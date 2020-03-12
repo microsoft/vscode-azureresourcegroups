@@ -4,6 +4,8 @@
 
 Manage Azure Resource Groups directly from VS Code.
 
+![explorer](resources/readme/explorer.png)
+
 **Visit the [wiki](https://github.com/Microsoft/vscode-azureresourcegroups/wiki) for additional information about the extension.**
 
 > Sign up today for your free Azure account and receive 12 months of free popular services, $200 free credit and 25+ always free services 👉 [Start Free](https://azure.microsoft.com/free/open-source).
