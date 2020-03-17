@@ -13,8 +13,9 @@ import { registerCommands } from './commands/registerCommands';
 import { ext } from './extensionVariables';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 
-export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<AzureExtensionApiProvider> {
+export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
     ext.context = context;
+    ext.ignoreBundle = ignoreBundle;
     ext.reporter = createTelemetryReporter(context);
     ext.outputChannel = createAzExtOutputChannel('Azure Resource Groups', ext.prefix);
     context.subscriptions.push(ext.outputChannel);

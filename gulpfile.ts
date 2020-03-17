@@ -16,6 +16,15 @@ import * as gulp from 'gulp';
 import * as path from 'path';
 import { gulp_installAzureAccount, gulp_webpack } from 'vscode-azureextensiondev';
 
+async function prepareForWebpack(): Promise<void> {
+    const mainJsPath: string = path.join(__dirname, 'main.js');
+    let contents: string = (await fse.readFile(mainJsPath)).toString();
+    contents = contents
+        .replace('out/src/extension', 'dist/extension.bundle')
+        .replace(', true /* ignoreBundle */', '');
+    await fse.writeFile(mainJsPath, contents);
+}
+
 function test() {
     const env = process.env;
     env.DEBUGTELEMETRY = 'v';
@@ -48,7 +57,7 @@ async function listIcons() {
     }
 }
 
-exports['webpack-dev'] = () => gulp_webpack('development');
-exports['webpack-prod'] = () => gulp_webpack('production');
+exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
+exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
 exports.test = gulp.series(gulp_installAzureAccount, test);
 exports.listIcons = listIcons;
