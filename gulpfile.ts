@@ -5,12 +5,13 @@
 
 // tslint:disable:no-console
 // tslint:disable:no-implicit-dependencies (this allows the use of dev dependencies)
-// tslint:disable:no-unsafe-any
 
 import * as fse from 'fs-extra';
 import * as gulp from 'gulp';
 import * as path from 'path';
 import { gulp_installAzureAccount, gulp_webpack } from 'vscode-azureextensiondev';
+
+declare let exports: { [key: string]: unknown };
 
 async function prepareForWebpack(): Promise<void> {
     const mainJsPath: string = path.join(__dirname, 'main.js');
