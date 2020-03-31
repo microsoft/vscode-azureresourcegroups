@@ -1,7 +1,11 @@
 {
+    "editor.codeActionsOnSave": {
+        "source.fixAll.tslint": true,
+        "source.organizeImports": true
+    },
+    "editor.detectIndentation": false,
     "editor.formatOnSave": true,
     "editor.insertSpaces": true,
-    "editor.detectIndentation": false,
     "editor.tabSize": 4,
     "files.insertFinalNewline": true,
     "files.trimTrailingWhitespace": true,
@@ -10,9 +14,7 @@
         "**/node_modules": true,
         ".vscode-test": true
     },
-    "editor.codeActionsOnSave": {
-        "source.fixAll.tslint": true,
-    },
     "tslint.ignoreDefinitionFiles": true,
-    "typescript.preferences.importModuleSpecifier": "relative"
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "typescript.tsdk": "node_modules/typescript/lib"
 }

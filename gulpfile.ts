@@ -5,12 +5,8 @@
 
 // tslint:disable:no-console
 // tslint:disable:no-implicit-dependencies (this allows the use of dev dependencies)
-
-// Grandfathered in
-// tslint:disable:typedef
 // tslint:disable:no-unsafe-any
 
-import * as cp from 'child_process';
 import * as fse from 'fs-extra';
 import * as gulp from 'gulp';
 import * as path from 'path';
@@ -25,16 +21,7 @@ async function prepareForWebpack(): Promise<void> {
     await fse.writeFile(mainJsPath, contents);
 }
 
-function test() {
-    const env = process.env;
-    env.DEBUGTELEMETRY = 'v';
-    env.MOCHA_timeout = String(20 * 1000);
-    env.CODE_TESTS_WORKSPACE = path.join(__dirname, 'test/test.code-workspace');
-    env.CODE_TESTS_PATH = path.join(__dirname, 'dist/test');
-    return cp.spawn('node', ['./node_modules/vscode/bin/test'], { stdio: 'inherit', env });
-}
-
-async function listIcons() {
+async function listIcons(): Promise<void> {
     const rootPath: string = path.join(__dirname, 'resources', 'providers');
     const subDirs: string[] = (await fse.readdir(rootPath)).filter(dir => dir.startsWith('microsoft.'));
     // tslint:disable-next-line: no-constant-condition
@@ -59,5 +46,5 @@ async function listIcons() {
 
 exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
 exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
-exports.test = gulp.series(gulp_installAzureAccount, test);
+exports.preTest = gulp_installAzureAccount;
 exports.listIcons = listIcons;
