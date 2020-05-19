@@ -26,6 +26,9 @@ export async function revealResource(context: IActionContext, node: ResourceTree
         case 'microsoft.compute/virtualmachines':
             extensionName = 'vscode-azurevirtualmachines';
             break;
+        case 'microsoft.web/staticsites':
+            extensionName = 'vscode-azurestaticwebapps';
+            break;
         case 'microsoft.web/sites':
             if (node.data.kind?.toLowerCase().includes('functionapp')) {
                 extensionName = 'vscode-azurefunctions';
