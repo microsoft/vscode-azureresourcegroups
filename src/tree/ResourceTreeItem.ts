@@ -60,6 +60,7 @@ const supportedIconTypes: string[] = [
     'microsoft.web/hostingenvironments',
     'microsoft.web/serverfarms',
     'microsoft.web/sites',
+    'microsoft.web/staticsites',
     'microsoft.storage/storageaccounts',
     'microsoft.sql/servers',
     'microsoft.sql/servers/databases',
