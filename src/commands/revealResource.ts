@@ -18,6 +18,7 @@ export async function revealResource(context: IActionContext, node: ResourceTree
     const publisher: string = 'ms-azuretools';
     switch (node.data.type?.toLowerCase()) {
         case 'microsoft.documentdb/databaseaccounts':
+        case 'microsoft.dbforpostgresql/servers':
             extensionName = 'vscode-cosmosdb';
             break;
         case 'microsoft.storage/storageaccounts':
