@@ -1,6 +1,7 @@
 {
     "azureResourceGroups.createResourceGroup": "Create Resource Group...",
     "azureResourceGroups.deleteResourceGroup": "Delete...",
+    "azureResourceGroups.editTags": "Edit Tags...",
     "azureResourceGroups.description": "An Azure Resource Groups extension for Visual Studio Code.",
     "azureResourceGroups.enableOutputTimestamps": "Prepends each line displayed in the output channel with a timestamp.",
     "azureResourceGroups.loadMore": "Load More",

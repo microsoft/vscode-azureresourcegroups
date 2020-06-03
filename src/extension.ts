@@ -10,6 +10,8 @@ import { AzExtTreeDataProvider, AzureUserInput, callWithTelemetryAndErrorHandlin
 // tslint:disable-next-line:no-submodule-imports
 import { AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
 import { registerCommands } from './commands/registerCommands';
+import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
+import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { ext } from './extensionVariables';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 
@@ -31,12 +33,16 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.tree = new AzExtTreeDataProvider(accountTreeItem, 'azureResourceGroups.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.tree, showCollapseAll: true, canSelectMany: true }));
 
+        ext.tagFS = new TagFileSystem();
+        context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
+        registerTagDiagnostics();
+
         registerCommands();
     });
 
     return createApiProvider([]);
 }
 
-// tslint:disable-next-line:no-empty
 export function deactivateInternal(): void {
+    ext.diagnosticWatcher?.dispose();
 }
