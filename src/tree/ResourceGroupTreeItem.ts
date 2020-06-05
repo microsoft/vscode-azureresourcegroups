@@ -4,7 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceManagementClient, ResourceModels } from "azure-arm-resource";
+import { FileChangeType } from "vscode";
 import { AzExtTreeItem, AzureParentTreeItem, createAzureClient, TreeItemIconPath } from "vscode-azureextensionui";
+import { ext } from "../extensionVariables";
 import { localize } from "../utils/localize";
 import { nonNullProp } from "../utils/nonNull";
 import { treeUtils } from "../utils/treeUtils";
@@ -15,12 +17,15 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
     public readonly contextValue: string = ResourceGroupTreeItem.contextValue;
     public readonly childTypeLabel: string = localize('resource', 'Resource');
     public data: ResourceModels.ResourceGroup;
+    public readonly cTime: number = Date.now();
+    public mTime: number = Date.now();
 
     private _nextLink: string | undefined;
 
     constructor(parent: AzureParentTreeItem, rg: ResourceModels.ResourceGroup) {
         super(parent);
         this.data = rg;
+        ext.tagFS.fireSoon({ type: FileChangeType.Changed, treeItem: this });
     }
 
     public get name(): string {
@@ -67,6 +72,8 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
     public async refreshImpl(): Promise<void> {
         const client: ResourceManagementClient = createAzureClient(this.root, ResourceManagementClient);
         this.data = await client.resourceGroups.get(this.name);
+        ext.tagFS.fireSoon({ type: FileChangeType.Changed, treeItem: this });
+        this.mTime = Date.now();
     }
 
     public async deleteTreeItemImpl(): Promise<void> {

@@ -28,8 +28,10 @@
     ],
     "preview": true,
     "activationEvents": [
+        "onFileSystem:azureResourceGroups",
         "onCommand:azureResourceGroups.createResourceGroup",
         "onCommand:azureResourceGroups.deleteResourceGroup",
+        "onCommand:azureResourceGroups.editTags",
         "onCommand:azureResourceGroups.loadMore",
         "onCommand:azureResourceGroups.openInPortal",
         "onCommand:azureResourceGroups.refresh",
@@ -53,6 +55,11 @@
             {
                 "command": "azureResourceGroups.deleteResourceGroup",
                 "title": "%azureResourceGroups.deleteResourceGroup%",
+                "category": "Azure Resource Groups"
+            },
+            {
+                "command": "azureResourceGroups.editTags",
+                "title": "%azureResourceGroups.editTags%",
                 "category": "Azure Resource Groups"
             },
             {
@@ -148,6 +155,11 @@
                     "command": "azureResourceGroups.deleteResourceGroup",
                     "when": "view == azureResourceGroups && viewItem == azureResourceGroup",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureResourceGroups.editTags",
+                    "when": "view == azureResourceGroups && viewItem == azureResourceGroup",
+                    "group": "2@1"
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
@@ -266,7 +278,8 @@
     "dependencies": {
         "azure-arm-resource": "^3.0.0-preview",
         "fs-extra": "^8.1.0",
-        "vscode-azureextensionui": "^0.33.0",
+        "jsonc-parser": "^2.2.1",
+        "vscode-azureextensionui": "^0.33.1",
         "vscode-nls": "^4.1.1"
     },
     "extensionDependencies": [

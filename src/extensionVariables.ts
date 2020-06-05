@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ExtensionContext } from "vscode";
+import { DiagnosticCollection, Disposable, ExtensionContext } from "vscode";
 import { AzExtTreeDataProvider, IAzExtOutputChannel, IAzureUserInput } from "vscode-azureextensionui";
+import { TagFileSystem } from "./commands/tags/TagFileSystem";
 
 /**
  * Namespace for common variables used throughout the extension. They must be initialized in the activate() method of extension.ts
@@ -17,4 +18,8 @@ export namespace ext {
     export let ui: IAzureUserInput;
     export let ignoreBundle: boolean | undefined;
     export let prefix: string = 'azureResourceGroups';
+
+    export let tagFS: TagFileSystem;
+    export let diagnosticWatcher: Disposable | undefined;
+    export let diagnosticCollection: DiagnosticCollection;
 }

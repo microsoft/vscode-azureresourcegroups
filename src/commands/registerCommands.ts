@@ -10,6 +10,7 @@ import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroup } from './deleteResourceGroup';
 import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
+import { editTags } from './tags/editTags';
 import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
@@ -21,4 +22,5 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.revealResource', revealResource);
     registerCommand('azureResourceGroups.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
     registerCommand('azureResourceGroups.viewProperties', viewProperties);
+    registerCommand('azureResourceGroups.editTags', editTags);
 }
