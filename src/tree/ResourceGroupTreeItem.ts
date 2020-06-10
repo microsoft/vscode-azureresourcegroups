@@ -25,7 +25,7 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
     constructor(parent: AzureParentTreeItem, rg: ResourceModels.ResourceGroup) {
         super(parent);
         this.data = rg;
-        ext.tagFS.fireSoon({ type: FileChangeType.Changed, treeItem: this });
+        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
     public get name(): string {
@@ -72,7 +72,7 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
     public async refreshImpl(): Promise<void> {
         const client: ResourceManagementClient = createAzureClient(this.root, ResourceManagementClient);
         this.data = await client.resourceGroups.get(this.name);
-        ext.tagFS.fireSoon({ type: FileChangeType.Changed, treeItem: this });
+        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
         this.mTime = Date.now();
     }
 

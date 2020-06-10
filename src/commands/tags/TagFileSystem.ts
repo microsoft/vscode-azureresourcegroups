@@ -7,11 +7,10 @@ import { ResourceManagementClient } from "azure-arm-resource";
 import * as jsonc from 'jsonc-parser';
 import * as os from "os";
 import { commands, Diagnostic, FileStat, FileType, MessageItem, Uri, window } from "vscode";
-import { createAzureClient, IActionContext } from 'vscode-azureextensionui';
+import { AzExtTreeFileSystem, createAzureClient, IActionContext } from 'vscode-azureextensionui';
 import { ext } from "../../extensionVariables";
 import { ResourceGroupTreeItem } from "../../tree/ResourceGroupTreeItem";
 import { localize } from "../../utils/localize";
-import { AzExtFileSystem } from "./AzExtFileSystem";
 import { getTagDiagnostics } from "./getTagDiagnostics";
 
 const insertKeyHere: string = localize('insertTagName', '<Insert tag name>');
@@ -21,7 +20,7 @@ const insertValueHere: string = localize('insertTagValue', '<Insert tag value>')
  * For now this file system only supports editing tags.
  * However, the scheme was left generic so that it could support editing other stuff in this extension without needing to create a whole new file system
  */
-export class TagFileSystem extends AzExtFileSystem<ResourceGroupTreeItem> {
+export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem> {
     public static scheme: string = 'azureResourceGroups';
     public scheme: string = TagFileSystem.scheme;
 
@@ -49,7 +48,7 @@ export class TagFileSystem extends AzExtFileSystem<ResourceGroupTreeItem> {
             window.showErrorMessage(message, showErrors).then(async (result) => {
                 if (result === showErrors) {
                     const openedUri: Uri | undefined = window.activeTextEditor?.document.uri;
-                    if (!openedUri || !this.areUrisEqual(originalUri, openedUri)) {
+                    if (!openedUri || originalUri.query !== openedUri.query) {
                         await this.showTextDocument(node);
                     }
 
