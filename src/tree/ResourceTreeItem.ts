@@ -5,19 +5,24 @@
 
 import { ResourceModels } from "azure-arm-resource";
 import * as path from 'path';
+import { FileChangeType } from "vscode";
 import { AzureParentTreeItem, AzureTreeItem, TreeItemIconPath } from "vscode-azureextensionui";
+import { ext } from "../extensionVariables";
 import { nonNullProp } from "../utils/nonNull";
 import { treeUtils } from "../utils/treeUtils";
 
 export class ResourceTreeItem extends AzureTreeItem {
     public static contextValue: string = 'azureResource';
     public readonly contextValue: string = ResourceTreeItem.contextValue;
-    public readonly data: ResourceModels.GenericResource;
+    public data: ResourceModels.GenericResource;
     public readonly commandId: string = 'azureResourceGroups.revealResource';
+    public readonly cTime: number = Date.now();
+    public mTime: number = Date.now();
 
     constructor(parent: AzureParentTreeItem, resource: ResourceModels.GenericResource) {
         super(parent);
         this.data = resource;
+        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
     public get name(): string {
@@ -51,6 +56,11 @@ export class ResourceTreeItem extends AzureTreeItem {
         }
 
         return treeUtils.getIconPath(iconName);
+    }
+
+    public async refreshImpl(): Promise<void> {
+        this.mTime = Date.now();
+        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 }
 
