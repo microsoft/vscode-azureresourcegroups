@@ -82,10 +82,15 @@ class TagVisitor implements jsonc.JSONVisitor {
                 this.addError(range, localize('tagNameTooLong', 'Tag name must be {0} characters or less.', max));
             }
 
+            if (/^\s*$/.test(property)) {
+                const error: string = localize('tagNameEmpty', 'Tag name cannot be empty.');
+                this.addError(range, error);
+            }
+
             const invalidChars: string[] = ['<', '>', '%', '&', '\\', '?', '/'];
             const matchingChars: string[] = invalidChars.filter(c => property.includes(c));
             if (matchingChars.length > 0) {
-                const error: string = localize('tag', 'Tag name cannot contain the following characters: {0}', invalidChars.join(', '));
+                const error: string = localize('tagNameInvalidChars', 'Tag name cannot contain the following characters: {0}', invalidChars.join(', '));
                 this.addError(range, error);
             }
 
