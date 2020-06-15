@@ -79,5 +79,6 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
     public async deleteTreeItemImpl(): Promise<void> {
         const client: ResourceManagementClient = createAzureClient(this.root, ResourceManagementClient);
         await client.resourceGroups.deleteMethod(this.name);
+        ext.outputChannel.appendLog(localize('deletedRg', 'Successfully deleted resource group "{0}".', this.name));
     }
 }

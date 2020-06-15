@@ -41,6 +41,8 @@ export async function deleteResourceGroup(context: IActionContext, primaryNode?:
         // don't wait
         // tslint:disable-next-line: no-floating-promises
         node.deleteTreeItem(context);
-        window.showInformationMessage(localize('startedDelete', 'Started delete of resource group "{0}".', node.name));
+        const message: string = localize('startedDelete', 'Started delete of resource group "{0}".', node.name);
+        window.showInformationMessage(message);
+        ext.outputChannel.appendLog(message);
     }
 }

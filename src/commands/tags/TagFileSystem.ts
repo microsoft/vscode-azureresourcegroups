@@ -89,6 +89,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
                 localize('updatedTagsGroup', 'Successfully updated tags for resource group "{0}".', node.name) :
                 localize('updatedTagsResource', 'Successfully updated tags for resource "{0}".', node.name);
             window.showInformationMessage(updatedMessage);
+            ext.outputChannel.appendLog(updatedMessage);
         }
     }
 
