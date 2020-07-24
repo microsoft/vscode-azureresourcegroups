@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementClient, ResourceModels } from "azure-arm-resource";
+import { ResourceManagementClient, ResourceManagementModels } from "@azure/arm-resources";
 import { FileChangeType } from "vscode";
 import { AzExtTreeItem, AzureParentTreeItem, createAzureClient, TreeItemIconPath } from "vscode-azureextensionui";
 import { ext } from "../extensionVariables";
@@ -16,13 +16,13 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
     public static contextValue: string = 'azureResourceGroup';
     public readonly contextValue: string = ResourceGroupTreeItem.contextValue;
     public readonly childTypeLabel: string = localize('resource', 'Resource');
-    public data: ResourceModels.ResourceGroup;
+    public data: ResourceManagementModels.ResourceGroup;
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
     private _nextLink: string | undefined;
 
-    constructor(parent: AzureParentTreeItem, rg: ResourceModels.ResourceGroup) {
+    constructor(parent: AzureParentTreeItem, rg: ResourceManagementModels.ResourceGroup) {
         super(parent);
         this.data = rg;
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
@@ -59,7 +59,7 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
         }
 
         const client: ResourceManagementClient = createAzureClient(this.root, ResourceManagementClient);
-        const resources: ResourceModels.ResourceListResult = this._nextLink ? await client.resources.listByResourceGroupNext(this._nextLink) : await client.resources.listByResourceGroup(this.name);
+        const resources: ResourceManagementModels.ResourceListResult = this._nextLink ? await client.resources.listByResourceGroupNext(this._nextLink) : await client.resources.listByResourceGroup(this.name);
         this._nextLink = resources.nextLink;
         return await this.createTreeItemsWithErrorHandling(
             resources,

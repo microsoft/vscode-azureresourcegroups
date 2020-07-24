@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceModels } from "azure-arm-resource";
+import { ResourceManagementModels } from "@azure/arm-resources";
 import * as path from 'path';
 import { FileChangeType } from "vscode";
 import { AzureParentTreeItem, AzureTreeItem, TreeItemIconPath } from "vscode-azureextensionui";
@@ -14,12 +14,12 @@ import { treeUtils } from "../utils/treeUtils";
 export class ResourceTreeItem extends AzureTreeItem {
     public static contextValue: string = 'azureResource';
     public readonly contextValue: string = ResourceTreeItem.contextValue;
-    public data: ResourceModels.GenericResource;
+    public data: ResourceManagementModels.GenericResource;
     public readonly commandId: string = 'azureResourceGroups.revealResource';
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
-    constructor(parent: AzureParentTreeItem, resource: ResourceModels.GenericResource) {
+    constructor(parent: AzureParentTreeItem, resource: ResourceManagementModels.GenericResource) {
         super(parent);
         this.data = resource;
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
