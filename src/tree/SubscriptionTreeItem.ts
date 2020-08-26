@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementClient, ResourceModels } from 'azure-arm-resource';
+import { ResourceManagementClient, ResourceManagementModels } from '@azure/arm-resources';
 import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, ICreateChildImplContext, IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
 import { localize } from '../utils/localize';
 import { nonNullProp } from '../utils/nonNull';
@@ -24,7 +24,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         const client: ResourceManagementClient = createAzureClient(this.root, ResourceManagementClient);
-        const rgs: ResourceModels.ResourceGroupListResult = this._nextLink ? await client.resourceGroups.listNext(this._nextLink) : await client.resourceGroups.list();
+        const rgs: ResourceManagementModels.ResourceGroupListResult = this._nextLink ? await client.resourceGroups.listNext(this._nextLink) : await client.resourceGroups.list();
         this._nextLink = rgs.nextLink;
         return await this.createTreeItemsWithErrorHandling(
             rgs,

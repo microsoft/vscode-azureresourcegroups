@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementClient } from "azure-arm-resource";
+import { ResourceManagementClient } from "@azure/arm-resources";
 import * as jsonc from 'jsonc-parser';
 import * as os from "os";
 import { commands, Diagnostic, FileStat, FileType, MessageItem, Uri, window } from "vscode";
@@ -12,7 +12,6 @@ import { ext } from "../../extensionVariables";
 import { ResourceGroupTreeItem } from "../../tree/ResourceGroupTreeItem";
 import { ResourceTreeItem } from "../../tree/ResourceTreeItem";
 import { localize } from "../../utils/localize";
-import { requestUtils } from "../../utils/requestUtils";
 import { getTagDiagnostics } from "./getTagDiagnostics";
 
 const insertKeyHere: string = localize('insertTagName', '<Insert tag name>');
@@ -79,11 +78,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
             }
 
             const client: ResourceManagementClient = createAzureClient(node.root, ResourceManagementClient);
-            if (node instanceof ResourceGroupTreeItem) {
-                await client.resourceGroups.update(node.name, { tags });
-            } else {
-                await updateResourceTags(node, tags);
-            }
+            await client.tags.updateAtScope(node.id, { properties: { tags }, operation: 'Replace' });
 
             const updatedMessage: string = isResourceGroup ?
                 localize('updatedTagsGroup', 'Successfully updated tags for resource group "{0}".', node.name) :
@@ -107,28 +102,4 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
         }
         return `// ${comment}${os.EOL}${JSON.stringify(tags, undefined, 4)}`;
     }
-}
-
-interface ITagProperties {
-    properties: {
-        tags: {};
-    };
-}
-
-/**
- * Doesn't seem to be supported for the "azure-arm-resource" npm package. Might be supported in the new "@azure/arm-resource" once we switch over (https://github.com/microsoft/vscode-azuretools/issues/510)
- * Docs: https://docs.microsoft.com/rest/api/resources/tags/updateatscope
- */
-async function updateResourceTags(node: ResourceTreeItem, tags: {}): Promise<void> {
-    const urlPath: string = `${node.id}/providers/Microsoft.Resources/tags/default?api-version=2019-10-01`;
-    const request: requestUtils.Request = await requestUtils.getDefaultAzureRequest(urlPath, node.root, 'PATCH');
-    request.headers['Content-Type'] = 'application/json';
-    request.body = JSON.stringify({
-        operation: 'Replace',
-        properties: {
-            tags
-        }
-    });
-    const result: ITagProperties = <ITagProperties>JSON.parse(await requestUtils.sendRequest(request));
-    node.data.tags = result.properties.tags;
 }
