@@ -1,6 +1,10 @@
 # Azure Resource Groups for Visual Studio Code (Preview)
 
+<!-- region exclude-from-marketplace -->
+
 [![Version](https://vsmarketplacebadge.apphb.com/version/ms-azuretools.vscode-azureresourcegroups.svg)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azureresourcegroups) [![Installs](https://vsmarketplacebadge.apphb.com/installs-short/ms-azuretools.vscode-azureresourcegroups.svg)](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azureresourcegroups) [![Build Status](https://dev.azure.com/ms-azuretools/AzCode/_apis/build/status/vscode-azureresourcegroups)](https://dev.azure.com/ms-azuretools/AzCode/_build/latest?definitionId=23)
+
+<!-- endregion exclude-from-marketplace -->
 
 Manage Azure Resource Groups directly from VS Code.
 
@@ -9,6 +13,8 @@ Manage Azure Resource Groups directly from VS Code.
 **Visit the [wiki](https://github.com/Microsoft/vscode-azureresourcegroups/wiki) for additional information about the extension.**
 
 > Sign up today for your free Azure account and receive 12 months of free popular services, $200 free credit and 25+ always free services 👉 [Start Free](https://azure.microsoft.com/free/open-source).
+
+<!-- region exclude-from-marketplace -->
 
 ## Contributing
 
@@ -30,6 +36,8 @@ Before we can accept your pull request you will need to sign a **Contribution Li
 ### Code of Conduct
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
+<!-- endregion exclude-from-marketplace -->
 
 ## Telemetry
 
