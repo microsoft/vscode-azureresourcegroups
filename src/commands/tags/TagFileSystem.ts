@@ -7,10 +7,11 @@ import { ResourceManagementClient } from "@azure/arm-resources";
 import * as jsonc from 'jsonc-parser';
 import * as os from "os";
 import { commands, Diagnostic, FileStat, FileType, MessageItem, Uri, window } from "vscode";
-import { AzExtTreeFileSystem, createAzureClient, IActionContext } from 'vscode-azureextensionui';
+import { AzExtTreeFileSystem, IActionContext } from 'vscode-azureextensionui';
 import { ext } from "../../extensionVariables";
 import { ResourceGroupTreeItem } from "../../tree/ResourceGroupTreeItem";
 import { ResourceTreeItem } from "../../tree/ResourceTreeItem";
+import { createResourceClient } from "../../utils/azureClients";
 import { localize } from "../../utils/localize";
 import { getTagDiagnostics } from "./getTagDiagnostics";
 
@@ -77,7 +78,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
                 delete tags[insertKeyHere];
             }
 
-            const client: ResourceManagementClient = createAzureClient(node.root, ResourceManagementClient);
+            const client: ResourceManagementClient = await createResourceClient(node.root);
             await client.tags.updateAtScope(node.id, { properties: { tags }, operation: 'Replace' });
 
             const updatedMessage: string = isResourceGroup ?
