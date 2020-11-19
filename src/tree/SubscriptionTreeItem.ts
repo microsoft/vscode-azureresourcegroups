@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceManagementClient, ResourceManagementModels } from '@azure/arm-resources';
-import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createAzureClient, ICreateChildImplContext, IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ICreateChildImplContext, IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
+import { createResourceClient } from '../utils/azureClients';
 import { localize } from '../utils/localize';
 import { nonNullProp } from '../utils/nonNull';
 import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
@@ -23,7 +24,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             this._nextLink = undefined;
         }
 
-        const client: ResourceManagementClient = createAzureClient(this.root, ResourceManagementClient);
+        const client: ResourceManagementClient = await createResourceClient(this.root);
         const rgs: ResourceManagementModels.ResourceGroupListResult = this._nextLink ? await client.resourceGroups.listNext(this._nextLink) : await client.resourceGroups.list();
         this._nextLink = rgs.nextLink;
         return await this.createTreeItemsWithErrorHandling(

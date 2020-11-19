@@ -5,8 +5,9 @@
 
 import { ResourceManagementClient, ResourceManagementModels } from "@azure/arm-resources";
 import { FileChangeType } from "vscode";
-import { AzExtTreeItem, AzureParentTreeItem, createAzureClient, TreeItemIconPath } from "vscode-azureextensionui";
+import { AzExtTreeItem, AzureParentTreeItem, TreeItemIconPath } from "vscode-azureextensionui";
 import { ext } from "../extensionVariables";
+import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
 import { nonNullProp } from "../utils/nonNull";
 import { treeUtils } from "../utils/treeUtils";
@@ -58,7 +59,7 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
             this._nextLink = undefined;
         }
 
-        const client: ResourceManagementClient = createAzureClient(this.root, ResourceManagementClient);
+        const client: ResourceManagementClient = await createResourceClient(this.root);
         const resources: ResourceManagementModels.ResourceListResult = this._nextLink ? await client.resources.listByResourceGroupNext(this._nextLink) : await client.resources.listByResourceGroup(this.name);
         this._nextLink = resources.nextLink;
         return await this.createTreeItemsWithErrorHandling(
@@ -70,14 +71,14 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
     }
 
     public async refreshImpl(): Promise<void> {
-        const client: ResourceManagementClient = createAzureClient(this.root, ResourceManagementClient);
+        const client: ResourceManagementClient = await createResourceClient(this.root);
         this.data = await client.resourceGroups.get(this.name);
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
         this.mTime = Date.now();
     }
 
     public async deleteTreeItemImpl(): Promise<void> {
-        const client: ResourceManagementClient = createAzureClient(this.root, ResourceManagementClient);
+        const client: ResourceManagementClient = await createResourceClient(this.root);
         await client.resourceGroups.deleteMethod(this.name);
         ext.outputChannel.appendLog(localize('deletedRg', 'Successfully deleted resource group "{0}".', this.name));
     }

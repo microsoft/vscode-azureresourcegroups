@@ -287,7 +287,7 @@
         "@azure/ms-rest-js": "^2.0.7",
         "fs-extra": "^8.1.0",
         "jsonc-parser": "^2.2.1",
-        "vscode-azureextensionui": "^0.34.0",
+        "vscode-azureextensionui": "^0.36.1",
         "vscode-nls": "^4.1.1"
     },
     "extensionDependencies": [
