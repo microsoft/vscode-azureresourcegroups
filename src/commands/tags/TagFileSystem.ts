@@ -69,7 +69,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
                 localize('confirmTagsGroup', 'Are you sure you want to update tags for resource group "{0}"?', node.name) :
                 localize('confirmTagsResource', 'Are you sure you want to update tags for resource "{0}"?', node.name);
             const update: MessageItem = { title: localize('update', 'Update') };
-            await ext.ui.showWarningMessage(confirmMessage, { modal: true }, update);
+            await context.ui.showWarningMessage(confirmMessage, { modal: true }, update);
 
             const tags: {} = <{}>jsonc.parse(text);
 

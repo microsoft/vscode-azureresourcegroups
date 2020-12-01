@@ -18,7 +18,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.deleteResourceGroup', deleteResourceGroup);
     registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzureTreeItem) => await ext.tree.loadMore(node, context));
     registerCommand('azureResourceGroups.openInPortal', openInPortal);
-    registerCommand('azureResourceGroups.refresh', async (_context: IActionContext, node?: AzureTreeItem) => await ext.tree.refresh(node));
+    registerCommand('azureResourceGroups.refresh', async (context: IActionContext, node?: AzureTreeItem) => await ext.tree.refresh(context, node));
     registerCommand('azureResourceGroups.revealResource', revealResource);
     registerCommand('azureResourceGroups.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
     registerCommand('azureResourceGroups.viewProperties', viewProperties);
