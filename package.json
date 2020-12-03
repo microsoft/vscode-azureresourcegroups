@@ -240,6 +240,11 @@
                             "%azureResourceGroups.deleteConfirmation.ClickButton%"
                         ],
                         "default": "EnterName"
+                    },
+                    "azureResourceGroups.showHiddenTypes": {
+                        "type": "boolean",
+                        "description": "%azureResourceGroups.showHiddenTypes%",
+                        "default": false
                     }
                 }
             }

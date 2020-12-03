@@ -11,5 +11,6 @@
     "azureResourceGroups.viewProperties": "View Properties",
     "azureResourceGroups.deleteConfirmation": "The behavior to use when confirming delete of a resource group.",
     "azureResourceGroups.deleteConfirmation.EnterName": "Prompts with an input box where you enter the resource group name to delete.",
-    "azureResourceGroups.deleteConfirmation.ClickButton": "Prompts with a warning dialog where you click a button to delete."
+    "azureResourceGroups.deleteConfirmation.ClickButton": "Prompts with a warning dialog where you click a button to delete.",
+    "azureResourceGroups.showHiddenTypes": "Show some ancillary resources that are created/managed by Azure infrastructure. Displaying them is typically useful when you want to clean up your resource groups or subscriptions."
 }

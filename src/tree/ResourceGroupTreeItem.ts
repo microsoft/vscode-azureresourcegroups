@@ -10,6 +10,7 @@ import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
 import { nonNullProp } from "../utils/nonNull";
+import { settingUtils } from "../utils/settingUtils";
 import { treeUtils } from "../utils/treeUtils";
 import { ResourceTreeItem } from "./ResourceTreeItem";
 
@@ -65,7 +66,19 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
         return await this.createTreeItemsWithErrorHandling(
             resources,
             'invalidResource',
-            resource => new ResourceTreeItem(this, resource),
+            resource => {
+                const hiddenTypes: string[] = [
+                    'microsoft.alertsmanagement/smartdetectoralertrules',
+                    'microsoft.insights/actiongroups',
+                    'microsoft.security/automations'
+                ];
+
+                if (settingUtils.getWorkspaceSetting<boolean>('showHiddenTypes') || (resource.type && !hiddenTypes.includes(resource.type.toLowerCase()))) {
+                    return new ResourceTreeItem(this, resource);
+                } else {
+                    return undefined;
+                }
+            },
             resource => resource.name
         );
     }
