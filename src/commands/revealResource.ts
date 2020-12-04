@@ -11,7 +11,7 @@ import { ResourceTreeItem } from '../tree/ResourceTreeItem';
 import { viewProperties } from './viewProperties';
 
 export async function revealResource(context: IActionContext, node: ResourceTreeItem): Promise<void> {
-    context.telemetry.properties.resourceType = node.data.type;
+    context.telemetry.properties.resourceType = node.data.type?.replace(/\//g, '|'); // Replace the slashes otherwise this gets redacted because it looks like a user file path
     context.telemetry.properties.resourceKind = node.data.kind;
 
     let extensionName: string | undefined;
