@@ -24,10 +24,10 @@ export async function deleteResourceGroup(context: IActionContext, primaryNode?:
     const deleteConfirmation: string | undefined = settingUtils.getWorkspaceSetting('deleteConfirmation');
     for (const node of selectedNodes) {
         if (deleteConfirmation === 'ClickButton') {
-            const areYouSureDelete: string = localize('areYouSureDelete', 'Are you sure you want to delete resource group "{0}" and all it\'s resources?', node.name);
+            const areYouSureDelete: string = localize('areYouSureDelete', 'Are you sure you want to delete resource group "{0}" and all its resources?', node.name);
             await context.ui.showWarningMessage(areYouSureDelete, { modal: true }, { title: localize('delete', 'Delete') }); // no need to check result - cancel will throw error
         } else {
-            const enterToDelete: string = localize('enterToDelete', 'Enter "{0}" to delete this resource group and all it\'s resources.', node.name);
+            const enterToDelete: string = localize('enterToDelete', 'Enter "{0}" to delete this resource group and all its resources.', node.name);
             function validateInput(val: string | undefined): string | undefined {
                 return val === node.name ? undefined : enterToDelete;
             }
