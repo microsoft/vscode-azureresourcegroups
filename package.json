@@ -1,6 +1,6 @@
 {
     "name": "vscode-azureresourcegroups",
-    "displayName": "Azure Resource Groups",
+    "displayName": "Azure Resources",
     "description": "%azureResourceGroups.description%",
     "version": "0.2.1-alpha",
     "publisher": "ms-azuretools",
@@ -35,10 +35,15 @@
         "onCommand:azureResourceGroups.loadMore",
         "onCommand:azureResourceGroups.openInPortal",
         "onCommand:azureResourceGroups.refresh",
+        "onCommand:azureResourceGroups.reportIssue",
         "onCommand:azureResourceGroups.revealResource",
         "onCommand:azureResourceGroups.selectSubscriptions",
         "onCommand:azureResourceGroups.viewProperties",
-        "onView:azureResourceGroups"
+        "onCommand:ms-azuretools.getStarted",
+        "onCommand:ms-azuretools.reportIssue",
+        "onCommand:ms-azuretools.reviewIssues",
+        "onView:azureResourceGroups",
+        "onView:ms-azuretools.helpAndFeedback"
     ],
     "main": "./main.js",
     "contributes": {
@@ -98,6 +103,26 @@
                 "command": "azureResourceGroups.viewProperties",
                 "title": "%azureResourceGroups.viewProperties%",
                 "category": "Azure Resource Groups"
+            },
+            {
+                "command": "azureResourceGroups.reportIssue",
+                "title": "%azureResourceGroups.reportIssue%",
+                "category": "Azure Resource Groups"
+            },
+            {
+                "command": "ms-azuretools.getStarted",
+                "title": "%ms-azuretools.getStarted%",
+                "category": "Azure"
+            },
+            {
+                "command": "ms-azuretools.reportIssue",
+                "title": "%ms-azuretools.reportIssue%",
+                "category": "Azure"
+            },
+            {
+                "command": "ms-azuretools.reviewIssues",
+                "title": "%ms-azuretools.reviewIssues%",
+                "category": "Azure"
             }
         ],
         "viewsContainers": {
@@ -113,7 +138,13 @@
             "azure": [
                 {
                     "id": "azureResourceGroups",
-                    "name": "Resource Groups"
+                    "name": "Resource Groups",
+                    "visibility": "collapsed"
+                },
+                {
+                    "id": "ms-azuretools.helpAndFeedback",
+                    "name": "%ms-azuretools.helpAndFeedback%",
+                    "visibility": "collapsed"
                 }
             ]
         },

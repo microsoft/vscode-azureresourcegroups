@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { commands, Extension, extensions } from 'vscode';
+import { commands, Extension } from 'vscode';
 import { IActionContext, parseError } from 'vscode-azureextensionui';
 // tslint:disable-next-line: no-submodule-imports
 import { AzureExtensionApi, AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
+import { AzExtWrapper, getAzureExtensions } from '../AzExtWrapper';
 import { ResourceTreeItem } from '../tree/ResourceTreeItem';
 import { viewProperties } from './viewProperties';
 
@@ -14,44 +15,15 @@ export async function revealResource(context: IActionContext, node: ResourceTree
     context.telemetry.properties.resourceType = node.data.type?.replace(/\//g, '|'); // Replace the slashes otherwise this gets redacted because it looks like a user file path
     context.telemetry.properties.resourceKind = node.data.kind;
 
-    let extensionName: string | undefined;
-    const publisher: string = 'ms-azuretools';
-    switch (node.data.type?.toLowerCase()) {
-        case 'microsoft.documentdb/databaseaccounts':
-        case 'microsoft.dbforpostgresql/servers':
-            extensionName = 'vscode-cosmosdb';
-            break;
-        case 'microsoft.storage/storageaccounts':
-            extensionName = 'vscode-azurestorage';
-            break;
-        case 'microsoft.compute/virtualmachines':
-            extensionName = 'vscode-azurevirtualmachines';
-            break;
-        case 'microsoft.web/staticsites':
-            extensionName = 'vscode-azurestaticwebapps';
-            break;
-        case 'microsoft.web/sites':
-            if (node.data.kind?.toLowerCase().includes('functionapp')) {
-                extensionName = 'vscode-azurefunctions';
-            } else {
-                extensionName = 'vscode-azureappservice';
-            }
-            break;
-        case 'microsoft.eventgrid/eventsubscriptions':
-        case 'microsoft.eventgrid/topics':
-            extensionName = 'vscode-azureeventgrid';
-            break;
-        default:
-    }
+    const azExtension: AzExtWrapper | undefined = getAzureExtensions().find(e => e.matchesResourceType(node.data));
 
     let viewPropertiesInstead: boolean = false;
-    if (!extensionName) {
+    if (!azExtension) {
         viewPropertiesInstead = true;
     } else {
-        const extensionId: string = `${publisher}.${extensionName}`;
-        const extension: Extension<AzureExtensionApiProvider> | undefined = extensions.getExtension(extensionId);
+        const extension: Extension<AzureExtensionApiProvider> | undefined = azExtension.getCodeExtension();
         if (!extension) {
-            await commands.executeCommand('extension.open', extensionId);
+            await commands.executeCommand('extension.open', azExtension.id);
         } else {
             if (!extension.isActive) {
                 await extension.activate();

@@ -4,10 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands } from 'vscode';
-import { AzureTreeItem, IActionContext, registerCommand } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureTreeItem, IActionContext, registerCommand, registerErrorHandler, registerReportIssueCommand } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroup } from './deleteResourceGroup';
+import { getStarted } from './helpAndFeedback/getStarted';
+import { reportIssue } from './helpAndFeedback/reportIssue';
+import { reviewIssues } from './helpAndFeedback/reviewIssues';
 import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
 import { editTags } from './tags/editTags';
@@ -23,4 +26,13 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
     registerCommand('azureResourceGroups.viewProperties', viewProperties);
     registerCommand('azureResourceGroups.editTags', editTags);
+
+    registerCommand('ms-azuretools.getStarted', getStarted);
+    registerCommand('ms-azuretools.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.helpTree.loadMore(node, context));
+    registerCommand('ms-azuretools.reportIssue', reportIssue);
+    registerCommand('ms-azuretools.reviewIssues', reviewIssues);
+
+    // Suppress "Report an Issue" button for all errors in favor of the command
+    registerErrorHandler(c => c.errorHandling.suppressReportIssue = true);
+    registerReportIssueCommand('azureResourceGroups.reportIssue');
 }
