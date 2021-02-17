@@ -27,7 +27,7 @@ export async function reportIssue(context: IActionContext): Promise<void> {
             await openNewIssuePage(azExtension.name);
         }
     } else {
-        await openNewIssuePage('vscode-azuretools');
+        await openNewIssuePage('azcode');
     }
 }
 
