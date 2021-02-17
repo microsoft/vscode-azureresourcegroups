@@ -128,6 +128,8 @@ class TagVisitor implements jsonc.JSONVisitor {
     }
 
     private addError(range: Range, error: string): void {
-        this.diagnostics.push(new Diagnostic(range, error));
+        const diagnostic: Diagnostic = new Diagnostic(range, error);
+        diagnostic.source = 'Azure';
+        this.diagnostics.push(diagnostic);
     }
 }

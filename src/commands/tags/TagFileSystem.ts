@@ -6,14 +6,13 @@
 import { ResourceManagementClient } from "@azure/arm-resources";
 import * as jsonc from 'jsonc-parser';
 import * as os from "os";
-import { commands, Diagnostic, FileStat, FileType, MessageItem, Uri, window } from "vscode";
+import { commands, Diagnostic, DiagnosticSeverity, FileStat, FileType, languages, MessageItem, Uri, window } from "vscode";
 import { AzExtTreeFileSystem, IActionContext } from 'vscode-azureextensionui';
 import { ext } from "../../extensionVariables";
 import { ResourceGroupTreeItem } from "../../tree/ResourceGroupTreeItem";
 import { ResourceTreeItem } from "../../tree/ResourceTreeItem";
 import { createResourceClient } from "../../utils/azureClients";
 import { localize } from "../../utils/localize";
-import { getTagDiagnostics } from "./getTagDiagnostics";
 
 const insertKeyHere: string = localize('insertTagName', '<Insert tag name>');
 const insertValueHere: string = localize('insertTagValue', '<Insert tag value>');
@@ -40,8 +39,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
         const text: string = content.toString();
         const isResourceGroup: boolean = node instanceof ResourceGroupTreeItem;
 
-        // tslint:disable-next-line: strict-boolean-expressions
-        const diagnostics: readonly Diagnostic[] = ext.diagnosticCollection.get(originalUri) || getTagDiagnostics(text);
+        const diagnostics: Diagnostic[] = languages.getDiagnostics(originalUri).filter(d => d.severity === DiagnosticSeverity.Error);
         if (diagnostics.length > 0) {
             context.telemetry.measurements.tagDiagnosticsLength = diagnostics.length;
 
@@ -61,6 +59,8 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
                 }
             });
 
+            // de-duped, sorted list of diagnostic sources
+            context.telemetry.properties.diagnosticSources = diagnostics.map(d => d.source).filter((value, index, array) => value && array.indexOf(value) === index).sort().join(',');
             context.errorHandling.suppressDisplay = true;
             // This won't be displayed, but might as well track the first diagnostic for telemetry
             throw new Error(diagnostics[0].message);
