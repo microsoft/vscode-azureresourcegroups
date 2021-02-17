@@ -46,7 +46,8 @@ export const azureExtensions: IAzExtMetadata[] = [
         tutorial: {
             label: localize('deployStatic', 'Deploy a static app'),
             url: 'https://aka.ms/AAb5xp8'
-        }
+        },
+        reportIssueCommandId: 'staticWebApps.reportIssue'
     },
     {
         name: 'vscode-azureresourcegroups',
@@ -59,14 +60,16 @@ export const azureExtensions: IAzExtMetadata[] = [
         label: 'Storage',
         resourceTypes: [
             'microsoft.storage/storageaccounts'
-        ]
+        ],
+        reportIssueCommandId: 'azureStorage.reportIssue'
     },
     {
         name: 'vscode-azurevirtualmachines',
         label: 'Virtual Machines',
         resourceTypes: [
             'microsoft.compute/virtualmachines'
-        ]
+        ],
+        reportIssueCommandId: 'azureVirtualMachines.reportIssue'
     },
     {
         name: 'vscode-azureeventgrid',
@@ -82,7 +85,8 @@ export const azureExtensions: IAzExtMetadata[] = [
         resourceTypes: [
             'microsoft.documentdb/databaseaccounts',
             'microsoft.dbforpostgresql/servers'
-        ]
+        ],
+        reportIssueCommandId: 'azureDatabases.reportIssue'
     }
 ];
 
