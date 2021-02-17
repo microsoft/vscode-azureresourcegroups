@@ -1,4 +1,4 @@
-# Azure Resource Groups for Visual Studio Code (Preview)
+# Azure Resources for Visual Studio Code (Preview)
 
 <!-- region exclude-from-marketplace -->
 
@@ -6,7 +6,7 @@
 
 <!-- endregion exclude-from-marketplace -->
 
-Manage Azure Resource Groups directly from VS Code.
+View and manage Azure Resources directly from VS Code.
 
 ![explorer](resources/readme/explorer.png)
 

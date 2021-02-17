@@ -14,6 +14,7 @@ import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { ext } from './extensionVariables';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
+import { HelpTreeItem } from './tree/HelpTreeItem';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
     ext.context = context;
@@ -36,6 +37,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.tagFS = new TagFileSystem(ext.tree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
         registerTagDiagnostics();
+
+        const helpTreeItem: HelpTreeItem = new HelpTreeItem();
+        ext.helpTree = new AzExtTreeDataProvider(helpTreeItem, 'ms-azuretools.loadMore');
+        context.subscriptions.push(vscode.window.createTreeView('ms-azuretools.helpAndFeedback', { treeDataProvider: ext.helpTree }));
 
         registerCommands();
     });

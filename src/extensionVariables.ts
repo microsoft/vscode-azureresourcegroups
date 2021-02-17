@@ -14,6 +14,7 @@ import { TagFileSystem } from "./commands/tags/TagFileSystem";
 export namespace ext {
     export let context: ExtensionContext;
     export let tree: AzExtTreeDataProvider;
+    export let helpTree: AzExtTreeDataProvider;
     export let outputChannel: IAzExtOutputChannel;
     export let ui: IAzureUserInput;
     export let ignoreBundle: boolean | undefined;

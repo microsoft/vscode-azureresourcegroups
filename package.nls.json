@@ -2,7 +2,7 @@
     "azureResourceGroups.createResourceGroup": "Create Resource Group...",
     "azureResourceGroups.deleteResourceGroup": "Delete...",
     "azureResourceGroups.editTags": "Edit Tags...",
-    "azureResourceGroups.description": "An Azure Resource Groups extension for Visual Studio Code.",
+    "azureResourceGroups.description": "An extension for viewing and managing Azure resources.",
     "azureResourceGroups.enableOutputTimestamps": "Prepends each line displayed in the output channel with a timestamp.",
     "azureResourceGroups.loadMore": "Load More",
     "azureResourceGroups.openInPortal": "Open in Portal",
@@ -12,5 +12,10 @@
     "azureResourceGroups.deleteConfirmation": "The behavior to use when confirming delete of a resource group.",
     "azureResourceGroups.deleteConfirmation.EnterName": "Prompts with an input box where you enter the resource group name to delete.",
     "azureResourceGroups.deleteConfirmation.ClickButton": "Prompts with a warning dialog where you click a button to delete.",
-    "azureResourceGroups.showHiddenTypes": "Show some ancillary resources that are created/managed by Azure infrastructure. Displaying them is typically useful when you want to clean up your resource groups or subscriptions."
+    "azureResourceGroups.reportIssue": "Report Issue...",
+    "azureResourceGroups.showHiddenTypes": "Show some ancillary resources that are created/managed by Azure infrastructure. Displaying them is typically useful when you want to clean up your resource groups or subscriptions.",
+    "ms-azuretools.getStarted": "Get Started...",
+    "ms-azuretools.helpAndFeedback": "Help and Feedback",
+    "ms-azuretools.reportIssue": "Report Issue...",
+    "ms-azuretools.reviewIssues": "Review Issues..."
 }
