@@ -99,7 +99,10 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
 
         const comment: string = localize('editAndSave', 'Edit and save this file to upload tags in Azure');
         if (Object.keys(tags).length === 0) {
-            tags[insertKeyHere] = insertValueHere;
+            // Make sure to use a new object here because of https://github.com/microsoft/vscode-azureresourcegroups/issues/54
+            tags = {
+                [insertKeyHere]: insertValueHere
+            };
         }
         return `// ${comment}${os.EOL}${JSON.stringify(tags, undefined, 4)}`;
     }
