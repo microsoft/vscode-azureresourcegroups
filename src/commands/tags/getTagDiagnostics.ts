@@ -27,6 +27,7 @@ class TagVisitor implements jsonc.JSONVisitor {
     private readonly _objectOpenBracketPositions: Position[] = [];
     private readonly _arrayOpenBracketPositions: Position[] = [];
     private _tagCount: number = 0;
+    private readonly _existingTags: string[] = [];
 
     /**
      * Invoked when an open brace is encountered and an object is started. The offset and length represent the location of the open brace.
@@ -94,6 +95,13 @@ class TagVisitor implements jsonc.JSONVisitor {
                 this.addError(range, error);
             }
 
+            if (this._existingTags.includes(property.toLowerCase())) {
+                const error: string = localize('tagNameAlreadyUsed', 'Tag name is already used. Tag names are case-insensitive.');
+                this.addError(range, error);
+            } else {
+                this._existingTags.push(property.toLowerCase());
+            }
+
             const maxTags: number = 50;
             if (this._tagCount > maxTags) {
                 this.addError(range, localize('tooManyTags', 'Only {0} tags are allowed.', maxTags));
@@ -128,6 +136,8 @@ class TagVisitor implements jsonc.JSONVisitor {
     }
 
     private addError(range: Range, error: string): void {
-        this.diagnostics.push(new Diagnostic(range, error));
+        const diagnostic: Diagnostic = new Diagnostic(range, error);
+        diagnostic.source = 'Azure';
+        this.diagnostics.push(diagnostic);
     }
 }
