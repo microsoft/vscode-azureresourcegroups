@@ -27,6 +27,7 @@ class TagVisitor implements jsonc.JSONVisitor {
     private readonly _objectOpenBracketPositions: Position[] = [];
     private readonly _arrayOpenBracketPositions: Position[] = [];
     private _tagCount: number = 0;
+    private _existingTags: string[] = [];
 
     /**
      * Invoked when an open brace is encountered and an object is started. The offset and length represent the location of the open brace.
@@ -92,6 +93,13 @@ class TagVisitor implements jsonc.JSONVisitor {
             if (matchingChars.length > 0) {
                 const error: string = localize('tagNameInvalidChars', 'Tag name cannot contain the following characters: {0}', invalidChars.join(', '));
                 this.addError(range, error);
+            }
+
+            if (this._existingTags.includes(property.toLowerCase())) {
+                const error: string = localize('tagNameInvalidChars', 'Tag name is already used. Tag names are case-insensitive.', invalidChars.join(', '));
+                this.addError(range, error);
+            } else {
+                this._existingTags.push(property.toLowerCase());
             }
 
             const maxTags: number = 50;
