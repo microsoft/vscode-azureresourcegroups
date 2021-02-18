@@ -29,10 +29,10 @@ export async function deleteResourceGroup(context: IActionContext, primaryNode?:
         } else {
             const enterToDelete: string = localize('enterToDelete', 'Enter "{0}" to delete this resource group and all its resources.', node.name);
             function validateInput(val: string | undefined): string | undefined {
-                return val === node.name ? undefined : enterToDelete;
+                return isNameEqual(val, node) ? undefined : enterToDelete;
             }
             const result: string = await context.ui.showInputBox({ prompt: enterToDelete, validateInput });
-            if (result !== node.name) { // Check again just in case `validateInput` didn't prevent the input box from closing
+            if (!isNameEqual(result, node)) { // Check again just in case `validateInput` didn't prevent the input box from closing
                 context.telemetry.properties.cancelStep = 'mismatchDelete';
                 throw new UserCancelledError();
             }
@@ -45,4 +45,8 @@ export async function deleteResourceGroup(context: IActionContext, primaryNode?:
         window.showInformationMessage(message);
         ext.outputChannel.appendLog(message);
     }
+}
+
+function isNameEqual(val: string | undefined, node: ResourceGroupTreeItem): boolean {
+    return !!val && val.toLowerCase() === node.name.toLowerCase();
 }
