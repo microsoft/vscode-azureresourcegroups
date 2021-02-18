@@ -27,7 +27,7 @@ class TagVisitor implements jsonc.JSONVisitor {
     private readonly _objectOpenBracketPositions: Position[] = [];
     private readonly _arrayOpenBracketPositions: Position[] = [];
     private _tagCount: number = 0;
-    private _existingTags: string[] = [];
+    private readonly _existingTags: string[] = [];
 
     /**
      * Invoked when an open brace is encountered and an object is started. The offset and length represent the location of the open brace.
