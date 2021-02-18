@@ -96,7 +96,7 @@ class TagVisitor implements jsonc.JSONVisitor {
             }
 
             if (this._existingTags.includes(property.toLowerCase())) {
-                const error: string = localize('tagNameInvalidChars', 'Tag name is already used. Tag names are case-insensitive.', invalidChars.join(', '));
+                const error: string = localize('tagNameAlreadyUsed', 'Tag name is already used. Tag names are case-insensitive.');
                 this.addError(range, error);
             } else {
                 this._existingTags.push(property.toLowerCase());
