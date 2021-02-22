@@ -6,7 +6,7 @@
 
 <!-- endregion exclude-from-marketplace -->
 
-View and manage Azure Resources directly from VS Code.
+View and manage Azure resources directly from VS Code.
 
 ![explorer](resources/readme/explorer.png)
 
