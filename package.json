@@ -321,9 +321,10 @@
     },
     "dependencies": {
         "@azure/arm-resources": "^3.0.0",
+        "@azure/arm-resources-profile-2020-09-01-hybrid": "^1.0.0",
         "fs-extra": "^8.1.0",
         "jsonc-parser": "^2.2.1",
-        "vscode-azureextensionui": "^0.39.1",
+        "vscode-azureextensionui": "^0.39.5",
         "vscode-nls": "^4.1.1"
     },
     "extensionDependencies": [
