@@ -314,7 +314,7 @@
         "tslint-microsoft-contrib": "^6.2.0",
         "typescript": "^3.8.3",
         "vsce": "^1.81.1",
-        "vscode-azureextensiondev": "^0.7.0",
+        "vscode-azureextensiondev": "^0.8.0",
         "vscode-test": "^1.3.0",
         "webpack": "^4.39.3",
         "webpack-cli": "^3.3.7"
@@ -324,7 +324,7 @@
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^1.0.0",
         "fs-extra": "^8.1.0",
         "jsonc-parser": "^2.2.1",
-        "vscode-azureextensionui": "^0.39.5",
+        "vscode-azureextensionui": "^0.40.1",
         "vscode-nls": "^4.1.1"
     },
     "extensionDependencies": [
