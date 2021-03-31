@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { commands, env, Uri } from "vscode";
+import { commands } from "vscode";
 import { IActionContext, IAzureQuickPickItem } from "vscode-azureextensionui";
 import { AzExtWrapper, getInstalledExtensionPicks } from "../../AzExtWrapper";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../utils/localize";
+import { openUrl } from '../../utils/openUrl';
 
 export async function reportIssue(context: IActionContext): Promise<void> {
     const picks: IAzureQuickPickItem<AzExtWrapper | undefined>[] = getInstalledExtensionPicks();
@@ -32,5 +33,5 @@ export async function reportIssue(context: IActionContext): Promise<void> {
 }
 
 async function openNewIssuePage(extensionName: string): Promise<void> {
-    await env.openExternal(Uri.parse(`https://github.com/microsoft/${extensionName}/issues/new`));
+    await openUrl(`https://github.com/microsoft/${extensionName}/issues/new`);
 }

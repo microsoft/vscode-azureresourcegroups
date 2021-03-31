@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { env, Uri } from "vscode";
 import { IActionContext, IAzureQuickPickItem } from "vscode-azureextensionui";
 import { AzExtWrapper, getAzureExtensions } from "../../AzExtWrapper";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../utils/localize";
 import { nonNullProp } from "../../utils/nonNull";
+import { openUrl } from '../../utils/openUrl';
 
 export async function getStarted(context: IActionContext): Promise<void> {
     const azExtensions: AzExtWrapper[] = getAzureExtensions();
@@ -28,5 +28,5 @@ export async function getStarted(context: IActionContext): Promise<void> {
     const placeHolder: string = localize('selectExtension', 'Select a getting started scenario');
     const extension: AzExtWrapper = (await ext.ui.showQuickPick(picks, { placeHolder, suppressPersistence: true })).data;
     context.telemetry.properties.extension = extension.name;
-    await env.openExternal(Uri.parse(nonNullProp(extension, 'tutorial').url));
+    await openUrl(nonNullProp(extension, 'tutorial').url);
 }
