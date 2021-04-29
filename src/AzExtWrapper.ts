@@ -6,7 +6,6 @@
 import { ResourceManagementModels } from "@azure/arm-resources";
 import { commands, Extension, extensions } from "vscode";
 import { IAzureQuickPickItem } from "vscode-azureextensionui";
-// tslint:disable-next-line: no-submodule-imports
 import { AzureExtensionApiProvider } from "vscode-azureextensionui/api";
 import { azureExtensions, IAzExtMetadata, IAzExtResourceType, IAzExtTutorial } from "./azureExtensions";
 
@@ -38,7 +37,6 @@ export class AzExtWrapper {
 
     constructor(data: IAzExtMetadata) {
         this._data = data;
-        // tslint:disable-next-line: strict-boolean-expressions
         this.id = `${data.publisher || 'ms-azuretools'}.${data.name}`;
         this._resourceTypes = data.resourceTypes.map(rt => {
             return typeof rt === 'object' ? rt : {

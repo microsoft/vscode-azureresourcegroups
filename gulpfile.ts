@@ -3,9 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// tslint:disable:no-console
-// tslint:disable:no-implicit-dependencies (this allows the use of dev dependencies)
-
 import * as fse from 'fs-extra';
 import * as gulp from 'gulp';
 import * as path from 'path';
@@ -25,7 +22,6 @@ async function prepareForWebpack(): Promise<void> {
 async function listIcons(): Promise<void> {
     const rootPath: string = path.join(__dirname, 'resources', 'providers');
     const subDirs: string[] = (await fse.readdir(rootPath)).filter(dir => dir.startsWith('microsoft.'));
-    // tslint:disable-next-line: no-constant-condition
     while (true) {
         const subDir: string | undefined = subDirs.pop();
         if (!subDir) {

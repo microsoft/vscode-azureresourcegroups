@@ -5,7 +5,6 @@
 
 import { commands, Extension } from 'vscode';
 import { IActionContext, parseError } from 'vscode-azureextensionui';
-// tslint:disable-next-line: no-submodule-imports
 import { AzureExtensionApi, AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
 import { AzExtWrapper, getAzureExtensions } from '../AzExtWrapper';
 import { ResourceTreeItem } from '../tree/ResourceTreeItem';

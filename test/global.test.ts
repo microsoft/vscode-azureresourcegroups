@@ -8,7 +8,7 @@ import { TestOutputChannel, TestUserInput } from 'vscode-azureextensiondev';
 import { ext, IActionContext } from '../extension.bundle';
 
 export let longRunningTestsEnabled: boolean;
-export let testUserInput: TestUserInput = new TestUserInput(vscode);
+export const testUserInput: TestUserInput = new TestUserInput(vscode);
 
 export function createTestActionContext(): IActionContext {
     return { telemetry: { properties: {}, measurements: {} }, errorHandling: { issueProperties: {} }, ui: testUserInput, valuesToMask: [] };
@@ -22,6 +22,5 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     ext.outputChannel = new TestOutputChannel();
     ext.ui = testUserInput;
 
-    // tslint:disable-next-line:strict-boolean-expressions
     longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '');
 });
