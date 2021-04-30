@@ -47,8 +47,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
             const message: string = isResourceGroup ?
                 localize('errorsExistGroup', 'Failed to upload tags for resource group "{0}".', node.name) :
                 localize('errorsExistResource', 'Failed to upload tags for resource "{0}".', node.name);
-            // don't wait
-            window.showErrorMessage(message, showErrors).then(async (result) => {
+            void window.showErrorMessage(message, showErrors).then(async (result) => {
                 if (result === showErrors) {
                     const openedUri: Uri | undefined = window.activeTextEditor?.document.uri;
                     if (!openedUri || originalUri.query !== openedUri.query) {
@@ -84,7 +83,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
             const updatedMessage: string = isResourceGroup ?
                 localize('updatedTagsGroup', 'Successfully updated tags for resource group "{0}".', node.name) :
                 localize('updatedTagsResource', 'Successfully updated tags for resource "{0}".', node.name);
-            window.showInformationMessage(updatedMessage);
+            void window.showInformationMessage(updatedMessage);
             ext.outputChannel.appendLog(updatedMessage);
         }
     }
@@ -94,7 +93,6 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
     }
 
     private getFileContentFromTags(tags: {} | undefined): string {
-        // tslint:disable-next-line: strict-boolean-expressions
         tags = tags || {};
 
         const comment: string = localize('editAndSave', 'Edit and save this file to upload tags in Azure');

@@ -17,6 +17,5 @@ export async function createResourceGroup(context: IActionContext, node?: Subscr
 
     const rgNode: ResourceGroupTreeItem = await node.createChild(context);
 
-    // don't wait
-    window.showInformationMessage(localize('createdRg', 'Created resource group "{0}".', rgNode.name));
+    void window.showInformationMessage(localize('createdRg', 'Created resource group "{0}".', rgNode.name));
 }
