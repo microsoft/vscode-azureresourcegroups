@@ -318,7 +318,7 @@
         "fs-extra": "^8.1.0",
         "jsonc-parser": "^2.2.1",
         "open": "^8.0.4",
-        "vscode-azureextensionui": "^0.41.3",
+        "vscode-azureextensionui": "^0.42.0",
         "vscode-nls": "^4.1.1"
     },
     "extensionDependencies": [
