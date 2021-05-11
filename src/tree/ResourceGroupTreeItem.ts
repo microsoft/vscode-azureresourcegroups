@@ -5,7 +5,7 @@
 
 import { ResourceManagementClient, ResourceManagementModels } from "@azure/arm-resources";
 import { FileChangeType } from "vscode";
-import { AzExtTreeItem, AzureParentTreeItem, TreeItemIconPath } from "vscode-azureextensionui";
+import { AzExtTreeItem, AzureParentTreeItem, IActionContext, TreeItemIconPath } from "vscode-azureextensionui";
 import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
@@ -49,6 +49,14 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
 
     public get iconPath(): TreeItemIconPath {
         return treeUtils.getIconPath('resourceGroup');
+    }
+
+    public async getNumOfResources(context: IActionContext): Promise<number> {
+        if (this.hasMoreChildrenImpl()) {
+            await this.loadAllChildren(context);
+        }
+
+        return (await this.getCachedChildren(context)).length;
     }
 
     public hasMoreChildrenImpl(): boolean {
