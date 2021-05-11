@@ -23,15 +23,21 @@ export async function deleteResourceGroup(context: IActionContext, primaryNode?:
 
     const deleteConfirmation: string | undefined = settingUtils.getWorkspaceSetting('deleteConfirmation');
     for (const node of selectedNodes) {
+        const numOfResources = await node.getNumOfResources(context);
+        const hasOneResource: boolean = numOfResources === 1;
+
         if (deleteConfirmation === 'ClickButton') {
-            const areYouSureDelete: string = localize('areYouSureDelete', 'Are you sure you want to delete resource group "{0}" and all its resources?', node.name);
-            await context.ui.showWarningMessage(areYouSureDelete, { modal: true }, { title: localize('delete', 'Delete') }); // no need to check result - cancel will throw error
+            const areYouSureDelete: string = localize('areYouSureDelete', 'Are you sure you want to delete resource group "{0}"? There are {1} resources in this resource group that will be deleted.', node.name, numOfResources);
+            const areYouSureDeleteOne: string = localize('areYouSureDeleteOne', 'Are you sure you want to delete resource group "{0}"? There is {1} resource in this resource group that will be deleted.', node.name, numOfResources);
+            await context.ui.showWarningMessage(hasOneResource ? areYouSureDeleteOne : areYouSureDelete, { modal: true }, { title: localize('delete', 'Delete') }); // no need to check result - cancel will throw error
         } else {
-            const enterToDelete: string = localize('enterToDelete', 'Enter "{0}" to delete this resource group and all its resources.', node.name);
+            const enterToDelete: string = localize('enterToDelete', 'Enter "{0}" to delete this resource group. There are {1} resources in this resource group that will be deleted.', node.name, numOfResources);
+            const enterToDeleteOne: string = localize('enterToDeleteOne', 'Enter "{0}" to delete this resource group. There is {1} resource in this resource group that will be deleted.', node.name, numOfResources);
+            const prompt = hasOneResource ? enterToDeleteOne : enterToDelete;
             function validateInput(val: string | undefined): string | undefined {
-                return isNameEqual(val, node) ? undefined : enterToDelete;
+                return isNameEqual(val, node) ? undefined : prompt;
             }
-            const result: string = await context.ui.showInputBox({ prompt: enterToDelete, validateInput });
+            const result: string = await context.ui.showInputBox({ prompt, validateInput });
             if (!isNameEqual(result, node)) { // Check again just in case `validateInput` didn't prevent the input box from closing
                 context.telemetry.properties.cancelStep = 'mismatchDelete';
                 throw new UserCancelledError();

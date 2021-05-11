@@ -5,7 +5,7 @@
 
 import { ResourceManagementClient, ResourceManagementModels } from "@azure/arm-resources";
 import { FileChangeType } from "vscode";
-import { AzExtTreeItem, AzureParentTreeItem, TreeItemIconPath } from "vscode-azureextensionui";
+import { AzExtTreeItem, AzureParentTreeItem, IActionContext, TreeItemIconPath } from "vscode-azureextensionui";
 import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
@@ -49,6 +49,17 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
 
     public get iconPath(): TreeItemIconPath {
         return treeUtils.getIconPath('resourceGroup');
+    }
+
+    public async getNumOfResources(context: IActionContext): Promise<number> {
+        // load/retrieve the first batch to check if there are more children
+        let resources = await this.getCachedChildren(context);
+
+        if (this.hasMoreChildrenImpl()) {
+            resources = await this.loadAllChildren(context);
+        }
+
+        return resources.length;
     }
 
     public hasMoreChildrenImpl(): boolean {
