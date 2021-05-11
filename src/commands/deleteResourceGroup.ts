@@ -26,10 +26,10 @@ export async function deleteResourceGroup(context: IActionContext, primaryNode?:
         const numOfResources = await node.getNumOfResources(context);
 
         if (deleteConfirmation === 'ClickButton') {
-            const areYouSureDelete: string = localize('areYouSureDelete', 'Are you sure you want to delete resource group "{0}". This will delete all {1} resource(s) in the resource group?', node.name, numOfResources);
+            const areYouSureDelete: string = localize('areYouSureDelete', 'Are you sure you want to delete resource group "{0}"? There are {1} resources in this resource group that will be deleted.', node.name, numOfResources);
             await context.ui.showWarningMessage(areYouSureDelete, { modal: true }, { title: localize('delete', 'Delete') }); // no need to check result - cancel will throw error
         } else {
-            const enterToDelete: string = localize('enterToDelete', 'Enter "{0}" to delete this resource group and all {1} resource(s) in the resource group.', node.name, numOfResources);
+            const enterToDelete: string = localize('enterToDelete', 'Enter "{0}" to delete this resource group. There are {1} resources in this resource group that will be deleted.', node.name, numOfResources);
             function validateInput(val: string | undefined): string | undefined {
                 return isNameEqual(val, node) ? undefined : enterToDelete;
             }
