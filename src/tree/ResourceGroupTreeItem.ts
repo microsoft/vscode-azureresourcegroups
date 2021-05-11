@@ -52,11 +52,14 @@ export class ResourceGroupTreeItem extends AzureParentTreeItem {
     }
 
     public async getNumOfResources(context: IActionContext): Promise<number> {
+        // load/retrieve the first batch to check if there are more children
+        let resources = await this.getCachedChildren(context);
+
         if (this.hasMoreChildrenImpl()) {
-            await this.loadAllChildren(context);
+            resources = await this.loadAllChildren(context);
         }
 
-        return (await this.getCachedChildren(context)).length;
+        return resources.length;
     }
 
     public hasMoreChildrenImpl(): boolean {
