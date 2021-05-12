@@ -1,8 +1,15 @@
 # Change Log
 
-## Unreleased
+## 0.4.0 - 2021-05-13
+
 ### Changed
+- Azure view icon to match new Azure Portal
 - Icons updated to match VS Code's theme. Install new product icon themes [here](https://marketplace.visualstudio.com/search?term=tag%3Aproduct-icon-theme&target=VSCode)
+- Delete resource group confirmation includes number of resources that will be deleted
+
+### Fixed
+- [Bugs fixed](https://github.com/microsoft/vscode-azureresourcegroups/milestone/8?closed=1)
+
 
 ## 0.3.0 - 2021-02-22
 
