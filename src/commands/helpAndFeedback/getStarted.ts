@@ -5,7 +5,6 @@
 
 import { IActionContext, IAzureQuickPickItem } from "vscode-azureextensionui";
 import { AzExtWrapper, getAzureExtensions } from "../../AzExtWrapper";
-import { ext } from "../../extensionVariables";
 import { localize } from "../../utils/localize";
 import { nonNullProp } from "../../utils/nonNull";
 import { openUrl } from '../../utils/openUrl';
@@ -26,7 +25,7 @@ export async function getStarted(context: IActionContext): Promise<void> {
     picks = picks.sort((a, b) => a.label.localeCompare(b.label));
 
     const placeHolder: string = localize('selectExtension', 'Select a getting started scenario');
-    const extension: AzExtWrapper = (await ext.ui.showQuickPick(picks, { placeHolder, suppressPersistence: true })).data;
+    const extension: AzExtWrapper = (await context.ui.showQuickPick(picks, { placeHolder, suppressPersistence: true })).data;
     context.telemetry.properties.extension = extension.name;
     await openUrl(nonNullProp(extension, 'tutorial').url);
 }
