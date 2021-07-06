@@ -6,7 +6,6 @@
 import { commands } from "vscode";
 import { IActionContext, IAzureQuickPickItem } from "vscode-azureextensionui";
 import { AzExtWrapper, getInstalledExtensionPicks } from "../../AzExtWrapper";
-import { ext } from "../../extensionVariables";
 import { localize } from "../../utils/localize";
 import { openUrl } from '../../utils/openUrl';
 
@@ -18,7 +17,7 @@ export async function reportIssue(context: IActionContext): Promise<void> {
     });
 
     const placeHolder: string = localize('selectExtension', 'Select the Azure extension you want to report an issue on');
-    const azExtension: AzExtWrapper | undefined = (await ext.ui.showQuickPick(picks, { placeHolder, suppressPersistence: true })).data;
+    const azExtension: AzExtWrapper | undefined = (await context.ui.showQuickPick(picks, { placeHolder, suppressPersistence: true })).data;
     if (azExtension) {
         context.telemetry.properties.extension = azExtension.name;
         const commandId: string | undefined = await azExtension.getReportIssueCommandId();
