@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { TestOutputChannel } from 'vscode-azureextensiondev';
-import { ext } from '../extension.bundle';
+import { TestOutputChannel, TestUserInput } from 'vscode-azureextensiondev';
+import { ext, registerOnActionStartHandler } from '../extension.bundle';
 
 export let longRunningTestsEnabled: boolean;
 
@@ -15,6 +15,11 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 
     await vscode.commands.executeCommand('azureResourceGroups.refresh'); // activate the extension before tests begin
     ext.outputChannel = new TestOutputChannel();
+
+    registerOnActionStartHandler(context => {
+        // Use `TestUserInput` by default so we get an error if an unexpected call to `context.ui` occurs, rather than timing out
+        context.ui = new TestUserInput(vscode);
+    });
 
     longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '');
 });

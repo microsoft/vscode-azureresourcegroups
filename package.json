@@ -307,7 +307,7 @@
         "ts-node": "^7.0.1",
         "typescript": "^3.8.3",
         "vsce": "^1.87.0",
-        "vscode-azureextensiondev": "^0.9.4",
+        "vscode-azureextensiondev": "^0.9.5",
         "vscode-test": "^1.5.2",
         "webpack": "^5.28.0",
         "webpack-cli": "^4.6.0"
@@ -318,7 +318,7 @@
         "fs-extra": "^8.1.0",
         "jsonc-parser": "^2.2.1",
         "open": "^8.0.4",
-        "vscode-azureextensionui": "^0.44.3",
+        "vscode-azureextensionui": "^0.45.0",
         "vscode-nls": "^4.1.1"
     },
     "extensionDependencies": [

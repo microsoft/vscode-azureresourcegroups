@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DiagnosticCollection, Disposable, ExtensionContext } from "vscode";
-import { AzExtTreeDataProvider, IAzExtOutputChannel, IAzureUserInput } from "vscode-azureextensionui";
+import { AzExtTreeDataProvider, IAzExtOutputChannel } from "vscode-azureextensionui";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 
 /**
@@ -15,7 +15,6 @@ export namespace ext {
     export let tree: AzExtTreeDataProvider;
     export let helpTree: AzExtTreeDataProvider;
     export let outputChannel: IAzExtOutputChannel;
-    export let ui: IAzureUserInput;
     export let ignoreBundle: boolean | undefined;
     export const prefix: string = 'azureResourceGroups';
 
