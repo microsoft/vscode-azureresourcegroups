@@ -15,13 +15,14 @@ export class ResourceTreeItem extends AzureTreeItem {
     public static contextValue: string = 'azureResource';
     public readonly contextValue: string = ResourceTreeItem.contextValue;
     public data: ResourceManagementModels.GenericResource;
-    public readonly commandId: string = 'azureResourceGroups.revealResource';
+
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
     constructor(parent: AzureParentTreeItem, resource: ResourceManagementModels.GenericResource) {
         super(parent);
         this.data = resource;
+        this.commandId = 'azureResourceGroups.revealResource';
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
