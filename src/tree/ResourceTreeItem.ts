@@ -6,12 +6,12 @@
 import { ResourceManagementModels } from "@azure/arm-resources";
 import * as path from 'path';
 import { FileChangeType } from "vscode";
-import { AzureParentTreeItem, AzureTreeItem, TreeItemIconPath } from "vscode-azureextensionui";
+import { AzExtParentTreeItem, AzExtTreeItem, TreeItemIconPath } from "vscode-azureextensionui";
 import { ext } from "../extensionVariables";
 import { nonNullProp } from "../utils/nonNull";
 import { treeUtils } from "../utils/treeUtils";
 
-export class ResourceTreeItem extends AzureTreeItem {
+export class ResourceTreeItem extends AzExtTreeItem {
     public static contextValue: string = 'azureResource';
     public readonly contextValue: string = ResourceTreeItem.contextValue;
     public data: ResourceManagementModels.GenericResource;
@@ -19,7 +19,7 @@ export class ResourceTreeItem extends AzureTreeItem {
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
-    constructor(parent: AzureParentTreeItem, resource: ResourceManagementModels.GenericResource) {
+    constructor(parent: AzExtParentTreeItem, resource: ResourceManagementModels.GenericResource) {
         super(parent);
         this.data = resource;
         this.commandId = 'azureResourceGroups.revealResource';

@@ -77,7 +77,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
                 delete tags[insertKeyHere];
             }
 
-            const client: ResourceManagementClient = await createResourceClient(node.root);
+            const client: ResourceManagementClient = await createResourceClient([context, node]);
             await client.tags.updateAtScope(node.id, { properties: { tags }, operation: 'Replace' });
 
             const updatedMessage: string = isResourceGroup ?
