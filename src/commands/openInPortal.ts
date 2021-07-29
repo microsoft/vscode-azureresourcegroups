@@ -13,5 +13,5 @@ export async function openInPortal(context: ui.IActionContext, node?: ResourceGr
         node = await ext.tree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, context);
     }
 
-    await ui.openInPortal(node.root, node.fullId);
+    await ui.openInPortal(node, node.fullId);
 }

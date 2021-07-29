@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceManagementClient, ResourceManagementModels } from '@azure/arm-resources';
-import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ICreateChildImplContext, IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
+import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
 import { createResourceClient } from '../utils/azureClients';
 import { localize } from '../utils/localize';
 import { nonNullProp } from '../utils/nonNull';
@@ -19,12 +19,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         return !!this._nextLink;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean): Promise<AzExtTreeItem[]> {
+    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         if (clearCache) {
             this._nextLink = undefined;
         }
 
-        const client: ResourceManagementClient = await createResourceClient(this.root);
+        const client: ResourceManagementClient = await createResourceClient([context, this]);
         const rgs: ResourceManagementModels.ResourceGroupListResult = this._nextLink ? await client.resourceGroups.listNext(this._nextLink) : await client.resourceGroups.list();
         this._nextLink = rgs.nextLink;
         return await this.createTreeItemsWithErrorHandling(
@@ -36,7 +36,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     }
 
     public async createChildImpl(context: ICreateChildImplContext): Promise<AzExtTreeItem> {
-        const wizardContext: IResourceGroupWizardContext = { ...context, ...this.root, suppress403Handling: true };
+        const wizardContext: IResourceGroupWizardContext = { ...context, ...this.subscription, suppress403Handling: true };
 
         const title: string = localize('createResourceGroup', 'Create Resource Group');
         const promptSteps: AzureWizardPromptStep<IResourceGroupWizardContext>[] = [new ResourceGroupNameStep()];
