@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Changed
+- Minimum version of VS Code is now 1.57.0
+
 ## 0.4.0 - 2021-05-13
 
 ### Changed
