@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { AzureExtensionApi, AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import { commands, Extension } from 'vscode';
-import { IActionContext, parseError } from 'vscode-azureextensionui';
-import { AzureExtensionApi, AzureExtensionApiProvider } from 'vscode-azureextensionui/api';
 import { AzExtWrapper, getAzureExtensions } from '../AzExtWrapper';
 import { ResourceTreeItem } from '../tree/ResourceTreeItem';
 import { viewProperties } from './viewProperties';

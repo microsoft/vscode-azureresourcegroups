@@ -3,23 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementModels } from "@azure/arm-resources";
+import { GenericResource } from "@azure/arm-resources";
+import { AzExtParentTreeItem, AzExtTreeItem, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { FileChangeType } from "vscode";
-import { AzExtParentTreeItem, AzExtTreeItem, TreeItemIconPath } from "vscode-azureextensionui";
 import { ext } from "../extensionVariables";
-import { nonNullProp } from "../utils/nonNull";
 import { treeUtils } from "../utils/treeUtils";
 
 export class ResourceTreeItem extends AzExtTreeItem {
     public static contextValue: string = 'azureResource';
     public readonly contextValue: string = ResourceTreeItem.contextValue;
-    public data: ResourceManagementModels.GenericResource;
+    public data: GenericResource;
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
-    constructor(parent: AzExtParentTreeItem, resource: ResourceManagementModels.GenericResource) {
+    constructor(parent: AzExtParentTreeItem, resource: GenericResource) {
         super(parent);
         this.data = resource;
         this.commandId = 'azureResourceGroups.revealResource';

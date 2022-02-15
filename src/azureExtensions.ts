@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementModels } from "@azure/arm-resources";
+import { GenericResource } from "@azure/arm-resources";
 import { localize } from "./utils/localize";
 
 export const azureExtensions: IAzExtMetadata[] = [
@@ -105,7 +105,7 @@ export interface IAzExtResourceType {
     /**
      * Only necessary if the resourceType itself isn't enough to identify the extension
      */
-    matchesResource(resource: ResourceManagementModels.GenericResource): boolean;
+    matchesResource(resource: GenericResource): boolean;
 }
 
 export interface IAzExtTutorial {
@@ -113,6 +113,6 @@ export interface IAzExtTutorial {
     url: string;
 }
 
-function isFunctionApp(resource: ResourceManagementModels.GenericResource): boolean {
+function isFunctionApp(resource: GenericResource): boolean {
     return !!resource.kind?.toLowerCase().includes('functionapp');
 }

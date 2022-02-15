@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementModels } from "@azure/arm-resources";
+import { GenericResource } from "@azure/arm-resources";
+import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
 import { commands, Extension, extensions } from "vscode";
-import { IAzureQuickPickItem } from "vscode-azureextensionui";
-import { AzureExtensionApiProvider } from "vscode-azureextensionui/api";
 import { azureExtensions, IAzExtMetadata, IAzExtResourceType, IAzExtTutorial } from "./azureExtensions";
 
 let wrappers: AzExtWrapper[] | undefined;
@@ -58,7 +58,7 @@ export class AzExtWrapper {
         return this._data.tutorial;
     }
 
-    public matchesResourceType(resource: ResourceManagementModels.GenericResource): boolean {
+    public matchesResourceType(resource: GenericResource): boolean {
         return this._resourceTypes.some(rt => {
             return rt.name === resource.type?.toLowerCase() && rt.matchesResource(resource);
         });

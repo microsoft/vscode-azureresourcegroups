@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
 import { ThemeIcon } from 'vscode';
-import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem, IActionContext } from 'vscode-azureextensionui';
 import { localize } from '../utils/localize';
 
 export class HelpTreeItem extends AzExtParentTreeItem {

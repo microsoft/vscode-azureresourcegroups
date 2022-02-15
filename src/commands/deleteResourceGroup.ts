@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
-import { IActionContext, UserCancelledError } from 'vscode-azureextensionui';
 import { ext } from '../extensionVariables';
 import { ResourceGroupTreeItem } from '../tree/ResourceGroupTreeItem';
 import { localize } from '../utils/localize';
