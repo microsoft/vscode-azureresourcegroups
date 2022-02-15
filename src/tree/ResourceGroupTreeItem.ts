@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementClient, ResourceManagementModels } from "@azure/arm-resources";
+import { GenericResourceExpanded, ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
+import { uiUtils } from "@microsoft/vscode-azext-azureutils";
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { FileChangeType } from "vscode";
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from "vscode-azureextensionui";
 import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
-import { nonNullProp } from "../utils/nonNull";
 import { settingUtils } from "../utils/settingUtils";
 import { treeUtils } from "../utils/treeUtils";
 import { ResourceTreeItem } from "./ResourceTreeItem";
@@ -18,13 +18,13 @@ export class ResourceGroupTreeItem extends AzExtParentTreeItem {
     public static contextValue: string = 'azureResourceGroup';
     public readonly contextValue: string = ResourceGroupTreeItem.contextValue;
     public readonly childTypeLabel: string = localize('resource', 'Resource');
-    public data: ResourceManagementModels.ResourceGroup;
+    public data: ResourceGroup;
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
     private _nextLink: string | undefined;
 
-    constructor(parent: AzExtParentTreeItem, rg: ResourceManagementModels.ResourceGroup) {
+    constructor(parent: AzExtParentTreeItem, rg: ResourceGroup) {
         super(parent);
         this.data = rg;
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
@@ -72,8 +72,8 @@ export class ResourceGroupTreeItem extends AzExtParentTreeItem {
         }
 
         const client: ResourceManagementClient = await createResourceClient([context, this]);
-        const resources: ResourceManagementModels.ResourceListResult = this._nextLink ? await client.resources.listByResourceGroupNext(this._nextLink) : await client.resources.listByResourceGroup(this.name);
-        this._nextLink = resources.nextLink;
+        // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
+        const resources: GenericResourceExpanded[] = await uiUtils.listAllIterator(client.resources.listByResourceGroup(this.name));
         return await this.createTreeItemsWithErrorHandling(
             resources,
             'invalidResource',
@@ -103,7 +103,7 @@ export class ResourceGroupTreeItem extends AzExtParentTreeItem {
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
         const client: ResourceManagementClient = await createResourceClient([context, this]);
-        await client.resourceGroups.deleteMethod(this.name);
+        await client.resourceGroups.beginDeleteAndWait(this.name);
         ext.outputChannel.appendLog(localize('deletedRg', 'Successfully deleted resource group "{0}".', this.name));
     }
 }

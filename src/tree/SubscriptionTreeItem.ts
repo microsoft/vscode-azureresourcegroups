@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementClient, ResourceManagementModels } from '@azure/arm-resources';
-import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from 'vscode-azureextensionui';
+import { ResourceGroup, ResourceManagementClient } from '@azure/arm-resources';
+import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { createResourceClient } from '../utils/azureClients';
 import { localize } from '../utils/localize';
-import { nonNullProp } from '../utils/nonNull';
 import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
@@ -25,8 +25,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         const client: ResourceManagementClient = await createResourceClient([context, this]);
-        const rgs: ResourceManagementModels.ResourceGroupListResult = this._nextLink ? await client.resourceGroups.listNext(this._nextLink) : await client.resourceGroups.list();
-        this._nextLink = rgs.nextLink;
+        // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
+        const rgs: ResourceGroup[] = await uiUtils.listAllIterator(client.resourceGroups.list());
         return await this.createTreeItemsWithErrorHandling(
             rgs,
             'invalidResourceGroup',

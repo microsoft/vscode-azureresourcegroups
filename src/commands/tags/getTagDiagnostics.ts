@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as jsonc from 'jsonc-parser';
 import { Diagnostic, Position, Range } from "vscode";
 import { localize } from "../../utils/localize";
-import { nonNullValue } from "../../utils/nonNull";
 
 export function getTagDiagnostics(text: string): Diagnostic[] {
     const visitor: TagVisitor = new TagVisitor();

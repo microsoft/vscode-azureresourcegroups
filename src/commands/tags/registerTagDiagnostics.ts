@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, IActionContext, registerEvent } from "@microsoft/vscode-azext-utils";
 import { Diagnostic, languages, TextDocument, TextDocumentChangeEvent, TextEditor, window, workspace } from "vscode";
-import { callWithTelemetryAndErrorHandling, IActionContext, registerEvent } from "vscode-azureextensionui";
 import { ext } from "../../extensionVariables";
 import { getTagDiagnostics } from "./getTagDiagnostics";
 import { TagFileSystem } from "./TagFileSystem";

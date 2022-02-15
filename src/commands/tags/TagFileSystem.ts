@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceManagementClient } from "@azure/arm-resources";
+import { AzExtTreeFileSystem, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as jsonc from 'jsonc-parser';
 import * as os from "os";
 import { commands, Diagnostic, DiagnosticSeverity, FileStat, FileType, languages, MessageItem, Uri, window } from "vscode";
-import { AzExtTreeFileSystem, IActionContext } from 'vscode-azureextensionui';
 import { ext } from "../../extensionVariables";
 import { ResourceGroupTreeItem } from "../../tree/ResourceGroupTreeItem";
 import { ResourceTreeItem } from "../../tree/ResourceTreeItem";
@@ -78,7 +78,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
             }
 
             const client: ResourceManagementClient = await createResourceClient([context, node]);
-            await client.tags.updateAtScope(node.id, { properties: { tags }, operation: 'Replace' });
+            await client.tagsOperations.updateAtScope(node.id, { properties: { tags }, operation: 'Replace' });
 
             const updatedMessage: string = isResourceGroup ?
                 localize('updatedTagsGroup', 'Successfully updated tags for resource group "{0}".', node.name) :

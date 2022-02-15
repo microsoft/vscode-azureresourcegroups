@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtTreeDataProvider, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
 import { DiagnosticCollection, Disposable, ExtensionContext } from "vscode";
-import { AzExtTreeDataProvider, IAzExtOutputChannel } from "vscode-azureextensionui";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 
 /**

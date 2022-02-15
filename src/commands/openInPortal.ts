@@ -3,15 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as ui from 'vscode-azureextensionui';
+import { openInPortal as uiOpenInPortal } from '@microsoft/vscode-azext-azureutils';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../extensionVariables';
 import { ResourceGroupTreeItem } from '../tree/ResourceGroupTreeItem';
 import { ResourceTreeItem } from '../tree/ResourceTreeItem';
 
-export async function openInPortal(context: ui.IActionContext, node?: ResourceGroupTreeItem | ResourceTreeItem): Promise<void> {
+export async function openInPortal(context: IActionContext, node?: ResourceGroupTreeItem | ResourceTreeItem): Promise<void> {
     if (!node) {
         node = await ext.tree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, context);
     }
 
-    await ui.openInPortal(node, node.fullId);
+    await uiOpenInPortal(node, node.fullId);
 }
