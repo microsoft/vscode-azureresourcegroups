@@ -13,6 +13,8 @@ export class AzureAccountTreeItem extends AzureAccountTreeItemBase {
     }
 
     public createSubscriptionTreeItem(root: ISubscriptionContext): SubscriptionTreeItem {
-        return new SubscriptionTreeItem(this, root);
+        const subTree = new SubscriptionTreeItem(this, root)
+        subTree.registerRefreshEvents();
+        return subTree;
     }
 }

@@ -11,6 +11,7 @@ export async function configureExplorer(context: IActionContext): Promise<void> 
     const value = await context.ui.showQuickPick([
         { label: localize('groupBy.label', 'Resource Groups') },
         { label: 'Resource Types' },
+        { label: 'Location' },
     ], {})
 
     await settingUtils.updateGlobalSetting('groupBy', value.label);
