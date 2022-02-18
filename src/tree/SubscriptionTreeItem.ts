@@ -3,17 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceGroup, ResourceManagementClient } from '@azure/arm-resources';
+import { Resource, ResourceManagementClient } from '@azure/arm-resources';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { createResourceClient } from '../utils/azureClients';
 import { localize } from '../utils/localize';
+import { settingUtils } from '../utils/settingUtils';
 import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
+import { ResourceTreeItem } from './ResourceTreeItem';
+import { ResourceTypeGroupTreeItem } from './ResourceTypeGroupTreeItem';
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public readonly childTypeLabel: string = localize('resourceGroup', 'Resource Group');
 
     private _nextLink: string | undefined;
+    private _items: AzExtTreeItem[];
+
+    public constructor(parent: AzExtParentTreeItem, subscription: ISubscriptionContext) {
+        super(parent, subscription);
+        this._items = [];
+    }
 
     public hasMoreChildrenImpl(): boolean {
         return !!this._nextLink;
@@ -26,13 +35,54 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         const client: ResourceManagementClient = await createResourceClient([context, this]);
         // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
-        const rgs: ResourceGroup[] = await uiUtils.listAllIterator(client.resourceGroups.list());
-        return await this.createTreeItemsWithErrorHandling(
+
+        const rgs: Resource[] = await uiUtils.listAllIterator(client.resources.list());
+        const rgsItem: ResourceTreeItem[] = <ResourceTreeItem[]>await this.createTreeItemsWithErrorHandling(
             rgs,
-            'invalidResourceGroup',
-            rg => new ResourceGroupTreeItem(this, rg),
+            'invalidResource',
+            rg => new ResourceTreeItem(this, rg),
             rg => rg.name
         );
+
+        // move this code to somewhere to only update the UI otherwise we'll have to load all the children again
+        const treeMap: { [key: string]: AzExtTreeItem | number } = {};
+        // eslint-disable-next-line no-constant-condition
+        if (settingUtils.getGlobalSetting<string>('groupBy') === 'Resource Types') {
+            for (const rg of rgsItem) {
+                if (!treeMap[rg.subGroupConfig.resourceType.label]) {
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                    const tree = new ResourceTypeGroupTreeItem(this, rg.subGroupConfig.resourceType.label);
+                    treeMap[rg.subGroupConfig.resourceType.label] = tree;
+                    this._items.push(tree);
+                }
+
+                (<ResourceTypeGroupTreeItem>treeMap[rg.subGroupConfig.resourceType.label]).items.push(rg);
+            }
+        } else {
+            for (const rg of rgsItem) {
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                if (!treeMap[rg.subGroupConfig.resourceGroup.id!]) {
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                    treeMap[rg.subGroupConfig.resourceGroup.id!] = 0;
+                }
+            }
+
+            await Promise.all(Object.keys(treeMap).map(async id => {
+                if (!treeMap[id]) {
+                    const group = await client.resourceGroups.get(id.split('/')[4]);
+                    const rgTree = new ResourceGroupTreeItem(this, group);
+                    treeMap[id] = rgTree;
+                    this._items.push(rgTree);
+                }
+            }));
+
+            for (const rg of rgsItem) {
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                (<ResourceGroupTreeItem>treeMap[rg.subGroupConfig.resourceGroup.id!]).items.push(rg);
+            }
+        }
+
+        return <AzExtTreeItem[]>Object.values(treeMap);
     }
 
     public async createChildImpl(context: ICreateChildImplContext): Promise<AzExtTreeItem> {

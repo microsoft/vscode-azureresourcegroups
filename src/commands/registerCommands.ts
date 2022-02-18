@@ -6,6 +6,7 @@
 import { AzExtTreeItem, IActionContext, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
+import { configureExplorer } from './configureExplorer';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroup } from './deleteResourceGroup';
 import { getStarted } from './helpAndFeedback/getStarted';
@@ -35,4 +36,5 @@ export function registerCommands(): void {
     // Suppress "Report an Issue" button for all errors in favor of the command
     registerErrorHandler(c => c.errorHandling.suppressReportIssue = true);
     registerReportIssueCommand('azureResourceGroups.reportIssue');
+    registerCommand('azureResourceGroups.configureExplorer', configureExplorer);
 }

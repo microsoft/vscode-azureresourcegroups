@@ -17,5 +17,6 @@
     "ms-azuretools.getStarted": "Get Started...",
     "ms-azuretools.helpAndFeedback": "Help and Feedback",
     "ms-azuretools.reportIssue": "Report Issue...",
-    "ms-azuretools.reviewIssues": "Review Issues..."
+    "ms-azuretools.reviewIssues": "Review Issues...",
+    "azureResourceGroups.configureExplorer": "Configure Explorer..."
 }

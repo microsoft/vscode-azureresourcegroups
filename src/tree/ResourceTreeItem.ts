@@ -7,10 +7,12 @@ import { GenericResource } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { FileChangeType } from "vscode";
+import { GroupableApplicationResource, TreeNodeConfiguration } from "../api";
 import { ext } from "../extensionVariables";
+import { getResourceGroupFromId } from "../utils/azureUtils";
 import { treeUtils } from "../utils/treeUtils";
 
-export class ResourceTreeItem extends AzExtTreeItem {
+export class ResourceTreeItem extends AzExtTreeItem implements GroupableApplicationResource {
     public static contextValue: string = 'azureResource';
     public readonly contextValue: string = ResourceTreeItem.contextValue;
     public data: GenericResource;
@@ -18,10 +20,22 @@ export class ResourceTreeItem extends AzExtTreeItem {
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
+    public rootGroupConfig: TreeNodeConfiguration;
+    public subGroupConfig: {
+        resourceGroup: TreeNodeConfiguration;
+        resourceType: TreeNodeConfiguration;
+    };
+
     constructor(parent: AzExtParentTreeItem, resource: GenericResource) {
         super(parent);
         this.data = resource;
         this.commandId = 'azureResourceGroups.revealResource';
+        this.rootGroupConfig = parent;
+        const id = nonNullProp(resource, 'id');
+        this.subGroupConfig = {
+            resourceGroup: { label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
+            resourceType: { label: resource.type?.toLowerCase() || 'unknown', id: resource.type?.toLowerCase() || 'unknown' }
+        };
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
@@ -65,7 +79,7 @@ export class ResourceTreeItem extends AzExtTreeItem {
 }
 
 // Execute `npm run listIcons` from root of repo to re-generate this list after adding an icon
-const supportedIconTypes: string[] = [
+export const supportedIconTypes: string[] = [
     'microsoft.web/functionapp',
     'microsoft.web/hostingenvironments',
     'microsoft.web/kubeenvironments',

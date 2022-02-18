@@ -3,65 +3,61 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
-import { FileChangeType } from "vscode";
-import { ext } from "../extensionVariables";
-import { createResourceClient } from "../utils/azureClients";
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
-import { ResourceTreeItem } from "./ResourceTreeItem";
+import { ResourceTreeItem, supportedIconTypes } from "./ResourceTreeItem";
+import path = require("path");
 
-export class ResourceGroupTreeItem extends AzExtParentTreeItem {
-    public static contextValue: string = 'azureResourceGroup';
-    public readonly contextValue: string = ResourceGroupTreeItem.contextValue;
+export class ResourceTypeGroupTreeItem extends AzExtParentTreeItem {
+    public static contextValue: string = 'azureResourceTypeGroup';
+    public readonly contextValue: string = ResourceTypeGroupTreeItem.contextValue;
     public readonly childTypeLabel: string = localize('resource', 'Resource');
-    public data: ResourceGroup;
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
     public items: ResourceTreeItem[];
+    public type: string;
 
     private _nextLink: string | undefined;
 
-    constructor(parent: AzExtParentTreeItem, rg: ResourceGroup) {
+    constructor(parent: AzExtParentTreeItem, type: string) {
         super(parent);
-        this.data = rg;
+        this.type = type;
         this.items = [];
-
-        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
     public get name(): string {
-        return nonNullProp(this.data, 'name');
+        return this.type;
     }
 
     public get id(): string {
-        return nonNullProp(this.data, 'id');
+        return this.type;
     }
 
     public get label(): string {
-        return this.name;
-    }
-
-    public get description(): string | undefined {
-        const state: string | undefined = this.data.properties?.provisioningState;
-        return state?.toLowerCase() === 'succeeded' ? undefined : state;
+        return this.type;
     }
 
     public get iconPath(): TreeItemIconPath {
-        return treeUtils.getIconPath('resourceGroup');
-    }
-
-    public async getNumOfResources(context: IActionContext): Promise<number> {
-        // load/retrieve the first batch to check if there are more children
-        let resources = await this.getCachedChildren(context);
-
-        if (this.hasMoreChildrenImpl()) {
-            resources = await this.loadAllChildren(context);
+        let iconName: string;
+        const rType: string | undefined = this.type.toLowerCase();
+        if (rType && supportedIconTypes.includes(rType)) {
+            iconName = rType;
+            switch (rType) {
+                case 'microsoft.web/sites':
+                    if (this.label?.toLowerCase().includes('functionapp')) {
+                        iconName = iconName.replace('sites', 'functionapp');
+                    }
+                    break;
+                default:
+            }
+            iconName = path.join('providers', iconName);
+        } else {
+            iconName = 'resource';
         }
 
-        return resources.length;
+        return treeUtils.getIconPath(iconName);
     }
 
     public hasMoreChildrenImpl(): boolean {
@@ -95,18 +91,5 @@ export class ResourceGroupTreeItem extends AzExtParentTreeItem {
         //     },
         //     resource => resource.name
         // );
-    }
-
-    public async refreshImpl(context: IActionContext): Promise<void> {
-        const client: ResourceManagementClient = await createResourceClient([context, this]);
-        this.data = await client.resourceGroups.get(this.name);
-        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
-        this.mTime = Date.now();
-    }
-
-    public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        const client: ResourceManagementClient = await createResourceClient([context, this]);
-        await client.resourceGroups.beginDeleteAndWait(this.name);
-        ext.outputChannel.appendLog(localize('deletedRg', 'Successfully deleted resource group "{0}".', this.name));
     }
 }

@@ -115,6 +115,12 @@
                 "command": "ms-azuretools.reviewIssues",
                 "title": "%ms-azuretools.reviewIssues%",
                 "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.configureExplorer",
+                "title": "%azureResourceGroups.configureExplorer%",
+                "category": "Azure Resource Groups",
+                "icon": "$(settings-gear)"
             }
         ],
         "viewsContainers": {
@@ -151,6 +157,11 @@
                     "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@2"
+                },
+                {
+                    "command": "azureResourceGroups.configureExplorer",
+                    "when": "view == azureResourceGroups",
+                    "group": "navigation@3"
                 }
             ],
             "view/item/context": [
@@ -268,6 +279,11 @@
                         "type": "boolean",
                         "description": "%azureResourceGroups.showHiddenTypes%",
                         "default": false
+                    },
+                    "azureResourceGroups.groupBy": {
+                        "type": "string",
+                        "description": "%azureResourceGroups.showHiddenTypes%",
+                        "default": "Resource Groups"
                     }
                 }
             }
