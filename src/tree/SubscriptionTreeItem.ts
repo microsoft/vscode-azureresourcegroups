@@ -3,21 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Resource, ResourceManagementClient } from '@azure/arm-resources';
-import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { GenericResource } from '@azure/arm-resources';
+import { ResourceManagementClient } from '@azure/arm-resources-profile-2020-09-01-hybrid';
+import { createAzureClient, IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
-import { createResourceClient } from '../utils/azureClients';
+import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
+import { ResolvableTreeItem } from './ResolvableTreeItem';
 import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
 import { ResourceTreeItem } from './ResourceTreeItem';
 import { ResourceTypeGroupTreeItem } from './ResourceTypeGroupTreeItem';
+
+const resolvables: Record<string, ResolvableTreeItem> = {};
+let rgsItem: GenericResource[] = [];
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public readonly childTypeLabel: string = localize('resourceGroup', 'Resource Group');
 
     private _nextLink: string | undefined;
     private _items: AzExtTreeItem[];
+
 
     public constructor(parent: AzExtParentTreeItem, subscription: ISubscriptionContext) {
         super(parent, subscription);
@@ -31,39 +37,45 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         if (clearCache) {
             this._nextLink = undefined;
+            rgsItem = [];
         }
 
-        const client: ResourceManagementClient = await createResourceClient([context, this]);
-        // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
+        const client: ResourceManagementClient = createAzureClient([context, this], ResourceManagementClient);
+        if (rgsItem.length === 0) {
+            rgsItem.push(...(await applicationResourceProviders[0]?.provideResources(this.subscription) ?? []));
+        }
+        // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
 
-        const rgs: Resource[] = await uiUtils.listAllIterator(client.resources.list());
-        const rgsItem: ResourceTreeItem[] = <ResourceTreeItem[]>await this.createTreeItemsWithErrorHandling(
-            rgs,
-            'invalidResource',
-            rg => new ResourceTreeItem(this, rg),
-            rg => rg.name
-        );
+        const proxyItems = rgsItem.map((resource: GenericResource) => {
+            const resourceId = nonNullProp(resource, 'id');
+            if (!resolvables[resourceId]) {
+                const resolvable = ResourceTreeItem.Create(this, resource);
+                resolvables[resourceId] ??= resolvable;
+                return resolvable;
+            }
+            return resolvables[resourceId];
+        });
 
         // move this code to somewhere to only update the UI otherwise we'll have to load all the children again
-        const treeMap: { [key: string]: AzExtTreeItem | number } = {};
+        const treeMap: { [key: string]: AzExtParentTreeItem | number } = {};
         // eslint-disable-next-line no-constant-condition
         if (settingUtils.getGlobalSetting<string>('groupBy') === 'Resource Types') {
-            for (const rg of rgsItem) {
-                if (!treeMap[rg.subGroupConfig.resourceType.label]) {
+            for (const rg of proxyItems) {
+                if (!treeMap[rg.groupConfig.resourceType.label]) {
                     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                    const tree = new ResourceTypeGroupTreeItem(this, rg.subGroupConfig.resourceType.label);
-                    treeMap[rg.subGroupConfig.resourceType.label] = tree;
+                    const tree = new ResourceTypeGroupTreeItem(this, rg.groupConfig.resourceType.label);
+                    treeMap[rg.groupConfig.resourceType.label] = tree;
                     this._items.push(tree);
                 }
 
-                (<ResourceTypeGroupTreeItem>treeMap[rg.subGroupConfig.resourceType.label]).items.push(rg);
+                (<ResourceTypeGroupTreeItem>treeMap[rg.groupConfig.resourceType.label]).items.push(rg);
             }
         } else {
-            for (const rg of rgsItem) {
+            for (const rg of proxyItems) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                if (!treeMap[rg.subGroupConfig.resourceGroup.id!]) {
+                if (!treeMap[rg.groupConfig.resourceGroup.id!]) {
                     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                    treeMap[rg.subGroupConfig.resourceGroup.id!] = 0;
+                    treeMap[rg.groupConfig.resourceGroup.id!] = 0;
                 }
             }
 
@@ -76,9 +88,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
                 }
             }));
 
-            for (const rg of rgsItem) {
+            for (const rg of proxyItems) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                (<ResourceGroupTreeItem>treeMap[rg.subGroupConfig.resourceGroup.id!]).items.push(rg);
+                (<ResourceGroupTreeItem>treeMap[rg.groupConfig.resourceGroup.id!]).items.push(rg);
             }
         }
 

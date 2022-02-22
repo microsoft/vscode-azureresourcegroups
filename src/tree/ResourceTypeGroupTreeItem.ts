@@ -6,7 +6,8 @@
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
-import { ResourceTreeItem, supportedIconTypes } from "./ResourceTreeItem";
+import { ResolvableTreeItem } from "./ResolvableTreeItem";
+import { supportedIconTypes } from "./ResourceTreeItem";
 import path = require("path");
 
 export class ResourceTypeGroupTreeItem extends AzExtParentTreeItem {
@@ -16,7 +17,7 @@ export class ResourceTypeGroupTreeItem extends AzExtParentTreeItem {
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
-    public items: ResourceTreeItem[];
+    public items: ResolvableTreeItem[];
     public type: string;
 
     private _nextLink: string | undefined;
@@ -65,6 +66,10 @@ export class ResourceTypeGroupTreeItem extends AzExtParentTreeItem {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
+        this.items.forEach((res) => void res.resolve(_clearCache, _context));
+
+        // const resolves = this.items.map(async (resolvable) => await resolvable.resolve(_clearCache, _context));
+        // await Promise.all(resolves);
         return this.items;
         // if (clearCache) {
         //     this._nextLink = undefined;

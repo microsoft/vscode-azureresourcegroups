@@ -10,7 +10,7 @@ import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
-import { ResourceTreeItem } from "./ResourceTreeItem";
+import { ResolvableTreeItem } from "./ResolvableTreeItem";
 
 export class ResourceGroupTreeItem extends AzExtParentTreeItem {
     public static contextValue: string = 'azureResourceGroup';
@@ -20,7 +20,7 @@ export class ResourceGroupTreeItem extends AzExtParentTreeItem {
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
-    public items: ResourceTreeItem[];
+    public items: ResolvableTreeItem[];
 
     private _nextLink: string | undefined;
 
@@ -69,6 +69,9 @@ export class ResourceGroupTreeItem extends AzExtParentTreeItem {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
+        this.items.forEach((res) => void res.resolve(_clearCache, _context));
+        // const resolves = this.items.map(async (resolvable) => await resolvable.resolve(_clearCache, _context));
+        // await Promise.all(resolves);
         return this.items;
         // if (clearCache) {
         //     this._nextLink = undefined;

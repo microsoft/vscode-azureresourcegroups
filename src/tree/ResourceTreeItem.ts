@@ -4,15 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { GenericResource } from "@azure/arm-resources";
-import { AzExtParentTreeItem, AzExtTreeItem, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { FileChangeType } from "vscode";
 import { GroupableApplicationResource, TreeNodeConfiguration } from "../api";
 import { ext } from "../extensionVariables";
 import { getResourceGroupFromId } from "../utils/azureUtils";
 import { treeUtils } from "../utils/treeUtils";
+import { ResolvableTreeItem } from "./ResolvableTreeItem";
 
-export class ResourceTreeItem extends AzExtTreeItem implements GroupableApplicationResource {
+export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApplicationResource {
+    public hasMoreChildrenImpl(): boolean {
+        return false;
+    }
+
     public static contextValue: string = 'azureResource';
     public readonly contextValue: string = ResourceTreeItem.contextValue;
     public data: GenericResource;
@@ -21,22 +26,46 @@ export class ResourceTreeItem extends AzExtTreeItem implements GroupableApplicat
     public mTime: number = Date.now();
 
     public rootGroupConfig: TreeNodeConfiguration;
-    public subGroupConfig: {
+    public groupConfig: {
         resourceGroup: TreeNodeConfiguration;
         resourceType: TreeNodeConfiguration;
     };
 
-    constructor(parent: AzExtParentTreeItem, resource: GenericResource) {
+    private constructor(parent: AzExtParentTreeItem, resource: GenericResource) {
         super(parent);
         this.data = resource;
         this.commandId = 'azureResourceGroups.revealResource';
         this.rootGroupConfig = parent;
         const id = nonNullProp(resource, 'id');
-        this.subGroupConfig = {
+        this.groupConfig = {
             resourceGroup: { label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
             resourceType: { label: resource.type?.toLowerCase() || 'unknown', id: resource.type?.toLowerCase() || 'unknown' }
         };
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+    }
+
+    public static Create(parent: AzExtParentTreeItem, resource: GenericResource): ResolvableTreeItem {
+
+        const resolvable = new ResourceTreeItem(parent, resource);
+
+        const providerHandler: ProxyHandler<ResolvableTreeItem> = {
+            get: (target: ResolvableTreeItem, name: string) => {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+                return resolvable?.treeItem?.[name] ?? target[name];
+            },
+            set: (target: ResolvableTreeItem, name: string, value: any) => {
+                // if resolvable.treeItem is defined and it property is writeable then set it
+                if (resolvable.treeItem && Object.getOwnPropertyDescriptor(resolvable.treeItem, name)?.writable) {
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                    resolvable.treeItem[name] = value;
+                    return true;
+                }
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                target[name] = value;
+                return true;
+            }
+        }
+        return new Proxy(resolvable, providerHandler);
     }
 
     public get name(): string {

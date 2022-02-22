@@ -7,8 +7,11 @@
 
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
-import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
+import { AzureExtensionApi, AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
+import { registerApplicationResourceProvider } from './api/registerApplicationResourceProvider';
+import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
+import { AzureResourceProvider } from './AzureResourceProvider';
 import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
@@ -43,9 +46,16 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(vscode.window.createTreeView('ms-azuretools.helpAndFeedback', { treeDataProvider: ext.helpTree }));
 
         registerCommands();
+
+        registerApplicationResourceProvider(new AzureResourceProvider());
     });
 
-    return createApiProvider([]);
+    return createApiProvider([
+        <AzureExtensionApi>{
+            apiVersion: '0.0.1',
+            registerApplicationResourceResolver
+        }
+    ]);
 }
 
 export function deactivateInternal(): void {
