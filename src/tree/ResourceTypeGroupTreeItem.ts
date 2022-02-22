@@ -8,6 +8,7 @@ import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
 import { ResolvableTreeItem } from "./ResolvableTreeItem";
 import { supportedIconTypes } from "./ResourceTreeItem";
+import { ShallowResourceTreeItem } from "./ShallowResourceTreeItem";
 import path = require("path");
 
 export class ResourceTypeGroupTreeItem extends AzExtParentTreeItem {
@@ -17,7 +18,7 @@ export class ResourceTypeGroupTreeItem extends AzExtParentTreeItem {
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
-    public items: ResolvableTreeItem[];
+    public items: (ResolvableTreeItem | ShallowResourceTreeItem)[];
     public type: string;
 
     private _nextLink: string | undefined;
@@ -66,7 +67,11 @@ export class ResourceTypeGroupTreeItem extends AzExtParentTreeItem {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        this.items.forEach((res) => void res.resolve(_clearCache, _context));
+        this.items.forEach((res) => {
+            if (res instanceof ResolvableTreeItem) {
+                void res.resolve(_clearCache, _context)
+            }
+        });
 
         // const resolves = this.items.map(async (resolvable) => await resolvable.resolve(_clearCache, _context));
         // await Promise.all(resolves);

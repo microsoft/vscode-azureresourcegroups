@@ -2,8 +2,9 @@ import { GenericResource } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, InvalidTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ApplicationResource, ApplicationResourceResolver, GroupingConfig, ResolveResult } from "../api";
 import { applicationResourceResolvers } from "../api/registerApplicationResourceResolver";
+import { InstallableResourceTreeItem } from "./InstallableResourceTreeItem";
 
-export abstract class ResolvableTreeItem extends AzExtParentTreeItem implements ApplicationResource {
+export abstract class ResolvableTreeItem extends AzExtTreeItem implements ApplicationResource {
 
     public hasMoreChildrenImpl(): boolean {
         return false;
@@ -13,13 +14,13 @@ export abstract class ResolvableTreeItem extends AzExtParentTreeItem implements 
 
     public resolveResult: ResolveResult | undefined | null;
 
-    public treeItem: AzExtParentTreeItem | undefined;
+    public treeItem: AzExtTreeItem | undefined;
 
     public data: GenericResource;
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         await this.resolve(clearCache, context);
-        if (this.treeItem) {
+        if (this.treeItem && this.treeItem instanceof AzExtParentTreeItem) {
             return await this.treeItem.loadMoreChildrenImpl(clearCache, context);
         } else {
             return [];
@@ -60,6 +61,17 @@ export abstract class ResolvableTreeItem extends AzExtParentTreeItem implements 
     }
 
     private getResolver(): ApplicationResourceResolver | undefined {
-        return applicationResourceResolvers[nonNullProp(this.data, 'type')];
+        const resolver = applicationResourceResolvers[nonNullProp(this.data, 'type')];
+        if (resolver) {
+            return resolver;
+        }
+
+        return {
+            resolveResource: async (sub, resource): Promise<ResolveResult> => {
+                return {
+                    treeItem: (parent) => new InstallableResourceTreeItem(parent, resource),
+                }
+            }
+        }
     }
 }

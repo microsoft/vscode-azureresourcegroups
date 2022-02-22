@@ -11,6 +11,7 @@ import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
 import { ResolvableTreeItem } from "./ResolvableTreeItem";
+import { ShallowResourceTreeItem } from "./ShallowResourceTreeItem";
 
 export class ResourceGroupTreeItem extends AzExtParentTreeItem {
     public static contextValue: string = 'azureResourceGroup';
@@ -20,7 +21,7 @@ export class ResourceGroupTreeItem extends AzExtParentTreeItem {
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
-    public items: ResolvableTreeItem[];
+    public items: (ResolvableTreeItem | ShallowResourceTreeItem)[];
 
     private _nextLink: string | undefined;
 
@@ -69,7 +70,11 @@ export class ResourceGroupTreeItem extends AzExtParentTreeItem {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        this.items.forEach((res) => void res.resolve(_clearCache, _context));
+        this.items.forEach((res) => {
+            if (res instanceof ResolvableTreeItem) {
+                void res.resolve(_clearCache, _context)
+            }
+        });
         // const resolves = this.items.map(async (resolvable) => await resolvable.resolve(_clearCache, _context));
         // await Promise.all(resolves);
         return this.items;
@@ -111,5 +116,17 @@ export class ResourceGroupTreeItem extends AzExtParentTreeItem {
         const client: ResourceManagementClient = await createResourceClient([context, this]);
         await client.resourceGroups.beginDeleteAndWait(this.name);
         ext.outputChannel.appendLog(localize('deletedRg', 'Successfully deleted resource group "{0}".', this.name));
+    }
+
+    public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {
+        if ((item1 as AzExtParentTreeItem).loadMoreChildrenImpl && (item2 as AzExtParentTreeItem).loadMoreChildrenImpl) {
+            return super.compareChildrenImpl(item1, item2);
+        } else if ((item1 as AzExtParentTreeItem).loadMoreChildrenImpl) {
+            return -1;
+        } else if ((item2 as AzExtParentTreeItem).loadMoreChildrenImpl) {
+            return 1;
+        } else {
+            return super.compareChildrenImpl(item1, item2);
+        }
     }
 }

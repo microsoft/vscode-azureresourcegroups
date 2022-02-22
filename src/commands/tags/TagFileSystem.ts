@@ -11,6 +11,7 @@ import { commands, Diagnostic, DiagnosticSeverity, FileStat, FileType, languages
 import { ext } from "../../extensionVariables";
 import { ResourceGroupTreeItem } from "../../tree/ResourceGroupTreeItem";
 import { ResourceTreeItem } from "../../tree/ResourceTreeItem";
+import { ShallowResourceTreeItem } from "../../tree/ShallowResourceTreeItem";
 import { createResourceClient } from "../../utils/azureClients";
 import { localize } from "../../utils/localize";
 
@@ -21,7 +22,7 @@ const insertValueHere: string = localize('insertTagValue', '<Insert tag value>')
  * For now this file system only supports editing tags.
  * However, the scheme was left generic so that it could support editing other stuff in this extension without needing to create a whole new file system
  */
-export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | ResourceTreeItem> {
+export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | ResourceTreeItem | ShallowResourceTreeItem> {
     public static scheme: string = 'azureResourceGroups';
     public scheme: string = TagFileSystem.scheme;
 

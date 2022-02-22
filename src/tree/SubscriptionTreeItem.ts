@@ -8,12 +8,14 @@ import { ResourceManagementClient } from '@azure/arm-resources-profile-2020-09-0
 import { createAzureClient, IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
+import { AzExtWrapper, getAzureExtensions } from '../AzExtWrapper';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
 import { ResolvableTreeItem } from './ResolvableTreeItem';
 import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
 import { ResourceTreeItem } from './ResourceTreeItem';
 import { ResourceTypeGroupTreeItem } from './ResourceTypeGroupTreeItem';
+import { ShallowResourceTreeItem } from './ShallowResourceTreeItem';
 
 const resolvables: Record<string, ResolvableTreeItem> = {};
 let rgsItem: GenericResource[] = [];
@@ -46,21 +48,26 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
         // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
 
-        const proxyItems = rgsItem.map((resource: GenericResource) => {
-            const resourceId = nonNullProp(resource, 'id');
-            if (!resolvables[resourceId]) {
-                const resolvable = ResourceTreeItem.Create(this, resource);
-                resolvables[resourceId] ??= resolvable;
-                return resolvable;
+        const resourceTreeItems: (ResolvableTreeItem | ShallowResourceTreeItem)[] = rgsItem.map((resource: GenericResource) => {
+            const azExts = getAzureExtensions();
+            if (azExts.find((ext: AzExtWrapper) => ext.matchesResourceType(resource))) {
+                const resourceId = nonNullProp(resource, 'id');
+                if (!resolvables[resourceId]) {
+                    const resolvable = ResourceTreeItem.Create(this, resource);
+                    resolvables[resourceId] ??= resolvable;
+                    return resolvable;
+                }
+                return resolvables[resourceId];
+            } else {
+                return new ShallowResourceTreeItem(this, resource);
             }
-            return resolvables[resourceId];
         });
 
         // move this code to somewhere to only update the UI otherwise we'll have to load all the children again
         const treeMap: { [key: string]: AzExtParentTreeItem | number } = {};
         // eslint-disable-next-line no-constant-condition
         if (settingUtils.getGlobalSetting<string>('groupBy') === 'Resource Types') {
-            for (const rg of proxyItems) {
+            for (const rg of resourceTreeItems) {
                 if (!treeMap[rg.groupConfig.resourceType.label]) {
                     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                     const tree = new ResourceTypeGroupTreeItem(this, rg.groupConfig.resourceType.label);
@@ -71,7 +78,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
                 (<ResourceTypeGroupTreeItem>treeMap[rg.groupConfig.resourceType.label]).items.push(rg);
             }
         } else {
-            for (const rg of proxyItems) {
+            for (const rg of resourceTreeItems) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 if (!treeMap[rg.groupConfig.resourceGroup.id!]) {
                     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -88,7 +95,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
                 }
             }));
 
-            for (const rg of proxyItems) {
+            for (const rg of resourceTreeItems) {
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 (<ResourceGroupTreeItem>treeMap[rg.groupConfig.resourceGroup.id!]).items.push(rg);
             }

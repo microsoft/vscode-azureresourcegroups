@@ -3,6 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { GenericResource } from '@azure/arm-resources';
+import { nonNullProp } from '@microsoft/vscode-azext-utils';
+import { GroupingConfig } from '../api';
 import { localize } from './localize';
 
 function parseResourceId(id: string): RegExpMatchArray {
@@ -17,4 +20,12 @@ function parseResourceId(id: string): RegExpMatchArray {
 
 export function getResourceGroupFromId(id: string): string {
     return parseResourceId(id)[2];
+}
+
+export function createGroupConfigFromResource(resource: GenericResource): GroupingConfig {
+    const id = nonNullProp(resource, 'id');
+    return {
+        resourceGroup: { label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
+        resourceType: { label: resource.type?.toLowerCase() || 'unknown', id: resource.type?.toLowerCase() || 'unknown' }
+    }
 }

@@ -10,15 +10,20 @@ export interface TreeNodeConfiguration {
     readonly contextValue?: string;
 }
 
+export interface ResolvableTreeItem {
+    readonly data: GenericResource;
+    resolve(clearCache: boolean, context: IActionContext): Promise<ResolveResult>;
+}
+
 export interface ResolveResult {
-    treeItem(parent: AzExtParentTreeItem): AzExtParentTreeItem;
+    treeItem(parent: AzExtParentTreeItem): AzExtTreeItem;
     groupConfig?: GroupingConfig;
     description?: string;
     contextValue?: string;
 }
 
 // ex: Static Web App
-interface ApplicationResource extends AzExtParentTreeItem {
+interface ApplicationResource extends AzExtTreeItem {
     getChildren?(): vscode.ProviderResult<AzExtTreeItem[]>;
     resolve?(clearCache: boolean, context: IActionContext): Thenable<ResolveResult>;
 
@@ -29,6 +34,10 @@ export interface GroupingConfig {
     readonly resourceGroup: TreeNodeConfiguration;
     readonly resourceType: TreeNodeConfiguration;
     readonly [label: string]: TreeNodeConfiguration; // Don't need to support right off the bat but we can put it in the interface
+}
+
+export interface GroupableResource {
+    readonly groupConfig: GroupingConfig;
 }
 
 export interface GroupableApplicationResource extends ApplicationResource {
