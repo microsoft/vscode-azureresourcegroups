@@ -23,6 +23,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public constructor(parent: AzExtParentTreeItem, subscription: ISubscriptionContext) {
         super(parent, subscription);
+        this.registerRefreshEvents('groupBy')
     }
 
     public hasMoreChildrenImpl(): boolean {
@@ -62,13 +63,13 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         return new ResourceGroupTreeItem(this, nonNullProp(wizardContext, 'newResourceGroupName'), nonNullProp(wizardContext, 'resourceGroup'));
     }
 
-    public registerRefreshEvents(): void {
+    public registerRefreshEvents(key: string): void {
         registerEvent('treeView.onDidChangeConfiguration', workspace.onDidChangeConfiguration, async (context: IActionContext, e: ConfigurationChangeEvent) => {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
             context.telemetry.properties.isActivationEvent = 'true';
 
-            if (e.affectsConfiguration(`${ext.prefix}.groupBy`)) {
+            if (e.affectsConfiguration(`${ext.prefix}.${key}`)) {
                 await this.refresh(context);
             }
         });

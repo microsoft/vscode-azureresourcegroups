@@ -64,14 +64,14 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
 
     public async refreshImpl(context: IActionContext): Promise<void> {
         const client: ResourceManagementClient = await createResourceClient([context, this]);
-        this.data = await client.resourceGroups.get(this.label);
+        this.data = await client.resourceGroups.get(this.name);
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
         this.mTime = Date.now();
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
         const client: ResourceManagementClient = await createResourceClient([context, this]);
-        await client.resourceGroups.beginDeleteAndWait(this.label);
-        ext.outputChannel.appendLog(localize('deletedRg', 'Successfully deleted resource group "{0}".', this.label));
+        await client.resourceGroups.beginDeleteAndWait(this.name);
+        ext.outputChannel.appendLog(localize('deletedRg', 'Successfully deleted resource group "{0}".', this.name));
     }
 }

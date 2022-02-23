@@ -35,17 +35,19 @@ export class ResourceTreeItem extends AzExtTreeItem implements GroupableApplicat
     constructor(parent: SubscriptionTreeItem, resource: GenericResource) {
         // parent should be renamed to rootGroup
         super(parent);
-
         this.rootGroupTreeItem = parent;
+        this.rootGroupConfig = <TreeNodeConfiguration><unknown>parent;
+
         this.data = resource;
         this.commandId = 'azureResourceGroups.revealResource';
-        this.rootGroupConfig = <TreeNodeConfiguration><unknown>parent;
         const id = nonNullProp(resource, 'id');
         this.subGroupConfig = {
+            // TODO: make constants
             resourceGroup: { name: 'Resource Groups', label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
             resourceType: { name: 'Resource Types', label: resource.type?.toLowerCase() || 'unknown', id: `${this.parent?.id}/${this.data.type}` || 'unknown' }
         };
 
+        // test for [label: string] keys
         this.subGroupConfig["location"] = { name: 'Locations', label: this.data.location || 'unknown', id: `${this.parent?.id}/${this.data.location}` }
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
@@ -97,20 +99,8 @@ export class ResourceTreeItem extends AzExtTreeItem implements GroupableApplicat
         }
 
         subGroupTreeItem.treeMap[this.id] = this;
+        // this should actually be "resolve"
         void subGroupTreeItem.refresh(context);
-
-        // for (const rg of this._items) {
-        //     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        //     if (!this.treeMap[(<ResourceTreeItem>rg).data.location!.toLocaleLowerCase()]) {
-        //         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        //         const locTree = new LocationGroupTreeItem(this, (<ResourceTreeItem>rg).data.location!.toLocaleLowerCase());
-        //         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        //         this.treeMap[(<ResourceTreeItem>rg).data.location!.toLocaleLowerCase()] = locTree;
-        //     }
-        //     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        //     (<LocationGroupTreeItem>this.treeMap[(<ResourceTreeItem>rg).data.location!.toLocaleLowerCase()]).items.push(rg);
-        // }
-
     }
 
     public createSubGroupTreeItem(groupBySetting: string): GroupTreeItemBase {

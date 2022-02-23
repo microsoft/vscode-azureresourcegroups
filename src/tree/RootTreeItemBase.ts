@@ -16,6 +16,7 @@ export abstract class RootTreeItemBase extends AzExtParentTreeItem {
 
     public constructor(parent: AzExtParentTreeItem) {
         super(parent);
+        this.registerRefreshEvents('groupBy');
     }
 
     public hasMoreChildrenImpl(): boolean {
