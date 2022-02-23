@@ -13,5 +13,5 @@ export async function viewProperties(context: IActionContext, node?: ResourceGro
         node = await ext.tree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, context);
     }
 
-    await openReadOnlyJson(node, node.data);
+    await openReadOnlyJson(node, node.data || {});
 }

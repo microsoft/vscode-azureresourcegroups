@@ -4,18 +4,24 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { GenericResource } from "@azure/arm-resources";
-import { AzExtParentTreeItem, AzExtTreeItem, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { FileChangeType } from "vscode";
 import { GroupableApplicationResource, TreeNodeConfiguration } from "../api";
 import { ext } from "../extensionVariables";
 import { getResourceGroupFromId } from "../utils/azureUtils";
 import { treeUtils } from "../utils/treeUtils";
+import { GroupTreeItemBase } from "./GroupTreeItemBase";
+import { LocationGroupTreeItem } from "./LocationGroupTreeItem";
+import { ResourceGroupTreeItem } from "./ResourceGroupTreeItem";
+import { ResourceTypeGroupTreeItem } from "./ResourceTypeGroupTreeItem";
+import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
 export class ResourceTreeItem extends AzExtTreeItem implements GroupableApplicationResource {
     public static contextValue: string = 'azureResource';
     public readonly contextValue: string = ResourceTreeItem.contextValue;
     public data: GenericResource;
+    public rootGroupTreeItem: SubscriptionTreeItem;
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
@@ -26,16 +32,21 @@ export class ResourceTreeItem extends AzExtTreeItem implements GroupableApplicat
         resourceType: TreeNodeConfiguration;
     };
 
-    constructor(parent: AzExtParentTreeItem, resource: GenericResource) {
+    constructor(parent: SubscriptionTreeItem, resource: GenericResource) {
+        // parent should be renamed to rootGroup
         super(parent);
+
+        this.rootGroupTreeItem = parent;
         this.data = resource;
         this.commandId = 'azureResourceGroups.revealResource';
-        this.rootGroupConfig = parent;
+        this.rootGroupConfig = <TreeNodeConfiguration><unknown>parent;
         const id = nonNullProp(resource, 'id');
         this.subGroupConfig = {
-            resourceGroup: { label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
-            resourceType: { label: resource.type?.toLowerCase() || 'unknown', id: resource.type?.toLowerCase() || 'unknown' }
+            resourceGroup: { name: 'Resource Groups', label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
+            resourceType: { name: 'Resource Types', label: resource.type?.toLowerCase() || 'unknown', id: `${this.parent?.id}/${this.data.type}` || 'unknown' }
         };
+
+        this.subGroupConfig["location"] = { name: 'Locations', label: this.data.location || 'unknown', id: `${this.parent?.id}/${this.data.location}` }
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
@@ -75,6 +86,42 @@ export class ResourceTreeItem extends AzExtTreeItem implements GroupableApplicat
     public async refreshImpl(): Promise<void> {
         this.mTime = Date.now();
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+    }
+
+    // put treemap command on Resource node
+    public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string): void {
+        let subGroupTreeItem = this.rootGroupTreeItem.getSubConfigGroupTreeItem(this.subGroupConfig[groupBySetting].id)
+        if (!subGroupTreeItem) {
+            subGroupTreeItem = this.createSubGroupTreeItem(groupBySetting);
+            this.rootGroupTreeItem.setSubConfigGroupTreeItem(nonNullProp(subGroupTreeItem, 'id'), subGroupTreeItem)
+        }
+
+        subGroupTreeItem.treeMap[this.id] = this;
+        void subGroupTreeItem.refresh(context);
+
+        // for (const rg of this._items) {
+        //     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        //     if (!this.treeMap[(<ResourceTreeItem>rg).data.location!.toLocaleLowerCase()]) {
+        //         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        //         const locTree = new LocationGroupTreeItem(this, (<ResourceTreeItem>rg).data.location!.toLocaleLowerCase());
+        //         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        //         this.treeMap[(<ResourceTreeItem>rg).data.location!.toLocaleLowerCase()] = locTree;
+        //     }
+        //     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        //     (<LocationGroupTreeItem>this.treeMap[(<ResourceTreeItem>rg).data.location!.toLocaleLowerCase()]).items.push(rg);
+        // }
+
+    }
+
+    public createSubGroupTreeItem(groupBySetting: string): GroupTreeItemBase {
+        switch (groupBySetting) {
+            case 'resourceType':
+                return new ResourceTypeGroupTreeItem(this.rootGroupTreeItem, this.subGroupConfig.resourceType.label)
+            case 'resourceGroup':
+                return new ResourceGroupTreeItem(this.rootGroupTreeItem, this.subGroupConfig.resourceGroup.label);
+            default:
+                return new LocationGroupTreeItem(this.rootGroupTreeItem, this.data.location!.toLocaleLowerCase());
+        }
     }
 }
 

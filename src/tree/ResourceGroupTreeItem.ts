@@ -4,48 +4,46 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { FileChangeType } from "vscode";
 import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
-import { ResourceTreeItem } from "./ResourceTreeItem";
+import { GroupTreeItemBase } from "./GroupTreeItemBase";
 
-export class ResourceGroupTreeItem extends AzExtParentTreeItem {
+export class ResourceGroupTreeItem extends GroupTreeItemBase {
     public static contextValue: string = 'azureResourceGroup';
     public readonly contextValue: string = ResourceGroupTreeItem.contextValue;
     public readonly childTypeLabel: string = localize('resource', 'Resource');
-    public data: ResourceGroup;
-    public readonly cTime: number = Date.now();
-    public mTime: number = Date.now();
+    public readonly label: string;
 
-    public items: ResourceTreeItem[];
-
-    private _nextLink: string | undefined;
-
-    constructor(parent: AzExtParentTreeItem, rg: ResourceGroup) {
+    constructor(parent: AzExtParentTreeItem, label: string, data?: ResourceGroup) {
         super(parent);
-        this.data = rg;
-        this.items = [];
+        this.label = label;
+        this.data = data;
 
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
-    public get name(): string {
-        return nonNullProp(this.data, 'name');
+    public get data(): ResourceGroup | undefined {
+        return this.data;
+    }
+
+    public set data(data: ResourceGroup | undefined) {
+        this.data = data;
     }
 
     public get id(): string {
-        return nonNullProp(this.data, 'id');
+        return this.data ? nonNullProp(this.data, 'id') : `${this.parent?.id}/${this.name}`
     }
 
-    public get label(): string {
-        return this.name;
+    public get name(): string {
+        return this.label;
     }
 
     public get description(): string | undefined {
-        const state: string | undefined = this.data.properties?.provisioningState;
+        const state: string | undefined = this.data?.properties?.provisioningState;
         return state?.toLowerCase() === 'succeeded' ? undefined : state;
     }
 
@@ -64,49 +62,16 @@ export class ResourceGroupTreeItem extends AzExtParentTreeItem {
         return resources.length;
     }
 
-    public hasMoreChildrenImpl(): boolean {
-        return !!this._nextLink;
-    }
-
-    public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        return this.items;
-        // if (clearCache) {
-        //     this._nextLink = undefined;
-        // }
-
-        // const client: ResourceManagementClient = await createResourceClient([context, this]);
-        // // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
-        // const resources: GenericResourceExpanded[] = await uiUtils.listAllIterator(client.resources.listByResourceGroup(this.name));
-        // return await this.createTreeItemsWithErrorHandling(
-        //     resources,
-        //     'invalidResource',
-        //     resource => {
-        //         const hiddenTypes: string[] = [
-        //             'microsoft.alertsmanagement/smartdetectoralertrules',
-        //             'microsoft.insights/actiongroups',
-        //             'microsoft.security/automations'
-        //         ];
-
-        //         if (settingUtils.getWorkspaceSetting<boolean>('showHiddenTypes') || (resource.type && !hiddenTypes.includes(resource.type.toLowerCase()))) {
-        //             return new ResourceTreeItem(this, resource);
-        //         } else {
-        //             return undefined;
-        //         }
-        //     },
-        //     resource => resource.name
-        // );
-    }
-
     public async refreshImpl(context: IActionContext): Promise<void> {
         const client: ResourceManagementClient = await createResourceClient([context, this]);
-        this.data = await client.resourceGroups.get(this.name);
+        this.data = await client.resourceGroups.get(this.label);
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
         this.mTime = Date.now();
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
         const client: ResourceManagementClient = await createResourceClient([context, this]);
-        await client.resourceGroups.beginDeleteAndWait(this.name);
-        ext.outputChannel.appendLog(localize('deletedRg', 'Successfully deleted resource group "{0}".', this.name));
+        await client.resourceGroups.beginDeleteAndWait(this.label);
+        ext.outputChannel.appendLog(localize('deletedRg', 'Successfully deleted resource group "{0}".', this.label));
     }
 }

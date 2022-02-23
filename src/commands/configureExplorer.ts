@@ -4,15 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { localize } from "../utils/localize";
+import { ext } from '../extensionVariables';
 import { settingUtils } from "../utils/settingUtils";
 
 export async function configureExplorer(context: IActionContext): Promise<void> {
-    const value = await context.ui.showQuickPick([
-        { label: localize('groupBy.label', 'Resource Groups') },
-        { label: 'Resource Types' },
-        { label: 'Location' },
-    ], {})
+    const value = await context.ui.showQuickPick(Object.keys(ext.groupByKeys).map(key => { return { label: ext.groupByKeys[key], data: key } }), {})
 
-    await settingUtils.updateGlobalSetting('groupBy', value.label);
+    await settingUtils.updateGlobalSetting('groupBy', value.data);
 }

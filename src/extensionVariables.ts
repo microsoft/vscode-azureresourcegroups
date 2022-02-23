@@ -5,6 +5,7 @@
 
 import { AzExtTreeDataProvider, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
 import { DiagnosticCollection, Disposable, ExtensionContext } from "vscode";
+import { ApplicationResourceProvider } from "./api";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 
 /**
@@ -21,4 +22,10 @@ export namespace ext {
     export let tagFS: TagFileSystem;
     export let diagnosticWatcher: Disposable | undefined;
     export let diagnosticCollection: DiagnosticCollection;
+
+    export const resourceProviders: { [key: string]: ApplicationResourceProvider } = {};
+    export const groupByKeys: { [key: string]: string } = {
+        resourceType: 'Resource Types',
+        resourceGroup: 'Resource Groups'
+    }
 }

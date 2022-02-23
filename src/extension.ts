@@ -9,6 +9,7 @@ import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-az
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
+import { ApplicationResourceProvider } from './ApplicationResourceProvider';
 import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
@@ -42,6 +43,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.helpTree = new AzExtTreeDataProvider(helpTreeItem, 'ms-azuretools.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('ms-azuretools.helpAndFeedback', { treeDataProvider: ext.helpTree }));
 
+        ext.resourceProviders['ms-azuretools.vscode-azureresourcegroups'] = new ApplicationResourceProvider();
         registerCommands();
     });
 

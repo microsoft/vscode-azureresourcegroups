@@ -283,7 +283,7 @@
                     "azureResourceGroups.groupBy": {
                         "type": "string",
                         "description": "%azureResourceGroups.showHiddenTypes%",
-                        "default": "Resource Groups"
+                        "default": "resourceGroup"
                     }
                 }
             }

@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { ThemeIcon } from "vscode";
 import { localize } from "../utils/localize";
+import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { ResourceTreeItem } from "./ResourceTreeItem";
 
-export class LocationGroupTreeItem extends AzExtParentTreeItem {
+export class LocationGroupTreeItem extends GroupTreeItemBase {
     public static contextValue: string = 'locationGroup';
     public readonly contextValue: string = LocationGroupTreeItem.contextValue;
     public readonly childTypeLabel: string = localize('resource', 'Resource');
@@ -17,8 +18,6 @@ export class LocationGroupTreeItem extends AzExtParentTreeItem {
 
     public items: ResourceTreeItem[];
     public location: string;
-
-    private _nextLink: string | undefined;
 
     constructor(parent: AzExtParentTreeItem, location: string) {
         super(parent);
@@ -40,13 +39,5 @@ export class LocationGroupTreeItem extends AzExtParentTreeItem {
 
     public get iconPath(): TreeItemIconPath {
         return new ThemeIcon('globe');
-    }
-
-    public hasMoreChildrenImpl(): boolean {
-        return !!this._nextLink;
-    }
-
-    public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        return this.items;
     }
 }
