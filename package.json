@@ -56,6 +56,12 @@
                 "icon": "$(add)"
             },
             {
+                "command": "azureResourceGroups.createResource",
+                "title": "Create Resource...",
+                "category": "Azure Resource Groups",
+                "icon": "$(add)"
+            },
+            {
                 "command": "azureResourceGroups.deleteResourceGroup",
                 "title": "%azureResourceGroups.deleteResourceGroup%",
                 "category": "Azure Resource Groups"
@@ -148,6 +154,11 @@
         },
         "menus": {
             "view/title": [
+                {
+                    "command": "azureResourceGroups.createResource",
+                    "when": "view == azureResourceGroups",
+                    "group": "navigation@1"
+                },
                 {
                     "command": "azureResourceGroups.createResourceGroup",
                     "when": "view == azureResourceGroups",

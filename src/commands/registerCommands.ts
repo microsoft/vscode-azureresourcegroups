@@ -7,6 +7,7 @@ import { AzExtTreeItem, IActionContext, registerCommand, registerErrorHandler, r
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
 import { configureExplorer } from './configureExplorer';
+import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroup } from './deleteResourceGroup';
 import { getStarted } from './helpAndFeedback/getStarted';
@@ -37,4 +38,5 @@ export function registerCommands(): void {
     registerErrorHandler(c => c.errorHandling.suppressReportIssue = true);
     registerReportIssueCommand('azureResourceGroups.reportIssue');
     registerCommand('azureResourceGroups.configureExplorer', configureExplorer);
+    registerCommand('azureResourceGroups.createResource', createResource);
 }

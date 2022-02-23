@@ -4,19 +4,28 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
+import { ResolvableTreeItem } from "./ResolvableTreeItem";
 import { supportedIconTypes } from "./ResourceTreeItem";
+import { ShallowResourceTreeItem } from "./ShallowResourceTreeItem";
 import path = require("path");
 
 export class ResourceTypeGroupTreeItem extends GroupTreeItemBase {
-    public static contextValue: string = 'azureResourceTypeGroup';
-    public readonly contextValue: string = ResourceTypeGroupTreeItem.contextValue;
+    public readonly contextValue: string = `azureResourceTypeGroup`;
+    public readonly childTypeLabel: string = localize('resource', 'Resource');
+    public readonly cTime: number = Date.now();
+    public mTime: number = Date.now();
+
+    public items: (ResolvableTreeItem | ShallowResourceTreeItem)[];
     public type: string;
 
     constructor(parent: AzExtParentTreeItem, type: string) {
         super(parent);
         this.type = type;
+        this.contextValue = `azureResourceTypeGroup/${this.type}`;
+        this.items = [];
     }
 
     public get name(): string {

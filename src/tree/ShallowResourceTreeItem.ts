@@ -4,79 +4,42 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { GenericResource } from "@azure/arm-resources";
-import { AzExtParentTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { FileChangeType } from "vscode";
-import { GroupableApplicationResource, GroupingConfig, TreeNodeConfiguration } from "../api";
+import { GroupableResource, GroupingConfig } from "../api";
 import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
-import { getResourceGroupFromId } from "../utils/azureUtils";
+import { createGroupConfigFromResource } from "../utils/azureUtils";
 import { treeUtils } from "../utils/treeUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { LocationGroupTreeItem } from "./LocationGroupTreeItem";
-import { ResolvableTreeItem } from "./ResolvableTreeItem";
 import { ResourceGroupTreeItem } from "./ResourceGroupTreeItem";
 import { ResourceTypeGroupTreeItem } from "./ResourceTypeGroupTreeItem";
 import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
-export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApplicationResource {
-    public hasMoreChildrenImpl(): boolean {
-        return false;
-    }
-
+/**
+ * Represents a resource that does not have an associated extension.
+ */
+export class ShallowResourceTreeItem extends AzExtTreeItem implements GroupableResource {
     public static contextValue: string = 'azureResource';
-    public readonly contextValue: string = ResourceTreeItem.contextValue;
+    public readonly contextValue: string = ShallowResourceTreeItem.contextValue;
     public data: GenericResource;
     public rootGroupTreeItem: AzExtParentTreeItem;
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
-    public rootGroupConfig: TreeNodeConfiguration;
-    public groupConfig: GroupingConfig;
-
     constructor(parent: AzExtParentTreeItem, resource: GenericResource) {
-        // parent should be renamed to rootGroup
         super(parent);
-        this.rootGroupTreeItem = parent;
-        this.rootGroupConfig = <TreeNodeConfiguration><unknown>parent;
-
         this.data = resource;
-        this.commandId = 'azureResourceGroups.revealResource';
-        const id = nonNullProp(resource, 'id');
-        this.groupConfig = {
-            // TODO: make constants
-            resourceGroup: { keyLabel: 'Resource Groups', label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
-            resourceType: { keyLabel: 'Resource Types', label: resource.type?.toLowerCase() || 'unknown', id: `${this.parent?.id}/${this.data.type}` || 'unknown' }
-        };
+        this.rootGroupTreeItem = parent;
 
-        // test for [label: string] keys
-        this.groupConfig["location"] = { keyLabel: 'Locations', label: this.data.location || 'unknown', id: `${this.parent?.id}/${this.data.location}` }
+        this.commandId = 'azureResourceGroups.revealResource';
+        this.groupConfig = createGroupConfigFromResource(resource);
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
-
-    public static Create(parent: AzExtParentTreeItem, resource: GenericResource): ResolvableTreeItem {
-
-        const resolvable = new ResourceTreeItem(parent, resource);
-
-        const providerHandler: ProxyHandler<ResolvableTreeItem> = {
-            get: (target: ResolvableTreeItem, name: string): unknown => {
-                return resolvable?.treeItem?.[name] ?? target[name];
-            },
-            set: (target: ResolvableTreeItem, name: string, value: unknown) => {
-                if (resolvable.treeItem && Object.getOwnPropertyDescriptor(resolvable.treeItem, name)?.writable) {
-                    resolvable.treeItem[name] = value;
-                    return true;
-                }
-                target[name] = value;
-                return true;
-            },
-            getPrototypeOf: (target: ResolvableTreeItem) => {
-                return resolvable?.treeItem ?? target;
-            }
-        }
-        return new Proxy(resolvable, providerHandler);
-    }
+    groupConfig: GroupingConfig;
 
     public get name(): string {
         return nonNullProp(this.data, 'name');
@@ -144,7 +107,7 @@ export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApp
 }
 
 // Execute `npm run listIcons` from root of repo to re-generate this list after adding an icon
-export const supportedIconTypes: string[] = [
+const supportedIconTypes: string[] = [
     'microsoft.web/functionapp',
     'microsoft.web/hostingenvironments',
     'microsoft.web/kubeenvironments',

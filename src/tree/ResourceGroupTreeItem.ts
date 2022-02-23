@@ -4,13 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
-import { AzExtParentTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { FileChangeType } from "vscode";
 import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
+import { ResolvableTreeItem } from "./ResolvableTreeItem";
+import { ShallowResourceTreeItem } from "./ShallowResourceTreeItem";
 
 export class ResourceGroupTreeItem extends GroupTreeItemBase {
     public static contextValue: string = 'azureResourceGroup';
@@ -18,9 +20,10 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
     public readonly childTypeLabel: string = localize('resource', 'Resource');
     public readonly label: string;
 
-    constructor(parent: AzExtParentTreeItem, label: string, data?: ResourceGroup) {
+    public items: (ResolvableTreeItem | ShallowResourceTreeItem)[];
+
+    constructor(parent: AzExtParentTreeItem, data: ResourceGroup) {
         super(parent);
-        this.label = label;
         this.data = data;
 
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
@@ -44,7 +47,7 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
 
     public get description(): string | undefined {
         const state: string | undefined = this.data?.properties?.provisioningState;
-        return state?.toLowerCase() === 'succeeded' ? undefined : state;
+        return state?.toLowerCase() === 'succeeded' ? `${this.items.length} resources` : state;
     }
 
     public get iconPath(): TreeItemIconPath {
@@ -73,5 +76,17 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
         const client: ResourceManagementClient = await createResourceClient([context, this]);
         await client.resourceGroups.beginDeleteAndWait(this.name);
         ext.outputChannel.appendLog(localize('deletedRg', 'Successfully deleted resource group "{0}".', this.name));
+    }
+
+    public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {
+        if ((item1 as AzExtParentTreeItem).loadMoreChildrenImpl && (item2 as AzExtParentTreeItem).loadMoreChildrenImpl) {
+            return super.compareChildrenImpl(item1, item2);
+        } else if ((item1 as AzExtParentTreeItem).loadMoreChildrenImpl) {
+            return -1;
+        } else if ((item2 as AzExtParentTreeItem).loadMoreChildrenImpl) {
+            return 1;
+        } else {
+            return super.compareChildrenImpl(item1, item2);
+        }
     }
 }
