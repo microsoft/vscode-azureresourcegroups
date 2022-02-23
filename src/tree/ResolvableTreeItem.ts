@@ -2,6 +2,7 @@ import { GenericResource } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, InvalidTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { ApplicationResource, ApplicationResourceResolver, GroupingConfig, ResolveResult } from "../api";
 import { applicationResourceResolvers } from "../api/registerApplicationResourceResolver";
+import { getAzureExtensions } from "../AzExtWrapper";
 import { InstallableResourceTreeItem } from "./InstallableResourceTreeItem";
 
 export abstract class ResolvableTreeItem extends AzExtTreeItem implements ApplicationResource {
@@ -66,10 +67,17 @@ export abstract class ResolvableTreeItem extends AzExtTreeItem implements Applic
             return resolver;
         }
 
+        const azExts = getAzureExtensions();
+
+        const extension = azExts.find((azExt) => azExt.matchesResourceType(this.data));
+        if (!extension) {
+            throw Error(`No extension found for ${this.data.type}`);
+        }
+
         return {
             resolveResource: async (sub, resource): Promise<ResolveResult> => {
                 return {
-                    treeItem: (parent) => new InstallableResourceTreeItem(parent, resource),
+                    treeItem: (parent) => new InstallableResourceTreeItem(parent, resource, extension),
                 }
             }
         }

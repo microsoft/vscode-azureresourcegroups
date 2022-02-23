@@ -12,8 +12,7 @@ import { ShallowResourceTreeItem } from "./ShallowResourceTreeItem";
 import path = require("path");
 
 export class ResourceTypeGroupTreeItem extends AzExtParentTreeItem {
-    public static contextValue: string = 'azureResourceTypeGroup';
-    public readonly contextValue: string = ResourceTypeGroupTreeItem.contextValue;
+    public readonly contextValue: string = `azureResourceTypeGroup`;
     public readonly childTypeLabel: string = localize('resource', 'Resource');
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
@@ -26,6 +25,7 @@ export class ResourceTypeGroupTreeItem extends AzExtParentTreeItem {
     constructor(parent: AzExtParentTreeItem, type: string) {
         super(parent);
         this.type = type;
+        this.contextValue = `azureResourceTypeGroup/${this.type}`;
         this.items = [];
     }
 

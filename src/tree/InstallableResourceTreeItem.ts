@@ -5,10 +5,11 @@
 
 import { GenericResource } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem, IActionContext, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { AzExtWrapper } from "../AzExtWrapper";
 
 export class InstallableResourceTreeItem extends AzExtParentTreeItem {
 
-    constructor(parent: AzExtParentTreeItem, private readonly resource: GenericResource) {
+    constructor(parent: AzExtParentTreeItem, private readonly resource: GenericResource, private readonly azExt: AzExtWrapper) {
         super(parent);
     }
 
@@ -16,7 +17,7 @@ export class InstallableResourceTreeItem extends AzExtParentTreeItem {
         return [
             new GenericTreeItem(this, {
                 contextValue: 'Must install extension',
-                label: 'Install the extension',
+                label: `Install the ${this.azExt.label} extension`,
                 id: nonNullProp(this.resource, 'id')
             })
         ]

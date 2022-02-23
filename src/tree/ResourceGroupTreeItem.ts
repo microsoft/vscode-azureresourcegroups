@@ -47,7 +47,7 @@ export class ResourceGroupTreeItem extends AzExtParentTreeItem {
 
     public get description(): string | undefined {
         const state: string | undefined = this.data.properties?.provisioningState;
-        return state?.toLowerCase() === 'succeeded' ? undefined : state;
+        return state?.toLowerCase() === 'succeeded' ? `${this.items.length} resources` : state;
     }
 
     public get iconPath(): TreeItemIconPath {

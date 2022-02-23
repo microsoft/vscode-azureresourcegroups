@@ -49,20 +49,19 @@ export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApp
         const resolvable = new ResourceTreeItem(parent, resource);
 
         const providerHandler: ProxyHandler<ResolvableTreeItem> = {
-            get: (target: ResolvableTreeItem, name: string) => {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+            get: (target: ResolvableTreeItem, name: string): unknown => {
                 return resolvable?.treeItem?.[name] ?? target[name];
             },
-            set: (target: ResolvableTreeItem, name: string, value: any) => {
-                // if resolvable.treeItem is defined and it property is writeable then set it
+            set: (target: ResolvableTreeItem, name: string, value: unknown) => {
                 if (resolvable.treeItem && Object.getOwnPropertyDescriptor(resolvable.treeItem, name)?.writable) {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                     resolvable.treeItem[name] = value;
                     return true;
                 }
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 target[name] = value;
                 return true;
+            },
+            getPrototypeOf: (target: ResolvableTreeItem) => {
+                return resolvable?.treeItem ?? target;
             }
         }
         return new Proxy(resolvable, providerHandler);

@@ -17,14 +17,14 @@ import { ResourceTreeItem } from './ResourceTreeItem';
 import { ResourceTypeGroupTreeItem } from './ResourceTypeGroupTreeItem';
 import { ShallowResourceTreeItem } from './ShallowResourceTreeItem';
 
-const resolvables: Record<string, ResolvableTreeItem> = {};
-let rgsItem: GenericResource[] = [];
-
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public readonly childTypeLabel: string = localize('resourceGroup', 'Resource Group');
 
     private _nextLink: string | undefined;
     private _items: AzExtTreeItem[];
+
+    private resolvables: Record<string, ResolvableTreeItem> = {};
+    private rgsItem: GenericResource[] = [];
 
 
     public constructor(parent: AzExtParentTreeItem, subscription: ISubscriptionContext) {
@@ -39,25 +39,25 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         if (clearCache) {
             this._nextLink = undefined;
-            rgsItem = [];
+            this.rgsItem = [];
         }
 
         const client: ResourceManagementClient = createAzureClient([context, this], ResourceManagementClient);
-        if (rgsItem.length === 0) {
-            rgsItem.push(...(await applicationResourceProviders[0]?.provideResources(this.subscription) ?? []));
+        if (this.rgsItem.length === 0) {
+            this.rgsItem.push(...(await applicationResourceProviders[0]?.provideResources(this.subscription) ?? []));
         }
-        // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
+        // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
 
-        const resourceTreeItems: (ResolvableTreeItem | ShallowResourceTreeItem)[] = rgsItem.map((resource: GenericResource) => {
+        const resourceTreeItems: (ResolvableTreeItem | ShallowResourceTreeItem)[] = this.rgsItem.map((resource: GenericResource) => {
             const azExts = getAzureExtensions();
             if (azExts.find((ext: AzExtWrapper) => ext.matchesResourceType(resource))) {
                 const resourceId = nonNullProp(resource, 'id');
-                if (!resolvables[resourceId]) {
+                if (!this.resolvables[resourceId]) {
                     const resolvable = ResourceTreeItem.Create(this, resource);
-                    resolvables[resourceId] ??= resolvable;
+                    this.resolvables[resourceId] ??= resolvable;
                     return resolvable;
                 }
-                return resolvables[resourceId];
+                return this.resolvables[resourceId];
             } else {
                 return new ShallowResourceTreeItem(this, resource);
             }
