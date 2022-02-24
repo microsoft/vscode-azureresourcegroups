@@ -4,13 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { GenericResource } from "@azure/arm-resources";
-import { AzExtParentTreeItem, AzExtTreeItem, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { FileChangeType } from "vscode";
 import { GroupableResource, GroupingConfig } from "../api";
 import { ext } from "../extensionVariables";
 import { createGroupConfigFromResource } from "../utils/azureUtils";
 import { treeUtils } from "../utils/treeUtils";
+import { GroupTreeItemBase } from "./GroupTreeItemBase";
+import { LocationGroupTreeItem } from "./LocationGroupTreeItem";
+import { ResourceTypeGroupTreeItem } from "./ResourceTypeGroupTreeItem";
+import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
 /**
  * Represents a resource that does not have an associated extension.
@@ -19,6 +23,7 @@ export class ShallowResourceTreeItem extends AzExtTreeItem implements GroupableR
     public static contextValue: string = 'azureResource';
     public readonly contextValue: string = ShallowResourceTreeItem.contextValue;
     public data: GenericResource;
+    public rootGroupTreeItem: AzExtParentTreeItem;
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
@@ -26,6 +31,8 @@ export class ShallowResourceTreeItem extends AzExtTreeItem implements GroupableR
     constructor(parent: AzExtParentTreeItem, resource: GenericResource) {
         super(parent);
         this.data = resource;
+        this.rootGroupTreeItem = parent;
+
         this.commandId = 'azureResourceGroups.revealResource';
         this.groupConfig = createGroupConfigFromResource(resource);
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
@@ -68,6 +75,32 @@ export class ShallowResourceTreeItem extends AzExtTreeItem implements GroupableR
     public async refreshImpl(): Promise<void> {
         this.mTime = Date.now();
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+    }
+
+    public async mapSubGroupConfigTree(context: IActionContext, groupBySetting: string): Promise<void> {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
+        if (!subGroupTreeItem) {
+            subGroupTreeItem = this.createSubGroupTreeItem(groupBySetting);
+            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
+        }
+
+        subGroupTreeItem.treeMap[this.id] = this;
+        // this should actually be "resolve"
+        void subGroupTreeItem.refresh(context);
+    }
+
+    public createSubGroupTreeItem(groupBySetting: string): GroupTreeItemBase {
+        switch (groupBySetting) {
+            case 'resourceType':
+                return new ResourceTypeGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceType.label)
+            case 'resourceGroup':
+            // TODO: Use ResovableTreeItem here
+            // TODO: Make it sync to create this and then resolve to a RG TreeItem
+            // return new ResourceGroupTreeItem(this.rootGroupTreeItem);
+            default:
+                return new LocationGroupTreeItem(this.rootGroupTreeItem, this.data.location!.toLocaleLowerCase());
+        }
     }
 }
 

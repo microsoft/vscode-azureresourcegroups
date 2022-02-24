@@ -4,13 +4,15 @@ import * as vscode from 'vscode';
 
 export interface TreeNodeConfiguration {
     readonly label: string;
-    readonly id?: string;
+    readonly id: string;
+    // label for GroupBy Configurations
+    readonly keyLabel?: string;
     readonly description?: string;
     readonly icon?: vscode.ThemeIcon;
     readonly contextValue?: string;
 }
 
-export interface ResolvableTreeItem {
+export interface ResolvableTreeItem extends GroupableResource {
     readonly data: GenericResource;
     resolve(clearCache: boolean, context: IActionContext): Promise<ResolveResult>;
 }
@@ -33,7 +35,7 @@ interface ApplicationResource extends AzExtTreeItem {
 export interface GroupingConfig {
     readonly resourceGroup: TreeNodeConfiguration;
     readonly resourceType: TreeNodeConfiguration;
-    readonly [label: string]: TreeNodeConfiguration; // Don't need to support right off the bat but we can put it in the interface
+    [label: string]: TreeNodeConfiguration; // Don't need to support right off the bat but we can put it in the interface
 }
 
 export interface GroupableResource {

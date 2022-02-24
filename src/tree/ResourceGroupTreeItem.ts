@@ -10,43 +10,43 @@ import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
+import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { ResolvableTreeItem } from "./ResolvableTreeItem";
 import { ShallowResourceTreeItem } from "./ShallowResourceTreeItem";
 
-export class ResourceGroupTreeItem extends AzExtParentTreeItem {
+export class ResourceGroupTreeItem extends GroupTreeItemBase {
     public static contextValue: string = 'azureResourceGroup';
     public readonly contextValue: string = ResourceGroupTreeItem.contextValue;
     public readonly childTypeLabel: string = localize('resource', 'Resource');
-    public data: ResourceGroup;
-    public readonly cTime: number = Date.now();
-    public mTime: number = Date.now();
+    public readonly label: string;
 
     public items: (ResolvableTreeItem | ShallowResourceTreeItem)[];
 
-    private _nextLink: string | undefined;
-
-    constructor(parent: AzExtParentTreeItem, rg: ResourceGroup) {
+    constructor(parent: AzExtParentTreeItem, data: ResourceGroup) {
         super(parent);
-        this.data = rg;
-        this.items = [];
+        this.data = data;
 
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
-    public get name(): string {
-        return nonNullProp(this.data, 'name');
+    public get data(): ResourceGroup | undefined {
+        return this.data;
+    }
+
+    public set data(data: ResourceGroup | undefined) {
+        this.data = data;
     }
 
     public get id(): string {
-        return nonNullProp(this.data, 'id');
+        return this.data ? nonNullProp(this.data, 'id') : `${this.parent?.id}/${this.name}`
     }
 
-    public get label(): string {
-        return this.name;
+    public get name(): string {
+        return this.label;
     }
 
     public get description(): string | undefined {
-        const state: string | undefined = this.data.properties?.provisioningState;
+        const state: string | undefined = this.data?.properties?.provisioningState;
         return state?.toLowerCase() === 'succeeded' ? `${this.items.length} resources` : state;
     }
 
@@ -63,46 +63,6 @@ export class ResourceGroupTreeItem extends AzExtParentTreeItem {
         }
 
         return resources.length;
-    }
-
-    public hasMoreChildrenImpl(): boolean {
-        return !!this._nextLink;
-    }
-
-    public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        this.items.forEach((res) => {
-            if (res instanceof ResolvableTreeItem) {
-                void res.resolve(_clearCache, _context)
-            }
-        });
-        // const resolves = this.items.map(async (resolvable) => await resolvable.resolve(_clearCache, _context));
-        // await Promise.all(resolves);
-        return this.items;
-        // if (clearCache) {
-        //     this._nextLink = undefined;
-        // }
-
-        // const client: ResourceManagementClient = await createResourceClient([context, this]);
-        // // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
-        // const resources: GenericResourceExpanded[] = await uiUtils.listAllIterator(client.resources.listByResourceGroup(this.name));
-        // return await this.createTreeItemsWithErrorHandling(
-        //     resources,
-        //     'invalidResource',
-        //     resource => {
-        //         const hiddenTypes: string[] = [
-        //             'microsoft.alertsmanagement/smartdetectoralertrules',
-        //             'microsoft.insights/actiongroups',
-        //             'microsoft.security/automations'
-        //         ];
-
-        //         if (settingUtils.getWorkspaceSetting<boolean>('showHiddenTypes') || (resource.type && !hiddenTypes.includes(resource.type.toLowerCase()))) {
-        //             return new ResourceTreeItem(this, resource);
-        //         } else {
-        //             return undefined;
-        //         }
-        //     },
-        //     resource => resource.name
-        // );
     }
 
     public async refreshImpl(context: IActionContext): Promise<void> {

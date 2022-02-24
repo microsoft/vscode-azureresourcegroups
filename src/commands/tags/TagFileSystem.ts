@@ -27,12 +27,12 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
     public scheme: string = TagFileSystem.scheme;
 
     public async statImpl(_context: IActionContext, node: ResourceGroupTreeItem | ResourceTreeItem): Promise<FileStat> {
-        const fileContent: string = this.getFileContentFromTags(node.data.tags);
+        const fileContent: string = this.getFileContentFromTags(node.data?.tags);
         return { type: FileType.File, ctime: node.cTime, mtime: node.mTime, size: Buffer.byteLength(fileContent) };
     }
 
     public async readFileImpl(_context: IActionContext, node: ResourceGroupTreeItem | ResourceTreeItem): Promise<Uint8Array> {
-        const fileContent: string = this.getFileContentFromTags(node.data.tags);
+        const fileContent: string = this.getFileContentFromTags(node.data?.tags);
         return Buffer.from(fileContent);
     }
 

@@ -4,14 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { GenericResource } from "@azure/arm-resources";
-import { AzExtParentTreeItem, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { FileChangeType } from "vscode";
-import { GroupableApplicationResource, TreeNodeConfiguration } from "../api";
+import { GroupableApplicationResource, GroupingConfig, TreeNodeConfiguration } from "../api";
 import { ext } from "../extensionVariables";
-import { getResourceGroupFromId } from "../utils/azureUtils";
+import { createGroupConfigFromResource } from "../utils/azureUtils";
 import { treeUtils } from "../utils/treeUtils";
+import { GroupTreeItemBase } from "./GroupTreeItemBase";
+import { LocationGroupTreeItem } from "./LocationGroupTreeItem";
 import { ResolvableTreeItem } from "./ResolvableTreeItem";
+import { ResourceTypeGroupTreeItem } from "./ResourceTypeGroupTreeItem";
+import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
 export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApplicationResource {
     public hasMoreChildrenImpl(): boolean {
@@ -21,26 +25,26 @@ export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApp
     public static contextValue: string = 'azureResource';
     public readonly contextValue: string = ResourceTreeItem.contextValue;
     public data: GenericResource;
+    public rootGroupTreeItem: AzExtParentTreeItem;
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
     public rootGroupConfig: TreeNodeConfiguration;
-    public groupConfig: {
-        resourceGroup: TreeNodeConfiguration;
-        resourceType: TreeNodeConfiguration;
-    };
+    public groupConfig: GroupingConfig;
 
-    private constructor(parent: AzExtParentTreeItem, resource: GenericResource) {
+    constructor(parent: AzExtParentTreeItem, resource: GenericResource) {
+        // parent should be renamed to rootGroup
         super(parent);
+        this.rootGroupTreeItem = parent;
+        this.rootGroupConfig = <TreeNodeConfiguration><unknown>parent;
+
         this.data = resource;
         this.commandId = 'azureResourceGroups.revealResource';
-        this.rootGroupConfig = parent;
-        const id = nonNullProp(resource, 'id');
-        this.groupConfig = {
-            resourceGroup: { label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
-            resourceType: { label: resource.type?.toLowerCase() || 'unknown', id: resource.type?.toLowerCase() || 'unknown' }
-        };
+        this.groupConfig = createGroupConfigFromResource(resource);
+
+        // test for [label: string] keys
+        this.groupConfig["location"] = { keyLabel: 'Locations', label: this.data.location || 'unknown', id: `${this.parent?.id}/${this.data.location}` }
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
@@ -103,6 +107,31 @@ export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApp
     public async refreshImpl(): Promise<void> {
         this.mTime = Date.now();
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+    }
+
+    public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string): void {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
+        if (!subGroupTreeItem) {
+            subGroupTreeItem = this.createSubGroupTreeItem(groupBySetting);
+            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
+        }
+
+        subGroupTreeItem.treeMap[this.id] = this;
+        // this should actually be "resolve"
+        void subGroupTreeItem.refresh(context);
+    }
+
+    public createSubGroupTreeItem(groupBySetting: string): GroupTreeItemBase {
+        switch (groupBySetting) {
+            case 'resourceType':
+                return new ResourceTypeGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceType.label)
+            // case 'resourceGroup':
+            // TODO: Use ResovableTreeItem here
+            // return new ResourceGroupTreeItem(this.rootGroupTreeItem, (await client.resourceGroups.get(this.groupConfig.resourceGroup.label)));
+            default:
+                return new LocationGroupTreeItem(this.rootGroupTreeItem, this.data.location!.toLocaleLowerCase());
+        }
     }
 }
 

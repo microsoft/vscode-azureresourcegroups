@@ -46,7 +46,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(vscode.window.createTreeView('ms-azuretools.helpAndFeedback', { treeDataProvider: ext.helpTree }));
 
         registerCommands();
-
         registerApplicationResourceProvider(new AzureResourceProvider());
     });
 
