@@ -6,6 +6,7 @@
 import { AzExtTreeDataProvider, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
 import { DiagnosticCollection, Disposable, ExtensionContext } from "vscode";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
+import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 
 /**
  * Namespace for common variables used throughout the extension. They must be initialized in the activate() method of extension.ts
@@ -21,4 +22,6 @@ export namespace ext {
     export let tagFS: TagFileSystem;
     export let diagnosticWatcher: Disposable | undefined;
     export let diagnosticCollection: DiagnosticCollection;
+
+    export let activationManager: ExtensionActivationManager;
 }

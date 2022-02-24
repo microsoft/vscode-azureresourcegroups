@@ -18,6 +18,7 @@ import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { ext } from './extensionVariables';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { HelpTreeItem } from './tree/HelpTreeItem';
+import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
     ext.context = context;
@@ -44,6 +45,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const helpTreeItem: HelpTreeItem = new HelpTreeItem();
         ext.helpTree = new AzExtTreeDataProvider(helpTreeItem, 'ms-azuretools.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('ms-azuretools.helpAndFeedback', { treeDataProvider: ext.helpTree }));
+
+        context.subscriptions.push(ext.activationManager = new ExtensionActivationManager());
 
         registerCommands();
 
