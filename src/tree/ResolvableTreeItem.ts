@@ -1,6 +1,6 @@
 import { GenericResource } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, InvalidTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { ApplicationResource, ApplicationResourceResolver, GroupingConfig, IResolvableTreeItem, ResolveResult } from "../api";
+import { ApplicationResource, ApplicationResourceResolver, GroupingConfig, ResolvableTreeItem as IResolvableTreeItem, ResolveResult } from "../api";
 import { applicationResourceResolvers } from "../api/registerApplicationResourceResolver";
 import { getAzureExtensions } from "../AzExtWrapper";
 import { InstallableResourceTreeItem } from "./InstallableResourceTreeItem";

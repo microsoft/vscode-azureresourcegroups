@@ -7,7 +7,7 @@ import { GenericResource } from '@azure/arm-resources';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { ConfigurationChangeEvent, workspace } from 'vscode';
-import { GroupableResource, IResolvableTreeItem } from '../api';
+import { GroupableResource, ResolvableTreeItem } from '../api';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { AzExtWrapper, getAzureExtensions } from '../AzExtWrapper';
 import { ext } from '../extensionVariables';
@@ -25,7 +25,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     private _items: GroupableResource[] = [];
     private _treeMap: { [key: string]: GroupTreeItemBase } = {};
 
-    private resolvables: Record<string, IResolvableTreeItem> = {};
+    private resolvables: Record<string, ResolvableTreeItem> = {};
     private rgsItem: GenericResource[] = [];
 
 
