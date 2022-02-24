@@ -126,7 +126,7 @@ export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApp
         switch (groupBySetting) {
             case 'resourceType':
                 return new ResourceTypeGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceType.label)
-            case 'resourceGroup':
+            // case 'resourceGroup':
             // TODO: Use ResovableTreeItem here
             // return new ResourceGroupTreeItem(this.rootGroupTreeItem, (await client.resourceGroups.get(this.groupConfig.resourceGroup.label)));
             default:
