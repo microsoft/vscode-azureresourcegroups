@@ -12,7 +12,7 @@ export interface TreeNodeConfiguration {
     readonly contextValue?: string;
 }
 
-export interface ResolvableTreeItem {
+export interface IResolvableTreeItem extends GroupableResource {
     readonly data: GenericResource;
     resolve(clearCache: boolean, context: IActionContext): Promise<ResolveResult>;
 }

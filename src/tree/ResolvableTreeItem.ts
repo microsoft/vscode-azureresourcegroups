@@ -1,11 +1,11 @@
 import { GenericResource } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, InvalidTreeItem, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { ApplicationResource, ApplicationResourceResolver, GroupingConfig, ResolveResult } from "../api";
+import { ApplicationResource, ApplicationResourceResolver, GroupingConfig, IResolvableTreeItem, ResolveResult } from "../api";
 import { applicationResourceResolvers } from "../api/registerApplicationResourceResolver";
 import { getAzureExtensions } from "../AzExtWrapper";
 import { InstallableResourceTreeItem } from "./InstallableResourceTreeItem";
 
-export abstract class ResolvableTreeItem extends AzExtTreeItem implements ApplicationResource {
+export abstract class ResolvableTreeItem extends AzExtTreeItem implements ApplicationResource, IResolvableTreeItem {
 
     public hasMoreChildrenImpl(): boolean {
         return false;
@@ -75,7 +75,7 @@ export abstract class ResolvableTreeItem extends AzExtTreeItem implements Applic
         }
 
         return {
-            resolveResource: async (sub, resource): Promise<ResolveResult> => {
+            resolveResource: async (_sub, resource): Promise<ResolveResult> => {
                 return {
                     treeItem: (parent) => new InstallableResourceTreeItem(parent, resource, extension),
                 }

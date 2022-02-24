@@ -7,7 +7,7 @@ import { GenericResource } from '@azure/arm-resources';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { ConfigurationChangeEvent, workspace } from 'vscode';
-import { GroupableResource, ResolvableTreeItem } from '../api';
+import { GroupableResource, IResolvableTreeItem } from '../api';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { AzExtWrapper, getAzureExtensions } from '../AzExtWrapper';
 import { ext } from '../extensionVariables';
@@ -25,7 +25,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     private _items: GroupableResource[] = [];
     private _treeMap: { [key: string]: GroupTreeItemBase } = {};
 
-    private resolvables: Record<string, ResolvableTreeItem> = {};
+    private resolvables: Record<string, IResolvableTreeItem> = {};
     private rgsItem: GenericResource[] = [];
 
 
@@ -50,7 +50,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
 
-        this._items = this.rgsItem.map((resource: GenericResource) => {
+        this._items = this.rgsItem.map((resource: GenericResource): GroupableResource => {
             const azExts = getAzureExtensions();
             if (azExts.find((ext: AzExtWrapper) => ext.matchesResourceType(resource))) {
                 const resourceId = nonNullProp(resource, 'id');
