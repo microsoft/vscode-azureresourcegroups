@@ -33,6 +33,6 @@ export abstract class GroupTreeItemBase extends AzExtParentTreeItem {
             }
         }
 
-        return <AzExtTreeItem[]><unknown>Object.values(this.treeMap);
+        return Object.values(this.treeMap) as AzExtTreeItem[];
     }
 }
