@@ -9,12 +9,10 @@ import * as path from 'path';
 import { FileChangeType } from "vscode";
 import { GroupableResource, GroupingConfig } from "../api";
 import { ext } from "../extensionVariables";
-import { createResourceClient } from "../utils/azureClients";
 import { createGroupConfigFromResource } from "../utils/azureUtils";
 import { treeUtils } from "../utils/treeUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { LocationGroupTreeItem } from "./LocationGroupTreeItem";
-import { ResourceGroupTreeItem } from "./ResourceGroupTreeItem";
 import { ResourceTypeGroupTreeItem } from "./ResourceTypeGroupTreeItem";
 import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
@@ -83,8 +81,8 @@ export class ShallowResourceTreeItem extends AzExtTreeItem implements GroupableR
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
         if (!subGroupTreeItem) {
-            subGroupTreeItem = await this.createSubGroupTreeItem(context, groupBySetting);
-            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(nonNullProp(subGroupTreeItem, 'id'), subGroupTreeItem)
+            subGroupTreeItem = this.createSubGroupTreeItem(groupBySetting);
+            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
         }
 
         subGroupTreeItem.treeMap[this.id] = this;
@@ -92,14 +90,14 @@ export class ShallowResourceTreeItem extends AzExtTreeItem implements GroupableR
         void subGroupTreeItem.refresh(context);
     }
 
-    public async createSubGroupTreeItem(context: IActionContext, groupBySetting: string): Promise<GroupTreeItemBase> {
+    public createSubGroupTreeItem(groupBySetting: string): GroupTreeItemBase {
         switch (groupBySetting) {
             case 'resourceType':
-                // TODO: Use ResovableTreeItem here
                 return new ResourceTypeGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceType.label)
             case 'resourceGroup':
-                const client = await createResourceClient([context, this]);
-                return new ResourceGroupTreeItem(this.rootGroupTreeItem, (await client.resourceGroups.get(this.groupConfig.resourceGroup.label)));
+            // TODO: Use ResovableTreeItem here
+            // TODO: Make it sync to create this and then resolve to a RG TreeItem
+            // return new ResourceGroupTreeItem(this.rootGroupTreeItem);
             default:
                 return new LocationGroupTreeItem(this.rootGroupTreeItem, this.data.location!.toLocaleLowerCase());
         }

@@ -109,7 +109,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public async refreshImpl(context: IActionContext): Promise<void> {
         this._treeMap = {};
         const groupBySetting = <string>settingUtils.getGlobalSetting<string>('groupBy');
-        this._items.forEach(rgTree => void (<ResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting))
+        this._items.forEach(rgTree => (<ResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting))
     }
 
     public getSubConfigGroupTreeItem(id: string): GroupTreeItemBase {

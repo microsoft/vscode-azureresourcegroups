@@ -9,13 +9,11 @@ import * as path from 'path';
 import { FileChangeType } from "vscode";
 import { GroupableApplicationResource, GroupingConfig, TreeNodeConfiguration } from "../api";
 import { ext } from "../extensionVariables";
-import { createResourceClient } from "../utils/azureClients";
-import { getResourceGroupFromId } from "../utils/azureUtils";
+import { createGroupConfigFromResource } from "../utils/azureUtils";
 import { treeUtils } from "../utils/treeUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { LocationGroupTreeItem } from "./LocationGroupTreeItem";
 import { ResolvableTreeItem } from "./ResolvableTreeItem";
-import { ResourceGroupTreeItem } from "./ResourceGroupTreeItem";
 import { ResourceTypeGroupTreeItem } from "./ResourceTypeGroupTreeItem";
 import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
@@ -43,12 +41,7 @@ export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApp
 
         this.data = resource;
         this.commandId = 'azureResourceGroups.revealResource';
-        const id = nonNullProp(resource, 'id');
-        this.groupConfig = {
-            // TODO: make constants
-            resourceGroup: { keyLabel: 'Resource Groups', label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
-            resourceType: { keyLabel: 'Resource Types', label: resource.type?.toLowerCase() || 'unknown', id: `${this.parent?.id}/${this.data.type}` || 'unknown' }
-        };
+        this.groupConfig = createGroupConfigFromResource(resource);
 
         // test for [label: string] keys
         this.groupConfig["location"] = { keyLabel: 'Locations', label: this.data.location || 'unknown', id: `${this.parent?.id}/${this.data.location}` }
@@ -116,12 +109,12 @@ export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApp
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
-    public async mapSubGroupConfigTree(context: IActionContext, groupBySetting: string): Promise<void> {
+    public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string): void {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
         if (!subGroupTreeItem) {
-            subGroupTreeItem = await this.createSubGroupTreeItem(context, groupBySetting);
-            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(nonNullProp(subGroupTreeItem, 'id'), subGroupTreeItem)
+            subGroupTreeItem = this.createSubGroupTreeItem(groupBySetting);
+            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
         }
 
         subGroupTreeItem.treeMap[this.id] = this;
@@ -129,14 +122,13 @@ export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApp
         void subGroupTreeItem.refresh(context);
     }
 
-    public async createSubGroupTreeItem(context: IActionContext, groupBySetting: string): Promise<GroupTreeItemBase> {
+    public createSubGroupTreeItem(groupBySetting: string): GroupTreeItemBase {
         switch (groupBySetting) {
             case 'resourceType':
-                // TODO: Use ResovableTreeItem here
                 return new ResourceTypeGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceType.label)
             case 'resourceGroup':
-                const client = await createResourceClient([context, this]);
-                return new ResourceGroupTreeItem(this.rootGroupTreeItem, (await client.resourceGroups.get(this.groupConfig.resourceGroup.label)));
+            // TODO: Use ResovableTreeItem here
+            // return new ResourceGroupTreeItem(this.rootGroupTreeItem, (await client.resourceGroups.get(this.groupConfig.resourceGroup.label)));
             default:
                 return new LocationGroupTreeItem(this.rootGroupTreeItem, this.data.location!.toLocaleLowerCase());
         }
