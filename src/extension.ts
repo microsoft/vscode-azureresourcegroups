@@ -49,7 +49,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(ext.activationManager = new ExtensionActivationManager());
 
         registerCommands();
-
         registerApplicationResourceProvider(new AzureResourceProvider());
     });
 

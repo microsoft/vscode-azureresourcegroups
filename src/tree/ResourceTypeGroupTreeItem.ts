@@ -3,15 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
+import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { ResolvableTreeItem } from "./ResolvableTreeItem";
 import { supportedIconTypes } from "./ResourceTreeItem";
 import { ShallowResourceTreeItem } from "./ShallowResourceTreeItem";
 import path = require("path");
 
-export class ResourceTypeGroupTreeItem extends AzExtParentTreeItem {
+export class ResourceTypeGroupTreeItem extends GroupTreeItemBase {
     public readonly contextValue: string = `azureResourceTypeGroup`;
     public readonly childTypeLabel: string = localize('resource', 'Resource');
     public readonly cTime: number = Date.now();
@@ -19,8 +20,6 @@ export class ResourceTypeGroupTreeItem extends AzExtParentTreeItem {
 
     public items: (ResolvableTreeItem | ShallowResourceTreeItem)[];
     public type: string;
-
-    private _nextLink: string | undefined;
 
     constructor(parent: AzExtParentTreeItem, type: string) {
         super(parent);
@@ -60,46 +59,5 @@ export class ResourceTypeGroupTreeItem extends AzExtParentTreeItem {
         }
 
         return treeUtils.getIconPath(iconName);
-    }
-
-    public hasMoreChildrenImpl(): boolean {
-        return !!this._nextLink;
-    }
-
-    public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        this.items.forEach((res) => {
-            if (res instanceof ResolvableTreeItem) {
-                void res.resolve(_clearCache, _context)
-            }
-        });
-
-        // const resolves = this.items.map(async (resolvable) => await resolvable.resolve(_clearCache, _context));
-        // await Promise.all(resolves);
-        return this.items;
-        // if (clearCache) {
-        //     this._nextLink = undefined;
-        // }
-
-        // const client: ResourceManagementClient = await createResourceClient([context, this]);
-        // // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
-        // const resources: GenericResourceExpanded[] = await uiUtils.listAllIterator(client.resources.listByResourceGroup(this.name));
-        // return await this.createTreeItemsWithErrorHandling(
-        //     resources,
-        //     'invalidResource',
-        //     resource => {
-        //         const hiddenTypes: string[] = [
-        //             'microsoft.alertsmanagement/smartdetectoralertrules',
-        //             'microsoft.insights/actiongroups',
-        //             'microsoft.security/automations'
-        //         ];
-
-        //         if (settingUtils.getWorkspaceSetting<boolean>('showHiddenTypes') || (resource.type && !hiddenTypes.includes(resource.type.toLowerCase()))) {
-        //             return new ResourceTreeItem(this, resource);
-        //         } else {
-        //             return undefined;
-        //         }
-        //     },
-        //     resource => resource.name
-        // );
     }
 }

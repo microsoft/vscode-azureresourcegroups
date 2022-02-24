@@ -25,7 +25,10 @@ export function getResourceGroupFromId(id: string): string {
 export function createGroupConfigFromResource(resource: GenericResource): GroupingConfig {
     const id = nonNullProp(resource, 'id');
     return {
-        resourceGroup: { label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
-        resourceType: { label: resource.type?.toLowerCase() || 'unknown', id: resource.type?.toLowerCase() || 'unknown' }
+        resourceGroup: { keyLabel: 'Resource Groups', label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
+        resourceType: {
+            keyLabel: 'Resource Types', label: resource.type?.toLowerCase() || 'unknown',
+            id: `${id.substring(0, id.indexOf('/resourceGroups'))}/${resource.type}` || 'unknown'
+        }
     }
 }
