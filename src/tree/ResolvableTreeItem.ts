@@ -3,6 +3,7 @@ import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, InvalidTreeItem, no
 import { ApplicationResource, ApplicationResourceResolver, GroupingConfig, ResolvableTreeItem as IResolvableTreeItem, ResolveResult } from "../api";
 import { applicationResourceResolvers } from "../api/registerApplicationResourceResolver";
 import { getAzureExtensions } from "../AzExtWrapper";
+import { ext } from "../extensionVariables";
 import { InstallableResourceTreeItem } from "./InstallableResourceTreeItem";
 
 export abstract class ResolvableTreeItem extends AzExtTreeItem implements ApplicationResource, IResolvableTreeItem {
@@ -53,6 +54,7 @@ export abstract class ResolvableTreeItem extends AzExtTreeItem implements Applic
             throw new Error('Failed to resolve tree item');
         }
 
+        ext.activationManager.onNodeTypeResolved(nonNullProp(this.data, 'type'));
         this.treeItem = this.resolveResult.treeItem(this.parent!);
         this.groupConfig = this.resolveResult.groupConfig ?? this.groupConfig;
         this.description = this.resolveResult.description ?? this.description;

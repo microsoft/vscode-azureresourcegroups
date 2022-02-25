@@ -54,6 +54,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             const azExts = getAzureExtensions();
             if (azExts.find((ext: AzExtWrapper) => ext.matchesResourceType(resource))) {
                 const resourceId = nonNullProp(resource, 'id');
+                ext.activationManager.onNodeTypeFetched(nonNullProp(resource, 'type'));
                 if (!this.resolvables[resourceId]) {
                     const resolvable = ResourceTreeItem.Create(this, resource);
                     this.resolvables[resourceId] ??= resolvable;
