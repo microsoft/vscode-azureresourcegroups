@@ -7,8 +7,8 @@ import { AzExtParentTreeItem, TreeItemIconPath } from "@microsoft/vscode-azext-u
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
 import { supportedIconTypes } from "./AppResourceTreeItem";
-import { AppResourceTreeItemBase } from "./AppResourceTreeItemBase";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
+import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 import { ShallowResourceTreeItem } from "./ShallowResourceTreeItem";
 import path = require("path");
 
@@ -18,7 +18,7 @@ export class ResourceTypeGroupTreeItem extends GroupTreeItemBase {
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
-    public items: (AppResourceTreeItemBase | ShallowResourceTreeItem)[];
+    public items: (ResolvableTreeItemBase | ShallowResourceTreeItem)[];
     public type: string;
 
     constructor(parent: AzExtParentTreeItem, type: string) {

@@ -1,12 +1,17 @@
+/*---------------------------------------------------------------------------------------------
+*  Copyright (c) Microsoft Corporation. All rights reserved.
+*  Licensed under the MIT License. See License.txt in the project root for license information.
+*--------------------------------------------------------------------------------------------*/
+
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, nonNullValue } from "@microsoft/vscode-azext-utils";
 import { ThemeIcon } from "vscode";
-import { ApplicationResourceResolver, AppResource, GroupableResource, GroupingConfig, ResolvableTreeItem, ResolvedAppResourceTreeItemBase } from "../api";
+import { AppResource, AppResourceResolver, GroupableResource, GroupingConfig, ResolvedAppResourceTreeItemBase } from "../api";
 import { applicationResourceResolvers } from "../api/registerApplicationResourceResolver";
 import { getAzureExtensions } from "../AzExtWrapper";
 import { ext } from "../extensionVariables";
 import { InstallableResourceTreeItem } from "./InstallableResourceTreeItem";
 
-export abstract class AppResourceTreeItemBase extends AzExtParentTreeItem implements ResolvableTreeItem, GroupableResource {
+export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem implements GroupableResource {
 
     public groupConfig: GroupingConfig;
     public resolveResult: ResolvedAppResourceTreeItemBase | undefined | null;
@@ -52,7 +57,7 @@ export abstract class AppResourceTreeItemBase extends AzExtParentTreeItem implem
         ext.activationManager.onNodeTypeResolved(nonNullProp(this.data, 'type'));
     }
 
-    private getResolver(): ApplicationResourceResolver | undefined {
+    private getResolver(): AppResourceResolver | undefined {
         const resolver = applicationResourceResolvers[nonNullProp(this.data, 'type')];
         if (resolver) {
             return resolver;

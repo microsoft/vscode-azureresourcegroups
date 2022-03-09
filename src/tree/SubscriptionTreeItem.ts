@@ -13,8 +13,8 @@ import { ext } from '../extensionVariables';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
 import { AppResourceTreeItem } from './AppResourceTreeItem';
-import { AppResourceTreeItemBase } from './AppResourceTreeItemBase';
 import { GroupTreeItemBase } from './GroupTreeItemBase';
+import { ResolvableTreeItemBase } from './ResolvableTreeItemBase';
 import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
 import { ShallowResourceTreeItem } from './ShallowResourceTreeItem';
 
@@ -25,7 +25,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     private _items: GroupableResource[] = [];
     private _treeMap: { [key: string]: GroupTreeItemBase } = {};
 
-    private resolvables: Record<string, AppResourceTreeItemBase> = {};
+    private resolvables: Record<string, ResolvableTreeItemBase> = {};
     private rgsItem: AppResource[] = [];
 
 

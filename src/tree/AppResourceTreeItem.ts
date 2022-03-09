@@ -10,13 +10,13 @@ import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration,
 import { ext } from "../extensionVariables";
 import { createGroupConfigFromResource } from "../utils/azureUtils";
 import { treeUtils } from "../utils/treeUtils";
-import { AppResourceTreeItemBase } from "./AppResourceTreeItemBase";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { LocationGroupTreeItem } from "./LocationGroupTreeItem";
+import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 import { ResourceTypeGroupTreeItem } from "./ResourceTypeGroupTreeItem";
 import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
-export class AppResourceTreeItem extends AppResourceTreeItemBase implements GroupableResource {
+export class AppResourceTreeItem extends ResolvableTreeItemBase implements GroupableResource {
     public static contextValue: string = 'azureResource';
     public readonly contextValue: string = AppResourceTreeItem.contextValue;
 

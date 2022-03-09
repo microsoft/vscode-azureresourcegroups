@@ -6,17 +6,25 @@
 import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 
-// Unresolved data that we turn into a tree item
-// Subsequently this gets turned into an `AppResourceTreeItem` by RG extension
+/**
+ * An abstract interface for GenericResource
+ */
 export interface AppResource {
     readonly id: string;
     readonly name: string;
     readonly type: string;
     readonly kind?: string;
     readonly location?: string;
+    /** Resource tags */
+    readonly tags?: {
+        [propertyName: string]: string;
+    };
     /* add more properties from GenericResource if needed */
 }
 
+/**
+ * Defines how a group tree item is created and appears in the tree view
+ */
 export interface GroupNodeConfiguration {
     readonly label: string;
     readonly id: string;
@@ -27,58 +35,26 @@ export interface GroupNodeConfiguration {
     readonly contextValue?: string;
 }
 
+/**
+ * Defines how a leaf tree item is grouped
+ */
 export interface GroupingConfig {
     readonly resourceGroup: GroupNodeConfiguration;
     readonly resourceType: GroupNodeConfiguration;
     [label: string]: GroupNodeConfiguration; // Don't need to support right off the bat but we can put it in the interface
 }
 
+/**
+ * A resource that can be grouped
+ */
 export interface GroupableResource {
     readonly groupConfig: GroupingConfig;
 }
 
-
-export interface ResolvableTreeItem {
-    readonly data: AppResource;
-    resolve(clearCache: boolean, context: IActionContext): Promise<void>;
-}
-
-export interface ApplicationResourceProvider {
-    provideResources(subContext: ISubscriptionContext): vscode.ProviderResult<AppResource[] | undefined>;
-}
-
-export interface ApplicationResourceResolver {
-    resolveResource(subContext: ISubscriptionContext, resource: AppResource): vscode.ProviderResult<ResolvedAppResourceTreeItemBase>;
-}
-
-export interface LocalResourceProvider {
-    provideResources(): vscode.ProviderResult<LocalResource[] | undefined>;
-}
-
-// called from a resource extension (SWA, Functions, etc)
-export declare function registerApplicationResourceResolver(
-    provider: ApplicationResourceResolver,
-    resourceType: string,
-    resourceKind?: string,
-): vscode.Disposable;
-
-// Resource Groups can have a default resolve() method that it supplies, that will activate the appropriate extension and give it a chance to replace the resolve() method
-// ALSO, it will eliminate that default resolver from future calls for that resource type
-
-// called from host extension (Resource Groups)
-// Will need a manifest of extensions mapping type => extension ID
-export declare function registerApplicationResourceProvider(provider: ApplicationResourceProvider): vscode.Disposable;
-
-// resource extensions need to activate onView:localResourceView and call this
-export declare function registerLocalResourceProvider(
-    resourceType: string,
-    provider: LocalResourceProvider
-): vscode.Disposable;
-
-// AzExtTreeItem stuff we don't want people to overwrite, but are accessible
-// AzExtTreeItemApi, AzExtTreeItemProtected, AzExtTreeItemReserved, *SealedAzExtTreeItem*
-// AzExtTreeItem will implement this interface
-export interface /*Walrused*/ /*Ottered*/ SealedAzExtTreeItem {
+/**
+ * AzExtTreeItem properties that cannot be overridden by an app resource resolver.
+ */
+export interface SealedAzExtTreeItem {
     refresh(): Promise<void>;
     /**
      * This id represents the effective/serializable full id of the item in the tree. It always starts with the parent's fullId and ends with either the AzExtTreeItem.id property (if implemented) or AzExtTreeItem.label property
@@ -109,8 +85,7 @@ export interface /*Walrused*/ /*Ottered*/ SealedAzExtTreeItem {
 // AzExtTreeItem stuff we need them to implement
 
 /**
- * AzExtTreeItem methods that are to be implemented by the base class
- * copied from utils/index.d.ts AzExtTreeItem
+ * AzExtTreeItem properties that can be provided by an app resource resolver.
  */
 export interface AbstractAzExtTreeItem {
 
@@ -139,6 +114,31 @@ export interface AbstractAzExtTreeItem {
       */
     loadMoreChildrenImpl?(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]>;
 
+    /**
+    * Implement this as a part of the "Load more..." action. Should not be called directly
+    * @returns 'true' if there are more children and a "Load more..." node should be displayed
+    */
+    hasMoreChildrenImpl?(): boolean;
+
+    /**
+     * Implement this if you want the 'create' option to show up in the tree picker. Should not be called directly
+     * @param context The action context and any additional user-defined options that are passed to the `AzExtParentTreeItem.createChild` or `AzExtTreeDataProvider.showTreeItemPicker`
+     */
+    createChildImpl?(context: ICreateChildImplContext): Promise<AzExtTreeItem>;
+
+    /**
+     * Override this if you want non-default (i.e. non-alphabetical) sorting of children. Should not be called directly
+     * @param item1 The first item to compare
+     * @param item2 The second item to compare
+     * @returns A negative number if the item1 occurs before item2; positive if item1 occurs after item2; 0 if they are equivalent
+     */
+    compareChildrenImpl?(item1: AzExtTreeItem, item2: AzExtTreeItem): number;
+
+    /**
+    * If this treeItem should not show up in the tree picker or you want custom logic to show quick picks, implement this to provide a child that corresponds to the expectedContextValue. Should not be called directly
+    * Otherwise, all children will be shown in the tree picker
+    */
+    pickTreeItemImpl?(expectedContextValues: (string | RegExp)[], context: IActionContext): AzExtTreeItem | undefined | Promise<AzExtTreeItem | undefined>;
 
     /**
      * Implement this to support the 'delete' action in the tree. Should not be called directly
@@ -159,11 +159,24 @@ export interface AbstractAzExtTreeItem {
 
 export type ResolvedAppResourceTreeItemBase = Partial<{ [P in keyof SealedAzExtTreeItem]: never }> & AbstractAzExtTreeItem;
 
-export type ResolvedItem = ResolvedAppResourceTreeItemBase
+export type ResolvedAppResource = ResolvedAppResourceTreeItemBase;
 
 export type ResolvedAppResourceTreeItem<T extends ResolvedAppResourceTreeItemBase> = AppResource & Omit<T, keyof ResolvedAppResourceTreeItemBase>;
 
 export type LocalResource = AzExtTreeItem;
+
+export interface AppResourceResolver {
+    resolveResource(subContext: ISubscriptionContext, resource: AppResource): vscode.ProviderResult<ResolvedAppResource>;
+}
+
+/**
+ * Resource extensions call this to register app resource resolvers.
+ *
+ * @param resolver
+ * @param resourceType
+ * @param resourceKind
+ */
+export declare function registerApplicationResourceResolver(resolver: AppResourceResolver, resourceType: string, resourceKind?: string): vscode.Disposable;
 
 // Not part of public interface to start with--only Resource Groups extension will call it (for now)
 // currently implemented as AzureResourceProvider
@@ -173,10 +186,17 @@ export interface AppResourceProvider {
     ): vscode.ProviderResult<AppResource[]>;
 }
 
-export interface AppResourceResolver {
-    // return null to explicitly skip this resource
-    resolveResource(
-        subContext: ISubscriptionContext,
-        resource: AppResource
-    ): Promise<ResolvedAppResourceTreeItemBase | null> | ResolvedAppResourceTreeItemBase;
+export interface LocalResourceProvider {
+    provideResources(): vscode.ProviderResult<LocalResource[] | undefined>;
 }
+
+// Resource Groups can have a default resolve() method that it supplies, that will activate the appropriate extension and give it a chance to replace the resolve() method
+// ALSO, it will eliminate that default resolver from future calls for that resource type
+
+// called from host extension (Resource Groups)
+// Will need a manifest of extensions mapping type => extension ID
+export declare function registerApplicationResourceProvider(provider: AppResourceProvider): vscode.Disposable;
+
+// resource extensions need to activate onView:localResourceView and call this
+export declare function registerLocalResourceProvider(resourceType: string, provider: LocalResourceProvider): vscode.Disposable;
+
