@@ -44,7 +44,7 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
             }
         }
 
-        await this.runWithTemporaryDescription(context, 'Resolving...', async () => {
+        await this.runWithTemporaryDescription(context, 'Loading...', async () => {
             if (!this.resolveResult || clearCache) {
                 this.resolveResult = await resolver?.resolveResource(this.subscription, this.data);
             }
