@@ -6,13 +6,12 @@
 import { ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { FileChangeType } from "vscode";
+import { GroupableResource } from "../api";
 import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
-import { ResolvableTreeItem } from "./ResolvableTreeItem";
-import { ShallowResourceTreeItem } from "./ShallowResourceTreeItem";
 
 export class ResourceGroupTreeItem extends GroupTreeItemBase {
     public static contextValue: string = 'azureResourceGroup';
@@ -20,7 +19,7 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
     public readonly childTypeLabel: string = localize('resource', 'Resource');
     public readonly label: string;
 
-    public items: (ResolvableTreeItem | ShallowResourceTreeItem)[];
+    public items: GroupableResource[];
 
     constructor(parent: AzExtParentTreeItem, data: ResourceGroup) {
         super(parent);

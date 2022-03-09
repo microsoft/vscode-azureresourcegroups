@@ -3,19 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { GenericResource } from '@azure/arm-resources';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { ConfigurationChangeEvent, workspace } from 'vscode';
-import { GroupableResource, ResolvableTreeItem } from '../api';
+import { AppResource, GroupableResource } from '../api';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { AzExtWrapper, getAzureExtensions } from '../AzExtWrapper';
 import { ext } from '../extensionVariables';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
+import { AppResourceTreeItem } from './AppResourceTreeItem';
+import { AppResourceTreeItemBase } from './AppResourceTreeItemBase';
 import { GroupTreeItemBase } from './GroupTreeItemBase';
 import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
-import { ResourceTreeItem } from './ResourceTreeItem';
 import { ShallowResourceTreeItem } from './ShallowResourceTreeItem';
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
@@ -25,8 +25,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     private _items: GroupableResource[] = [];
     private _treeMap: { [key: string]: GroupTreeItemBase } = {};
 
-    private resolvables: Record<string, ResolvableTreeItem> = {};
-    private rgsItem: GenericResource[] = [];
+    private resolvables: Record<string, AppResourceTreeItemBase> = {};
+    private rgsItem: AppResource[] = [];
 
 
     public constructor(parent: AzExtParentTreeItem, subscription: ISubscriptionContext) {
@@ -50,13 +50,13 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
 
-        this._items = this.rgsItem.map((resource: GenericResource): GroupableResource => {
+        this._items = this.rgsItem.map((resource: AppResource): GroupableResource => {
             const azExts = getAzureExtensions();
             if (azExts.find((ext: AzExtWrapper) => ext.matchesResourceType(resource))) {
                 const resourceId = nonNullProp(resource, 'id');
                 ext.activationManager.onNodeTypeFetched(nonNullProp(resource, 'type'));
                 if (!this.resolvables[resourceId]) {
-                    const resolvable = ResourceTreeItem.Create(this, resource);
+                    const resolvable = AppResourceTreeItem.Create(this, resource);
                     this.resolvables[resourceId] ??= resolvable;
                     return resolvable;
                 }
@@ -110,7 +110,10 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public async refreshImpl(context: IActionContext): Promise<void> {
         this._treeMap = {};
         const groupBySetting = <string>settingUtils.getGlobalSetting<string>('groupBy');
-        this._items.forEach(rgTree => (<ResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting))
+
+        for (const rgTree of this._items) {
+            (<AppResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting);
+        }
     }
 
     public getSubConfigGroupTreeItem(id: string): GroupTreeItemBase {

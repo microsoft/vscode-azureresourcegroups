@@ -5,12 +5,12 @@
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import { localize } from "../utils/localize";
-import { ResolvableTreeItem } from "./ResolvableTreeItem";
+import { AppResourceTreeItemBase } from "./AppResourceTreeItemBase";
 import { ShallowResourceTreeItem } from "./ShallowResourceTreeItem";
 
 export abstract class GroupTreeItemBase extends AzExtParentTreeItem {
     public readonly childTypeLabel: string = localize('resource', 'Resource');
-    public treeMap: { [key: string]: (ResolvableTreeItem | ShallowResourceTreeItem) } = {};
+    public treeMap: { [key: string]: (AppResourceTreeItemBase | ShallowResourceTreeItem) } = {};
     public abstract label;
 
     public readonly cTime: number = Date.now();
@@ -28,7 +28,7 @@ export abstract class GroupTreeItemBase extends AzExtParentTreeItem {
         }
 
         for (const ti of Object.values(this.treeMap)) {
-            if (ti instanceof ResolvableTreeItem) {
+            if (ti instanceof AppResourceTreeItemBase) {
                 void ti.resolve(clearCache, context);
             }
         }

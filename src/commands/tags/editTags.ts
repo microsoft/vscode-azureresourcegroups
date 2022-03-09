@@ -5,10 +5,10 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
+import { AppResourceTreeItem } from "../../tree/AppResourceTreeItem";
 import { ResourceGroupTreeItem } from "../../tree/ResourceGroupTreeItem";
-import { ResourceTreeItem } from "../../tree/ResourceTreeItem";
 
-export async function editTags(context: IActionContext, node?: ResourceGroupTreeItem | ResourceTreeItem): Promise<void> {
+export async function editTags(context: IActionContext, node?: ResourceGroupTreeItem | AppResourceTreeItem): Promise<void> {
     if (!node) {
         node = await ext.tree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, context);
     }
