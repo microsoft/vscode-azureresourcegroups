@@ -7,10 +7,12 @@
 
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
-import { AzureExtensionApi, AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
+import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
+import { AzureResourceGroupsExtensionApi } from './api';
 import { registerApplicationResourceProvider } from './api/registerApplicationResourceProvider';
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
+import { revealTreeItem } from './api/revealTreeItem';
 import { AzureResourceProvider } from './AzureResourceProvider';
 import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
@@ -36,7 +38,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const accountTreeItem: AzureAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(accountTreeItem);
         ext.tree = new AzExtTreeDataProvider(accountTreeItem, 'azureResourceGroups.loadMore');
-        context.subscriptions.push(vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.tree, showCollapseAll: true, canSelectMany: true }));
+        ext.treeView = vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.tree, showCollapseAll: true, canSelectMany: true });
+        context.subscriptions.push(ext.treeView);
 
         ext.tagFS = new TagFileSystem(ext.tree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
@@ -53,8 +56,11 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     });
 
     return createApiProvider([
-        <AzureExtensionApi>{
+        <AzureResourceGroupsExtensionApi>{
             apiVersion: '0.0.1',
+            tree: ext.tree,
+            treeView: ext.treeView,
+            revealTreeItem,
             registerApplicationResourceResolver
         }
     ]);

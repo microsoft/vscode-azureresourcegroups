@@ -2,6 +2,15 @@ import { GenericResource } from '@azure/arm-resources';
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 
+export interface AzureResourceGroupsExtensionApi {
+    tree: AzExtTreeDataProvider;
+    treeView: TreeView<AzExtTreeItem>;
+
+    apiVersion: string;
+    revealTreeItem(resourceId: string): Promise<void>;
+
+}
+
 export interface TreeNodeConfiguration {
     readonly label: string;
     readonly id: string;
