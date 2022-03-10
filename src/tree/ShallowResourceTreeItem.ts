@@ -94,12 +94,12 @@ export class ShallowResourceTreeItem extends AzExtTreeItem implements GroupableR
         switch (groupBySetting) {
             case 'resourceType':
                 return new ResourceTypeGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceType.label)
-            case 'resourceGroup':
+            // case 'resourceGroup':
             // TODO: Use ResovableTreeItem here
             // TODO: Make it sync to create this and then resolve to a RG TreeItem
             // return new ResourceGroupTreeItem(this.rootGroupTreeItem);
             default:
-                return new LocationGroupTreeItem(this.rootGroupTreeItem, this.data.location!.toLocaleLowerCase());
+                return new LocationGroupTreeItem(this.rootGroupTreeItem, this.data.location?.toLocaleLowerCase() ?? 'No location');
         }
     }
 }

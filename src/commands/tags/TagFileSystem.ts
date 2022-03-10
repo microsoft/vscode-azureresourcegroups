@@ -9,8 +9,8 @@ import * as jsonc from 'jsonc-parser';
 import * as os from "os";
 import { commands, Diagnostic, DiagnosticSeverity, FileStat, FileType, languages, MessageItem, Uri, window } from "vscode";
 import { ext } from "../../extensionVariables";
+import { AppResourceTreeItem } from "../../tree/AppResourceTreeItem";
 import { ResourceGroupTreeItem } from "../../tree/ResourceGroupTreeItem";
-import { ResourceTreeItem } from "../../tree/ResourceTreeItem";
 import { ShallowResourceTreeItem } from "../../tree/ShallowResourceTreeItem";
 import { createResourceClient } from "../../utils/azureClients";
 import { localize } from "../../utils/localize";
@@ -22,21 +22,21 @@ const insertValueHere: string = localize('insertTagValue', '<Insert tag value>')
  * For now this file system only supports editing tags.
  * However, the scheme was left generic so that it could support editing other stuff in this extension without needing to create a whole new file system
  */
-export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | ResourceTreeItem | ShallowResourceTreeItem> {
+export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | AppResourceTreeItem | ShallowResourceTreeItem> {
     public static scheme: string = 'azureResourceGroups';
     public scheme: string = TagFileSystem.scheme;
 
-    public async statImpl(_context: IActionContext, node: ResourceGroupTreeItem | ResourceTreeItem): Promise<FileStat> {
+    public async statImpl(_context: IActionContext, node: ResourceGroupTreeItem | AppResourceTreeItem): Promise<FileStat> {
         const fileContent: string = this.getFileContentFromTags(node.data?.tags);
         return { type: FileType.File, ctime: node.cTime, mtime: node.mTime, size: Buffer.byteLength(fileContent) };
     }
 
-    public async readFileImpl(_context: IActionContext, node: ResourceGroupTreeItem | ResourceTreeItem): Promise<Uint8Array> {
+    public async readFileImpl(_context: IActionContext, node: ResourceGroupTreeItem | AppResourceTreeItem): Promise<Uint8Array> {
         const fileContent: string = this.getFileContentFromTags(node.data?.tags);
         return Buffer.from(fileContent);
     }
 
-    public async writeFileImpl(context: IActionContext, node: ResourceGroupTreeItem | ResourceTreeItem, content: Uint8Array, originalUri: Uri): Promise<void> {
+    public async writeFileImpl(context: IActionContext, node: ResourceGroupTreeItem | AppResourceTreeItem, content: Uint8Array, originalUri: Uri): Promise<void> {
         const text: string = content.toString();
         const isResourceGroup: boolean = node instanceof ResourceGroupTreeItem;
 
@@ -89,7 +89,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | R
         }
     }
 
-    public getFilePath(node: ResourceGroupTreeItem | ResourceTreeItem): string {
+    public getFilePath(node: ResourceGroupTreeItem | AppResourceTreeItem): string {
         return `${node.name}-tags.jsonc`;
     }
 

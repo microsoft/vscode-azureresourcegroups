@@ -29,6 +29,11 @@ export function createGroupConfigFromResource(resource: GenericResource): Groupi
         resourceType: {
             keyLabel: 'Resource Types', label: resource.type?.toLowerCase() || 'unknown',
             id: `${id.substring(0, id.indexOf('/resourceGroups'))}/${resource.type}` || 'unknown'
+        },
+        location: {
+            id: resource.location ?? 'No location',
+            keyLabel: 'Location',
+            label: resource.location ?? 'No location'
         }
     }
 }
