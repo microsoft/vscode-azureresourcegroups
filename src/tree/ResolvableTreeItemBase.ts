@@ -16,7 +16,11 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     public groupConfig: GroupingConfig;
     public resolveResult: ResolvedAppResourceBase | undefined | null;
     public data: AppResource;
-    public readonly contextValues: string[] = [];
+    protected readonly contextValues: Set<string> = new Set<string>();
+
+    public get contextValue(): string {
+        return Array.from(this.contextValues.values()).sort().join(';');
+    }
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         await this.resolve(clearCache, context);
@@ -38,7 +42,7 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
 
         await this.runWithTemporaryDescription(context, 'Loading...', async () => {
             if (!this.resolveResult || clearCache) {
-                this.resolveResult = await resolver?.resolveResource(this.subscription, this.data);
+                this.resolveResult = await resolver.resolveResource(this.subscription, this.data);
             }
 
             // Debug only?
@@ -46,11 +50,13 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
                 throw new Error('Failed to resolve tree item');
             }
 
-            await this.refresh(context);
+            this.resolveResult?.contextValues?.forEach(cv => this.contextValues.add(cv));
+
+            await this.refresh(context); // refreshUIOnly?
         });
     }
 
-    private getResolver(): AppResourceResolver | undefined {
+    private getResolver(): AppResourceResolver {
         const resolver = applicationResourceResolvers[nonNullProp(this.data, 'type')];
         if (resolver) {
             return resolver;

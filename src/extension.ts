@@ -53,9 +53,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         registerCommands();
         registerApplicationResourceProvider(new AzureResourceProvider());
-        registerApplicationResourceResolver(noopResolver, 'vscode-azureresourcegroups.noopResolver');
-        registerApplicationResourceResolver(installableAppResourceResolver, 'vscode-azureresourcegroups.installableAppResourceResolver');
-        registerApplicationResourceResolver(shallowResourceResolver, 'vscode-azureresourcegroups.shallowResourceResolver');
+        registerApplicationResourceResolver(noopResolver, 'Microsoft.vscode-azureresourcegroups/noopResolver');
+        registerApplicationResourceResolver(installableAppResourceResolver, 'Microsoft.vscode-azureresourcegroups/installableAppResourceResolver');
+        registerApplicationResourceResolver(shallowResourceResolver, 'Microsoft.vscode-azureresourcegroups/shallowResourceResolver');
     });
 
     return createApiProvider([

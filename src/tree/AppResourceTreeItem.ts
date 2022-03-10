@@ -33,10 +33,10 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         this.rootGroupConfig = <GroupNodeConfiguration><unknown>parent;
 
         this.data = resource;
-        this.commandId = 'azureResourceGroups.revealResource';
+        this.commandId = 'azureResourceGroups.revealResource'; // TODO: is this still needed?
         this.groupConfig = createGroupConfigFromResource(resource);
 
-        this.contextValues.push(AppResourceTreeItem.contextValue);
+        this.contextValues.add(AppResourceTreeItem.contextValue);
 
         // test for [label: string] keys
         this.groupConfig["location"] = { keyLabel: 'Locations', label: this.data.location || 'unknown', id: `${this.parent?.id}/${this.data.location}` }
@@ -54,7 +54,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         const resolvable: AppResourceTreeItem = new AppResourceTreeItem(parent, resource);
         const providerHandler: ProxyHandler<AppResourceTreeItem> = {
             get: (target: AppResourceTreeItem, name: string): unknown => {
-                // TODO: concatenate context values
+                // TODO: Should we add a filter for `contextValues`, or maybe rename it?
                 return resolvable?.resolveResult?.[name] ?? target[name];
             },
             set: (target: AppResourceTreeItem, name: string, value: unknown): boolean => {
@@ -70,10 +70,6 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
             }
         }
         return new Proxy(resolvable, providerHandler);
-    }
-
-    public get contextValue(): string {
-        return this.contextValues.sort().join(';');
     }
 
     public get name(): string {
