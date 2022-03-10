@@ -37,7 +37,9 @@ export abstract class GroupTreeItemBase extends AzExtParentTreeItem {
     }
 
     public async resolveVisibleChildren(context: IActionContext, resourceType: string): Promise<void> {
-        if (this.collapsibleState !== TreeItemCollapsibleState.Expanded) {
+        // TODO: `collapsibleState` needs to be made visible on `AzExtTreeItem`
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        if ((this as any).collapsibleState !== TreeItemCollapsibleState.Expanded) {
             // Nothing to do if this node isn't expanded
             return;
         }
