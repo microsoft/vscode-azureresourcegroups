@@ -124,7 +124,7 @@ export interface AbstractAzExtTreeItem {
      * Implement this if you want the 'create' option to show up in the tree picker. Should not be called directly
      * @param context The action context and any additional user-defined options that are passed to the `AzExtParentTreeItem.createChild` or `AzExtTreeDataProvider.showTreeItemPicker`
      */
-    createChildImpl?(context: unknown /* ICreateChildImplContext */): Promise<AzExtTreeItem>;
+    createChildImpl?(context: ICreateChildImplContext): Promise<AzExtTreeItem>;
 
     /**
      * Override this if you want non-default (i.e. non-alphabetical) sorting of children. Should not be called directly

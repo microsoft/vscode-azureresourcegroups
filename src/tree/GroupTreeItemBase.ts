@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
+import { TreeItemCollapsibleState } from "vscode";
 import { localize } from "../utils/localize";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 
@@ -33,5 +34,17 @@ export abstract class GroupTreeItemBase extends AzExtParentTreeItem {
         }
 
         return Object.values(this.treeMap) as AzExtTreeItem[];
+    }
+
+    public async resolveVisibleChildren(context: IActionContext, resourceType: string): Promise<void> {
+        if (this.collapsibleState !== TreeItemCollapsibleState.Expanded) {
+            // Nothing to do if this node isn't expanded
+            return;
+        }
+
+        const childrenOfType = Object.values(this.treeMap).filter(c => c.data.type.toLowerCase() === resourceType.toLowerCase());
+        const childPromises = childrenOfType.map(resolvable => resolvable.resolve(true, context));
+
+        await Promise.all(childPromises);
     }
 }

@@ -4,7 +4,6 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { ThemeIcon } from "vscode";
 import { AppResource, AppResourceResolver, GroupableResource, GroupingConfig, ResolvedAppResourceBase } from "../api";
 import { applicationResourceResolvers } from "../api/registerApplicationResourceResolver";
 import { ext } from "../extensionVariables";
@@ -33,28 +32,22 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     }
 
     public async resolve(clearCache: boolean, context: IActionContext): Promise<void> {
+        ext.activationManager.onNodeTypeResolved(this.data.type);
 
         const resolver = this.getResolver();
-
-        if (!resolver) {
-            this.resolveResult = {
-                id: this.data.id,
-                description: 'No resolver found for this resource',
-                iconPath: new ThemeIcon('error'),
-            }
-        }
 
         await this.runWithTemporaryDescription(context, 'Loading...', async () => {
             if (!this.resolveResult || clearCache) {
                 this.resolveResult = await resolver?.resolveResource(this.subscription, this.data);
             }
+
+            // Debug only?
+            if (!this.resolveResult) {
+                throw new Error('Failed to resolve tree item');
+            }
+
+            await this.refresh(context);
         });
-
-        if (!this.resolveResult) {
-            throw new Error('Failed to resolve tree item');
-        }
-
-        ext.activationManager.onNodeTypeResolved(nonNullProp(this.data, 'type'));
     }
 
     private getResolver(): AppResourceResolver | undefined {

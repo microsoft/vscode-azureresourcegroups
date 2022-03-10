@@ -8,13 +8,11 @@ import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep
 import { ConfigurationChangeEvent, workspace } from 'vscode';
 import { AppResource, GroupableResource } from '../api';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
-import { AzExtWrapper, getAzureExtensions } from '../AzExtWrapper';
 import { ext } from '../extensionVariables';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
 import { AppResourceTreeItem } from './AppResourceTreeItem';
 import { GroupTreeItemBase } from './GroupTreeItemBase';
-import { ResolvableTreeItemBase } from './ResolvableTreeItemBase';
 import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
@@ -24,7 +22,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     private _items: GroupableResource[] = [];
     private _treeMap: { [key: string]: GroupTreeItemBase } = {};
 
-    private resolvables: Record<string, ResolvableTreeItemBase> = {};
     private rgsItem: AppResource[] = [];
 
 
@@ -52,21 +49,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             this.rgsItem.forEach(item => ext.activationManager.onNodeTypeFetched(item.type));
         }
 
-        this._items = this.rgsItem.map((resource: AppResource): GroupableResource => {
-            const azExts = getAzureExtensions();
-            if (azExts.find((ext: AzExtWrapper) => ext.matchesResourceType(resource))) {
-                const resourceId = nonNullProp(resource, 'id');
-                if (!this.resolvables[resourceId]) {
-                    const resolvable = AppResourceTreeItem.Create(this, resource);
-                    this.resolvables[resourceId] ??= resolvable;
-                    return resolvable;
-                }
-                return this.resolvables[resourceId];
-            }
-
-            // TODO
-            return undefined as GroupableResource;
-        });
+        this._items = this.rgsItem.map((resource: AppResource): GroupableResource => AppResourceTreeItem.Create(this, resource));
 
         // dynamically generate GroupBy keys, should be moved
         for (const item of this._items) {
@@ -124,5 +107,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public setSubConfigGroupTreeItem(id: string, treeItem: GroupTreeItemBase): void {
         this._treeMap[id] = treeItem;
+    }
+
+    public async resolveVisibleChildren(context: IActionContext, resourceType: string): Promise<void> {
+        const children = Object.values(this._treeMap);
+        const childPromises = children.map(c => c.resolveVisibleChildren(context, resourceType));
+
+        await Promise.all(childPromises);
     }
 }

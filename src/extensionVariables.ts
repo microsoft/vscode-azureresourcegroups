@@ -7,6 +7,7 @@ import { AzExtTreeDataProvider, IAzExtOutputChannel } from "@microsoft/vscode-az
 import { DiagnosticCollection, Disposable, ExtensionContext } from "vscode";
 import { AppResourceProvider } from "./api";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
+import { AzureAccountTreeItem } from "./tree/AzureAccountTreeItem";
 import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 
 /**
@@ -15,6 +16,7 @@ import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 export namespace ext {
     export let context: ExtensionContext;
     export let tree: AzExtTreeDataProvider;
+    export let rootAccountTreeItem: AzureAccountTreeItem;
     export let helpTree: AzExtTreeDataProvider;
     export let outputChannel: IAzExtOutputChannel;
     export let ignoreBundle: boolean | undefined;
