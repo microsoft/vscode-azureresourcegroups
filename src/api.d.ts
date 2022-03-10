@@ -55,7 +55,7 @@ export interface GroupableResource {
  * AzExtTreeItem properties that cannot be overridden by an app resource resolver.
  */
 export interface SealedAzExtTreeItem {
-    refresh(): Promise<void>;
+    refresh(context: IActionContext): Promise<void>;
     /**
      * This id represents the effective/serializable full id of the item in the tree. It always starts with the parent's fullId and ends with either the AzExtTreeItem.id property (if implemented) or AzExtTreeItem.label property
      * This is used for AzureTreeDataProvider.findTreeItem and openInPortal
@@ -89,7 +89,7 @@ export interface SealedAzExtTreeItem {
  */
 export interface AbstractAzExtTreeItem {
 
-    id: string;
+    id?: string;
     label: string;
 
     /**
@@ -124,7 +124,7 @@ export interface AbstractAzExtTreeItem {
      * Implement this if you want the 'create' option to show up in the tree picker. Should not be called directly
      * @param context The action context and any additional user-defined options that are passed to the `AzExtParentTreeItem.createChild` or `AzExtTreeDataProvider.showTreeItemPicker`
      */
-    createChildImpl?(context: ICreateChildImplContext): Promise<AzExtTreeItem>;
+    createChildImpl?(context: unknown /* ICreateChildImplContext */): Promise<AzExtTreeItem>;
 
     /**
      * Override this if you want non-default (i.e. non-alphabetical) sorting of children. Should not be called directly
@@ -157,16 +157,14 @@ export interface AbstractAzExtTreeItem {
     isAncestorOfImpl?(contextValue: string | RegExp): boolean;
 }
 
-export type ResolvedAppResourceTreeItemBase = Partial<{ [P in keyof SealedAzExtTreeItem]: never }> & AbstractAzExtTreeItem;
+export type ResolvedAppResourceBase = Partial<{ [P in keyof SealedAzExtTreeItem]: never }> & Partial<AbstractAzExtTreeItem> & { contextValue?: never, contextValues?: string[] };
 
-export type ResolvedAppResource = ResolvedAppResourceTreeItemBase;
-
-export type ResolvedAppResourceTreeItem<T extends ResolvedAppResourceTreeItemBase> = AppResource & Omit<T, keyof ResolvedAppResourceTreeItemBase>;
+export type ResolvedAppResourceTreeItem<T extends ResolvedAppResourceBase> = AppResource & SealedAzExtTreeItem & Omit<T, keyof ResolvedAppResourceBase>;
 
 export type LocalResource = AzExtTreeItem;
 
 export interface AppResourceResolver {
-    resolveResource(subContext: ISubscriptionContext, resource: AppResource): vscode.ProviderResult<ResolvedAppResource>;
+    resolveResource(subContext: ISubscriptionContext, resource: AppResource): vscode.ProviderResult<ResolvedAppResourceBase>;
 }
 
 /**

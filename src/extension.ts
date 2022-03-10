@@ -16,6 +16,9 @@ import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { ext } from './extensionVariables';
+import { installableAppResourceResolver } from './resolvers/InstallableAppResourceResolver';
+import { noopResolver } from './resolvers/NoopResolver';
+import { shallowResourceResolver } from './resolvers/ShallowResourceResolver';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
@@ -50,6 +53,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         registerCommands();
         registerApplicationResourceProvider(new AzureResourceProvider());
+        registerApplicationResourceResolver(noopResolver, 'vscode-azureresourcegroups.noopResolver');
+        registerApplicationResourceResolver(installableAppResourceResolver, 'vscode-azureresourcegroups.installableAppResourceResolver');
+        registerApplicationResourceResolver(shallowResourceResolver, 'vscode-azureresourcegroups.shallowResourceResolver');
     });
 
     return createApiProvider([

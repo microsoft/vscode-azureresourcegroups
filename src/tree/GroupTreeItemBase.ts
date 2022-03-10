@@ -6,11 +6,10 @@
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import { localize } from "../utils/localize";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
-import { ShallowResourceTreeItem } from "./ShallowResourceTreeItem";
 
 export abstract class GroupTreeItemBase extends AzExtParentTreeItem {
     public readonly childTypeLabel: string = localize('resource', 'Resource');
-    public treeMap: { [key: string]: (ResolvableTreeItemBase | ShallowResourceTreeItem) } = {};
+    public treeMap: { [key: string]: ResolvableTreeItemBase } = {};
     public abstract label;
 
     public readonly cTime: number = Date.now();

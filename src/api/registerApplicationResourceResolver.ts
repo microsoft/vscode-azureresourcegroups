@@ -12,7 +12,9 @@ export function registerApplicationResourceResolver(provider: AppResourceResolve
     // not handling resource kind yet
     applicationResourceResolvers[resourceType] = provider;
 
+    // TODO: trigger resolve on all visible resource nodes
+
     return new Disposable(() => {
         delete applicationResourceResolvers[resourceType];
-    })
+    });
 }

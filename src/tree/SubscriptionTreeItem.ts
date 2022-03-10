@@ -16,7 +16,6 @@ import { AppResourceTreeItem } from './AppResourceTreeItem';
 import { GroupTreeItemBase } from './GroupTreeItemBase';
 import { ResolvableTreeItemBase } from './ResolvableTreeItemBase';
 import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
-import { ShallowResourceTreeItem } from './ShallowResourceTreeItem';
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public readonly childTypeLabel: string = localize('resourceGroup', 'Resource Group');
@@ -46,24 +45,27 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         if (this.rgsItem.length === 0) {
             this.rgsItem.push(...(await applicationResourceProviders[0]?.provideResources(this.subscription) ?? []));
-        }
 
-        // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
+            // To support multiple app resource providers, need to use this pattern
+            // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
+
+            this.rgsItem.forEach(item => ext.activationManager.onNodeTypeFetched(item.type));
+        }
 
         this._items = this.rgsItem.map((resource: AppResource): GroupableResource => {
             const azExts = getAzureExtensions();
             if (azExts.find((ext: AzExtWrapper) => ext.matchesResourceType(resource))) {
                 const resourceId = nonNullProp(resource, 'id');
-                ext.activationManager.onNodeTypeFetched(nonNullProp(resource, 'type'));
                 if (!this.resolvables[resourceId]) {
                     const resolvable = AppResourceTreeItem.Create(this, resource);
                     this.resolvables[resourceId] ??= resolvable;
                     return resolvable;
                 }
                 return this.resolvables[resourceId];
-            } else {
-                return new ShallowResourceTreeItem(this, resource);
             }
+
+            // TODO
+            return undefined as GroupableResource;
         });
 
         // dynamically generate GroupBy keys, should be moved

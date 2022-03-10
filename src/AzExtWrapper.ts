@@ -78,4 +78,8 @@ export class AzExtWrapper {
         }
         return this._verifiedReportIssueCommandId;
     }
+
+    public isInstalled(): boolean {
+        return !!this.getCodeExtension();
+    }
 }
