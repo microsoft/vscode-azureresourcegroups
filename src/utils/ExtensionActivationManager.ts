@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /*!--------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
@@ -37,6 +38,7 @@ export class ExtensionActivationManager implements vscode.Disposable {
             .filter(ext => !builtInExtensionIdRegex.test(ext.id)); // We don't need to look at any built-in extensions (often the majority of them)
 
         for (const ext of possibleExtensions) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const activationEvents: string[] = Array.isArray(ext.packageJSON.activationEvents) ? ext.packageJSON.activationEvents : [];
 
             for (const activationEvent of activationEvents) {
@@ -53,8 +55,8 @@ export class ExtensionActivationManager implements vscode.Disposable {
         }
     }
 
-    public onNodeTypeFetched = (type: string) => this.onNodeType(type, this.onFetchExtensions);
-    public onNodeTypeResolved = (type: string) => this.onNodeType(type, this.onResolveExtensions);
+    public onNodeTypeFetched = (type: string): void => this.onNodeType(type, this.onFetchExtensions);
+    public onNodeTypeResolved = (type: string): void => this.onNodeType(type, this.onResolveExtensions);
 
     private addExtensionToActivationList(type: string, extensionId: string, activationList: Map<string, Set<string>>): void {
         const typeLower = type.toLowerCase(); // Cast to lowercase
@@ -62,6 +64,8 @@ export class ExtensionActivationManager implements vscode.Disposable {
             activationList.set(typeLower, new Set<string>());
         }
 
+        // allow non-null assertion because we are sure that this key exists due to above check
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         activationList.get(typeLower)!.add(extensionId);
     }
 

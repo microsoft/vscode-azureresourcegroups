@@ -5,7 +5,7 @@
 
 import { AzExtTreeDataProvider, AzExtTreeItem, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
 import { DiagnosticCollection, Disposable, ExtensionContext, TreeView } from "vscode";
-import { ApplicationResourceProvider } from "./api";
+import { AppResourceProvider } from "./api";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 
@@ -26,7 +26,7 @@ export namespace ext {
     export let diagnosticCollection: DiagnosticCollection;
 
     export let activationManager: ExtensionActivationManager;
-    export const resourceProviders: { [key: string]: ApplicationResourceProvider } = {};
+    export const resourceProviders: { [key: string]: AppResourceProvider } = {};
     export const groupByKeys: { [key: string]: string } = {
         resourceType: 'Resource Types',
         resourceGroup: 'Resource Groups'

@@ -3,41 +3,35 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { GenericResource } from "@azure/arm-resources";
 import { AzExtParentTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { FileChangeType } from "vscode";
-import { GroupableApplicationResource, GroupingConfig, TreeNodeConfiguration } from "../api";
+import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration, ResolvedAppResourceTreeItemBase } from "../api";
 import { ext } from "../extensionVariables";
 import { createGroupConfigFromResource } from "../utils/azureUtils";
 import { treeUtils } from "../utils/treeUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { LocationGroupTreeItem } from "./LocationGroupTreeItem";
-import { ResolvableTreeItem } from "./ResolvableTreeItem";
+import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 import { ResourceTypeGroupTreeItem } from "./ResourceTypeGroupTreeItem";
 import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
-export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApplicationResource {
-    public hasMoreChildrenImpl(): boolean {
-        return false;
-    }
-
+export class AppResourceTreeItem extends ResolvableTreeItemBase implements GroupableResource {
     public static contextValue: string = 'azureResource';
-    public readonly contextValue: string = ResourceTreeItem.contextValue;
-    public data: GenericResource;
-    public rootGroupTreeItem: AzExtParentTreeItem;
+    public readonly contextValue: string = AppResourceTreeItem.contextValue;
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
-    public rootGroupConfig: TreeNodeConfiguration;
+    public rootGroupTreeItem: AzExtParentTreeItem;
+    public rootGroupConfig: GroupNodeConfiguration;
     public groupConfig: GroupingConfig;
 
-    constructor(parent: AzExtParentTreeItem, resource: GenericResource) {
+    private constructor(parent: AzExtParentTreeItem, resource: AppResource) {
         // parent should be renamed to rootGroup
         super(parent);
         this.rootGroupTreeItem = parent;
-        this.rootGroupConfig = <TreeNodeConfiguration><unknown>parent;
+        this.rootGroupConfig = <GroupNodeConfiguration><unknown>parent;
 
         this.data = resource;
         this.commandId = 'azureResourceGroups.revealResource';
@@ -48,24 +42,29 @@ export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApp
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
-    public static Create(parent: AzExtParentTreeItem, resource: GenericResource): ResolvableTreeItem {
-
-        const resolvable = new ResourceTreeItem(parent, resource);
-
-        const providerHandler: ProxyHandler<ResolvableTreeItem> = {
-            get: (target: ResolvableTreeItem, name: string): unknown => {
-                return resolvable?.treeItem?.[name] ?? target[name];
+    /**
+     * Creates a Proxied app resource tree item
+     *
+     * @param parent
+     * @param resource
+     * @returns
+     */
+    public static Create(parent: AzExtParentTreeItem, resource: AppResource): AppResourceTreeItem {
+        const resolvable: AppResourceTreeItem = new AppResourceTreeItem(parent, resource);
+        const providerHandler: ProxyHandler<AppResourceTreeItem> = {
+            get: (target: AppResourceTreeItem, name: string): unknown => {
+                return resolvable?.resolveResult?.[name] ?? target[name];
             },
-            set: (target: ResolvableTreeItem, name: string, value: unknown) => {
-                if (resolvable.treeItem && Object.getOwnPropertyDescriptor(resolvable.treeItem, name)?.writable) {
-                    resolvable.treeItem[name] = value;
+            set: (target: AppResourceTreeItem, name: string, value: unknown) => {
+                if (resolvable.resolveResult && Object.getOwnPropertyDescriptor(resolvable.resolveResult, name)?.writable) {
+                    resolvable.resolveResult[name] = value;
                     return true;
                 }
                 target[name] = value;
                 return true;
             },
-            getPrototypeOf: (target: ResolvableTreeItem) => {
-                return resolvable?.treeItem ?? target;
+            getPrototypeOf: (target: AppResourceTreeItem): AppResourceTreeItem | ResolvedAppResourceTreeItemBase => {
+                return resolvable?.resolveResult ?? target;
             }
         }
         return new Proxy(resolvable, providerHandler);
@@ -113,7 +112,7 @@ export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApp
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
         if (!subGroupTreeItem) {
-            subGroupTreeItem = this.createSubGroupTreeItem(groupBySetting);
+            subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting);
             (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
         }
 
@@ -122,7 +121,8 @@ export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApp
         void subGroupTreeItem.refresh(context);
     }
 
-    public createSubGroupTreeItem(groupBySetting: string): GroupTreeItemBase {
+    public createSubGroupTreeItem(_context: IActionContext, groupBySetting: string): GroupTreeItemBase {
+        // const client = await createResourceClient([context, this.rootGroupTreeItem.subscription]);
         switch (groupBySetting) {
             case 'resourceType':
                 return new ResourceTypeGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceType.label)
@@ -130,7 +130,7 @@ export class ResourceTreeItem extends ResolvableTreeItem implements GroupableApp
             // TODO: Use ResovableTreeItem here
             // return new ResourceGroupTreeItem(this.rootGroupTreeItem, (await client.resourceGroups.get(this.groupConfig.resourceGroup.label)));
             default:
-                return new LocationGroupTreeItem(this.rootGroupTreeItem, this.data.location!.toLocaleLowerCase());
+                return new LocationGroupTreeItem(this.rootGroupTreeItem, this.data.location?.toLocaleLowerCase() ?? 'No location');
         }
     }
 }
