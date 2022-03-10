@@ -55,7 +55,7 @@ export interface GroupableResource {
  * AzExtTreeItem properties that cannot be overridden by an app resource resolver.
  */
 export interface SealedAzExtTreeItem {
-    refresh(context: IActionContext): Promise<void>;
+    refresh(): Promise<void>;
     /**
      * This id represents the effective/serializable full id of the item in the tree. It always starts with the parent's fullId and ends with either the AzExtTreeItem.id property (if implemented) or AzExtTreeItem.label property
      * This is used for AzureTreeDataProvider.findTreeItem and openInPortal
