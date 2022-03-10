@@ -89,7 +89,7 @@ export interface SealedAzExtTreeItem {
  */
 export interface AbstractAzExtTreeItem {
 
-    id?: string;
+    id: string;
     label: string;
 
     /**
