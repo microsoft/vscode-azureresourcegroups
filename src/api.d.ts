@@ -157,7 +157,19 @@ export interface AbstractAzExtTreeItem {
     isAncestorOfImpl?(contextValue: string | RegExp): boolean;
 }
 
-export type ResolvedAppResourceBase = Partial<{ [P in keyof SealedAzExtTreeItem]: never }> & Partial<AbstractAzExtTreeItem> & { contextValue?: never, contextValues?: string[] };
+interface ContextValuesToAdd {
+    /**
+     * Resolvers are not allowed to set the context value. Instead, they must provide `contextValuesToAdd`
+     */
+    contextValue?: never;
+
+    /**
+     * These will be added to a Set<string> of context values. The array is *not* pre-initialized as an empty array.
+     */
+    contextValuesToAdd?: string[];
+}
+
+export type ResolvedAppResourceBase = Partial<{ [P in keyof SealedAzExtTreeItem]: never }> & Partial<AbstractAzExtTreeItem> & ContextValuesToAdd;
 
 export type ResolvedAppResourceTreeItem<T extends ResolvedAppResourceBase> = AppResource & SealedAzExtTreeItem & Omit<T, keyof ResolvedAppResourceBase>;
 

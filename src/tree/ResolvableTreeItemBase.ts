@@ -50,7 +50,7 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
                 throw new Error('Failed to resolve tree item');
             }
 
-            this.resolveResult?.contextValues?.forEach(cv => this.contextValues.add(cv));
+            this.resolveResult?.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
 
             await this.refresh(context); // refreshUIOnly?
         });
