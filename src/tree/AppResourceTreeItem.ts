@@ -33,7 +33,6 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         this.rootGroupConfig = <GroupNodeConfiguration><unknown>parent;
 
         this.data = resource;
-        this.commandId = 'azureResourceGroups.revealResource'; // TODO: is this still needed?
         this.groupConfig = createGroupConfigFromResource(resource);
 
         this.contextValues.add(AppResourceTreeItem.contextValue);
