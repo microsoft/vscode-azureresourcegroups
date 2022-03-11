@@ -6,19 +6,22 @@
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { AppResource, AppResourceResolver, ResolvedAppResourceBase } from "../api";
 import { getAzureExtensions } from "../AzExtWrapper";
+import { BuiltinResolver } from "./BuiltinResolver";
 
 /**
  * This resolver acts as a "placeholder" resolver when no extension is known for the resource type.
  * It changes nothing about the node. When the extension activates, it will supply the real resolver.
  */
-class ShallowResourceResolver implements AppResourceResolver {
+class ShallowResourceResolver implements AppResourceResolver, BuiltinResolver {
+    public readonly resolverKind = 'builtin';
+
     public resolveResource(_subContext: ISubscriptionContext, _resource: AppResource): ResolvedAppResourceBase {
         return {
             commandId: 'azureResourceGroups.viewProperties'
         };
     }
 
-    public isApplicable(resource: AppResource): boolean {
+    public matchesResource(resource: AppResource): boolean {
         return !getAzureExtensions().some(azExt => azExt.matchesResourceType(resource));
     }
 }

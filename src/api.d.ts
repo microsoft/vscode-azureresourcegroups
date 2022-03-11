@@ -177,16 +177,16 @@ export type LocalResource = AzExtTreeItem;
 
 export interface AppResourceResolver {
     resolveResource(subContext: ISubscriptionContext, resource: AppResource): vscode.ProviderResult<ResolvedAppResourceBase>;
+    matchesResource(resource: AppResource): boolean;
 }
 
 /**
  * Resource extensions call this to register app resource resolvers.
  *
+ * @param id
  * @param resolver
- * @param resourceType
- * @param resourceKind
  */
-export declare function registerApplicationResourceResolver(resolver: AppResourceResolver, resourceType: string, resourceKind?: string): vscode.Disposable;
+export declare function registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): vscode.Disposable;
 
 // Not part of public interface to start with--only Resource Groups extension will call it (for now)
 // currently implemented as AzureResourceProvider
@@ -205,8 +205,8 @@ export interface LocalResourceProvider {
 
 // called from host extension (Resource Groups)
 // Will need a manifest of extensions mapping type => extension ID
-export declare function registerApplicationResourceProvider(provider: AppResourceProvider): vscode.Disposable;
+export declare function registerApplicationResourceProvider(id: string, provider: AppResourceProvider): vscode.Disposable;
 
 // resource extensions need to activate onView:localResourceView and call this
-export declare function registerLocalResourceProvider(resourceType: string, provider: LocalResourceProvider): vscode.Disposable;
+export declare function registerLocalResourceProvider(id: string, provider: LocalResourceProvider): vscode.Disposable;
 

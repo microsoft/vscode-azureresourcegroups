@@ -10,15 +10,14 @@ import { ext } from "../extensionVariables";
 
 export const applicationResourceResolvers: Record<string, AppResourceResolver> = {};
 
-export function registerApplicationResourceResolver(provider: AppResourceResolver, resourceType: string, _resourceKind?: string): Disposable {
-    // not handling resource kind yet
-    applicationResourceResolvers[resourceType] = provider;
+export function registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): Disposable {
+    applicationResourceResolvers[id] = resolver;
 
     void callWithTelemetryAndErrorHandling('resolveVisibleChildren', async (context: IActionContext) => {
-        await ext.rootAccountTreeItem.resolveVisibleChildren(context, resourceType);
+        await ext.rootAccountTreeItem.resolveVisibleChildren(context, resolver);
     });
 
     return new Disposable(() => {
-        delete applicationResourceResolvers[resourceType];
+        delete applicationResourceResolvers[id];
     });
 }

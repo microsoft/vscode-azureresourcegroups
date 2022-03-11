@@ -5,6 +5,7 @@
 
 import { AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AppResourceResolver } from '../api';
 import { SubscriptionTreeItem } from './SubscriptionTreeItem';
 
 export class AzureAccountTreeItem extends AzureAccountTreeItemBase {
@@ -16,9 +17,9 @@ export class AzureAccountTreeItem extends AzureAccountTreeItemBase {
         return new SubscriptionTreeItem(this, root);
     }
 
-    public async resolveVisibleChildren(context: IActionContext, resourceType: string): Promise<void> {
+    public async resolveVisibleChildren(context: IActionContext, resolver: AppResourceResolver): Promise<void> {
         const children = await this.getCachedChildren(context) as SubscriptionTreeItem[];
-        const childPromises = children.map(c => c.resolveVisibleChildren(context, resourceType));
+        const childPromises = children.map(c => c.resolveVisibleChildren(context, resolver));
 
         await Promise.all(childPromises);
     }

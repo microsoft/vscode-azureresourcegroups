@@ -5,6 +5,7 @@
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import { TreeItemCollapsibleState } from "vscode";
+import { AppResourceResolver } from "../api";
 import { localize } from "../utils/localize";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 
@@ -36,7 +37,7 @@ export abstract class GroupTreeItemBase extends AzExtParentTreeItem {
         return Object.values(this.treeMap) as AzExtTreeItem[];
     }
 
-    public async resolveVisibleChildren(context: IActionContext, resourceType: string): Promise<void> {
+    public async resolveVisibleChildren(context: IActionContext, resolver: AppResourceResolver): Promise<void> {
         // TODO: `collapsibleState` needs to be made visible on `AzExtTreeItem`
         // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
         if ((this as any).collapsibleState !== TreeItemCollapsibleState.Expanded) {
@@ -44,7 +45,7 @@ export abstract class GroupTreeItemBase extends AzExtParentTreeItem {
             return;
         }
 
-        const childrenOfType = Object.values(this.treeMap).filter(c => c.data.type.toLowerCase() === resourceType.toLowerCase());
+        const childrenOfType = Object.values(this.treeMap).filter(c => resolver.matchesResource(c.data));
         const childPromises = childrenOfType.map(resolvable => resolvable.resolve(true, context));
 
         await Promise.all(childPromises);

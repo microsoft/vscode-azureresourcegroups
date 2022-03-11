@@ -6,7 +6,7 @@
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { ConfigurationChangeEvent, workspace } from 'vscode';
-import { AppResource, GroupableResource } from '../api';
+import { AppResource, AppResourceResolver, GroupableResource } from '../api';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { ext } from '../extensionVariables';
 import { localize } from '../utils/localize';
@@ -109,9 +109,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         this._treeMap[id] = treeItem;
     }
 
-    public async resolveVisibleChildren(context: IActionContext, resourceType: string): Promise<void> {
+    public async resolveVisibleChildren(context: IActionContext, resolver: AppResourceResolver): Promise<void> {
         const children = Object.values(this._treeMap);
-        const childPromises = children.map(c => c.resolveVisibleChildren(context, resourceType));
+        const childPromises = children.map(c => c.resolveVisibleChildren(context, resolver));
 
         await Promise.all(childPromises);
     }

@@ -3,10 +3,11 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import { AppResource, AppResourceResolver, GroupableResource, GroupingConfig, ResolvedAppResourceBase } from "../api";
 import { applicationResourceResolvers } from "../api/registerApplicationResourceResolver";
 import { ext } from "../extensionVariables";
+import { isBuiltinResolver } from "../resolvers/BuiltinResolver";
 import { installableAppResourceResolver } from "../resolvers/InstallableAppResourceResolver";
 import { noopResolver } from "../resolvers/NoopResolver";
 import { shallowResourceResolver } from "../resolvers/ShallowResourceResolver";
@@ -57,15 +58,17 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     }
 
     private getResolver(): AppResourceResolver {
-        const resolver = applicationResourceResolvers[nonNullProp(this.data, 'type')];
+        const resolver: AppResourceResolver | undefined =
+            Object.values(applicationResourceResolvers).find(r => r.matchesResource(this.data) && !isBuiltinResolver(r));
+
         if (resolver) {
             return resolver;
-        } else if (noopResolver.isApplicable(this.data)) {
+        } else if (noopResolver.matchesResource(this.data)) {
             return noopResolver;
-        } else if (installableAppResourceResolver.isApplicable(this.data)) {
+        } else if (installableAppResourceResolver.matchesResource(this.data)) {
             return installableAppResourceResolver;
+        } else {
+            return shallowResourceResolver;
         }
-
-        return shallowResourceResolver;
     }
 }
