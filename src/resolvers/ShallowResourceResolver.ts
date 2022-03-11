@@ -14,7 +14,7 @@ import { getAzureExtensions } from "../AzExtWrapper";
 class ShallowResourceResolver implements AppResourceResolver {
     public resolveResource(_subContext: ISubscriptionContext, _resource: AppResource): ResolvedAppResourceBase {
         return {
-            commandId: 'azureResourceGroups.revealResource'
+            commandId: 'azureResourceGroups.viewProperties'
         };
     }
 
