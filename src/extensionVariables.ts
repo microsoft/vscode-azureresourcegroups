@@ -15,6 +15,7 @@ import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 export namespace ext {
     export let context: ExtensionContext;
     export let tree: AzExtTreeDataProvider;
+    export let workspaceTree: AzExtTreeDataProvider;
     export let helpTree: AzExtTreeDataProvider;
     export let outputChannel: IAzExtOutputChannel;
     export let ignoreBundle: boolean | undefined;

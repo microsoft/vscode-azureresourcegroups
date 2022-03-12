@@ -187,7 +187,7 @@ export interface AppResourceProvider {
 }
 
 export interface LocalResourceProvider {
-    provideResources(): vscode.ProviderResult<LocalResource[] | undefined>;
+    provideResources(parent: AzExtParentTreeItem): vscode.ProviderResult<LocalResource[] | undefined>;
 }
 
 // Resource Groups can have a default resolve() method that it supplies, that will activate the appropriate extension and give it a chance to replace the resolve() method

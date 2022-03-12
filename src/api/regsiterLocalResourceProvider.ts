@@ -3,16 +3,22 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
 import { Disposable } from "vscode";
 import { LocalResourceProvider } from "../api";
+import { ext } from "../extensionVariables";
 
 export const localResourceProviders: Record<string, LocalResourceProvider> = {};
 
-export function registerApplicationResourceResolver(resourceType: string, provider: LocalResourceProvider): Disposable {
-    // not handling resource kind yet
-    localResourceProviders[resourceType] = provider;
+export function registerLocalResourceProvider(resourceType: string, provider: LocalResourceProvider): Disposable | undefined {
+    return callWithTelemetryAndErrorHandlingSync('registerLocalResourceProvider', (context) => {
+        localResourceProviders[resourceType] = provider;
 
-    return new Disposable(() => {
-        delete localResourceProviders[resourceType];
-    })
+        void ext.workspaceTree.refresh(context);
+
+        return new Disposable(() => {
+            delete localResourceProviders[resourceType];
+            void ext.workspaceTree.refresh(context);
+        });
+    });
 }
