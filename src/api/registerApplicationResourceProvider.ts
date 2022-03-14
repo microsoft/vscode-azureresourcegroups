@@ -6,13 +6,16 @@
 import { Disposable } from "vscode";
 import { AppResourceProvider } from "../api";
 
-export const applicationResourceProviders: AppResourceProvider[] = [];
+export const applicationResourceProviders: Record<string, AppResourceProvider> = {};
 
-export function registerApplicationResourceProvider(provider: AppResourceProvider): Disposable {
-    // not handling resource kind yet
-    applicationResourceProviders.push(provider);
+export function registerApplicationResourceProvider(id: string, provider: AppResourceProvider): Disposable {
+    if (applicationResourceProviders[id]) {
+        throw new Error(`Application resource provider with id '${id}' has already been registered.`);
+    }
+
+    applicationResourceProviders[id] = provider;
 
     return new Disposable(() => {
-        applicationResourceProviders.splice(applicationResourceProviders.indexOf(provider), 1);
+        delete applicationResourceProviders[id];
     });
 }
