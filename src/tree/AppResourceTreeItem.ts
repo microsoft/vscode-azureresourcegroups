@@ -53,7 +53,6 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         const resolvable: AppResourceTreeItem = new AppResourceTreeItem(parent, resource);
         const providerHandler: ProxyHandler<AppResourceTreeItem> = {
             get: (target: AppResourceTreeItem, name: string): unknown => {
-                // TODO: Should we add a filter for `contextValues`, or maybe rename it?
                 return resolvable?.resolveResult?.[name] ?? target[name];
             },
             set: (target: AppResourceTreeItem, name: string, value: unknown): boolean => {

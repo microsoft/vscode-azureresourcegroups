@@ -9,6 +9,10 @@ import { AppResourceProvider } from "../api";
 export const applicationResourceProviders: Record<string, AppResourceProvider> = {};
 
 export function registerApplicationResourceProvider(id: string, provider: AppResourceProvider): Disposable {
+    if (applicationResourceProviders[id]) {
+        throw new Error(`Application resource provider with id '${id}' has already been registered.`);
+    }
+
     applicationResourceProviders[id] = provider;
 
     return new Disposable(() => {

@@ -11,6 +11,10 @@ import { ext } from "../extensionVariables";
 export const applicationResourceResolvers: Record<string, AppResourceResolver> = {};
 
 export function registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): Disposable {
+    if (applicationResourceResolvers[id]) {
+        throw new Error(`Application resource resolver with id '${id}' has already been registered.`);
+    }
+
     applicationResourceResolvers[id] = resolver;
 
     void callWithTelemetryAndErrorHandling('resolveVisibleChildren', async (context: IActionContext) => {
