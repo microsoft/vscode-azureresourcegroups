@@ -8,17 +8,37 @@ import { Disposable, TreeView } from 'vscode';
 import { AppResourceResolver, AzureResourceGroupsExtensionApi } from '../api';
 
 export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGroupsExtensionApi {
-    readonly tree: AzExtTreeDataProvider;
-    readonly treeView: TreeView<AzExtTreeItem>;
-    readonly apiVersion: string;
-    readonly revealTreeItem: (resourceId: string) => Promise<void>;
-    readonly registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
+    #tree: AzExtTreeDataProvider;
+    #treeView: TreeView<AzExtTreeItem>;
+    #apiVersion: string;
+    #revealTreeItem: (resourceId: string) => Promise<void>;
+    #registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
 
     public constructor(options: AzureResourceGroupsExtensionApi) {
-        this.tree = options.tree;
-        this.treeView = options.treeView;
-        this.apiVersion = options.apiVersion;
-        this.revealTreeItem = options.revealTreeItem;
-        this.registerApplicationResourceResolver = options.registerApplicationResourceResolver;
+        this.#tree = options.tree;
+        this.#treeView = options.treeView;
+        this.#apiVersion = options.apiVersion;
+        this.#revealTreeItem = options.revealTreeItem;
+        this.#registerApplicationResourceResolver = options.registerApplicationResourceResolver;
+    }
+
+    public get tree(): AzExtTreeDataProvider {
+        return this.#tree;
+    }
+
+    public get treeView(): TreeView<AzExtTreeItem> {
+        return this.#treeView;
+    }
+
+    public get apiVersion(): string {
+        return this.#apiVersion;
+    }
+
+    public async revealTreeItem(resourceId: string): Promise<void> {
+        return await this.#revealTreeItem(resourceId);
+    }
+
+    public registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): Disposable {
+        return this.#registerApplicationResourceResolver(id, resolver);
     }
 }

@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 
 export interface AzureResourceGroupsExtensionApi {
     readonly tree: AzExtTreeDataProvider;
-    readonly treeView: TreeView<AzExtTreeItem>;
+    readonly treeView: vscode.TreeView<AzExtTreeItem>;
 
     readonly apiVersion: string;
     readonly revealTreeItem(resourceId: string): Promise<void>;
