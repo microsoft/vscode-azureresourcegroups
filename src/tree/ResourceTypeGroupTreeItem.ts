@@ -9,7 +9,6 @@ import { treeUtils } from "../utils/treeUtils";
 import { supportedIconTypes } from "./AppResourceTreeItem";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
-import { ShallowResourceTreeItem } from "./ShallowResourceTreeItem";
 import path = require("path");
 
 export class ResourceTypeGroupTreeItem extends GroupTreeItemBase {
@@ -18,7 +17,7 @@ export class ResourceTypeGroupTreeItem extends GroupTreeItemBase {
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
-    public items: (ResolvableTreeItemBase | ShallowResourceTreeItem)[];
+    public items: ResolvableTreeItemBase[];
     public type: string;
 
     constructor(parent: AzExtParentTreeItem, type: string) {

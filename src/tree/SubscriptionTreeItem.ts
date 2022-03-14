@@ -6,17 +6,14 @@
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { ConfigurationChangeEvent, workspace } from 'vscode';
-import { AppResource, GroupableResource } from '../api';
+import { AppResource, AppResourceResolver, GroupableResource } from '../api';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
-import { AzExtWrapper, getAzureExtensions } from '../AzExtWrapper';
 import { ext } from '../extensionVariables';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
 import { AppResourceTreeItem } from './AppResourceTreeItem';
 import { GroupTreeItemBase } from './GroupTreeItemBase';
-import { ResolvableTreeItemBase } from './ResolvableTreeItemBase';
 import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
-import { ShallowResourceTreeItem } from './ShallowResourceTreeItem';
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public readonly childTypeLabel: string = localize('resourceGroup', 'Resource Group');
@@ -25,7 +22,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     private _items: GroupableResource[] = [];
     private _treeMap: { [key: string]: GroupTreeItemBase } = {};
 
-    private resolvables: Record<string, ResolvableTreeItemBase> = {};
     private rgsItem: AppResource[] = [];
 
 
@@ -46,25 +42,14 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         if (this.rgsItem.length === 0) {
             this.rgsItem.push(...(await applicationResourceProviders[0]?.provideResources(this.subscription) ?? []));
+
+            // To support multiple app resource providers, need to use this pattern
+            // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
+
+            this.rgsItem.forEach(item => ext.activationManager.onNodeTypeFetched(item.type));
         }
 
-        // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
-
-        this._items = this.rgsItem.map((resource: AppResource): GroupableResource => {
-            const azExts = getAzureExtensions();
-            if (azExts.find((ext: AzExtWrapper) => ext.matchesResourceType(resource))) {
-                const resourceId = nonNullProp(resource, 'id');
-                ext.activationManager.onNodeTypeFetched(nonNullProp(resource, 'type'));
-                if (!this.resolvables[resourceId]) {
-                    const resolvable = AppResourceTreeItem.Create(this, resource);
-                    this.resolvables[resourceId] ??= resolvable;
-                    return resolvable;
-                }
-                return this.resolvables[resourceId];
-            } else {
-                return new ShallowResourceTreeItem(this, resource);
-            }
-        });
+        this._items = this.rgsItem.map((resource: AppResource): GroupableResource => AppResourceTreeItem.Create(this, resource));
 
         // dynamically generate GroupBy keys, should be moved
         for (const item of this._items) {
@@ -122,5 +107,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public setSubConfigGroupTreeItem(id: string, treeItem: GroupTreeItemBase): void {
         this._treeMap[id] = treeItem;
+    }
+
+    public async resolveVisibleChildren(context: IActionContext, resolver: AppResourceResolver): Promise<void> {
+        const children = Object.values(this._treeMap);
+        const childPromises = children.map(c => c.resolveVisibleChildren(context, resolver));
+
+        await Promise.all(childPromises);
     }
 }

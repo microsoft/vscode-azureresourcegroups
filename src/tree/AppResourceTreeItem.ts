@@ -6,7 +6,7 @@
 import { AzExtParentTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import * as path from 'path';
 import { FileChangeType } from "vscode";
-import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration, ResolvedAppResourceTreeItemBase } from "../api";
+import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration, ResolvedAppResourceBase } from "../api";
 import { ext } from "../extensionVariables";
 import { createGroupConfigFromResource } from "../utils/azureUtils";
 import { treeUtils } from "../utils/treeUtils";
@@ -18,7 +18,6 @@ import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
 export class AppResourceTreeItem extends ResolvableTreeItemBase implements GroupableResource {
     public static contextValue: string = 'azureResource';
-    public readonly contextValue: string = AppResourceTreeItem.contextValue;
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
@@ -34,8 +33,9 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         this.rootGroupConfig = <GroupNodeConfiguration><unknown>parent;
 
         this.data = resource;
-        this.commandId = 'azureResourceGroups.revealResource';
         this.groupConfig = createGroupConfigFromResource(resource);
+
+        this.contextValues.add(AppResourceTreeItem.contextValue);
 
         // test for [label: string] keys
         this.groupConfig["location"] = { keyLabel: 'Locations', label: this.data.location || 'unknown', id: `${this.parent?.id}/${this.data.location}` }
@@ -55,7 +55,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
             get: (target: AppResourceTreeItem, name: string): unknown => {
                 return resolvable?.resolveResult?.[name] ?? target[name];
             },
-            set: (target: AppResourceTreeItem, name: string, value: unknown) => {
+            set: (target: AppResourceTreeItem, name: string, value: unknown): boolean => {
                 if (resolvable.resolveResult && Object.getOwnPropertyDescriptor(resolvable.resolveResult, name)?.writable) {
                     resolvable.resolveResult[name] = value;
                     return true;
@@ -63,7 +63,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
                 target[name] = value;
                 return true;
             },
-            getPrototypeOf: (target: AppResourceTreeItem): AppResourceTreeItem | ResolvedAppResourceTreeItemBase => {
+            getPrototypeOf: (target: AppResourceTreeItem): AppResourceTreeItem | ResolvedAppResourceBase => {
                 return resolvable?.resolveResult ?? target;
             }
         }
