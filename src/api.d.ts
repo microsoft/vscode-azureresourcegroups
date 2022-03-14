@@ -7,12 +7,12 @@ import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionConte
 import * as vscode from 'vscode';
 
 export interface AzureResourceGroupsExtensionApi {
-    tree: AzExtTreeDataProvider;
-    treeView: TreeView<AzExtTreeItem>;
+    readonly tree: AzExtTreeDataProvider;
+    readonly treeView: TreeView<AzExtTreeItem>;
 
-    apiVersion: string;
-    revealTreeItem(resourceId: string): Promise<void>;
-
+    readonly apiVersion: string;
+    readonly revealTreeItem(resourceId: string): Promise<void>;
+    readonly registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): Disposable;
 }
 
 /**

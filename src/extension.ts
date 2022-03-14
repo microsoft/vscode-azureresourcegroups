@@ -9,7 +9,7 @@ import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-az
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
-import { AzureResourceGroupsExtensionApi } from './api';
+import { InternalAzureResourceGroupsExtensionApi } from './api/AzureResourceGroupsExtensionApi';
 import { registerApplicationResourceProvider } from './api/registerApplicationResourceProvider';
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
 import { revealTreeItem } from './api/revealTreeItem';
@@ -62,13 +62,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     });
 
     return createApiProvider([
-        <AzureResourceGroupsExtensionApi>{
+        new InternalAzureResourceGroupsExtensionApi({
             apiVersion: '0.0.1',
             tree: ext.tree,
             treeView: ext.treeView,
             revealTreeItem,
             registerApplicationResourceResolver
-        }
+        })
     ]);
 }
 
