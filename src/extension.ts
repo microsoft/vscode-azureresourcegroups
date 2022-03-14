@@ -16,6 +16,9 @@ import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { ext } from './extensionVariables';
+import { installableAppResourceResolver } from './resolvers/InstallableAppResourceResolver';
+import { noopResolver } from './resolvers/NoopResolver';
+import { shallowResourceResolver } from './resolvers/ShallowResourceResolver';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
@@ -33,9 +36,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
-        const accountTreeItem: AzureAccountTreeItem = new AzureAccountTreeItem();
-        context.subscriptions.push(accountTreeItem);
-        ext.tree = new AzExtTreeDataProvider(accountTreeItem, 'azureResourceGroups.loadMore');
+        ext.rootAccountTreeItem = new AzureAccountTreeItem();
+        context.subscriptions.push(ext.rootAccountTreeItem);
+        ext.tree = new AzExtTreeDataProvider(ext.rootAccountTreeItem, 'azureResourceGroups.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.tree, showCollapseAll: true, canSelectMany: true }));
 
         ext.tagFS = new TagFileSystem(ext.tree);
@@ -49,7 +52,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(ext.activationManager = new ExtensionActivationManager());
 
         registerCommands();
-        registerApplicationResourceProvider(new AzureResourceProvider());
+        registerApplicationResourceProvider('vscode-azureresourcegroups.azureResourceProvider', new AzureResourceProvider());
+        registerApplicationResourceResolver('vscode-azureresourcegroups.noopResolver', noopResolver);
+        registerApplicationResourceResolver('vscode-azureresourcegroups.installableAppResourceResolver', installableAppResourceResolver);
+        registerApplicationResourceResolver('vscode-azureresourcegroups.shallowResourceResolver', shallowResourceResolver);
     });
 
     return createApiProvider([
