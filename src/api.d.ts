@@ -6,6 +6,15 @@
 import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 
+export interface AzureResourceGroupsExtensionApi {
+    readonly tree: AzExtTreeDataProvider;
+    readonly treeView: vscode.TreeView<AzExtTreeItem>;
+
+    readonly apiVersion: string;
+    readonly revealTreeItem(resourceId: string): Promise<void>;
+    readonly registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): Disposable;
+}
+
 /**
  * An abstract interface for GenericResource
  */
