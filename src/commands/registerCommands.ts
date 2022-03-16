@@ -17,6 +17,7 @@ import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
 import { editTags } from './tags/editTags';
 import { viewProperties } from './viewProperties';
+import { refreshWorkspace } from './workspace/refreshWorkspace';
 
 export function registerCommands(): void {
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
@@ -39,4 +40,5 @@ export function registerCommands(): void {
     registerReportIssueCommand('azureResourceGroups.reportIssue');
     registerCommand('azureResourceGroups.configureExplorer', configureExplorer);
     registerCommand('azureResourceGroups.createResource', createResource);
+    registerCommand('azureResourceGroups.refreshWorkspace', refreshWorkspace);
 }

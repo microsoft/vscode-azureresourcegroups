@@ -12,6 +12,7 @@ import * as vscode from 'vscode';
 import { InternalAzureResourceGroupsExtensionApi } from './api/AzureResourceGroupsExtensionApi';
 import { registerApplicationResourceProvider } from './api/registerApplicationResourceProvider';
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
+import { registerLocalResourceProvider } from './api/regsiterLocalResourceProvider';
 import { revealTreeItem } from './api/revealTreeItem';
 import { AzureResourceProvider } from './AzureResourceProvider';
 import { registerCommands } from './commands/registerCommands';
@@ -23,6 +24,7 @@ import { noopResolver } from './resolvers/NoopResolver';
 import { shallowResourceResolver } from './resolvers/ShallowResourceResolver';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { HelpTreeItem } from './tree/HelpTreeItem';
+import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
 import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
@@ -52,6 +54,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.helpTree = new AzExtTreeDataProvider(helpTreeItem, 'ms-azuretools.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('ms-azuretools.helpAndFeedback', { treeDataProvider: ext.helpTree }));
 
+        const workspaceTreeItem = new WorkspaceTreeItem();
+        ext.workspaceTree = new AzExtTreeDataProvider(workspaceTreeItem, 'azureWorkspace.loadMore');
+        context.subscriptions.push(vscode.window.createTreeView('azureWorkspace', { treeDataProvider: ext.workspaceTree }));
+
         context.subscriptions.push(ext.activationManager = new ExtensionActivationManager());
 
         registerCommands();
@@ -67,7 +73,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             tree: ext.tree,
             treeView: ext.treeView,
             revealTreeItem,
-            registerApplicationResourceResolver
+            registerApplicationResourceResolver,
+            registerLocalResourceProvider,
         })
     ]);
 }

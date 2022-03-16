@@ -127,6 +127,12 @@
                 "title": "%azureResourceGroups.configureExplorer%",
                 "category": "Azure Resource Groups",
                 "icon": "$(settings-gear)"
+            },
+            {
+                "command": "azureResourceGroups.refreshWorkspace",
+                "title": "%azureResourceGroups.refresh%",
+                "category": "Azure Resource Groups",
+                "icon": "$(refresh)"
             }
         ],
         "viewsContainers": {
@@ -143,6 +149,11 @@
                 {
                     "id": "azureResourceGroups",
                     "name": "Resource Groups",
+                    "visibility": "collapsed"
+                },
+                {
+                    "id": "azureWorkspace",
+                    "name": "Workspace",
                     "visibility": "collapsed"
                 },
                 {
@@ -173,6 +184,11 @@
                     "command": "azureResourceGroups.configureExplorer",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@3"
+                },
+                {
+                    "command": "azureResourceGroups.refreshWorkspace",
+                    "when": "view == azureWorkspace",
+                    "group": "navigation@1"
                 }
             ],
             "view/item/context": [

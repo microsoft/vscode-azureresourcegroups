@@ -16,6 +16,7 @@ import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 export namespace ext {
     export let context: ExtensionContext;
     export let tree: AzExtTreeDataProvider;
+    export let workspaceTree: AzExtTreeDataProvider;
     export let treeView: TreeView<AzExtTreeItem>;
     export let rootAccountTreeItem: AzureAccountTreeItem;
     export let helpTree: AzExtTreeDataProvider;
