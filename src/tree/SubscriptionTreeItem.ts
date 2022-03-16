@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
-import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { ConfigurationChangeEvent, workspace } from 'vscode';
 import { AppResource, AppResourceResolver, GroupableResource } from '../api';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
@@ -41,7 +41,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         if (this.rgsItem.length === 0) {
-            this.rgsItem.push(...(await applicationResourceProviders[0]?.provideResources(this.subscription) ?? []));
+            this.rgsItem.push(...(await applicationResourceProviders['vscode-azureresourcegroups.azureResourceProvider']?.provideResources(this.subscription) ?? []));
 
             // To support multiple app resource providers, need to use this pattern
             // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
@@ -77,7 +77,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         await wizard.prompt();
         context.showCreatingTreeItem(nonNullProp(wizardContext, 'newResourceGroupName'));
         await wizard.execute();
-        return new ResourceGroupTreeItem(this, nonNullProp(wizardContext, 'resourceGroup'));
+        return new ResourceGroupTreeItem(this,
+            { label: nonNullProp(wizardContext, 'newResourceGroupName'), id: nonNullOrEmptyValue(nonNullProp(wizardContext, 'resourceGroup').id) },
+            nonNullProp(wizardContext, 'resourceGroup'));
     }
 
     public registerRefreshEvents(key: string): void {
