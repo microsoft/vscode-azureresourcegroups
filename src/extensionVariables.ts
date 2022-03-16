@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeDataProvider, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
-import { DiagnosticCollection, Disposable, ExtensionContext } from "vscode";
+import { AzExtTreeDataProvider, AzExtTreeItem, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
+import { DiagnosticCollection, Disposable, ExtensionContext, TreeView } from "vscode";
 import { AppResourceProvider } from "./api";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureAccountTreeItem } from "./tree/AzureAccountTreeItem";
@@ -17,6 +17,7 @@ export namespace ext {
     export let context: ExtensionContext;
     export let tree: AzExtTreeDataProvider;
     export let workspaceTree: AzExtTreeDataProvider;
+    export let treeView: TreeView<AzExtTreeItem>;
     export let rootAccountTreeItem: AzureAccountTreeItem;
     export let helpTree: AzExtTreeDataProvider;
     export let outputChannel: IAzExtOutputChannel;
