@@ -7,7 +7,6 @@ import { callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-u
 import { Disposable } from "vscode";
 import { LocalResourceProvider } from "../api";
 import { refreshWorkspace } from "../commands/workspace/refreshWorkspace";
-import { ext } from "../extensionVariables";
 
 export const localResourceProviders: Record<string, LocalResourceProvider> = {};
 
@@ -15,7 +14,7 @@ export function registerLocalResourceProvider(resourceType: string, provider: Lo
     return callWithTelemetryAndErrorHandlingSync('registerLocalResourceProvider', (context) => {
         localResourceProviders[resourceType] = provider;
 
-        void ext.workspaceTree.refresh(context);
+        void refreshWorkspace(context);
 
         return new Disposable(() => {
             delete localResourceProviders[resourceType];
