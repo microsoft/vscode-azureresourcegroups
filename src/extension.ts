@@ -17,6 +17,7 @@ import { AzureResourceProvider } from './AzureResourceProvider';
 import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
+import { azureResourceProviderId } from './constants';
 import { ext } from './extensionVariables';
 import { installableAppResourceResolver } from './resolvers/InstallableAppResourceResolver';
 import { noopResolver } from './resolvers/NoopResolver';
@@ -55,7 +56,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(ext.activationManager = new ExtensionActivationManager());
 
         registerCommands();
-        registerApplicationResourceProvider('vscode-azureresourcegroups.azureResourceProvider', new AzureResourceProvider());
+        registerApplicationResourceProvider(azureResourceProviderId, new AzureResourceProvider());
         registerApplicationResourceResolver('vscode-azureresourcegroups.noopResolver', noopResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.installableAppResourceResolver', installableAppResourceResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.shallowResourceResolver', shallowResourceResolver);

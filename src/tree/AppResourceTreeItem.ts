@@ -99,16 +99,13 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
 
     public createSubGroupTreeItem(_context: IActionContext, groupBySetting: string): GroupTreeItemBase {
         // const client = await createResourceClient([context, this.rootGroupTreeItem.subscription]);
-        return new GroupTreeItemBase(this.rootGroupTreeItem, this.groupConfig[groupBySetting]);
-        // switch (groupBySetting) {
-        //     case 'resourceType':
-        //         return new GroupTreeItemBase(this.rootGroupTreeItem, this.groupConfig.resourceType);
-        //     // case 'resourceGroup':
-        //     // TODO: Use ResovableTreeItem here
-        //     // return new ResourceGroupTreeItem(this.rootGroupTreeItem, (await client.resourceGroups.get(this.groupConfig.resourceGroup.label)));
-        //     default:
-        //         return new GroupTreeItemBase(this.rootGroupTreeItem, this.groupConfig['location']);
-        // }
+
+        switch (groupBySetting) {
+            // TODO: Use ResovableTreeItem here
+            case 'resourceGroup':
+            default:
+                return new GroupTreeItemBase(this.rootGroupTreeItem, this.groupConfig[groupBySetting]);
+        }
     }
 }
 

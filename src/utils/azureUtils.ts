@@ -31,8 +31,8 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
         resourceGroup: { keyLabel: 'Resource Groups', label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
         resourceType: {
             keyLabel: 'Resource Types', label: resource.type?.toLowerCase() ?? 'unknown',
-            id: `${subscriptionId}/${resource.type}` || 'unknown',
-            iconPath: getIconPath(resource?.type || 'resource')
+            id: `${subscriptionId}/${resource.type}` ?? 'unknown',
+            iconPath: getIconPath(resource?.type ?? 'resource')
         },
         location: {
             id: `${subscriptionId}/${resource.location}` ?? 'unknown',

@@ -8,6 +8,7 @@ import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep
 import { ConfigurationChangeEvent, workspace } from 'vscode';
 import { AppResource, AppResourceResolver, GroupableResource } from '../api';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
+import { azureResourceProviderId } from '../constants';
 import { ext } from '../extensionVariables';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
@@ -41,7 +42,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         if (this.rgsItem.length === 0) {
-            this.rgsItem.push(...(await applicationResourceProviders['vscode-azureresourcegroups.azureResourceProvider']?.provideResources(this.subscription) ?? []));
+            this.rgsItem.push(...(await applicationResourceProviders[azureResourceProviderId]?.provideResources(this.subscription) ?? []));
 
             // To support multiple app resource providers, need to use this pattern
             // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
