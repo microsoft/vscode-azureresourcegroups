@@ -3,24 +3,47 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { TreeItemCollapsibleState } from "vscode";
-import { AppResourceResolver } from "../api";
+import { AppResourceResolver, GroupNodeConfiguration } from "../api";
 import { localize } from "../utils/localize";
+import { treeUtils } from "../utils/treeUtils";
+import { AppResourceTreeItem } from "./AppResourceTreeItem";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 
-export abstract class GroupTreeItemBase extends AzExtParentTreeItem {
+export class GroupTreeItemBase extends AzExtParentTreeItem {
     public readonly childTypeLabel: string = localize('resource', 'Resource');
     public treeMap: { [key: string]: ResolvableTreeItemBase } = {};
-    public abstract label;
+    public items: AppResourceTreeItem[];
+    public config: GroupNodeConfiguration;
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
-    private _nextLink: string | undefined;
+    constructor(parent: AzExtParentTreeItem, config: GroupNodeConfiguration) {
+        super(parent);
+        this.config = config;
+        this.items = [];
+    }
+
+    public get id(): string {
+        return this.config.id;
+    }
+
+    public get label(): string {
+        return this.config.label;
+    }
+
+    public get contextValue(): string {
+        return this.config.contextValue || 'GroupTreeItem';
+    }
+
+    public get description(): string | undefined {
+        return this.config.description;
+    }
 
     public hasMoreChildrenImpl(): boolean {
-        return !!this._nextLink;
+        return false;
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
@@ -49,5 +72,9 @@ export abstract class GroupTreeItemBase extends AzExtParentTreeItem {
         const childPromises = childrenOfType.map(resolvable => resolvable.resolve(true, context));
 
         await Promise.all(childPromises);
+    }
+
+    public get iconPath(): TreeItemIconPath | undefined {
+        return this.config.icon ?? this.config.iconPath ?? treeUtils.getIconPath('resource');
     }
 }

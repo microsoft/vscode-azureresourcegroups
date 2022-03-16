@@ -6,7 +6,7 @@
 import { ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { FileChangeType } from "vscode";
-import { GroupableResource } from "../api";
+import { GroupNodeConfiguration } from "../api";
 import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
@@ -15,14 +15,9 @@ import { GroupTreeItemBase } from "./GroupTreeItemBase";
 
 export class ResourceGroupTreeItem extends GroupTreeItemBase {
     public static contextValue: string = 'azureResourceGroup';
-    public readonly contextValue: string = ResourceGroupTreeItem.contextValue;
-    public readonly childTypeLabel: string = localize('resource', 'Resource');
-    public readonly label: string;
 
-    public items: GroupableResource[];
-
-    constructor(parent: AzExtParentTreeItem, data: ResourceGroup) {
-        super(parent);
+    constructor(parent: AzExtParentTreeItem, config: GroupNodeConfiguration, data: ResourceGroup) {
+        super(parent, config);
         this.data = data;
 
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
@@ -34,6 +29,10 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
 
     public set data(data: ResourceGroup | undefined) {
         this.data = data;
+    }
+
+    public get contextValue(): string {
+        return ResourceGroupTreeItem.contextValue
     }
 
     public get id(): string {
