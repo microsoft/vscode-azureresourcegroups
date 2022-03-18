@@ -8,7 +8,18 @@ import * as vscode from 'vscode';
 
 const builtInExtensionIdRegex = /^vscode\./i;
 
-const activationEventRegex = /^x-onAzNodeType(?<trigger>Fetch|Resolve):(?<type>[\w.\/]+)$/;
+interface AzResourceContributionPoint {
+    readonly activation?: {
+        readonly onFetch?: string[];
+        readonly onResolve?: string[];
+    }
+}
+
+interface AzExtensionManifest {
+    readonly contributes?: {
+        readonly 'x-azResources'?: AzResourceContributionPoint;
+    }
+}
 
 export class ExtensionActivationManager implements vscode.Disposable {
     private readonly onFetchExtensions = new Map<string, Set<string>>();
@@ -38,20 +49,10 @@ export class ExtensionActivationManager implements vscode.Disposable {
             .filter(ext => !builtInExtensionIdRegex.test(ext.id)); // We don't need to look at any built-in extensions (often the majority of them)
 
         for (const ext of possibleExtensions) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            const activationEvents: string[] = Array.isArray(ext.packageJSON.activationEvents) ? ext.packageJSON.activationEvents : [];
+            const activation = (ext.packageJSON as AzExtensionManifest)?.contributes?.['x-azResources']?.activation;
 
-            for (const activationEvent of activationEvents) {
-                const match = activationEventRegex.exec(activationEvent);
-
-                if (match?.groups?.trigger && match?.groups?.type) {
-                    this.addExtensionToActivationList(
-                        match.groups.type,
-                        ext.id,
-                        match.groups.trigger === 'Fetch' ? this.onFetchExtensions : this.onResolveExtensions
-                    );
-                }
-            }
+            activation?.onFetch?.forEach(fetchType => this.addExtensionToActivationList(fetchType, ext.id, this.onFetchExtensions));
+            activation?.onResolve?.forEach(resolveType => this.addExtensionToActivationList(resolveType, ext.id, this.onResolveExtensions));
         }
     }
 
