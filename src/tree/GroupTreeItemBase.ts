@@ -8,13 +8,11 @@ import { TreeItemCollapsibleState } from "vscode";
 import { AppResourceResolver, GroupNodeConfiguration } from "../api";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
-import { AppResourceTreeItem } from "./AppResourceTreeItem";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 
 export class GroupTreeItemBase extends AzExtParentTreeItem {
     public readonly childTypeLabel: string = localize('resource', 'Resource');
     public treeMap: { [key: string]: ResolvableTreeItemBase } = {};
-    public items: AppResourceTreeItem[];
     public config: GroupNodeConfiguration;
 
     public readonly cTime: number = Date.now();
@@ -23,7 +21,6 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
     constructor(parent: AzExtParentTreeItem, config: GroupNodeConfiguration) {
         super(parent);
         this.config = config;
-        this.items = [];
     }
 
     public get id(): string {

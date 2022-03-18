@@ -26,7 +26,8 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         await this.resolve(clearCache, context);
         if (this.resolveResult && this.resolveResult.loadMoreChildrenImpl) {
-            return await this.resolveResult.loadMoreChildrenImpl(clearCache, context);
+            // this is actually calling resolveResult.loadMoreChildrenImpl through the Proxy so that the function has the correct thisArg
+            return await this.loadMoreChildrenImpl(clearCache, context);
         } else {
             return [];
         }
