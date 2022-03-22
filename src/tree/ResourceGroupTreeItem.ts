@@ -45,7 +45,7 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
 
     public get description(): string | undefined {
         const state: string | undefined = this.data?.properties?.provisioningState;
-        return state?.toLowerCase() === 'succeeded' ? `${this.items.length} resources` : state;
+        return state?.toLowerCase() === 'succeeded' ? `${Object.keys(this.treeMap).length} resources` : state;
     }
 
     public get iconPath(): TreeItemIconPath {

@@ -118,4 +118,21 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         await Promise.all(childPromises);
     }
+
+    public removeChildFromCache(child: AppResourceTreeItem): void {
+        // remove item from cache of any group tree item that has this item as a child
+        Object.values(this._treeMap).forEach((groupTreeItem) => {
+            if (groupTreeItem.treeMap[child.id]) {
+                delete groupTreeItem.treeMap[child.id];
+                groupTreeItem.removeChildFromCache(child);
+            }
+        });
+
+        const index = this.rgsItem.findIndex((ar) => ar.id === child.id);
+        if (index > -1) {
+            this.rgsItem.splice(index, 1);
+        }
+
+        this.treeDataProvider.refreshUIOnly(this);
+    }
 }
