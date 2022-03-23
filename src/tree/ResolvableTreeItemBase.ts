@@ -23,6 +23,10 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
         return Array.from(this.contextValues.values()).sort().join(';');
     }
 
+    public get description(): string | undefined {
+        return this.resolveResult?.description;
+    }
+
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         await this.resolve(clearCache, context);
         if (this.resolveResult && this.resolveResult.loadMoreChildrenImpl) {
