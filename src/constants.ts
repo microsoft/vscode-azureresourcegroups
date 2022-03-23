@@ -4,3 +4,4 @@
  *--------------------------------------------------------------------------------------------*/
 
 export const azureResourceProviderId: string = 'vscode-azureresourcegroups.azureResourceProvider';
+export const contributesKey = 'x-azResources';
