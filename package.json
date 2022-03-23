@@ -148,7 +148,7 @@
             "azure": [
                 {
                     "id": "azureResourceGroups",
-                    "name": "Resource Groups",
+                    "name": "Azure Resources",
                     "visibility": "collapsed"
                 },
                 {
