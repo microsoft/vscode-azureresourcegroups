@@ -5,6 +5,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { contributesKey } from '../constants';
 
 const builtInExtensionIdRegex = /^vscode\./i;
 
@@ -17,7 +18,7 @@ interface AzResourceContributionPoint {
 
 interface AzExtensionManifest {
     readonly contributes?: {
-        readonly 'x-azResources'?: AzResourceContributionPoint;
+        readonly [contributesKey]?: AzResourceContributionPoint;
     }
 }
 
@@ -49,7 +50,7 @@ export class ExtensionActivationManager implements vscode.Disposable {
             .filter(ext => !builtInExtensionIdRegex.test(ext.id)); // We don't need to look at any built-in extensions (often the majority of them)
 
         for (const ext of possibleExtensions) {
-            const activation = (ext.packageJSON as AzExtensionManifest)?.contributes?.['x-azResources']?.activation;
+            const activation = (ext.packageJSON as AzExtensionManifest)?.contributes?.[contributesKey]?.activation;
 
             activation?.onFetch?.forEach(fetchType => this.addExtensionToActivationList(fetchType, ext.id, this.onFetchExtensions));
             activation?.onResolve?.forEach(resolveType => this.addExtensionToActivationList(resolveType, ext.id, this.onResolveExtensions));
