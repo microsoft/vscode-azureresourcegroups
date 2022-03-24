@@ -28,7 +28,7 @@ export function getResourceGroupFromId(id: string): string {
 export function createGroupConfigFromResource(resource: GenericResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
     return {
-        resourceGroup: { keyLabel: 'Resource Groups', label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase() },
+        resourceGroup: { keyLabel: 'Resource Groups', label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')) },
         resourceType: {
             keyLabel: 'Resource Types', label: resource.type?.toLowerCase() ?? 'unknown',
             id: `${subscriptionId}/${resource.type}` ?? 'unknown',
