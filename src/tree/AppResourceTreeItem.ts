@@ -21,15 +21,15 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     public rootGroupTreeItem: AzExtParentTreeItem;
     public rootGroupConfig: GroupNodeConfiguration;
     public groupConfig: GroupingConfig;
+    public parent: GroupTreeItemBase | undefined;
 
-    private constructor(parent: AzExtParentTreeItem, resource: AppResource) {
-        // parent should be renamed to rootGroup
-        super(parent);
-        this.rootGroupTreeItem = parent;
-        this.rootGroupConfig = <GroupNodeConfiguration><unknown>parent;
+    private constructor(root: AzExtParentTreeItem, resource: AppResource) {
+        super(root);
+        this.rootGroupTreeItem = root;
+        this.rootGroupConfig = <GroupNodeConfiguration><unknown>root;
 
         this.data = resource;
-        this.groupConfig = createGroupConfigFromResource(resource, parent.id);
+        this.groupConfig = createGroupConfigFromResource(resource, root.id);
 
         this.contextValues.add(AppResourceTreeItem.contextValue);
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
@@ -93,6 +93,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         }
 
         subGroupTreeItem.treeMap[this.id] = this;
+        this.parent = subGroupTreeItem;
         // this should actually be "resolve"
         void subGroupTreeItem.refresh(context);
     }
