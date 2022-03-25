@@ -48,12 +48,19 @@
     ],
     "main": "./main.js",
     "contributes": {
+        "x-azResources": {
+            "commands": [
+                {
+                    "command": "azureResourceGroups.createResourceGroup",
+                    "title": "%azureResourceGroups.createResourceGroup%"
+                }
+            ]
+        },
         "commands": [
             {
                 "command": "azureResourceGroups.createResourceGroup",
                 "title": "%azureResourceGroups.createResourceGroup%",
-                "category": "Azure Resource Groups",
-                "icon": "$(add)"
+                "category": "Azure Resource Groups"
             },
             {
                 "command": "azureResourceGroups.createResource",
@@ -123,10 +130,22 @@
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.configureExplorer",
-                "title": "%azureResourceGroups.configureExplorer%",
+                "command": "azureResourceGroups.groupBy.resourceGroup",
+                "title": "%azureResourceGroups.groupBy.resourceGroup%",
                 "category": "Azure Resource Groups",
-                "icon": "$(settings-gear)"
+                "icon": "$(gear)"
+            },
+            {
+                "command": "azureResourceGroups.groupBy.resourceType",
+                "title": "%azureResourceGroups.groupBy.resourceType%",
+                "category": "Azure Resource Groups",
+                "icon": "$(gear)"
+            },
+            {
+                "command": "azureResourceGroups.groupBy.location",
+                "title": "%azureResourceGroups.groupBy.location%",
+                "category": "Azure Resource Groups",
+                "icon": "$(gear)"
             },
             {
                 "command": "azureResourceGroups.refreshWorkspace",
@@ -171,17 +190,12 @@
                     "group": "navigation@1"
                 },
                 {
-                    "command": "azureResourceGroups.createResourceGroup",
-                    "when": "view == azureResourceGroups",
-                    "group": "navigation@1"
-                },
-                {
-                    "command": "azureResourceGroups.refresh",
+                    "submenu": "azureResourceGroups.groupBy",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@2"
                 },
                 {
-                    "command": "azureResourceGroups.configureExplorer",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@3"
                 },
@@ -270,8 +284,29 @@
                     "command": "azureResourceGroups.revealResource",
                     "when": "never"
                 }
+            ],
+            "azureResourceGroups.groupBy": [
+                {
+                    "command": "azureResourceGroups.groupBy.resourceGroup",
+                    "group": "1_default@1"
+                },
+                {
+                    "command": "azureResourceGroups.groupBy.resourceType",
+                    "group": "1_default@2"
+                },
+                {
+                    "command": "azureResourceGroups.groupBy.location",
+                    "group": "1_default@3"
+                }
             ]
         },
+        "submenus": [
+            {
+                "id": "azureResourceGroups.groupBy",
+                "label": "Group By",
+                "icon": "$(group-by-ref-type)"
+            }
+        ],
         "keybindings": [
             {
                 "command": "workbench.view.extension.azure",

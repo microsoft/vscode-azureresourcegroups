@@ -112,6 +112,8 @@ export interface AbstractAzExtTreeItem {
     commandId?: string;
     tooltip?: string;
 
+    collapsibleState?: vscode.TreeItemCollapsibleState;
+
     /**
      * The arguments to pass in when executing `commandId`. If not specified, this tree item will be used.
      */

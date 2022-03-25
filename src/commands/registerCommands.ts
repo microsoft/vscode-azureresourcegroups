@@ -6,10 +6,10 @@
 import { AzExtTreeItem, IActionContext, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
-import { configureExplorer } from './configureExplorer';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroup } from './deleteResourceGroup';
+import { buildGroupByCommand } from './explorer/groupBy';
 import { getStarted } from './helpAndFeedback/getStarted';
 import { reportIssue } from './helpAndFeedback/reportIssue';
 import { reviewIssues } from './helpAndFeedback/reviewIssues';
@@ -38,7 +38,9 @@ export function registerCommands(): void {
     // Suppress "Report an Issue" button for all errors in favor of the command
     registerErrorHandler(c => c.errorHandling.suppressReportIssue = true);
     registerReportIssueCommand('azureResourceGroups.reportIssue');
-    registerCommand('azureResourceGroups.configureExplorer', configureExplorer);
     registerCommand('azureResourceGroups.createResource', createResource);
     registerCommand('azureResourceGroups.refreshWorkspace', refreshWorkspace);
+    registerCommand('azureResourceGroups.groupBy.resourceGroup', buildGroupByCommand('resourceGroup'));
+    registerCommand('azureResourceGroups.groupBy.resourceType', buildGroupByCommand('resourceType'));
+    registerCommand('azureResourceGroups.groupBy.location', buildGroupByCommand('location'));
 }
