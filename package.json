@@ -289,6 +289,10 @@
                 {
                     "command": "azureResourceGroups.revealResource",
                     "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.installExtension",
+                    "when": "never"
                 }
             ],
             "azureResourceGroups.groupBy": [
