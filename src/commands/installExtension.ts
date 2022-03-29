@@ -6,7 +6,10 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { commands } from "vscode";
 
-export async function installExtension(_context: IActionContext, extensionId: string): Promise<void> {
+export async function installExtension(context: IActionContext, extensionId: string): Promise<void> {
+    context.errorHandling.suppressDisplay = true;
+    context.telemetry.properties.extensionId = extensionId;
     void commands.executeCommand('extension.open', extensionId);
-    void commands.executeCommand('workbench.extensions.installExtension', extensionId);
+    await commands.executeCommand('workbench.extensions.installExtension', extensionId);
+    context.telemetry.properties.result = 'Succeeded';
 }
