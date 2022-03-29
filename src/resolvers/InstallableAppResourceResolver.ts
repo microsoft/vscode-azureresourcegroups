@@ -26,7 +26,7 @@ class InstallableAppResourceResolver implements AppResourceResolver, BuiltinReso
             loadMoreChildrenImpl: async () => {
                 const ti = new GenericTreeItem(undefined, {
                     contextValue: 'installExtension',
-                    label: localize('installExtension', 'Install {0} extension...', extension.label),
+                    label: localize('installExtensionToEnableFeatures', 'Install extension to enable additional features...'),
                     commandId: 'azureResourceGroups.installExtension',
                     iconPath: new ThemeIcon('extensions'),
                 });
