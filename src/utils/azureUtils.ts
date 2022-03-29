@@ -28,11 +28,12 @@ export function getResourceGroupFromId(id: string): string {
 export function createGroupConfigFromResource(resource: GenericResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
     return {
-        resourceGroup: { keyLabel: 'Resource Groups', label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')) },
+        resourceGroup: { keyLabel: 'Resource Groups', label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase().replace('/resourcegroups', '/resourceGroups') },
         resourceType: {
-            keyLabel: 'Resource Types', label: resource.type?.toLowerCase() ?? 'unknown',
-            id: `${subscriptionId}/${resource.type}` ?? 'unknown',
-            iconPath: getIconPath(resource?.type ?? 'resource')
+            keyLabel: 'Resource Types',
+            label: getName(resource) ?? resource.type ?? 'unknown',
+            id: getId(subscriptionId, resource.type, resource.kind),
+            iconPath: getIconPath(resource?.type ?? 'resource', resource.kind)
         },
         location: {
             id: `${subscriptionId}/${resource.location}` ?? 'unknown',
@@ -43,14 +44,23 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
     }
 }
 
-export function getIconPath(type?: string): TreeItemIconPath {
+function getId(subscriptionId?: string, type?: string, kind?: string): string {
+    if (type?.toLowerCase() === 'microsoft.web/sites') {
+        if (kind?.toLowerCase() === 'functionapp') {
+            return `${subscriptionId}/${kind}`;
+        }
+    }
+    return `${subscriptionId}/${type}`;
+}
+
+export function getIconPath(type?: string, kind?: string): TreeItemIconPath {
     let iconName: string;
     const rType: string | undefined = type?.toLowerCase();
-    if (rType && supportedIconTypes.includes(rType)) {
+    if (rType && supportedIconTypes.includes(rType as SupportedTypes)) {
         iconName = rType;
         switch (rType) {
             case 'microsoft.web/sites':
-                if (type?.toLowerCase().includes('functionapp')) {
+                if (kind?.toLowerCase().includes('functionapp')) {
                     iconName = iconName.replace('sites', 'functionapp');
                 }
                 break;
@@ -66,7 +76,7 @@ export function getIconPath(type?: string): TreeItemIconPath {
 
 
 // Execute `npm run listIcons` from root of repo to re-generate this list after adding an icon
-export const supportedIconTypes: string[] = [
+export const supportedIconTypes = [
     'microsoft.web/functionapp',
     'microsoft.web/hostingenvironments',
     'microsoft.web/kubeenvironments',
@@ -121,4 +131,54 @@ export const supportedIconTypes: string[] = [
     'microsoft.cache/redis',
     'microsoft.batch/batchaccounts',
     'microsoft.apimanagement/service',
-];
+] as const;
+
+type SupportedTypes = typeof supportedIconTypes[number];
+
+interface SupportedType {
+    displayName: string;
+}
+
+function getName(resource: GenericResource): string | undefined {
+    let type = resource.type?.toLowerCase();
+    if (resource.type?.toLowerCase() === 'microsoft.web/sites') {
+        if (resource.kind?.toLowerCase() === 'functionapp') {
+            type = 'microsoft.web/functionapp';
+        }
+    }
+    if (type) {
+        return supportTypeInfo[type as SupportedTypes]?.displayName;
+    }
+    return undefined;
+}
+
+const supportTypeInfo: Partial<Record<SupportedTypes, SupportedType>> = {
+    'microsoft.web/sites': { displayName: localize('webApp', 'App Services') },
+    'microsoft.web/staticsites': { displayName: localize('staticWebApp', 'Static Web Apps') },
+    'microsoft.web/functionapp': { displayName: localize('functionApp', 'Function App') },
+    'microsoft.compute/virtualmachines': { displayName: localize('virtualMachines', 'Virtual machines') },
+    'microsoft.storage/storageaccounts': { displayName: localize('storageAccounts', 'Storage accounts') },
+    'microsoft.network/networksecuritygroups': { displayName: localize('networkSecurityGroups', 'Network security groups') },
+    'microsoft.network/loadbalancers': { displayName: localize('loadBalancers', 'Load balancers') },
+    'microsoft.compute/disks': { displayName: localize('disks', 'Disks') },
+    'microsoft.compute/images': { displayName: localize('images', 'Images') },
+    'microsoft.compute/availabilitysets': { displayName: localize('availabilitySets', 'Availability sets') },
+    'microsoft.compute/virtualmachinescalesets': { displayName: localize('virtualMachineScaleSets', 'Virtual machine scale sets') },
+    'microsoft.network/virtualnetworks': { displayName: localize('virtualNetworks', 'Virtual networks') },
+    'microsoft.cdn/profiles': { displayName: localize('frontDoorAndcdnProfiles', 'Front Door and CDN profiles') },
+    'microsoft.network/publicipaddresses': { displayName: localize('publicIpAddresses', 'Public IP addresses') },
+    'microsoft.network/networkinterfaces': { displayName: localize('networkInterfaces', 'Network interfaces') },
+    'microsoft.network/networkwatchers': { displayName: localize('networkWatchers', 'Network watchers') },
+    'microsoft.batch/batchaccounts': { displayName: localize('batchAccounts', 'Batch accounts') },
+    'microsoft.containerregistry/registries': { displayName: localize('containerRegistry', 'Container registry') },
+    'microsoft.dbforpostgresql/servers': { displayName: localize('postgreSqlServers', 'PostgreSql servers') },
+    'microsoft.dbformysql/servers': { displayName: localize('mysqlServers', 'MySql servers') },
+    'microsoft.sql/servers/databases': { displayName: localize('sqlDatabases', 'SQL databases') },
+    'microsoft.sql/servers': { displayName: localize('sqlServers', 'SQL servers') },
+    'microsoft.documentdb/databaseaccounts': { displayName: localize('documentDB', 'Azure CosmosDB') },
+    'microsoft.operationalinsights/workspaces': { displayName: localize('operationalInsightsWorkspaces', 'Operational Insights workspaces') },
+    'microsoft.operationsmanagement/solutions': { displayName: localize('operationsManagementSolutions', 'Operations management solutions') },
+    'microsoft.insights/components': { displayName: localize('insightsComponents', 'Application Insights') },
+    'microsoft.web/serverfarms': { displayName: localize('serverFarms', 'App Service plans') },
+    'microsoft.web/kubeenvironments': { displayName: localize('containerService', 'App Service Kubernetes Environment') },
+}
