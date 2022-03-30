@@ -119,6 +119,7 @@ export const supportedIconTypes = [
     'microsoft.devtestlab/labs',
     'microsoft.devices/iothubs',
     'microsoft.dbforpostgresql/servers',
+    'microsoft.dbforpostgresql/flexibleservers',
     'microsoft.dbformysql/servers',
     'microsoft.containerservice/managedclusters',
     'microsoft.containerregistry/registries',
@@ -147,12 +148,15 @@ function getName(resource: GenericResource): string | undefined {
         }
     }
     if (type) {
-        return supportTypeInfo[type as SupportedTypes]?.displayName;
+        return supportedTypes[type as SupportedTypes]?.displayName;
     }
     return undefined;
 }
 
-const supportTypeInfo: Partial<Record<SupportedTypes, SupportedType>> = {
+// intersect with Record<stirng, SupportedType> so we can add info for resources we don't have icons for
+type SupportedTypeMap = Partial<Record<SupportedTypes, SupportedType> & Record<string, SupportedType>>;
+
+const supportedTypes: SupportedTypeMap = {
     'microsoft.web/sites': { displayName: localize('webApp', 'App Services') },
     'microsoft.web/staticsites': { displayName: localize('staticWebApp', 'Static Web Apps') },
     'microsoft.web/functionapp': { displayName: localize('functionApp', 'Function App') },
@@ -171,7 +175,8 @@ const supportTypeInfo: Partial<Record<SupportedTypes, SupportedType>> = {
     'microsoft.network/networkwatchers': { displayName: localize('networkWatchers', 'Network watchers') },
     'microsoft.batch/batchaccounts': { displayName: localize('batchAccounts', 'Batch accounts') },
     'microsoft.containerregistry/registries': { displayName: localize('containerRegistry', 'Container registry') },
-    'microsoft.dbforpostgresql/servers': { displayName: localize('postgreSqlServers', 'PostgreSql servers') },
+    'microsoft.dbforpostgresql/servers': { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Standard)') },
+    'microsoft.dbforpostgresql/flexibleservers': { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Flexible)') },
     'microsoft.dbformysql/servers': { displayName: localize('mysqlServers', 'MySql servers') },
     'microsoft.sql/servers/databases': { displayName: localize('sqlDatabases', 'SQL databases') },
     'microsoft.sql/servers': { displayName: localize('sqlServers', 'SQL servers') },
