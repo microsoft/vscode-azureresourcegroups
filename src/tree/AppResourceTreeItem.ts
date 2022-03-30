@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { FileChangeType } from "vscode";
-import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration, ResolvedAppResourceBase } from "../api";
+import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration } from "../api";
 import { ext } from "../extensionVariables";
 import { createGroupConfigFromResource, getIconPath } from "../utils/azureUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
@@ -56,8 +56,17 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
                 target[name] = value;
                 return true;
             },
-            getPrototypeOf: (target: AppResourceTreeItem): AppResourceTreeItem | ResolvedAppResourceBase => {
-                return resolvable?.resolveResult ?? target;
+            /**
+             * Needed to be compatible with any usages of instanceof in utils/azureutils
+             *
+             * If resolved returns AzExtTreeItem or AzExtParentTreeItem depending on if resolveResult has loadMoreChildrenImpl defined
+             * If not resolved, returns AppResourceTreeItem
+             */
+            getPrototypeOf: (target: AppResourceTreeItem): AppResourceTreeItem | AzExtParentTreeItem | AzExtTreeItem => {
+                if (resolvable?.resolveResult) {
+                    return resolvable.resolveResult.loadMoreChildrenImpl ? AzExtParentTreeItem.prototype : AzExtTreeItem.prototype
+                }
+                return target;
             }
         }
         return new Proxy(resolvable, providerHandler);
