@@ -91,11 +91,7 @@ export class ExtensionActivationManager implements vscode.Disposable {
 
         previousTypesList.add(typeLower);
 
-        const extensionsToActivate = activationList.get(typeLower);
-
-        if (extensionsToActivate) {
-            extensionsToActivate.forEach(extId => this.activateExtension(extId));
-        }
+        activationList.get(typeLower)?.forEach(extId => this.activateExtension(extId));
 
         // Remove the type from the registration because all of the subscribed extensions are now activated
         activationList.delete(typeLower);
