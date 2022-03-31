@@ -176,6 +176,11 @@
                     "visibility": "collapsed"
                 },
                 {
+                    "id": "azureOperations",
+                    "name": "Operations",
+                    "visibility": "collapsed"
+                },
+                {
                     "id": "ms-azuretools.helpAndFeedback",
                     "name": "%ms-azuretools.helpAndFeedback%",
                     "visibility": "collapsed"

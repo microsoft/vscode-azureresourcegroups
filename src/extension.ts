@@ -9,6 +9,7 @@ import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-az
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
+import { AppResource } from './api';
 import { InternalAzureResourceGroupsExtensionApi } from './api/AzureResourceGroupsExtensionApi';
 import { registerApplicationResourceProvider } from './api/registerApplicationResourceProvider';
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
@@ -25,7 +26,9 @@ import { noopResolver } from './resolvers/NoopResolver';
 import { shallowResourceResolver } from './resolvers/ShallowResourceResolver';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { HelpTreeItem } from './tree/HelpTreeItem';
+import { OperationsTreeItem } from './tree/operations/OperationsTreeItem';
 import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
+import { delay } from './utils/delay';
 import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
@@ -58,6 +61,35 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         const workspaceTreeItem = new WorkspaceTreeItem();
         ext.workspaceTree = new AzExtTreeDataProvider(workspaceTreeItem, 'azureWorkspace.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('azureWorkspace', { treeDataProvider: ext.workspaceTree }));
+
+        const operationTreeItem = new OperationsTreeItem();
+        ext.operationsTree = new AzExtTreeDataProvider(operationTreeItem, 'azureOperations.loadMore');
+        context.subscriptions.push(vscode.window.createTreeView('azureOperations', { treeDataProvider: ext.operationsTree }));
+
+        const task = async (): Promise<AppResource> => {
+            await delay(5000);
+            return {
+                id: '/subscriptions/570117a0-fe37-4dde-ae48-b692c1b25f70/resourcegroups/angular-basic-dotnet/providers/microsoft.web/staticSites/angular-basic-dotnet',
+                name: 'angular-basic-dotnet',
+                type: 'microsoft.web/staticsites',
+                location: 'West US 2',
+            }
+        };
+
+        operationTreeItem.registerOperation(activateContext, {
+            label: "Create static web app 'angular-basic-dotnet'",
+            task,
+        });
+
+        await delay(1000);
+
+        operationTreeItem.registerOperation(activateContext, {
+            label: "Delete static web app 'angular-basic-02'",
+            task: async () => {
+                await delay(10000);
+                throw new Error('Error deleting static web app');
+            },
+        });
 
         context.subscriptions.push(ext.activationManager = new ExtensionActivationManager());
 
