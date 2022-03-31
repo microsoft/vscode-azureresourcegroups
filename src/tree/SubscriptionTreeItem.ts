@@ -118,4 +118,18 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         await Promise.all(childPromises);
     }
+
+    public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[], context: IActionContext): Promise<AzExtTreeItem | undefined> {
+        for (const contextValue of expectedContextValues) {
+            // string or RegExp, re-create it because we want it to be case-insensitive
+            const regExp: RegExp = new RegExp(contextValue, 'gi');
+            const groupTreeItem = (await this.getCachedChildren(context)).find(group => regExp.test(nonNullProp(group, 'id')));
+
+            if (groupTreeItem) {
+                return groupTreeItem;
+            }
+        }
+
+        return undefined;
+    }
 }
