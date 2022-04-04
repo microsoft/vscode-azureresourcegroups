@@ -6,9 +6,9 @@
 import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, GenericTreeItem, IActionContext, IParsedError, parseError, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { randomUUID } from 'crypto';
 import { ThemeColor, ThemeIcon } from 'vscode';
-import { AppResource } from '../../api';
-import { getIconPath } from '../../utils/azureUtils';
-import { Operation, OperationsTreeItem } from './OperationsTreeItem';
+import { AppResource } from '../api';
+import { getIconPath } from '../utils/azureUtils';
+import { ActivityLogsTreeItem, Operation } from './ActivityLogsTreeItem';
 
 export class OperationTreeItem extends AzExtParentTreeItem {
 
@@ -28,6 +28,8 @@ export class OperationTreeItem extends AzExtParentTreeItem {
         return this.data.label;
     }
 
+    public readonly timestamp: number;
+
     public get description(): string | undefined {
         if (this.done) {
             return this.error ? 'Failed' : 'Succeeded';
@@ -43,9 +45,11 @@ export class OperationTreeItem extends AzExtParentTreeItem {
         }
     }
 
-    constructor(parent: OperationsTreeItem, operation: Operation) {
+    constructor(parent: ActivityLogsTreeItem, operation: Operation) {
         super(parent);
         this.data = operation;
+
+        this.timestamp = Date.now();
 
         this.id = randomUUID();
 

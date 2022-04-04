@@ -9,6 +9,8 @@ import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-az
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
+import { ActivityLogsTreeItem } from './activityLog/ActivityLogsTreeItem';
+import { createResourceOperation } from './activityLog/ActivityTreeItemBase';
 import { AppResource } from './api';
 import { InternalAzureResourceGroupsExtensionApi } from './api/AzureResourceGroupsExtensionApi';
 import { registerApplicationResourceProvider } from './api/registerApplicationResourceProvider';
@@ -26,7 +28,6 @@ import { noopResolver } from './resolvers/NoopResolver';
 import { shallowResourceResolver } from './resolvers/ShallowResourceResolver';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { HelpTreeItem } from './tree/HelpTreeItem';
-import { OperationsTreeItem } from './tree/operations/OperationsTreeItem';
 import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
 import { delay } from './utils/delay';
 import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
@@ -62,7 +63,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.workspaceTree = new AzExtTreeDataProvider(workspaceTreeItem, 'azureWorkspace.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('azureWorkspace', { treeDataProvider: ext.workspaceTree }));
 
-        const operationTreeItem = new OperationsTreeItem();
+        const operationTreeItem = new ActivityLogsTreeItem();
         ext.operationsTree = new AzExtTreeDataProvider(operationTreeItem, 'azureOperations.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('azureOperations', { treeDataProvider: ext.operationsTree }));
 
@@ -90,6 +91,20 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 throw new Error('Error deleting static web app');
             },
         });
+
+        operationTreeItem.registerOperation2(activateContext, createResourceOperation(async () => {
+            await delay(7000);
+        }));
+        operationTreeItem.registerOperation2(activateContext, createResourceOperation(async () => {
+            await delay(17000);
+        }));
+        operationTreeItem.registerOperation2(activateContext, createResourceOperation(async () => {
+            await delay(11000);
+            throw new Error('Error creating static web app');
+        }));
+        operationTreeItem.registerOperation2(activateContext, createResourceOperation(async () => {
+            await delay(27000);
+        }));
 
         context.subscriptions.push(ext.activationManager = new ExtensionActivationManager());
 

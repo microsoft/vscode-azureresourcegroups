@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
-import { AppResource } from '../../api';
-import { localize } from '../../utils/localize';
-import { OperationTreeItem } from './OperationTreeItem';
+import { AppResource } from '../api';
+import { localize } from '../utils/localize';
+import { OperationTreeItem } from './ActivityTreeItem';
+import { ActivityTreeItemBase, CreateOperationOptions } from './ActivityTreeItemBase';
 
 export interface RegisterOperationOptions {
     label: string;
@@ -17,11 +18,12 @@ export interface Operation extends RegisterOperationOptions {
     timestamp: number;
 }
 
-export class OperationsTreeItem extends AzExtParentTreeItem {
+export class ActivityLogsTreeItem extends AzExtParentTreeItem {
     public label: string = localize('operations', 'Operations');
     public contextValue: string = 'azureOperations';
 
     private _operations: Operation[] = [];
+    private _operations2: CreateOperationOptions[] = [];
 
     public constructor() {
         super(undefined);
@@ -37,12 +39,17 @@ export class OperationsTreeItem extends AzExtParentTreeItem {
         void this.refresh(context);
     }
 
+    public registerOperation2(context: IActionContext, options: CreateOperationOptions): void {
+        this._operations2.push(options);
+        void this.refresh(context);
+    }
+
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        return this._operations.map((operation) => new OperationTreeItem(this, operation));
+        return this._operations2.map((operation) => new ActivityTreeItemBase(this, operation));
     }
 
     public compareChildrenImpl(item1: OperationTreeItem, item2: OperationTreeItem): number {
-        return item2.data.timestamp - item1.data.timestamp;
+        return item2.timestamp - item1.timestamp;
     }
 
     public hasMoreChildrenImpl(): boolean {

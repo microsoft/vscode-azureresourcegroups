@@ -161,6 +161,13 @@
                     "title": "Azure",
                     "icon": "resources/azure.svg"
                 }
+            ],
+            "panel": [
+                {
+                    "id": "azurePanel",
+                    "title": "Azure",
+                    "icon": "resources/azure.svg"
+                }
             ]
         },
         "views": {
@@ -176,14 +183,18 @@
                     "visibility": "collapsed"
                 },
                 {
-                    "id": "azureOperations",
-                    "name": "Operations",
-                    "visibility": "collapsed"
-                },
-                {
                     "id": "ms-azuretools.helpAndFeedback",
                     "name": "%ms-azuretools.helpAndFeedback%",
                     "visibility": "collapsed"
+                }
+            ],
+            "azurePanel": [
+                {
+                    "id": "azureOperations",
+                    "name": "Activity Log",
+                    "visibility": "collapsed",
+                    "icon": "resources/azure.svg",
+                    "type": "tree"
                 }
             ]
         },
