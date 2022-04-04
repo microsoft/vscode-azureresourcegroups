@@ -28,7 +28,11 @@ export function getResourceGroupFromId(id: string): string {
 export function createGroupConfigFromResource(resource: GenericResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
     return {
-        resourceGroup: { keyLabel: 'Resource Groups', label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')).toLowerCase().replace('/resourcegroups', '/resourceGroups') },
+        resourceGroup: {
+            keyLabel: 'Resource Groups',
+            label: getResourceGroupFromId(id),
+            id: id.substring(0, id.indexOf('/providers')).toLowerCase().replace('/resourcegroups', '/resourceGroups')
+        },
         resourceType: {
             keyLabel: 'Resource Types',
             label: getName(resource) ?? resource.type ?? 'unknown',
@@ -45,28 +49,15 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
 }
 
 function getId(subscriptionId?: string, type?: string, kind?: string): string {
-    if (type?.toLowerCase() === 'microsoft.web/sites') {
-        if (kind?.toLowerCase() === 'functionapp') {
-            return `${subscriptionId}/${kind}`;
-        }
-    }
-    return `${subscriptionId}/${type}`;
+    const rType: string = getResourceType(type, kind);
+    return `${subscriptionId}/${rType}`;
 }
 
 export function getIconPath(type?: string, kind?: string): TreeItemIconPath {
     let iconName: string;
-    const rType: string | undefined = type?.toLowerCase();
-    if (rType && supportedIconTypes.includes(rType as SupportedTypes)) {
-        iconName = rType;
-        switch (rType) {
-            case 'microsoft.web/sites':
-                if (kind?.toLowerCase().includes('functionapp')) {
-                    iconName = iconName.replace('sites', 'functionapp');
-                }
-                break;
-            default:
-        }
-        iconName = path.join('providers', iconName);
+    const rType: string = getResourceType(type, kind);
+    if (supportedIconTypes.includes(rType as SupportedTypes)) {
+        iconName = path.join('providers', rType);
     } else {
         iconName = 'resource';
     }
@@ -77,7 +68,7 @@ export function getIconPath(type?: string, kind?: string): TreeItemIconPath {
 
 // Execute `npm run listIcons` from root of repo to re-generate this list after adding an icon
 export const supportedIconTypes = [
-    'microsoft.web/functionapp',
+    'microsoft.web/sites/functionapp',
     'microsoft.web/hostingenvironments',
     'microsoft.web/kubeenvironments',
     'microsoft.web/serverfarms',
@@ -142,10 +133,8 @@ interface SupportedType {
 
 function getName(resource: GenericResource): string | undefined {
     let type = resource.type?.toLowerCase();
-    if (resource.type?.toLowerCase() === 'microsoft.web/sites') {
-        if (resource.kind?.toLowerCase() === 'functionapp') {
-            type = 'microsoft.web/functionapp';
-        }
+    if (isFunctionApp(resource.type, resource.kind)) {
+        type = 'microsoft.web/sites/functionapp';
     }
     if (type) {
         return supportedTypes[type as SupportedTypes]?.displayName;
@@ -159,7 +148,7 @@ type SupportedTypeMap = Partial<Record<SupportedTypes, SupportedType> & Record<s
 const supportedTypes: SupportedTypeMap = {
     'microsoft.web/sites': { displayName: localize('webApp', 'App Services') },
     'microsoft.web/staticsites': { displayName: localize('staticWebApp', 'Static Web Apps') },
-    'microsoft.web/functionapp': { displayName: localize('functionApp', 'Function App') },
+    'microsoft.web/sites/functionapp': { displayName: localize('functionApp', 'Function App') },
     'microsoft.compute/virtualmachines': { displayName: localize('virtualMachines', 'Virtual machines') },
     'microsoft.storage/storageaccounts': { displayName: localize('storageAccounts', 'Storage accounts') },
     'microsoft.network/networksecuritygroups': { displayName: localize('networkSecurityGroups', 'Network security groups') },
@@ -186,4 +175,25 @@ const supportedTypes: SupportedTypeMap = {
     'microsoft.insights/components': { displayName: localize('insightsComponents', 'Application Insights') },
     'microsoft.web/serverfarms': { displayName: localize('serverFarms', 'App Service plans') },
     'microsoft.web/kubeenvironments': { displayName: localize('containerService', 'App Service Kubernetes Environment') },
+}
+
+export function isFunctionApp(type?: string, kind?: string): boolean {
+    if (type?.toLowerCase() === 'microsoft.web/sites') {
+        if (kind?.toLowerCase().includes('functionapp')) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function getRelevantKind(type?: string, kind?: string): string | undefined {
+    if (isFunctionApp(type, kind)) {
+        return 'functionapp';
+    }
+    return undefined;
+}
+
+function getResourceType(type?: string, kind?: string): string {
+    const relevantKind = getRelevantKind(type, kind);
+    return `${type?.toLowerCase()}${relevantKind ? `/${relevantKind}` : ''}`;
 }
