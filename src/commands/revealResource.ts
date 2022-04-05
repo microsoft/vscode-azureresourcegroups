@@ -4,14 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { AppResource } from '../api';
 import { revealTreeItem } from '../api/revealTreeItem';
-import { AppResourceTreeItem } from '../tree/AppResourceTreeItem';
 
-export async function revealResource(context: IActionContext, node: AppResourceTreeItem): Promise<void> {
-    context.telemetry.properties.resourceType = node.data.type?.replace(/\//g, '|'); // Replace the slashes otherwise this gets redacted because it looks like a user file path
-    context.telemetry.properties.resourceKind = node.data.kind;
+export async function revealResource(context: IActionContext, resource: AppResource): Promise<void> {
+    context.telemetry.properties.resourceType = resource.type?.replace(/\//g, '|'); // Replace the slashes otherwise this gets redacted because it looks like a user file path
+    context.telemetry.properties.resourceKind = resource.kind;
     try {
-        await revealTreeItem(node.fullId);
+        await revealTreeItem(resource.id);
     } catch (error) {
         context.telemetry.properties.revealError = parseError(error).message;
     }

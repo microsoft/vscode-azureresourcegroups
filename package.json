@@ -190,7 +190,7 @@
             ],
             "azurePanel": [
                 {
-                    "id": "azureOperations",
+                    "id": "azureActivityLog",
                     "name": "Activity Log",
                     "visibility": "collapsed",
                     "icon": "resources/azure.svg",

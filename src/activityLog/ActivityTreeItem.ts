@@ -1,104 +1,67 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
+*  Copyright (c) Microsoft Corporation. All rights reserved.
+*  Licensed under the MIT License. See License.txt in the project root for license information.
+*--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, GenericTreeItem, IActionContext, IParsedError, parseError, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { randomUUID } from 'crypto';
-import { ThemeColor, ThemeIcon } from 'vscode';
-import { AppResource } from '../api';
-import { getIconPath } from '../utils/azureUtils';
-import { ActivityLogsTreeItem, Operation } from './ActivityLogsTreeItem';
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
+import { localize } from "../utils/localize";
+import { ActivityBase } from "./Activity";
 
-export class OperationTreeItem extends AzExtParentTreeItem {
+export class ActivityTreeItem extends AzExtParentTreeItem {
 
+    public constructor(parent: AzExtParentTreeItem, public readonly activity: ActivityBase) {
+        super(parent);
+    }
 
-    public contextValue: string = 'azureOperation';
+    public get contextValue(): string {
+        const postfix = this.activity.state.contextValuePostfix ? `.${this.activity.state.contextValuePostfix}` : '';
+        return `azureOperation.${this.activity.done ? this.activity.error ? 'failed' : 'succeeded' : 'running'}${postfix}`;
+    }
 
-    public data: Operation;
+    public get collapsibleState(): TreeItemCollapsibleState {
+        return this.activity.state.collapsibleState ?? this.activity.done ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.None;
+    }
 
-    public done: boolean;
-
-    public result?: AppResource;
-
-
-    public error?: IParsedError;
+    public set collapsibleState(_value: TreeItemCollapsibleState) {
+        // no-op
+    }
 
     public get label(): string {
-        return this.data.label;
+        return this.activity.state.label;
     }
-
-    public readonly timestamp: number;
 
     public get description(): string | undefined {
-        if (this.done) {
-            return this.error ? 'Failed' : 'Succeeded';
-        }
-        return 'Running...';
+        return this.stateValue({
+            running: undefined,
+            succeeded: localize('succeded', 'Succeeded'),
+            failed: localize('failed', 'Failed'),
+        });
     }
 
-    public get iconPath(): TreeItemIconPath {
-        if (this.done) {
-            return this.error ? new ThemeIcon('error', new ThemeIcon('testing.iconFailed')) : new ThemeIcon('pass', new ThemeColor('testing.iconPassed'));
-        } else {
-            return new ThemeIcon('loading~spin');
-        }
-    }
-
-    constructor(parent: ActivityLogsTreeItem, operation: Operation) {
-        super(parent);
-        this.data = operation;
-
-        this.timestamp = Date.now();
-
-        this.id = randomUUID();
-
-        void callWithTelemetryAndErrorHandling('operation', async (context: IActionContext) => {
-            try {
-                this.result = await this.data.task();
-            } catch (e) {
-                this.error = parseError(e);
-            } finally {
-                this.done = true;
-                void this.refresh(context);
-            }
+    public get iconPath(): TreeItemIconPath | undefined {
+        return this.stateValue({
+            running: new ThemeIcon('loading~spin'),
+            succeeded: new ThemeIcon('pass', new ThemeColor('testing.iconPassed')),
+            failed: new ThemeIcon('error', new ThemeColor('testing.iconFailed')),
         });
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        if (this.error) {
-            return [
-                new GenericTreeItem(this, {
-                    contextValue: 'operationError',
-                    label: this.error.message
-                })
-            ];
+        if (this.activity.state.children) {
+            return this.activity.state.children(this);
         }
-
-        if (this.result) {
-            const ti = new GenericTreeItem(this, {
-                contextValue: 'operationResult',
-                label: this.result.name,
-                iconPath: getIconPath(this.result.type),
-                commandId: 'azureResourceGroups.revealResource'
-            });
-
-            ti.commandArgs = [
-                {
-                    fullId: '/subscriptions/570117a0-fe37-4dde-ae48-b692c1b25f70/resourceGroups/angular-basic-dotnet/providers/microsoft.web/staticSites/angular-basic-dotnet',
-                    data: { ...this.result }
-                }
-            ];
-
-            return [
-                ti
-            ]
-        }
-
         return [];
     }
 
     public hasMoreChildrenImpl(): boolean {
         return false;
+    }
+
+    private stateValue<T>(values: { running: T, succeeded: T, failed: T }): T {
+        if (this.activity.done) {
+            return this.activity.error ? values.failed : values.succeeded;
+        }
+        return values.running;
     }
 }

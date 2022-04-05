@@ -5,6 +5,7 @@
 
 import { AzExtTreeDataProvider, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { Disposable, TreeView } from 'vscode';
+import { ActivityBase } from '../activityLog/Activity';
 import { AppResourceResolver, AzureResourceGroupsExtensionApi, LocalResourceProvider } from '../api';
 
 export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGroupsExtensionApi {
@@ -14,6 +15,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGro
     #revealTreeItem: (resourceId: string) => Promise<void>;
     #registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
     #registerLocalResourceProvider: (id: string, resolver: LocalResourceProvider) => Disposable;
+    #registerActivity: <R>(activity: ActivityBase<R>) => Promise<R | undefined>;
 
     public constructor(options: AzureResourceGroupsExtensionApi) {
         this.#tree = options.tree;
@@ -22,6 +24,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGro
         this.#revealTreeItem = options.revealTreeItem;
         this.#registerApplicationResourceResolver = options.registerApplicationResourceResolver;
         this.#registerLocalResourceProvider = options.registerLocalResourceProvider;
+        this.#registerActivity = options.registerActivity;
     }
 
     public get tree(): AzExtTreeDataProvider {
@@ -46,5 +49,9 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGro
 
     public registerLocalResourceProvider(id: string, resolver: LocalResourceProvider): Disposable {
         return this.#registerLocalResourceProvider(id, resolver);
+    }
+
+    public async registerActivity<R>(activity: ActivityBase<R>): Promise<R | undefined> {
+        return this.#registerActivity<R>(activity);
     }
 }
