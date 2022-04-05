@@ -13,6 +13,7 @@ import { buildGroupByCommand } from './explorer/groupBy';
 import { getStarted } from './helpAndFeedback/getStarted';
 import { reportIssue } from './helpAndFeedback/reportIssue';
 import { reviewIssues } from './helpAndFeedback/reviewIssues';
+import { installExtension } from './installExtension';
 import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
 import { editTags } from './tags/editTags';
@@ -43,4 +44,6 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.groupBy.resourceGroup', buildGroupByCommand('resourceGroup'));
     registerCommand('azureResourceGroups.groupBy.resourceType', buildGroupByCommand('resourceType'));
     registerCommand('azureResourceGroups.groupBy.location', buildGroupByCommand('location'));
+
+    registerCommand('azureResourceGroups.installExtension', installExtension);
 }

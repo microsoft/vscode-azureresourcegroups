@@ -3,9 +3,11 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { GenericTreeItem, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { ThemeIcon } from "vscode";
 import { AppResource, AppResourceResolver, ResolvedAppResourceBase } from "../api";
 import { getAzureExtensions } from "../AzExtWrapper";
+import { localize } from "../utils/localize";
 import { BuiltinResolver } from "./BuiltinResolver";
 
 /**
@@ -18,11 +20,20 @@ class InstallableAppResourceResolver implements AppResourceResolver, BuiltinReso
     public resolveResource(_subContext: ISubscriptionContext, resource: AppResource): ResolvedAppResourceBase {
         // We know the extension is known but uninstalled, or else it would not have passed the `isApplicable` check below
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const extensionId = getAzureExtensions().find(azExt => azExt.matchesResourceType(resource))!.id;
+        const extension = getAzureExtensions().find(azExt => azExt.matchesResourceType(resource))!;
 
         return {
-            commandId: 'extension.open',
-            commandArgs: [extensionId],
+            loadMoreChildrenImpl: async () => {
+                const ti = new GenericTreeItem(undefined, {
+                    contextValue: 'installExtension',
+                    label: localize('installExtensionToEnableFeatures', 'Install extension to enable additional features...'),
+                    commandId: 'azureResourceGroups.installExtension',
+                    iconPath: new ThemeIcon('extensions'),
+                });
+                ti.commandArgs = [extension.id];
+
+                return [ti];
+            }
         };
     }
 

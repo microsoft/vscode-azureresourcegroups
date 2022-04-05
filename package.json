@@ -63,6 +63,12 @@
                 "category": "Azure Resource Groups"
             },
             {
+                "command": "azureResourceGroups.installExtension",
+                "title": "Install Azure extension",
+                "icon": "$(extensions)",
+                "category": "Azure Resource Groups"
+            },
+            {
                 "command": "azureResourceGroups.createResource",
                 "title": "Create Resource...",
                 "category": "Azure Resource Groups",
@@ -272,6 +278,10 @@
                 },
                 {
                     "command": "azureResourceGroups.revealResource",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.installExtension",
                     "when": "never"
                 }
             ],
