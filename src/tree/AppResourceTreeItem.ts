@@ -85,7 +85,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     }
 
     public get iconPath(): TreeItemIconPath {
-        return getIconPath(this.data.type);
+        return getIconPath(this.data.type, this.data.kind);
     }
 
     public async refreshImpl(): Promise<void> {
