@@ -1,6 +1,5 @@
-import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
+import { ActivityBase, callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../extensionVariables";
-import { ActivityBase } from "./Activity";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const activities: ActivityBase<any>[] = [];

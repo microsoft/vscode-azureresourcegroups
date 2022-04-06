@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeDataProvider, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { ActivityBase, AzExtTreeDataProvider, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { Disposable, TreeView } from 'vscode';
-import { ActivityBase } from '../activityLog/Activity';
 import { AppResourceResolver, AzureResourceGroupsExtensionApi, LocalResourceProvider } from '../api';
 
 export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGroupsExtensionApi {

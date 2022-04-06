@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
+import { ActivityTreeItem, AzExtParentTreeItem, AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
 import { localize } from '../utils/localize';
-import { ActivityTreeItem } from './ActivityTreeItem';
 import { activities } from './registerActivity';
 
 export class ActivityLogTreeItem extends AzExtParentTreeItem {
