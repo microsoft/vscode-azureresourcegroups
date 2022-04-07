@@ -87,6 +87,14 @@ export const azureExtensions: IAzExtMetadata[] = [
             'microsoft.dbforpostgresql/servers'
         ],
         reportIssueCommandId: 'azureDatabases.reportIssue'
+    },
+    {
+        name: 'vscode-azurecontainerapps',
+        label: 'Container Apps',
+        resourceTypes: [
+            'microsoft.app/containerapps'
+        ],
+        reportIssueCommandId: 'containerApps.reportIssue'
     }
 ];
 
