@@ -5,6 +5,8 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
+import { armTagKeys } from "../../utils/azureUtils";
+import { localize } from "../../utils/localize";
 import { settingUtils } from "../../utils/settingUtils";
 
 export function buildGroupByCommand(setting: string) {
@@ -12,6 +14,13 @@ export function buildGroupByCommand(setting: string) {
 }
 
 async function groupBy(context: IActionContext, setting: string): Promise<void> {
+    if (setting === 'armTag') {
+        const armTagKey = await context.ui.showQuickPick(Array.from(armTagKeys).map(key => { return { label: key } }), {
+            placeHolder: localize('groupByArmTagKey', 'Select the tag key to group by...')
+        });
+        await settingUtils.updateGlobalSetting('groupBy.armTagKey', armTagKey.label);
+    }
+
     await settingUtils.updateGlobalSetting('groupBy', setting);
     void ext.tree.refresh(context);
 }

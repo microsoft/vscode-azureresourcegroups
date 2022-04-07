@@ -52,15 +52,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         this._items = this.rgsItem.map((resource: AppResource): GroupableResource => AppResourceTreeItem.Create(this, resource));
 
-        // dynamically generate GroupBy keys, should be moved
-        for (const item of this._items) {
-            Object.keys(item.groupConfig).forEach(key => {
-                if (!ext.groupByKeys[key] && !!item.groupConfig[key].keyLabel) {
-                    ext.groupByKeys[key] = <string>item.groupConfig[key].keyLabel;
-                }
-            });
-        }
-
         await this.refresh(context);
         return <AzExtTreeItem[]>Object.values(this._treeMap);
     }

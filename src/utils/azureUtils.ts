@@ -28,15 +28,14 @@ export function getResourceGroupFromId(id: string): string {
 export function createGroupConfigFromResource(resource: GenericResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
     return {
-        resourceGroup: { keyLabel: 'Resource Groups', label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')) },
+        resourceGroup: { label: getResourceGroupFromId(id), id: id.substring(0, id.indexOf('/providers')) },
         resourceType: {
-            keyLabel: 'Resource Types', label: resource.type?.toLowerCase() ?? 'unknown',
+            label: resource.type?.toLowerCase() ?? 'unknown',
             id: `${subscriptionId}/${resource.type}` ?? 'unknown',
             iconPath: getIconPath(resource?.type ?? 'resource')
         },
         location: {
             id: `${subscriptionId}/${resource.location}` ?? 'unknown',
-            keyLabel: 'Location',
             label: resource.location ?? localize('unknown', 'Unknown'),
             icon: new ThemeIcon('globe')
         }
@@ -64,6 +63,7 @@ export function getIconPath(type?: string): TreeItemIconPath {
     return treeUtils.getIconPath(iconName);
 }
 
+export const armTagKeys: Set<string> = new Set();
 
 // Execute `npm run listIcons` from root of repo to re-generate this list after adding an icon
 export const supportedIconTypes: string[] = [

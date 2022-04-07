@@ -43,4 +43,5 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.groupBy.resourceGroup', buildGroupByCommand('resourceGroup'));
     registerCommand('azureResourceGroups.groupBy.resourceType', buildGroupByCommand('resourceType'));
     registerCommand('azureResourceGroups.groupBy.location', buildGroupByCommand('location'));
+    registerCommand('azureResourceGroups.groupBy.armTag', buildGroupByCommand('armTag'));
 }

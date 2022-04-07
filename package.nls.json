@@ -18,7 +18,10 @@
     "ms-azuretools.helpAndFeedback": "Help and Feedback",
     "ms-azuretools.reportIssue": "Report Issue...",
     "ms-azuretools.reviewIssues": "Review Issues...",
+    "azureResourceGroups.groupBy": "The setting to control how Azure resources are grouped in the tree view",
     "azureResourceGroups.groupBy.resourceGroup": "Group by Resource Group",
     "azureResourceGroups.groupBy.resourceType": "Group by Resource Type",
-    "azureResourceGroups.groupBy.location": "Group by Location"
+    "azureResourceGroups.groupBy.location": "Group by Location",
+    "azureResourceGroups.groupBy.armTag": "Group by ARM Tag",
+    "azureResourceGroups.groupBy.armTagKey": "ARM tag key to group resources by"
 }

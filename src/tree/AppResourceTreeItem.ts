@@ -7,7 +7,9 @@ import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeIt
 import { FileChangeType } from "vscode";
 import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration } from "../api";
 import { ext } from "../extensionVariables";
-import { createGroupConfigFromResource, getIconPath } from "../utils/azureUtils";
+import { armTagKeys, createGroupConfigFromResource, getIconPath } from "../utils/azureUtils";
+import { localize } from "../utils/localize";
+import { settingUtils } from "../utils/settingUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
@@ -30,6 +32,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
 
         this.data = resource;
         this.groupConfig = createGroupConfigFromResource(resource, root.id);
+        this._addArmTags();
 
         this.contextValues.add(AppResourceTreeItem.contextValue);
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
@@ -89,6 +92,10 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     }
 
     public async refreshImpl(): Promise<void> {
+        const armTagKey: string | undefined = settingUtils.getGlobalSetting('groupBy.armTagKey');
+        if (armTagKey) {
+            this.setGroupConfigFromArmTagKey(armTagKey);
+        }
         this.mTime = Date.now();
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
@@ -115,6 +122,27 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
             case 'resourceGroup':
             default:
                 return new GroupTreeItemBase(this.rootGroupTreeItem, this.groupConfig[groupBySetting]);
+        }
+    }
+
+    private setGroupConfigFromArmTagKey(key: string): GroupNodeConfiguration {
+        return this.data.tags && this.data.tags[key] ?
+            {
+                label: this.data.tags[key],
+                id: `${this.subscription.subscriptionId}/${this.data.tags[key]}`
+            } :
+            {
+                label: localize('untagged', 'Untagged for key "{0}"', key),
+                id: `${this.subscription.subscriptionId}/untagged}`
+            }
+    }
+
+
+    private _addArmTags(): void {
+        if (this.data.tags) {
+            for (const key of Object.keys(this.data.tags)) {
+                armTagKeys.add(key);
+            }
         }
     }
 }

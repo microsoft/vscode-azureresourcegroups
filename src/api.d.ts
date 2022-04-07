@@ -38,8 +38,6 @@ export interface AppResource {
 export interface GroupNodeConfiguration {
     readonly label: string;
     readonly id: string;
-    // label for GroupBy Configurations
-    readonly keyLabel?: string;
     readonly description?: string;
     readonly icon?: vscode.ThemeIcon;
     readonly iconPath?: string | vscode.Uri | { light: string | vscode.Uri; dark: string | vscode.Uri } | vscode.ThemeIcon;
