@@ -45,6 +45,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
         label: localize('loading', 'Loading...')
     }
 
+    public started: boolean = false;
     private done: boolean = false;
     public error: unknown;
     private latestProgress?: { message?: string };
@@ -86,6 +87,8 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
 
     private async onStart(data: OnStartActivityData): Promise<void> {
         await callWithTelemetryAndErrorHandling('activityOnStart', async (context) => {
+            this.startedAtMs = Date.now();
+            this.started = true;
             this.state = data;
             await this.refresh(context);
         });

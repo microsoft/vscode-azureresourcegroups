@@ -25,7 +25,7 @@ export class ActivityLogTreeItem extends AzExtParentTreeItem {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        return Object.values(this.activityTreeItems);
+        return Object.values(this.activityTreeItems).filter((activity) => activity.started);
     }
 
     public compareChildrenImpl(item1: ActivityTreeItem, item2: ActivityTreeItem): number {
