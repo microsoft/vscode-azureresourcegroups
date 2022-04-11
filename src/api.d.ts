@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { ActivityBase, AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ICreateChildImplContext, IParsedError, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { Activity, AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ICreateChildImplContext, IParsedError, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 
 export interface AzureResourceGroupsExtensionApi {
@@ -14,7 +14,7 @@ export interface AzureResourceGroupsExtensionApi {
     readonly revealTreeItem(resourceId: string): Promise<void>;
     readonly registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): Disposable;
     readonly registerLocalResourceProvider(id: string, provider: LocalResourceProvider): Disposable;
-    registerActivity<R>(activity: ActivityBase<R>): Promise<R | undefined>;
+    registerActivity(activity: Activity): Promise<void>;
 }
 
 /**

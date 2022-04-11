@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ActivityBase, AzExtTreeDataProvider, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { Activity, AzExtTreeDataProvider, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { Disposable, TreeView } from 'vscode';
 import { AppResourceResolver, AzureResourceGroupsExtensionApi, LocalResourceProvider } from '../api';
 
@@ -14,7 +14,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGro
     #revealTreeItem: (resourceId: string) => Promise<void>;
     #registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
     #registerLocalResourceProvider: (id: string, resolver: LocalResourceProvider) => Disposable;
-    #registerActivity: <R>(activity: ActivityBase<R>) => Promise<R | undefined>;
+    #registerActivity: (activity: Activity) => Promise<void>;
 
     public constructor(options: AzureResourceGroupsExtensionApi) {
         this.#tree = options.tree;
@@ -50,7 +50,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGro
         return this.#registerLocalResourceProvider(id, resolver);
     }
 
-    public async registerActivity<R>(activity: ActivityBase<R>): Promise<R | undefined> {
-        return this.#registerActivity<R>(activity);
+    public async registerActivity(activity: Activity): Promise<void> {
+        return this.#registerActivity(activity);
     }
 }

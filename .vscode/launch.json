@@ -26,7 +26,7 @@
             "runtimeExecutable": "${execPath}",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionDevelopmentPath=${workspaceFolder}/../../worktrees/vscode-azurestaticwebapps/swa-unified"
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurestaticwebapps"
             ],
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"

@@ -3,24 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ActivityTreeItem, AzExtParentTreeItem, AzExtTreeItem, IActionContext } from '@microsoft/vscode-azext-utils';
+import { Activity, AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import { localize } from '../utils/localize';
-import { activities } from './registerActivity';
+import { ActivityTreeItem } from './ActivityTreeItem';
 
 export class ActivityLogTreeItem extends AzExtParentTreeItem {
     public label: string = localize('activityLog', 'Activity Log');
     public contextValue: string = 'azureActivityLog';
 
+    private activityTreeItems: Record<string, ActivityTreeItem> = {};
+
     public constructor() {
         super(undefined);
     }
 
+    public async addActivity(activity: Activity): Promise<void> {
+        await callWithTelemetryAndErrorHandling('registerActivity', async (context: IActionContext) => {
+            this.activityTreeItems[activity.id] = new ActivityTreeItem(this, activity);
+            await this.refresh(context);
+        });
+    }
+
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        return activities.map((activity) => new ActivityTreeItem(this, activity));
+        return Object.values(this.activityTreeItems);
     }
 
     public compareChildrenImpl(item1: ActivityTreeItem, item2: ActivityTreeItem): number {
-        return item1.activity.startedAtMs - item2.activity.startedAtMs;
+        return item1.startedAtMs - item2.startedAtMs;
     }
 
     public hasMoreChildrenImpl(): boolean {
