@@ -158,6 +158,12 @@
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure Resource Groups",
                 "icon": "$(refresh)"
+            },
+            {
+                "command": "azureResourceGroups.clearActivities",
+                "title": "Clear Activities",
+                "category": "Azure Resource Groups",
+                "icon": "$(clear-all)"
             }
         ],
         "viewsContainers": {
@@ -224,6 +230,11 @@
                 {
                     "command": "azureResourceGroups.refreshWorkspace",
                     "when": "view == azureWorkspace",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "azureResourceGroups.clearActivities",
+                    "when": "view == azureActivityLog",
                     "group": "navigation@1"
                 }
             ],

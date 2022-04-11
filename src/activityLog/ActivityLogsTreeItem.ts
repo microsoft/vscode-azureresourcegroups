@@ -24,6 +24,11 @@ export class ActivityLogTreeItem extends AzExtParentTreeItem {
         });
     }
 
+    public async clearActivities(context: IActionContext): Promise<void> {
+        this.activityTreeItems = {};
+        await this.refresh(context);
+    }
+
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
         return Object.values(this.activityTreeItems).filter((activity) => activity.started);
     }

@@ -6,6 +6,7 @@
 import { AzExtTreeItem, IActionContext, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
+import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroup } from './deleteResourceGroup';
@@ -46,4 +47,6 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.groupBy.location', buildGroupByCommand('location'));
 
     registerCommand('azureResourceGroups.installExtension', installExtension);
+
+    registerCommand('azureResourceGroups.clearActivities', clearActivities);
 }
