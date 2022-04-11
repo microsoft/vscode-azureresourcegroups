@@ -84,7 +84,8 @@ export const azureExtensions: IAzExtMetadata[] = [
         label: 'Databases',
         resourceTypes: [
             'microsoft.documentdb/databaseaccounts',
-            'microsoft.dbforpostgresql/servers'
+            'microsoft.dbforpostgresql/servers',
+            'microsoft.dbforpostgresql/flexibleservers',
         ],
         reportIssueCommandId: 'azureDatabases.reportIssue'
     },
