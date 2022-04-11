@@ -346,11 +346,6 @@
                         "type": "string",
                         "description": "%azureResourceGroups.groupBy%",
                         "default": "resourceGroup"
-                    },
-                    "azureResourceGroups.groupBy.armTagKey": {
-                        "type": "string",
-                        "description": "%azureResourceGroups.groupBy.armTagKey%",
-                        "default": ""
                     }
                 }
             }

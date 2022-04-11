@@ -7,9 +7,7 @@ import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeIt
 import { FileChangeType } from "vscode";
 import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration } from "../api";
 import { ext } from "../extensionVariables";
-import { armTagKeys, createGroupConfigFromResource, getIconPath } from "../utils/azureUtils";
-import { localize } from "../utils/localize";
-import { settingUtils } from "../utils/settingUtils";
+import { createGroupConfigFromResource, getIconPath } from "../utils/azureUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
@@ -32,7 +30,6 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
 
         this.data = resource;
         this.groupConfig = createGroupConfigFromResource(resource, root.id);
-        this._addArmTags();
 
         this.contextValues.add(AppResourceTreeItem.contextValue);
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
@@ -92,26 +89,28 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     }
 
     public async refreshImpl(): Promise<void> {
-        const armTagKey: string | undefined = settingUtils.getGlobalSetting('groupBy.armTagKey');
-        if (armTagKey) {
-            this.setGroupConfigFromArmTagKey(armTagKey);
-        }
         this.mTime = Date.now();
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
     public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string): void {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
-        if (!subGroupTreeItem) {
-            subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting);
-            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
+        const configId: string | undefined = this.groupConfig[groupBySetting]?.id;
+
+        // if this configuration can't be found, skip this resource
+        if (configId) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
+            if (!subGroupTreeItem) {
+                subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting);
+                (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
+            }
+
+            subGroupTreeItem.treeMap[this.id] = this;
+            this.parent = subGroupTreeItem;
+            // this should actually be "resolve"
+            void subGroupTreeItem.refresh(context);
         }
 
-        subGroupTreeItem.treeMap[this.id] = this;
-        this.parent = subGroupTreeItem;
-        // this should actually be "resolve"
-        void subGroupTreeItem.refresh(context);
     }
 
     public createSubGroupTreeItem(_context: IActionContext, groupBySetting: string): GroupTreeItemBase {
@@ -122,27 +121,6 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
             case 'resourceGroup':
             default:
                 return new GroupTreeItemBase(this.rootGroupTreeItem, this.groupConfig[groupBySetting]);
-        }
-    }
-
-    private setGroupConfigFromArmTagKey(key: string): GroupNodeConfiguration {
-        return this.data.tags && this.data.tags[key] ?
-            {
-                label: this.data.tags[key],
-                id: `${this.subscription.subscriptionId}/${this.data.tags[key]}`
-            } :
-            {
-                label: localize('untagged', 'Untagged for key "{0}"', key),
-                id: `${this.subscription.subscriptionId}/untagged}`
-            }
-    }
-
-
-    private _addArmTags(): void {
-        if (this.data.tags) {
-            for (const key of Object.keys(this.data.tags)) {
-                armTagKeys.add(key);
-            }
         }
     }
 }

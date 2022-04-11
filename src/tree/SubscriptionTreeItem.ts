@@ -88,7 +88,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public async refreshImpl(context: IActionContext): Promise<void> {
         this._treeMap = {};
-        const groupBySetting = <string>settingUtils.getGlobalSetting<string>('groupBy');
+        const groupBySetting = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
 
         for (const rgTree of this._items) {
             (<AppResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting);
