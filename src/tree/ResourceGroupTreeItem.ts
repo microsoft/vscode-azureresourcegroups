@@ -16,19 +16,10 @@ import { GroupTreeItemBase } from "./GroupTreeItemBase";
 export class ResourceGroupTreeItem extends GroupTreeItemBase {
     public static contextValue: string = 'azureResourceGroup';
 
-    constructor(parent: AzExtParentTreeItem, config: GroupNodeConfiguration, data: ResourceGroup) {
+    constructor(parent: AzExtParentTreeItem, config: GroupNodeConfiguration, public data: ResourceGroup) {
         super(parent, config);
-        this.data = data;
 
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
-    }
-
-    public get data(): ResourceGroup | undefined {
-        return this.data;
-    }
-
-    public set data(data: ResourceGroup | undefined) {
-        this.data = data;
     }
 
     public get contextValue(): string {
