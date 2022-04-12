@@ -16,19 +16,20 @@ import { GroupTreeItemBase } from "./GroupTreeItemBase";
 export class ResourceGroupTreeItem extends GroupTreeItemBase {
     public static contextValue: string = 'azureResourceGroup';
 
-    constructor(parent: AzExtParentTreeItem, config: GroupNodeConfiguration, data: ResourceGroup) {
+    public data?: ResourceGroup;
+
+    constructor(parent: AzExtParentTreeItem, config: GroupNodeConfiguration, data?: ResourceGroup | Promise<ResourceGroup[]>) {
         super(parent, config);
-        this.data = data;
+
+        if (data instanceof Promise) {
+            data?.then((rg) => {
+                this.data = rg.find((rg) => rg.name === this.name);
+            });
+        } else {
+            this.data = data;
+        }
 
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
-    }
-
-    public get data(): ResourceGroup | undefined {
-        return this.data;
-    }
-
-    public set data(data: ResourceGroup | undefined) {
-        this.data = data;
     }
 
     public get contextValue(): string {
@@ -41,11 +42,6 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
 
     public get name(): string {
         return this.label;
-    }
-
-    public get description(): string | undefined {
-        const state: string | undefined = this.data?.properties?.provisioningState;
-        return state?.toLowerCase() === 'succeeded' ? `${Object.keys(this.treeMap).length} resources` : state;
     }
 
     public get iconPath(): TreeItemIconPath {
@@ -66,6 +62,7 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
     public async refreshImpl(context: IActionContext): Promise<void> {
         const client: ResourceManagementClient = await createResourceClient([context, this]);
         this.data = await client.resourceGroups.get(this.name);
+
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
         this.mTime = Date.now();
     }

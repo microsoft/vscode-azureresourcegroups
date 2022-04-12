@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ResourceGroup } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { FileChangeType } from "vscode";
 import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration } from "../api";
@@ -10,6 +11,7 @@ import { ext } from "../extensionVariables";
 import { createGroupConfigFromResource, getIconPath } from "../utils/azureUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
+import { ResourceGroupTreeItem } from "./ResourceGroupTreeItem";
 import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
 export class AppResourceTreeItem extends ResolvableTreeItemBase implements GroupableResource {
@@ -93,11 +95,11 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
-    public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string): void {
+    public async mapSubGroupConfigTree(context: IActionContext, groupBySetting: string, resourceGroups: Promise<ResourceGroup[]>): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
         if (!subGroupTreeItem) {
-            subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting);
+            subGroupTreeItem = await this.createSubGroupTreeItem(context, groupBySetting, resourceGroups);
             (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
         }
 
@@ -107,12 +109,11 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         void subGroupTreeItem.refresh(context);
     }
 
-    public createSubGroupTreeItem(_context: IActionContext, groupBySetting: string): GroupTreeItemBase {
-        // const client = await createResourceClient([context, this.rootGroupTreeItem.subscription]);
-
+    public async createSubGroupTreeItem(_context: IActionContext, groupBySetting: string, resourceGroups: Promise<ResourceGroup[]>): Promise<GroupTreeItemBase> {
         switch (groupBySetting) {
             // TODO: Use ResovableTreeItem here
             case 'resourceGroup':
+                return new ResourceGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceGroup, resourceGroups);
             default:
                 return new GroupTreeItemBase(this.rootGroupTreeItem, this.groupConfig[groupBySetting]);
         }

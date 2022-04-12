@@ -3,13 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
+import { ResourceManagementClient } from '@azure/arm-resources';
+import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { ConfigurationChangeEvent, workspace } from 'vscode';
 import { AppResource, AppResourceResolver, GroupableResource } from '../api';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { azureResourceProviderId } from '../constants';
 import { ext } from '../extensionVariables';
+import { createResourceClient } from '../utils/azureClients';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
 import { AppResourceTreeItem } from './AppResourceTreeItem';
@@ -99,8 +101,11 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         this._treeMap = {};
         const groupBySetting = <string>settingUtils.getGlobalSetting<string>('groupBy');
 
-        for (const rgTree of this._items) {
-            (<AppResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting);
+        const client: ResourceManagementClient = await createResourceClient([context, this]);
+        const resourceGroups = uiUtils.listAllIterator(client.resourceGroups.list());
+
+        for await (const rgTree of this._items) {
+            await (<AppResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting, resourceGroups);
         }
     }
 
