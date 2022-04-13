@@ -108,7 +108,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const resourceGroups = uiUtils.listAllIterator(client.resourceGroups.list());
 
         for await (const rgTree of this._items) {
-            await (<AppResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting, resourceGroups);
+            (<AppResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting, resourceGroups);
         }
     }
 

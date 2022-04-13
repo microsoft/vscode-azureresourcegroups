@@ -95,11 +95,11 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
-    public async mapSubGroupConfigTree(context: IActionContext, groupBySetting: string, resourceGroups: Promise<ResourceGroup[]>): Promise<void> {
+    public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string, resourceGroups: Promise<ResourceGroup[]>): void {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
         if (!subGroupTreeItem) {
-            subGroupTreeItem = await this.createSubGroupTreeItem(context, groupBySetting, resourceGroups);
+            subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting, resourceGroups);
             (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
         }
 
@@ -109,7 +109,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         void subGroupTreeItem.refresh(context);
     }
 
-    public async createSubGroupTreeItem(_context: IActionContext, groupBySetting: string, resourceGroups: Promise<ResourceGroup[]>): Promise<GroupTreeItemBase> {
+    public createSubGroupTreeItem(_context: IActionContext, groupBySetting: string, resourceGroups: Promise<ResourceGroup[]>): GroupTreeItemBase {
         switch (groupBySetting) {
             // TODO: Use ResovableTreeItem here
             case 'resourceGroup':
