@@ -94,23 +94,18 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     }
 
     public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string): void {
-        const configId: string | undefined = this.groupConfig[groupBySetting]?.id;
+        const configId: string | undefined = this.groupConfig[groupBySetting]?.id ?? `${this.rootGroupConfig.id}/ungrouped`;
 
-        // if this configuration can't be found, skip this resource
-        if (configId) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
-            if (!subGroupTreeItem) {
-                subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting);
-                (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
-            }
-
-            subGroupTreeItem.treeMap[this.id] = this;
-            this.parent = subGroupTreeItem;
-            // this should actually be "resolve"
-            void subGroupTreeItem.refresh(context);
+        let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(configId);
+        if (!subGroupTreeItem) {
+            subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting);
+            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(configId, subGroupTreeItem)
         }
 
+        subGroupTreeItem.treeMap[this.id] = this;
+        this.parent = subGroupTreeItem;
+        // this should actually be "resolve"
+        void subGroupTreeItem.refresh(context);
     }
 
     public createSubGroupTreeItem(_context: IActionContext, groupBySetting: string): GroupTreeItemBase {
