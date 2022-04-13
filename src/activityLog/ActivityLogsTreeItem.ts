@@ -5,7 +5,7 @@
 
 import { Activity, AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import { localize } from '../utils/localize';
-import { ActivityTreeItem } from './ActivityTreeItem';
+import { ActivityStatus, ActivityTreeItem } from './ActivityTreeItem';
 
 export class ActivityLogTreeItem extends AzExtParentTreeItem {
     public label: string = localize('activityLog', 'Activity Log');
@@ -25,12 +25,17 @@ export class ActivityLogTreeItem extends AzExtParentTreeItem {
     }
 
     public async clearActivities(context: IActionContext): Promise<void> {
-        this.activityTreeItems = {};
+        Object.entries(this.activityTreeItems).forEach(([id, activity]: [string, ActivityTreeItem]) => {
+            if (activity.status === ActivityStatus.Done) {
+                delete this.activityTreeItems[id];
+            }
+        });
         await this.refresh(context);
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        return Object.values(this.activityTreeItems).filter((activity) => activity.started);
+        // no status means activity hasn't started yet
+        return Object.values(this.activityTreeItems).filter((activity) => !!activity.status);
     }
 
     public compareChildrenImpl(item1: ActivityTreeItem, item2: ActivityTreeItem): number {

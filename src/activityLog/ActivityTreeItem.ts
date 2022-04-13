@@ -7,6 +7,11 @@ import { Activity, ActivityTreeItemOptions, AzExtParentTreeItem, AzExtTreeItem, 
 import { ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { localize } from "../utils/localize";
 
+export enum ActivityStatus {
+    Running = 'running',
+    Done = 'done'
+}
+
 export class ActivityTreeItem extends AzExtParentTreeItem {
 
     public startedAtMs: number;
@@ -21,33 +26,34 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
     }
 
     public get description(): string | undefined {
-
-        if (this.latestProgress && this.latestProgress.message && !this.done) {
-            return this.latestProgress.message;
+        if (this.status === ActivityStatus.Done) {
+            if (this.error) {
+                return localize('failed', 'Failed');
+            } else {
+                return localize('succeeded', 'Succeeded');
+            }
+        } else {
+            return this.latestProgress?.message;
         }
-
-        return this.stateValue({
-            running: this.latestProgress?.message,
-            succeeded: localize('succeeded', 'Succeeded'),
-            failed: localize('failed', 'Failed'),
-        });
     }
 
     public get iconPath(): TreeItemIconPath | undefined {
-        return this.stateValue({
-            running: new ThemeIcon('loading~spin'),
-            succeeded: new ThemeIcon('pass', new ThemeColor('testing.iconPassed')),
-            failed: new ThemeIcon('error', new ThemeColor('testing.iconFailed')),
-        });
+        if (this.status === ActivityStatus.Done) {
+            if (this.error) {
+                return new ThemeIcon('error', new ThemeColor('testing.iconFailed'));
+            } else {
+                return new ThemeIcon('pass', new ThemeColor('testing.iconPassed'));
+            }
+        }
+        return new ThemeIcon('loading~spin');
     }
 
     private state: ActivityTreeItemOptions = {
         label: localize('loading', 'Loading...')
     }
 
-    public started: boolean = false;
-    private done: boolean = false;
-    public error: unknown;
+    public status?: ActivityStatus;
+    public error?: unknown;
     private latestProgress?: { message?: string };
 
     public get collapsibleState(): TreeItemCollapsibleState {
@@ -66,9 +72,8 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        if (this.state.children) {
-            const children = this.state.children(this);
-            return children;
+        if (this.state.getChildren) {
+            return await this.state.getChildren(this);
         }
         return [];
     }
@@ -88,7 +93,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
     private async onStart(data: OnStartActivityData): Promise<void> {
         await callWithTelemetryAndErrorHandling('activityOnStart', async (context) => {
             this.startedAtMs = Date.now();
-            this.started = true;
+            this.status = ActivityStatus.Running;
             this.state = data;
             await this.refresh(context);
         });
@@ -97,7 +102,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
     private async onSuccess(data: OnSuccessActivityData): Promise<void> {
         await callWithTelemetryAndErrorHandling('activityOnSuccess', async (context) => {
             this.state = data;
-            this.done = true;
+            this.status = ActivityStatus.Done;
             await this.refresh(context);
         })
     }
@@ -105,7 +110,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
     private async onError(data: OnErrorActivityData): Promise<void> {
         await callWithTelemetryAndErrorHandling('activityOnError', async (context) => {
             this.state = data;
-            this.done = true;
+            this.status = ActivityStatus.Done;
             this.error = data.error;
             await this.refresh(context);
         });
@@ -116,12 +121,5 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
         activity.onStart(this.onStart.bind(this));
         activity.onSuccess(this.onSuccess.bind(this));
         activity.onError(this.onError.bind(this));
-    }
-
-    private stateValue<T>(values: { running: T, succeeded: T, failed: T }): T {
-        if (this.done) {
-            return this.error ? values.failed : values.succeeded;
-        }
-        return values.running;
     }
 }
