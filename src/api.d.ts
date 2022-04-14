@@ -14,7 +14,7 @@ export interface AzureResourceGroupsExtensionApi {
     readonly revealTreeItem(resourceId: string): Promise<void>;
     readonly registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): Disposable;
     readonly registerLocalResourceProvider(id: string, provider: LocalResourceProvider): Disposable;
-    registerActivity(activity: Activity): Promise<void>;
+    readonly registerActivity(activity: Activity): Promise<void>;
 }
 
 /**
