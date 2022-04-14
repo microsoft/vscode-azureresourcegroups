@@ -7,11 +7,12 @@ import { IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils'
 import { ext } from '../extensionVariables';
 import { AppResourceTreeItem } from '../tree/AppResourceTreeItem';
 import { ResourceGroupTreeItem } from '../tree/ResourceGroupTreeItem';
+import { getDataFromNode } from './openInPortal';
 
 export async function viewProperties(context: IActionContext, node?: ResourceGroupTreeItem | AppResourceTreeItem): Promise<void> {
     if (!node) {
         node = await ext.tree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, context);
     }
 
-    await openReadOnlyJson(node, node.data || {});
+    await openReadOnlyJson(node, (await getDataFromNode(node))?.id || {});
 }

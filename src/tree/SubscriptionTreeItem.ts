@@ -3,13 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase } from '@microsoft/vscode-azext-azureutils';
+import { ResourceGroup, ResourceManagementClient } from '@azure/arm-resources';
+import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
-import { ConfigurationChangeEvent, workspace } from 'vscode';
+import { ConfigurationChangeEvent, ThemeIcon, workspace } from 'vscode';
 import { AppResource, AppResourceResolver, GroupableResource } from '../api';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { azureResourceProviderId } from '../constants';
 import { ext } from '../extensionVariables';
+import { createResourceClient } from '../utils/azureClients';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
 import { AppResourceTreeItem } from './AppResourceTreeItem';
@@ -52,17 +54,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         this._items = this.rgsItem.map((resource: AppResource): GroupableResource => AppResourceTreeItem.Create(this, resource));
 
-        // dynamically generate GroupBy keys, should be moved
-        for (const item of this._items) {
-            Object.keys(item.groupConfig).forEach(key => {
-                if (!ext.groupByKeys[key] && !!item.groupConfig[key].keyLabel) {
-                    ext.groupByKeys[key] = <string>item.groupConfig[key].keyLabel;
-                }
-            });
-        }
-
         await this.refresh(context);
-        return <AzExtTreeItem[]>Object.values(this._treeMap);
+        return <AzExtTreeItem[]>Object.values(this._treeMap).filter(groupNode => groupNode.hasChildren());
     }
 
 
@@ -78,9 +71,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         await wizard.prompt();
         context.showCreatingTreeItem(nonNullProp(wizardContext, 'newResourceGroupName'));
         await wizard.execute();
-        return new ResourceGroupTreeItem(this,
-            { label: nonNullProp(wizardContext, 'newResourceGroupName'), id: nonNullOrEmptyValue(nonNullProp(wizardContext, 'resourceGroup').id) },
-            nonNullProp(wizardContext, 'resourceGroup'));
+        return new ResourceGroupTreeItem(this, {
+            label: nonNullProp(wizardContext, 'newResourceGroupName'),
+            id: nonNullOrEmptyValue(nonNullProp(wizardContext, 'resourceGroup').id)
+        },
+            (): Promise<ResourceGroup> => Promise.resolve(nonNullProp(wizardContext, 'resourceGroup'))
+        );
     }
 
     public registerRefreshEvents(key: string): void {
@@ -97,10 +93,20 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public async refreshImpl(context: IActionContext): Promise<void> {
         this._treeMap = {};
-        const groupBySetting = <string>settingUtils.getGlobalSetting<string>('groupBy');
+        const id = `${this.id}/ungrouped`;
+        this._treeMap[id] = new GroupTreeItemBase(this, { label: localize('ungrouped', 'ungrouped'), id, iconPath: new ThemeIcon('json') });
 
-        for (const rgTree of this._items) {
-            (<AppResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting);
+        const groupBySetting = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
+
+        const client: ResourceManagementClient = await createResourceClient([context, this]);
+        const resourceGroups = uiUtils.listAllIterator(client.resourceGroups.list());
+
+        const getResourceGroupTask: (resourceGroup: string) => Promise<ResourceGroup | undefined> = async (resourceGroup: string) => {
+            return (await resourceGroups).find((rg) => rg.name === resourceGroup);
+        };
+
+        for await (const rgTree of this._items) {
+            (<AppResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting, getResourceGroupTask);
         }
     }
 
@@ -117,5 +123,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const childPromises = children.map(c => c.resolveVisibleChildren(context, resolver));
 
         await Promise.all(childPromises);
+    }
+
+    public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {
+        const id = `${this.id}/ungrouped`;
+        if (item1.id === id) { return 1; } else if (item2.id === id) { return -1; }
+
+        return super.compareChildrenImpl(item1, item2);
     }
 }
