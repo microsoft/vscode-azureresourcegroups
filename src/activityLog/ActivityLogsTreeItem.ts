@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Activity, AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
-import { Disposable } from 'vscode';
+import { commands, Disposable } from 'vscode';
 import { localize } from '../utils/localize';
+import { settingUtils } from '../utils/settingUtils';
 import { ActivityStatus, ActivityTreeItem } from './ActivityTreeItem';
 
 export class ActivityLogTreeItem extends AzExtParentTreeItem implements Disposable {
@@ -27,6 +28,9 @@ export class ActivityLogTreeItem extends AzExtParentTreeItem implements Disposab
     public async addActivity(activity: Activity): Promise<void> {
         await callWithTelemetryAndErrorHandling('registerActivity', async (context: IActionContext) => {
             this.activityTreeItems[activity.id] = new ActivityTreeItem(this, activity);
+            if ((await settingUtils.getWorkspaceSetting('autoOpenActivityPanel'))) {
+                await commands.executeCommand('azureActivityLog.focus');
+            }
             await this.refresh(context);
         });
     }

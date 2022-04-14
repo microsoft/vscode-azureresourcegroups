@@ -354,7 +354,7 @@
         ],
         "configuration": [
             {
-                "title": "Azure Resource Groups",
+                "title": "Azure",
                 "properties": {
                     "azureResourceGroups.enableOutputTimestamps": {
                         "type": "boolean",
@@ -383,6 +383,16 @@
                         "type": "string",
                         "description": "%azureResourceGroups.groupBy%",
                         "default": "resourceGroup"
+                    },
+                    "azureResourceGroups.suppressActivityNotifications": {
+                        "type": "boolean",
+                        "description": "%azureResourceGroups.suppressActivityNotifications%",
+                        "default": true
+                    },
+                    "azureResourceGroups.autoOpenActivityPanel": {
+                        "type": "boolean",
+                        "description": "%azureResourceGroups.autoOpenActivityPanel%",
+                        "default": true
                     }
                 }
             }
