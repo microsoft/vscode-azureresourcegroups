@@ -4,10 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Activity, AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { Disposable } from 'vscode';
 import { localize } from '../utils/localize';
 import { ActivityStatus, ActivityTreeItem } from './ActivityTreeItem';
 
-export class ActivityLogTreeItem extends AzExtParentTreeItem {
+export class ActivityLogTreeItem extends AzExtParentTreeItem implements Disposable {
     public label: string = localize('activityLog', 'Activity Log');
     public contextValue: string = 'azureActivityLog';
 
@@ -15,6 +16,12 @@ export class ActivityLogTreeItem extends AzExtParentTreeItem {
 
     public constructor() {
         super(undefined);
+    }
+
+    public dispose(): void {
+        Object.values(this.activityTreeItems).forEach((activity: ActivityTreeItem) => {
+            activity.dispose();
+        });
     }
 
     public async addActivity(activity: Activity): Promise<void> {
@@ -27,6 +34,7 @@ export class ActivityLogTreeItem extends AzExtParentTreeItem {
     public async clearActivities(context: IActionContext): Promise<void> {
         Object.entries(this.activityTreeItems).forEach(([id, activity]: [string, ActivityTreeItem]) => {
             if (activity.status === ActivityStatus.Done) {
+                activity.dispose();
                 delete this.activityTreeItems[id];
             }
         });

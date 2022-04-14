@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { Activity, ActivityTreeItemOptions, AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
-import { ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
+import { Disposable, ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { localize } from "../utils/localize";
 
 export enum ActivityStatus {
@@ -12,7 +12,7 @@ export enum ActivityStatus {
     Done = 'done'
 }
 
-export class ActivityTreeItem extends AzExtParentTreeItem {
+export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable {
 
     public startedAtMs: number;
 
@@ -71,6 +71,12 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
         this.startedAtMs = Date.now();
     }
 
+    public dispose(): void {
+        throw new Error("Method not implemented.");
+    }
+
+    public disposables: Disposable[] = [];
+
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
         if (this.state.getChildren) {
             return await this.state.getChildren(this);
@@ -118,9 +124,9 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
     }
 
     private setupListeners(activity: Activity): void {
-        activity.onProgress(this.onProgress.bind(this));
-        activity.onStart(this.onStart.bind(this));
-        activity.onSuccess(this.onSuccess.bind(this));
-        activity.onError(this.onError.bind(this));
+        this.disposables.push(activity.onProgress(this.onProgress.bind(this)));
+        this.disposables.push(activity.onStart(this.onStart.bind(this)));
+        this.disposables.push(activity.onSuccess(this.onSuccess.bind(this)));
+        this.disposables.push(activity.onError(this.onError.bind(this)));
     }
 }
