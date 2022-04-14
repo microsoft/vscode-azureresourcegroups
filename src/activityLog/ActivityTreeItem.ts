@@ -82,8 +82,8 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
         return false;
     }
 
-    private async onProgress(data: OnProgressActivityData): Promise<void> {
-        await callWithTelemetryAndErrorHandling('activityOnProgress', async (context) => {
+    private onProgress(data: OnProgressActivityData): void {
+        void callWithTelemetryAndErrorHandling('activityOnProgress', async (context) => {
             context.telemetry.suppressIfSuccessful = true;
             this.latestProgress = data.message ? { message: data?.message } : this.latestProgress;
             this.state = data;
@@ -91,8 +91,8 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
         });
     }
 
-    private async onStart(data: OnStartActivityData): Promise<void> {
-        await callWithTelemetryAndErrorHandling('activityOnStart', async (context) => {
+    private onStart(data: OnStartActivityData): void {
+        void callWithTelemetryAndErrorHandling('activityOnStart', async (context) => {
             this.startedAtMs = Date.now();
             this.status = ActivityStatus.Running;
             this.state = data;
@@ -100,16 +100,16 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
         });
     }
 
-    private async onSuccess(data: OnSuccessActivityData): Promise<void> {
-        await callWithTelemetryAndErrorHandling('activityOnSuccess', async (context) => {
+    private onSuccess(data: OnSuccessActivityData): void {
+        void callWithTelemetryAndErrorHandling('activityOnSuccess', async (context) => {
             this.state = data;
             this.status = ActivityStatus.Done;
             await this.refresh(context);
         })
     }
 
-    private async onError(data: OnErrorActivityData): Promise<void> {
-        await callWithTelemetryAndErrorHandling('activityOnError', async (context) => {
+    private onError(data: OnErrorActivityData): void {
+        void callWithTelemetryAndErrorHandling('activityOnError', async (context) => {
             this.state = data;
             this.status = ActivityStatus.Done;
             this.error = data.error;
