@@ -96,11 +96,12 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     }
 
     public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string, getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>): void {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
+        const configId: string | undefined = this.groupConfig[groupBySetting]?.id ?? `${this.rootGroupConfig.id}/ungrouped`;
+
+        let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(configId);
         if (!subGroupTreeItem) {
             subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting, getResourceGroup);
-            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
+            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(configId, subGroupTreeItem)
         }
 
         subGroupTreeItem.treeMap[this.id] = this;

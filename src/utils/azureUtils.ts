@@ -3,10 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { GenericResource } from '@azure/arm-resources';
-import { nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { GenericResource, ResourceManagementClient } from '@azure/arm-resources';
+import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { ThemeIcon } from 'vscode';
 import { GroupingConfig } from '../api';
+import { ext } from '../extensionVariables';
+import { createResourceClient } from './azureClients';
 import { localize } from './localize';
 import { treeUtils } from './treeUtils';
 import path = require('path');
@@ -27,25 +30,33 @@ export function getResourceGroupFromId(id: string): string {
 
 export function createGroupConfigFromResource(resource: GenericResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
-    return {
+    const groupConfig = {
         resourceGroup: {
-            keyLabel: 'Resource Groups',
             label: getResourceGroupFromId(id),
             id: id.substring(0, id.indexOf('/providers')).toLowerCase().replace('/resourcegroups', '/resourceGroups')
         },
         resourceType: {
-            keyLabel: 'Resource Types',
             label: getName(resource) ?? resource.type ?? 'unknown',
             id: getId(subscriptionId, resource.type, resource.kind),
             iconPath: getIconPath(resource?.type ?? 'resource', resource.kind)
         },
         location: {
             id: `${subscriptionId}/${resource.location}` ?? 'unknown',
-            keyLabel: 'Location',
             label: resource.location ?? localize('unknown', 'Unknown'),
             icon: new ThemeIcon('globe')
         }
     }
+
+    resource.tags ||= {};
+    for (const tag of Object.keys(resource.tags)) {
+        groupConfig[`armTag-${tag}`] = {
+            label: resource.tags[tag],
+            id: `${subscriptionId}/${resource.tags[tag]}`,
+            icon: new ThemeIcon('tag')
+        }
+    }
+
+    return groupConfig;
 }
 
 function getId(subscriptionId?: string, type?: string, kind?: string): string {
@@ -65,6 +76,18 @@ export function getIconPath(type?: string, kind?: string): TreeItemIconPath {
     return treeUtils.getIconPath(iconName);
 }
 
+export async function getArmTagKeys(context: IActionContext): Promise<Set<string>> {
+    const armTagKeys: Set<string> = new Set();
+    for (const sub of (await ext.rootAccountTreeItem.getCachedChildren(context))) {
+        const client: ResourceManagementClient = await createResourceClient([context, sub]);
+        const tags = await uiUtils.listAllIterator(client.tagsOperations.list());
+        for (const tag of tags) {
+            tag.tagName ? armTagKeys.add(tag.tagName) : undefined;
+        }
+    }
+
+    return armTagKeys;
+}
 
 // Execute `npm run listIcons` from root of repo to re-generate this list after adding an icon
 export const supportedIconTypes = [

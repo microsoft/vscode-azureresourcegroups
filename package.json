@@ -154,6 +154,12 @@
                 "icon": "$(gear)"
             },
             {
+                "command": "azureResourceGroups.groupBy.armTag",
+                "title": "%azureResourceGroups.groupBy.armTag%",
+                "category": "Azure Resource Groups",
+                "icon": "$(gear)"
+            },
+            {
                 "command": "azureResourceGroups.refreshWorkspace",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure Resource Groups",
@@ -297,6 +303,10 @@
                 {
                     "command": "azureResourceGroups.groupBy.location",
                     "group": "1_default@3"
+                },
+                {
+                    "command": "azureResourceGroups.groupBy.armTag",
+                    "group": "1_default@4"
                 }
             ]
         },
@@ -344,7 +354,7 @@
                     },
                     "azureResourceGroups.groupBy": {
                         "type": "string",
-                        "description": "%azureResourceGroups.showHiddenTypes%",
+                        "description": "%azureResourceGroups.groupBy%",
                         "default": "resourceGroup"
                     }
                 }

@@ -74,4 +74,8 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
     public get iconPath(): TreeItemIconPath | undefined {
         return this.config.icon ?? this.config.iconPath ?? treeUtils.getIconPath('resource');
     }
+
+    public hasChildren(): boolean {
+        return !!Object.values(this.treeMap).length;
+    }
 }
