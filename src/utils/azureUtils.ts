@@ -52,7 +52,7 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
         groupConfig[`armTag-${tag}`] = {
             label: resource.tags[tag],
             id: `${subscriptionId}/${resource.tags[tag]}`,
-            icon: new ThemeIcon('json')
+            icon: new ThemeIcon('tag')
         }
     }
 

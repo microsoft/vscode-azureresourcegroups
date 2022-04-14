@@ -92,7 +92,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public async refreshImpl(context: IActionContext): Promise<void> {
         this._treeMap = {};
         const id = `${this.id}/ungrouped`;
-        this._treeMap[id] = new GroupTreeItemBase(this, { label: localize('ungrouped', 'ungrouped'), id, iconPath: new ThemeIcon('unverified') });
+        this._treeMap[id] = new GroupTreeItemBase(this, { label: localize('ungrouped', 'ungrouped'), id, iconPath: new ThemeIcon('json') });
 
         const groupBySetting = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
 
