@@ -17,8 +17,8 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
     public startedAtMs: number;
 
     public get contextValue(): string {
-        const postfix = this.state.contextValuePostfix ? `.${this.state.contextValuePostfix}` : '';
-        return `azureOperation.${postfix}`;
+        const contextValues = new Set(['azureActivity', ...(this.state.contextValuesToAdd ?? [])]);
+        return Array.from(contextValues).sort().join(';');
     }
 
     public get label(): string {
