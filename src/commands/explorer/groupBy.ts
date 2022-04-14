@@ -4,6 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { QuickPickItem } from "vscode";
 import { ext } from "../../extensionVariables";
 import { getArmTagKeys } from "../../utils/azureUtils";
 import { localize } from "../../utils/localize";
@@ -15,8 +16,7 @@ export function buildGroupByCommand(setting: string) {
 
 async function groupBy(context: IActionContext, setting: string): Promise<void> {
     if (setting === 'armTag') {
-        const armTagKeys = await getArmTagKeys(context);
-        const tag = await context.ui.showQuickPick(Array.from(armTagKeys).map(key => { return { label: key } }), {
+        const tag = await context.ui.showQuickPick(getQuickPicks(context), {
             placeHolder: localize('groupByArmTagKey', 'Select the tag key to group by...')
         });
         setting += `-${tag.label}`;
@@ -24,4 +24,8 @@ async function groupBy(context: IActionContext, setting: string): Promise<void> 
 
     await settingUtils.updateGlobalSetting('groupBy', setting);
     void ext.tree.refresh(context);
+}
+
+async function getQuickPicks(context: IActionContext): Promise<QuickPickItem[]> {
+    return Array.from((await getArmTagKeys(context))).map(key => { return { label: key } })
 }
