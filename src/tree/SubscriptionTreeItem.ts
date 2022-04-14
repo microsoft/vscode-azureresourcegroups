@@ -69,9 +69,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         await wizard.prompt();
         context.showCreatingTreeItem(nonNullProp(wizardContext, 'newResourceGroupName'));
         await wizard.execute();
-        return new ResourceGroupTreeItem(this,
-            { label: nonNullProp(wizardContext, 'newResourceGroupName'), id: nonNullOrEmptyValue(nonNullProp(wizardContext, 'resourceGroup').id) },
-            nonNullProp(wizardContext, 'resourceGroup'));
+        return new ResourceGroupTreeItem(this, {
+            label: nonNullProp(wizardContext, 'newResourceGroupName'),
+            id: nonNullOrEmptyValue(nonNullProp(wizardContext, 'resourceGroup').id)
+        },
+            nonNullProp(wizardContext, 'resourceGroup')
+        );
     }
 
     public registerRefreshEvents(key: string): void {
