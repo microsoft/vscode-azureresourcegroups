@@ -72,10 +72,10 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     }
 
     public dispose(): void {
-        throw new Error("Method not implemented.");
+        this.disposables.forEach(d => { d.dispose() });
     }
 
-    public disposables: Disposable[] = [];
+    private readonly disposables: Disposable[] = [];
 
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
         if (this.state.getChildren) {
