@@ -16,18 +16,18 @@ import { GroupTreeItemBase } from "./GroupTreeItemBase";
 export class ResourceGroupTreeItem extends GroupTreeItemBase {
     public static contextValue: string = 'azureResourceGroup';
 
-    public data?: ResourceGroup;
+    public async getData(): Promise<ResourceGroup | undefined> {
+        return await this.getResourceGroup(this.name);
+    }
 
-    constructor(parent: AzExtParentTreeItem, config: GroupNodeConfiguration, data?: ResourceGroup | Promise<ResourceGroup[]>) {
+    private data?: ResourceGroup;
+
+    constructor(parent: AzExtParentTreeItem, config: GroupNodeConfiguration, private readonly getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>) {
         super(parent, config);
 
-        if (data instanceof Promise) {
-            data?.then((rg) => {
-                this.data = rg.find((rg) => rg.name === this.name);
-            });
-        } else {
-            this.data = data;
-        }
+        void this.getResourceGroup(this.name).then((rg) => {
+            this.data = rg;
+        });
 
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }

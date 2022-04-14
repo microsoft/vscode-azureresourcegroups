@@ -95,11 +95,11 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
-    public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string, resourceGroups: Promise<ResourceGroup[]>): void {
+    public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string, getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>): void {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
         if (!subGroupTreeItem) {
-            subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting, resourceGroups);
+            subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting, getResourceGroup);
             (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
         }
 
@@ -109,11 +109,11 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         void subGroupTreeItem.refresh(context);
     }
 
-    public createSubGroupTreeItem(_context: IActionContext, groupBySetting: string, resourceGroups: Promise<ResourceGroup[]>): GroupTreeItemBase {
+    public createSubGroupTreeItem(_context: IActionContext, groupBySetting: string, getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>): GroupTreeItemBase {
         switch (groupBySetting) {
             // TODO: Use ResovableTreeItem here
             case 'resourceGroup':
-                return new ResourceGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceGroup, resourceGroups);
+                return new ResourceGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceGroup, getResourceGroup);
             default:
                 return new GroupTreeItemBase(this.rootGroupTreeItem, this.groupConfig[groupBySetting]);
         }

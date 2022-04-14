@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementClient } from "@azure/arm-resources";
+import { ResourceManagementClient, Tags } from "@azure/arm-resources";
 import { AzExtTreeFileSystem, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as jsonc from 'jsonc-parser';
 import * as os from "os";
@@ -26,12 +26,12 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | A
     public scheme: string = TagFileSystem.scheme;
 
     public async statImpl(_context: IActionContext, node: ResourceGroupTreeItem | AppResourceTreeItem): Promise<FileStat> {
-        const fileContent: string = this.getFileContentFromTags(node.data?.tags);
+        const fileContent: string = this.getFileContentFromTags(await this.getTagsFromNode(node));
         return { type: FileType.File, ctime: node.cTime, mtime: node.mTime, size: Buffer.byteLength(fileContent) };
     }
 
     public async readFileImpl(_context: IActionContext, node: ResourceGroupTreeItem | AppResourceTreeItem): Promise<Uint8Array> {
-        const fileContent: string = this.getFileContentFromTags(node.data?.tags);
+        const fileContent: string = this.getFileContentFromTags(await this.getTagsFromNode(node));
         return Buffer.from(fileContent);
     }
 
@@ -103,5 +103,12 @@ export class TagFileSystem extends AzExtTreeFileSystem<ResourceGroupTreeItem | A
             };
         }
         return `// ${comment}${os.EOL}${JSON.stringify(tags, undefined, 4)}`;
+    }
+
+    private async getTagsFromNode(node: ResourceGroupTreeItem | AppResourceTreeItem): Promise<Tags | undefined> {
+        if (node instanceof ResourceGroupTreeItem) {
+            return (await node.getData())?.tags;
+        }
+        return node.data.tags;
     }
 }
