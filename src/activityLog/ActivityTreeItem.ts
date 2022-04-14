@@ -84,6 +84,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem {
 
     private async onProgress(data: OnProgressActivityData): Promise<void> {
         await callWithTelemetryAndErrorHandling('activityOnProgress', async (context) => {
+            context.telemetry.suppressIfSuccessful = true;
             this.latestProgress = data.message ? { message: data?.message } : this.latestProgress;
             this.state = data;
             await this.refresh(context);
