@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeDataProvider, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { Activity, AzExtTreeDataProvider, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { Disposable, TreeView } from 'vscode';
 import { AppResourceResolver, AzureResourceGroupsExtensionApi, LocalResourceProvider } from '../api';
 
@@ -14,6 +14,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGro
     #revealTreeItem: (resourceId: string) => Promise<void>;
     #registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
     #registerLocalResourceProvider: (id: string, resolver: LocalResourceProvider) => Disposable;
+    #registerActivity: (activity: Activity) => Promise<void>;
 
     public constructor(options: AzureResourceGroupsExtensionApi) {
         this.#tree = options.tree;
@@ -22,6 +23,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGro
         this.#revealTreeItem = options.revealTreeItem;
         this.#registerApplicationResourceResolver = options.registerApplicationResourceResolver;
         this.#registerLocalResourceProvider = options.registerLocalResourceProvider;
+        this.#registerActivity = options.registerActivity;
     }
 
     public get tree(): AzExtTreeDataProvider {
@@ -46,5 +48,9 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGro
 
     public registerLocalResourceProvider(id: string, resolver: LocalResourceProvider): Disposable {
         return this.#registerLocalResourceProvider(id, resolver);
+    }
+
+    public async registerActivity(activity: Activity): Promise<void> {
+        return this.#registerActivity(activity);
     }
 }

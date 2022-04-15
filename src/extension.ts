@@ -9,6 +9,8 @@ import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-az
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
+import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
+import { registerActivity } from './activityLog/registerActivity';
 import { InternalAzureResourceGroupsExtensionApi } from './api/AzureResourceGroupsExtensionApi';
 import { registerApplicationResourceProvider } from './api/registerApplicationResourceProvider';
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
@@ -59,6 +61,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.workspaceTree = new AzExtTreeDataProvider(workspaceTreeItem, 'azureWorkspace.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('azureWorkspace', { treeDataProvider: ext.workspaceTree }));
 
+        context.subscriptions.push(ext.activityLogTreeItem = new ActivityLogTreeItem());
+        ext.activityLogTree = new AzExtTreeDataProvider(ext.activityLogTreeItem, 'azureActivityLog.loadMore');
+        context.subscriptions.push(vscode.window.createTreeView('azureActivityLog', { treeDataProvider: ext.activityLogTree }));
+
         context.subscriptions.push(ext.activationManager = new ExtensionActivationManager());
 
         registerCommands();
@@ -76,6 +82,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             revealTreeItem,
             registerApplicationResourceResolver,
             registerLocalResourceProvider,
+            registerActivity,
         })
     ]);
 }

@@ -164,12 +164,25 @@
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure Resource Groups",
                 "icon": "$(refresh)"
+            },
+            {
+                "command": "azureResourceGroups.clearActivities",
+                "title": "Clear Completed Activities",
+                "category": "Azure Resource Groups",
+                "icon": "$(clear-all)"
             }
         ],
         "viewsContainers": {
             "activitybar": [
                 {
                     "id": "azure",
+                    "title": "Azure",
+                    "icon": "resources/azure.svg"
+                }
+            ],
+            "panel": [
+                {
+                    "id": "azurePanel",
                     "title": "Azure",
                     "icon": "resources/azure.svg"
                 }
@@ -191,6 +204,15 @@
                     "id": "ms-azuretools.helpAndFeedback",
                     "name": "%ms-azuretools.helpAndFeedback%",
                     "visibility": "collapsed"
+                }
+            ],
+            "azurePanel": [
+                {
+                    "id": "azureActivityLog",
+                    "name": "Activity Log",
+                    "visibility": "collapsed",
+                    "icon": "resources/azure.svg",
+                    "type": "tree"
                 }
             ]
         },
@@ -214,6 +236,11 @@
                 {
                     "command": "azureResourceGroups.refreshWorkspace",
                     "when": "view == azureWorkspace",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "azureResourceGroups.clearActivities",
+                    "when": "view == azureActivityLog",
                     "group": "navigation@1"
                 }
             ],
@@ -327,7 +354,7 @@
         ],
         "configuration": [
             {
-                "title": "Azure Resource Groups",
+                "title": "Azure",
                 "properties": {
                     "azureResourceGroups.enableOutputTimestamps": {
                         "type": "boolean",
@@ -356,6 +383,16 @@
                         "type": "string",
                         "description": "%azureResourceGroups.groupBy%",
                         "default": "resourceGroup"
+                    },
+                    "azureResourceGroups.suppressActivityNotifications": {
+                        "type": "boolean",
+                        "description": "%azureResourceGroups.suppressActivityNotifications%",
+                        "default": true
+                    },
+                    "azureResourceGroups.autoOpenActivityPanel": {
+                        "type": "boolean",
+                        "description": "%azureResourceGroups.autoOpenActivityPanel%",
+                        "default": true
                     }
                 }
             }
@@ -404,7 +441,7 @@
         "@azure/arm-resources": "5.0.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^1.0.0",
         "@microsoft/vscode-azext-azureutils": "^0.1.1",
-        "@microsoft/vscode-azext-utils": "^0.1.0",
+        "@microsoft/vscode-azext-utils": "^0.1.2",
         "fs-extra": "^8.1.0",
         "jsonc-parser": "^2.2.1",
         "open": "^8.0.4",
