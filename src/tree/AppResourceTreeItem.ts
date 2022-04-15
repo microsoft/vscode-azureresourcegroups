@@ -7,6 +7,7 @@ import { ResourceGroup } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { FileChangeType } from "vscode";
 import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration } from "../api";
+import { GroupBySettings } from "../commands/explorer/groupBy";
 import { ext } from "../extensionVariables";
 import { createGroupConfigFromResource, getIconPath } from "../utils/azureUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
@@ -113,7 +114,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     public createSubGroupTreeItem(_context: IActionContext, groupBySetting: string, getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>): GroupTreeItemBase {
         switch (groupBySetting) {
             // TODO: Use ResovableTreeItem here
-            case 'resourceGroup':
+            case GroupBySettings.ResourceGroup:
                 return new ResourceGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceGroup, getResourceGroup);
             default:
                 return new GroupTreeItemBase(this.rootGroupTreeItem, this.groupConfig[groupBySetting]);

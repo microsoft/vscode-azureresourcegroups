@@ -9,6 +9,7 @@ import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep
 import { ConfigurationChangeEvent, ThemeIcon, workspace } from 'vscode';
 import { AppResource, AppResourceResolver, GroupableResource } from '../api';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
+import { GroupBySettings } from '../commands/explorer/groupBy';
 import { azureResourceProviderId } from '../constants';
 import { ext } from '../extensionVariables';
 import { createResourceClient } from '../utils/azureClients';
@@ -26,7 +27,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     private _treeMap: { [key: string]: GroupTreeItemBase } = {};
 
     private rgsItem: AppResource[] = [];
-
 
     public constructor(parent: AzExtParentTreeItem, subscription: ISubscriptionContext) {
         super(parent, subscription);
@@ -55,7 +55,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         this._items = this.rgsItem.map((resource: AppResource): GroupableResource => AppResourceTreeItem.Create(this, resource));
 
         await this.refresh(context);
-        return <AzExtTreeItem[]>Object.values(this._treeMap).filter(groupNode => groupNode.hasChildren());
+        return <AzExtTreeItem[]>Object.values(this._treeMap);
     }
 
 
@@ -93,20 +93,38 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public async refreshImpl(context: IActionContext): Promise<void> {
         this._treeMap = {};
-        const id = `${this.id}/ungrouped`;
-        this._treeMap[id] = new GroupTreeItemBase(this, { label: localize('ungrouped', 'ungrouped'), id, iconPath: new ThemeIcon('json') });
+        const ungroupedTreeItem = new GroupTreeItemBase(this, {
+            label: localize('ungrouped', 'ungrouped'),
+            id: `${this.id}/ungrouped`,
+            iconPath: new ThemeIcon('json')
+        });
+
+        this._treeMap[ungroupedTreeItem.id] = ungroupedTreeItem;
 
         const groupBySetting = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
-
         const client: ResourceManagementClient = await createResourceClient([context, this]);
-        const resourceGroups = uiUtils.listAllIterator(client.resourceGroups.list());
+        const getResourceGroupsTask = uiUtils.listAllIterator(client.resourceGroups.list());
 
         const getResourceGroupTask: (resourceGroup: string) => Promise<ResourceGroup | undefined> = async (resourceGroup: string) => {
-            return (await resourceGroups).find((rg) => rg.name === resourceGroup);
+            return (await getResourceGroupsTask).find((rg) => rg.name === resourceGroup);
         };
 
-        for await (const rgTree of this._items) {
+        for (const rgTree of this._items) {
             (<AppResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting, getResourceGroupTask);
+        }
+
+        if (groupBySetting === GroupBySettings.ResourceGroup) {
+            // if this isn't resolved by now, we need it to be so that we can retrieve empty RGs
+            const resourceGroups = await getResourceGroupsTask;
+            // only get RGs that are not in the treeMap already
+            const emptyResourceGroups = resourceGroups.filter(rg => !this._treeMap[rg.id?.toLowerCase() ?? '']);
+            for (const eRg of emptyResourceGroups) {
+                this._treeMap[nonNullProp(eRg, 'id').toLowerCase()] = ResourceGroupTreeItem.createFromResourceGroup(this, eRg);
+            }
+        }
+
+        if (!ungroupedTreeItem.hasChildren()) {
+            delete this._treeMap[ungroupedTreeItem.id]
         }
     }
 
@@ -115,7 +133,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     }
 
     public setSubConfigGroupTreeItem(id: string, treeItem: GroupTreeItemBase): void {
-        this._treeMap[id] = treeItem;
+        this._treeMap[id.toLowerCase()] = treeItem;
     }
 
     public async resolveVisibleChildren(context: IActionContext, resolver: AppResourceResolver): Promise<void> {

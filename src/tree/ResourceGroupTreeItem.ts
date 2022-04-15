@@ -32,6 +32,16 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
+    public static createFromResourceGroup(parent: AzExtParentTreeItem, rg: ResourceGroup): ResourceGroupTreeItem {
+        return new ResourceGroupTreeItem(parent,
+            {
+                label: nonNullProp(rg, 'name'),
+                id: nonNullProp(rg, 'id'),
+
+            },
+            async () => rg);
+    }
+
     public get contextValue(): string {
         return ResourceGroupTreeItem.contextValue
     }
@@ -59,10 +69,7 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
         return resources.length;
     }
 
-    public async refreshImpl(context: IActionContext): Promise<void> {
-        const client: ResourceManagementClient = await createResourceClient([context, this]);
-        this.data = await client.resourceGroups.get(this.name);
-
+    public async refreshImpl(): Promise<void> {
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
         this.mTime = Date.now();
     }
