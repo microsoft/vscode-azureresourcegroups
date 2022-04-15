@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
-import { ext } from '../extensionVariables';
-import { ResourceGroupTreeItem } from '../tree/ResourceGroupTreeItem';
-import { localize } from '../utils/localize';
-import { settingUtils } from '../utils/settingUtils';
+import { ext } from '../../extensionVariables';
+import { ResourceGroupTreeItem } from '../../tree/ResourceGroupTreeItem';
+import { localize } from '../../utils/localize';
+import { settingUtils } from '../../utils/settingUtils';
 
 export async function deleteResourceGroup(context: IActionContext, primaryNode?: ResourceGroupTreeItem, selectedNodes?: ResourceGroupTreeItem[]): Promise<void> {
     if (!selectedNodes) {

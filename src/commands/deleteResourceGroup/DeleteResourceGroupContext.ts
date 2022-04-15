@@ -5,7 +5,7 @@
 
 import { ExecuteActivityContext, IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 
-export interface DeleteRGWizardContext extends IActionContext, ExecuteActivityContext {
+export interface DeleteResourceGroupContext extends IActionContext, ExecuteActivityContext {
     resourceGroupToDelete?: string;
     subscription: ISubscriptionContext;
 }

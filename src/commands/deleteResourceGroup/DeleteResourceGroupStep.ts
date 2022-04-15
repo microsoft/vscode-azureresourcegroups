@@ -9,12 +9,12 @@ import { Progress } from "vscode";
 import { ext } from "../../extensionVariables";
 import { createResourceClient } from "../../utils/azureClients";
 import { localize } from "../../utils/localize";
-import { DeleteRGWizardContext } from "./IDeleteWizardContext";
+import { DeleteResourceGroupContext } from "./DeleteResourceGroupContext";
 
-export class DeleteResourceGroupStep extends AzureWizardExecuteStep<DeleteRGWizardContext> {
+export class DeleteResourceGroupStep extends AzureWizardExecuteStep<DeleteResourceGroupContext> {
     public priority: number = 250;
 
-    public async execute(context: DeleteRGWizardContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
+    public async execute(context: DeleteResourceGroupContext, progress: Progress<{ message?: string | undefined; increment?: number | undefined }>): Promise<void> {
         const resourceGroupName = nonNullProp(context, 'resourceGroupToDelete');
         const message = localize('deleteResourceGroup', 'Deleting resource group "{0}"...', resourceGroupName);
         ext.outputChannel.appendLog(message);
@@ -24,7 +24,7 @@ export class DeleteResourceGroupStep extends AzureWizardExecuteStep<DeleteRGWiza
         ext.outputChannel.appendLog(localize('deletedRg', 'Successfully deleted resource group "{0}".', resourceGroupName));
     }
 
-    public shouldExecute(context: DeleteRGWizardContext): boolean {
+    public shouldExecute(context: DeleteResourceGroupContext): boolean {
         return !!context.resourceGroupToDelete;
     }
 }

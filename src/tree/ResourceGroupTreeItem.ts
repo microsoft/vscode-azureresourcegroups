@@ -7,8 +7,8 @@ import { ResourceGroup } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { FileChangeType } from "vscode";
 import { GroupNodeConfiguration } from "../api";
+import { DeleteResourceGroupContext } from "../commands/deleteResourceGroup/DeleteResourceGroupContext";
 import { DeleteResourceGroupStep } from "../commands/deleteResourceGroup/DeleteResourceGroupStep";
-import { DeleteRGWizardContext } from "../commands/deleteResourceGroup/IDeleteWizardContext";
 import { ext } from "../extensionVariables";
 import { createActivityContext } from "../utils/activityUtils";
 import { localize } from "../utils/localize";
@@ -77,7 +77,7 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        const wizard = new AzureWizard<DeleteRGWizardContext>({
+        const wizard = new AzureWizard<DeleteResourceGroupContext>({
             subscription: this.subscription,
             resourceGroupToDelete: this.name,
             activityTitle: localize('deleteResourceGroup', 'Delete resource group "{0}"', this.name),
