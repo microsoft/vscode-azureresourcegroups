@@ -29,3 +29,10 @@ async function groupBy(context: IActionContext, setting: string): Promise<void> 
 async function getQuickPicks(context: IActionContext): Promise<QuickPickItem[]> {
     return Array.from((await getArmTagKeys(context))).map(key => { return { label: key } })
 }
+
+export enum GroupBySettings {
+    ResourceGroup = 'resourceGroup',
+    ResourceType = 'resourceType',
+    Location = 'location',
+    ArmTag = 'armTag'
+}

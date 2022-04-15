@@ -30,8 +30,4 @@ export namespace ext {
 
     export let activationManager: ExtensionActivationManager;
     export const resourceProviders: { [key: string]: AppResourceProvider } = {};
-    export const groupByKeys: { [key: string]: string } = {
-        resourceType: 'Resource Types',
-        resourceGroup: 'Resource Groups'
-    }
 }
