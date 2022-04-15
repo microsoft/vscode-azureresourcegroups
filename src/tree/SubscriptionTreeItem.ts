@@ -5,13 +5,14 @@
 
 import { ResourceGroup, ResourceManagementClient } from '@azure/arm-resources';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { ConfigurationChangeEvent, ThemeIcon, workspace } from 'vscode';
 import { AppResource, AppResourceResolver, GroupableResource } from '../api';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { GroupBySettings } from '../commands/explorer/groupBy';
 import { azureResourceProviderId } from '../constants';
 import { ext } from '../extensionVariables';
+import { createActivityContext } from '../utils/activityUtils';
 import { createResourceClient } from '../utils/azureClients';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
@@ -60,16 +61,20 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
 
     public async createChildImpl(context: ICreateChildImplContext): Promise<AzExtTreeItem> {
-        const wizardContext: IResourceGroupWizardContext = { ...context, ...this.subscription, suppress403Handling: true };
+        const wizardContext: IResourceGroupWizardContext & ExecuteActivityContext = {
+            ...context, ...this.subscription, suppress403Handling: true,
+            ...(await createActivityContext()),
+        };
 
         const title: string = localize('createResourceGroup', 'Create Resource Group');
         const promptSteps: AzureWizardPromptStep<IResourceGroupWizardContext>[] = [new ResourceGroupNameStep()];
         LocationListStep.addStep(wizardContext, promptSteps);
         const executeSteps: AzureWizardExecuteStep<IResourceGroupWizardContext>[] = [new ResourceGroupCreateStep()];
-
-        const wizard: AzureWizard<IResourceGroupWizardContext> = new AzureWizard(wizardContext, { title, promptSteps, executeSteps });
+        const wizard: AzureWizard<IResourceGroupWizardContext & ExecuteActivityContext> = new AzureWizard(wizardContext, { title, promptSteps, executeSteps });
         await wizard.prompt();
-        context.showCreatingTreeItem(nonNullProp(wizardContext, 'newResourceGroupName'));
+        const newResourceGroupName = nonNullProp(wizardContext, 'newResourceGroupName');
+        wizardContext.activityTitle = localize('createResourceGroup', 'Create Resource Group "{0}"', newResourceGroupName);
+        context.showCreatingTreeItem(newResourceGroupName);
         await wizard.execute();
         return new ResourceGroupTreeItem(this, {
             label: nonNullProp(wizardContext, 'newResourceGroupName'),
