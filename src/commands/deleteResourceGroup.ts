@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
-import { window } from 'vscode';
 import { ext } from '../extensionVariables';
 import { ResourceGroupTreeItem } from '../tree/ResourceGroupTreeItem';
 import { localize } from '../utils/localize';
@@ -45,9 +44,6 @@ export async function deleteResourceGroup(context: IActionContext, primaryNode?:
         }
 
         void node.deleteTreeItem(context);
-        const message: string = localize('startedDelete', 'Started delete of resource group "{0}".', node.name);
-        void window.showInformationMessage(message);
-        ext.outputChannel.appendLog(message);
     }
 }
 
