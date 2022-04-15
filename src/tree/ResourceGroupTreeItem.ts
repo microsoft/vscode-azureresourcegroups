@@ -3,12 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { ResourceGroup } from "@azure/arm-resources";
+import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { FileChangeType } from "vscode";
 import { GroupNodeConfiguration } from "../api";
+import { DeleteResourceGroupContext } from "../commands/deleteResourceGroup/DeleteResourceGroupContext";
+import { DeleteResourceGroupStep } from "../commands/deleteResourceGroup/DeleteResourceGroupStep";
 import { ext } from "../extensionVariables";
-import { createResourceClient } from "../utils/azureClients";
+import { createActivityContext } from "../utils/activityUtils";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
@@ -75,9 +77,17 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
-        const client: ResourceManagementClient = await createResourceClient([context, this]);
-        await client.resourceGroups.beginDeleteAndWait(this.name);
-        ext.outputChannel.appendLog(localize('deletedRg', 'Successfully deleted resource group "{0}".', this.name));
+        const wizard = new AzureWizard<DeleteResourceGroupContext>({
+            subscription: this.subscription,
+            resourceGroupToDelete: this.name,
+            activityTitle: localize('deleteResourceGroup', 'Delete resource group "{0}"', this.name),
+            ...(await createActivityContext()),
+            ...context,
+        }, {
+            executeSteps: [new DeleteResourceGroupStep()]
+        });
+
+        await wizard.execute();
     }
 
     public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {

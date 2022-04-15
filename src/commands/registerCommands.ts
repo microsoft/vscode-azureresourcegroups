@@ -9,7 +9,7 @@ import { ext } from '../extensionVariables';
 import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
-import { deleteResourceGroup } from './deleteResourceGroup';
+import { deleteResourceGroup } from './deleteResourceGroup/deleteResourceGroup';
 import { buildGroupByCommand } from './explorer/groupBy';
 import { getStarted } from './helpAndFeedback/getStarted';
 import { reportIssue } from './helpAndFeedback/reportIssue';
