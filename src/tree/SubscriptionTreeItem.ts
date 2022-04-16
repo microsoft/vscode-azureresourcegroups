@@ -134,7 +134,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     }
 
     public getSubConfigGroupTreeItem(id: string): GroupTreeItemBase {
-        return this._treeMap[id];
+        return this._treeMap[id.toLowerCase()];
     }
 
     public setSubConfigGroupTreeItem(id: string, treeItem: GroupTreeItemBase): void {
