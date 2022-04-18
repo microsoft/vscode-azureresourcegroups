@@ -56,13 +56,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     public error?: unknown;
     private latestProgress?: { message?: string };
 
-    public get collapsibleState(): TreeItemCollapsibleState {
-        return this.state.collapsibleState ?? TreeItemCollapsibleState.None;
-    }
-
-    public set collapsibleState(_value: TreeItemCollapsibleState) {
-        // no-op
-    }
+    public collapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None;
 
     public constructor(parent: AzExtParentTreeItem, activity: Activity) {
         super(parent);

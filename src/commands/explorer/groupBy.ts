@@ -5,7 +5,6 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { QuickPickItem } from "vscode";
-import { ext } from "../../extensionVariables";
 import { getArmTagKeys } from "../../utils/azureUtils";
 import { localize } from "../../utils/localize";
 import { settingUtils } from "../../utils/settingUtils";
@@ -23,7 +22,6 @@ async function groupBy(context: IActionContext, setting: string): Promise<void> 
     }
 
     await settingUtils.updateGlobalSetting('groupBy', setting);
-    void ext.tree.refresh(context);
 }
 
 async function getQuickPicks(context: IActionContext): Promise<QuickPickItem[]> {

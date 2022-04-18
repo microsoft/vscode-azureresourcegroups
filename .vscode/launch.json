@@ -25,7 +25,8 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}"
+                "--extensionDevelopmentPath=${workspaceFolder}",
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurestaticwebapps"
             ],
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"

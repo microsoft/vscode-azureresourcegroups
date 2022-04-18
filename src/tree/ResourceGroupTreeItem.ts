@@ -5,7 +5,7 @@
 
 import { ResourceGroup } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
-import { FileChangeType } from "vscode";
+import { FileChangeType, TreeItemCollapsibleState } from "vscode";
 import { GroupNodeConfiguration } from "../api";
 import { DeleteResourceGroupContext } from "../commands/deleteResourceGroup/DeleteResourceGroupContext";
 import { DeleteResourceGroupStep } from "../commands/deleteResourceGroup/DeleteResourceGroupStep";
@@ -23,6 +23,8 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
     }
 
     private data?: ResourceGroup;
+
+    protected internalContextValuesToAdd: string[] = [ResourceGroupTreeItem.contextValue];
 
     constructor(parent: AzExtParentTreeItem, config: GroupNodeConfiguration, private readonly getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>) {
         super(parent, config);
@@ -42,10 +44,6 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
 
             },
             async () => rg);
-    }
-
-    public get contextValue(): string {
-        return ResourceGroupTreeItem.contextValue
     }
 
     public get id(): string {
@@ -90,15 +88,13 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
         await wizard.execute();
     }
 
-    public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {
-        if ((item1 as AzExtParentTreeItem).loadMoreChildrenImpl && (item2 as AzExtParentTreeItem).loadMoreChildrenImpl) {
+    public compareChildrenImpl(item1: AzExtTreeItem & { collapsibleState: TreeItemCollapsibleState }, item2: AzExtTreeItem & { collapsibleState: TreeItemCollapsibleState }): number {
+        // Put parent tree items at the top
+        if (item1.collapsibleState > 0 && item2.collapsibleState > 0) {
             return super.compareChildrenImpl(item1, item2);
-        } else if ((item1 as AzExtParentTreeItem).loadMoreChildrenImpl) {
-            return -1;
-        } else if ((item2 as AzExtParentTreeItem).loadMoreChildrenImpl) {
-            return 1;
-        } else {
+        } else if (item1.collapsibleState === 0 && item2.collapsibleState === 0) {
             return super.compareChildrenImpl(item1, item2);
         }
+        return item2.collapsibleState - item1.collapsibleState;
     }
 }
