@@ -40,7 +40,7 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
             label: getName(resource) ?? resource.type ?? 'unknown',
             id: getId(subscriptionId, resource.type, resource.kind),
             iconPath: getIconPath(resource?.type ?? 'resource', resource.kind),
-            contextValuesToAdd: ['azureResourceType', getResourceType(resource.type, resource.kind)]
+            contextValuesToAdd: ['azureResourceTypeGroup', getResourceType(resource.type, resource.kind)]
         },
         location: {
             id: `${subscriptionId}/${resource.location}` ?? 'unknown',
