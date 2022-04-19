@@ -46,7 +46,7 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
             id: `${subscriptionId}/${resource.location}` ?? 'unknown',
             label: resource.location ?? localize('unknown', 'Unknown'),
             icon: new ThemeIcon('globe'),
-            contextValuesToAdd: ['azureLocation']
+            contextValuesToAdd: ['azureLocationGroup']
         }
     }
 
