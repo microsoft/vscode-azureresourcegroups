@@ -34,8 +34,8 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
     }
 
     public get contextValue(): string {
-        const contextValues = [...this.config.contextValuesToAdd ?? [], ...this.internalContextValuesToAdd, 'group'];
-        return contextValues.sort().join(';');
+        const contextValues = new Set([...this.config.contextValuesToAdd ?? [], ...this.internalContextValuesToAdd, 'group']);
+        return Array.from(contextValues).sort().join(';');
     }
 
     public get description(): string | undefined {
