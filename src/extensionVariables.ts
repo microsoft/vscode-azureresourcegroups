@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtTreeDataProvider, AzExtTreeItem, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
-import { DiagnosticCollection, Disposable, ExtensionContext, TreeView } from "vscode";
+import { DiagnosticCollection, Disposable, EventEmitter, ExtensionContext, TreeView } from "vscode";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
-import { AppResourceProvider } from "./api";
+import { AppResourceProvider, AppResourceResolver } from "./api";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureAccountTreeItem } from "./tree/AzureAccountTreeItem";
 import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
@@ -26,6 +26,8 @@ export namespace ext {
     export let outputChannel: IAzExtOutputChannel;
     export let ignoreBundle: boolean | undefined;
     export const prefix: string = 'azureResourceGroups';
+
+    export const resolverRegisteredEmitter = new EventEmitter<AppResourceResolver>();
 
     export let tagFS: TagFileSystem;
     export let diagnosticWatcher: Disposable | undefined;

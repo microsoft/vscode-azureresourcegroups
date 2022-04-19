@@ -23,8 +23,8 @@ import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { azureResourceProviderId } from './constants';
 import { ext } from './extensionVariables';
 import { installableAppResourceResolver } from './resolvers/InstallableAppResourceResolver';
-import { noopResolver } from './resolvers/NoopResolver';
 import { shallowResourceResolver } from './resolvers/ShallowResourceResolver';
+import { wrapperResolver } from './resolvers/WrapperResolver';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
@@ -69,7 +69,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         registerCommands();
         registerApplicationResourceProvider(azureResourceProviderId, new AzureResourceProvider());
-        registerApplicationResourceResolver('vscode-azureresourcegroups.noopResolver', noopResolver);
+        registerApplicationResourceResolver('vscode-azureresourcegroups.wrapperResolver', wrapperResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.installableAppResourceResolver', installableAppResourceResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.shallowResourceResolver', shallowResourceResolver);
     });

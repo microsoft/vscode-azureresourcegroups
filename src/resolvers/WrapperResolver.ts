@@ -4,22 +4,28 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { TreeItemCollapsibleState } from "vscode";
 import { AppResource, AppResourceResolver, ResolvedAppResourceBase } from "../api";
 import { getAzureExtensions } from "../AzExtWrapper";
+import { ext } from "../extensionVariables";
 import { BuiltinResolver } from "./BuiltinResolver";
 
 /**
  * This resolver acts as a "placeholder" resolver when an extension is known for the resource type *and* installed (but not yet activated).
  * Upon the resolved node being clicked, it will reveal the resource as JSON.
  */
-class NoopResolver implements AppResourceResolver, BuiltinResolver {
+class WrapperResolver implements AppResourceResolver, BuiltinResolver {
     public readonly resolverKind = 'builtin';
 
-    public resolveResource(_subContext: ISubscriptionContext, _resource: AppResource): ResolvedAppResourceBase {
-        return {
-            collapsibleState: TreeItemCollapsibleState.None,
-        };
+    public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedAppResourceBase> {
+        return new Promise<ResolvedAppResourceBase>((resolve) => {
+            const disposable = ext.resolverRegisteredEmitter.event((resolver: AppResourceResolver) => {
+                disposable.dispose();
+
+                if (resolver.matchesResource(resource)) {
+                    resolve(resolver.resolveResource(subContext, resource))
+                }
+            });
+        });
     }
 
     public matchesResource(resource: AppResource): boolean {
@@ -27,4 +33,4 @@ class NoopResolver implements AppResourceResolver, BuiltinResolver {
     }
 }
 
-export const noopResolver = new NoopResolver();
+export const wrapperResolver = new WrapperResolver();
