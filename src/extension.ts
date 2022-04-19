@@ -47,7 +47,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(ext.rootAccountTreeItem);
         ext.tree = new AzExtTreeDataProvider(ext.rootAccountTreeItem, 'azureResourceGroups.loadMore');
         context.subscriptions.push(ext.treeView = vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.tree, showCollapseAll: true, canSelectMany: true }));
-        context.subscriptions.push(ext.tree.setupCollapsibleStateListeners(ext.treeView));
 
         ext.tagFS = new TagFileSystem(ext.tree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));

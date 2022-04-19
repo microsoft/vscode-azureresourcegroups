@@ -15,7 +15,7 @@ import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 import { ResourceGroupTreeItem } from "./ResourceGroupTreeItem";
 import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
-export class AppResourceTreeItem extends ResolvableTreeItemBase implements GroupableResource {
+export class AppResourceTreeItem extends ResolvableTreeItemBase implements GroupableResource, AppResource {
     public static contextValue: string = 'azureResource';
 
     public readonly cTime: number = Date.now();
@@ -36,7 +36,17 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
 
         this.contextValues.add(AppResourceTreeItem.contextValue);
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+
+        this.type = resource.type;
+        this.kind = resource.kind;
+        this.location = resource.location;
+        this.tags = resource.tags;
     }
+
+    public type: string;
+    public kind?: string | undefined;
+    public location?: string | undefined;
+    public tags?: { [propertyName: string]: string; } | undefined;
 
     /**
      * Creates a Proxied app resource tree item
