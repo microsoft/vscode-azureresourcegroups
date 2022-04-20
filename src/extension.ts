@@ -46,8 +46,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.rootAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(ext.rootAccountTreeItem);
         ext.appResourceTree = new AzExtTreeDataProvider(ext.rootAccountTreeItem, 'azureResourceGroups.loadMore');
-        ext.appResourceTreeView = vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.appResourceTree, showCollapseAll: true, canSelectMany: true });
-        context.subscriptions.push(ext.appResourceTreeView);
+        context.subscriptions.push(ext.appResourceTreeView = vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.appResourceTree, showCollapseAll: true, canSelectMany: true }));
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));

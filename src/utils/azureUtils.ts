@@ -30,20 +30,23 @@ export function getResourceGroupFromId(id: string): string {
 
 export function createGroupConfigFromResource(resource: GenericResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
-    const groupConfig = {
+    const groupConfig: GroupingConfig = {
         resourceGroup: {
             label: getResourceGroupFromId(id),
-            id: id.substring(0, id.indexOf('/providers')).toLowerCase().replace('/resourcegroups', '/resourceGroups')
+            id: id.substring(0, id.indexOf('/providers')).toLowerCase().replace('/resourcegroups', '/resourceGroups'),
+            contextValuesToAdd: ['azureResourceGroup']
         },
         resourceType: {
             label: getName(resource) ?? resource.type ?? 'unknown',
             id: getId(subscriptionId, resource.type, resource.kind),
-            iconPath: getIconPath(resource?.type ?? 'resource', resource.kind)
+            iconPath: getIconPath(resource?.type ?? 'resource', resource.kind),
+            contextValuesToAdd: ['azureResourceTypeGroup', getResourceType(resource.type, resource.kind)]
         },
         location: {
             id: `${subscriptionId}/${resource.location}` ?? 'unknown',
             label: resource.location ?? localize('unknown', 'Unknown'),
-            icon: new ThemeIcon('globe')
+            icon: new ThemeIcon('globe'),
+            contextValuesToAdd: ['azureLocationGroup']
         }
     }
 
