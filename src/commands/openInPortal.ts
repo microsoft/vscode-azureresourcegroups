@@ -6,7 +6,7 @@
 import { ResourceGroup } from '@azure/arm-resources';
 import { openInPortal as uiOpenInPortal } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
-import { AppResource } from '../api';
+import { AppResource } from '@microsoft/vscode-azext-utils/rgapi';
 import { ext } from '../extensionVariables';
 import { AppResourceTreeItem } from '../tree/AppResourceTreeItem';
 import { ResourceGroupTreeItem } from '../tree/ResourceGroupTreeItem';
@@ -20,7 +20,7 @@ export async function getDataFromNode(node: ResourceGroupTreeItem | AppResourceT
 
 export async function openInPortal(context: IActionContext, node?: ResourceGroupTreeItem | AppResourceTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, context);
+        node = await ext.appResourceTree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, context);
     }
 
     await uiOpenInPortal(node, (await getDataFromNode(node))?.id ?? node.fullId);

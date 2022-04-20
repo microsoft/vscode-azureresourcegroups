@@ -3,8 +3,9 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { Activity, ActivityTreeItemOptions, AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
-import { Disposable, ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
+import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/rgapi";
+import { Disposable, ThemeColor, ThemeIcon } from "vscode";
 import { localize } from "../utils/localize";
 
 export enum ActivityStatus {
@@ -55,14 +56,6 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     public status?: ActivityStatus;
     public error?: unknown;
     private latestProgress?: { message?: string };
-
-    public get collapsibleState(): TreeItemCollapsibleState {
-        return this.state.collapsibleState ?? TreeItemCollapsibleState.None;
-    }
-
-    public set collapsibleState(_value: TreeItemCollapsibleState) {
-        // no-op
-    }
 
     public constructor(parent: AzExtParentTreeItem, activity: Activity) {
         super(parent);

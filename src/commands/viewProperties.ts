@@ -11,7 +11,7 @@ import { getDataFromNode } from './openInPortal';
 
 export async function viewProperties(context: IActionContext, node?: ResourceGroupTreeItem | AppResourceTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, context);
+        node = await ext.appResourceTree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, context);
     }
 
     await openReadOnlyJson(node, (await getDataFromNode(node)) || {});

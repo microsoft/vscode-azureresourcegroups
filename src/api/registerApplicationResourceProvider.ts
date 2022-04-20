@@ -3,8 +3,8 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { AppResourceProvider } from "@microsoft/vscode-azext-utils/rgapi";
 import { Disposable } from "vscode";
-import { AppResourceProvider } from "../api";
 
 export const applicationResourceProviders: Record<string, AppResourceProvider> = {};
 

@@ -4,8 +4,8 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
+import { AppResourceResolver } from "@microsoft/vscode-azext-utils/rgapi";
 import { Disposable } from "vscode";
-import { AppResourceResolver } from "../api";
 import { ext } from "../extensionVariables";
 
 export const applicationResourceResolvers: Record<string, AppResourceResolver> = {};

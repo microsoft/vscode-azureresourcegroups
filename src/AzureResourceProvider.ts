@@ -6,7 +6,7 @@
 import { GenericResource, ResourceManagementClient } from "@azure/arm-resources";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, IActionContext, ISubscriptionContext, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { AppResource, AppResourceProvider } from "./api";
+import { AppResource, AppResourceProvider } from "@microsoft/vscode-azext-utils/rgapi";
 import { createResourceClient } from "./utils/azureClients";
 
 

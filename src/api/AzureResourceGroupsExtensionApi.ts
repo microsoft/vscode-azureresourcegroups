@@ -3,35 +3,47 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Activity, AzExtTreeDataProvider, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { Activity, AppResourceResolver, AzureResourceGroupsExtensionApi, LocalResourceProvider, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/rgapi';
 import { Disposable, TreeView } from 'vscode';
-import { AppResourceResolver, AzureResourceGroupsExtensionApi, LocalResourceProvider } from '../api';
 
 export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGroupsExtensionApi {
-    #tree: AzExtTreeDataProvider;
-    #treeView: TreeView<AzExtTreeItem>;
+    #appResourceTree: AzExtTreeDataProvider;
+    #appResourceTreeView: TreeView<AzExtTreeItem>;
+    #workspaceResourceTree: AzExtTreeDataProvider;
+    #workspaceResourceTreeView: TreeView<AzExtTreeItem>;
     #apiVersion: string;
     #revealTreeItem: (resourceId: string) => Promise<void>;
     #registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
-    #registerLocalResourceProvider: (id: string, resolver: LocalResourceProvider) => Disposable;
+    #registerWorkspaceResourceProvider: (id: string, resolver: WorkspaceResourceProvider) => Disposable;
     #registerActivity: (activity: Activity) => Promise<void>;
 
-    public constructor(options: AzureResourceGroupsExtensionApi) {
-        this.#tree = options.tree;
-        this.#treeView = options.treeView;
+    // This `omit` is here because the interface expects those keys to be defined, but in this object they will not be
+    // They are replaced with functions defined on this class that merely wrap the newly-named keys
+    public constructor(options: Omit<AzureResourceGroupsExtensionApi, 'tree' | 'treeView' | 'registerLocalResourceProvider'>) {
+        this.#appResourceTree = options.appResourceTree;
+        this.#appResourceTreeView = options.appResourceTreeView;
         this.#apiVersion = options.apiVersion;
         this.#revealTreeItem = options.revealTreeItem;
         this.#registerApplicationResourceResolver = options.registerApplicationResourceResolver;
-        this.#registerLocalResourceProvider = options.registerLocalResourceProvider;
+        this.#registerWorkspaceResourceProvider = options.registerWorkspaceResourceProvider;
         this.#registerActivity = options.registerActivity;
     }
 
-    public get tree(): AzExtTreeDataProvider {
-        return this.#tree;
+    public get appResourceTree(): AzExtTreeDataProvider {
+        return this.#appResourceTree;
     }
 
-    public get treeView(): TreeView<AzExtTreeItem> {
-        return this.#treeView;
+    public get appResourceTreeView(): TreeView<AzExtTreeItem> {
+        return this.#appResourceTreeView;
+    }
+
+    public get workspaceResourceTree(): AzExtTreeDataProvider {
+        return this.#workspaceResourceTree;
+    }
+
+    public get workspaceResourceTreeView(): TreeView<AzExtTreeItem> {
+        return this.#workspaceResourceTreeView;
     }
 
     public get apiVersion(): string {
@@ -46,11 +58,27 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGro
         return this.#registerApplicationResourceResolver(id, resolver);
     }
 
-    public registerLocalResourceProvider(id: string, resolver: LocalResourceProvider): Disposable {
-        return this.#registerLocalResourceProvider(id, resolver);
+    public registerWorkspaceResourceProvider(id: string, resolver: WorkspaceResourceProvider): Disposable {
+        return this.#registerWorkspaceResourceProvider(id, resolver);
     }
 
     public async registerActivity(activity: Activity): Promise<void> {
         return this.#registerActivity(activity);
     }
+
+    //#region Deprecated things that will be removed soon
+
+    public get tree(): AzExtTreeDataProvider {
+        return this.appResourceTree;
+    }
+
+    public get treeView(): TreeView<AzExtTreeItem> {
+        return this.appResourceTreeView;
+    }
+
+    public registerLocalResourceProvider(id: string, provider: LocalResourceProvider): Disposable {
+        return this.registerWorkspaceResourceProvider(id, provider);
+    }
+
+    //#endregion
 }

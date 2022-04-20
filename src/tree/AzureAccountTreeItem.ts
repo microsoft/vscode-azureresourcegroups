@@ -5,7 +5,7 @@
 
 import { AzureAccountTreeItemBase } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { AppResourceResolver } from '../api';
+import { AppResourceResolver } from '@microsoft/vscode-azext-utils/rgapi';
 import { SubscriptionTreeItem } from './SubscriptionTreeItem';
 
 export class AzureAccountTreeItem extends AzureAccountTreeItemBase {

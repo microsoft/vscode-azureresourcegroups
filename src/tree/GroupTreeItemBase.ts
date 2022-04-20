@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AppResourceResolver, GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/rgapi";
 import { TreeItemCollapsibleState } from "vscode";
-import { AppResourceResolver, GroupNodeConfiguration } from "../api";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";

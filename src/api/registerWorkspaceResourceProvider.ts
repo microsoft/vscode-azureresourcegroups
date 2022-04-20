@@ -4,21 +4,22 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
+import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/rgapi";
 import { Disposable } from "vscode";
-import { LocalResourceProvider } from "../api";
 import { refreshWorkspace } from "../commands/workspace/refreshWorkspace";
 
-export const localResourceProviders: Record<string, LocalResourceProvider> = {};
+export const workspaceResourceProviders: Record<string, WorkspaceResourceProvider> = {};
 
-export function registerLocalResourceProvider(resourceType: string, provider: LocalResourceProvider): Disposable | undefined {
-    return callWithTelemetryAndErrorHandlingSync('registerLocalResourceProvider', (context) => {
-        localResourceProviders[resourceType] = provider;
+export function registerWorkspaceResourceProvider(resourceType: string, provider: WorkspaceResourceProvider): Disposable {
+    workspaceResourceProviders[resourceType] = provider;
+
+    return callWithTelemetryAndErrorHandlingSync('registerWorkspaceResourceProvider', (context) => {
 
         void refreshWorkspace(context);
 
         return new Disposable(() => {
-            delete localResourceProviders[resourceType];
+            delete workspaceResourceProviders[resourceType];
             void refreshWorkspace(context);
         });
-    });
+    }) as Disposable;
 }

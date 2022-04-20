@@ -4,8 +4,8 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { GenericTreeItem, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { AppResource, AppResourceResolver, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/rgapi";
 import { ThemeIcon } from "vscode";
-import { AppResource, AppResourceResolver, ResolvedAppResourceBase } from "../api";
 import { getAzureExtensions } from "../AzExtWrapper";
 import { localize } from "../utils/localize";
 import { BuiltinResolver } from "./BuiltinResolver";

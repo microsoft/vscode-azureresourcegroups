@@ -23,7 +23,7 @@ async function groupBy(context: IActionContext, setting: string): Promise<void> 
     }
 
     await settingUtils.updateGlobalSetting('groupBy', setting);
-    void ext.tree.refresh(context);
+    void ext.appResourceTree.refresh(context);
 }
 
 async function getQuickPicks(context: IActionContext): Promise<QuickPickItem[]> {

@@ -6,8 +6,8 @@
 import { GenericResource, ResourceManagementClient } from '@azure/arm-resources';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { GroupingConfig } from '@microsoft/vscode-azext-utils/rgapi';
 import { ThemeIcon } from 'vscode';
-import { GroupingConfig } from '../api';
 import { ext } from '../extensionVariables';
 import { createResourceClient } from './azureClients';
 import { localize } from './localize';
