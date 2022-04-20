@@ -6,6 +6,7 @@
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { TreeItemCollapsibleState } from "vscode";
 import { AppResourceResolver, GroupNodeConfiguration } from "../api";
+import { ext } from "../extensionVariables";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
@@ -34,7 +35,13 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
     }
 
     public get contextValue(): string {
+        const focusedGroup = ext.context.workspaceState.get<string>('focusedGroup');
         const contextValues = new Set([...this.config.contextValuesToAdd ?? [], ...this.internalContextValuesToAdd, 'group']);
+        if (focusedGroup?.toLowerCase() === this.id.toLowerCase()) {
+            contextValues.add('focused');
+        } else {
+            contextValues.add('unfocused')
+        }
         return Array.from(contextValues).sort().join(';');
     }
 
