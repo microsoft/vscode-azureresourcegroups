@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceGroup } from "@azure/arm-resources";
-import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
-import { FileChangeType, TreeItemCollapsibleState } from "vscode";
+import { AzExtParentTreeItem, AzureWizard, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { FileChangeType } from "vscode";
 import { GroupNodeConfiguration } from "../api";
 import { DeleteResourceGroupContext } from "../commands/deleteResourceGroup/DeleteResourceGroupContext";
 import { DeleteResourceGroupStep } from "../commands/deleteResourceGroup/DeleteResourceGroupStep";
@@ -86,15 +86,5 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
         });
 
         await wizard.execute();
-    }
-
-    public compareChildrenImpl(item1: AzExtTreeItem & { collapsibleState: TreeItemCollapsibleState }, item2: AzExtTreeItem & { collapsibleState: TreeItemCollapsibleState }): number {
-        // Put parent tree items at the top
-        if (item1.collapsibleState > 0 && item2.collapsibleState > 0) {
-            return super.compareChildrenImpl(item1, item2);
-        } else if (item1.collapsibleState === 0 && item2.collapsibleState === 0) {
-            return super.compareChildrenImpl(item1, item2);
-        }
-        return item2.collapsibleState - item1.collapsibleState;
     }
 }

@@ -86,7 +86,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         } else {
             return <AzExtTreeItem[]>Object.values(this._treeMap);
         }
-        return <AzExtTreeItem[]>Object.values(this._treeMap);
     }
 
 
