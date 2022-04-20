@@ -58,8 +58,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const workspaceTreeItem = new WorkspaceTreeItem();
         ext.workspaceTree = new AzExtTreeDataProvider(workspaceTreeItem, 'azureWorkspace.loadMore');
-        ext.workspaceTreeView = vscode.window.createTreeView('azureWorkspace', { treeDataProvider: ext.workspaceTree });
-        context.subscriptions.push(ext.workspaceTreeView);
+        context.subscriptions.push(ext.workspaceTreeView = vscode.window.createTreeView('azureWorkspace', { treeDataProvider: ext.workspaceTree }));
 
         context.subscriptions.push(ext.activityLogTreeItem = new ActivityLogTreeItem());
         ext.activityLogTree = new AzExtTreeDataProvider(ext.activityLogTreeItem, 'azureActivityLog.loadMore');
