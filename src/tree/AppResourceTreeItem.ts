@@ -26,6 +26,11 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     public groupConfig: GroupingConfig;
     public parent: GroupTreeItemBase | undefined;
 
+    public type: string;
+    public kind?: string | undefined;
+    public location?: string | undefined;
+    public tags?: { [propertyName: string]: string; } | undefined;
+
     private constructor(root: AzExtParentTreeItem, resource: AppResource) {
         super(root);
         this.rootGroupTreeItem = root;
@@ -42,11 +47,6 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         this.location = resource.location;
         this.tags = resource.tags;
     }
-
-    public type: string;
-    public kind?: string | undefined;
-    public location?: string | undefined;
-    public tags?: { [propertyName: string]: string; } | undefined;
 
     /**
      * Creates a Proxied app resource tree item
