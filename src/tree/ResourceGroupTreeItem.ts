@@ -5,7 +5,7 @@
 
 import { ResourceGroup } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
-import { GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/rgapi";
+import { GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
 import { FileChangeType } from "vscode";
 import { DeleteResourceGroupContext } from "../commands/deleteResourceGroup/DeleteResourceGroupContext";
 import { DeleteResourceGroupStep } from "../commands/deleteResourceGroup/DeleteResourceGroupStep";

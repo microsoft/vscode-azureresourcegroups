@@ -6,7 +6,7 @@
 import { ResourceGroup } from '@azure/arm-resources';
 import { openInPortal as uiOpenInPortal } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext } from '@microsoft/vscode-azext-utils';
-import { AppResource } from '@microsoft/vscode-azext-utils/rgapi';
+import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { ext } from '../extensionVariables';
 import { AppResourceTreeItem } from '../tree/AppResourceTreeItem';
 import { ResourceGroupTreeItem } from '../tree/ResourceGroupTreeItem';

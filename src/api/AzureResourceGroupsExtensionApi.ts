@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtTreeDataProvider, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
-import { Activity, AppResourceResolver, AzureResourceGroupsExtensionApi, LocalResourceProvider, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/rgapi';
+import { Activity, AppResourceResolver, AzureHostExtensionApi, AzureResourceGroupsExtensionApi, LocalResourceProvider, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi';
 import { Disposable, TreeView } from 'vscode';
 
-export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGroupsExtensionApi {
+export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensionApi, AzureResourceGroupsExtensionApi {
     #appResourceTree: AzExtTreeDataProvider;
     #appResourceTreeView: TreeView<AzExtTreeItem>;
     #workspaceResourceTree: AzExtTreeDataProvider;
@@ -20,7 +20,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureResourceGro
 
     // This `omit` is here because the interface expects those keys to be defined, but in this object they will not be
     // They are replaced with functions defined on this class that merely wrap the newly-named keys
-    public constructor(options: Omit<AzureResourceGroupsExtensionApi, 'tree' | 'treeView' | 'registerLocalResourceProvider'>) {
+    public constructor(options: Omit<AzureHostExtensionApi, 'tree' | 'treeView' | 'registerLocalResourceProvider'>) {
         this.#appResourceTree = options.appResourceTree;
         this.#appResourceTreeView = options.appResourceTreeView;
         this.#apiVersion = options.apiVersion;

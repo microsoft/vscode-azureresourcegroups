@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
-import { AppResource } from '@microsoft/vscode-azext-utils/rgapi';
+import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { revealTreeItem } from '../api/revealTreeItem';
 
 export async function revealResource(context: IActionContext, resource: AppResource): Promise<void> {

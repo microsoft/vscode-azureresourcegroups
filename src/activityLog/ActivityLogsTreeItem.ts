@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
-import { Activity } from '@microsoft/vscode-azext-utils/rgapi';
+import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
 import { commands, Disposable } from 'vscode';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';

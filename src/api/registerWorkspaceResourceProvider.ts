@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
-import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/rgapi";
+import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
 import { refreshWorkspace } from "../commands/workspace/refreshWorkspace";
 

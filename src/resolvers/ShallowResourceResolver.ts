@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { AppResource, AppResourceResolver, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/rgapi";
+import { AppResource, AppResourceResolver, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { TreeItemCollapsibleState } from "vscode";
 import { getAzureExtensions } from "../AzExtWrapper";
 import { BuiltinResolver } from "./BuiltinResolver";

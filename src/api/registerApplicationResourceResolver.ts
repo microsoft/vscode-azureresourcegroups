@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
-import { AppResourceResolver } from "@microsoft/vscode-azext-utils/rgapi";
+import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
 import { ext } from "../extensionVariables";
 
