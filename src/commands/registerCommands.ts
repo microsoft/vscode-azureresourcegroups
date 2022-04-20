@@ -10,7 +10,9 @@ import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroup } from './deleteResourceGroup/deleteResourceGroup';
+import { focusGroup } from './explorer/focusGroup';
 import { buildGroupByCommand } from './explorer/groupBy';
+import { unfocusGroup } from './explorer/unfocusGroup';
 import { getStarted } from './helpAndFeedback/getStarted';
 import { reportIssue } from './helpAndFeedback/reportIssue';
 import { reviewIssues } from './helpAndFeedback/reviewIssues';
@@ -46,6 +48,10 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.groupBy.resourceType', buildGroupByCommand('resourceType'));
     registerCommand('azureResourceGroups.groupBy.location', buildGroupByCommand('location'));
     registerCommand('azureResourceGroups.groupBy.armTag', buildGroupByCommand('armTag'));
+
+    registerCommand('azureResourceGroups.focusGroup', focusGroup);
+    registerCommand('azureResourceGroups.unfocusGroup', unfocusGroup);
+
     registerCommand('azureResourceGroups.installExtension', installExtension);
 
     registerCommand('azureResourceGroups.clearActivities', clearActivities);

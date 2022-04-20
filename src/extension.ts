@@ -43,6 +43,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
+        context.subscriptions.push(ext.emitters.onDidChangeFocusedGroup = new vscode.EventEmitter());
+        ext.events.onDidChangeFocusedGroup = ext.emitters.onDidChangeFocusedGroup.event;
+
         ext.rootAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(ext.rootAccountTreeItem);
         ext.appResourceTree = new AzExtTreeDataProvider(ext.rootAccountTreeItem, 'azureResourceGroups.loadMore');

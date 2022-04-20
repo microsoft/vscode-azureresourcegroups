@@ -4,11 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtTreeDataProvider, AzExtTreeItem, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
-import { DiagnosticCollection, Disposable, ExtensionContext, TreeView } from "vscode";
+import { DiagnosticCollection, Disposable, Event, EventEmitter, ExtensionContext, TreeView } from "vscode";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureAccountTreeItem } from "./tree/AzureAccountTreeItem";
 import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
+
+namespace extEmitters {
+    export let onDidChangeFocusedGroup: EventEmitter<void>;
+}
+
+namespace extEvents {
+    export let onDidChangeFocusedGroup: Event<void>;
+}
 
 /**
  * Namespace for common variables used throughout the extension. They must be initialized in the activate() method of extension.ts
@@ -32,4 +40,7 @@ export namespace ext {
     export let diagnosticCollection: DiagnosticCollection;
 
     export let activationManager: ExtensionActivationManager;
+
+    export const emitters = extEmitters;
+    export const events = extEvents;
 }

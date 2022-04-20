@@ -166,6 +166,18 @@
                 "icon": "$(refresh)"
             },
             {
+                "command": "azureResourceGroups.focusGroup",
+                "title": "Focus this Group",
+                "category": "Azure Resource Groups",
+                "icon": "$(zoom-in)"
+            },
+            {
+                "command": "azureResourceGroups.unfocusGroup",
+                "title": "Unfocus Group",
+                "category": "Azure Resource Groups",
+                "icon": "$(zoom-out)"
+            },
+            {
                 "command": "azureResourceGroups.clearActivities",
                 "title": "Clear Completed Activities",
                 "category": "Azure Resource Groups",
@@ -294,6 +306,16 @@
                     "command": "azureResourceGroups.viewProperties",
                     "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
                     "group": "9@1"
+                },
+                {
+                    "command": "azureResourceGroups.focusGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /(group).*(unfocused)/",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureResourceGroups.unfocusGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /(focused).*(group)/",
+                    "group": "inline"
                 }
             ],
             "commandPalette": [
