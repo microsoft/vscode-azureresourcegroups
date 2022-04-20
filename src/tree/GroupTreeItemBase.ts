@@ -15,6 +15,8 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
     public treeMap: { [key: string]: ResolvableTreeItemBase } = {};
     public config: GroupNodeConfiguration;
 
+    protected internalContextValuesToAdd: string[] = []
+
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
 
@@ -32,7 +34,8 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
     }
 
     public get contextValue(): string {
-        return this.config.contextValue || 'GroupTreeItem';
+        const contextValues = new Set([...this.config.contextValuesToAdd ?? [], ...this.internalContextValuesToAdd, 'group']);
+        return Array.from(contextValues).sort().join(';');
     }
 
     public get description(): string | undefined {

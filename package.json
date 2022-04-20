@@ -267,17 +267,17 @@
                 },
                 {
                     "command": "azureResourceGroups.deleteResourceGroup",
-                    "when": "view == azureResourceGroups && viewItem == azureResourceGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureResourceGroups.editTags",
-                    "when": "view == azureResourceGroups && viewItem == azureResourceGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureResourceGroups.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
                     "group": "9@2"
                 },
                 {
@@ -287,12 +287,12 @@
                 },
                 {
                     "command": "azureResourceGroups.editTags",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Group)/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Group)(?!Type)/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
                     "group": "9@1"
                 }
             ],
