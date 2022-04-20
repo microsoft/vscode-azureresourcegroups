@@ -50,6 +50,13 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         super(parent, subscription);
         this.resetCache();
         this.registerRefreshEvents('groupBy');
+
+        registerEvent('treeView.onDidChangeFocusedGroup', ext.events.onDidChangeFocusedGroup, async (context: IActionContext) => {
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
+            context.telemetry.properties.isActivationEvent = 'true';
+            await this.refresh(context);
+        });
     }
 
     public hasMoreChildrenImpl(): boolean {
@@ -72,7 +79,13 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         await this.createTreeMaps(clearCache, context);
-        return <AzExtTreeItem[]>Object.values(this._treeMap);
+        const focusedGroupId = ext.context.workspaceState.get('focusedGroup') as string;
+        const focusedGroup = Object.values(this._treeMap).find(group => group.id.toLowerCase() === focusedGroupId?.toLowerCase());
+        if (focusedGroup) {
+            return [focusedGroup];
+        } else {
+            return <AzExtTreeItem[]>Object.values(this._treeMap);
+        }
     }
 
 
