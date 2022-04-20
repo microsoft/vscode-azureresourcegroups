@@ -18,8 +18,9 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
     #registerWorkspaceResourceProvider: (id: string, resolver: WorkspaceResourceProvider) => Disposable;
     #registerActivity: (activity: Activity) => Promise<void>;
 
-    // This `omit` is here because the interface expects those keys to be defined, but in this object they will not be
+    // This `Omit` is here because the interface expects those keys to be defined, but in this object they will not be
     // They are replaced with functions defined on this class that merely wrap the newly-named keys
+    // TODO: when `tree`, `treeView`, and `registerLocalResourceProvider` are removed from the interface, this `Omit` can be removed
     public constructor(options: Omit<AzureHostExtensionApi, 'tree' | 'treeView' | 'registerLocalResourceProvider'>) {
         this.#appResourceTree = options.appResourceTree;
         this.#appResourceTreeView = options.appResourceTreeView;
