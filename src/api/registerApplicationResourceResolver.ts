@@ -3,8 +3,8 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
-import { AppResourceResolver } from "../api";
 import { ext } from "../extensionVariables";
 
 export const applicationResourceResolvers: Record<string, AppResourceResolver> = {};

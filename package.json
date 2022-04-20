@@ -166,6 +166,18 @@
                 "icon": "$(refresh)"
             },
             {
+                "command": "azureResourceGroups.focusGroup",
+                "title": "Focus this Group",
+                "category": "Azure Resource Groups",
+                "icon": "$(zoom-in)"
+            },
+            {
+                "command": "azureResourceGroups.unfocusGroup",
+                "title": "Unfocus Group",
+                "category": "Azure Resource Groups",
+                "icon": "$(zoom-out)"
+            },
+            {
                 "command": "azureResourceGroups.clearActivities",
                 "title": "Clear Completed Activities",
                 "category": "Azure Resource Groups",
@@ -267,17 +279,17 @@
                 },
                 {
                     "command": "azureResourceGroups.deleteResourceGroup",
-                    "when": "view == azureResourceGroups && viewItem == azureResourceGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureResourceGroups.editTags",
-                    "when": "view == azureResourceGroups && viewItem == azureResourceGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureResourceGroups.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
                     "group": "9@2"
                 },
                 {
@@ -287,13 +299,23 @@
                 },
                 {
                     "command": "azureResourceGroups.editTags",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Group)/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Group)(?!Type)/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
                     "group": "9@1"
+                },
+                {
+                    "command": "azureResourceGroups.focusGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /(group).*(unfocused)/",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureResourceGroups.unfocusGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /(focused).*(group)/",
+                    "group": "inline"
                 }
             ],
             "commandPalette": [
@@ -440,8 +462,8 @@
     "dependencies": {
         "@azure/arm-resources": "5.0.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^1.0.0",
-        "@microsoft/vscode-azext-azureutils": "^0.1.1",
-        "@microsoft/vscode-azext-utils": "^0.1.2",
+        "@microsoft/vscode-azext-azureutils": "^0.2.0",
+        "@microsoft/vscode-azext-utils": "^0.2.0",
         "fs-extra": "^8.1.0",
         "jsonc-parser": "^2.2.1",
         "open": "^8.0.4",

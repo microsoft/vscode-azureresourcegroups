@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { AppResource, AppResourceResolver, ResolvedAppResourceBase } from "../api";
+import { AppResource, AppResourceResolver, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { getAzureExtensions } from "../AzExtWrapper";
 import { ext } from "../extensionVariables";
 import { BuiltinResolver } from "./BuiltinResolver";

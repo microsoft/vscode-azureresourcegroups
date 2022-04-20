@@ -3,9 +3,10 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { Activity } from "@microsoft/vscode-azext-utils/hostapi";
-import { ext } from "../extensionVariables";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { ext } from "../../extensionVariables";
 
-export async function registerActivity(activity: Activity): Promise<void> {
-    await ext.activityLogTreeItem.addActivity(activity);
+export async function unfocusGroup(_context: IActionContext): Promise<void> {
+    await ext.context.workspaceState.update("focusedGroup", "");
+    ext.emitters.onDidChangeFocusedGroup.fire();
 }
