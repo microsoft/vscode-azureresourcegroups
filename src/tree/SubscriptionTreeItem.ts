@@ -51,7 +51,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         this.resetCache();
         this.registerRefreshEvents('groupBy');
 
-        registerEvent('treeView.onDidChangeFocuedGroup', ext.events.onDidChangeFocusedGroup, async (context: IActionContext) => {
+        registerEvent('treeView.onDidChangeFocusedGroup', ext.events.onDidChangeFocusedGroup, async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
             context.telemetry.properties.isActivationEvent = 'true';
