@@ -10,7 +10,7 @@ import { GroupTreeItemBase } from "../../tree/GroupTreeItemBase";
 export async function focusGroup(_context: IActionContext, node: GroupTreeItemBase): Promise<void> {
     const id = node.config.id;
     // don't wait
-    void ext.treeView.reveal(node, { expand: true });
+    void ext.appResourceTreeView.reveal(node, { expand: true });
     await ext.context.workspaceState.update('focusedGroup', id);
     ext.emitters.onDidChangeFocusedGroup.fire();
 }

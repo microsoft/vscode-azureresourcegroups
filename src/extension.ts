@@ -14,7 +14,7 @@ import { registerActivity } from './activityLog/registerActivity';
 import { InternalAzureResourceGroupsExtensionApi } from './api/AzureResourceGroupsExtensionApi';
 import { registerApplicationResourceProvider } from './api/registerApplicationResourceProvider';
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
-import { registerLocalResourceProvider } from './api/regsiterLocalResourceProvider';
+import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResourceProvider';
 import { revealTreeItem } from './api/revealTreeItem';
 import { AzureResourceProvider } from './AzureResourceProvider';
 import { registerCommands } from './commands/registerCommands';
@@ -48,10 +48,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         ext.rootAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(ext.rootAccountTreeItem);
-        ext.tree = new AzExtTreeDataProvider(ext.rootAccountTreeItem, 'azureResourceGroups.loadMore');
-        context.subscriptions.push(ext.treeView = vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.tree, showCollapseAll: true, canSelectMany: true }));
+        ext.appResourceTree = new AzExtTreeDataProvider(ext.rootAccountTreeItem, 'azureResourceGroups.loadMore');
+        context.subscriptions.push(ext.appResourceTreeView = vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.appResourceTree, showCollapseAll: true, canSelectMany: true }));
 
-        ext.tagFS = new TagFileSystem(ext.tree);
+        ext.tagFS = new TagFileSystem(ext.appResourceTree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
         registerTagDiagnostics();
 
@@ -61,7 +61,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         const workspaceTreeItem = new WorkspaceTreeItem();
         ext.workspaceTree = new AzExtTreeDataProvider(workspaceTreeItem, 'azureWorkspace.loadMore');
-        context.subscriptions.push(vscode.window.createTreeView('azureWorkspace', { treeDataProvider: ext.workspaceTree }));
+        context.subscriptions.push(ext.workspaceTreeView = vscode.window.createTreeView('azureWorkspace', { treeDataProvider: ext.workspaceTree }));
 
         context.subscriptions.push(ext.activityLogTreeItem = new ActivityLogTreeItem());
         ext.activityLogTree = new AzExtTreeDataProvider(ext.activityLogTreeItem, 'azureActivityLog.loadMore');
@@ -79,11 +79,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     return createApiProvider([
         new InternalAzureResourceGroupsExtensionApi({
             apiVersion: '0.0.1',
-            tree: ext.tree,
-            treeView: ext.treeView,
+            appResourceTree: ext.appResourceTree,
+            appResourceTreeView: ext.appResourceTreeView,
+            workspaceResourceTree: ext.workspaceTree,
+            workspaceResourceTreeView: ext.workspaceTreeView,
             revealTreeItem,
             registerApplicationResourceResolver,
-            registerLocalResourceProvider,
+            registerWorkspaceResourceProvider,
             registerActivity,
         })
     ]);
