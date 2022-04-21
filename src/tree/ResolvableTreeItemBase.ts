@@ -9,6 +9,7 @@ import { applicationResourceResolvers } from "../api/registerApplicationResource
 import { ext } from "../extensionVariables";
 import { isBuiltinResolver } from "../resolvers/BuiltinResolver";
 import { installableAppResourceResolver } from "../resolvers/InstallableAppResourceResolver";
+import { outdatedAppResourceResolver } from "../resolvers/OutdatedAppResourceResolver";
 import { shallowResourceResolver } from "../resolvers/ShallowResourceResolver";
 import { wrapperResolver } from "../resolvers/WrapperResolver";
 
@@ -68,6 +69,8 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
 
         if (resolver) {
             return resolver;
+        } else if (outdatedAppResourceResolver.matchesResource(this.data)) {
+            return outdatedAppResourceResolver;
         } else if (wrapperResolver.matchesResource(this.data)) {
             return wrapperResolver;
         } else if (installableAppResourceResolver.matchesResource(this.data)) {
