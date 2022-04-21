@@ -7,6 +7,7 @@
     "azureResourceGroups.loadMore": "Load More",
     "azureResourceGroups.openInPortal": "Open in Portal",
     "azureResourceGroups.refresh": "Refresh",
+    "azureResourceGroups.refreshWorkspace": "Refresh Workspace",
     "azureResourceGroups.revealResource": "Reveal Resource",
     "azureResourceGroups.viewProperties": "View Properties",
     "azureResourceGroups.deleteConfirmation": "The behavior to use when confirming delete of a resource group.",
