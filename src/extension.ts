@@ -8,6 +8,7 @@
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
+import type { AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
@@ -23,8 +24,8 @@ import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { azureResourceProviderId } from './constants';
 import { ext } from './extensionVariables';
 import { installableAppResourceResolver } from './resolvers/InstallableAppResourceResolver';
-import { noopResolver } from './resolvers/NoopResolver';
 import { shallowResourceResolver } from './resolvers/ShallowResourceResolver';
+import { wrapperResolver } from './resolvers/WrapperResolver';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
@@ -43,8 +44,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
-        context.subscriptions.push(ext.emitters.onDidChangeFocusedGroup = new vscode.EventEmitter());
-        ext.events.onDidChangeFocusedGroup = ext.emitters.onDidChangeFocusedGroup.event;
+        setupEvents(context);
 
         ext.rootAccountTreeItem = new AzureAccountTreeItem();
         context.subscriptions.push(ext.rootAccountTreeItem);
@@ -71,7 +71,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         registerCommands();
         registerApplicationResourceProvider(azureResourceProviderId, new AzureResourceProvider());
-        registerApplicationResourceResolver('vscode-azureresourcegroups.noopResolver', noopResolver);
+        registerApplicationResourceResolver('vscode-azureresourcegroups.wrapperResolver', wrapperResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.installableAppResourceResolver', installableAppResourceResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.shallowResourceResolver', shallowResourceResolver);
     });
@@ -93,4 +93,14 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
 export function deactivateInternal(): void {
     ext.diagnosticWatcher?.dispose();
+}
+
+function setupEvents(context: vscode.ExtensionContext): void {
+    // Event emitter for when a group is focused/unfocused
+    context.subscriptions.push(ext.emitters.onDidChangeFocusedGroup = new vscode.EventEmitter());
+    ext.events.onDidChangeFocusedGroup = ext.emitters.onDidChangeFocusedGroup.event;
+
+    // Event emitter for when an AppResourceResolver is registered
+    context.subscriptions.push(ext.emitters.onDidRegisterResolver = new vscode.EventEmitter<AppResourceResolver>());
+    ext.events.onDidRegisterResolver = ext.emitters.onDidRegisterResolver.event;
 }

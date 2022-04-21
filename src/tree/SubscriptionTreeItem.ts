@@ -6,7 +6,7 @@
 import { ResourceGroup, ResourceManagementClient } from '@azure/arm-resources';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
-import { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
+import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { ConfigurationChangeEvent, ThemeIcon, workspace } from 'vscode';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { GroupBySettings } from '../commands/explorer/groupBy';
@@ -169,13 +169,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public setSubConfigGroupTreeItem(id: string, treeItem: GroupTreeItemBase): void {
         this._treeMap[id.toLowerCase()] = treeItem;
-    }
-
-    public async resolveVisibleChildren(context: IActionContext, resolver: AppResourceResolver): Promise<void> {
-        const children = Object.values(this._treeMap);
-        const childPromises = children.map(c => c.resolveVisibleChildren(context, resolver));
-
-        await Promise.all(childPromises);
     }
 
     public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {

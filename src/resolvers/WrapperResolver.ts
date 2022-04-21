@@ -5,21 +5,28 @@
 
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { AppResource, AppResourceResolver, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
-import { TreeItemCollapsibleState } from "vscode";
 import { getAzureExtensions } from "../AzExtWrapper";
+import { ext } from "../extensionVariables";
 import { BuiltinResolver } from "./BuiltinResolver";
 
 /**
  * This resolver acts as a "placeholder" resolver when an extension is known for the resource type *and* installed (but not yet activated).
- * Upon the resolved node being clicked, it will reveal the resource as JSON.
+ * This returns a wrapper promise that will resolve when the resolver registers, with the value provided by that resolver
  */
-class NoopResolver implements AppResourceResolver, BuiltinResolver {
+class WrapperResolver implements AppResourceResolver, BuiltinResolver {
     public readonly resolverKind = 'builtin';
 
-    public resolveResource(_subContext: ISubscriptionContext, _resource: AppResource): ResolvedAppResourceBase {
-        return {
-            collapsibleState: TreeItemCollapsibleState.None,
-        };
+    public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedAppResourceBase | undefined | null> {
+        return new Promise<ResolvedAppResourceBase | undefined | null>((resolve) => {
+            const disposable = ext.events.onDidRegisterResolver((resolver: AppResourceResolver) => {
+                if (resolver.matchesResource(resource)) {
+                    disposable.dispose();
+                    resolve(resolver.resolveResource(subContext, resource))
+                } else {
+                    // If it doesn't match; do nothing and also don't dispose of the event listener
+                }
+            });
+        });
     }
 
     public matchesResource(resource: AppResource): boolean {
@@ -27,4 +34,4 @@ class NoopResolver implements AppResourceResolver, BuiltinResolver {
     }
 }
 
-export const noopResolver = new NoopResolver();
+export const wrapperResolver = new WrapperResolver();

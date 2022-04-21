@@ -3,7 +3,6 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
 import { ext } from "../extensionVariables";
@@ -16,10 +15,7 @@ export function registerApplicationResourceResolver(id: string, resolver: AppRes
     }
 
     applicationResourceResolvers[id] = resolver;
-
-    void callWithTelemetryAndErrorHandling('resolveVisibleChildren', async (context: IActionContext) => {
-        await ext.rootAccountTreeItem.resolveVisibleChildren(context, resolver);
-    });
+    ext.emitters.onDidRegisterResolver.fire(resolver);
 
     return new Disposable(() => {
         delete applicationResourceResolvers[id];
