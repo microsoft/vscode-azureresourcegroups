@@ -11,6 +11,7 @@ import { treeUtils } from "../utils/treeUtils";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 
 export class GroupTreeItemBase extends AzExtParentTreeItem {
+    public static contextValue = 'group';
     public readonly childTypeLabel: string = localize('resource', 'Resource');
     public treeMap: { [key: string]: ResolvableTreeItemBase } = {};
     public config: GroupNodeConfiguration;
@@ -35,7 +36,7 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
 
     public get contextValue(): string {
         const focusedGroup = ext.context.workspaceState.get<string>('focusedGroup');
-        const contextValues = [...this.config.contextValuesToAdd ?? [], ...this.internalContextValuesToAdd, 'group'];
+        const contextValues = [...this.config.contextValuesToAdd ?? [], ...this.internalContextValuesToAdd, GroupTreeItemBase.contextValue];
         if (focusedGroup?.toLowerCase() === this.id.toLowerCase()) {
             contextValues.push('focused');
         } else {
