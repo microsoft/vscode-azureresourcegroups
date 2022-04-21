@@ -30,8 +30,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         return this.cache.resourceGroups;
     }
 
-    public readonly childTypeLabel: string = localize('resourceGroup', 'Resource Group');
-
     private cache: {
         resourceGroups: ResourceGroup[];
         nextLink?: string;
