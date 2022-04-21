@@ -8,6 +8,7 @@ import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
 import { commands, Extension, extensions } from "vscode";
 import { azureExtensions, IAzExtMetadata, IAzExtResourceType, IAzExtTutorial } from "./azureExtensions";
+import { contributesKey } from "./constants";
 
 let wrappers: AzExtWrapper[] | undefined;
 export function getAzureExtensions(): AzExtWrapper[] {
@@ -81,5 +82,11 @@ export class AzExtWrapper {
 
     public isInstalled(): boolean {
         return !!this.getCodeExtension();
+    }
+
+    public meetsMinVersion(): boolean {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        return this.getCodeExtension()?.packageJSON?.contributes?.[contributesKey] !== undefined;
+        // return new SemVer(this._data.minVersion).compare((this.getCodeExtension()?.packageJSON)?.version as string) <= 0;
     }
 }
