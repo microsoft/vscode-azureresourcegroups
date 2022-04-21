@@ -263,7 +263,7 @@
                     "group": "inline"
                 },
                 {
-                    "command": "azureResourceGroups.createResourceGroup",
+                    "command": "azureResourceGroups.createResource",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "1@1"
                 },
