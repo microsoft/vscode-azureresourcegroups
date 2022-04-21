@@ -109,10 +109,10 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string, getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>): void {
         const configId: string | undefined = this.groupConfig[groupBySetting]?.id ?? `${this.rootGroupConfig.id}/ungrouped`;
 
-        let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(configId);
+        let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(groupBySetting, configId);
         if (!subGroupTreeItem) {
             subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting, getResourceGroup);
-            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(configId, subGroupTreeItem)
+            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(groupBySetting, configId, subGroupTreeItem)
         }
 
         subGroupTreeItem.treeMap[this.id] = this;
