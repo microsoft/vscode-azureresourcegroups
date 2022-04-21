@@ -18,7 +18,7 @@ class OutdatedAppResourceResolver implements AppResourceResolver, BuiltinResolve
     public readonly resolverKind = 'builtin';
 
     public resolveResource(_subContext: ISubscriptionContext, resource: AppResource): ResolvedAppResourceBase {
-        // We know the extension is known but uninstalled, or else it would not have passed the `isApplicable` check below
+        // We know the extension is known but outdated, or else it would not have passed the `isApplicable` check below
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const extension = getAzureExtensions().find(azExt => azExt.matchesResourceType(resource))!;
 
@@ -38,7 +38,7 @@ class OutdatedAppResourceResolver implements AppResourceResolver, BuiltinResolve
     }
 
     public matchesResource(resource: AppResource): boolean {
-        return getAzureExtensions().some(azExt => azExt.matchesResourceType(resource) && !azExt.meetsMinVersion());
+        return getAzureExtensions().some(azExt => azExt.matchesResourceType(resource) && azExt.isInstalled() && !azExt.meetsMinVersion());
     }
 }
 
