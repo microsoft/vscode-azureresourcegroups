@@ -87,6 +87,5 @@ export class AzExtWrapper {
     public meetsMinVersion(): boolean {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         return this.getCodeExtension()?.packageJSON?.contributes?.[contributesKey] !== undefined;
-        // return new SemVer(this._data.minVersion).compare((this.getCodeExtension()?.packageJSON)?.version as string) <= 0;
     }
 }

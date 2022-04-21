@@ -464,11 +464,9 @@
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^1.0.0",
         "@microsoft/vscode-azext-azureutils": "^0.2.0",
         "@microsoft/vscode-azext-utils": "^0.2.0",
-        "@types/semver": "^7.3.9",
         "fs-extra": "^8.1.0",
         "jsonc-parser": "^2.2.1",
         "open": "^8.0.4",
-        "semver": "^7.3.7",
         "vscode-nls": "^4.1.1"
     },
     "extensionDependencies": [
