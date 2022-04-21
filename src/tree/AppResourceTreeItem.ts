@@ -3,16 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { ResourceGroup } from "@azure/arm-resources";
+import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
 import { FileChangeType } from "vscode";
-import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration, ResolvedAppResourceBase } from "../api";
+import { GroupBySettings } from "../commands/explorer/groupBy";
 import { ext } from "../extensionVariables";
 import { createGroupConfigFromResource, getIconPath } from "../utils/azureUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
+import { ResourceGroupTreeItem } from "./ResourceGroupTreeItem";
 import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
-export class AppResourceTreeItem extends ResolvableTreeItemBase implements GroupableResource {
+export class AppResourceTreeItem extends ResolvableTreeItemBase implements GroupableResource, AppResource {
     public static contextValue: string = 'azureResource';
 
     public readonly cTime: number = Date.now();
@@ -21,18 +24,28 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     public rootGroupTreeItem: AzExtParentTreeItem;
     public rootGroupConfig: GroupNodeConfiguration;
     public groupConfig: GroupingConfig;
+    public parent: GroupTreeItemBase | undefined;
 
-    private constructor(parent: AzExtParentTreeItem, resource: AppResource) {
-        // parent should be renamed to rootGroup
-        super(parent);
-        this.rootGroupTreeItem = parent;
-        this.rootGroupConfig = <GroupNodeConfiguration><unknown>parent;
+    public type: string;
+    public kind?: string | undefined;
+    public location?: string | undefined;
+    public tags?: { [propertyName: string]: string; } | undefined;
+
+    private constructor(root: AzExtParentTreeItem, resource: AppResource) {
+        super(root);
+        this.rootGroupTreeItem = root;
+        this.rootGroupConfig = <GroupNodeConfiguration><unknown>root;
 
         this.data = resource;
-        this.groupConfig = createGroupConfigFromResource(resource, parent.id);
+        this.groupConfig = createGroupConfigFromResource(resource, root.id);
 
         this.contextValues.add(AppResourceTreeItem.contextValue);
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+
+        this.type = resource.type;
+        this.kind = resource.kind;
+        this.location = resource.location;
+        this.tags = resource.tags;
     }
 
     /**
@@ -56,8 +69,17 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
                 target[name] = value;
                 return true;
             },
-            getPrototypeOf: (target: AppResourceTreeItem): AppResourceTreeItem | ResolvedAppResourceBase => {
-                return resolvable?.resolveResult ?? target;
+            /**
+             * Needed to be compatible with any usages of instanceof in utils/azureutils
+             *
+             * If resolved returns AzExtTreeItem or AzExtParentTreeItem depending on if resolveResult has loadMoreChildrenImpl defined
+             * If not resolved, returns AppResourceTreeItem
+             */
+            getPrototypeOf: (target: AppResourceTreeItem): AppResourceTreeItem | AzExtParentTreeItem | AzExtTreeItem => {
+                if (resolvable?.resolveResult) {
+                    return resolvable.resolveResult.loadMoreChildrenImpl ? AzExtParentTreeItem.prototype : AzExtTreeItem.prototype
+                }
+                return target;
             }
         }
         return new Proxy(resolvable, providerHandler);
@@ -76,7 +98,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     }
 
     public get iconPath(): TreeItemIconPath {
-        return getIconPath(this.data.type);
+        return getIconPath(this.data.type, this.data.kind);
     }
 
     public async refreshImpl(): Promise<void> {
@@ -84,25 +106,26 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
-    public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string): void {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id)
+    public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string, getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>): void {
+        const configId: string | undefined = this.groupConfig[groupBySetting]?.id ?? `${this.rootGroupConfig.id}/ungrouped`;
+
+        let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(configId);
         if (!subGroupTreeItem) {
-            subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting);
-            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(this.groupConfig[groupBySetting].id, subGroupTreeItem)
+            subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting, getResourceGroup);
+            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(configId, subGroupTreeItem)
         }
 
         subGroupTreeItem.treeMap[this.id] = this;
+        this.parent = subGroupTreeItem;
         // this should actually be "resolve"
         void subGroupTreeItem.refresh(context);
     }
 
-    public createSubGroupTreeItem(_context: IActionContext, groupBySetting: string): GroupTreeItemBase {
-        // const client = await createResourceClient([context, this.rootGroupTreeItem.subscription]);
-
+    public createSubGroupTreeItem(_context: IActionContext, groupBySetting: string, getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>): GroupTreeItemBase {
         switch (groupBySetting) {
             // TODO: Use ResovableTreeItem here
-            case 'resourceGroup':
+            case GroupBySettings.ResourceGroup:
+                return new ResourceGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceGroup, getResourceGroup);
             default:
                 return new GroupTreeItemBase(this.rootGroupTreeItem, this.groupConfig[groupBySetting]);
         }

@@ -25,8 +25,28 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/out/**/*.js"
+            ],
+            "preLaunchTask": "${defaultBuildTask}",
+            "env": {
+                "DEBUGTELEMETRY": "v",
+                "NODE_DEBUG": ""
+            }
+        },
+        {
+            "name": "Launch All Extensions",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurestaticwebapps"
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurestaticwebapps",
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurestorage",
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurefunctions",
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurevirtualmachines"
             ],
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"

@@ -6,13 +6,17 @@
 import { AzExtTreeItem, IActionContext, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
-import { configureExplorer } from './configureExplorer';
+import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
-import { deleteResourceGroup } from './deleteResourceGroup';
+import { deleteResourceGroup } from './deleteResourceGroup/deleteResourceGroup';
+import { focusGroup } from './explorer/focusGroup';
+import { buildGroupByCommand } from './explorer/groupBy';
+import { unfocusGroup } from './explorer/unfocusGroup';
 import { getStarted } from './helpAndFeedback/getStarted';
 import { reportIssue } from './helpAndFeedback/reportIssue';
 import { reviewIssues } from './helpAndFeedback/reviewIssues';
+import { installExtension } from './installExtension';
 import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
 import { editTags } from './tags/editTags';
@@ -22,9 +26,9 @@ import { refreshWorkspace } from './workspace/refreshWorkspace';
 export function registerCommands(): void {
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroup', deleteResourceGroup);
-    registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.tree.loadMore(node, context));
+    registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.appResourceTree.loadMore(node, context));
     registerCommand('azureResourceGroups.openInPortal', openInPortal);
-    registerCommand('azureResourceGroups.refresh', async (context: IActionContext, node?: AzExtTreeItem) => await ext.tree.refresh(context, node));
+    registerCommand('azureResourceGroups.refresh', async (context: IActionContext, node?: AzExtTreeItem) => await ext.appResourceTree.refresh(context, node));
     registerCommand('azureResourceGroups.revealResource', revealResource);
     registerCommand('azureResourceGroups.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
     registerCommand('azureResourceGroups.viewProperties', viewProperties);
@@ -38,7 +42,17 @@ export function registerCommands(): void {
     // Suppress "Report an Issue" button for all errors in favor of the command
     registerErrorHandler(c => c.errorHandling.suppressReportIssue = true);
     registerReportIssueCommand('azureResourceGroups.reportIssue');
-    registerCommand('azureResourceGroups.configureExplorer', configureExplorer);
     registerCommand('azureResourceGroups.createResource', createResource);
     registerCommand('azureResourceGroups.refreshWorkspace', refreshWorkspace);
+    registerCommand('azureResourceGroups.groupBy.resourceGroup', buildGroupByCommand('resourceGroup'));
+    registerCommand('azureResourceGroups.groupBy.resourceType', buildGroupByCommand('resourceType'));
+    registerCommand('azureResourceGroups.groupBy.location', buildGroupByCommand('location'));
+    registerCommand('azureResourceGroups.groupBy.armTag', buildGroupByCommand('armTag'));
+
+    registerCommand('azureResourceGroups.focusGroup', focusGroup);
+    registerCommand('azureResourceGroups.unfocusGroup', unfocusGroup);
+
+    registerCommand('azureResourceGroups.installExtension', installExtension);
+
+    registerCommand('azureResourceGroups.clearActivities', clearActivities);
 }

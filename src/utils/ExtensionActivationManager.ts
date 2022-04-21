@@ -5,6 +5,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { contributesKey } from '../constants';
 
 const builtInExtensionIdRegex = /^vscode\./i;
 
@@ -17,13 +18,16 @@ interface AzResourceContributionPoint {
 
 interface AzExtensionManifest {
     readonly contributes?: {
-        readonly 'x-azResources'?: AzResourceContributionPoint;
+        readonly [contributesKey]?: AzResourceContributionPoint;
     }
 }
 
 export class ExtensionActivationManager implements vscode.Disposable {
     private readonly onFetchExtensions = new Map<string, Set<string>>();
     private readonly onResolveExtensions = new Map<string, Set<string>>();
+
+    private readonly previouslyFetchedTypes = new Set<string>();
+    private readonly previouslyResolvedTypes = new Set<string>();
 
     private readonly extensionChangeDisposable: vscode.Disposable;
 
@@ -49,18 +53,28 @@ export class ExtensionActivationManager implements vscode.Disposable {
             .filter(ext => !builtInExtensionIdRegex.test(ext.id)); // We don't need to look at any built-in extensions (often the majority of them)
 
         for (const ext of possibleExtensions) {
-            const activation = (ext.packageJSON as AzExtensionManifest)?.contributes?.['x-azResources']?.activation;
+            const activation = (ext.packageJSON as AzExtensionManifest)?.contributes?.[contributesKey]?.activation;
 
-            activation?.onFetch?.forEach(fetchType => this.addExtensionToActivationList(fetchType, ext.id, this.onFetchExtensions));
-            activation?.onResolve?.forEach(resolveType => this.addExtensionToActivationList(resolveType, ext.id, this.onResolveExtensions));
+            activation?.onFetch?.forEach(fetchType => this.activateOrAddExtensionToActivationList(fetchType, ext.id, 'fetch'));
+            activation?.onResolve?.forEach(resolveType => this.activateOrAddExtensionToActivationList(resolveType, ext.id, 'resolve'));
         }
     }
 
-    public onNodeTypeFetched = (type: string): void => this.onNodeType(type, this.onFetchExtensions);
-    public onNodeTypeResolved = (type: string): void => this.onNodeType(type, this.onResolveExtensions);
+    public onNodeTypeFetched = (type: string): void => this.onNodeType(type, 'fetch');
+    public onNodeTypeResolved = (type: string): void => this.onNodeType(type, 'resolve');
 
-    private addExtensionToActivationList(type: string, extensionId: string, activationList: Map<string, Set<string>>): void {
+    private activateOrAddExtensionToActivationList(type: string, extensionId: string, activationType: 'fetch' | 'resolve'): void {
         const typeLower = type.toLowerCase(); // Cast to lowercase
+        const activationList = activationType === 'fetch' ? this.onFetchExtensions : this.onResolveExtensions;
+        const previousTypesList = activationType === 'fetch' ? this.previouslyFetchedTypes : this.previouslyResolvedTypes;
+
+        // If we've already fetched/resolved this type, then just activate now, and don't add it to the list to activate
+        // This way, if an extension is installed after-the-fact, it will be immediately activated
+        if (previousTypesList.has(typeLower)) {
+            this.activateExtension(extensionId);
+            return;
+        }
+
         if (!activationList.has(typeLower)) {
             activationList.set(typeLower, new Set<string>());
         }
@@ -70,22 +84,25 @@ export class ExtensionActivationManager implements vscode.Disposable {
         activationList.get(typeLower)!.add(extensionId);
     }
 
-    private onNodeType(type: string, activationList: Map<string, Set<string>>): void {
+    private onNodeType(type: string, activationType: 'fetch' | 'resolve'): void {
         const typeLower = type.toLowerCase(); // Cast to lowercase
-        const extensionsToActivate = activationList.get(typeLower);
+        const activationList = activationType === 'fetch' ? this.onFetchExtensions : this.onResolveExtensions;
+        const previousTypesList = activationType === 'fetch' ? this.previouslyFetchedTypes : this.previouslyResolvedTypes;
 
-        if (extensionsToActivate) {
-            for (const extensionId of extensionsToActivate.values()) {
-                const extension = vscode.extensions.getExtension(extensionId);
+        previousTypesList.add(typeLower);
 
-                if (extension && !extension.isActive) {
-                    // Activate without waiting
-                    void extension.activate();
-                }
-            }
-        }
+        activationList.get(typeLower)?.forEach(extId => this.activateExtension(extId));
 
         // Remove the type from the registration because all of the subscribed extensions are now activated
         activationList.delete(typeLower);
+    }
+
+    private activateExtension(extensionId: string): void {
+        const extension = vscode.extensions.getExtension(extensionId);
+
+        if (extension && !extension.isActive) {
+            // Activate without waiting
+            void extension.activate();
+        }
     }
 }

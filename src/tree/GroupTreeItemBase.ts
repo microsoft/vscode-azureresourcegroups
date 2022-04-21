@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AppResourceResolver, GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
 import { TreeItemCollapsibleState } from "vscode";
-import { AppResourceResolver, GroupNodeConfiguration } from "../api";
+import { ext } from "../extensionVariables";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
@@ -14,6 +15,8 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
     public readonly childTypeLabel: string = localize('resource', 'Resource');
     public treeMap: { [key: string]: ResolvableTreeItemBase } = {};
     public config: GroupNodeConfiguration;
+
+    protected internalContextValuesToAdd: string[] = []
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
@@ -32,7 +35,14 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
     }
 
     public get contextValue(): string {
-        return this.config.contextValue || 'GroupTreeItem';
+        const focusedGroup = ext.context.workspaceState.get<string>('focusedGroup');
+        const contextValues = [...this.config.contextValuesToAdd ?? [], ...this.internalContextValuesToAdd, 'group'];
+        if (focusedGroup?.toLowerCase() === this.id.toLowerCase()) {
+            contextValues.push('focused');
+        } else {
+            contextValues.push('unfocused')
+        }
+        return Array.from(new Set(contextValues)).sort().join(';');
     }
 
     public get description(): string | undefined {
@@ -73,5 +83,9 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
 
     public get iconPath(): TreeItemIconPath | undefined {
         return this.config.icon ?? this.config.iconPath ?? treeUtils.getIconPath('resource');
+    }
+
+    public hasChildren(): boolean {
+        return !!Object.values(this.treeMap).length;
     }
 }

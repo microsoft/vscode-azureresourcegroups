@@ -4,7 +4,8 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { AppResource, AppResourceResolver, ResolvedAppResourceBase } from "../api";
+import { AppResource, AppResourceResolver, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
+import { TreeItemCollapsibleState } from "vscode";
 import { getAzureExtensions } from "../AzExtWrapper";
 import { BuiltinResolver } from "./BuiltinResolver";
 
@@ -16,7 +17,9 @@ class NoopResolver implements AppResourceResolver, BuiltinResolver {
     public readonly resolverKind = 'builtin';
 
     public resolveResource(_subContext: ISubscriptionContext, _resource: AppResource): ResolvedAppResourceBase {
-        return {};
+        return {
+            collapsibleState: TreeItemCollapsibleState.None,
+        };
     }
 
     public matchesResource(resource: AppResource): boolean {

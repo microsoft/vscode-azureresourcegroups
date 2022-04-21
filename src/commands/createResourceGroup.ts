@@ -12,7 +12,7 @@ import { localize } from '../utils/localize';
 
 export async function createResourceGroup(context: IActionContext, node?: SubscriptionTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<SubscriptionTreeItem>(SubscriptionTreeItem.contextValue, context);
+        node = await ext.appResourceTree.showTreeItemPicker<SubscriptionTreeItem>(SubscriptionTreeItem.contextValue, context);
     }
 
     const rgNode: ResourceGroupTreeItem = await node.createChild(context);

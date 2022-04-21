@@ -48,12 +48,25 @@
     ],
     "main": "./main.js",
     "contributes": {
+        "x-azResources": {
+            "commands": [
+                {
+                    "command": "azureResourceGroups.createResourceGroup",
+                    "title": "%azureResourceGroups.createResourceGroup%"
+                }
+            ]
+        },
         "commands": [
             {
                 "command": "azureResourceGroups.createResourceGroup",
                 "title": "%azureResourceGroups.createResourceGroup%",
-                "category": "Azure Resource Groups",
-                "icon": "$(add)"
+                "category": "Azure Resource Groups"
+            },
+            {
+                "command": "azureResourceGroups.installExtension",
+                "title": "Install Azure extension",
+                "icon": "$(extensions)",
+                "category": "Azure Resource Groups"
             },
             {
                 "command": "azureResourceGroups.createResource",
@@ -123,16 +136,52 @@
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.configureExplorer",
-                "title": "%azureResourceGroups.configureExplorer%",
+                "command": "azureResourceGroups.groupBy.resourceGroup",
+                "title": "%azureResourceGroups.groupBy.resourceGroup%",
                 "category": "Azure Resource Groups",
-                "icon": "$(settings-gear)"
+                "icon": "$(gear)"
+            },
+            {
+                "command": "azureResourceGroups.groupBy.resourceType",
+                "title": "%azureResourceGroups.groupBy.resourceType%",
+                "category": "Azure Resource Groups",
+                "icon": "$(gear)"
+            },
+            {
+                "command": "azureResourceGroups.groupBy.location",
+                "title": "%azureResourceGroups.groupBy.location%",
+                "category": "Azure Resource Groups",
+                "icon": "$(gear)"
+            },
+            {
+                "command": "azureResourceGroups.groupBy.armTag",
+                "title": "%azureResourceGroups.groupBy.armTag%",
+                "category": "Azure Resource Groups",
+                "icon": "$(gear)"
             },
             {
                 "command": "azureResourceGroups.refreshWorkspace",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure Resource Groups",
                 "icon": "$(refresh)"
+            },
+            {
+                "command": "azureResourceGroups.focusGroup",
+                "title": "Focus this Group",
+                "category": "Azure Resource Groups",
+                "icon": "$(zoom-in)"
+            },
+            {
+                "command": "azureResourceGroups.unfocusGroup",
+                "title": "Unfocus Group",
+                "category": "Azure Resource Groups",
+                "icon": "$(zoom-out)"
+            },
+            {
+                "command": "azureResourceGroups.clearActivities",
+                "title": "Clear Completed Activities",
+                "category": "Azure Resource Groups",
+                "icon": "$(clear-all)"
             }
         ],
         "viewsContainers": {
@@ -142,13 +191,20 @@
                     "title": "Azure",
                     "icon": "resources/azure.svg"
                 }
+            ],
+            "panel": [
+                {
+                    "id": "azurePanel",
+                    "title": "Azure",
+                    "icon": "resources/azure.svg"
+                }
             ]
         },
         "views": {
             "azure": [
                 {
                     "id": "azureResourceGroups",
-                    "name": "Resource Groups",
+                    "name": "Azure Resources",
                     "visibility": "collapsed"
                 },
                 {
@@ -161,6 +217,15 @@
                     "name": "%ms-azuretools.helpAndFeedback%",
                     "visibility": "collapsed"
                 }
+            ],
+            "azurePanel": [
+                {
+                    "id": "azureActivityLog",
+                    "name": "Activity Log",
+                    "visibility": "collapsed",
+                    "icon": "resources/azure.svg",
+                    "type": "tree"
+                }
             ]
         },
         "menus": {
@@ -171,23 +236,23 @@
                     "group": "navigation@1"
                 },
                 {
-                    "command": "azureResourceGroups.createResourceGroup",
-                    "when": "view == azureResourceGroups",
-                    "group": "navigation@1"
-                },
-                {
-                    "command": "azureResourceGroups.refresh",
+                    "submenu": "azureResourceGroups.groupBy",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@2"
                 },
                 {
-                    "command": "azureResourceGroups.configureExplorer",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@3"
                 },
                 {
                     "command": "azureResourceGroups.refreshWorkspace",
                     "when": "view == azureWorkspace",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "azureResourceGroups.clearActivities",
+                    "when": "view == azureActivityLog",
                     "group": "navigation@1"
                 }
             ],
@@ -214,43 +279,43 @@
                 },
                 {
                     "command": "azureResourceGroups.deleteResourceGroup",
-                    "when": "view == azureResourceGroups && viewItem == azureResourceGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureResourceGroups.editTags",
-                    "when": "view == azureResourceGroups && viewItem == azureResourceGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
                     "group": "2@1"
                 },
                 {
-                    "command": "azureResourceGroups.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem == azureResourceGroup",
-                    "group": "9@1"
-                },
-                {
                     "command": "azureResourceGroups.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem == azureResourceGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
                     "group": "9@2"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem == azureResourceGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResource/",
                     "group": "9@3"
                 },
                 {
                     "command": "azureResourceGroups.editTags",
-                    "when": "view == azureResourceGroups && viewItem == azureResource",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Group)(?!Type)/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem == azureResource",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
                     "group": "9@1"
                 },
                 {
-                    "command": "azureResourceGroups.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem == azureResource",
-                    "group": "9@2"
+                    "command": "azureResourceGroups.focusGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /(group).*(unfocused)/",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureResourceGroups.unfocusGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /(focused).*(group)/",
+                    "group": "inline"
                 }
             ],
             "commandPalette": [
@@ -269,9 +334,38 @@
                 {
                     "command": "azureResourceGroups.revealResource",
                     "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.installExtension",
+                    "when": "never"
+                }
+            ],
+            "azureResourceGroups.groupBy": [
+                {
+                    "command": "azureResourceGroups.groupBy.resourceGroup",
+                    "group": "1_default@1"
+                },
+                {
+                    "command": "azureResourceGroups.groupBy.resourceType",
+                    "group": "1_default@2"
+                },
+                {
+                    "command": "azureResourceGroups.groupBy.location",
+                    "group": "1_default@3"
+                },
+                {
+                    "command": "azureResourceGroups.groupBy.armTag",
+                    "group": "1_default@4"
                 }
             ]
         },
+        "submenus": [
+            {
+                "id": "azureResourceGroups.groupBy",
+                "label": "Group By",
+                "icon": "$(group-by-ref-type)"
+            }
+        ],
         "keybindings": [
             {
                 "command": "workbench.view.extension.azure",
@@ -282,7 +376,7 @@
         ],
         "configuration": [
             {
-                "title": "Azure Resource Groups",
+                "title": "Azure",
                 "properties": {
                     "azureResourceGroups.enableOutputTimestamps": {
                         "type": "boolean",
@@ -309,8 +403,18 @@
                     },
                     "azureResourceGroups.groupBy": {
                         "type": "string",
-                        "description": "%azureResourceGroups.showHiddenTypes%",
+                        "description": "%azureResourceGroups.groupBy%",
                         "default": "resourceGroup"
+                    },
+                    "azureResourceGroups.suppressActivityNotifications": {
+                        "type": "boolean",
+                        "description": "%azureResourceGroups.suppressActivityNotifications%",
+                        "default": true
+                    },
+                    "azureResourceGroups.autoOpenActivityPanel": {
+                        "type": "boolean",
+                        "description": "%azureResourceGroups.autoOpenActivityPanel%",
+                        "default": true
                     }
                 }
             }
@@ -358,8 +462,8 @@
     "dependencies": {
         "@azure/arm-resources": "5.0.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^1.0.0",
-        "@microsoft/vscode-azext-azureutils": "^0.1.1",
-        "@microsoft/vscode-azext-utils": "^0.1.0",
+        "@microsoft/vscode-azext-azureutils": "^0.2.0",
+        "@microsoft/vscode-azext-utils": "^0.2.0",
         "fs-extra": "^8.1.0",
         "jsonc-parser": "^2.2.1",
         "open": "^8.0.4",

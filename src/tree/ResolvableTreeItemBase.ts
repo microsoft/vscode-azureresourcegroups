@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
-import { AppResource, AppResourceResolver, GroupableResource, GroupingConfig, ResolvedAppResourceBase } from "../api";
+import { AppResource, AppResourceResolver, GroupableResource, GroupingConfig, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { applicationResourceResolvers } from "../api/registerApplicationResourceResolver";
 import { ext } from "../extensionVariables";
 import { isBuiltinResolver } from "../resolvers/BuiltinResolver";
@@ -21,6 +21,10 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
 
     public get contextValue(): string {
         return Array.from(this.contextValues.values()).sort().join(';');
+    }
+
+    public get description(): string | undefined {
+        return this.resolveResult?.description;
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
