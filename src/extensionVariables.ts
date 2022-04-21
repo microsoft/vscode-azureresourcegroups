@@ -13,10 +13,12 @@ import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 
 namespace extEmitters {
     export let onDidChangeFocusedGroup: EventEmitter<void>;
+    export let onDidRegisterResolver: EventEmitter<AppResourceResolver>;
 }
 
 namespace extEvents {
     export let onDidChangeFocusedGroup: Event<void>;
+    export let onDidRegisterResolver: Event<AppResourceResolver>;
 }
 
 /**
@@ -35,8 +37,6 @@ export namespace ext {
     export let outputChannel: IAzExtOutputChannel;
     export let ignoreBundle: boolean | undefined;
     export const prefix: string = 'azureResourceGroups';
-
-    export const resolverRegisteredEmitter = new EventEmitter<AppResourceResolver>();
 
     export let tagFS: TagFileSystem;
     export let diagnosticWatcher: Disposable | undefined;

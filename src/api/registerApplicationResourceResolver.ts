@@ -15,7 +15,7 @@ export function registerApplicationResourceResolver(id: string, resolver: AppRes
     }
 
     applicationResourceResolvers[id] = resolver;
-    ext.resolverRegisteredEmitter.fire(resolver);
+    ext.emitters.onDidRegisterResolver.fire(resolver);
 
     return new Disposable(() => {
         delete applicationResourceResolvers[id];

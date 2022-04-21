@@ -18,7 +18,7 @@ class WrapperResolver implements AppResourceResolver, BuiltinResolver {
 
     public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedAppResourceBase | undefined | null> {
         return new Promise<ResolvedAppResourceBase | undefined | null>((resolve) => {
-            const disposable = ext.resolverRegisteredEmitter.event((resolver: AppResourceResolver) => {
+            const disposable = ext.events.onDidRegisterResolver((resolver: AppResourceResolver) => {
                 if (resolver.matchesResource(resource)) {
                     disposable.dispose();
                     resolve(resolver.resolveResource(subContext, resource))
