@@ -328,6 +328,10 @@
                     "when": "never"
                 },
                 {
+                    "command": "azureResourceGroups.refreshWorkspace",
+                    "when": "never"
+                },
+                {
                     "command": "azureResourceGroups.loadMore",
                     "when": "never"
                 },
