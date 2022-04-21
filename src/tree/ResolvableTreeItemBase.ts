@@ -9,9 +9,9 @@ import { applicationResourceResolvers } from "../api/registerApplicationResource
 import { ext } from "../extensionVariables";
 import { isBuiltinResolver } from "../resolvers/BuiltinResolver";
 import { installableAppResourceResolver } from "../resolvers/InstallableAppResourceResolver";
-import { noopResolver } from "../resolvers/NoopResolver";
 import { outdatedAppResourceResolver } from "../resolvers/OutdatedAppResourceResolver";
 import { shallowResourceResolver } from "../resolvers/ShallowResourceResolver";
+import { wrapperResolver } from "../resolvers/WrapperResolver";
 
 export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem implements GroupableResource {
 
@@ -71,10 +71,10 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
             return resolver;
         } else if (outdatedAppResourceResolver.matchesResource(this.data)) {
             return outdatedAppResourceResolver;
+        } else if (wrapperResolver.matchesResource(this.data)) {
+            return wrapperResolver;
         } else if (installableAppResourceResolver.matchesResource(this.data)) {
             return installableAppResourceResolver;
-        } else if (noopResolver.matchesResource(this.data)) {
-            return noopResolver;
         } else {
             return shallowResourceResolver;
         }
