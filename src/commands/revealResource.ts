@@ -15,8 +15,8 @@ export async function revealResource(context: IActionContext, resource: AppResou
     context.telemetry.properties.resourceType = resource.type?.replace(/\//g, '|'); // Replace the slashes otherwise this gets redacted because it looks like a user file path
     context.telemetry.properties.resourceKind = resource.kind;
     try {
-        const subscriptionNode: SubscriptionTreeItem = await ext.appResourceTree.findTreeItem(`/subscriptions/${getSubscriptionIdFromId(resource.id)}`, { ...context, loadAll: true }) as SubscriptionTreeItem;
-        const appResourceNode: AppResourceTreeItem | undefined = subscriptionNode.findAppResourceByResourceId(resource.id);
+        const subscriptionNode: SubscriptionTreeItem | undefined = await ext.appResourceTree.findTreeItem(`/subscriptions/${getSubscriptionIdFromId(resource.id)}`, { ...context, loadAll: true });
+        const appResourceNode: AppResourceTreeItem | undefined = subscriptionNode?.findAppResourceByResourceId(resource.id);
         if (appResourceNode) {
             await revealTreeItem(appResourceNode);
         }
