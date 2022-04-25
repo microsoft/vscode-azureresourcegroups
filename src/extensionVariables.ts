@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtTreeDataProvider, AzExtTreeItem, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
+import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { DiagnosticCollection, Disposable, Event, EventEmitter, ExtensionContext, TreeView } from "vscode";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
@@ -12,10 +13,12 @@ import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 
 namespace extEmitters {
     export let onDidChangeFocusedGroup: EventEmitter<void>;
+    export let onDidRegisterResolver: EventEmitter<AppResourceResolver>;
 }
 
 namespace extEvents {
     export let onDidChangeFocusedGroup: Event<void>;
+    export let onDidRegisterResolver: Event<AppResourceResolver>;
 }
 
 /**

@@ -14,7 +14,7 @@ export async function deleteResourceGroup(context: IActionContext, primaryNode?:
         if (primaryNode) {
             selectedNodes = [primaryNode];
         } else {
-            selectedNodes = await ext.appResourceTree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, { ...context, canPickMany: true, suppressCreatePick: true });
+            selectedNodes = await ext.appResourceTree.showTreeItemPicker<ResourceGroupTreeItem>(new RegExp(ResourceGroupTreeItem.contextValue), { ...context, canPickMany: true, suppressCreatePick: true });
         }
     } else {
         selectedNodes = selectedNodes.filter(n => n instanceof ResourceGroupTreeItem);

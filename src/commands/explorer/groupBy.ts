@@ -31,6 +31,5 @@ async function getQuickPicks(context: IActionContext): Promise<QuickPickItem[]> 
 export enum GroupBySettings {
     ResourceGroup = 'resourceGroup',
     ResourceType = 'resourceType',
-    Location = 'location',
-    ArmTag = 'armTag'
+    Location = 'location'
 }

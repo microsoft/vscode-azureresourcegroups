@@ -5,7 +5,7 @@
 
 import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
-import { Disposable, ThemeColor, ThemeIcon } from "vscode";
+import { Disposable, ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { localize } from "../utils/localize";
 
 export enum ActivityStatus {
@@ -52,6 +52,8 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     private state: ActivityTreeItemOptions = {
         label: localize('loading', 'Loading...')
     }
+
+    public collapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None;
 
     public status?: ActivityStatus;
     public error?: unknown;
@@ -103,6 +105,9 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
         void callWithTelemetryAndErrorHandling('activityOnSuccess', async (context) => {
             this.state = data;
             this.status = ActivityStatus.Done;
+            if (this.state.getChildren) {
+                this.collapsibleState = TreeItemCollapsibleState.Expanded;
+            }
             await this.refresh(context);
         })
     }
@@ -112,6 +117,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
             this.state = data;
             this.status = ActivityStatus.Done;
             this.error = data.error;
+            this.collapsibleState = TreeItemCollapsibleState.Expanded;
             await this.refresh(context);
         });
     }
