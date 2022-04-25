@@ -109,7 +109,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     }
 
     public set parent(_node: GroupTreeItemBase | undefined) {
-        // do nothing
+        // do nothing as we only want to return parent dynamically
     }
 
     public async refreshImpl(): Promise<void> {
