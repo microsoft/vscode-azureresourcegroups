@@ -10,6 +10,7 @@ import { FileChangeType } from "vscode";
 import { GroupBySettings } from "../commands/explorer/groupBy";
 import { ext } from "../extensionVariables";
 import { createGroupConfigFromResource, getIconPath } from "../utils/azureUtils";
+import { settingUtils } from "../utils/settingUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 import { ResourceGroupTreeItem } from "./ResourceGroupTreeItem";
@@ -24,7 +25,6 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     public rootGroupTreeItem: AzExtParentTreeItem;
     public rootGroupConfig: GroupNodeConfiguration;
     public groupConfig: GroupingConfig;
-    public parent: GroupTreeItemBase | undefined;
 
     public type: string;
     public kind?: string | undefined;
@@ -101,6 +101,17 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         return getIconPath(this.data.type, this.data.kind);
     }
 
+    public get parent(): GroupTreeItemBase | undefined {
+        const groupBySetting = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
+        const configId: string | undefined = this.groupConfig[groupBySetting]?.id ?? `${this.rootGroupConfig.id}/ungrouped`;
+
+        return (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(groupBySetting, configId);
+    }
+
+    public set parent(_node: GroupTreeItemBase | undefined) {
+        // do nothing as we only want to return parent dynamically
+    }
+
     public async refreshImpl(): Promise<void> {
         this.mTime = Date.now();
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
@@ -116,7 +127,6 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         }
 
         subGroupTreeItem.treeMap[this.id] = this;
-        this.parent = subGroupTreeItem;
         // this should actually be "resolve"
         void subGroupTreeItem.refresh(context);
     }
