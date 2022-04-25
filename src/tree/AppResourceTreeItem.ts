@@ -127,7 +127,6 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         }
 
         subGroupTreeItem.treeMap[this.id] = this;
-        // this.parent = subGroupTreeItem;
         // this should actually be "resolve"
         void subGroupTreeItem.refresh(context);
     }
