@@ -5,10 +5,18 @@
 
 import { AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../extensionVariables";
+import { AppResourceTreeItem } from "../tree/AppResourceTreeItem";
 
-export async function revealTreeItem(resourceId: string): Promise<void> {
+export async function revealTreeItem(resource: string | AppResourceTreeItem): Promise<void> {
     return await callWithTelemetryAndErrorHandling('api.revealTreeItem', async (context: IActionContext) => {
-        const node: AzExtTreeItem | undefined = await ext.appResourceTree.findTreeItem(resourceId, { ...context, loadAll: true });
+        let node: AzExtTreeItem | undefined;
+
+        if (typeof resource === 'string') {
+            node = await ext.appResourceTree.findTreeItem(resource, { ...context, loadAll: true });
+        } else {
+            node = resource;
+        }
+
         if (node) {
             await ext.appResourceTreeView.reveal(node, { select: true, focus: true, expand: false });
         }

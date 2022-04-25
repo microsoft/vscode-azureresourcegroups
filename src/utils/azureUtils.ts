@@ -24,6 +24,10 @@ function parseResourceId(id: string): RegExpMatchArray {
     return matches;
 }
 
+export function getSubscriptionIdFromId(id: string): string {
+    return parseResourceId(id)[1];
+}
+
 export function getResourceGroupFromId(id: string): string {
     return parseResourceId(id)[2];
 }
