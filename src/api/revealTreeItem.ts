@@ -10,7 +10,6 @@ import { AppResourceTreeItem } from "../tree/AppResourceTreeItem";
 export async function revealTreeItem(resource: string | AppResourceTreeItem): Promise<void> {
     return await callWithTelemetryAndErrorHandling('api.revealTreeItem', async (context: IActionContext) => {
         let node: AzExtTreeItem | undefined;
-
         if (typeof resource === 'string') {
             node = await ext.appResourceTree.findTreeItem(resource, { ...context, loadAll: true });
         } else {

@@ -187,7 +187,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         this.cache.treeMaps[groupBy][id.toLowerCase()] = treeItem;
     }
 
-    public findAppResourceByResourceId(resourceId: string): AppResourceTreeItem | undefined {
+    public async findAppResourceByResourceId(context: IActionContext, resourceId: string): Promise<AppResourceTreeItem | undefined> {
+        await this.getCachedChildren(context) // to ensure the group nodes are loaded
         return this.cache.appResources.find(ar => ar.id === resourceId);
     }
 

@@ -16,8 +16,10 @@ export async function revealResource(context: IActionContext, resource: AppResou
     context.telemetry.properties.resourceKind = resource.kind;
     try {
         const subscriptionNode: SubscriptionTreeItem | undefined = await ext.appResourceTree.findTreeItem(`/subscriptions/${getSubscriptionIdFromId(resource.id)}`, { ...context, loadAll: true });
-        const appResourceNode: AppResourceTreeItem | undefined = subscriptionNode?.findAppResourceByResourceId(resource.id);
+        const appResourceNode: AppResourceTreeItem | undefined = await subscriptionNode?.findAppResourceByResourceId(context, resource.id);
         if (appResourceNode) {
+            // ensure the parent node loaded this AppResourceTreeItem
+            await appResourceNode.parent?.getCachedChildren(context);
             await revealTreeItem(appResourceNode);
         }
     } catch (error) {
