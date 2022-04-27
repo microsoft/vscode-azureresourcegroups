@@ -14,11 +14,11 @@ import { shallowResourceResolver } from "../resolvers/ShallowResourceResolver";
 import { wrapperResolver } from "../resolvers/WrapperResolver";
 
 export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem implements GroupableResource {
-
     public groupConfig: GroupingConfig;
     public resolveResult: ResolvedAppResourceBase | undefined | null;
     public data: AppResource;
     protected readonly contextValues: Set<string> = new Set<string>();
+    public abstract parent?: AzExtParentTreeItem | undefined;
 
     public get contextValue(): string {
         return Array.from(this.contextValues.values()).sort().join(';');

@@ -28,7 +28,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     private cache: {
         resourceGroups: ResourceGroup[];
         nextLink?: string;
-        appResources: AppResource[];
+        appResources: AppResourceTreeItem[];
         treeMaps: {
             [groupBySetting: string]: {
                 [key: string]: GroupTreeItemBase
@@ -72,24 +72,24 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
                 }
 
                 if (this.cache.appResources.length === 0) {
-                    this.cache.appResources.push(...(await applicationResourceProviders[azureResourceProviderId]?.provideResources(this.subscription) ?? []));
+                    const resources = await applicationResourceProviders[azureResourceProviderId]?.provideResources(this.subscription) ?? [];
 
                     // To support multiple app resource providers, need to use this pattern
                     // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
 
-                    this.cache.appResources.forEach(item => ext.activationManager.onNodeTypeFetched(item.type));
-                    this.cache.appResources = this.cache.appResources.map((resource: AppResource) => AppResourceTreeItem.Create(this, resource));
+                    resources.forEach(item => ext.activationManager.onNodeTypeFetched(item.type));
+                    this.cache.appResources = resources.map((resource: AppResource) => AppResourceTreeItem.Create(this, resource));
                 }
 
                 await this.createTreeMaps(clearCache, context);
                 const focusedGroupId = ext.context.workspaceState.get('focusedGroup') as string;
-                const focusedGroup = Object.values(this._treeMap).find(group => group.id.toLowerCase() === focusedGroupId?.toLowerCase());
+                const focusedGroup = Object.values(this.treeMap).find(group => group.id.toLowerCase() === focusedGroupId?.toLowerCase());
                 if (focusedGroup) {
                     return [focusedGroup];
                 }
             }
 
-            let groupTreeItems = Object.values(this._treeMap) as GroupTreeItemBase[];
+            let groupTreeItems = Object.values(this.treeMap) as GroupTreeItemBase[];
             if (!settingUtils.getWorkspaceSetting('showHiddenTypes') &&
                 settingUtils.getWorkspaceSetting<string>('groupBy') === GroupBySettings.ResourceType) {
                 groupTreeItems = groupTreeItems.filter(ti => this._azExtGroupConfigs.some(config => config.id === ti.config.id));
@@ -203,6 +203,11 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         this.cache.treeMaps[groupBy][id.toLowerCase()] = treeItem;
     }
 
+    public async findAppResourceByResourceId(context: IActionContext, resourceId: string): Promise<AppResourceTreeItem | undefined> {
+        await this.getCachedChildren(context) // to ensure the group nodes are loaded
+        return this.cache.appResources.find(ar => ar.id === resourceId);
+    }
+
     public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {
         const id = `${this.id}/ungrouped`;
         if (item1.id === id) { return 1; } else if (item2.id === id) { return -1; }
@@ -210,7 +215,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         return super.compareChildrenImpl(item1, item2);
     }
 
-    public get _treeMap(): { [key: string]: GroupTreeItemBase } {
+    public get treeMap(): { [key: string]: GroupTreeItemBase } {
         const groupBy = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
         return this.cache.treeMaps[groupBy] ?? {};
     }
