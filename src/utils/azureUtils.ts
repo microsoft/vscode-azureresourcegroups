@@ -6,8 +6,9 @@
 import { GenericResource, ResourceManagementClient } from '@azure/arm-resources';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { GroupingConfig } from '@microsoft/vscode-azext-utils/hostapi';
+import { GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
 import { ThemeIcon } from 'vscode';
+import { azureExtensions } from '../azureExtensions';
 import { ext } from '../extensionVariables';
 import { createResourceClient } from './azureClients';
 import { localize } from './localize';
@@ -41,7 +42,7 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
             contextValuesToAdd: ['azureResourceGroup']
         },
         resourceType: {
-            label: getName(resource) ?? resource.type ?? 'unknown',
+            label: getName(resource.type, resource.kind) ?? resource.type ?? 'unknown',
             id: getId(subscriptionId, resource.type, resource.kind),
             iconPath: getIconPath(resource?.type ?? 'resource', resource.kind),
             contextValuesToAdd: ['azureResourceTypeGroup', getResourceType(resource.type, resource.kind)]
@@ -64,6 +65,24 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
     }
 
     return groupConfig;
+}
+
+export function createAzureExtensionsGroupConfig(subscriptionId: string): GroupNodeConfiguration[] {
+    const azExtGroupConfigs: GroupNodeConfiguration[] = [];
+    for (const azExt of azureExtensions) {
+        for (const resourceType of azExt.resourceTypes) {
+            const type = typeof resourceType === 'string' ? resourceType : resourceType.name;
+            const kind = azExt.name === 'vscode-azurefunctions' ? 'functionapp' : undefined;
+
+            azExtGroupConfigs.push({
+                label: getName(type, kind) ?? type ?? 'unknown',
+                id: getId(subscriptionId, type, kind),
+                iconPath: getIconPath(type ?? 'resource', kind),
+                contextValuesToAdd: ['azureResourceTypeGroup', getResourceType(type, kind)]
+            });
+        }
+    }
+    return azExtGroupConfigs;
 }
 
 function getId(subscriptionId?: string, type?: string, kind?: string): string {
@@ -161,9 +180,9 @@ interface SupportedType {
     displayName: string;
 }
 
-function getName(resource: GenericResource): string | undefined {
-    let type = resource.type?.toLowerCase();
-    if (isFunctionApp(resource.type, resource.kind)) {
+function getName(type?: string, kind?: string): string | undefined {
+    type = type?.toLowerCase();
+    if (isFunctionApp(type, kind)) {
         type = 'microsoft.web/sites/functionapp';
     }
     if (type) {

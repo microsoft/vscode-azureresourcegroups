@@ -25,5 +25,9 @@
     "azureResourceGroups.groupBy.location": "Group by Location",
     "azureResourceGroups.groupBy.armTag": "Group by ARM Tag...",
     "azureResourceGroups.suppressActivityNotifications": "Suppress Activity notifications",
-    "azureResourceGroups.autoOpenActivityPanel": "Open the Azure Activity panel when an Activity starts"
+    "azureResourceGroups.autoOpenActivityPanel": "Open the Azure Activity panel when an Activity starts",
+    "azureResourceGroups.focusGroup": "Focus this Group",
+    "azureResourceGroups.unfocusGroup": "Unfocus Group",
+    "azureResourceGroups.clearActivities": "Clear Completed Activities",
+    "azureResourceGroups.toggleShowAllResources": "Show/Hide Filtered Resources"
 }

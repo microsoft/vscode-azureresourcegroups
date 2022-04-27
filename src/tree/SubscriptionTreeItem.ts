@@ -14,6 +14,7 @@ import { azureResourceProviderId } from '../constants';
 import { ext } from '../extensionVariables';
 import { createActivityContext } from '../utils/activityUtils';
 import { createResourceClient } from '../utils/azureClients';
+import { createAzureExtensionsGroupConfig } from '../utils/azureUtils';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
 import { AppResourceTreeItem } from './AppResourceTreeItem';
@@ -34,6 +35,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             }
         }
     }
+
+    private _azExtGroupConfigs = createAzureExtensionsGroupConfig(nonNullProp(this, 'id'));
 
     private async getResourceGroups(clearCache: boolean, context: IActionContext): Promise<ResourceGroup[]> {
         if (!this.cache.resourceGroups.length || !clearCache) {
@@ -86,7 +89,13 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
                 }
             }
 
-            return <AzExtTreeItem[]>Object.values(this.treeMap);
+            let groupTreeItems = Object.values(this.treeMap) as GroupTreeItemBase[];
+            if (!settingUtils.getWorkspaceSetting('showHiddenTypes') &&
+                settingUtils.getWorkspaceSetting<string>('groupBy') === GroupBySettings.ResourceType) {
+                groupTreeItems = groupTreeItems.filter(ti => this._azExtGroupConfigs.some(config => config.id === ti.config.id));
+            }
+
+            return groupTreeItems;
         } finally {
             this._triggeredByDefaultSetting = false;
         }
@@ -130,7 +139,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             context.telemetry.suppressIfSuccessful = true;
             context.telemetry.properties.isActivationEvent = 'true';
 
-            if (e.affectsConfiguration(`${ext.prefix}.groupBy`)) {
+            if (e.affectsConfiguration(`${ext.prefix}.groupBy`) ||
+                e.affectsConfiguration(`${ext.prefix}.showHiddenTypes`)) {
                 // we can generate the default groups ahead of time so we don't need to refresh the entire tree
                 this._triggeredByDefaultSetting = Object.values(GroupBySettings).includes(settingUtils.getWorkspaceSetting<string>('groupBy') as GroupBySettings);
                 await this.refresh(context);
@@ -148,7 +158,13 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
         const currentGroupBySetting = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
         const groupBySettings = Object.values(GroupBySettings) as string[];
-        if (!groupBySettings.includes(currentGroupBySetting)) { groupBySettings.push(currentGroupBySetting) }
+        if (!groupBySettings.includes(currentGroupBySetting)) { groupBySettings.push(currentGroupBySetting); }
+
+        // always create the groups for extensions that we support
+        for (const azExtGroupConfig of this._azExtGroupConfigs) {
+            const groupTreeItem = new GroupTreeItemBase(this, azExtGroupConfig);
+            this.setSubConfigGroupTreeItem(GroupBySettings.ResourceType, azExtGroupConfig.id, groupTreeItem);
+        }
 
         for (const groupBySetting of groupBySettings) {
             this.cache.treeMaps[groupBySetting] ??= {};
