@@ -3,11 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
+import { azureExtensions } from "../azureExtensions";
 import { ext } from "../extensionVariables";
 import { localize } from "../utils/localize";
+import { settingUtils } from "../utils/settingUtils";
 import { treeUtils } from "../utils/treeUtils";
+import { AppResourceTreeItem } from "./AppResourceTreeItem";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
 
 export class GroupTreeItemBase extends AzExtParentTreeItem {
@@ -20,6 +23,8 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
+
+    private _showAllResources: boolean = false;
 
     constructor(parent: AzExtParentTreeItem, config: GroupNodeConfiguration) {
         super(parent);
@@ -64,7 +69,21 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
             }
         }
 
-        return Object.values(this.treeMap) as AzExtTreeItem[];
+        let resources = Object.values(this.treeMap) as AzExtTreeItem[];
+        const allResources = Object.values(this.treeMap) as AzExtTreeItem[];
+
+        const showHiddenTypes = settingUtils.getWorkspaceSetting('showHiddenTypes') as boolean;
+        if (!showHiddenTypes) {
+            if (!this._showAllResources) {
+                resources = this.filterResources(resources);
+            }
+
+            if (resources.length !== allResources.length || this._showAllResources) {
+                resources.push(this.createToggleShowAllResourcesTreeItem(resources.length, Object.keys(this.treeMap).length));
+            }
+        }
+
+        return resources;
     }
 
     public get iconPath(): TreeItemIconPath | undefined {
@@ -73,5 +92,46 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
 
     public hasChildren(): boolean {
         return !!Object.values(this.treeMap).length;
+    }
+
+    public filterResources(resources: AzExtTreeItem[]): AzExtTreeItem[] {
+        return resources.filter(r =>
+            azureExtensions.some(ext =>
+                ext.resourceTypes.some((type) => {
+                    return typeof type === 'string' ?
+                        type.toLowerCase() === (<AppResourceTreeItem>r).type?.toLowerCase() :
+                        type.name.toLowerCase() === (<AppResourceTreeItem>r).type?.toLowerCase()
+                })));
+    }
+
+    public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {
+        if (item1 instanceof GenericTreeItem) {
+            return 1;
+        } else if (item2 instanceof GenericTreeItem) {
+            return -1;
+        }
+
+        return super.compareChildrenImpl(item1, item2);
+    }
+
+    public async toggleShowAllResources(context: IActionContext): Promise<void> {
+        this._showAllResources = !this._showAllResources;
+        await this.refresh(context);
+    }
+
+    private createToggleShowAllResourcesTreeItem(numOfResources: number, numOfTotalResources: number): GenericTreeItem {
+        const label = !this._showAllResources ?
+            localize('showingResources', 'Showing {0} of {1} resources. Click to reveal all resources.', numOfResources, numOfTotalResources) :
+            localize('hideAllResources', 'Click to hide filtered resources.');
+
+        const showAllResourcesTreeItem = new GenericTreeItem(this, {
+            label,
+            contextValue: 'showAllResourcesTree',
+            commandId: 'azureResourceGroups.toggleShowAllResources',
+        });
+
+        showAllResourcesTreeItem.commandArgs = [this];
+
+        return showAllResourcesTreeItem;
     }
 }
