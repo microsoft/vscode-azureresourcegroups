@@ -167,21 +167,26 @@
             },
             {
                 "command": "azureResourceGroups.focusGroup",
-                "title": "Focus this Group",
+                "title": "%azureResourceGroups.focusGroup%",
                 "category": "Azure Resource Groups",
                 "icon": "$(zoom-in)"
             },
             {
                 "command": "azureResourceGroups.unfocusGroup",
-                "title": "Unfocus Group",
+                "title": "%azureResourceGroups.unfocusGroup%",
                 "category": "Azure Resource Groups",
                 "icon": "$(zoom-out)"
             },
             {
                 "command": "azureResourceGroups.clearActivities",
-                "title": "Clear Completed Activities",
+                "title": "%azureResourceGroups.clearActivities%",
                 "category": "Azure Resource Groups",
                 "icon": "$(clear-all)"
+            },
+            {
+                "command": "azureResourceGroups.toggleShowAllResources",
+                "title": "%azureResourceGroups.toggleShowAllResources%",
+                "category": "Azure Resource Groups"
             }
         ],
         "viewsContainers": {
@@ -341,6 +346,10 @@
                 },
                 {
                     "command": "azureResourceGroups.installExtension",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.toggleShowAllResources",
                     "when": "never"
                 }
             ],
