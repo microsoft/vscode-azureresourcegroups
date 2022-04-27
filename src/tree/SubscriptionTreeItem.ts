@@ -23,7 +23,9 @@ import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public readonly childTypeLabel: string = localize('resourceGroup', 'Resource Group');
 
-    private _triggeredByDefaultSetting: boolean = false;
+    private _triggeredByDefaultGroupBySetting: boolean = false;
+    private _triggeredByFocusGroupSetting: boolean = false;
+
     private cache: {
         resourceGroups: ResourceGroup[];
         nextLink?: string;
@@ -63,7 +65,14 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         try {
-            if (!this._triggeredByDefaultSetting) {
+            const focusedGroupId = await ext.context.workspaceState.get('focusedGroup') as string;
+            let focusGroupTreeItem: GroupTreeItemBase | undefined;
+            if (this._triggeredByFocusGroupSetting) {
+                focusGroupTreeItem = await this.tryGetFocusGroupTreeItem(focusedGroupId);
+                if (focusGroupTreeItem) {
+                    return [focusGroupTreeItem];
+                }
+            } else if (!this._triggeredByDefaultGroupBySetting) {
                 if (clearCache) {
                     this.resetCache();
                 }
@@ -77,18 +86,19 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
                     resources.forEach(item => ext.activationManager.onNodeTypeFetched(item.type));
                     this.cache.appResources = resources.map((resource: AppResource) => AppResourceTreeItem.Create(this, resource));
                 }
-
                 await this.createTreeMaps(clearCache, context);
-                const focusedGroupId = ext.context.workspaceState.get('focusedGroup') as string;
-                const focusedGroup = Object.values(this.treeMap).find(group => group.id.toLowerCase() === focusedGroupId?.toLowerCase());
-                if (focusedGroup) {
-                    return [focusedGroup];
+
+                // on first load, check if there was persistent setting
+                focusGroupTreeItem = await this.tryGetFocusGroupTreeItem(focusedGroupId);
+                if (focusGroupTreeItem) {
+                    return [focusGroupTreeItem];
                 }
             }
 
             return <AzExtTreeItem[]>Object.values(this.treeMap);
         } finally {
-            this._triggeredByDefaultSetting = false;
+            this._triggeredByDefaultGroupBySetting = false;
+            this._triggeredByFocusGroupSetting = false;
         }
     }
 
@@ -122,6 +132,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
             context.telemetry.properties.isActivationEvent = 'true';
+            this._triggeredByFocusGroupSetting = true;
             await this.refresh(context);
         });
 
@@ -132,7 +143,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
             if (e.affectsConfiguration(`${ext.prefix}.groupBy`)) {
                 // we can generate the default groups ahead of time so we don't need to refresh the entire tree
-                this._triggeredByDefaultSetting = Object.values(GroupBySettings).includes(settingUtils.getWorkspaceSetting<string>('groupBy') as GroupBySettings);
+                this._triggeredByDefaultGroupBySetting = Object.values(GroupBySettings).includes(settingUtils.getWorkspaceSetting<string>('groupBy') as GroupBySettings);
+                // reset the focusedGroup since it won't exist in this grouping
+                await ext.context.workspaceState.update('focusedGroup', '');
                 await this.refresh(context);
             }
         });
@@ -202,5 +215,19 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public get treeMap(): { [key: string]: GroupTreeItemBase } {
         const groupBy = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
         return this.cache.treeMaps[groupBy] ?? {};
+    }
+
+    private async tryGetFocusGroupTreeItem(focusedGroupId: string | undefined): Promise<GroupTreeItemBase | undefined> {
+        if (focusedGroupId) {
+            const focusedGroup = Object.values(this.treeMap).find(group => group.id.toLowerCase() === focusedGroupId?.toLowerCase());
+            if (focusedGroup) {
+                return focusedGroup;
+            }
+
+            // if we can't find it, erase the current setting, return current cached tree
+            await ext.context.workspaceState.update('focusedGroup', '');
+        }
+
+        return undefined;
     }
 }
