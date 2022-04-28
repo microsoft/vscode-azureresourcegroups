@@ -88,7 +88,7 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
 
     public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[], context: IActionContext): Promise<AzExtTreeItem | undefined> {
         for await (const resource of Object.values(this.treeMap)) {
-            await resource.resolve(true, context);
+            void resource.resolve(true, context);
         }
         return super.pickTreeItemImpl?.(expectedContextValues, context);
     }

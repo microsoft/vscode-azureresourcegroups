@@ -63,6 +63,13 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
         });
     }
 
+    public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[], context: IActionContext): Promise<AzExtTreeItem | undefined> {
+        if (!this.resolveResult) {
+            await this.resolve(true, context);
+        }
+        return super.pickTreeItemImpl?.(expectedContextValues, context);
+    }
+
     private getResolver(): AppResourceResolver {
         const resolver: AppResourceResolver | undefined =
             Object.values(applicationResourceResolvers).find(r => r.matchesResource(this.data) && !isBuiltinResolver(r));
