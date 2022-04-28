@@ -86,6 +86,13 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
         return resources;
     }
 
+    public async pickTreeItemImpl(expectedContextValues: (string | RegExp)[], context: IActionContext): Promise<AzExtTreeItem | undefined> {
+        for await (const resource of Object.values(this.treeMap)) {
+            await resource.resolve(true, context);
+        }
+        return super.pickTreeItemImpl?.(expectedContextValues, context);
+    }
+
     public get iconPath(): TreeItemIconPath | undefined {
         return this.config.icon ?? this.config.iconPath ?? treeUtils.getIconPath('resource');
     }
