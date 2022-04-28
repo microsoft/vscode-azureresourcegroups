@@ -24,6 +24,8 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
     public constructor(options: Omit<AzureHostExtensionApi, 'tree' | 'treeView' | 'registerLocalResourceProvider'>) {
         this.#appResourceTree = options.appResourceTree;
         this.#appResourceTreeView = options.appResourceTreeView;
+        this.#workspaceResourceTree = options.workspaceResourceTree;
+        this.#workspaceResourceTreeView = options.workspaceResourceTreeView;
         this.#apiVersion = options.apiVersion;
         this.#revealTreeItem = options.revealTreeItem;
         this.#registerApplicationResourceResolver = options.registerApplicationResourceResolver;
