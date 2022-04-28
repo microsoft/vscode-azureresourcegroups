@@ -20,6 +20,7 @@ import { installExtension } from './installExtension';
 import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
 import { editTags } from './tags/editTags';
+import { toggleShowAllResources } from './toggleShowAllResources';
 import { viewProperties } from './viewProperties';
 import { refreshWorkspace } from './workspace/refreshWorkspace';
 
@@ -55,4 +56,5 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.installExtension', installExtension);
 
     registerCommand('azureResourceGroups.clearActivities', clearActivities);
+    registerCommand('azureResourceGroups.toggleShowAllResources', toggleShowAllResources);
 }

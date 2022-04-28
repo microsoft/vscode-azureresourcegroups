@@ -2,7 +2,7 @@
     "name": "vscode-azureresourcegroups",
     "displayName": "Azure Resources",
     "description": "%azureResourceGroups.description%",
-    "version": "0.4.1-alpha.5",
+    "version": "0.4.1-alpha.7",
     "publisher": "ms-azuretools",
     "icon": "resources/resourceGroup.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -167,21 +167,26 @@
             },
             {
                 "command": "azureResourceGroups.focusGroup",
-                "title": "Focus this Group",
+                "title": "%azureResourceGroups.focusGroup%",
                 "category": "Azure Resource Groups",
                 "icon": "$(zoom-in)"
             },
             {
                 "command": "azureResourceGroups.unfocusGroup",
-                "title": "Unfocus Group",
+                "title": "%azureResourceGroups.unfocusGroup%",
                 "category": "Azure Resource Groups",
                 "icon": "$(zoom-out)"
             },
             {
                 "command": "azureResourceGroups.clearActivities",
-                "title": "Clear Completed Activities",
+                "title": "%azureResourceGroups.clearActivities%",
                 "category": "Azure Resource Groups",
                 "icon": "$(clear-all)"
+            },
+            {
+                "command": "azureResourceGroups.toggleShowAllResources",
+                "title": "%azureResourceGroups.toggleShowAllResources%",
+                "category": "Azure Resource Groups"
             }
         ],
         "viewsContainers": {
@@ -341,6 +346,10 @@
                 },
                 {
                     "command": "azureResourceGroups.installExtension",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.toggleShowAllResources",
                     "when": "never"
                 }
             ],
