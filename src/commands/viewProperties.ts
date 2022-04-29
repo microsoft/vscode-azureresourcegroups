@@ -4,15 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
-import { ext } from '../extensionVariables';
+import { pickAppResource } from '../api/pickAppResource';
 import { AppResourceTreeItem } from '../tree/AppResourceTreeItem';
-import { ResourceGroupTreeItem } from '../tree/ResourceGroupTreeItem';
-import { getDataFromNode } from './openInPortal';
 
-export async function viewProperties(context: IActionContext, node?: ResourceGroupTreeItem | AppResourceTreeItem): Promise<void> {
+export async function viewProperties(context: IActionContext, node?: AppResourceTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.appResourceTree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, context);
+        node = await pickAppResource<AppResourceTreeItem>(context);
     }
 
-    await openReadOnlyJson(node, (await getDataFromNode(node)) || {});
+    await openReadOnlyJson(node, node.data);
 }
