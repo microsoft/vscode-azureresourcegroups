@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { pickAppResource } from "../../api/pickAppResource";
 import { ext } from "../../extensionVariables";
 import { AppResourceTreeItem } from "../../tree/AppResourceTreeItem";
-import { ResourceGroupTreeItem } from "../../tree/ResourceGroupTreeItem";
 
-export async function editTags(context: IActionContext, node?: ResourceGroupTreeItem | AppResourceTreeItem): Promise<void> {
+export async function editTags(context: IActionContext, node?: AppResourceTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.appResourceTree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, context);
+        node = await pickAppResource<AppResourceTreeItem>(context);
     }
 
     await ext.tagFS.showTextDocument(node);

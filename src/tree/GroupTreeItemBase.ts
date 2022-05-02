@@ -75,7 +75,7 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
         const showHiddenTypes = settingUtils.getWorkspaceSetting('showHiddenTypes') as boolean;
         if (!showHiddenTypes) {
             if (!this._showAllResources) {
-                resources = this.filterResources(resources);
+                resources = GroupTreeItemBase.filterResources(resources as AppResourceTreeItem[]);
             }
 
             if (resources.length !== allResources.length || this._showAllResources) {
@@ -94,7 +94,7 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
         return !!Object.values(this.treeMap).length;
     }
 
-    public filterResources(resources: AzExtTreeItem[]): AzExtTreeItem[] {
+    public static filterResources(resources: AppResourceTreeItem[]): AppResourceTreeItem[] {
         return resources.filter(r =>
             azureExtensions.some(ext =>
                 ext.resourceTypes.some((type) => {

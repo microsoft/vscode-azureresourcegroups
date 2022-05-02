@@ -242,7 +242,7 @@ function getRelevantKind(type?: string, kind?: string): string | undefined {
     return undefined;
 }
 
-function getResourceType(type?: string, kind?: string): string {
+export function getResourceType(type?: string, kind?: string): string {
     const relevantKind = getRelevantKind(type, kind);
     return `${type?.toLowerCase()}${relevantKind ? `/${relevantKind}` : ''}`;
 }

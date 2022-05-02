@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeDataProvider, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
-import { Activity, AppResourceResolver, AzureHostExtensionApi, AzureResourceGroupsExtensionApi, LocalResourceProvider, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi';
+import { AzExtTreeDataProvider, AzExtTreeItem, ITreeItemPickerContext } from '@microsoft/vscode-azext-utils';
+import { Activity, AppResourceResolver, AzureHostExtensionApi, AzureResourceGroupsExtensionApi, LocalResourceProvider, PickAppResourceOptions, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi';
 import { Disposable, TreeView } from 'vscode';
 
 export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensionApi, AzureResourceGroupsExtensionApi {
@@ -17,6 +17,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
     #registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
     #registerWorkspaceResourceProvider: (id: string, resolver: WorkspaceResourceProvider) => Disposable;
     #registerActivity: (activity: Activity) => Promise<void>;
+    #pickAppResource: <T extends AzExtTreeItem>(context: ITreeItemPickerContext, options?: PickAppResourceOptions) => Promise<T>;
 
     // This `Omit` is here because the interface expects those keys to be defined, but in this object they will not be
     // They are replaced with functions defined on this class that merely wrap the newly-named keys
@@ -31,6 +32,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         this.#registerApplicationResourceResolver = options.registerApplicationResourceResolver;
         this.#registerWorkspaceResourceProvider = options.registerWorkspaceResourceProvider;
         this.#registerActivity = options.registerActivity;
+        this.#pickAppResource = options.pickAppResource;
     }
 
     public get appResourceTree(): AzExtTreeDataProvider {
@@ -55,6 +57,10 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
 
     public async revealTreeItem(resourceId: string): Promise<void> {
         return await this.#revealTreeItem(resourceId);
+    }
+
+    public async pickAppResource<T extends AzExtTreeItem>(context: ITreeItemPickerContext, options?: PickAppResourceOptions): Promise<T> {
+        return this.#pickAppResource(context, options);
     }
 
     public registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): Disposable {
