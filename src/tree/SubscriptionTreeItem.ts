@@ -40,10 +40,14 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public async pickAppResource(context: IActionContext, options?: PickAppResourceOptions): Promise<AppResourceTreeItem> {
         await this.getCachedChildren(context);
-        let appResources = GroupTreeItemBase.filterResources(this.cache.appResources);
 
+        let appResources = this.cache.appResources;
+        const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>('showHiddenTypes');
+        if (!showHiddenTypes) {
+            appResources = GroupTreeItemBase.filterResources(this.cache.appResources);
+        }
         if (options?.type) {
-            appResources = appResources.filter((appResource) => getResourceType(appResource.data.type, appResource.data.kind) === options.type);
+            appResources = appResources.filter((appResource) => getResourceType(appResource.data.type, appResource.data.kind) === options?.type);
         }
 
         const picks = appResources.map((appResource) => ({ data: appResource, label: appResource.label, group: appResource.groupConfig.resourceType.label, description: appResource.groupConfig.resourceGroup.label }))
