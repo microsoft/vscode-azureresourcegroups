@@ -46,15 +46,16 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         if (!showHiddenTypes) {
             appResources = GroupTreeItemBase.filterResources(this.cache.appResources);
         }
-        if (options?.type) {
-            appResources = appResources.filter((appResource) => getResourceType(appResource.data.type, appResource.data.kind) === options?.type);
+        if (options?.filter) {
+            const filterType = getResourceType(options.filter.type, options.filter.kind);
+            appResources = appResources.filter((appResource) => getResourceType(appResource.data.type, appResource.data.kind) === filterType);
         }
 
         const picks = appResources.map((appResource) => ({ data: appResource, label: appResource.label, group: appResource.groupConfig.resourceType.label, description: appResource.groupConfig.resourceGroup.label }))
             .sort((a, b) => a.group.localeCompare(b.group));
 
         const quickPickOptions: IAzureQuickPickOptions = {
-            enableGrouping: !options?.type,
+            enableGrouping: !options?.filter,
             placeHolder: localize('selectResource', 'Select a resource'),
             ...options,
         };
