@@ -13,6 +13,7 @@ import * as vscode from 'vscode';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
 import { InternalAzureResourceGroupsExtensionApi } from './api/AzureResourceGroupsExtensionApi';
+import { pickAppResource } from './api/pickAppResource';
 import { registerApplicationResourceProvider } from './api/registerApplicationResourceProvider';
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
 import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResourceProvider';
@@ -87,6 +88,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             registerApplicationResourceResolver,
             registerWorkspaceResourceProvider,
             registerActivity,
+            pickAppResource,
         })
     ]);
 }
