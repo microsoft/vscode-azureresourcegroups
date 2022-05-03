@@ -108,12 +108,12 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
             } else if (item2.isHidden) {
                 return -1;
             }
-        }
 
-        if (item1 instanceof GenericTreeItem) {
-            return 1;
-        } else if (item2 instanceof GenericTreeItem) {
-            return -1;
+            if (item1 instanceof GenericTreeItem) {
+                return 1;
+            } else if (item2 instanceof GenericTreeItem) {
+                return -1;
+            }
         }
 
         return super.compareChildrenImpl(item1, item2);
