@@ -5,7 +5,6 @@
 
 import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
-import { azureExtensions } from "../azureExtensions";
 import { ext } from "../extensionVariables";
 import { localize } from "../utils/localize";
 import { settingUtils } from "../utils/settingUtils";
@@ -95,16 +94,22 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
     }
 
     public static filterResources(resources: AppResourceTreeItem[]): AppResourceTreeItem[] {
-        return resources.filter(r =>
-            azureExtensions.some(ext =>
-                ext.resourceTypes.some((type) => {
-                    return typeof type === 'string' ?
-                        type.toLowerCase() === (<AppResourceTreeItem>r).type?.toLowerCase() :
-                        type.name.toLowerCase() === (<AppResourceTreeItem>r).type?.toLowerCase()
-                })));
+        return resources.filter(r => !r.isHidden);
     }
 
-    public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {
+    public compareChildrenImpl(item1: AppResourceTreeItem, item2: AppResourceTreeItem): number {
+        const showHiddenTypes = settingUtils.getWorkspaceSetting('showHiddenTypes') as boolean;
+        // if showHiddenTypes is off, then these should be pushed below toggleShowAllResourcesTreeItem
+        if (!showHiddenTypes) {
+            if (item1.isHidden && item2.isHidden) {
+                return super.compareChildrenImpl(item1, item2);
+            } else if (item1.isHidden) {
+                return 1;
+            } else if (item2.isHidden) {
+                return -1;
+            }
+        }
+
         if (item1 instanceof GenericTreeItem) {
             return 1;
         } else if (item2 instanceof GenericTreeItem) {
@@ -124,14 +129,14 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
             localize('showingResources', 'Showing {0} of {1} resources. Click to reveal all resources.', numOfResources, numOfTotalResources) :
             localize('hideAllResources', 'Click to hide filtered resources.');
 
-        const showAllResourcesTreeItem = new GenericTreeItem(this, {
+        const toggleShowAllResourcesTreeItem = new GenericTreeItem(this, {
             label,
             contextValue: 'showAllResourcesTree',
             commandId: 'azureResourceGroups.toggleShowAllResources',
         });
 
-        showAllResourcesTreeItem.commandArgs = [this];
+        toggleShowAllResourcesTreeItem.commandArgs = [this];
 
-        return showAllResourcesTreeItem;
+        return toggleShowAllResourcesTreeItem;
     }
 }
