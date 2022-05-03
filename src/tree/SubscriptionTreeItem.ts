@@ -150,9 +150,9 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             const focusedGroupId = await ext.context.workspaceState.get('focusedGroup') as string;
             const focusGroupTreeItem = await this.tryGetFocusGroupTreeItem(focusedGroupId);
             if (focusGroupTreeItem) {
-                this.setCachedChildren([focusGroupTreeItem]);
+                this._setCachedChildren([focusGroupTreeItem]);
             } else {
-                this.setCachedChildren(this.getGroupTreeItems());
+                this._setCachedChildren(this.getGroupTreeItems());
             }
         });
 
@@ -168,7 +168,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
                 // reset the focusedGroup since it won't exist in this grouping
                 await ext.context.workspaceState.update('focusedGroup', '');
                 triggeredByDefaultGroupBySetting ?
-                    this.setCachedChildren(this.getGroupTreeItems()) :
+                    this._setCachedChildren(this.getGroupTreeItems()) :
                     await this.refresh(context);
             }
         });
@@ -244,6 +244,14 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public get treeMap(): { [key: string]: GroupTreeItemBase } {
         const groupBy = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
         return this.cache.treeMaps[groupBy] ?? {};
+    }
+
+    private _setCachedChildren(childrenToSet: AzExtTreeItem[]): void {
+        // To access the private cacheChildren, go buckwild and ignore typings!!
+        const thisUnknown = this as unknown as { _cachedChildren: AzExtTreeItem[] };
+        thisUnknown._cachedChildren = childrenToSet;
+        thisUnknown._cachedChildren = childrenToSet.sort((ti1, ti2) => this.compareChildrenImpl(ti1, ti2));
+        this.treeDataProvider.refreshUIOnly(this);
     }
 
     private async tryGetFocusGroupTreeItem(focusedGroupId: string | undefined): Promise<GroupTreeItemBase | undefined> {
