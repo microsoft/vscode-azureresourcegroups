@@ -92,48 +92,29 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        try {
-            const focusedGroupId = await ext.context.workspaceState.get('focusedGroup') as string;
-            let focusGroupTreeItem: GroupTreeItemBase | undefined;
-            if (this._triggeredByFocusGroupSetting) {
-                focusGroupTreeItem = await this.tryGetFocusGroupTreeItem(focusedGroupId);
-                if (focusGroupTreeItem) {
-                    return [focusGroupTreeItem];
-                }
-            } else if (!this._triggeredByDefaultGroupBySetting) {
-                if (clearCache) {
-                    this.resetCache();
-                }
-
-                if (this.cache.appResources.length === 0) {
-                    const resources = await applicationResourceProviders[azureResourceProviderId]?.provideResources(this.subscription) ?? [];
-
-                    // To support multiple app resource providers, need to use this pattern
-                    // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
-
-                    resources.forEach(item => ext.activationManager.onNodeTypeFetched(item.type));
-                    this.cache.appResources = resources.map((resource: AppResource) => AppResourceTreeItem.Create(this, resource));
-                }
-                await this.createTreeMaps(clearCache, context);
-
-                // on first load, check if there was persistent setting
-                focusGroupTreeItem = await this.tryGetFocusGroupTreeItem(focusedGroupId);
-                if (focusGroupTreeItem) {
-                    return [focusGroupTreeItem];
-                }
-            }
-
-            let groupTreeItems = Object.values(this.treeMap) as GroupTreeItemBase[];
-            if (!settingUtils.getWorkspaceSetting('showHiddenTypes') &&
-                settingUtils.getWorkspaceSetting<string>('groupBy') === GroupBySettings.ResourceType) {
-                groupTreeItems = groupTreeItems.filter(ti => this._azExtGroupConfigs.some(config => config.id === ti.config.id));
-            }
-
-            return groupTreeItems;
-        } finally {
-            this._triggeredByDefaultGroupBySetting = false;
-            this._triggeredByFocusGroupSetting = false;
+        if (clearCache) {
+            this.resetCache();
         }
+
+        if (this.cache.appResources.length === 0) {
+            const resources = await applicationResourceProviders[azureResourceProviderId]?.provideResources(this.subscription) ?? [];
+
+            // To support multiple app resource providers, need to use this pattern
+            // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
+
+            resources.forEach(item => ext.activationManager.onNodeTypeFetched(item.type));
+            this.cache.appResources = resources.map((resource: AppResource) => AppResourceTreeItem.Create(this, resource));
+        }
+        await this.createTreeMaps(clearCache, context);
+
+        const focusedGroupId = await ext.context.workspaceState.get('focusedGroup') as string;
+        // on first load, check if there was persistent setting
+        const focusGroupTreeItem = await this.tryGetFocusGroupTreeItem(focusedGroupId);
+        if (focusGroupTreeItem) {
+            return [focusGroupTreeItem];
+        }
+
+        return this.getGroupTreeItems();
     }
 
 
@@ -166,8 +147,13 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
             context.telemetry.properties.isActivationEvent = 'true';
-            this._triggeredByFocusGroupSetting = true;
-            await this.refresh(context);
+            const focusedGroupId = await ext.context.workspaceState.get('focusedGroup') as string;
+            const focusGroupTreeItem = await this.tryGetFocusGroupTreeItem(focusedGroupId);
+            if (focusGroupTreeItem) {
+                this.setCachedChildren([focusGroupTreeItem]);
+            } else {
+                this.setCachedChildren(this.getGroupTreeItems());
+            }
         });
 
         registerEvent('treeView.onDidChangeConfiguration', workspace.onDidChangeConfiguration, async (context: IActionContext, e: ConfigurationChangeEvent) => {
@@ -178,10 +164,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             if (e.affectsConfiguration(`${ext.prefix}.groupBy`) ||
                 e.affectsConfiguration(`${ext.prefix}.showHiddenTypes`)) {
                 // we can generate the default groups ahead of time so we don't need to refresh the entire tree
-                this._triggeredByDefaultGroupBySetting = Object.values(GroupBySettings).includes(settingUtils.getWorkspaceSetting<string>('groupBy') as GroupBySettings);
+                const triggeredByDefaultGroupBySetting = Object.values(GroupBySettings).includes(settingUtils.getWorkspaceSetting<string>('groupBy') as GroupBySettings);
                 // reset the focusedGroup since it won't exist in this grouping
                 await ext.context.workspaceState.update('focusedGroup', '');
-                await this.refresh(context);
+                triggeredByDefaultGroupBySetting ?
+                    this.setCachedChildren(this.getGroupTreeItems()) :
+                    await this.refresh(context);
             }
         });
     }
@@ -270,5 +258,15 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         return undefined;
+    }
+
+    private getGroupTreeItems(): GroupTreeItemBase[] {
+        let groupTreeItems = Object.values(this.treeMap) as GroupTreeItemBase[];
+        if (!settingUtils.getWorkspaceSetting('showHiddenTypes') &&
+            settingUtils.getWorkspaceSetting<string>('groupBy') === GroupBySettings.ResourceType) {
+            groupTreeItems = groupTreeItems.filter(ti => this._azExtGroupConfigs.some(config => config.id === ti.config.id));
+        }
+
+        return groupTreeItems;
     }
 }
