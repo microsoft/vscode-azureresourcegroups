@@ -9,6 +9,7 @@ import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep
 import { PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
 import { ConfigurationChangeEvent, workspace } from 'vscode';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
+import { GroupBySettings } from '../commands/explorer/groupBy';
 import { azureResourceProviderId } from '../constants';
 import { ext } from '../extensionVariables';
 import { createActivityContext } from '../utils/activityUtils';
@@ -53,9 +54,11 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         return (await context.ui.showQuickPick(picks, quickPickOptions)).data;
     }
 
-    private async resolveResourceGroups(context: IActionContext) {
-        const client: ResourceManagementClient = await createResourceClient([context, this.subscription]);
-        this.cache.resourceGroups = await uiUtils.listAllIterator(client.resourceGroups.list());
+    private async resolveResourceGroupsIfNeeded(context: IActionContext): Promise<void> {
+        if (<string>settingUtils.getWorkspaceSetting<string>('groupBy') === GroupBySettings.ResourceGroup) {
+            const client: ResourceManagementClient = await createResourceClient([context, this.subscription]);
+            this.cache.resourceGroups = await uiUtils.listAllIterator(client.resourceGroups.list());
+        }
     }
 
     public constructor(parent: AzExtParentTreeItem, subscription: ISubscriptionContext) {
@@ -75,7 +78,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         resources.forEach(item => ext.activationManager.onNodeTypeFetched(item.type));
         this.cache.appResources = resources;
 
-        await this.resolveResourceGroups(context);
+        await this.resolveResourceGroupsIfNeeded(context);
         this.treeMap = this.cache.getTreeMap(context);
 
         // on first load, check if there was persistent setting

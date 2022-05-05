@@ -37,17 +37,19 @@ export class ResourceCache {
     }
 
     public set appResources(resources: AppResource[]) {
-        const addedResources = this.resolveProvidedResources(this._appResources, resources);
+        const { addedResources, deletedResources } = this.diffProvidedResources(this._appResources, resources);
+        this.deleteResourcesFromCache(this._appResources, deletedResources);
         this._appResources.push(...addedResources.map(added => AppResourceTreeItem.Create(this._subscriptionTreeItem, added)));
     }
 
     public set resourceGroups(resourceGroups: ResourceGroup[]) {
-        this._resourceGroups.push(...this.resolveProvidedResources(this._resourceGroups, resourceGroups));
+        const { addedResources, deletedResources } = this.diffProvidedResources(this._resourceGroups, resourceGroups);
+        this.deleteResourcesFromCache(this._resourceGroups, deletedResources);
+        this._resourceGroups.push(...addedResources);
     }
 
     public getTreeMap(context: IActionContext): GroupTreeMap {
         const treeMap: GroupTreeMap = {};
-        // start this as early as possible
         const getResourceGroupTask: (resourceGroup: string) => Promise<ResourceGroup | undefined> = async (resourceGroup: string) => {
             return this._resourceGroups.find((rg) => rg.name === resourceGroup);
         };
@@ -102,19 +104,21 @@ export class ResourceCache {
     }
     /**
      *
-     * @param cachedResources Resources already in cache. Will be mutated to remove stale resources.
+     * @param cachedResources Resources already in cache.
      * @param providedResources Resources provided by resolver/API.
-     * @return Resources that are new and should be handled by cache
+     * @return Object containing arrays of added and deleted resources.
      */
-    private resolveProvidedResources<T extends { id?: string }>(cachedResources: T[], providedResources: T[]): T[] {
+    private diffProvidedResources<T extends { id?: string }>(cachedResources: T[], providedResources: T[]): { addedResources: T[], deletedResources: T[] } {
         const addedResources = providedResources.filter(providedResource => !cachedResources.some(rg => rg.id === providedResource.id));
         const deletedResources = cachedResources.filter(cachedResource => !providedResources.some(rg => rg.id === cachedResource.id));
 
-        for (const deleted of deletedResources) {
+        return { addedResources, deletedResources }
+    }
+
+    private deleteResourcesFromCache<T extends { id?: string }>(cachedResources: T[], resourcesToDelete: T[]): void {
+        for (const deleted of resourcesToDelete) {
             const index = cachedResources.findIndex(cachedResource => cachedResource.id === deleted.id);
             cachedResources.splice(index, 1);
         }
-
-        return addedResources;
     }
 }
