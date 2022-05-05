@@ -2,7 +2,11 @@
     "name": "vscode-azureresourcegroups",
     "displayName": "Azure Resources",
     "description": "%azureResourceGroups.description%",
+<<<<<<< HEAD
     "version": "0.4.1-alpha.13",
+=======
+    "version": "0.4.1-alpha.12",
+>>>>>>> 1f0382da98ab2fa3d08c49fcda995521f2b2f7f9
     "publisher": "ms-azuretools",
     "icon": "resources/resourceGroup.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -476,7 +480,7 @@
         "@azure/arm-resources": "5.0.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^1.0.0",
         "@microsoft/vscode-azext-azureutils": "^0.2.0",
-        "@microsoft/vscode-azext-utils": "^0.2.3",
+        "@microsoft/vscode-azext-utils": "^0.2.5",
         "fs-extra": "^8.1.0",
         "jsonc-parser": "^2.2.1",
         "open": "^8.0.4",
