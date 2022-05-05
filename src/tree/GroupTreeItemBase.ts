@@ -57,17 +57,7 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
         return false;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        if (clearCache) {
-            // this.treeMap = {};
-        }
-
-        for (const ti of Object.values(this.treeMap)) {
-            if (ti instanceof ResolvableTreeItemBase) {
-                void ti.resolve(clearCache, context);
-            }
-        }
-
+    public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
         let resources = Object.values(this.treeMap) as AzExtTreeItem[];
         const allResources = Object.values(this.treeMap) as AzExtTreeItem[];
 
