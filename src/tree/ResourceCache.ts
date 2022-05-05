@@ -1,0 +1,120 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+import { ResourceGroup } from "@azure/arm-resources";
+import { IActionContext, nonNullProp } from "@microsoft/vscode-azext-utils";
+import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
+import { ThemeIcon } from "vscode";
+import { GroupBySettings } from "../commands/explorer/groupBy";
+import { createAzureExtensionsGroupConfig } from "../utils/azureUtils";
+import { localize } from "../utils/localize";
+import { settingUtils } from "../utils/settingUtils";
+import { AppResourceTreeItem } from "./AppResourceTreeItem";
+import { GroupTreeItemBase } from "./GroupTreeItemBase";
+import { ResourceGroupTreeItem } from "./ResourceGroupTreeItem";
+import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
+
+export type GroupTreeMap = { [groupTreeId: string]: GroupTreeItemBase };
+export class ResourceCache {
+    private _subscriptionTreeItem: SubscriptionTreeItem;
+    private _resourceGroups: ResourceGroup[];
+    private _appResources: AppResourceTreeItem[];
+
+    public constructor(sub: SubscriptionTreeItem) {
+        this._subscriptionTreeItem = sub;
+        this.resetCache();
+    }
+
+    private resetCache(): void {
+        this._appResources = [];
+        this._resourceGroups = [];
+    }
+
+    public get appResources(): AppResourceTreeItem[] {
+        return this._appResources;
+    }
+
+    public set appResources(resources: AppResource[]) {
+        const addedResources = this.resolveProvidedResources(this._appResources, resources);
+        this._appResources.push(...addedResources.map(added => AppResourceTreeItem.Create(this._subscriptionTreeItem, added)));
+    }
+
+    public set resourceGroups(resourceGroups: ResourceGroup[]) {
+        this._resourceGroups.push(...this.resolveProvidedResources(this._resourceGroups, resourceGroups));
+    }
+
+    public getTreeMap(context: IActionContext): GroupTreeMap {
+        const treeMap: GroupTreeMap = {};
+        // start this as early as possible
+        const getResourceGroupTask: (resourceGroup: string) => Promise<ResourceGroup | undefined> = async (resourceGroup: string) => {
+            return this._resourceGroups.find((rg) => rg.name === resourceGroup);
+        };
+
+        const ungroupedTreeItem = new GroupTreeItemBase(this._subscriptionTreeItem, {
+            label: localize('ungrouped', 'ungrouped'),
+            id: `${this._subscriptionTreeItem.id}/ungrouped`,
+            iconPath: new ThemeIcon('json')
+        });
+
+        treeMap[ungroupedTreeItem.id] = ungroupedTreeItem;
+        const groupBySetting = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
+        for (const rgTree of this._appResources) {
+            (<AppResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting, treeMap, getResourceGroupTask);
+        }
+
+        switch (groupBySetting) {
+            case GroupBySettings.ResourceGroup:
+                // if this isn't resolved by now, we need it to be so that we can retrieve empty RGs
+                // only get RGs that are not in the treeMap already
+                const emptyResourceGroups = this._resourceGroups.filter(rg => !treeMap[rg.id?.toLowerCase() ?? '']);
+                for (const eRg of emptyResourceGroups) {
+                    treeMap[nonNullProp(eRg, 'id').toLowerCase()] = ResourceGroupTreeItem.createFromResourceGroup(this._subscriptionTreeItem, eRg);
+                }
+                break;
+            case GroupBySettings.ResourceType:
+                // always create the groups for extensions that we support
+                const azExtGroupConfigs = createAzureExtensionsGroupConfig(nonNullProp(this._subscriptionTreeItem, 'id'));
+                for (const azExtGroupConfig of azExtGroupConfigs) {
+                    if (!treeMap[azExtGroupConfig.id]) {
+                        const groupTreeItem = new GroupTreeItemBase(this._subscriptionTreeItem, azExtGroupConfig);
+                        treeMap[groupTreeItem.id] = groupTreeItem;
+                    }
+                }
+
+                // delete groups that aren't supported by Azure extensions
+                if (!settingUtils.getWorkspaceSetting('showHiddenTypes')) {
+                    for (const id in treeMap) {
+                        if (!azExtGroupConfigs.some(config => config.id === id)) {
+                            delete treeMap[id];
+                        }
+                    }
+                }
+                break;
+        }
+
+        if (!ungroupedTreeItem.hasChildren()) {
+            delete treeMap[ungroupedTreeItem.id];
+        }
+
+        return treeMap;
+    }
+    /**
+     *
+     * @param cachedResources Resources already in cache. Will be mutated to remove stale resources.
+     * @param providedResources Resources provided by resolver/API.
+     * @return Resources that are new and should be handled by cache
+     */
+    private resolveProvidedResources<T extends { id?: string }>(cachedResources: T[], providedResources: T[]): T[] {
+        const addedResources = providedResources.filter(providedResource => !cachedResources.some(rg => rg.id === providedResource.id));
+        const deletedResources = cachedResources.filter(cachedResource => !providedResources.some(rg => rg.id === cachedResource.id));
+
+        for (const deleted of deletedResources) {
+            const index = cachedResources.findIndex(cachedResource => cachedResource.id === deleted.id);
+            cachedResources.splice(index, 1);
+        }
+
+        return addedResources;
+    }
+}

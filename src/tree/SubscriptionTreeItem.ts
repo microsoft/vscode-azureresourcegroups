@@ -6,37 +6,27 @@
 import { ResourceGroup, ResourceManagementClient } from '@azure/arm-resources';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, IAzureQuickPickOptions, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
-import { AppResource, PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
-import { ConfigurationChangeEvent, ThemeIcon, workspace } from 'vscode';
+import { PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
+import { ConfigurationChangeEvent, workspace } from 'vscode';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
-import { GroupBySettings } from '../commands/explorer/groupBy';
 import { azureResourceProviderId } from '../constants';
 import { ext } from '../extensionVariables';
 import { createActivityContext } from '../utils/activityUtils';
 import { createResourceClient } from '../utils/azureClients';
-import { createAzureExtensionsGroupConfig, getResourceType } from '../utils/azureUtils';
+import { getResourceType } from '../utils/azureUtils';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
 import { AppResourceTreeItem } from './AppResourceTreeItem';
 import { GroupTreeItemBase } from './GroupTreeItemBase';
+import { GroupTreeMap, ResourceCache } from './ResourceCache';
 import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public readonly childTypeLabel: string = localize('resourceGroup', 'Resource Group');
+    public treeMap: GroupTreeMap = {}
 
-    private _triggeredByDefaultGroupBySetting: boolean = false;
-    private _triggeredByFocusGroupSetting: boolean = false;
 
-    private cache: {
-        resourceGroups: ResourceGroup[];
-        nextLink?: string;
-        appResources: AppResourceTreeItem[];
-        treeMaps: {
-            [groupBySetting: string]: {
-                [key: string]: GroupTreeItemBase
-            }
-        }
-    }
+    private cache: ResourceCache = new ResourceCache(this);
 
     public async pickAppResource(context: IActionContext, options?: PickAppResourceOptions): Promise<AppResourceTreeItem> {
         await this.getCachedChildren(context);
@@ -63,77 +53,38 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         return (await context.ui.showQuickPick(picks, quickPickOptions)).data;
     }
 
-    private _azExtGroupConfigs = createAzureExtensionsGroupConfig(nonNullProp(this, 'id'));
-
-    private async getResourceGroups(clearCache: boolean, context: IActionContext): Promise<ResourceGroup[]> {
-        if (!this.cache.resourceGroups.length || !clearCache) {
-            const client: ResourceManagementClient = await createResourceClient([context, this.subscription]);
-            this.cache.resourceGroups = await uiUtils.listAllIterator(client.resourceGroups.list());
-        }
-        return this.cache.resourceGroups;
-    }
-
-    private resetCache(): void {
-        this.cache = {
-            resourceGroups: [],
-            appResources: [],
-            treeMaps: {}
-        }
+    private async resolveResourceGroups(context: IActionContext) {
+        const client: ResourceManagementClient = await createResourceClient([context, this.subscription]);
+        this.cache.resourceGroups = await uiUtils.listAllIterator(client.resourceGroups.list());
     }
 
     public constructor(parent: AzExtParentTreeItem, subscription: ISubscriptionContext) {
         super(parent, subscription);
-        this.resetCache();
         this.registerRefreshEvents();
     }
 
     public hasMoreChildrenImpl(): boolean {
-        return !!this.cache.nextLink;
+        return false;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        try {
-            const focusedGroupId = await ext.context.workspaceState.get('focusedGroup') as string;
-            let focusGroupTreeItem: GroupTreeItemBase | undefined;
-            if (this._triggeredByFocusGroupSetting) {
-                focusGroupTreeItem = await this.tryGetFocusGroupTreeItem(focusedGroupId);
-                if (focusGroupTreeItem) {
-                    return [focusGroupTreeItem];
-                }
-            } else if (!this._triggeredByDefaultGroupBySetting) {
-                if (clearCache) {
-                    this.resetCache();
-                }
+    public async loadMoreChildrenImpl(_clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
+        const resources = await applicationResourceProviders[azureResourceProviderId]?.provideResources(this.subscription) ?? [];
 
-                if (this.cache.appResources.length === 0) {
-                    const resources = await applicationResourceProviders[azureResourceProviderId]?.provideResources(this.subscription) ?? [];
+        // To support multiple app resource providers, need to use this pattern
+        // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
+        resources.forEach(item => ext.activationManager.onNodeTypeFetched(item.type));
+        this.cache.appResources = resources;
 
-                    // To support multiple app resource providers, need to use this pattern
-                    // await Promise.all(applicationResourceProviders.map((provider: ApplicationResourceProvider) => async () => this.rgsItem.push(...(await provider.provideResources(this.subscription) ?? []))));
+        await this.resolveResourceGroups(context);
+        this.treeMap = this.cache.getTreeMap(context);
 
-                    resources.forEach(item => ext.activationManager.onNodeTypeFetched(item.type));
-                    this.cache.appResources = resources.map((resource: AppResource) => AppResourceTreeItem.Create(this, resource));
-                }
-                await this.createTreeMaps(clearCache, context);
-
-                // on first load, check if there was persistent setting
-                focusGroupTreeItem = await this.tryGetFocusGroupTreeItem(focusedGroupId);
-                if (focusGroupTreeItem) {
-                    return [focusGroupTreeItem];
-                }
-            }
-
-            let groupTreeItems = Object.values(this.treeMap) as GroupTreeItemBase[];
-            if (!settingUtils.getWorkspaceSetting('showHiddenTypes') &&
-                settingUtils.getWorkspaceSetting<string>('groupBy') === GroupBySettings.ResourceType) {
-                groupTreeItems = groupTreeItems.filter(ti => this._azExtGroupConfigs.some(config => config.id === ti.config.id));
-            }
-
-            return groupTreeItems;
-        } finally {
-            this._triggeredByDefaultGroupBySetting = false;
-            this._triggeredByFocusGroupSetting = false;
+        // on first load, check if there was persistent setting
+        const focusGroupTreeItem = await this.tryGetFocusGroupTreeItem();
+        if (focusGroupTreeItem) {
+            return [focusGroupTreeItem];
         }
+
+        return Object.values(this.treeMap);
     }
 
 
@@ -166,8 +117,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.suppressIfSuccessful = true;
             context.telemetry.properties.isActivationEvent = 'true';
-            this._triggeredByFocusGroupSetting = true;
-            await this.refresh(context);
+            const groupTreeItem = await this.tryGetFocusGroupTreeItem();
+            this._setCachedChildren(groupTreeItem ? [groupTreeItem] : Object.values(this.treeMap));
         });
 
         registerEvent('treeView.onDidChangeConfiguration', workspace.onDidChangeConfiguration, async (context: IActionContext, e: ConfigurationChangeEvent) => {
@@ -177,68 +128,11 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
             if (e.affectsConfiguration(`${ext.prefix}.groupBy`) ||
                 e.affectsConfiguration(`${ext.prefix}.showHiddenTypes`)) {
-                // we can generate the default groups ahead of time so we don't need to refresh the entire tree
-                this._triggeredByDefaultGroupBySetting = Object.values(GroupBySettings).includes(settingUtils.getWorkspaceSetting<string>('groupBy') as GroupBySettings);
                 // reset the focusedGroup since it won't exist in this grouping
                 await ext.context.workspaceState.update('focusedGroup', '');
                 await this.refresh(context);
             }
         });
-    }
-
-    private async createTreeMaps(clearCache: boolean, context: IActionContext): Promise<void> {
-        // start this as early as possible
-        const resourceGroupsTask = this.getResourceGroups(clearCache, context);
-
-        const getResourceGroupTask: (resourceGroup: string) => Promise<ResourceGroup | undefined> = async (resourceGroup: string) => {
-            return (await resourceGroupsTask).find((rg) => rg.name === resourceGroup);
-        };
-
-        const currentGroupBySetting = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
-        const groupBySettings = Object.values(GroupBySettings) as string[];
-        if (!groupBySettings.includes(currentGroupBySetting)) { groupBySettings.push(currentGroupBySetting); }
-
-        // always create the groups for extensions that we support
-        for (const azExtGroupConfig of this._azExtGroupConfigs) {
-            const groupTreeItem = new GroupTreeItemBase(this, azExtGroupConfig);
-            this.setSubConfigGroupTreeItem(GroupBySettings.ResourceType, azExtGroupConfig.id, groupTreeItem);
-        }
-
-        for (const groupBySetting of groupBySettings) {
-            this.cache.treeMaps[groupBySetting] ??= {};
-
-            const ungroupedTreeItem = new GroupTreeItemBase(this, {
-                label: localize('ungrouped', 'ungrouped'),
-                id: `${this.id}/ungrouped`,
-                iconPath: new ThemeIcon('json')
-            });
-
-            this.cache.treeMaps[groupBySetting][ungroupedTreeItem.id] = ungroupedTreeItem;
-            for (const rgTree of this.cache.appResources) {
-                (<AppResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting, getResourceGroupTask);
-            }
-
-            if (!ungroupedTreeItem.hasChildren()) {
-                delete this.cache.treeMaps[groupBySetting][ungroupedTreeItem.id];
-            }
-        }
-
-        // if this isn't resolved by now, we need it to be so that we can retrieve empty RGs
-        const resourceGroups = await resourceGroupsTask;
-        // only get RGs that are not in the treeMap already
-        const emptyResourceGroups = resourceGroups.filter(rg => !this.cache.treeMaps[GroupBySettings.ResourceGroup][rg.id?.toLowerCase() ?? '']);
-        for (const eRg of emptyResourceGroups) {
-            this.cache.treeMaps[GroupBySettings.ResourceGroup][nonNullProp(eRg, 'id').toLowerCase()] = ResourceGroupTreeItem.createFromResourceGroup(this, eRg);
-        }
-    }
-
-    public getSubConfigGroupTreeItem(groupBy: string, id: string): GroupTreeItemBase | undefined {
-        return this.cache.treeMaps[groupBy]?.[id.toLowerCase()];
-    }
-
-    public setSubConfigGroupTreeItem(groupBy: string, id: string, treeItem: GroupTreeItemBase): void {
-        this.cache.treeMaps[groupBy] ??= {};
-        this.cache.treeMaps[groupBy][id.toLowerCase()] = treeItem;
     }
 
     public async findAppResourceByResourceId(context: IActionContext, resourceId: string): Promise<AppResourceTreeItem | undefined> {
@@ -253,12 +147,16 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         return super.compareChildrenImpl(item1, item2);
     }
 
-    public get treeMap(): { [key: string]: GroupTreeItemBase } {
-        const groupBy = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
-        return this.cache.treeMaps[groupBy] ?? {};
+    private _setCachedChildren(childrenToSet: AzExtTreeItem[]): void {
+        // To access the private cacheChildren, go buckwild and ignore typings!!
+        const thisUnknown = this as unknown as { _cachedChildren: AzExtTreeItem[] };
+        thisUnknown._cachedChildren = childrenToSet;
+        thisUnknown._cachedChildren = childrenToSet.sort((ti1, ti2) => this.compareChildrenImpl(ti1, ti2));
+        this.treeDataProvider.refreshUIOnly(this);
     }
 
-    private async tryGetFocusGroupTreeItem(focusedGroupId: string | undefined): Promise<GroupTreeItemBase | undefined> {
+    private async tryGetFocusGroupTreeItem(): Promise<GroupTreeItemBase | undefined> {
+        const focusedGroupId = await ext.context.workspaceState.get('focusedGroup') as string;
         if (focusedGroupId) {
             const focusedGroup = Object.values(this.treeMap).find(group => group.id.toLowerCase() === focusedGroupId?.toLowerCase());
             if (focusedGroup) {
