@@ -6,7 +6,7 @@
 import { ResourceGroup, ResourceManagementClient } from '@azure/arm-resources';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, IAzureQuickPickOptions, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
-import { AppResource, PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
+import { AppResource, AppResourceFilter, PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
 import { ConfigurationChangeEvent, ThemeIcon, workspace } from 'vscode';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { GroupBySettings } from '../commands/explorer/groupBy';
@@ -47,8 +47,16 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             appResources = GroupTreeItemBase.filterResources(this.cache.appResources);
         }
         if (options?.filter) {
-            const filterType = getResourceType(options.filter.type, options.filter.kind);
-            appResources = appResources.filter((appResource) => getResourceType(appResource.data.type, appResource.data.kind) === filterType);
+            const filters: AppResourceFilter[] = Array.isArray(options.filter) ? options.filter : [options.filter];
+            appResources = appResources.filter((appResource) => filters.some(filter => {
+                if (getResourceType(filter.type, filter.kind) === getResourceType(appResource.data.type, appResource.data.kind)) {
+                    if (filter.tags) {
+                        return Object.entries(filter.tags).every(([tag, value]) => appResource.tags?.[tag] === value);
+                    }
+                    return true;
+                }
+                return false;
+            }));
         }
 
         const picks = appResources.map((appResource) => ({ data: appResource, label: appResource.label, group: appResource.groupConfig.resourceType.label, description: appResource.groupConfig.resourceGroup.label }))
