@@ -5,6 +5,7 @@
 
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import { AppResource, AppResourceResolver, GroupableResource, GroupingConfig, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
+import { TreeItemCollapsibleState } from "vscode";
 import { applicationResourceResolvers } from "../api/registerApplicationResourceResolver";
 import { ext } from "../extensionVariables";
 import { isBuiltinResolver } from "../resolvers/BuiltinResolver";
@@ -28,9 +29,13 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
         return this.resolveResult?.description;
     }
 
+    public get collapsibleState(): TreeItemCollapsibleState {
+        // TODO: verify this is correct
+        return this.resolveResult?.collapsibleState ?? !!this.resolveResult?.loadMoreChildrenImpl ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
+    }
+
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        await this.resolve(clearCache, context);
-        if (this.resolveResult && this.resolveResult.loadMoreChildrenImpl) {
+        if (this.resolveResult?.loadMoreChildrenImpl) {
             // this is actually calling resolveResult.loadMoreChildrenImpl through the Proxy so that the function has the correct thisArg
             return await this.loadMoreChildrenImpl(clearCache, context);
         } else {
@@ -59,7 +64,7 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
 
             this.resolveResult?.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
 
-            await this.refresh(context); // refreshUIOnly?
+            ext.appResourceTree.refreshUIOnly(this);
         });
     }
 

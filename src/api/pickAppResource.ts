@@ -12,10 +12,6 @@ export async function pickAppResource<T extends AzExtTreeItem>(context: ITreeIte
     const subscription: SubscriptionTreeItem = await ext.appResourceTree.showTreeItemPicker(SubscriptionTreeItem.contextValue, context);
     const appResource = await subscription.pickAppResource(context, options);
 
-    if (!appResource.resolveResult) {
-        await appResource.resolve(true, context);
-    }
-
     if (options?.expectedChildContextValue) {
         return ext.appResourceTree.showTreeItemPicker(options.expectedChildContextValue, context, appResource);
     } else {
