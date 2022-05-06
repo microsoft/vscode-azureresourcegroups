@@ -6,6 +6,7 @@
 import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
 import { ext } from "../extensionVariables";
+import { WrapperResolver } from "../resolvers/WrapperResolver";
 import { localize } from "../utils/localize";
 import { settingUtils } from "../utils/settingUtils";
 import { treeUtils } from "../utils/treeUtils";
@@ -57,7 +58,15 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
         return false;
     }
 
-    public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
+    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
+        for (const ti of Object.values(this.treeMap)) {
+            if (ti instanceof ResolvableTreeItemBase) {
+                if (!(ti.getResolver() instanceof WrapperResolver)) {
+                    void ti.resolve(clearCache, context);
+                }
+            }
+        }
+
         let resources = Object.values(this.treeMap) as AzExtTreeItem[];
         const allResources = Object.values(this.treeMap) as AzExtTreeItem[];
 

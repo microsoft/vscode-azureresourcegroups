@@ -29,7 +29,6 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        await this.resolve(clearCache, context);
         if (this.resolveResult && this.resolveResult.loadMoreChildrenImpl) {
             // this is actually calling resolveResult.loadMoreChildrenImpl through the Proxy so that the function has the correct thisArg
             return await this.loadMoreChildrenImpl(clearCache, context);
@@ -53,17 +52,15 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
             }
 
             // Debug only?
-            if (!this.resolveResult) {
+            if (this.resolveResult === null) {
                 throw new Error('Failed to resolve tree item');
             }
 
             this.resolveResult?.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
-
-            await this.refresh(context); // refreshUIOnly?
         });
     }
 
-    private getResolver(): AppResourceResolver {
+    public getResolver(): AppResourceResolver {
         const resolver: AppResourceResolver | undefined =
             Object.values(applicationResourceResolvers).find(r => r.matchesResource(this.data) && !isBuiltinResolver(r));
 

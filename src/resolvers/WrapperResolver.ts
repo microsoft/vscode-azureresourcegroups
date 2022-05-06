@@ -13,7 +13,7 @@ import { BuiltinResolver } from "./BuiltinResolver";
  * This resolver acts as a "placeholder" resolver when an extension is known for the resource type *and* installed (but not yet activated).
  * This returns a wrapper promise that will resolve when the resolver registers, with the value provided by that resolver
  */
-class WrapperResolver implements AppResourceResolver, BuiltinResolver {
+export class WrapperResolver implements AppResourceResolver, BuiltinResolver {
     public readonly resolverKind = 'builtin';
 
     public async resolveResource(subContext: ISubscriptionContext, resource: AppResource): Promise<ResolvedAppResourceBase | undefined | null> {
