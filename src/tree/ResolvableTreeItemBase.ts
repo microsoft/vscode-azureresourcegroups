@@ -34,6 +34,10 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
         return this.resolveResult?.collapsibleState ?? !!this.resolveResult?.loadMoreChildrenImpl ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
     }
 
+    public set collapsibleState(_state: TreeItemCollapsibleState) {
+        // Noop
+    }
+
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
         if (this.resolveResult?.loadMoreChildrenImpl) {
             // this is actually calling resolveResult.loadMoreChildrenImpl through the Proxy so that the function has the correct thisArg
@@ -48,24 +52,22 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     }
 
     public async resolve(clearCache: boolean, context: IActionContext): Promise<void> {
-        ext.activationManager.onNodeTypeResolved(this.data.type);
+        if (!this.resolveResult || clearCache) {
+            ext.activationManager.onNodeTypeResolved(this.data.type);
 
-        const resolver = this.getResolver();
+            const resolver = this.getResolver();
 
-        await this.runWithTemporaryDescription(context, 'Loading...', async () => {
-            if (!this.resolveResult || clearCache) {
+            await this.runWithTemporaryDescription(context, 'Loading...', async () => {
                 this.resolveResult = await resolver.resolveResource(this.subscription, this.data);
-            }
 
-            // Debug only?
-            if (!this.resolveResult) {
-                throw new Error('Failed to resolve tree item');
-            }
+                // Debug only?
+                if (!this.resolveResult) {
+                    throw new Error('Failed to resolve tree item');
+                }
 
-            this.resolveResult?.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
-
-            ext.appResourceTree.refreshUIOnly(this);
-        });
+                this.resolveResult.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
+            });
+        }
     }
 
     private getResolver(): AppResourceResolver {
