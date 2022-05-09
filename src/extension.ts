@@ -52,14 +52,15 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(ext.rootAccountTreeItem);
         ext.appResourceTree = new AzExtTreeDataProvider(ext.rootAccountTreeItem, 'azureResourceGroups.loadMore');
         context.subscriptions.push(ext.appResourceTreeView = vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.appResourceTree, showCollapseAll: true, canSelectMany: true }));
+        context.subscriptions.push(ext.appResourceTree.trackTreeItemCollapsibleState(ext.appResourceTreeView));
 
         // Hook up the resolve handler
-        registerEvent('treeItem.expanded', ext.appResourceTreeView.onDidExpandElement, async (context: IActionContext, eventArgs: vscode.TreeViewExpansionEvent<AzExtTreeItem>) => {
+        registerEvent('treeItem.expanded', ext.appResourceTree.onDidExpandOrRefreshExpandedTreeItem, async (context: IActionContext, treeItem: AzExtTreeItem) => {
             context.telemetry.suppressAll = true;
             context.errorHandling.suppressDisplay = true;
 
-            if (eventArgs.element instanceof GroupTreeItemBase) {
-                await eventArgs.element.resolveAllChildrenOnExpanded(context);
+            if (treeItem instanceof GroupTreeItemBase) {
+                await treeItem.resolveAllChildrenOnExpanded(context);
             }
         });
 
