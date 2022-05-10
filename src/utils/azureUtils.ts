@@ -48,7 +48,7 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
             contextValuesToAdd: ['azureResourceTypeGroup', getResourceType(resource.type, resource.kind)]
         },
         location: {
-            id: `${subscriptionId}/${resource.location}` ?? 'unknown',
+            id: `${subscriptionId}/location/${resource.location}` ?? 'unknown',
             label: resource.location ?? localize('unknown', 'Unknown'),
             icon: new ThemeIcon('globe'),
             contextValuesToAdd: ['azureLocationGroup']
@@ -59,7 +59,7 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
     for (const tag of Object.keys(resource.tags)) {
         groupConfig[`armTag-${tag}`] = {
             label: resource.tags[tag],
-            id: `${subscriptionId}/${resource.tags[tag]}`,
+            id: `${subscriptionId}/${tag}/${resource.tags[tag]}`,
             icon: new ThemeIcon('tag')
         }
     }

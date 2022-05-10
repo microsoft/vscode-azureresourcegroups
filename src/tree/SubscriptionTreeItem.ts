@@ -10,7 +10,7 @@ import { AppResource, PickAppResourceOptions } from '@microsoft/vscode-azext-uti
 import { ConfigurationChangeEvent, ThemeIcon, workspace } from 'vscode';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { GroupBySettings } from '../commands/explorer/groupBy';
-import { azureResourceProviderId } from '../constants';
+import { azureResourceProviderId, ungroupedId } from '../constants';
 import { ext } from '../extensionVariables';
 import { createActivityContext } from '../utils/activityUtils';
 import { createResourceClient } from '../utils/azureClients';
@@ -209,7 +209,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
             const ungroupedTreeItem = new GroupTreeItemBase(this, {
                 label: localize('ungrouped', 'ungrouped'),
-                id: `${this.id}/ungrouped`,
+                id: `${this.id}/${ungroupedId}`,
                 iconPath: new ThemeIcon('json')
             });
 
@@ -247,7 +247,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     }
 
     public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {
-        const id = `${this.id}/ungrouped`;
+        const id = `${this.id}/${ungroupedId}`;
         if (item1.id === id) { return 1; } else if (item2.id === id) { return -1; }
 
         return super.compareChildrenImpl(item1, item2);

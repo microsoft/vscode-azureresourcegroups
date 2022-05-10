@@ -5,3 +5,5 @@
 
 export const azureResourceProviderId: string = 'vscode-azureresourcegroups.azureResourceProvider';
 export const contributesKey = 'x-azResources';
+// every group id has a groupBySetting/value format, so just following it
+export const ungroupedId = 'group/ungrouped'
