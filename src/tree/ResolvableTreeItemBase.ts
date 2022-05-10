@@ -29,13 +29,8 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
         return this.resolveResult?.description;
     }
 
-    public get collapsibleState(): TreeItemCollapsibleState {
-        // TODO: verify this is correct
-        return this.resolveResult?.collapsibleState ?? !!this.resolveResult?.loadMoreChildrenImpl ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
-    }
-
-    public set collapsibleState(_state: TreeItemCollapsibleState) {
-        // Noop
+    public override get collapsibleState(): TreeItemCollapsibleState | undefined {
+        return this.resolveResult?.initialCollapsibleState ?? !!this.resolveResult?.loadMoreChildrenImpl ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
@@ -67,6 +62,8 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
 
                 this.resolveResult.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
             });
+
+            // It is not needed to refresh at this point, because `runWithTemporaryDescription` already does that
         }
     }
 
