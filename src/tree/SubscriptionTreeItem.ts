@@ -46,6 +46,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         if (!showHiddenTypes) {
             appResources = GroupTreeItemBase.filterResources(this.cache.appResources);
         }
+
         if (options?.filter) {
             const filters: AppResourceFilter[] = Array.isArray(options.filter) ? options.filter : [options.filter];
             appResources = appResources.filter((appResource) => filters.some(filter => {
@@ -59,6 +60,13 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             }));
         }
 
+        // If requested, resolve the `AppResourceTreeItem`s now
+        if (options?.resolveQuickPicksBeforeDisplay) {
+            await Promise.all(
+                appResources.map(async appResource => appResource.resolve(false, context))
+            );
+        }
+
         const picks = appResources.map((appResource) => ({ data: appResource, label: appResource.label, group: appResource.groupConfig.resourceType.label, description: appResource.groupConfig.resourceGroup.label }))
             .sort((a, b) => a.group.localeCompare(b.group));
 
@@ -68,7 +76,13 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             ...options,
         };
 
-        return (await context.ui.showQuickPick(picks, quickPickOptions)).data;
+        const result = await context.ui.showQuickPick(picks, quickPickOptions);
+
+        // If not resolved yet, resolve now
+        // Internally, `resolve` will noop if it is already resolved
+        await result.data.resolve(false, context);
+
+        return result.data;
     }
 
     private _azExtGroupConfigs = createAzureExtensionsGroupConfig(nonNullProp(this, 'id'));

@@ -53,7 +53,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
         label: localize('loading', 'Loading...')
     }
 
-    public collapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None;
+    public initialCollapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None;
 
     public status?: ActivityStatus;
     public error?: unknown;
@@ -106,7 +106,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
             this.state = data;
             this.status = ActivityStatus.Done;
             if (this.state.getChildren) {
-                this.collapsibleState = TreeItemCollapsibleState.Expanded;
+                this.initialCollapsibleState = TreeItemCollapsibleState.Expanded;
             }
             await this.refresh(context);
         })
@@ -117,7 +117,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
             this.state = data;
             this.status = ActivityStatus.Done;
             this.error = data.error;
-            this.collapsibleState = TreeItemCollapsibleState.Expanded;
+            this.initialCollapsibleState = TreeItemCollapsibleState.Expanded;
             await this.refresh(context);
         });
     }

@@ -19,7 +19,7 @@ class ShallowResourceResolver implements AppResourceResolver, BuiltinResolver {
     public resolveResource(_subContext: ISubscriptionContext, _resource: AppResource): ResolvedAppResourceBase {
         return {
             commandId: 'azureResourceGroups.viewProperties',
-            collapsibleState: TreeItemCollapsibleState.None
+            initialCollapsibleState: TreeItemCollapsibleState.None
         };
     }
 
