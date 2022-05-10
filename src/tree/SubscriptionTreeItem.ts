@@ -79,9 +79,8 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const result = await context.ui.showQuickPick(picks, quickPickOptions);
 
         // If not resolved yet, resolve now
-        if (!result.data.resolveResult) {
-            await result.data.resolve(false, context);
-        }
+        // Internally, `resolve` will noop if it is already resolved
+        await result.data.resolve(false, context);
 
         return result.data;
     }
