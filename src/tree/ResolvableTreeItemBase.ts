@@ -21,12 +21,14 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     protected readonly contextValues: Set<string> = new Set<string>();
     public abstract parent?: AzExtParentTreeItem | undefined;
 
+    private _tempDescription: string | undefined = 'Loading...';
+
     public get contextValue(): string {
         return Array.from(this.contextValues.values()).sort().join(';');
     }
 
     public get description(): string | undefined {
-        return this.resolveResult?.description;
+        return this._tempDescription ?? this.resolveResult?.description;
     }
 
     public override get collapsibleState(): TreeItemCollapsibleState | undefined {
@@ -46,13 +48,14 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
         return false;
     }
 
-    public async resolve(clearCache: boolean, context: IActionContext): Promise<void> {
+    public async resolve(clearCache: boolean, _context: IActionContext): Promise<void> {
         if (!this.resolveResult || clearCache) {
             ext.activationManager.onNodeTypeResolved(this.data.type);
 
             const resolver = this.getResolver();
 
-            await this.runWithTemporaryDescription(context, 'Loading...', async () => {
+            try {
+                this._tempDescription = 'Loading...';
                 this.resolveResult = await resolver.resolveResource(this.subscription, this.data);
 
                 // Debug only?
@@ -61,9 +64,10 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
                 }
 
                 this.resolveResult.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
-            });
-
-            // It is not needed to refresh at this point, because `runWithTemporaryDescription` already does that
+            } finally {
+                this._tempDescription = undefined;
+                this.treeDataProvider.refreshUIOnly(this.parent);
+            }
         }
     }
 
