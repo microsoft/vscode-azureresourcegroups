@@ -9,15 +9,20 @@ import { Command, commands, extensions } from 'vscode';
 import { contributesKey } from '../constants';
 import { SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
 
+interface AzExtCreateResourceCommand extends Command {
+    title: string;
+    detail?: string;
+}
+
 export async function createResource(_context: IActionContext, _node?: SubscriptionTreeItem): Promise<void> {
     const all = extensions.all;
 
     const extCommands = all.map((azExt) => azExt.packageJSON?.contributes?.[contributesKey]?.commands as unknown).filter((value) => value !== undefined);
-    const createCommands: Command[] = [];
+    const createCommands: AzExtCreateResourceCommand[] = [];
 
-    extCommands.forEach((extCommand: Command[]) => createCommands.push(...extCommand));
+    extCommands.forEach((extCommand: AzExtCreateResourceCommand[]) => createCommands.push(...extCommand));
 
-    const pick = await _context.ui.showQuickPick(createCommands.map((command: Command): IAzureQuickPickItem<Command> => ({ label: command.title, data: command })), { placeHolder: 'Select a resource to create' });
+    const pick = await _context.ui.showQuickPick(createCommands.map((command: AzExtCreateResourceCommand): IAzureQuickPickItem<AzExtCreateResourceCommand> => ({ label: command.title, data: command, detail: command.detail })), { placeHolder: 'Select a resource to create' });
 
     if (pick) {
         await commands.executeCommand(pick.data.command);
