@@ -65,6 +65,7 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
 
                 this.resolveResult.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
             } finally {
+                // Prevent double spinners, see https://github.com/microsoft/vscode-azureresourcegroups/pull/230#discussion_r869913020
                 this.treeDataProvider.refreshUIOnly(this.parent);
                 this._temporaryDescription = undefined;
             }
