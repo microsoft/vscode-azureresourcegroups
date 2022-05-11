@@ -187,9 +187,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             if (focusedGroup) {
                 return focusedGroup;
             }
-
-            // if we can't find it, erase the current setting, return current cached tree
-            await ext.context.workspaceState.update('focusedGroup', '');
         }
 
         return undefined;
