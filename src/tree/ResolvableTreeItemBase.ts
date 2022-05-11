@@ -22,12 +22,14 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     public abstract parent?: AzExtParentTreeItem | undefined;
     public abstract fullId: string;
 
+    private _temporaryDescription: string | undefined = 'Loading...';
+
     public get contextValue(): string {
         return Array.from(this.contextValues.values()).sort().join(';');
     }
 
     public get description(): string | undefined {
-        return this.resolveResult?.description;
+        return this._temporaryDescription ?? this.resolveResult?.description;
     }
 
     public override get collapsibleState(): TreeItemCollapsibleState | undefined {
@@ -47,13 +49,14 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
         return false;
     }
 
-    public async resolve(clearCache: boolean, context: IActionContext): Promise<void> {
+    public async resolve(clearCache: boolean, _context: IActionContext): Promise<void> {
         if (!this.resolveResult || clearCache) {
             ext.activationManager.onNodeTypeResolved(this.data.type);
 
             const resolver = this.getResolver();
 
-            await this.runWithTemporaryDescription(context, 'Loading...', async () => {
+            try {
+                this._temporaryDescription = 'Loading...';
                 this.resolveResult = await resolver.resolveResource(this.subscription, this.data);
 
                 // Debug only?
@@ -62,9 +65,11 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
                 }
 
                 this.resolveResult.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
-            });
-
-            // It is not needed to refresh at this point, because `runWithTemporaryDescription` already does that
+            } finally {
+                // Prevent double spinners, see https://github.com/microsoft/vscode-azureresourcegroups/pull/230#discussion_r869913020
+                this.treeDataProvider.refreshUIOnly(this.parent);
+                this._temporaryDescription = undefined;
+            }
         }
     }
 
