@@ -52,13 +52,13 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
         return false;
     }
 
-    public async resolve(clearCache: boolean, _context: IActionContext): Promise<void> {
+    public async resolve(clearCache: boolean, context: IActionContext): Promise<void> {
         if (!this.resolveResult || clearCache) {
             ext.activationManager.onNodeTypeResolved(this.data.type);
 
             const resolver = this.getResolver();
 
-            await this.runWithTemporaryDescription(_context, {
+            await this.runWithTemporaryDescription(context, {
                 description: 'Loading...',
                 skipRefresh: true
             }, async () => {
