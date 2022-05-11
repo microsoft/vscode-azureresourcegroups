@@ -15,6 +15,7 @@ import { createGroupConfigFromResource, getIconPath } from "../utils/azureUtils"
 import { settingUtils } from "../utils/settingUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
 import { ResolvableTreeItemBase } from "./ResolvableTreeItemBase";
+import { GroupTreeMap } from "./ResourceCache";
 import { ResourceGroupTreeItem } from "./ResourceGroupTreeItem";
 import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 
@@ -118,9 +119,9 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
 
     public get parent(): GroupTreeItemBase | undefined {
         const groupBySetting = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
-        const configId: string | undefined = this.groupConfig[groupBySetting]?.id ?? `${this.rootGroupConfig.id}/${ungroupedId}`;
+        const configId: string | undefined = this.groupConfig[groupBySetting]?.id.toLowerCase() ?? `${this.rootGroupConfig.id}/${ungroupedId}`;
 
-        return (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(groupBySetting, configId);
+        return (<SubscriptionTreeItem>this.rootGroupTreeItem).treeMap[configId];
     }
 
     public set parent(_node: GroupTreeItemBase | undefined) {
@@ -132,13 +133,16 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
-    public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string, getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>): void {
-        const configId: string | undefined = this.groupConfig[groupBySetting]?.id ?? `${this.rootGroupConfig.id}/${ungroupedId}`;
+    public mapSubGroupConfigTree(context: IActionContext,
+        groupBySetting: string,
+        treeMap: GroupTreeMap,
+        getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>): void {
 
-        let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(groupBySetting, configId);
+        const configId: string | undefined = this.groupConfig[groupBySetting]?.id.toLowerCase() ?? `${this.rootGroupConfig.id}/${ungroupedId}`;
+        let subGroupTreeItem = treeMap[configId];
         if (!subGroupTreeItem) {
             subGroupTreeItem = this.createSubGroupTreeItem(context, groupBySetting, getResourceGroup);
-            (<SubscriptionTreeItem>this.rootGroupTreeItem).setSubConfigGroupTreeItem(groupBySetting, configId, subGroupTreeItem)
+            treeMap[configId] = subGroupTreeItem;
         }
 
         subGroupTreeItem.treeMap[this.id] = this;
@@ -148,7 +152,6 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
 
     public createSubGroupTreeItem(_context: IActionContext, groupBySetting: string, getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>): GroupTreeItemBase {
         switch (groupBySetting) {
-            // TODO: Use ResovableTreeItem here
             case GroupBySettings.ResourceGroup:
                 return new ResourceGroupTreeItem(this.rootGroupTreeItem, this.groupConfig.resourceGroup, getResourceGroup);
             default:
