@@ -14,7 +14,7 @@ interface AzExtCreateResourceCommand extends Command {
     detail?: string;
 }
 
-export async function createResource(_context: IActionContext, _node?: SubscriptionTreeItem): Promise<void> {
+export async function createResource(context: IActionContext, _node?: SubscriptionTreeItem): Promise<void> {
     const all = extensions.all;
 
     const extCommands = all.map((azExt) => azExt.packageJSON?.contributes?.[contributesKey]?.commands as unknown).filter((value) => value !== undefined);
@@ -22,7 +22,7 @@ export async function createResource(_context: IActionContext, _node?: Subscript
 
     extCommands.forEach((extCommand: AzExtCreateResourceCommand[]) => createCommands.push(...extCommand));
 
-    const pick = await _context.ui.showQuickPick(createCommands.map((command: AzExtCreateResourceCommand): IAzureQuickPickItem<AzExtCreateResourceCommand> => ({ label: command.title, data: command, detail: command.detail })), { placeHolder: 'Select a resource to create' });
+    const pick = await context.ui.showQuickPick(createCommands.sort((a, b) => a.title.localeCompare(b.title)).map((command: AzExtCreateResourceCommand): IAzureQuickPickItem<AzExtCreateResourceCommand> => ({ label: command.title, data: command, detail: command.detail })), { placeHolder: 'Select a resource to create' });
 
     if (pick) {
         await commands.executeCommand(pick.data.command);
