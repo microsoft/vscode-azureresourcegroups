@@ -22,6 +22,9 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     public abstract parent?: AzExtParentTreeItem | undefined;
     public abstract fullId: string;
 
+    // Setting this forces the tree item to always start out with a spinner icon, and have a "Loading..." description
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     private _temporaryDescription: string | undefined = 'Loading...';
 
     public get contextValue(): string {
@@ -29,7 +32,7 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     }
 
     public get description(): string | undefined {
-        return this._temporaryDescription ?? this.resolveResult?.description;
+        return this.resolveResult?.description;
     }
 
     public override get collapsibleState(): TreeItemCollapsibleState | undefined {
@@ -55,8 +58,10 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
 
             const resolver = this.getResolver();
 
-            try {
-                this._temporaryDescription = 'Loading...';
+            await this.runWithTemporaryDescription(_context, {
+                description: 'Loading...',
+                skipRefresh: true
+            }, async () => {
                 this.resolveResult = await resolver.resolveResource(this.subscription, this.data);
 
                 // Debug only?
@@ -65,11 +70,7 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
                 }
 
                 this.resolveResult.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
-            } finally {
-                // Prevent double spinners, see https://github.com/microsoft/vscode-azureresourcegroups/pull/230#discussion_r869913020
-                this.treeDataProvider.refreshUIOnly(this.parent);
-                this._temporaryDescription = undefined;
-            }
+            });
         }
     }
 
