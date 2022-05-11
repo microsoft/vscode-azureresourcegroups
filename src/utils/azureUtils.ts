@@ -218,7 +218,7 @@ const supportedTypes: SupportedTypeMap = {
     'microsoft.dbformysql/servers': { displayName: localize('mysqlServers', 'MySql servers') },
     'microsoft.sql/servers/databases': { displayName: localize('sqlDatabases', 'SQL databases') },
     'microsoft.sql/servers': { displayName: localize('sqlServers', 'SQL servers') },
-    'microsoft.documentdb/databaseaccounts': { displayName: localize('documentDB', 'Azure CosmosDB') },
+    'microsoft.documentdb/databaseaccounts': { displayName: localize('documentDB', 'Azure Cosmos DB') },
     'microsoft.operationalinsights/workspaces': { displayName: localize('operationalInsightsWorkspaces', 'Operational Insights workspaces') },
     'microsoft.operationsmanagement/solutions': { displayName: localize('operationsManagementSolutions', 'Operations management solutions') },
     'microsoft.insights/components': { displayName: localize('insightsComponents', 'Application Insights') },
