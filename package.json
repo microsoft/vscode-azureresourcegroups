@@ -60,50 +60,50 @@
             {
                 "command": "azureResourceGroups.createResourceGroup",
                 "title": "%azureResourceGroups.createResourceGroup%",
-                "category": "Azure Resource Groups"
+                "category": "Azure"
             },
             {
                 "command": "azureResourceGroups.installExtension",
                 "title": "Install Azure extension",
                 "icon": "$(extensions)",
-                "category": "Azure Resource Groups"
+                "category": "Azure"
             },
             {
                 "command": "azureResourceGroups.createResource",
                 "title": "Create Resource...",
-                "category": "Azure Resource Groups",
+                "category": "Azure",
                 "icon": "$(add)"
             },
             {
                 "command": "azureResourceGroups.deleteResourceGroup",
                 "title": "%azureResourceGroups.deleteResourceGroup%",
-                "category": "Azure Resource Groups"
+                "category": "Azure"
             },
             {
                 "command": "azureResourceGroups.editTags",
                 "title": "%azureResourceGroups.editTags%",
-                "category": "Azure Resource Groups"
+                "category": "Azure"
             },
             {
                 "command": "azureResourceGroups.loadMore",
                 "title": "%azureResourceGroups.loadMore%",
-                "category": "Azure Resource Groups"
+                "category": "Azure"
             },
             {
                 "command": "azureResourceGroups.openInPortal",
                 "title": "%azureResourceGroups.openInPortal%",
-                "category": "Azure Resource Groups"
+                "category": "Azure"
             },
             {
                 "command": "azureResourceGroups.refresh",
                 "title": "%azureResourceGroups.refresh%",
-                "category": "Azure Resource Groups",
+                "category": "Azure",
                 "icon": "$(refresh)"
             },
             {
                 "command": "azureResourceGroups.revealResource",
                 "title": "%azureResourceGroups.revealResource%",
-                "category": "Azure Resource Groups"
+                "category": "Azure"
             },
             {
                 "command": "azureResourceGroups.selectSubscriptions",
@@ -113,12 +113,12 @@
             {
                 "command": "azureResourceGroups.viewProperties",
                 "title": "%azureResourceGroups.viewProperties%",
-                "category": "Azure Resource Groups"
+                "category": "Azure"
             },
             {
                 "command": "azureResourceGroups.reportIssue",
                 "title": "%azureResourceGroups.reportIssue%",
-                "category": "Azure Resource Groups"
+                "category": "Azure"
             },
             {
                 "command": "ms-azuretools.getStarted",
@@ -138,55 +138,55 @@
             {
                 "command": "azureResourceGroups.groupBy.resourceGroup",
                 "title": "%azureResourceGroups.groupBy.resourceGroup%",
-                "category": "Azure Resource Groups",
+                "category": "Azure",
                 "icon": "$(gear)"
             },
             {
                 "command": "azureResourceGroups.groupBy.resourceType",
                 "title": "%azureResourceGroups.groupBy.resourceType%",
-                "category": "Azure Resource Groups",
+                "category": "Azure",
                 "icon": "$(gear)"
             },
             {
                 "command": "azureResourceGroups.groupBy.location",
                 "title": "%azureResourceGroups.groupBy.location%",
-                "category": "Azure Resource Groups",
+                "category": "Azure",
                 "icon": "$(gear)"
             },
             {
                 "command": "azureResourceGroups.groupBy.armTag",
                 "title": "%azureResourceGroups.groupBy.armTag%",
-                "category": "Azure Resource Groups",
+                "category": "Azure",
                 "icon": "$(gear)"
             },
             {
                 "command": "azureResourceGroups.refreshWorkspace",
                 "title": "%azureResourceGroups.refresh%",
-                "category": "Azure Resource Groups",
+                "category": "Azure",
                 "icon": "$(refresh)"
             },
             {
                 "command": "azureResourceGroups.focusGroup",
                 "title": "%azureResourceGroups.focusGroup%",
-                "category": "Azure Resource Groups",
+                "category": "Azure",
                 "icon": "$(zoom-in)"
             },
             {
                 "command": "azureResourceGroups.unfocusGroup",
                 "title": "%azureResourceGroups.unfocusGroup%",
-                "category": "Azure Resource Groups",
+                "category": "Azure",
                 "icon": "$(zoom-out)"
             },
             {
                 "command": "azureResourceGroups.clearActivities",
                 "title": "%azureResourceGroups.clearActivities%",
-                "category": "Azure Resource Groups",
+                "category": "Azure",
                 "icon": "$(clear-all)"
             },
             {
                 "command": "azureResourceGroups.toggleShowAllResources",
                 "title": "%azureResourceGroups.toggleShowAllResources%",
-                "category": "Azure Resource Groups"
+                "category": "Azure"
             }
         ],
         "viewsContainers": {
