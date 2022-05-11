@@ -21,14 +21,14 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     protected readonly contextValues: Set<string> = new Set<string>();
     public abstract parent?: AzExtParentTreeItem | undefined;
 
-    private _tempDescription: string | undefined = 'Loading...';
+    private _temporaryDescription: string | undefined = 'Loading...';
 
     public get contextValue(): string {
         return Array.from(this.contextValues.values()).sort().join(';');
     }
 
     public get description(): string | undefined {
-        return this._tempDescription ?? this.resolveResult?.description;
+        return this._temporaryDescription ?? this.resolveResult?.description;
     }
 
     public override get collapsibleState(): TreeItemCollapsibleState | undefined {
@@ -55,7 +55,7 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
             const resolver = this.getResolver();
 
             try {
-                this._tempDescription = 'Loading...';
+                this._temporaryDescription = 'Loading...';
                 this.resolveResult = await resolver.resolveResource(this.subscription, this.data);
 
                 // Debug only?
@@ -65,8 +65,8 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
 
                 this.resolveResult.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
             } finally {
-                this._tempDescription = undefined;
                 this.treeDataProvider.refreshUIOnly(this.parent);
+                this._temporaryDescription = undefined;
             }
         }
     }
