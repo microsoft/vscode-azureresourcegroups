@@ -20,6 +20,7 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     public data: AppResource;
     protected readonly contextValues: Set<string> = new Set<string>();
     public abstract parent?: AzExtParentTreeItem | undefined;
+    public abstract fullId: string;
 
     public get contextValue(): string {
         return Array.from(this.contextValues.values()).sort().join(';');
