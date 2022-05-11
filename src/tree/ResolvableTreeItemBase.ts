@@ -71,6 +71,8 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
 
                 this.resolveResult.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
             });
+
+            // It is not needed to refresh at this point, because `runWithTemporaryDescription` already does that
         }
     }
 
