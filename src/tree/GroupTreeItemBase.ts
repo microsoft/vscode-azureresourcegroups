@@ -57,11 +57,9 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
         return false;
     }
 
-    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        for (const ti of Object.values(this.treeMap)) {
-            if (ti instanceof ResolvableTreeItemBase) {
-                void ti.resolve(clearCache, context);
-            }
+    public async loadMoreChildrenImpl(clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
+        if (clearCache) {
+            // this.treeMap = {};
         }
 
         let resources = Object.values(this.treeMap) as AzExtTreeItem[];
@@ -118,6 +116,12 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
     public async toggleShowAllResources(context: IActionContext): Promise<void> {
         this._showAllResources = !this._showAllResources;
         await this.refresh(context);
+    }
+
+    public async resolveAllChildrenOnExpanded(context: IActionContext): Promise<void> {
+        await Promise.all(
+            Object.values(this.treeMap).map(async resolvable => resolvable.resolve(false, context))
+        );
     }
 
     private createToggleShowAllResourcesTreeItem(numOfResources: number, numOfTotalResources: number): GenericTreeItem {

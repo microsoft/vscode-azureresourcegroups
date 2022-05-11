@@ -10,7 +10,7 @@ import { AppResourceFilter, PickAppResourceOptions } from '@microsoft/vscode-aze
 import { ConfigurationChangeEvent, workspace } from 'vscode';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { GroupBySettings } from '../commands/explorer/groupBy';
-import { azureResourceProviderId } from '../constants';
+import { azureResourceProviderId, ungroupedId } from '../constants';
 import { ext } from '../extensionVariables';
 import { createActivityContext } from '../utils/activityUtils';
 import { createResourceClient } from '../utils/azureClients';
@@ -37,6 +37,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         if (!showHiddenTypes) {
             appResources = GroupTreeItemBase.filterResources(this.cache.appResources);
         }
+
         if (options?.filter) {
             const filters: AppResourceFilter[] = Array.isArray(options.filter) ? options.filter : [options.filter];
             appResources = appResources.filter((appResource) => filters.some(filter => {
@@ -50,6 +51,13 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             }));
         }
 
+        // If requested, resolve the `AppResourceTreeItem`s now
+        if (options?.resolveQuickPicksBeforeDisplay) {
+            await Promise.all(
+                appResources.map(async appResource => appResource.resolve(false, context))
+            );
+        }
+
         const picks = appResources.map((appResource) => ({ data: appResource, label: appResource.label, group: appResource.groupConfig.resourceType.label, description: appResource.groupConfig.resourceGroup.label }))
             .sort((a, b) => a.group.localeCompare(b.group));
 
@@ -59,7 +67,13 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             ...options,
         };
 
-        return (await context.ui.showQuickPick(picks, quickPickOptions)).data;
+        const result = await context.ui.showQuickPick(picks, quickPickOptions);
+
+        // If not resolved yet, resolve now
+        // Internally, `resolve` will noop if it is already resolved
+        await result.data.resolve(false, context);
+
+        return result.data;
     }
 
     private async resolveResourceGroupsIfNeeded(context: IActionContext): Promise<void> {
@@ -152,7 +166,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     }
 
     public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {
-        const id = `${this.id}/ungrouped`;
+        const id = `${this.id}/${ungroupedId}`;
         if (item1.id === id) { return 1; } else if (item2.id === id) { return -1; }
 
         return super.compareChildrenImpl(item1, item2);

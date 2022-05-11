@@ -48,7 +48,7 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
             contextValuesToAdd: ['azureResourceTypeGroup', getResourceType(resource.type, resource.kind)]
         },
         location: {
-            id: `${subscriptionId}/${resource.location}` ?? 'unknown',
+            id: `${subscriptionId}/location/${resource.location}` ?? 'unknown',
             label: resource.location ?? localize('unknown', 'Unknown'),
             icon: new ThemeIcon('globe'),
             contextValuesToAdd: ['azureLocationGroup']
@@ -59,7 +59,7 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
     for (const tag of Object.keys(resource.tags)) {
         groupConfig[`armTag-${tag}`] = {
             label: resource.tags[tag],
-            id: `${subscriptionId}/${resource.tags[tag]}`,
+            id: `${subscriptionId}/${tag}/${resource.tags[tag]}`,
             icon: new ThemeIcon('tag')
         }
     }
@@ -92,7 +92,7 @@ function getId(subscriptionId?: string, type?: string, kind?: string): string {
 
 export function getIconPath(type?: string, kind?: string): TreeItemIconPath {
     let iconName: string;
-    const rType: string = getResourceType(type, kind);
+    const rType: string = getResourceType(type, kind).toLowerCase();
     if (supportedIconTypes.includes(rType as SupportedTypes)) {
         iconName = path.join('providers', rType);
     } else {
@@ -117,7 +117,7 @@ export async function getArmTagKeys(context: IActionContext): Promise<Set<string
 
 // Execute `npm run listIcons` from root of repo to re-generate this list after adding an icon
 export const supportedIconTypes = [
-    'microsoft.web/sites/functionapp',
+    'microsoft.web/functionapp',
     'microsoft.web/hostingenvironments',
     'microsoft.web/kubeenvironments',
     'microsoft.web/serverfarms',
@@ -183,7 +183,7 @@ interface SupportedType {
 function getName(type?: string, kind?: string): string | undefined {
     type = type?.toLowerCase();
     if (isFunctionApp(type, kind)) {
-        type = 'microsoft.web/sites/functionapp';
+        type = 'microsoft.web/functionapp';
     }
     if (type) {
         return supportedTypes[type as SupportedTypes]?.displayName;
@@ -197,7 +197,7 @@ type SupportedTypeMap = Partial<Record<SupportedTypes, SupportedType> & Record<s
 const supportedTypes: SupportedTypeMap = {
     'microsoft.web/sites': { displayName: localize('webApp', 'App Services') },
     'microsoft.web/staticsites': { displayName: localize('staticWebApp', 'Static Web Apps') },
-    'microsoft.web/sites/functionapp': { displayName: localize('functionApp', 'Function App') },
+    'microsoft.web/functionapp': { displayName: localize('functionApp', 'Function App') },
     'microsoft.compute/virtualmachines': { displayName: localize('virtualMachines', 'Virtual machines') },
     'microsoft.storage/storageaccounts': { displayName: localize('storageAccounts', 'Storage accounts') },
     'microsoft.network/networksecuritygroups': { displayName: localize('networkSecurityGroups', 'Network security groups') },
@@ -244,5 +244,6 @@ function getRelevantKind(type?: string, kind?: string): string | undefined {
 
 export function getResourceType(type?: string, kind?: string): string {
     const relevantKind = getRelevantKind(type, kind);
-    return `${type?.toLowerCase()}${relevantKind ? `/${relevantKind}` : ''}`;
+    const provider = type?.split('/')?.[0];
+    return relevantKind ? `${provider}/${relevantKind}` : type?.toLowerCase() ?? '';
 }

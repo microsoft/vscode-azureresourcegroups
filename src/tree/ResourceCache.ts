@@ -8,6 +8,7 @@ import { IActionContext, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { ThemeIcon } from "vscode";
 import { GroupBySettings } from "../commands/explorer/groupBy";
+import { ungroupedId } from "../constants";
 import { createAzureExtensionsGroupConfig } from "../utils/azureUtils";
 import { localize } from "../utils/localize";
 import { settingUtils } from "../utils/settingUtils";
@@ -56,7 +57,7 @@ export class ResourceCache {
 
         const ungroupedTreeItem = new GroupTreeItemBase(this._subscriptionTreeItem, {
             label: localize('ungrouped', 'ungrouped'),
-            id: `${this._subscriptionTreeItem.id}/ungrouped`,
+            id: `${this._subscriptionTreeItem.id}/${ungroupedId}`,
             iconPath: new ThemeIcon('json')
         });
 
