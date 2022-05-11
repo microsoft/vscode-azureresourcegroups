@@ -9,6 +9,7 @@ import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration 
 import { FileChangeType } from "vscode";
 import { azureExtensions } from "../azureExtensions";
 import { GroupBySettings } from "../commands/explorer/groupBy";
+import { ungroupedId } from "../constants";
 import { ext } from "../extensionVariables";
 import { createGroupConfigFromResource, getIconPath } from "../utils/azureUtils";
 import { settingUtils } from "../utils/settingUtils";
@@ -103,6 +104,10 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         return nonNullProp(this.data, 'id');
     }
 
+    public get fullId(): string {
+        return `${this.parent?.id}${this.id}`;
+    }
+
     public get label(): string {
         return this.name;
     }
@@ -113,7 +118,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
 
     public get parent(): GroupTreeItemBase | undefined {
         const groupBySetting = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
-        const configId: string | undefined = this.groupConfig[groupBySetting]?.id ?? `${this.rootGroupConfig.id}/ungrouped`;
+        const configId: string | undefined = this.groupConfig[groupBySetting]?.id ?? `${this.rootGroupConfig.id}/${ungroupedId}`;
 
         return (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(groupBySetting, configId);
     }
@@ -128,7 +133,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     }
 
     public mapSubGroupConfigTree(context: IActionContext, groupBySetting: string, getResourceGroup: (resourceGroup: string) => Promise<ResourceGroup | undefined>): void {
-        const configId: string | undefined = this.groupConfig[groupBySetting]?.id ?? `${this.rootGroupConfig.id}/ungrouped`;
+        const configId: string | undefined = this.groupConfig[groupBySetting]?.id ?? `${this.rootGroupConfig.id}/${ungroupedId}`;
 
         let subGroupTreeItem = (<SubscriptionTreeItem>this.rootGroupTreeItem).getSubConfigGroupTreeItem(groupBySetting, configId);
         if (!subGroupTreeItem) {
