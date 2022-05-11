@@ -6,6 +6,7 @@
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import { AppResource, AppResourceResolver, GroupableResource, GroupingConfig, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { TreeItemCollapsibleState } from "vscode";
+import { localize } from "vscode-nls";
 import { applicationResourceResolvers } from "../api/registerApplicationResourceResolver";
 import { ext } from "../extensionVariables";
 import { isBuiltinResolver } from "../resolvers/BuiltinResolver";
@@ -13,6 +14,8 @@ import { installableAppResourceResolver } from "../resolvers/InstallableAppResou
 import { outdatedAppResourceResolver } from "../resolvers/OutdatedAppResourceResolver";
 import { shallowResourceResolver } from "../resolvers/ShallowResourceResolver";
 import { wrapperResolver } from "../resolvers/WrapperResolver";
+
+const loading = localize('loading', "Loading...");
 
 export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem implements GroupableResource {
     public groupConfig: GroupingConfig;
@@ -25,7 +28,7 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     // Setting this forces the tree item to always start out with a spinner icon, and have a "Loading..." description
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    private _temporaryDescription: string | undefined = 'Loading...';
+    private _temporaryDescription: string | undefined = loading;
 
     public get contextValue(): string {
         return Array.from(this.contextValues.values()).sort().join(';');
@@ -59,7 +62,7 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
             const resolver = this.getResolver();
 
             await this.runWithTemporaryDescription(context, {
-                description: 'Loading...',
+                description: loading,
                 skipRefresh: true
             }, async () => {
                 this.resolveResult = await resolver.resolveResource(this.subscription, this.data);
