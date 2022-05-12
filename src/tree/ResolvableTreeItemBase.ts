@@ -6,7 +6,6 @@
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import { AppResource, AppResourceResolver, GroupableResource, GroupingConfig, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { TreeItemCollapsibleState } from "vscode";
-import { localize } from "vscode-nls";
 import { applicationResourceResolvers } from "../api/registerApplicationResourceResolver";
 import { ext } from "../extensionVariables";
 import { isBuiltinResolver } from "../resolvers/BuiltinResolver";
@@ -14,6 +13,7 @@ import { installableAppResourceResolver } from "../resolvers/InstallableAppResou
 import { outdatedAppResourceResolver } from "../resolvers/OutdatedAppResourceResolver";
 import { shallowResourceResolver } from "../resolvers/ShallowResourceResolver";
 import { wrapperResolver } from "../resolvers/WrapperResolver";
+import { localize } from "../utils/localize";
 
 const loading = localize('loading', "Loading...");
 
