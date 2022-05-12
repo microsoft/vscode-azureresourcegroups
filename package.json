@@ -417,7 +417,7 @@
                     "azureResourceGroups.groupBy": {
                         "type": "string",
                         "description": "%azureResourceGroups.groupBy%",
-                        "default": "resourceGroup"
+                        "default": "resourceType"
                     },
                     "azureResourceGroups.suppressActivityNotifications": {
                         "type": "boolean",
