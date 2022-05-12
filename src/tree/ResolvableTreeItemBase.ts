@@ -13,6 +13,9 @@ import { installableAppResourceResolver } from "../resolvers/InstallableAppResou
 import { outdatedAppResourceResolver } from "../resolvers/OutdatedAppResourceResolver";
 import { shallowResourceResolver } from "../resolvers/ShallowResourceResolver";
 import { wrapperResolver } from "../resolvers/WrapperResolver";
+import { localize } from "../utils/localize";
+
+const loading = localize('loading', "Loading...");
 
 export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem implements GroupableResource {
     public groupConfig: GroupingConfig;
@@ -21,6 +24,11 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
     protected readonly contextValues: Set<string> = new Set<string>();
     public abstract parent?: AzExtParentTreeItem | undefined;
     public abstract fullId: string;
+
+    // Setting this forces the tree item to always start out with a spinner icon, and have a "Loading..." description
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    private _temporaryDescription: string | undefined = loading;
 
     public get contextValue(): string {
         return Array.from(this.contextValues.values()).sort().join(';');
@@ -53,7 +61,10 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
 
             const resolver = this.getResolver();
 
-            await this.runWithTemporaryDescription(context, 'Loading...', async () => {
+            await this.runWithTemporaryDescription(context, {
+                description: loading,
+                softRefresh: true
+            }, async () => {
                 this.resolveResult = await resolver.resolveResource(this.subscription, this.data);
 
                 // Debug only?
