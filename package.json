@@ -260,6 +260,11 @@
                     "command": "azureResourceGroups.clearActivities",
                     "when": "view == azureActivityLog",
                     "group": "navigation@1"
+                },
+                {
+                    "submenu": "azureWorkspaceCreate",
+                    "when": "view == azureWorkspace",
+                    "group": "navigation@1"
                 }
             ],
             "view/item/context": [
@@ -378,6 +383,11 @@
                 "id": "azureResourceGroups.groupBy",
                 "label": "Group By",
                 "icon": "$(group-by-ref-type)"
+            },
+            {
+                "id": "azureWorkspaceCreate",
+                "icon": "$(add)",
+                "label": "Add..."
             }
         ],
         "keybindings": [
