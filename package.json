@@ -52,7 +52,8 @@
             "commands": [
                 {
                     "command": "azureResourceGroups.createResourceGroup",
-                    "title": "%azureResourceGroups.createResourceGroup%"
+                    "title": "%azureResourceGroups.createResourceGroup%",
+                    "detail": "%azureResourceGroups.createResourceGroupDetail%"
                 }
             ]
         },
