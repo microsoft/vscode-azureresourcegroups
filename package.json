@@ -2,7 +2,7 @@
     "name": "vscode-azureresourcegroups",
     "displayName": "Azure Resources",
     "description": "%azureResourceGroups.description%",
-    "version": "0.4.1-alpha.18",
+    "version": "0.4.1-alpha.19",
     "publisher": "ms-azuretools",
     "icon": "resources/resourceGroup.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -210,7 +210,7 @@
             "azure": [
                 {
                     "id": "azureResourceGroups",
-                    "name": "Azure Resources",
+                    "name": "Resources",
                     "visibility": "collapsed"
                 },
                 {
