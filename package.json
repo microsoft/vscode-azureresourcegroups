@@ -2,7 +2,7 @@
     "name": "vscode-azureresourcegroups",
     "displayName": "Azure Resources",
     "description": "%azureResourceGroups.description%",
-    "version": "0.4.1-alpha.17",
+    "version": "0.4.1-alpha.18",
     "publisher": "ms-azuretools",
     "icon": "resources/resourceGroup.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
@@ -260,6 +260,11 @@
                     "command": "azureResourceGroups.clearActivities",
                     "when": "view == azureActivityLog",
                     "group": "navigation@1"
+                },
+                {
+                    "submenu": "azureWorkspaceCreate",
+                    "when": "view == azureWorkspace",
+                    "group": "navigation@1"
                 }
             ],
             "view/item/context": [
@@ -378,6 +383,11 @@
                 "id": "azureResourceGroups.groupBy",
                 "label": "Group By",
                 "icon": "$(group-by-ref-type)"
+            },
+            {
+                "id": "azureWorkspaceCreate",
+                "icon": "$(add)",
+                "label": "Add..."
             }
         ],
         "keybindings": [
