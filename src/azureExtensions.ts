@@ -72,19 +72,12 @@ export const azureExtensions: IAzExtMetadata[] = [
         reportIssueCommandId: 'azureVirtualMachines.reportIssue'
     },
     {
-        name: 'vscode-azureeventgrid',
-        label: 'Event Grid',
-        resourceTypes: [
-            'microsoft.eventgrid/eventsubscriptions',
-            'microsoft.eventgrid/topics'
-        ]
-    },
-    {
         name: 'vscode-cosmosdb',
         label: 'Databases',
         resourceTypes: [
             'microsoft.documentdb/databaseaccounts',
-            'microsoft.dbforpostgresql/servers'
+            'microsoft.dbforpostgresql/servers',
+            'microsoft.dbforpostgresql/flexibleservers',
         ],
         reportIssueCommandId: 'azureDatabases.reportIssue'
     },

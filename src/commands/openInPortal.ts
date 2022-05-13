@@ -4,15 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { openInPortal as uiOpenInPortal } from '@microsoft/vscode-azext-azureutils';
-import { IActionContext } from '@microsoft/vscode-azext-utils';
-import { ext } from '../extensionVariables';
-import { ResourceGroupTreeItem } from '../tree/ResourceGroupTreeItem';
-import { ResourceTreeItem } from '../tree/ResourceTreeItem';
+import { AzExtTreeItem, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { pickAppResource } from '../api/pickAppResource';
+import { AppResourceTreeItem } from '../tree/AppResourceTreeItem';
 
-export async function openInPortal(context: IActionContext, node?: ResourceGroupTreeItem | ResourceTreeItem): Promise<void> {
+export async function openInPortal(context: IActionContext, node?: AzExtTreeItem): Promise<void> {
     if (!node) {
-        node = await ext.tree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, context);
+        node = await pickAppResource<AppResourceTreeItem>(context);
     }
 
-    await uiOpenInPortal(node, node.fullId);
+    await uiOpenInPortal(node, nonNullProp(node, 'id'));
 }

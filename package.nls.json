@@ -1,5 +1,6 @@
 {
     "azureResourceGroups.createResourceGroup": "Create Resource Group...",
+    "azureResourceGroups.createResourceGroupDetail": "The logical grouping for your resources.",
     "azureResourceGroups.deleteResourceGroup": "Delete...",
     "azureResourceGroups.editTags": "Edit Tags...",
     "azureResourceGroups.description": "An extension for viewing and managing Azure resources.",
@@ -7,6 +8,7 @@
     "azureResourceGroups.loadMore": "Load More",
     "azureResourceGroups.openInPortal": "Open in Portal",
     "azureResourceGroups.refresh": "Refresh",
+    "azureResourceGroups.refreshWorkspace": "Refresh Workspace",
     "azureResourceGroups.revealResource": "Reveal Resource",
     "azureResourceGroups.viewProperties": "View Properties",
     "azureResourceGroups.deleteConfirmation": "The behavior to use when confirming delete of a resource group.",
@@ -17,5 +19,16 @@
     "ms-azuretools.getStarted": "Get Started...",
     "ms-azuretools.helpAndFeedback": "Help and Feedback",
     "ms-azuretools.reportIssue": "Report Issue...",
-    "ms-azuretools.reviewIssues": "Review Issues..."
+    "ms-azuretools.reviewIssues": "Review Issues...",
+    "azureResourceGroups.groupBy": "The setting to control how Azure resources are grouped in the tree view",
+    "azureResourceGroups.groupBy.resourceGroup": "Group by Resource Group",
+    "azureResourceGroups.groupBy.resourceType": "Group by Resource Type",
+    "azureResourceGroups.groupBy.location": "Group by Location",
+    "azureResourceGroups.groupBy.armTag": "Group by ARM Tag...",
+    "azureResourceGroups.suppressActivityNotifications": "Suppress Activity notifications",
+    "azureResourceGroups.autoOpenActivityPanel": "Open the Azure Activity panel when an Activity starts",
+    "azureResourceGroups.focusGroup": "Focus this Group",
+    "azureResourceGroups.unfocusGroup": "Unfocus Group",
+    "azureResourceGroups.clearActivities": "Clear Completed Activities",
+    "azureResourceGroups.toggleShowAllResources": "Show/Hide Filtered Resources"
 }

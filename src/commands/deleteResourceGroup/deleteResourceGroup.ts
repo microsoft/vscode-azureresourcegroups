@@ -4,18 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
-import { window } from 'vscode';
-import { ext } from '../extensionVariables';
-import { ResourceGroupTreeItem } from '../tree/ResourceGroupTreeItem';
-import { localize } from '../utils/localize';
-import { settingUtils } from '../utils/settingUtils';
+import { ext } from '../../extensionVariables';
+import { ResourceGroupTreeItem } from '../../tree/ResourceGroupTreeItem';
+import { localize } from '../../utils/localize';
+import { settingUtils } from '../../utils/settingUtils';
 
 export async function deleteResourceGroup(context: IActionContext, primaryNode?: ResourceGroupTreeItem, selectedNodes?: ResourceGroupTreeItem[]): Promise<void> {
     if (!selectedNodes) {
         if (primaryNode) {
             selectedNodes = [primaryNode];
         } else {
-            selectedNodes = await ext.tree.showTreeItemPicker<ResourceGroupTreeItem>(ResourceGroupTreeItem.contextValue, { ...context, canPickMany: true, suppressCreatePick: true });
+            selectedNodes = await ext.appResourceTree.showTreeItemPicker<ResourceGroupTreeItem>(new RegExp(ResourceGroupTreeItem.contextValue), { ...context, canPickMany: true, suppressCreatePick: true });
         }
     } else {
         selectedNodes = selectedNodes.filter(n => n instanceof ResourceGroupTreeItem);
@@ -45,9 +44,6 @@ export async function deleteResourceGroup(context: IActionContext, primaryNode?:
         }
 
         void node.deleteTreeItem(context);
-        const message: string = localize('startedDelete', 'Started delete of resource group "{0}".', node.name);
-        void window.showInformationMessage(message);
-        ext.outputChannel.appendLog(message);
     }
 }
 
