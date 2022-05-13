@@ -53,7 +53,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(ext.rootAccountTreeItem);
         ext.appResourceTree = new AzExtTreeDataProvider(ext.rootAccountTreeItem, 'azureResourceGroups.loadMore');
         context.subscriptions.push(ext.appResourceTreeView = vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.appResourceTree, showCollapseAll: true, canSelectMany: true }));
-        ext.workspaceTreeView.description = localize('remote', 'Remote');
+        ext.appResourceTreeView.description = localize('remote', 'Remote');
         context.subscriptions.push(ext.appResourceTree.trackTreeItemCollapsibleState(ext.appResourceTreeView));
 
         // Hook up the resolve handler
