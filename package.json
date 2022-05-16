@@ -44,7 +44,8 @@
         "onCommand:ms-azuretools.reportIssue",
         "onCommand:ms-azuretools.reviewIssues",
         "onView:azureResourceGroups",
-        "onView:ms-azuretools.helpAndFeedback"
+        "onView:ms-azuretools.helpAndFeedback",
+        "onWalkthrough:azure-get-started"
     ],
     "main": "./main.js",
     "contributes": {
@@ -234,6 +235,12 @@
                 }
             ]
         },
+        "viewsWelcome": [
+            {
+                "view": "azureActivityLog",
+                "contents": "Some text about what the activity log is. \n [Create an Azure resource](command:azureResourceGroups.createResource)\nTo learn more about how to use git and source control in VS Code [read our docs](https://aka.ms/vscode-scm)."
+            }
+        ],
         "menus": {
             "view/title": [
                 {
@@ -441,6 +448,64 @@
                         "default": true
                     }
                 }
+            }
+        ],
+        "walkthroughs": [
+            {
+                "id": "azure-get-started",
+                "title": "Get Started with Azure in VS Code",
+                "description": "Setup your account and get to know the Azure extension view.",
+                "steps": [
+                    {
+                        "id": "sign-in",
+                        "title": "Sign into your Azure account",
+                        "description": "Sign in or create an Azure Account to see all of the resources within your Azure subscription.\n[Sign In](command:azure-account.login)\n",
+                        "when": "!azure-account.signedIn",
+                        "media": {
+                            "svg": "resources/walkthrough/signin.svg",
+                            "altText": "Sign into your Azure Account."
+                        }
+                    },
+                    {
+                        "id": "azure-view",
+                        "title": "The Azure view & manage resources",
+                        "description": "Use the Resources explorer to create and manage Azure resources. Use the Workspace explorer to create files and deploy.\n[Open the Azure view](command:workbench.view.extension.azure)\n",
+                        "media": {
+                            "svg": "resources/walkthrough/sidebarview.svg",
+                            "altText": "The Azure Sidebar view."
+                        }
+                    },
+                    {
+                        "id": "grouping-and-focus",
+                        "title": "Grouping & focus on your resources",
+                        "description": "Change the way resources are grouped to fit your workflow and focus on the resources that are most important for your current workspace.\n[Show grouping options](command:azureResourceGroups.showGroupOptions)",
+                        "media": {
+                            "svg": "resources/walkthrough/groupby.svg",
+                            "altText": "Group by and focus resources."
+                        }
+                    },
+                    {
+                        "id": "activity-log",
+                        "title": "The Azure activity log",
+                        "description": "View all of your recent activities and quickly access resources you've recently created.\n[Show the Activity Log](command:azureActivityLog.focus)",
+                        "media": {
+                            "svg": "resources/walkthrough/activitylog.svg",
+                            "altText": "The Azure Activity Log."
+                        }
+                    },
+                    {
+                        "id": "create-resource",
+                        "title": "Create an Azure resource",
+                        "description": "Create an Azure resource from your installed extensions directly in VS Code.\n[Create a resource](command:azureResourceGroups.createResource)",
+                        "completionEvents": [
+                            ""
+                        ],
+                        "media": {
+                            "svg": "resources/walkthrough/createresource.svg",
+                            "altText": "Create Azure resources."
+                        }
+                    }
+                ]
             }
         ]
     },
