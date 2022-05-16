@@ -41,7 +41,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         if (options?.filter) {
             const filters: AppResourceFilter[] = Array.isArray(options.filter) ? options.filter : [options.filter];
             appResources = appResources.filter((appResource) => filters.some(filter => {
-                if (getResourceType(filter.type, filter.kind) === getResourceType(appResource.data.type, appResource.data.kind)) {
+                if (getResourceType(filter.type, filter.kind).toLowerCase() === getResourceType(appResource.data.type, appResource.data.kind).toLowerCase()) {
                     if (filter.tags) {
                         return Object.entries(filter.tags).every(([tag, value]) => appResource.tags?.[tag] === value);
                     }
