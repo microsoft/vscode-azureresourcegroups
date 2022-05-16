@@ -162,7 +162,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
 
     public async findAppResourceByResourceId(context: IActionContext, resourceId: string): Promise<AppResourceTreeItem | undefined> {
         await this.getCachedChildren(context) // to ensure the group nodes are loaded
-        return this.cache.appResources.find(ar => ar.id === resourceId);
+        return this.cache.appResources.find(ar => ar.id.toLowerCase() === resourceId.toLowerCase());
     }
 
     public compareChildrenImpl(item1: AzExtTreeItem, item2: AzExtTreeItem): number {
