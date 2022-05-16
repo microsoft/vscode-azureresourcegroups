@@ -238,7 +238,7 @@
         "viewsWelcome": [
             {
                 "view": "azureActivityLog",
-                "contents": "Some text about what the activity log is. \n [Create an Azure resource](command:azureResourceGroups.createResource)\nTo learn more about how to use git and source control in VS Code [read our docs](https://aka.ms/vscode-scm)."
+                "contents": "View all of your recent activities and quickly access resources you've recently created. \n [Create an Azure resource](command:azureResourceGroups.createResource)"
             }
         ],
         "menus": {
