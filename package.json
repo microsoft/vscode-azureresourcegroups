@@ -189,6 +189,11 @@
                 "command": "azureResourceGroups.toggleShowAllResources",
                 "title": "%azureResourceGroups.toggleShowAllResources%",
                 "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.showGroupOptions",
+                "title": "%azureResourceGroups.showGroupOptions%",
+                "category": "Azure"
             }
         ],
         "viewsContainers": {
