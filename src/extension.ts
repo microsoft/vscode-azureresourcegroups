@@ -58,6 +58,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         // Hook up the resolve handler
         registerEvent('treeItem.expanded', ext.appResourceTree.onDidExpandOrRefreshExpandedTreeItem, async (context: IActionContext, treeItem: AzExtTreeItem) => {
+            context.errorHandling.suppressDisplay = true;
+
             if (treeItem instanceof GroupTreeItemBase) {
                 await treeItem.resolveAllChildrenOnExpanded(context);
             }
@@ -87,6 +89,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         registerApplicationResourceResolver('vscode-azureresourcegroups.wrapperResolver', wrapperResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.installableAppResourceResolver', installableAppResourceResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.shallowResourceResolver', shallowResourceResolver);
+
+        await vscode.commands.executeCommand('setContext', 'azure-account.signedIn', await ext.rootAccountTreeItem.getIsLoggedIn());
     });
 
     return createApiProvider([
