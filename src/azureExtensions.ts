@@ -81,14 +81,14 @@ export const azureExtensions: IAzExtMetadata[] = [
         ],
         reportIssueCommandId: 'azureDatabases.reportIssue'
     },
-    // {
-    //     name: 'vscode-azurecontainerapps',
-    //     label: 'Container Apps',
-    //     resourceTypes: [
-    //         'microsoft.app/containerapps'
-    //     ],
-    //     reportIssueCommandId: 'containerApps.reportIssue'
-    // }
+    {
+        name: 'vscode-azurecontainerapps',
+        label: 'Container Apps',
+        resourceTypes: [
+            // 'microsoft.app/containerapps'
+        ],
+        reportIssueCommandId: 'containerApps.reportIssue'
+    }
 ];
 
 export interface IAzExtMetadata {
