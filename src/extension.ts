@@ -58,9 +58,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         // Hook up the resolve handler
         registerEvent('treeItem.expanded', ext.appResourceTree.onDidExpandOrRefreshExpandedTreeItem, async (context: IActionContext, treeItem: AzExtTreeItem) => {
-            context.telemetry.suppressAll = true;
-            context.errorHandling.suppressDisplay = true;
-
             if (treeItem instanceof GroupTreeItemBase) {
                 await treeItem.resolveAllChildrenOnExpanded(context);
             }
