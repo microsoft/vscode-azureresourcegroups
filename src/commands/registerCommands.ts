@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, IActionContext, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
 import { clearActivities } from './activities/clearActivities';
@@ -59,4 +59,8 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.clearActivities', clearActivities);
     registerCommand('azureResourceGroups.toggleShowAllResources', toggleShowAllResources);
     registerCommand('azureResourceGroups.showGroupOptions', showGroupOptions);
+    registerCommand('azureResourceGroups.openUrl', async (context: IActionContext, url: string) => {
+        context.telemetry.properties.url = url;
+        await openUrl(url)
+    });
 }
