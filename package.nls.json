@@ -30,5 +30,6 @@
     "azureResourceGroups.focusGroup": "Focus this Group",
     "azureResourceGroups.unfocusGroup": "Unfocus Group",
     "azureResourceGroups.clearActivities": "Clear Completed Activities",
-    "azureResourceGroups.toggleShowAllResources": "Show/Hide Filtered Resources"
+    "azureResourceGroups.toggleShowAllResources": "Show/Hide Filtered Resources",
+    "azureResourceGroups.showGroupOptions": "Show Grouping Options"
 }

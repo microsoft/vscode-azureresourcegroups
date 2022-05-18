@@ -12,6 +12,7 @@ import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroup } from './deleteResourceGroup/deleteResourceGroup';
 import { focusGroup } from './explorer/focusGroup';
 import { buildGroupByCommand } from './explorer/groupBy';
+import { showGroupOptions } from './explorer/showGroupOptions';
 import { unfocusGroup } from './explorer/unfocusGroup';
 import { getStarted } from './helpAndFeedback/getStarted';
 import { reportIssue } from './helpAndFeedback/reportIssue';
@@ -57,6 +58,7 @@ export function registerCommands(): void {
 
     registerCommand('azureResourceGroups.clearActivities', clearActivities);
     registerCommand('azureResourceGroups.toggleShowAllResources', toggleShowAllResources);
+    registerCommand('azureResourceGroups.showGroupOptions', showGroupOptions);
     registerCommand('azureResourceGroups.openUrl', async (context: IActionContext, url: string) => {
         context.telemetry.properties.url = url;
         await openUrl(url)
