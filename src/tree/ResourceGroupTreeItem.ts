@@ -51,6 +51,10 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
         return this.data ? nonNullProp(this.data, 'id') : `${this.parent?.id}/${this.name}`
     }
 
+    public get location(): string {
+        return this.data ? this.data.location : 'unknown';
+    }
+
     public get name(): string {
         return this.label;
     }
