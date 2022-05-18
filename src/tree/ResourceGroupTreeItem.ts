@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceGroup } from "@azure/arm-resources";
+import { ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzureWizard, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
 import { FileChangeType } from "vscode";
@@ -11,6 +11,7 @@ import { DeleteResourceGroupContext } from "../commands/deleteResourceGroup/Dele
 import { DeleteResourceGroupStep } from "../commands/deleteResourceGroup/DeleteResourceGroupStep";
 import { ext } from "../extensionVariables";
 import { createActivityContext } from "../utils/activityUtils";
+import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
 import { treeUtils } from "../utils/treeUtils";
 import { GroupTreeItemBase } from "./GroupTreeItemBase";
@@ -19,7 +20,7 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
     public static contextValue: string = 'azureResourceGroup';
 
     public async getData(): Promise<ResourceGroup | undefined> {
-        return await this.getResourceGroup(this.name);
+        return this.data || await this.getResourceGroup(this.name);
     }
 
     private data?: ResourceGroup;
@@ -69,9 +70,11 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
         return resources.length;
     }
 
-    public async refreshImpl(): Promise<void> {
-        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+    public async refreshImpl(context: IActionContext): Promise<void> {
+        const client: ResourceManagementClient = await createResourceClient([context, this.subscription]);
+        this.data = await client.resourceGroups.get(this.name);
         this.mTime = Date.now();
+        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
