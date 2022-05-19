@@ -84,9 +84,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public async pickResourceGroup(context: IActionContext, options: PickResourceGroupOptions & { canPickMany: true }): Promise<ResourceGroupTreeItem[]>;
     public async pickResourceGroup(context: IActionContext, options: PickResourceGroupOptions & { canPickMany: false }): Promise<ResourceGroupTreeItem>;
     public async pickResourceGroup(context: IActionContext, options: PickResourceGroupOptions): Promise<ResourceGroupTreeItem | ResourceGroupTreeItem[]> {
-        await this.getCachedChildren(context);
-        const rgsTreeMap = this.cache.getTreeMap(context, 'resourceGroup');
-        const tis = (await context.ui.showQuickPick((Object.values(rgsTreeMap).filter((groupTreeItem) => groupTreeItem instanceof ResourceGroupTreeItem) as ResourceGroupTreeItem[]).sort((a, b) => a.name.localeCompare(b.name)).map((rg: ResourceGroupTreeItem): IAzureQuickPickItem<ResourceGroupTreeItem> => ({
+        if (this.cache.resourceGroups.length === 0) {
+            const client: ResourceManagementClient = await createResourceClient([context, this.subscription]);
+            this.cache.resourceGroups = await uiUtils.listAllIterator(client.resourceGroups.list());
+        }
+
+        const tis = (await context.ui.showQuickPick(this.cache.resourceGroups.sort((a, b) => a.name.localeCompare(b.name)).map((rg: ResourceGroupTreeItem): IAzureQuickPickItem<ResourceGroupTreeItem> => ({
             data: rg,
             label: nonNullProp(rg, 'name')
         })), {
