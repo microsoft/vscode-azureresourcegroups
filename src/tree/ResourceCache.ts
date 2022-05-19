@@ -53,7 +53,7 @@ export class ResourceCache {
         this._resourceGroups.push(...addedResources.map(added => ResourceGroupTreeItem.createFromResourceGroup(this._subscriptionTreeItem, added as ResourceGroup)));
     }
 
-    public getTreeMap(context: IActionContext, groupBySetting?: string): GroupTreeMap {
+    public getTreeMap(context: IActionContext): GroupTreeMap {
         const treeMap: GroupTreeMap = {};
         const getResourceGroupTask: (resourceGroup: string) => Promise<ResourceGroup | undefined> = async (resourceGroup: string) => {
             return this._resourceGroups.find((rg) => rg.name === resourceGroup)?.getData();
@@ -66,7 +66,7 @@ export class ResourceCache {
         });
 
         treeMap[ungroupedTreeItem.id] = ungroupedTreeItem;
-        groupBySetting ||= <string>settingUtils.getWorkspaceSetting<string>('groupBy');
+        const groupBySetting = <string>settingUtils.getWorkspaceSetting<string>('groupBy');
         for (const rgTree of this._appResources) {
             (<AppResourceTreeItem>rgTree).mapSubGroupConfigTree(context, groupBySetting, treeMap, getResourceGroupTask);
         }
