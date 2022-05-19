@@ -6,6 +6,7 @@
 import { IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { ext } from '../../extensionVariables';
 import { ResourceGroupTreeItem } from '../../tree/ResourceGroupTreeItem';
+import { SubscriptionTreeItem } from '../../tree/SubscriptionTreeItem';
 import { localize } from '../../utils/localize';
 import { settingUtils } from '../../utils/settingUtils';
 
@@ -14,7 +15,11 @@ export async function deleteResourceGroup(context: IActionContext, primaryNode?:
         if (primaryNode) {
             selectedNodes = [primaryNode];
         } else {
-            selectedNodes = await ext.appResourceTree.showTreeItemPicker<ResourceGroupTreeItem>(new RegExp(ResourceGroupTreeItem.contextValue), { ...context, canPickMany: true, suppressCreatePick: true });
+            const subscription: SubscriptionTreeItem = await ext.appResourceTree.showTreeItemPicker(SubscriptionTreeItem.contextValue, context);
+            selectedNodes = await subscription.pickResourceGroup(context, {
+                canPickMany: true,
+                placeholder: localize('selectResourceGroupToDelete', 'Select resource group(s) to delete'),
+            });
         }
     } else {
         selectedNodes = selectedNodes.filter(n => n instanceof ResourceGroupTreeItem);

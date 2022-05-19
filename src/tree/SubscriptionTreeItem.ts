@@ -5,7 +5,7 @@
 
 import { ResourceGroup, ResourceManagementClient } from '@azure/arm-resources';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, IAzureQuickPickOptions, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, NoResourceFoundError, registerEvent } from '@microsoft/vscode-azext-utils';
 import { AppResourceFilter, PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
 import { ConfigurationChangeEvent, workspace } from 'vscode';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
@@ -21,6 +21,11 @@ import { AppResourceTreeItem } from './AppResourceTreeItem';
 import { GroupTreeItemBase } from './GroupTreeItemBase';
 import { GroupTreeMap, ResourceCache } from './ResourceCache';
 import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
+
+interface PickResourceGroupOptions {
+    canPickMany?: boolean;
+    placeholder?: string;
+}
 
 export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     public readonly childTypeLabel: string = localize('resourceGroup', 'Resource Group');
@@ -74,6 +79,35 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         await result.data.resolve(false, context);
 
         return result.data;
+    }
+
+    public async pickResourceGroup(context: IActionContext, options: PickResourceGroupOptions & { canPickMany: true }): Promise<ResourceGroupTreeItem[]>;
+    public async pickResourceGroup(context: IActionContext, options: PickResourceGroupOptions & { canPickMany: false }): Promise<ResourceGroupTreeItem>;
+    public async pickResourceGroup(context: IActionContext, options: PickResourceGroupOptions): Promise<ResourceGroupTreeItem | ResourceGroupTreeItem[]> {
+        if (this.cache.resourceGroups.length === 0) {
+            const client: ResourceManagementClient = await createResourceClient([context, this.subscription]);
+            this.cache.resourceGroups = await uiUtils.listAllIterator(client.resourceGroups.list());
+        }
+
+        const quickPicks: IAzureQuickPickItem<ResourceGroupTreeItem>[] = this.cache.resourceGroups.sort((a, b) => a.name.localeCompare(b.name)).map((rg: ResourceGroupTreeItem): IAzureQuickPickItem<ResourceGroupTreeItem> => ({
+            data: rg,
+            label: nonNullProp(rg, 'name')
+        }));
+
+        if (quickPicks.length === 0) {
+            throw new NoResourceFoundError();
+        }
+
+        const tis = (await context.ui.showQuickPick(quickPicks, {
+            canPickMany: options.canPickMany,
+            placeHolder: options.placeholder || localize('selectResourceGroup', 'Select a resource group'),
+        }));
+
+        if (Array.isArray(tis)) {
+            return (tis as IAzureQuickPickItem<ResourceGroupTreeItem>[]).map((ti) => ti.data);
+        } else {
+            return (tis as IAzureQuickPickItem<ResourceGroupTreeItem>).data;
+        }
     }
 
     private async resolveResourceGroupsIfNeeded(context: IActionContext): Promise<void> {
