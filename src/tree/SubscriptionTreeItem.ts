@@ -5,7 +5,7 @@
 
 import { ResourceGroup, ResourceManagementClient } from '@azure/arm-resources';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, NoResourceFoundError, registerEvent } from '@microsoft/vscode-azext-utils';
 import { AppResourceFilter, PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
 import { ConfigurationChangeEvent, workspace } from 'vscode';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
@@ -89,10 +89,16 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             this.cache.resourceGroups = await uiUtils.listAllIterator(client.resourceGroups.list());
         }
 
-        const tis = (await context.ui.showQuickPick(this.cache.resourceGroups.sort((a, b) => a.name.localeCompare(b.name)).map((rg: ResourceGroupTreeItem): IAzureQuickPickItem<ResourceGroupTreeItem> => ({
+        const quickPicks: IAzureQuickPickItem<ResourceGroupTreeItem>[] = this.cache.resourceGroups.sort((a, b) => a.name.localeCompare(b.name)).map((rg: ResourceGroupTreeItem): IAzureQuickPickItem<ResourceGroupTreeItem> => ({
             data: rg,
             label: nonNullProp(rg, 'name')
-        })), {
+        }));
+
+        if (quickPicks.length === 0) {
+            throw new NoResourceFoundError();
+        }
+
+        const tis = (await context.ui.showQuickPick(quickPicks, {
             canPickMany: options.canPickMany,
             placeHolder: options.placeholder || localize('selectResourceGroup', 'Select a resource group'),
         }));
