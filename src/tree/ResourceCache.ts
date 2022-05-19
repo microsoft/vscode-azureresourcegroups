@@ -20,7 +20,7 @@ import { SubscriptionTreeItem } from "./SubscriptionTreeItem";
 export type GroupTreeMap = { [groupTreeId: string]: GroupTreeItemBase };
 export class ResourceCache {
     private _subscriptionTreeItem: SubscriptionTreeItem;
-    private _resourceGroups: ResourceGroup[];
+    private _resourceGroups: ResourceGroupTreeItem[];
     private _appResources: AppResourceTreeItem[];
 
     public constructor(sub: SubscriptionTreeItem) {
@@ -43,16 +43,20 @@ export class ResourceCache {
         this._appResources.push(...addedResources.map(added => AppResourceTreeItem.Create(this._subscriptionTreeItem, added)));
     }
 
-    public set resourceGroups(resourceGroups: ResourceGroup[]) {
-        const { addedResources, deletedResources } = this.diffProvidedResources(this._resourceGroups, resourceGroups);
+    public get resourceGroups(): ResourceGroupTreeItem[] {
+        return this._resourceGroups;
+    }
+
+    public set resourceGroups(groups: ResourceGroup[]) {
+        const { addedResources, deletedResources } = this.diffProvidedResources<{ id?: string }>(this._resourceGroups, groups);
         this.deleteResourcesFromCache(this._resourceGroups, deletedResources);
-        this._resourceGroups.push(...addedResources);
+        this._resourceGroups.push(...addedResources.map(added => ResourceGroupTreeItem.createFromResourceGroup(this._subscriptionTreeItem, added as ResourceGroup)));
     }
 
     public getTreeMap(context: IActionContext, groupBySetting?: string): GroupTreeMap {
         const treeMap: GroupTreeMap = {};
         const getResourceGroupTask: (resourceGroup: string) => Promise<ResourceGroup | undefined> = async (resourceGroup: string) => {
-            return this._resourceGroups.find((rg) => rg.name === resourceGroup);
+            return this._resourceGroups.find((rg) => rg.name === resourceGroup)?.getData();
         };
 
         const ungroupedTreeItem = new GroupTreeItemBase(this._subscriptionTreeItem, {
@@ -73,7 +77,7 @@ export class ResourceCache {
                 // only get RGs that are not in the treeMap already
                 const emptyResourceGroups = this._resourceGroups.filter(rg => !treeMap[rg.id?.toLowerCase() ?? '']);
                 for (const eRg of emptyResourceGroups) {
-                    treeMap[nonNullProp(eRg, 'id').toLowerCase()] = ResourceGroupTreeItem.createFromResourceGroup(this._subscriptionTreeItem, eRg);
+                    treeMap[nonNullProp(eRg, 'id').toLowerCase()] = eRg;
                 }
                 break;
             case GroupBySettings.ResourceType:
