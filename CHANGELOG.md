@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.5.0 - 2022-05-24
+
+### Added
+- Resources explorer to create and manage Azure resources.
+- Workspace explorer to create and manage your local project files and deploy.
+- View all of your recent activities and quickly access resources you've recently created in the new Activity Log panel
+- Focus on a specific group in the Resources explorer
+- Group resources by Type, Resource Group, ARM Tag, and Location in the Resources explorer
+
 ### Changed
 - Minimum version of VS Code is now 1.57.0
 
