@@ -14,17 +14,25 @@ View and manage Azure resources directly from VS Code.
 
 ## Features
 
+### Resource and Workspace views
+
 Use the Resources explorer to create and manage Azure resources. Use the Workspace explorer to create files and deploy.
 
 ![Azure explorer](resources/readme/explorerGraphic.png)
+
+### Grouping and Focusing
 
 Change the way resources are grouped to fit your workflow and focus on the resources that are most important for your current workspace.
 
 ![Grouping](resources/readme/groupingGraphic.png)
 
-View all of your recent activities and quickly access resources you've recently created.
+### Activity Log
+
+View all of your recent activities and quickly access resources you've recently created in the Activity Log.
 
 ![Activity Log](resources/readme/activityLogGraphic.png)
+
+### Create Resources
 
 Create an Azure resource from your installed extensions directly in VS Code.
 
