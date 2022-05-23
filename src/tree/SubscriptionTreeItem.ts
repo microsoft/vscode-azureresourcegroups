@@ -217,7 +217,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
     private async tryGetFocusGroupTreeItem(): Promise<GroupTreeItemBase | undefined> {
         const focusedGroupId = await ext.context.workspaceState.get('focusedGroup') as string;
         if (focusedGroupId) {
-            const focusedGroup = Object.values(this.treeMap).find(group => group.id.toLowerCase() === focusedGroupId?.toLowerCase());
+            const focusedGroup = this.treeMap[focusedGroupId.toLowerCase()];
             if (focusedGroup) {
                 return focusedGroup;
             }
