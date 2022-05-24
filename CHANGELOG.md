@@ -10,6 +10,7 @@
 - View all of your recent activities and quickly access resources you've recently created in the new Activity Log panel
 - Focus on a specific group in the Resources explorer
 - Group resources by Type, Resource Group, ARM Tag, and Location in the Resources explorer
+- "Get started with Azure in VS Code" walkthrough
 
 ### Changed
 - Minimum version of VS Code is now 1.57.0
