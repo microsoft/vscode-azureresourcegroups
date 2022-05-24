@@ -8,11 +8,46 @@
 
 View and manage Azure resources directly from VS Code.
 
-![explorer](resources/readme/explorer.png)
-
-**Visit the [wiki](https://github.com/Microsoft/vscode-azureresourcegroups/wiki) for additional information about the extension.**
+![Resources explorer](resources/readme/resourcesExplorer.png)
 
 > Sign up today for your free Azure account and receive 12 months of free popular services, $200 free credit and 25+ always free services 👉 [Start Free](https://azure.microsoft.com/free/open-source).
+
+## Features
+
+### Resource and Workspace views
+
+Use the Resources explorer to create and manage Azure resources. Use the Workspace explorer to create files and deploy.
+
+![Azure explorer](resources/readme/explorerGraphic.png)
+
+### Grouping and Focusing
+
+Change the way resources are grouped to fit your workflow and focus on the resources that are most important for your current workspace.
+
+![Grouping](resources/readme/groupingGraphic.png)
+
+### Activity Log
+
+View all of your recent activities and quickly access resources you've recently created in the Activity Log.
+
+![Activity Log](resources/readme/activityLogGraphic.png)
+
+### Create Resources
+
+Create an Azure resource from your installed extensions directly in VS Code.
+
+![Create Resource](resources/readme/createResourceGraphic.png)
+
+## Azure Extensions
+
+Install these extensions to enable additional resource-specific features.
+
+* [Azure Functions](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions)
+* [Azure App Service](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azureappservice)
+* [Azure Static Web Apps](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurestaticwebapps)
+* [Azure Databases](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-cosmosdb)
+* [Azure Storage](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurestorage)
+* [Azure Virtual Machines](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurevirtualmachines)
 
 <!-- region exclude-from-marketplace -->
 
