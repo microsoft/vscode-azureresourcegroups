@@ -267,7 +267,7 @@
                 {
                     "command": "azureResourceGroups.refreshWorkspace",
                     "when": "view == azureWorkspace",
-                    "group": "navigation@1"
+                    "group": "navigation@10"
                 },
                 {
                     "command": "azureResourceGroups.clearActivities",
