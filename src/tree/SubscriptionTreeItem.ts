@@ -211,7 +211,10 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         const thisUnknown = this as unknown as { _cachedChildren: AzExtTreeItem[] };
         thisUnknown._cachedChildren = childrenToSet;
         thisUnknown._cachedChildren = childrenToSet.sort((ti1, ti2) => this.compareChildrenImpl(ti1, ti2));
-        this.treeDataProvider.refreshUIOnly(this);
+
+        // To prevent "Element with id {0} is already registered" errors, we must
+        // clear VS Code's internal cache by passing `undefined` to refresh the whole tree
+        this.treeDataProvider.refreshUIOnly(undefined);
     }
 
     private async tryGetFocusGroupTreeItem(): Promise<GroupTreeItemBase | undefined> {
