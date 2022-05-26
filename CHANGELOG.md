@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.5.1 - 2022-05-26
+
+### Fixed
+- Error: Element is already registered when focusing/unfocusing groups [#284](https://github.com/microsoft/vscode-azureresourcegroups/issues/284)
+
 ## 0.5.0 - 2022-05-24
 
 ### Added
