@@ -6,7 +6,7 @@
 'use strict';
 
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzExtTreeItem, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerEvent, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, OnDidExpandOrRefreshExpandedEmitterData, registerEvent, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import type { AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
@@ -57,11 +57,14 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(ext.appResourceTree.trackTreeItemCollapsibleState(ext.appResourceTreeView));
 
         // Hook up the resolve handler
-        registerEvent('treeItem.expanded', ext.appResourceTree.onDidExpandOrRefreshExpandedTreeItem, async (context: IActionContext, treeItem: AzExtTreeItem) => {
+        registerEvent('treeItem.expanded', ext.appResourceTree.onDidExpandOrRefreshExpandedTreeItem, async (context: IActionContext, data: OnDidExpandOrRefreshExpandedEmitterData) => {
             context.errorHandling.suppressDisplay = true;
-
-            if (treeItem instanceof GroupTreeItemBase) {
-                await treeItem.resolveAllChildrenOnExpanded(context);
+            if (data.item instanceof GroupTreeItemBase) {
+                if (data.source !== 'refresh') {
+                    // clear VS Code's internal cache
+                    ext.appResourceTree.refreshUIOnly(undefined);
+                }
+                await data.item.resolveAllChildrenOnExpanded(context);
             }
         });
 
