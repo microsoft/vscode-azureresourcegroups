@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.5.2 - 2022-06-01
+
+### Changed
+- Update @vscode/extension-telemetry to 0.5.2 [#290](https://github.com/microsoft/vscode-azureresourcegroups/pull/290)
+
 ## 0.5.1 - 2022-05-26
 
 ### Fixed
