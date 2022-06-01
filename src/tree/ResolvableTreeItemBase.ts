@@ -55,6 +55,10 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
         return false;
     }
 
+    public async refreshImpl(context: IActionContext): Promise<void> {
+        await this.resolve(true, context);
+    }
+
     public async resolve(clearCache: boolean, context: IActionContext): Promise<void> {
         if (!this.resolveResult || clearCache) {
             ext.activationManager.onNodeTypeResolved(this.data.type);

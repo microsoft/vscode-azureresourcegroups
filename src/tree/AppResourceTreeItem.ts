@@ -128,9 +128,10 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         // do nothing as we only want to return parent dynamically
     }
 
-    public async refreshImpl(): Promise<void> {
+    public async refreshImpl(context: IActionContext): Promise<void> {
         this.mTime = Date.now();
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+        await super.refreshImpl(context);
     }
 
     public mapSubGroupConfigTree(context: IActionContext,
