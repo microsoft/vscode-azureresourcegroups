@@ -79,6 +79,15 @@ export abstract class ResolvableTreeItemBase extends AzExtParentTreeItem impleme
                 this.resolveResult.contextValuesToAdd?.forEach(cv => this.contextValues.add(cv));
             });
 
+            const disposable = ext.events.onDidRegisterResolver(async (resolver: AppResourceResolver) => {
+                if (resolver.matchesResource(this.data)) {
+                    disposable.dispose();
+                    await this.refresh(context);
+                } else {
+                    // If it doesn't match; do nothing and also don't dispose of the event listener
+                }
+            });
+
             // It is not needed to refresh at this point, because `runWithTemporaryDescription` already does that
         }
     }
