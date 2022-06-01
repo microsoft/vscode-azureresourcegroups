@@ -2,7 +2,7 @@
     "name": "vscode-azureresourcegroups",
     "displayName": "Azure Resources",
     "description": "%azureResourceGroups.description%",
-    "version": "0.5.2",
+    "version": "0.5.3-0",
     "publisher": "ms-azuretools",
     "icon": "resources/resourceGroup.png",
     "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
