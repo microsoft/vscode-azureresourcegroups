@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
+import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { AzExtParentTreeItem, AzureWizard, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
 import { FileChangeType } from "vscode";
@@ -64,13 +65,8 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
     }
 
     public async getNumOfResources(context: IActionContext): Promise<number> {
-        // load/retrieve the first batch to check if there are more children
-        let resources = await this.getCachedChildren(context);
-
-        if (this.hasMoreChildrenImpl()) {
-            resources = await this.loadAllChildren(context);
-        }
-
+        const client: ResourceManagementClient = await createResourceClient([context, this.subscription]);
+        const resources = await uiUtils.listAllIterator(client.resources.listByResourceGroup(this.name));
         return resources.length;
     }
 
