@@ -218,12 +218,12 @@
                 {
                     "id": "azureResourceGroups",
                     "name": "Resources",
-                    "visibility": "collapsed"
+                    "visibility": "visible"
                 },
                 {
                     "id": "azureWorkspace",
                     "name": "Workspace",
-                    "visibility": "collapsed"
+                    "visibility": "visible"
                 },
                 {
                     "id": "ms-azuretools.helpAndFeedback",
