@@ -324,7 +324,7 @@
                 {
                     "command": "azureResourceGroups.editTags",
                     "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Group)(?!Type)/",
-                    "group": "1@1"
+                    "group": "8@1"
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
