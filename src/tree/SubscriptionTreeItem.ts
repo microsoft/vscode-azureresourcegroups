@@ -64,7 +64,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         const picks = appResources.map((appResource) => ({ data: appResource, label: appResource.label, group: appResource.groupConfig.resourceType.label, description: appResource.groupConfig.resourceGroup.label }))
-            .sort((a, b) => a.group.localeCompare(b.group));
+            .sort((a, b) => a.label.localeCompare(b.label));
 
         const quickPickOptions: IAzureQuickPickOptions = {
             enableGrouping: !options?.filter,
