@@ -45,6 +45,7 @@
         "onCommand:ms-azuretools.reportIssue",
         "onCommand:ms-azuretools.reviewIssues",
         "onView:azureResourceGroups",
+        "onView:azureResourceGroupsV2",
         "onView:ms-azuretools.helpAndFeedback",
         "onWalkthrough:azure-get-started"
     ],
@@ -218,6 +219,11 @@
                 {
                     "id": "azureResourceGroups",
                     "name": "Resources",
+                    "visibility": "visible"
+                },
+                {
+                    "id": "azureResourceGroupsV2",
+                    "name": "Resources (V2)",
                     "visibility": "visible"
                 },
                 {

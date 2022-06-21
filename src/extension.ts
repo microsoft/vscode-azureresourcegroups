@@ -18,6 +18,7 @@ import { registerApplicationResourceProvider } from './api/registerApplicationRe
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
 import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResourceProvider';
 import { revealTreeItem } from './api/revealTreeItem';
+import { V2AzureResourcesApiImplementation } from './api/v2/v2AzureResourcesApiImplementation';
 import { AzureResourceProvider } from './AzureResourceProvider';
 import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
@@ -30,6 +31,7 @@ import { wrapperResolver } from './resolvers/WrapperResolver';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { GroupTreeItemBase } from './tree/GroupTreeItemBase';
 import { HelpTreeItem } from './tree/HelpTreeItem';
+import { registerResourceGroupsTreeV2 } from './tree/v2/registerResourceGroupsTreeV2';
 import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
 import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
 import { localize } from './utils/localize';
@@ -55,6 +57,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         context.subscriptions.push(ext.appResourceTreeView = vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.appResourceTree, showCollapseAll: true, canSelectMany: true }));
         ext.appResourceTreeView.description = localize('remote', 'Remote');
         context.subscriptions.push(ext.appResourceTree.trackTreeItemCollapsibleState(ext.appResourceTreeView));
+
+        registerResourceGroupsTreeV2(context);
 
         // Hook up the resolve handler
         registerEvent('treeItem.expanded', ext.appResourceTree.onDidExpandOrRefreshExpandedTreeItem, async (context: IActionContext, treeItem: AzExtTreeItem) => {
@@ -105,7 +109,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             registerWorkspaceResourceProvider,
             registerActivity,
             pickAppResource,
-        })
+        }),
+        new V2AzureResourcesApiImplementation()
     ]);
 }
 
