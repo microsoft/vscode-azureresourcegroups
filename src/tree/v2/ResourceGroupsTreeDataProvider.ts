@@ -64,7 +64,16 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                             }),
                     ];
                 } else {
-                    return undefined;
+                    return [
+                        new GenericItem(
+                            api.status === 'Initializing'
+                                ? localize('loadingTreeItem', 'Loading...')
+                                : localize('signingIn', 'Waiting for Azure sign-in...'),
+                            {
+                                commandId: 'azure-account.login',
+                                iconPath: new vscode.ThemeIcon('loading~spin')
+                            })
+                    ];
                 }
             }
         }
