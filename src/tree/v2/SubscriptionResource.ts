@@ -1,9 +1,10 @@
 import * as vscode from "vscode";
 import { ApplicationResourceProviderManager } from "../../api/v2/providers/ApplicationResourceProviderManager";
-import { ApplicationSubscription } from "../../api/v2/v2AzureResourcesApi";
+import { ApplicationResource, ApplicationSubscription } from "../../api/v2/v2AzureResourcesApi";
 import { treeUtils } from "../../utils/treeUtils";
 import { ApplicationResourceItem } from "./ApplicationResourceItem";
 import { AzureSubscription } from "./azure-account.api";
+import { GenericItem } from "./GenericItem";
 import { ResourceGroupResourceBase } from "./ResourceGroupResourceBase";
 
 export class SubscriptionResource implements ResourceGroupResourceBase {
@@ -17,9 +18,10 @@ export class SubscriptionResource implements ResourceGroupResourceBase {
             isCustomCloud: this.azureSubscription.session.environment.name === 'AzureCustomCloud',
             subscriptionId: this.azureSubscription.subscription.subscriptionId || 'TODO: ever undefined?',
         };
+
         const resources = await this.resourceProviderManager.provideResources(subscription);
 
-        return (resources ?? []).map(resource => new ApplicationResourceItem(resource));
+        return this.groupResources(resources ?? []);
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
@@ -35,4 +37,30 @@ export class SubscriptionResource implements ResourceGroupResourceBase {
     id: string;
     name: string;
     type: string;
+
+    private groupResources(resources: ApplicationResource[]): GenericItem[] {
+        const map = resources.reduce(
+            (acc, resource) => {
+                const key = resource.location ?? 'Unknown'; // TODO: Is location ever undefined?
+                let children = acc[key];
+
+                if (!children) {
+                    acc[key] = children = [];
+                }
+
+                children.push(new ApplicationResourceItem(resource));
+
+                return acc;
+            },
+            <{ [key: string]: ApplicationResourceItem[] }>{});
+
+        return Object.keys(map).sort((a, b) => a.localeCompare(b)).map(key => {
+            return new GenericItem(
+                key,
+                {
+                    children: map[key],
+                    iconPath: new vscode.ThemeIcon('globe'),
+                });
+        });
+    }
 }

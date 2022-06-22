@@ -1,10 +1,12 @@
+import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceGroupResourceBase } from "./ResourceGroupResourceBase";
 
 export interface GenericItemOptions {
+    readonly children?: ResourceGroupResourceBase[];
     readonly commandArgs?: unknown[];
     readonly commandId?: string;
-    readonly iconPath?: vscode.ThemeIcon;
+    readonly iconPath?: TreeItemIconPath;
 }
 
 export class GenericItem implements ResourceGroupResourceBase {
@@ -12,11 +14,11 @@ export class GenericItem implements ResourceGroupResourceBase {
     }
 
     getChildren(): vscode.ProviderResult<ResourceGroupResourceBase[]> {
-        return undefined;
+        return this.options?.children;
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        const treeItem = new vscode.TreeItem(this.label);
+        const treeItem = new vscode.TreeItem(this.label, this.options?.children ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 
         if (this.options?.commandId) {
             treeItem.command = {
