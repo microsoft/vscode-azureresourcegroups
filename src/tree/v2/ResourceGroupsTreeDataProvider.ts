@@ -12,11 +12,13 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
 
     private api: AzureAccountExtensionApi | undefined;
     private filtersSubscription: vscode.Disposable | undefined;
+    private statusSubscription: vscode.Disposable | undefined;
 
     constructor(private readonly resourceProviderManager: ApplicationResourceProviderManager) {
         super(
             () => {
                 this.filtersSubscription?.dispose();
+                this.statusSubscription?.dispose();
             });
     }
 
@@ -33,10 +35,36 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
             const api = await this.getApi();
 
             if (api) {
-                if (api.filters.length === 0) {
-                    return [ new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), 'azure-account.selectSubscriptions') ]
+                if (api.status === 'LoggedIn') {
+                    if (api.filters.length === 0) {
+                        return [ new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), { commandId: 'azure-account.selectSubscriptions' }) ]
+                    } else {
+                        return api.filters.map(subscription => new SubscriptionResource(subscription, this.resourceProviderManager));
+                    }
+                } else if (api.status === 'LoggedOut') {
+                    return [
+                        new GenericItem(
+                            localize('signInLabel', 'Sign in to Azure...'),
+                            {
+                                commandId: 'azure-account.login',
+                                iconPath: new vscode.ThemeIcon('sign-in')
+                            }),
+                        new GenericItem(
+                            localize('createAccountLabel', 'Create an Azure Account...'),
+                            {
+                                commandId: 'azure-account.createAccount',
+                                iconPath: new vscode.ThemeIcon('add')
+                            }),
+                        new GenericItem(
+                            localize('createStudentAccount', 'Create an Azure for Students Account...'),
+                            {
+                                commandId: 'azureResourceGroups.openUrl',
+                                commandArgs: [ 'https://aka.ms/student-account' ],
+                                iconPath: new vscode.ThemeIcon('mortar-board')
+                            }),
+                    ];
                 } else {
-                    return api.filters.map(subscription => new SubscriptionResource(subscription, this.resourceProviderManager));
+                    return undefined;
                 }
             }
         }
@@ -59,6 +87,7 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                     await this.api.waitForFilters();
 
                     this.filtersSubscription = this.api.onFiltersChanged(() => this.onDidChangeTreeDataEmitter?.fire());
+                    this.statusSubscription = this.api.onStatusChanged(() => this.onDidChangeTreeDataEmitter?.fire());
                 }
             }
         }
