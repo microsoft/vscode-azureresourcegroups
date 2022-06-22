@@ -293,6 +293,11 @@
                     "group": "inline"
                 },
                 {
+                    "command": "azureResourceGroups.selectSubscriptions",
+                    "when": "view == azureResourceGroupsV2 && viewItem == azureextensionui.azureSubscription",
+                    "group": "inline"
+                },
+                {
                     "command": "azureResourceGroups.createResource",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "1@1"
