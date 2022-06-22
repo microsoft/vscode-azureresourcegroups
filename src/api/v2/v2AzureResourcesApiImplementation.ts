@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ApplicationResource, ApplicationResourceProvider, ResourceManager, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
+import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     get apiVersion(): string {
@@ -22,7 +22,7 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    registerApplicationResourceManager<T>(_id: string, _provider: ResourceManager<ApplicationResource, T>): vscode.Disposable {
+    registerApplicationResourceManager<T>(_id: string, _provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable {
         throw new Error("Method not implemented.");
     }
 
@@ -32,7 +32,7 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    registerWorkspaceResourceManager<T>(_id: string, _provider: ResourceManager<WorkspaceResource, T>): vscode.Disposable {
+    registerWorkspaceResourceManager<T>(_id: string, _provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable {
         throw new Error("Method not implemented.");
     }
 }

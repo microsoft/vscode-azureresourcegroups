@@ -113,7 +113,7 @@ export interface ResourceModelBase {
 /**
  * The interface that resource resolvers must implement
  */
-export interface ResourceManager<TResource extends ResourceBase, TModel extends ResourceModelBase> extends vscode.TreeDataProvider<TModel> {
+export interface BranchDataProvider<TResource extends ResourceBase, TModel extends ResourceModelBase> extends vscode.TreeDataProvider<TModel> {
     /**
      * Called to get the provider's model element for a specific resource.
      * @remarks getChildren() assumes that the provider passes a known <T> model item, or undefined when getting the root children.
@@ -219,7 +219,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
      * @param id The resolver ID. Must be unique.
      * @param resolver The resolver
      */
-    registerApplicationResourceManager<T>(id: string, provider: ResourceManager<ApplicationResource, T>): vscode.Disposable;
+    registerApplicationResourceManager<T>(id: string, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable;
 
     /**
      * Registers a workspace resource provider
@@ -233,7 +233,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
      * @param id The resolver ID. Must be unique.
      * @param resolver The resolver
      */
-    registerWorkspaceResourceManager<T>(id: string, provider: ResourceManager<WorkspaceResource, T>): vscode.Disposable;
+    registerWorkspaceResourceManager<T>(id: string, provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable;
 }
 
 export interface AzureResourcesApiBase {
