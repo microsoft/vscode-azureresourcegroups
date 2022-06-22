@@ -1,9 +1,11 @@
-import * as vscode from 'vscode';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
+import * as vscode from 'vscode';
+import { ApplicationResourceProviderManager } from '../../api/v2/providers/ApplicationResourceProviderManager';
+import { localize } from '../../utils/localize';
 import { AzureAccountExtensionApi } from './azure-account.api';
+import { GenericItem } from './GenericItem';
 import { ResourceGroupResourceBase } from './ResourceGroupResourceBase';
 import { SubscriptionResource } from './SubscriptionResource';
-import { ApplicationResourceProviderManager } from '../../api/v2/providers/ApplicationResourceProviderManager';
 
 export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupResourceBase> {
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupResourceBase | null | undefined>();
@@ -31,11 +33,15 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
             const api = await this.getApi();
 
             if (api) {
-                return api.filters.map(subscription => new SubscriptionResource(subscription, this.resourceProviderManager));
+                if (api.filters.length === 0) {
+                    return [ new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), 'azure-account.selectSubscriptions') ]
+                } else {
+                    return api.filters.map(subscription => new SubscriptionResource(subscription, this.resourceProviderManager));
+                }
             }
         }
 
-        return [];
+        return undefined;
     }
 
     private async getApi(): Promise<AzureAccountExtensionApi | undefined> {
@@ -50,6 +56,8 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                 this.api = extension.exports.getApi<AzureAccountExtensionApi>('1');
 
                 if (this.api) {
+                    await this.api.waitForFilters();
+
                     this.filtersSubscription = this.api.onFiltersChanged(() => this.onDidChangeTreeDataEmitter?.fire());
                 }
             }
