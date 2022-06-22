@@ -18,6 +18,8 @@ import { registerApplicationResourceProvider } from './api/registerApplicationRe
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
 import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResourceProvider';
 import { revealTreeItem } from './api/revealTreeItem';
+import { ApplicationResourceProviderManager } from './api/v2/providers/ApplicationResourceProviderManager';
+import { BuiltInApplicationResourceProvider } from './api/v2/providers/BuiltInApplicationResourceProvider';
 import { V2AzureResourcesApiImplementation } from './api/v2/v2AzureResourcesApiImplementation';
 import { AzureResourceProvider } from './AzureResourceProvider';
 import { registerCommands } from './commands/registerCommands';
@@ -58,8 +60,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.appResourceTreeView.description = localize('remote', 'Remote');
         context.subscriptions.push(ext.appResourceTree.trackTreeItemCollapsibleState(ext.appResourceTreeView));
 
-        registerResourceGroupsTreeV2(context);
-
         // Hook up the resolve handler
         registerEvent('treeItem.expanded', ext.appResourceTree.onDidExpandOrRefreshExpandedTreeItem, async (context: IActionContext, treeItem: AzExtTreeItem) => {
             context.errorHandling.suppressDisplay = true;
@@ -97,6 +97,14 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         await vscode.commands.executeCommand('setContext', 'azure-account.signedIn', await ext.rootAccountTreeItem.getIsLoggedIn());
     });
 
+    const resourceProviderManager = new ApplicationResourceProviderManager();
+
+    registerResourceGroupsTreeV2(context, resourceProviderManager);
+
+    const v2Api = new V2AzureResourcesApiImplementation(resourceProviderManager);
+
+    v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider());
+
     return createApiProvider([
         new InternalAzureResourceGroupsExtensionApi({
             apiVersion: '0.0.1',
@@ -110,7 +118,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             registerActivity,
             pickAppResource,
         }),
-        new V2AzureResourcesApiImplementation()
+        v2Api
     ]);
 }
 

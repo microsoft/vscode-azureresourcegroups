@@ -3,6 +3,7 @@ import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import { AzureAccountExtensionApi } from './azure-account.api';
 import { ResourceGroupResourceBase } from './ResourceGroupResourceBase';
 import { SubscriptionResource } from './SubscriptionResource';
+import { ApplicationResourceProviderManager } from '../../api/v2/providers/ApplicationResourceProviderManager';
 
 export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupResourceBase> {
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupResourceBase | null | undefined>();
@@ -10,7 +11,7 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
     private api: AzureAccountExtensionApi | undefined;
     private filtersSubscription: vscode.Disposable | undefined;
 
-    constructor() {
+    constructor(private readonly resourceProviderManager: ApplicationResourceProviderManager) {
         super(
             () => {
                 this.filtersSubscription?.dispose();
@@ -30,7 +31,7 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
             const api = await this.getApi();
 
             if (api) {
-                return api.filters.map(subscription => new SubscriptionResource(subscription));
+                return api.filters.map(subscription => new SubscriptionResource(subscription, this.resourceProviderManager));
             }
         }
 
