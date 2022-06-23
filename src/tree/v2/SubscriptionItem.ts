@@ -23,7 +23,7 @@ export class SubscriptionItem implements ResourceGroupResourceBase {
 
         const resources = await this.resourceProviderManager.provideResources(subscription);
 
-        return this.resourceGroupingManager.groupResources(resources ?? []);
+        return this.resourceGroupingManager.groupResources(resources ?? []).sort((a, b) => a.label.localeCompare(b.label));
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {

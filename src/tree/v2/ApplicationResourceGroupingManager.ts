@@ -8,6 +8,7 @@ import { GenericItem } from './GenericItem';
 import { localize } from "../../utils/localize";
 import { treeUtils } from '../../utils/treeUtils';
 import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { getIconPath, getName } from '../../utils/azureUtils';
 
 const unknownLabel = localize('unknown', 'unknown');
 
@@ -76,7 +77,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             },
             <{ [key: string]: ApplicationResourceItem[] }>{});
 
-        return Object.keys(map).sort((a, b) => a.localeCompare(b)).map(key => {
+        return Object.keys(map).map(key => {
             return new GenericItem(
                 labelSelector(key),
                 {
@@ -115,7 +116,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         return this.groupBy(
             resources,
             resource => resource.type ?? unknownLabel, // TODO: Is resource type ever undefined?
-            key => key,
-            () => undefined); // TODO: What's the default icon for a resource type?
+            key => getName(key) ?? key,
+            key => getIconPath(key)); // TODO: What's the default icon for a resource type?
     }
 }

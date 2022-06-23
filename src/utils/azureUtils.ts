@@ -180,7 +180,7 @@ interface SupportedType {
     displayName: string;
 }
 
-function getName(type?: string, kind?: string): string | undefined {
+export function getName(type?: string, kind?: string): string | undefined {
     type = type?.toLowerCase();
     if (isFunctionApp(type, kind)) {
         type = 'microsoft.web/functionapp';

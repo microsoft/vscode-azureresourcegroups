@@ -10,7 +10,7 @@ export interface GenericItemOptions {
 }
 
 export class GenericItem implements ResourceGroupResourceBase {
-    constructor(private readonly label: string, private readonly options?: GenericItemOptions) {
+    constructor(public readonly label: string, private readonly options?: GenericItemOptions) {
     }
 
     getChildren(): vscode.ProviderResult<ResourceGroupResourceBase[]> {
