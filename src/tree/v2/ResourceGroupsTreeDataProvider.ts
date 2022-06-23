@@ -1,13 +1,15 @@
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../api/v2/providers/ApplicationResourceProviderManager';
+import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { AzureAccountExtensionApi } from './azure-account.api';
 import { GenericItem } from './GenericItem';
 import { ResourceGroupResourceBase } from './ResourceGroupResourceBase';
-import { SubscriptionResource } from './SubscriptionResource';
+import { SubscriptionItem } from './SubscriptionItem';
 
 export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupResourceBase> {
+    private readonly configSubscription: vscode.Disposable;
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupResourceBase | null | undefined>();
 
     private api: AzureAccountExtensionApi | undefined;
@@ -17,8 +19,20 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
     constructor(private readonly resourceProviderManager: ApplicationResourceProviderManager) {
         super(
             () => {
+                this.configSubscription.dispose();
                 this.filtersSubscription?.dispose();
                 this.statusSubscription?.dispose();
+            });
+
+        // TODO: This really belongs on the subscription item, but that then involves disposing of them during refresh,
+        //       and I'm not sure of the mechanics of that.  Ideally grouping mode changes shouldn't require new network calls,
+        //       as we're just rearranging known items; we might try caching resource items and only calling getTreeItem() on
+        //       branch providers during the tree refresh that results from this (rather than getChildren() again).
+        this.configSubscription = vscode.workspace.onDidChangeConfiguration(
+            e => {
+                if (e.affectsConfiguration(`${ext.prefix}.groupBy`)) {
+                    this.onDidChangeTreeDataEmitter.fire();
+                }
             });
     }
 
@@ -37,9 +51,9 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
             if (api) {
                 if (api.status === 'LoggedIn') {
                     if (api.filters.length === 0) {
-                        return [ new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), { commandId: 'azure-account.selectSubscriptions' }) ]
+                        return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), { commandId: 'azure-account.selectSubscriptions' })]
                     } else {
-                        return api.filters.map(subscription => new SubscriptionResource(subscription, this.resourceProviderManager));
+                        return api.filters.map(subscription => new SubscriptionItem(subscription, this.resourceProviderManager));
                     }
                 } else if (api.status === 'LoggedOut') {
                     return [
@@ -59,7 +73,7 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                             localize('createStudentAccount', 'Create an Azure for Students Account...'),
                             {
                                 commandId: 'azureResourceGroups.openUrl',
-                                commandArgs: [ 'https://aka.ms/student-account' ],
+                                commandArgs: ['https://aka.ms/student-account'],
                                 iconPath: new vscode.ThemeIcon('mortar-board')
                             }),
                     ];

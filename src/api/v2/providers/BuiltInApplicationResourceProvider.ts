@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { createResourceClient } from '../../../utils/azureClients';
 import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions } from '../v2AzureResourcesApi';
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
+import { getResourceGroupFromId } from '../../../utils/azureUtils';
 
 export class BuiltInApplicationResourceProvider implements ApplicationResourceProvider {
     private readonly onDidChangeResourceEmitter = new vscode.EventEmitter<ApplicationResource | undefined>();
@@ -31,11 +32,14 @@ export class BuiltInApplicationResourceProvider implements ApplicationResourcePr
     onDidChangeResource = this.onDidChangeResourceEmitter.event;
 
     private createAppResource(subscription: ApplicationSubscription, resource: GenericResource): ApplicationResource {
+        const resourceId = nonNullProp(resource, 'id');
+
         return {
             subscription,
-            id: nonNullProp(resource, 'id'),
+            id: resourceId,
             name: nonNullProp(resource, 'name'),
             type: nonNullProp(resource, 'type'),
+            resourceGroup: getResourceGroupFromId(resourceId),
             kind: resource.kind,
             location: resource.location,
             ...resource

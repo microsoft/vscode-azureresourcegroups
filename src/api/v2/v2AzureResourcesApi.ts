@@ -27,6 +27,7 @@ export interface ApplicationResource extends ResourceBase {
     readonly subscription: ApplicationSubscription;
     readonly kind?: string;
     readonly location?: string;
+    readonly resourceGroup?: string;
     /** Resource tags */
     readonly tags?: {
         [propertyName: string]: string;
