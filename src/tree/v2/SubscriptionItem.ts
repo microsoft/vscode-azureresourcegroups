@@ -1,17 +1,16 @@
 import * as vscode from "vscode";
-import { localize } from "../../utils/localize";
 import { ApplicationResourceProviderManager } from "../../api/v2/providers/ApplicationResourceProviderManager";
-import { ApplicationResource, ApplicationSubscription } from "../../api/v2/v2AzureResourcesApi";
-import { GroupBySettings } from "../../commands/explorer/groupBy";
-import { settingUtils } from "../../utils/settingUtils";
+import { ApplicationSubscription } from "../../api/v2/v2AzureResourcesApi";
 import { treeUtils } from "../../utils/treeUtils";
-import { ApplicationResourceItem } from "./ApplicationResourceItem";
 import { AzureSubscription } from "./azure-account.api";
-import { GenericItem } from "./GenericItem";
 import { ResourceGroupResourceBase } from "./ResourceGroupResourceBase";
+import { ApplicationResourceGroupingManager } from "./ApplicationResourceGroupingManager";
 
 export class SubscriptionItem implements ResourceGroupResourceBase {
-    constructor(private readonly azureSubscription: AzureSubscription, private readonly resourceProviderManager: ApplicationResourceProviderManager) {
+    constructor(
+        private readonly azureSubscription: AzureSubscription,
+        private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
+        private readonly resourceProviderManager: ApplicationResourceProviderManager) {
     }
 
     async getChildren(): Promise<ResourceGroupResourceBase[]> {
@@ -24,7 +23,7 @@ export class SubscriptionItem implements ResourceGroupResourceBase {
 
         const resources = await this.resourceProviderManager.provideResources(subscription);
 
-        return this.groupResources(resources ?? []);
+        return this.resourceGroupingManager.groupResources(resources ?? []);
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
@@ -40,135 +39,4 @@ export class SubscriptionItem implements ResourceGroupResourceBase {
     id: string;
     name: string;
     type: string;
-
-    // TODO: Consolidate repeated grouping logic.
-    private groupByArmTag(resources: ApplicationResource[], tag: string): GenericItem[] {
-        const ungroupedKey = 'ungrouped';
-        const map = resources.reduce(
-            (acc, resource) => {
-                const key = resource.tags?.[tag] ?? ungroupedKey;
-                let children = acc[key];
-
-                if (!children) {
-                    acc[key] = children = [];
-                }
-
-                children.push(new ApplicationResourceItem(resource));
-
-                return acc;
-            },
-            <{ [key: string]: ApplicationResourceItem[] }>{});
-
-        return Object.keys(map).sort((a, b) => a.localeCompare(b)).map(key => {
-            return new GenericItem(
-                key !== ungroupedKey ? key : localize('ungrouped', 'ungrouped'),
-                {
-                    children: map[key],
-                    iconPath: new vscode.ThemeIcon(key !== ungroupedKey ? 'tag' : 'json')
-                });
-        });
-    }
-
-    private groupByLocation(resources: ApplicationResource[]): GenericItem[] {
-        const map = resources.reduce(
-            (acc, resource) => {
-                const key = resource.location ?? 'Unknown'; // TODO: Is location ever undefined?
-                let children = acc[key];
-
-                if (!children) {
-                    acc[key] = children = [];
-                }
-
-                children.push(new ApplicationResourceItem(resource));
-
-                return acc;
-            },
-            <{ [key: string]: ApplicationResourceItem[] }>{});
-
-        return Object.keys(map).sort((a, b) => a.localeCompare(b)).map(key => {
-            return new GenericItem(
-                key,
-                {
-                    children: map[key],
-                    iconPath: new vscode.ThemeIcon('globe')
-                });
-        });
-    }
-
-    private groupByResourceGroup(resources: ApplicationResource[]): GenericItem[] {
-        const map = resources.reduce(
-            (acc, resource) => {
-                const key = resource.resourceGroup ?? 'Unknown'; // TODO: Is resource group ever undefined?
-                let children = acc[key];
-
-                if (!children) {
-                    acc[key] = children = [];
-                }
-
-                children.push(new ApplicationResourceItem(resource));
-
-                return acc;
-            },
-            <{ [key: string]: ApplicationResourceItem[] }>{});
-
-        return Object.keys(map).sort((a, b) => a.localeCompare(b)).map(key => {
-            return new GenericItem(
-                key,
-                {
-                    children: map[key],
-                    iconPath: treeUtils.getIconPath('resourceGroup')
-                });
-        });
-    }
-
-    private groupByResourceType(resources: ApplicationResource[]): GenericItem[] {
-        const map = resources.reduce(
-            (acc, resource) => {
-                const key = resource.type ?? 'Unknown'; // TODO: Is resource type ever undefined?
-                let children = acc[key];
-
-                if (!children) {
-                    acc[key] = children = [];
-                }
-
-                children.push(new ApplicationResourceItem(resource));
-
-                return acc;
-            },
-            <{ [key: string]: ApplicationResourceItem[] }>{});
-
-        return Object.keys(map).sort((a, b) => a.localeCompare(b)).map(key => {
-            return new GenericItem(
-                key,
-                {
-                    children: map[key],
-                    iconPath: treeUtils.getIconPath('resourceGroup')
-                });
-        });
-    }
-
-    private groupResources(resources: ApplicationResource[]): GenericItem[] {
-        const groupBy = settingUtils.getWorkspaceSetting<string>('groupBy');
-
-        if (groupBy?.startsWith('armTag')) {
-            const tag = groupBy.substring('armTag'.length + 1);
-
-            return this.groupByArmTag(resources, tag);
-        }
-
-        switch (groupBy) {
-            case GroupBySettings.Location:
-
-                return this.groupByLocation(resources);
-
-            case GroupBySettings.ResourceType:
-
-                return this.groupByResourceType(resources);
-
-            case GroupBySettings.ResourceGroup:
-            default:
-
-                return this.groupByResourceGroup(resources);
-        }
-    }
 }
