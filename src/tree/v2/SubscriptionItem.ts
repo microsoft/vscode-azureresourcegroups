@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { localize } from "../../utils/localize";
 import { ApplicationResourceProviderManager } from "../../api/v2/providers/ApplicationResourceProviderManager";
 import { ApplicationResource, ApplicationSubscription } from "../../api/v2/v2AzureResourcesApi";
 import { GroupBySettings } from "../../commands/explorer/groupBy";
@@ -41,6 +42,33 @@ export class SubscriptionItem implements ResourceGroupResourceBase {
     type: string;
 
     // TODO: Consolidate repeated grouping logic.
+    private groupByArmTag(resources: ApplicationResource[], tag: string): GenericItem[] {
+        const ungroupedKey = 'ungrouped';
+        const map = resources.reduce(
+            (acc, resource) => {
+                const key = resource.tags?.[tag] ?? ungroupedKey;
+                let children = acc[key];
+
+                if (!children) {
+                    acc[key] = children = [];
+                }
+
+                children.push(new ApplicationResourceItem(resource));
+
+                return acc;
+            },
+            <{ [key: string]: ApplicationResourceItem[] }>{});
+
+        return Object.keys(map).sort((a, b) => a.localeCompare(b)).map(key => {
+            return new GenericItem(
+                key !== ungroupedKey ? key : localize('ungrouped', 'ungrouped'),
+                {
+                    children: map[key],
+                    iconPath: new vscode.ThemeIcon(key !== ungroupedKey ? 'tag' : 'json')
+                });
+        });
+    }
+
     private groupByLocation(resources: ApplicationResource[]): GenericItem[] {
         const map = resources.reduce(
             (acc, resource) => {
@@ -121,6 +149,12 @@ export class SubscriptionItem implements ResourceGroupResourceBase {
 
     private groupResources(resources: ApplicationResource[]): GenericItem[] {
         const groupBy = settingUtils.getWorkspaceSetting<string>('groupBy');
+
+        if (groupBy?.startsWith('armTag')) {
+            const tag = groupBy.substring('armTag'.length + 1);
+
+            return this.groupByArmTag(resources, tag);
+        }
 
         switch (groupBy) {
             case GroupBySettings.Location:
