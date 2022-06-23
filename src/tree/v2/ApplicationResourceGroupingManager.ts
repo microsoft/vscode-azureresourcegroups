@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ApplicationResource } from '../../api/v2/v2AzureResourcesApi';
+import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { GroupBySettings } from '../../commands/explorer/groupBy';
 import { ext } from '../../extensionVariables';
 import { settingUtils } from '../../utils/settingUtils';
@@ -16,7 +16,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
     private readonly onDidChangeGroupingEmitter = new vscode.EventEmitter<void>();
     private readonly configSubscription: vscode.Disposable;
 
-    constructor() {
+    constructor(private readonly branchDataProviderFactory: (ApplicationResource) => BranchDataProvider<ApplicationResource, ResourceModelBase>) {
         super(
             () =>
             {
@@ -71,7 +71,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
                     acc[key] = children = [];
                 }
 
-                children.push(new ApplicationResourceItem(resource));
+                children.push(new ApplicationResourceItem(this.branchDataProviderFactory(resource), resource));
 
                 return acc;
             },

@@ -9,7 +9,6 @@ import { ResourceGroupResourceBase } from './ResourceGroupResourceBase';
 import { SubscriptionItem } from './SubscriptionItem';
 
 export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupResourceBase> {
-    private readonly resourceGroupingManager = new ApplicationResourceGroupingManager();
     private readonly groupingChangeSubscription: vscode.Disposable;
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupResourceBase | null | undefined>();
 
@@ -17,14 +16,14 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
     private filtersSubscription: vscode.Disposable | undefined;
     private statusSubscription: vscode.Disposable | undefined;
 
-    constructor(private readonly resourceProviderManager: ApplicationResourceProviderManager) {
+    constructor(
+        private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
+        private readonly resourceProviderManager: ApplicationResourceProviderManager) {
         super(
             () => {
                 this.groupingChangeSubscription.dispose();
                 this.filtersSubscription?.dispose();
                 this.statusSubscription?.dispose();
-
-                this.resourceGroupingManager.dispose();
             });
 
         // TODO: This really belongs on the subscription item, but that then involves disposing of them during refresh,

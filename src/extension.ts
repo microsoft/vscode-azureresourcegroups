@@ -33,6 +33,8 @@ import { wrapperResolver } from './resolvers/WrapperResolver';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { GroupTreeItemBase } from './tree/GroupTreeItemBase';
 import { HelpTreeItem } from './tree/HelpTreeItem';
+import { BranchDataProviderManager } from './tree/v2/providers/BranchDataProviderManager';
+import { BuiltInApplicationResourceBranchDataProvider } from './tree/v2/providers/BuiltInApplicationResourceBranchDataProvider';
 import { registerResourceGroupsTreeV2 } from './tree/v2/registerResourceGroupsTreeV2';
 import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
 import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
@@ -97,11 +99,14 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         await vscode.commands.executeCommand('setContext', 'azure-account.signedIn', await ext.rootAccountTreeItem.getIsLoggedIn());
     });
 
+    const branchDataProviderManager = new BranchDataProviderManager(new BuiltInApplicationResourceBranchDataProvider());
     const resourceProviderManager = new ApplicationResourceProviderManager();
 
-    registerResourceGroupsTreeV2(context, resourceProviderManager);
+    registerResourceGroupsTreeV2(context, branchDataProviderManager, resourceProviderManager);
 
-    const v2Api = new V2AzureResourcesApiImplementation(resourceProviderManager);
+    const v2Api = new V2AzureResourcesApiImplementation(
+        branchDataProviderManager,
+        resourceProviderManager);
 
     v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider());
 

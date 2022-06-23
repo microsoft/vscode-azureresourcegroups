@@ -1,22 +1,34 @@
 import * as vscode from 'vscode';
-import { ApplicationResource } from '../../api/v2/v2AzureResourcesApi';
-import { getIconPath } from '../../utils/azureUtils';
+import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { ApplicationResourceChildItem } from './ApplicationResourceChildItem';
 import { ResourceGroupResourceBase } from './ResourceGroupResourceBase';
 
+// TODO: Remove in favor of reusing ApplicationResourceChildItem (having the parent make the initial getResourceItem() call)?
 export class ApplicationResourceItem implements ResourceGroupResourceBase {
-    constructor(private readonly resource: ApplicationResource) {
+    private
+    constructor(
+        private readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
+        private readonly resource: ApplicationResource) {
     }
 
-    getChildren(): vscode.ProviderResult<ResourceGroupResourceBase[]> {
+    async getChildren(): Promise<ResourceGroupResourceBase[] | undefined> {
+        // TODO: Should the resource be cached?
+        const resourceItem = await this.branchDataProvider.getResourceItem(this.resource);
+
+        if (resourceItem) {
+            const children = await this.branchDataProvider.getChildren(resourceItem);
+
+            return children?.map(child => new ApplicationResourceChildItem(this.branchDataProvider, child));
+        }
+
         return undefined;
     }
 
-    getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        const treeItem = new vscode.TreeItem(this.resource.name ?? 'Unnamed Resource');
+    async getTreeItem(): Promise<vscode.TreeItem> {
+        // TODO: Should the resource be cached?
+        const resourceItem = await this.branchDataProvider.getResourceItem(this.resource);
 
-        treeItem.iconPath = getIconPath(this.resource.type);
-
-        return treeItem;
+        return this.branchDataProvider.getTreeItem(resourceItem);
     }
 
     id: string;

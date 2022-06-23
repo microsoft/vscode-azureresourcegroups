@@ -67,7 +67,7 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
      * @remarks getChildren() assumes that the provider passes a known <T> model item, or undefined when getting the root children.
      *          However, we need to be able to pass a specific application resource which may not match the <T> model hierarchy used by the provider.
      */
-    getResourceItem(element: TResource): vscode.ProviderResult<TModel>;
+    getResourceItem(element: TResource): TModel | Thenable<TModel>;
 
     /**
      * (Optional) Called to create a new resource of the type (e.g. via Quick Pick).
@@ -167,7 +167,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
      * @param id The resolver ID. Must be unique.
      * @param resolver The resolver
      */
-    registerApplicationResourceManager<T>(id: string, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable;
+    registerApplicationResourceBranchDataProvider<T>(id: string, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable;
 
     /**
      * Registers a workspace resource provider
@@ -181,7 +181,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
      * @param id The resolver ID. Must be unique.
      * @param resolver The resolver
      */
-    registerWorkspaceResourceManager<T>(id: string, provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable;
+    registerWorkspaceResourceBranchDataProvider<T>(id: string, provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable;
 }
 
 export interface AzureResourcesApiBase {
