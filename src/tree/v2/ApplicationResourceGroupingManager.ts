@@ -7,6 +7,9 @@ import { ApplicationResourceItem } from './ApplicationResourceItem';
 import { GenericItem } from './GenericItem';
 import { localize } from "../../utils/localize";
 import { treeUtils } from '../../utils/treeUtils';
+import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+
+const unknownLabel = localize('unknown', 'unknown');
 
 export class ApplicationResourceGroupingManager extends vscode.Disposable {
     private readonly onDidChangeGroupingEmitter = new vscode.EventEmitter<void>();
@@ -57,11 +60,10 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
     }
 
     // TODO: Consolidate repeated grouping logic.
-    private groupByArmTag(resources: ApplicationResource[], tag: string): GenericItem[] {
-        const ungroupedKey = 'ungrouped';
+    private groupBy(resources: ApplicationResource[], keySelector: (resource: ApplicationResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined): GenericItem[] {
         const map = resources.reduce(
             (acc, resource) => {
-                const key = resource.tags?.[tag] ?? ungroupedKey;
+                const key = keySelector(resource);
                 let children = acc[key];
 
                 if (!children) {
@@ -76,89 +78,44 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
 
         return Object.keys(map).sort((a, b) => a.localeCompare(b)).map(key => {
             return new GenericItem(
-                key !== ungroupedKey ? key : localize('ungrouped', 'ungrouped'),
+                labelSelector(key),
                 {
                     children: map[key],
-                    iconPath: new vscode.ThemeIcon(key !== ungroupedKey ? 'tag' : 'json')
+                    iconPath: iconSelector(key)
                 });
         });
+    }
+
+    private groupByArmTag(resources: ApplicationResource[], tag: string): GenericItem[] {
+        const ungroupedKey = 'ungrouped';
+        return this.groupBy(
+            resources,
+            resource => resource.tags?.[tag] ?? ungroupedKey,
+            key => key !== ungroupedKey ? key : localize('ungrouped', 'ungrouped'),
+            key => new vscode.ThemeIcon(key !== ungroupedKey ? 'tag' : 'json'));
     }
 
     private groupByLocation(resources: ApplicationResource[]): GenericItem[] {
-        const map = resources.reduce(
-            (acc, resource) => {
-                const key = resource.location ?? 'Unknown'; // TODO: Is location ever undefined?
-                let children = acc[key];
-
-                if (!children) {
-                    acc[key] = children = [];
-                }
-
-                children.push(new ApplicationResourceItem(resource));
-
-                return acc;
-            },
-            <{ [key: string]: ApplicationResourceItem[] }>{});
-
-        return Object.keys(map).sort((a, b) => a.localeCompare(b)).map(key => {
-            return new GenericItem(
-                key,
-                {
-                    children: map[key],
-                    iconPath: new vscode.ThemeIcon('globe')
-                });
-        });
+        return this.groupBy(
+            resources,
+            resource => resource.location ?? unknownLabel, // TODO: Is location ever undefined?
+            key => key,
+            () => new vscode.ThemeIcon('globe'));
     }
 
     private groupByResourceGroup(resources: ApplicationResource[]): GenericItem[] {
-        const map = resources.reduce(
-            (acc, resource) => {
-                const key = resource.resourceGroup ?? 'Unknown'; // TODO: Is resource group ever undefined?
-                let children = acc[key];
-
-                if (!children) {
-                    acc[key] = children = [];
-                }
-
-                children.push(new ApplicationResourceItem(resource));
-
-                return acc;
-            },
-            <{ [key: string]: ApplicationResourceItem[] }>{});
-
-        return Object.keys(map).sort((a, b) => a.localeCompare(b)).map(key => {
-            return new GenericItem(
-                key,
-                {
-                    children: map[key],
-                    iconPath: treeUtils.getIconPath('resourceGroup')
-                });
-        });
+        return this.groupBy(
+            resources,
+            resource => resource.resourceGroup?.toLowerCase() ?? unknownLabel, // TODO: Is resource group ever undefined? Should resource group be normalized on creation?
+            key => key,
+            () => treeUtils.getIconPath('resourceGroup'));
     }
 
     private groupByResourceType(resources: ApplicationResource[]): GenericItem[] {
-        const map = resources.reduce(
-            (acc, resource) => {
-                const key = resource.type ?? 'Unknown'; // TODO: Is resource type ever undefined?
-                let children = acc[key];
-
-                if (!children) {
-                    acc[key] = children = [];
-                }
-
-                children.push(new ApplicationResourceItem(resource));
-
-                return acc;
-            },
-            <{ [key: string]: ApplicationResourceItem[] }>{});
-
-        return Object.keys(map).sort((a, b) => a.localeCompare(b)).map(key => {
-            return new GenericItem(
-                key,
-                {
-                    children: map[key],
-                    iconPath: treeUtils.getIconPath('resourceGroup')
-                });
-        });
+        return this.groupBy(
+            resources,
+            resource => resource.type ?? unknownLabel, // TODO: Is resource type ever undefined?
+            key => key,
+            () => undefined); // TODO: What's the default icon for a resource type?
     }
 }
