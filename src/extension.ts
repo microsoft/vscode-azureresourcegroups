@@ -100,6 +100,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     });
 
     const branchDataProviderManager = new BranchDataProviderManager(new BuiltInApplicationResourceBranchDataProvider());
+
+    context.subscriptions.push(branchDataProviderManager);
+
     const resourceProviderManager = new ApplicationResourceProviderManager();
 
     registerResourceGroupsTreeV2(context, branchDataProviderManager, resourceProviderManager);

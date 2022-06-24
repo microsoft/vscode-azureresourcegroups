@@ -3,12 +3,11 @@ import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../.
 import { GroupBySettings } from '../../commands/explorer/groupBy';
 import { ext } from '../../extensionVariables';
 import { settingUtils } from '../../utils/settingUtils';
-import { ApplicationResourceItem } from './ApplicationResourceItem';
-import { GenericItem } from './GenericItem';
 import { localize } from "../../utils/localize";
 import { treeUtils } from '../../utils/treeUtils';
 import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { getIconPath, getName } from '../../utils/azureUtils';
+import { GroupingItem } from './GroupingItem';
 
 const unknownLabel = localize('unknown', 'unknown');
 
@@ -35,7 +34,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         return this.onDidChangeGroupingEmitter.event;
     }
 
-    groupResources(resources: ApplicationResource[]): GenericItem[] {
+    groupResources(resources: ApplicationResource[]): GroupingItem[] {
         const groupBy = settingUtils.getWorkspaceSetting<string>('groupBy');
 
         if (groupBy?.startsWith('armTag')) {
@@ -61,7 +60,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
     }
 
     // TODO: Consolidate repeated grouping logic.
-    private groupBy(resources: ApplicationResource[], keySelector: (resource: ApplicationResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined): GenericItem[] {
+    private groupBy(resources: ApplicationResource[], keySelector: (resource: ApplicationResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined): GroupingItem[] {
         const map = resources.reduce(
             (acc, resource) => {
                 const key = keySelector(resource);
@@ -71,23 +70,22 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
                     acc[key] = children = [];
                 }
 
-                children.push(new ApplicationResourceItem(this.branchDataProviderFactory(resource), resource));
+                children.push(resource);
 
                 return acc;
             },
-            <{ [key: string]: ApplicationResourceItem[] }>{});
+            <{ [key: string]: ApplicationResource[] }>{});
 
         return Object.keys(map).map(key => {
-            return new GenericItem(
+            return new GroupingItem(
+                this.branchDataProviderFactory,
+                iconSelector(key),
                 labelSelector(key),
-                {
-                    children: map[key],
-                    iconPath: iconSelector(key)
-                });
+                map[key]);
         });
     }
 
-    private groupByArmTag(resources: ApplicationResource[], tag: string): GenericItem[] {
+    private groupByArmTag(resources: ApplicationResource[], tag: string): GroupingItem[] {
         const ungroupedKey = 'ungrouped';
         return this.groupBy(
             resources,
@@ -96,7 +94,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             key => new vscode.ThemeIcon(key !== ungroupedKey ? 'tag' : 'json'));
     }
 
-    private groupByLocation(resources: ApplicationResource[]): GenericItem[] {
+    private groupByLocation(resources: ApplicationResource[]): GroupingItem[] {
         return this.groupBy(
             resources,
             resource => resource.location ?? unknownLabel, // TODO: Is location ever undefined?
@@ -104,7 +102,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             () => new vscode.ThemeIcon('globe'));
     }
 
-    private groupByResourceGroup(resources: ApplicationResource[]): GenericItem[] {
+    private groupByResourceGroup(resources: ApplicationResource[]): GroupingItem[] {
         return this.groupBy(
             resources,
             resource => resource.resourceGroup?.toLowerCase() ?? unknownLabel, // TODO: Is resource group ever undefined? Should resource group be normalized on creation?
@@ -112,7 +110,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             () => treeUtils.getIconPath('resourceGroup'));
     }
 
-    private groupByResourceType(resources: ApplicationResource[]): GenericItem[] {
+    private groupByResourceType(resources: ApplicationResource[]): GroupingItem[] {
         return this.groupBy(
             resources,
             resource => resource.type ?? unknownLabel, // TODO: Is resource type ever undefined?
