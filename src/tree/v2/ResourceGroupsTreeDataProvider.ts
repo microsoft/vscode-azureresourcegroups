@@ -5,10 +5,12 @@ import { localize } from '../../utils/localize';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
 import { AzureAccountExtensionApi } from './azure-account.api';
 import { GenericItem } from './GenericItem';
+import { ResourceGroupItemCache } from './ResourceGroupItemCache';
 import { ResourceGroupResourceBase } from './ResourceGroupResourceBase';
 import { SubscriptionItem } from './SubscriptionItem';
 
 export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupResourceBase> {
+    private readonly branchChangeSubscription: vscode.Disposable;
     private readonly groupingChangeSubscription: vscode.Disposable;
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupResourceBase | null | undefined>();
 
@@ -17,13 +19,25 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
     private statusSubscription: vscode.Disposable | undefined;
 
     constructor(
+        private readonly itemCache: ResourceGroupItemCache,
+        onDidChangeBranchData: vscode.Event<unknown>,
         private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
         private readonly resourceProviderManager: ApplicationResourceProviderManager) {
         super(
             () => {
+                this.branchChangeSubscription.dispose();
                 this.groupingChangeSubscription.dispose();
                 this.filtersSubscription?.dispose();
                 this.statusSubscription?.dispose();
+            });
+
+        this.branchChangeSubscription = onDidChangeBranchData(
+            e => {
+                const item = this.itemCache.getItemForBranchItem(e);
+
+                if (item) {
+                    this.onDidChangeTreeDataEmitter.fire(item)
+                }
             });
 
         // TODO: This really belongs on the subscription item, but that then involves disposing of them during refresh,
@@ -43,6 +57,9 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
         if (element) {
             return await element.getChildren();
         } else {
+            // We're effectively redrawing the entire tree, so we need to clear the cache...
+            this.itemCache.evictAll();
+
             const api = await this.getApi();
 
             if (api) {
