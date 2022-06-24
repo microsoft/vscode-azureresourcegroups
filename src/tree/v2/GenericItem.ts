@@ -1,19 +1,19 @@
 import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ResourceGroupResourceBase } from "./ResourceGroupResourceBase";
+import { ResourceGroupItem } from "./ResourceGroupItem";
 
 export interface GenericItemOptions {
-    readonly children?: ResourceGroupResourceBase[];
+    readonly children?: ResourceGroupItem[];
     readonly commandArgs?: unknown[];
     readonly commandId?: string;
     readonly iconPath?: TreeItemIconPath;
 }
 
-export class GenericItem implements ResourceGroupResourceBase {
+export class GenericItem implements ResourceGroupItem {
     constructor(public readonly label: string, private readonly options?: GenericItemOptions) {
     }
 
-    getChildren(): vscode.ProviderResult<ResourceGroupResourceBase[]> {
+    getChildren(): vscode.ProviderResult<ResourceGroupItem[]> {
         return this.options?.children;
     }
 

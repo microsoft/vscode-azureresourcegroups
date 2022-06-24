@@ -34,3 +34,6 @@ export class BranchDataProviderManager extends vscode.Disposable {
         delete this.applicationResourceBranchDataProviders[type];
     }
 }
+
+export type BranchDataProviderFactory = (ApplicationResource) => BranchDataProvider<ApplicationResource, ResourceModelBase>;
+

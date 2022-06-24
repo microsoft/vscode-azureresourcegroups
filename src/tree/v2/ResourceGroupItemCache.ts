@@ -1,14 +1,14 @@
-import { ResourceGroupResourceBase } from './ResourceGroupResourceBase';
+import { ResourceGroupItem } from './ResourceGroupItem';
 
 export class ResourceGroupItemCache {
-    private readonly cache: Map<ResourceGroupResourceBase, ResourceGroupResourceBase[]> = new Map();
-    private readonly branchcache: Map<unknown, ResourceGroupResourceBase> = new Map();
+    private readonly cache: Map<ResourceGroupItem, ResourceGroupItem[]> = new Map();
+    private readonly branchcache: Map<unknown, ResourceGroupItem> = new Map();
 
-    addBranchItem(branchItem: unknown, item: ResourceGroupResourceBase): void {
+    addBranchItem(branchItem: unknown, item: ResourceGroupItem): void {
         this.branchcache.set(branchItem, item);
     }
 
-    addItem(item: ResourceGroupResourceBase, children: ResourceGroupResourceBase[]): void {
+    addItem(item: ResourceGroupItem, children: ResourceGroupItem[]): void {
         this.cache.set(item, children);
     }
 
@@ -17,21 +17,25 @@ export class ResourceGroupItemCache {
         this.cache.clear();
     }
 
-    evictItem(item: ResourceGroupResourceBase): void {
+    evictItemChildren(item: ResourceGroupItem): void {
         // TODO: Evict any branch items associated with this item.
 
-        const stack = [ item ];
+        const children = this.cache.get(item);
 
-        while (stack.pop()) {
+        while (children?.pop()) {
             const children = this.cache.get(item);
 
-            children?.forEach(child => stack.push(child));
+            children?.forEach(child => children.push(child));
 
             this.cache.delete(item);
         }
     }
 
-    getItemForBranchItem(branchItem: unknown): ResourceGroupResourceBase | undefined {
+    getItemForBranchItem(branchItem: unknown): ResourceGroupItem | undefined {
         return this.branchcache.get(branchItem);
+    }
+
+    updateItemChildren(item: ResourceGroupItem, children: ResourceGroupItem[]): void {
+        this.cache.set(item, children);
     }
 }

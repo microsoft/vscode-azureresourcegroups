@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { ApplicationResource } from '../../api/v2/v2AzureResourcesApi';
 import { GroupBySettings } from '../../commands/explorer/groupBy';
 import { ext } from '../../extensionVariables';
 import { settingUtils } from '../../utils/settingUtils';
@@ -7,7 +7,7 @@ import { localize } from "../../utils/localize";
 import { treeUtils } from '../../utils/treeUtils';
 import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { getIconPath, getName } from '../../utils/azureUtils';
-import { GroupingItem } from './GroupingItem';
+import { GroupingItem, GroupingItemFactory } from './GroupingItem';
 
 const unknownLabel = localize('unknown', 'unknown');
 
@@ -15,7 +15,8 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
     private readonly onDidChangeGroupingEmitter = new vscode.EventEmitter<void>();
     private readonly configSubscription: vscode.Disposable;
 
-    constructor(private readonly branchDataProviderFactory: (ApplicationResource) => BranchDataProvider<ApplicationResource, ResourceModelBase>) {
+    constructor(
+        private readonly groupingItemFactory: GroupingItemFactory) {
         super(
             () =>
             {
@@ -77,8 +78,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             <{ [key: string]: ApplicationResource[] }>{});
 
         return Object.keys(map).map(key => {
-            return new GroupingItem(
-                this.branchDataProviderFactory,
+            return this.groupingItemFactory(
                 iconSelector(key),
                 labelSelector(key),
                 map[key]);

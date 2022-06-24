@@ -5,14 +5,14 @@ import { localize } from '../../utils/localize';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
 import { AzureAccountExtensionApi } from './azure-account.api';
 import { GenericItem } from './GenericItem';
+import { ResourceGroupItem } from './ResourceGroupItem';
 import { ResourceGroupItemCache } from './ResourceGroupItemCache';
-import { ResourceGroupResourceBase } from './ResourceGroupResourceBase';
 import { SubscriptionItem } from './SubscriptionItem';
 
-export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupResourceBase> {
+export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupItem> {
     private readonly branchChangeSubscription: vscode.Disposable;
     private readonly groupingChangeSubscription: vscode.Disposable;
-    private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupResourceBase | null | undefined>();
+    private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupItem | null | undefined>();
 
     private api: AzureAccountExtensionApi | undefined;
     private filtersSubscription: vscode.Disposable | undefined;
@@ -47,66 +47,92 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
         this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => this.onDidChangeTreeDataEmitter.fire());
     }
 
-    onDidChangeTreeData: vscode.Event<void | ResourceGroupResourceBase | null | undefined> = this.onDidChangeTreeDataEmitter.event;
+    onDidChangeTreeData: vscode.Event<void | ResourceGroupItem | null | undefined> = this.onDidChangeTreeDataEmitter.event;
 
-    getTreeItem(element: ResourceGroupResourceBase): vscode.TreeItem | Thenable<vscode.TreeItem> {
+    getTreeItem(element: ResourceGroupItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
         return element.getTreeItem();
     }
 
-    async getChildren(element?: ResourceGroupResourceBase | undefined): Promise<ResourceGroupResourceBase[] | null | undefined> {
-        if (element) {
-            return await element.getChildren();
-        } else {
-            // We're effectively redrawing the entire tree, so we need to clear the cache...
-            this.itemCache.evictAll();
-
-            const api = await this.getApi();
-
-            if (api) {
-                if (api.status === 'LoggedIn') {
-                    if (api.filters.length === 0) {
-                        return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), { commandId: 'azure-account.selectSubscriptions' })]
-                    } else {
-                        return api.filters.map(subscription => new SubscriptionItem(subscription, this.resourceGroupingManager, this.resourceProviderManager));
-                    }
-                } else if (api.status === 'LoggedOut') {
-                    return [
-                        new GenericItem(
-                            localize('signInLabel', 'Sign in to Azure...'),
-                            {
-                                commandId: 'azure-account.login',
-                                iconPath: new vscode.ThemeIcon('sign-in')
-                            }),
-                        new GenericItem(
-                            localize('createAccountLabel', 'Create an Azure Account...'),
-                            {
-                                commandId: 'azure-account.createAccount',
-                                iconPath: new vscode.ThemeIcon('add')
-                            }),
-                        new GenericItem(
-                            localize('createStudentAccount', 'Create an Azure for Students Account...'),
-                            {
-                                commandId: 'azureResourceGroups.openUrl',
-                                commandArgs: ['https://aka.ms/student-account'],
-                                iconPath: new vscode.ThemeIcon('mortar-board')
-                            }),
-                    ];
+    async getChildren(element?: ResourceGroupItem | undefined): Promise<ResourceGroupItem[] | null | undefined> {
+        return this.cacheChildren(
+            element,
+            async () => {
+                if (element) {
+                    return await element.getChildren();
                 } else {
-                    return [
-                        new GenericItem(
-                            api.status === 'Initializing'
-                                ? localize('loadingTreeItem', 'Loading...')
-                                : localize('signingIn', 'Waiting for Azure sign-in...'),
-                            {
-                                commandId: 'azure-account.login',
-                                iconPath: new vscode.ThemeIcon('loading~spin')
-                            })
-                    ];
+                    // We're effectively redrawing the entire tree, so we need to clear the cache...
+                    this.itemCache.evictAll();
+
+                    const api = await this.getApi();
+
+                    if (api) {
+                        if (api.status === 'LoggedIn') {
+                            if (api.filters.length === 0) {
+                                return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), { commandId: 'azure-account.selectSubscriptions' })]
+                            } else {
+                                return api.filters.map(subscription => new SubscriptionItem(subscription, this.resourceGroupingManager, this.resourceProviderManager));
+                            }
+                        } else if (api.status === 'LoggedOut') {
+                            return [
+                                new GenericItem(
+                                    localize('signInLabel', 'Sign in to Azure...'),
+                                    {
+                                        commandId: 'azure-account.login',
+                                        iconPath: new vscode.ThemeIcon('sign-in')
+                                    }),
+                                    new GenericItem(
+                                        localize('createAccountLabel', 'Create an Azure Account...'),
+                                        {
+                                            commandId: 'azure-account.createAccount',
+                                            iconPath: new vscode.ThemeIcon('add')
+                                        }),
+                                        new GenericItem(
+                                            localize('createStudentAccount', 'Create an Azure for Students Account...'),
+                                            {
+                                                commandId: 'azureResourceGroups.openUrl',
+                                                commandArgs: ['https://aka.ms/student-account'],
+                                                iconPath: new vscode.ThemeIcon('mortar-board')
+                                            }),
+                                        ];
+                        } else {
+                            return [
+                                new GenericItem(
+                                    api.status === 'Initializing'
+                                    ? localize('loadingTreeItem', 'Loading...')
+                                    : localize('signingIn', 'Waiting for Azure sign-in...'),
+                                    {
+                                        commandId: 'azure-account.login',
+                                        iconPath: new vscode.ThemeIcon('loading~spin')
+                                    })
+                                ];
+                        }
+                    }
                 }
+
+                return undefined;
+            });
+    }
+
+    async cacheChildren(element: ResourceGroupItem | undefined, callback: () => Promise<ResourceGroupItem[] | null | undefined>): Promise<ResourceGroupItem[] | null | undefined> {
+        if (element) {
+            // TODO: Do we really need to evict before generating new children, or can we just update after the fact?
+            //       Since the callback is async, could change notifications show up while doing this?
+            this.itemCache.evictItemChildren(element);
+        } else {
+            this.itemCache.evictAll();
+        }
+
+        const children = await callback();
+
+        if (children) {
+            if (element) {
+                this.itemCache.updateItemChildren(element, children);
+            } else {
+                children.forEach(child => this.itemCache.addItem(child, []));
             }
         }
 
-        return undefined;
+        return children;
     }
 
     private async getApi(): Promise<AzureAccountExtensionApi | undefined> {

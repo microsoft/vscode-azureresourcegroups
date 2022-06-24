@@ -2,18 +2,18 @@ import * as vscode from "vscode";
 import { ApplicationResourceProviderManager } from "../../api/v2/providers/ApplicationResourceProviderManager";
 import { ApplicationSubscription } from "../../api/v2/v2AzureResourcesApi";
 import { treeUtils } from "../../utils/treeUtils";
-import { AzureSubscription } from "./azure-account.api";
-import { ResourceGroupResourceBase } from "./ResourceGroupResourceBase";
 import { ApplicationResourceGroupingManager } from "./ApplicationResourceGroupingManager";
+import { AzureSubscription } from "./azure-account.api";
+import { ResourceGroupItem } from "./ResourceGroupItem";
 
-export class SubscriptionItem implements ResourceGroupResourceBase {
+export class SubscriptionItem implements ResourceGroupItem {
     constructor(
         private readonly azureSubscription: AzureSubscription,
         private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
         private readonly resourceProviderManager: ApplicationResourceProviderManager) {
     }
 
-    async getChildren(): Promise<ResourceGroupResourceBase[]> {
+    async getChildren(): Promise<ResourceGroupItem[]> {
         const subscription: ApplicationSubscription = {
             credentials: this.azureSubscription.session.credentials2,
             environment: this.azureSubscription.session.environment,
