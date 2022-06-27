@@ -18,7 +18,7 @@ export function registerResourceGroupsTreeV2(
 
     context.subscriptions.push(resourceGroupingManager);
 
-    const treeDataProvider = new ResourceGroupsTreeDataProvider(itemCache, branchDataProviderManager.onDidChangeTreeData, resourceGroupingManager, resourceProviderManager);
+    const treeDataProvider = new ResourceGroupsTreeDataProvider(branchDataProviderManager, itemCache, resourceGroupingManager, resourceProviderManager);
 
     context.subscriptions.push(treeDataProvider);
 

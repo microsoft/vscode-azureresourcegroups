@@ -5,6 +5,7 @@ import { localize } from '../../utils/localize';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
 import { AzureAccountExtensionApi } from './azure-account.api';
 import { GenericItem } from './GenericItem';
+import { BranchDataProviderManager } from './providers/BranchDataProviderManager';
 import { ResourceGroupItem } from './ResourceGroupItem';
 import { ResourceGroupItemCache } from './ResourceGroupItemCache';
 import { SubscriptionItem } from './SubscriptionItem';
@@ -12,6 +13,7 @@ import { SubscriptionItem } from './SubscriptionItem';
 export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupItem> {
     private readonly branchChangeSubscription: vscode.Disposable;
     private readonly groupingChangeSubscription: vscode.Disposable;
+    private readonly providersChangeSubscription: vscode.Disposable;
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupItem | null | undefined>();
 
     private api: AzureAccountExtensionApi | undefined;
@@ -19,8 +21,8 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
     private statusSubscription: vscode.Disposable | undefined;
 
     constructor(
+        branchDataProviderManager: BranchDataProviderManager,
         private readonly itemCache: ResourceGroupItemCache,
-        onDidChangeBranchData: vscode.Event<unknown>,
         private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
         private readonly resourceProviderManager: ApplicationResourceProviderManager) {
         super(
@@ -28,10 +30,13 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                 this.branchChangeSubscription.dispose();
                 this.groupingChangeSubscription.dispose();
                 this.filtersSubscription?.dispose();
+                this.providersChangeSubscription.dispose();
                 this.statusSubscription?.dispose();
             });
 
-        this.branchChangeSubscription = onDidChangeBranchData(
+        this.providersChangeSubscription = branchDataProviderManager.onDidChangeProviders(() => this.onDidChangeTreeDataEmitter.fire());
+
+        this.branchChangeSubscription = branchDataProviderManager.onDidChangeTreeData(
             e => {
                 const item = this.itemCache.getItemForBranchItem(e);
 

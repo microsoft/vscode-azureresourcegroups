@@ -35,6 +35,7 @@ import { GroupTreeItemBase } from './tree/GroupTreeItemBase';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { BranchDataProviderManager } from './tree/v2/providers/BranchDataProviderManager';
 import { BuiltInApplicationResourceBranchDataProvider } from './tree/v2/providers/BuiltInApplicationResourceBranchDataProvider';
+import { BuiltInStorageAccountBranchDataProvider } from './tree/v2/providers/BuiltInStorageAccountBranchDataProvider';
 import { registerResourceGroupsTreeV2 } from './tree/v2/registerResourceGroupsTreeV2';
 import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
 import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
@@ -103,6 +104,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     context.subscriptions.push(branchDataProviderManager);
 
+    const storageAccountBranchDataProvider = new BuiltInStorageAccountBranchDataProvider();
+
+    context.subscriptions.push(storageAccountBranchDataProvider);
+
     const resourceProviderManager = new ApplicationResourceProviderManager();
 
     registerResourceGroupsTreeV2(context, branchDataProviderManager, resourceProviderManager);
@@ -111,7 +116,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         branchDataProviderManager,
         resourceProviderManager);
 
-    v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider());
+    context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider()));
+
+    context.subscriptions.push(v2Api.registerApplicationResourceBranchDataProvider('Microsoft.Storage/storageAccounts', storageAccountBranchDataProvider));
 
     return createApiProvider([
         new InternalAzureResourceGroupsExtensionApi({
