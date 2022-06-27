@@ -4,14 +4,19 @@ import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../.
 import { BranchDataItemFactory } from './BranchDataItem';
 import { BranchDataProviderFactory } from './providers/BranchDataProviderManager';
 import { ResourceGroupItem } from './ResourceGroupItem';
+import { ResourceGroupsTreeContext } from './ResourceGroupsTreeContext';
 
 export class GroupingItem implements ResourceGroupItem {
+    private description: string | undefined;
+
     constructor(
+        public readonly context: ResourceGroupsTreeContext,
         private readonly branchDataItemFactory: BranchDataItemFactory,
         private readonly branchDataProviderFactory: (ApplicationResource) => BranchDataProvider<ApplicationResource, ResourceModelBase>,
+        private readonly contextValues: string[] | undefined,
         private readonly iconPath: TreeItemIconPath | undefined,
         public readonly label: string,
-        private readonly resources: ApplicationResource[]) {
+        public readonly resources: ApplicationResource[]) {
     }
 
     async getChildren(): Promise<ResourceGroupItem[] | undefined> {
@@ -29,9 +34,23 @@ export class GroupingItem implements ResourceGroupItem {
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = new vscode.TreeItem(this.label, vscode.TreeItemCollapsibleState.Collapsed);
 
+        treeItem.contextValue = this.contextValues?.join(' ');
+        treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
 
         return treeItem;
+    }
+
+    async withDescription(description: string, callback: () => Promise<void>): Promise<void> {
+        this.description = description;
+        this.context.refresh(this);
+
+        try {
+            await callback();
+        } finally {
+            this.description = undefined;
+            this.context.refresh(this);
+        }
     }
 
     id: string;
@@ -39,8 +58,8 @@ export class GroupingItem implements ResourceGroupItem {
     type: string;
 }
 
-export type GroupingItemFactory = (iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[]) => GroupingItem;
+export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[]) => GroupingItem;
 
 export function createGroupingItemFactory(branchDataItemFactory: BranchDataItemFactory, branchDataProviderFactory: BranchDataProviderFactory): GroupingItemFactory {
-    return (iconPath, label, resources) => new GroupingItem(branchDataItemFactory, branchDataProviderFactory, iconPath, label, resources);
+    return (context, contextValues, iconPath, label, resources) => new GroupingItem(context, branchDataItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources);
 }

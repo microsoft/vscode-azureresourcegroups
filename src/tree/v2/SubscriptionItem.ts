@@ -1,37 +1,29 @@
 import * as vscode from "vscode";
 import { ApplicationResourceProviderManager } from "../../api/v2/providers/ApplicationResourceProviderManager";
-import { ApplicationSubscription } from "../../api/v2/v2AzureResourcesApi";
 import { treeUtils } from "../../utils/treeUtils";
 import { ApplicationResourceGroupingManager } from "./ApplicationResourceGroupingManager";
-import { AzureSubscription } from "./azure-account.api";
 import { ResourceGroupItem } from "./ResourceGroupItem";
+import { ResourceGroupsTreeContext } from "./ResourceGroupsTreeContext";
 
 export class SubscriptionItem implements ResourceGroupItem {
     constructor(
-        private readonly azureSubscription: AzureSubscription,
+        private readonly context: ResourceGroupsTreeContext,
         private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
         private readonly resourceProviderManager: ApplicationResourceProviderManager) {
     }
 
     async getChildren(): Promise<ResourceGroupItem[]> {
-        const subscription: ApplicationSubscription = {
-            credentials: this.azureSubscription.session.credentials2,
-            environment: this.azureSubscription.session.environment,
-            isCustomCloud: this.azureSubscription.session.environment.name === 'AzureCustomCloud',
-            subscriptionId: this.azureSubscription.subscription.subscriptionId || 'TODO: ever undefined?',
-        };
+        const resources = await this.resourceProviderManager.provideResources(this.context.subscription);
 
-        const resources = await this.resourceProviderManager.provideResources(subscription);
-
-        return this.resourceGroupingManager.groupResources(resources ?? []).sort((a, b) => a.label.localeCompare(b.label));
+        return this.resourceGroupingManager.groupResources(this.context, resources ?? []).sort((a, b) => a.label.localeCompare(b.label));
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        const treeItem = new vscode.TreeItem(this.azureSubscription.subscription.displayName ?? 'Unnamed', vscode.TreeItemCollapsibleState.Collapsed);
+        const treeItem = new vscode.TreeItem(this.context.subscription.displayName ?? 'Unnamed', vscode.TreeItemCollapsibleState.Collapsed);
 
         treeItem.contextValue = 'azureextensionui.azureSubscription';
         treeItem.iconPath = treeUtils.getIconPath('azureSubscription');
-        treeItem.id = this.azureSubscription.subscription.id;
+        treeItem.id = this.context.subscription.subscriptionId;
 
         return treeItem;
     }

@@ -8,6 +8,7 @@ import { AzExtServiceClientCredentials } from '@microsoft/vscode-azext-utils';
  */
  export interface ApplicationSubscription {
     readonly credentials: AzExtServiceClientCredentials;
+    readonly displayName: string;
     readonly subscriptionId: string;
     readonly environment: Environment;
     readonly isCustomCloud: boolean;

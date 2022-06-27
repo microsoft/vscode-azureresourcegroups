@@ -1,3 +1,4 @@
+import { AzExtServiceClientCredentials, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../api/v2/providers/ApplicationResourceProviderManager';
@@ -75,7 +76,30 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                             if (api.filters.length === 0) {
                                 return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), { commandId: 'azure-account.selectSubscriptions' })]
                             } else {
-                                return api.filters.map(subscription => new SubscriptionItem(subscription, this.resourceGroupingManager, this.resourceProviderManager));
+                                return api.filters.map(
+                                    subscription => new SubscriptionItem(
+                                        {
+                                            subscriptionContext: {
+                                                credentials: <AzExtServiceClientCredentials>subscription.session.credentials2,
+                                                subscriptionDisplayName: nonNullProp(subscription.subscription, 'displayName'),
+                                                subscriptionId: nonNullProp(subscription.subscription, 'subscriptionId'),
+                                                subscriptionPath: nonNullProp(subscription.subscription, 'id'),
+                                                tenantId: subscription.session.tenantId,
+                                                userId: subscription.session.userId,
+                                                environment: subscription.session.environment,
+                                                isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud'
+                                            },
+                                            subscription: {
+                                                credentials: subscription.session.credentials2,
+                                                displayName: subscription.subscription.displayName || 'TODO: ever undefined?',
+                                                environment: subscription.session.environment,
+                                                isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud',
+                                                subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
+                                                                                    },
+                                            refresh: item => this.onDidChangeTreeDataEmitter.fire(item),
+                                        },
+                                        this.resourceGroupingManager,
+                                        this.resourceProviderManager));
                             }
                         } else if (api.status === 'LoggedOut') {
                             return [

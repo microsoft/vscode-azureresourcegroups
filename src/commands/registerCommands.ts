@@ -10,6 +10,7 @@ import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroup } from './deleteResourceGroup/deleteResourceGroup';
+import { deleteResourceGroupV2 } from './deleteResourceGroup/v2/deleteResourceGroupV2';
 import { focusGroup } from './explorer/focusGroup';
 import { buildGroupByCommand } from './explorer/groupBy';
 import { showGroupOptions } from './explorer/showGroupOptions';
@@ -28,6 +29,7 @@ import { refreshWorkspace } from './workspace/refreshWorkspace';
 export function registerCommands(): void {
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroup', deleteResourceGroup);
+    registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
     registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.appResourceTree.loadMore(node, context));
     registerCommand('azureResourceGroups.openInPortal', openInPortal);
     registerCommand('azureResourceGroups.refresh', async (context: IActionContext, node?: AzExtTreeItem) => await ext.appResourceTree.refresh(context, node));

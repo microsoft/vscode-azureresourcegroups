@@ -32,6 +32,7 @@
         "onFileSystem:azureResourceGroups",
         "onCommand:azureResourceGroups.createResourceGroup",
         "onCommand:azureResourceGroups.deleteResourceGroup",
+        "onCommand:azureResourceGroups.deleteResourceGroupV2",
         "onCommand:azureResourceGroups.editTags",
         "onCommand:azureResourceGroups.loadMore",
         "onCommand:azureResourceGroups.openInPortal",
@@ -80,6 +81,11 @@
             },
             {
                 "command": "azureResourceGroups.deleteResourceGroup",
+                "title": "%azureResourceGroups.deleteResourceGroup%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.deleteResourceGroupV2",
                 "title": "%azureResourceGroups.deleteResourceGroup%",
                 "category": "Azure"
             },
@@ -315,6 +321,11 @@
                 {
                     "command": "azureResourceGroups.deleteResourceGroup",
                     "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureResourceGroups.deleteResourceGroupV2",
+                    "when": "view == azureResourceGroupsV2 && viewItem =~ /azureResourceGroup/",
                     "group": "1@1"
                 },
                 {
