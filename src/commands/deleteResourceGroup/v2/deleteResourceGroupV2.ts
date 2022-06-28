@@ -52,21 +52,30 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
             }
         }
 
-        void node.withDescription(
-            'Deleting...',
-            async () => {
-                const wizard = new AzureWizard<DeleteResourceGroupContext>({
-                    subscription: node.context.subscriptionContext,
-                    resourceGroupToDelete: node.label, // TODO: Should have a name (separate from label)?
-                    activityTitle: localize('deleteResourceGroup', 'Delete resource group "{0}"', node.label),
-                    ...(await createActivityContext()),
-                    ...context,
-                }, {
-                    executeSteps: [new DeleteResourceGroupStep()]
-                });
-
-                await wizard.execute();
+        void node
+            .withDescription(
+                'Deleting...',
+                async () => {
+                    const wizard = new AzureWizard<DeleteResourceGroupContext>({
+                        subscription: node.context.subscriptionContext,
+                        resourceGroupToDelete: node.label, // TODO: Should have a name (separate from label)?
+                        activityTitle: localize('deleteResourceGroup', 'Delete resource group "{0}"', node.label),
+                        ...(await createActivityContext()),
+                        ...context,
+                    }, {
+                        executeSteps: [new DeleteResourceGroupStep()]
                     });
+
+                    await wizard.execute();
+                })
+            .finally(
+                () => {
+                    const parent = node.context.getParent(node);
+
+                    if (parent) {
+                        node.context.refresh(parent);
+                    }
+                });
     }
 }
 

@@ -4,6 +4,7 @@ export class ResourceGroupsItemCache {
     private readonly branchItemToItemCache: Map<unknown, ResourceGroupsItem> = new Map();
     private readonly itemToBranchItemCache: Map<ResourceGroupsItem, unknown> = new Map();
     private readonly itemToChildrenCache: Map<ResourceGroupsItem, ResourceGroupsItem[]> = new Map();
+    private readonly itemToParentCache: Map<ResourceGroupsItem, ResourceGroupsItem> = new Map();
 
     addBranchItem(branchItem: unknown, item: ResourceGroupsItem): void {
         this.branchItemToItemCache.set(branchItem, item);
@@ -12,12 +13,14 @@ export class ResourceGroupsItemCache {
 
     addItem(item: ResourceGroupsItem, children: ResourceGroupsItem[]): void {
         this.itemToChildrenCache.set(item, children);
+        children.forEach(child => this.itemToParentCache.set(child, item));
     }
 
     evictAll(): void {
         this.branchItemToItemCache.clear();
         this.itemToBranchItemCache.clear();
         this.itemToChildrenCache.clear();
+        this.itemToParentCache.clear();
     }
 
     evictItemChildren(item: ResourceGroupsItem): void {
@@ -36,6 +39,7 @@ export class ResourceGroupsItemCache {
 
             this.itemToBranchItemCache.delete(item);
             this.itemToChildrenCache.delete(item);
+            this.itemToParentCache.delete(item);
         }
     }
 
@@ -43,7 +47,12 @@ export class ResourceGroupsItemCache {
         return this.branchItemToItemCache.get(branchItem);
     }
 
+    getParentForItem(item: ResourceGroupsItem): ResourceGroupsItem | undefined {
+        return this.itemToParentCache.get(item);
+    }
+
     updateItemChildren(item: ResourceGroupsItem, children: ResourceGroupsItem[]): void {
         this.itemToChildrenCache.set(item, children);
+        children.forEach(child => this.itemToParentCache.set(child, item));
     }
 }

@@ -1,12 +1,12 @@
-import * as vscode from 'vscode';
 import type { Environment } from '@azure/ms-rest-azure-env';
-import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
 import { AzExtServiceClientCredentials } from '@microsoft/vscode-azext-utils';
+import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
+import * as vscode from 'vscode';
 
 /**
  * Information specific to the Subscription
  */
- export interface ApplicationSubscription {
+export interface ApplicationSubscription {
     readonly credentials: AzExtServiceClientCredentials;
     readonly displayName: string;
     readonly subscriptionId: string;
@@ -46,7 +46,7 @@ export interface ProvideResourceOptions {
 }
 
 export interface ApplicationResourceProvider extends ResourceProviderBase<ApplicationResource> {
-    provideResources(subscription: ApplicationSubscription, options?: ProvideResourceOptions): vscode.ProviderResult<ApplicationResource[]>;
+    getResources(subscription: ApplicationSubscription, options?: ProvideResourceOptions): vscode.ProviderResult<ApplicationResource[]>;
 }
 
 export interface ResourceQuickPickOptions {
@@ -100,10 +100,10 @@ export interface ResourcePickOptions {
      */
     canPickMany?: boolean;
 
-     /**
-      * If set to false, the 'Create new...' pick will not be displayed.
-      * For example, this could be used when the command deletes a tree item.
-      */
+    /**
+     * If set to false, the 'Create new...' pick will not be displayed.
+     * For example, this could be used when the command deletes a tree item.
+     */
     canCreate?: boolean;
 
     /**
@@ -112,15 +112,15 @@ export interface ResourcePickOptions {
      */
     onCreate?: (create: () => Promise<never>) => void;
 
-     /**
-      * If set to true, the quick pick dialog will not close when focus moves out. Defaults to `true`.
-      */
+    /**
+     * If set to true, the quick pick dialog will not close when focus moves out. Defaults to `true`.
+     */
     ignoreFocusOut?: boolean;
 
-     /**
-      * When no item is available for user to pick, this message will be displayed in the error notification.
-      * This will also suppress the report issue button.
-      */
+    /**
+     * When no item is available for user to pick, this message will be displayed in the error notification.
+     * This will also suppress the report issue button.
+     */
     noItemFoundErrorMessage?: string;
 
     /**
@@ -128,16 +128,16 @@ export interface ResourcePickOptions {
      */
     filter?: AppResourceFilter | AppResourceFilter[];
 
-     /**
-      * Set this to pick a child of the selected app resource
-      */
+    /**
+     * Set this to pick a child of the selected app resource
+     */
     expectedChildContextValue?: string | RegExp | (string | RegExp)[];
 
-     /**
-      * Whether `AppResourceTreeItem`s should be resolved before displaying them as quick picks, or only once one has been selected
-      * If a client extension needs to change label/description/something visible on the quick pick via `resolve`, set to true,
-      * otherwise set to false. Default will be false.
-      */
+    /**
+     * Whether `AppResourceTreeItem`s should be resolved before displaying them as quick picks, or only once one has been selected
+     * If a client extension needs to change label/description/something visible on the quick pick via `resolve`, set to true,
+     * otherwise set to false. Default will be false.
+     */
     resolveQuickPicksBeforeDisplay?: boolean;
 }
 

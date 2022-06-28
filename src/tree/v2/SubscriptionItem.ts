@@ -13,7 +13,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
     }
 
     async getChildren(): Promise<ResourceGroupsItem[]> {
-        const resources = await this.resourceProviderManager.provideResources(this.context.subscription);
+        const resources = await this.resourceProviderManager.getResources(this.context.subscription);
 
         return this.resourceGroupingManager.groupResources(this.context, resources ?? []).sort((a, b) => a.label.localeCompare(b.label));
     }

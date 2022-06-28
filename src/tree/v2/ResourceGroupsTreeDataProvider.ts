@@ -96,6 +96,7 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                                                 isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud',
                                                 subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
                                             },
+                                            getParent: item => this.itemCache.getParentForItem(item),
                                             refresh: item => this.onDidChangeTreeDataEmitter.fire(item),
                                         },
                                         this.resourceGroupingManager,
@@ -142,7 +143,11 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
             });
     }
 
-    async cacheChildren(element: ResourceGroupsItem | undefined, callback: () => Promise<ResourceGroupsItem[] | null | undefined>): Promise<ResourceGroupsItem[] | null | undefined> {
+    refreshItem(item?: ResourceGroupsItem): void {
+        this.onDidChangeTreeDataEmitter.fire(item);
+    }
+
+    private async cacheChildren(element: ResourceGroupsItem | undefined, callback: () => Promise<ResourceGroupsItem[] | null | undefined>): Promise<ResourceGroupsItem[] | null | undefined> {
         if (element) {
             // TODO: Do we really need to evict before generating new children, or can we just update after the fact?
             //       Since the callback is async, could change notifications show up while doing this?

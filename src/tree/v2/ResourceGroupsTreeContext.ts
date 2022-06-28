@@ -8,5 +8,7 @@ export interface ResourceGroupsTreeContext {
 
     readonly subscription: ApplicationSubscription;
 
+    getParent(item: ResourceGroupsItem): ResourceGroupsItem | undefined;
+
     refresh(item: ResourceGroupsItem): void;
 }

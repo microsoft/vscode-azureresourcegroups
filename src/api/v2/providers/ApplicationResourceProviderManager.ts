@@ -12,8 +12,8 @@ export class ApplicationResourceProviderManager {
         this.resourceProviders.splice(this.resourceProviders.indexOf(resourceProvider), 1);
     }
 
-    provideResources(subscription: ApplicationSubscription, options?: ProvideResourceOptions | undefined): vscode.ProviderResult<ApplicationResource[]> {
-        return Promise.all(this.resourceProviders.map(resourceProvider => resourceProvider.provideResources(subscription, options))).then(results => {
+    getResources(subscription: ApplicationSubscription, options?: ProvideResourceOptions | undefined): vscode.ProviderResult<ApplicationResource[]> {
+        return Promise.all(this.resourceProviders.map(resourceProvider => resourceProvider.getResources(subscription, options))).then(results => {
             return results.reduce((acc, result) => acc?.concat(result ?? []), []);
         });
     }
