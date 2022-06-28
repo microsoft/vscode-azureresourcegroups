@@ -61,8 +61,9 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         }
     }
 
-    // TODO: Consolidate repeated grouping logic.
-    private groupBy(context: ResourceGroupsTreeContext, resources: ApplicationResource[], keySelector: (resource: ApplicationResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, contextValues?: string[]): GroupingItem[] {
+    private groupBy(context: ResourceGroupsTreeContext, resources: ApplicationResource[], keySelector: (resource: ApplicationResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: ApplicationResource[] }, contextValues?: string[]): GroupingItem[] {
+        initialGrouping = initialGrouping ?? {};
+
         const map = resources.reduce(
             (acc, resource) => {
                 const key = keySelector(resource);
@@ -76,7 +77,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
 
                 return acc;
             },
-            <{ [key: string]: ApplicationResource[] }>{});
+            initialGrouping);
 
         return Object.keys(map).map(key => {
             return this.groupingItemFactory(
@@ -108,13 +109,31 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
     }
 
     private groupByResourceGroup(context: ResourceGroupsTreeContext, resources: ApplicationResource[]): GroupingItem[] {
-        return this.groupBy(
+        const resourceGroups: ApplicationResource[] = [];
+        const nonResourceGroups: ApplicationResource[] = [];
+
+        resources.forEach(resource => resource.type === 'Microsoft.Resources/resourceGroups' ? resourceGroups.push(resource) : nonResourceGroups.push(resource));
+
+        const keySelector: (resource: ApplicationResource) => string = resource => resource.resourceGroup?.toLowerCase() ?? unknownLabel; // TODO: Is resource group ever undefined? Should resource group be normalized on creation?
+
+        const initialGrouping = resourceGroups.reduce(
+            (previous, next) => {
+                previous[next.name.toLowerCase() ?? unknownLabel] = [];
+
+                return previous;
+            },
+            {});
+
+        const groupedResources = this.groupBy(
             context,
-            resources,
-            resource => resource.resourceGroup?.toLowerCase() ?? unknownLabel, // TODO: Is resource group ever undefined? Should resource group be normalized on creation?
+            nonResourceGroups,
+            keySelector,
             key => key,
             () => treeUtils.getIconPath('resourceGroup'),
+            initialGrouping,
             [ 'azureResourceGroup' ]);
+
+        return groupedResources;
     }
 
     private groupByResourceType(context: ResourceGroupsTreeContext, resources: ApplicationResource[]): GroupingItem[] {

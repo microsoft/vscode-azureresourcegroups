@@ -35,12 +35,12 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
         const hasOneResource: boolean = numOfResources === 1;
 
         if (deleteConfirmation === 'ClickButton') {
-            const areYouSureDelete: string = localize('areYouSureDelete', 'Are you sure you want to delete resource group "{0}"? There are {1} resources in this resource group that will be deleted.', node.name, numOfResources);
-            const areYouSureDeleteOne: string = localize('areYouSureDeleteOne', 'Are you sure you want to delete resource group "{0}"? There is {1} resource in this resource group that will be deleted.', node.name, numOfResources);
+            const areYouSureDelete: string = localize('areYouSureDelete', 'Are you sure you want to delete resource group "{0}"? There are {1} resources in this resource group that will be deleted.', node.label, numOfResources);
+            const areYouSureDeleteOne: string = localize('areYouSureDeleteOne', 'Are you sure you want to delete resource group "{0}"? There is {1} resource in this resource group that will be deleted.', node.label, numOfResources);
             await context.ui.showWarningMessage(hasOneResource ? areYouSureDeleteOne : areYouSureDelete, { modal: true }, { title: localize('delete', 'Delete') }); // no need to check result - cancel will throw error
         } else {
-            const enterToDelete: string = localize('enterToDelete', 'Enter "{0}" to delete this resource group. There are {1} resources in this resource group that will be deleted.', node.name, numOfResources);
-            const enterToDeleteOne: string = localize('enterToDeleteOne', 'Enter "{0}" to delete this resource group. There is {1} resource in this resource group that will be deleted.', node.name, numOfResources);
+            const enterToDelete: string = localize('enterToDelete', 'Enter "{0}" to delete this resource group. There are {1} resources in this resource group that will be deleted.', node.label, numOfResources);
+            const enterToDeleteOne: string = localize('enterToDeleteOne', 'Enter "{0}" to delete this resource group. There is {1} resource in this resource group that will be deleted.', node.label, numOfResources);
             const prompt = hasOneResource ? enterToDeleteOne : enterToDelete;
             function validateInput(val: string | undefined): string | undefined {
                 return isNameEqual(val, node) ? undefined : prompt;
@@ -57,8 +57,8 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
             async () => {
                 const wizard = new AzureWizard<DeleteResourceGroupContext>({
                     subscription: node.context.subscriptionContext,
-                    resourceGroupToDelete: node.name,
-                    activityTitle: localize('deleteResourceGroup', 'Delete resource group "{0}"', node.name),
+                    resourceGroupToDelete: node.label, // TODO: Should have a name (separate from label)?
+                    activityTitle: localize('deleteResourceGroup', 'Delete resource group "{0}"', node.label),
                     ...(await createActivityContext()),
                     ...context,
                 }, {
@@ -71,5 +71,5 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
 }
 
 function isNameEqual(val: string | undefined, node: GroupingItem): boolean {
-    return !!val && val.toLowerCase() === node.name.toLowerCase();
+    return !!val && val.toLowerCase() === node.label.toLowerCase();
 }

@@ -52,10 +52,6 @@ export class GroupingItem implements ResourceGroupItem {
             this.context.refresh(this);
         }
     }
-
-    id: string;
-    name: string;
-    type: string;
 }
 
 export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[]) => GroupingItem;

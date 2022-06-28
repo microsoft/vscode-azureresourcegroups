@@ -1,4 +1,4 @@
-import { GenericResource } from '@azure/arm-resources';
+import { GenericResource, ResourceGroup } from '@azure/arm-resources';
 import { callWithTelemetryAndErrorHandling, IActionContext, ISubscriptionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { createResourceClient } from '../../../utils/azureClients';
@@ -24,12 +24,27 @@ export class BuiltInApplicationResourceProvider implements ApplicationResourcePr
                 const client = await createResourceClient([context, subContext]);
                 // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
 
-                const resources: GenericResource[] = await uiUtils.listAllIterator(client.resources.list());
-                return resources.map(resource => this.createAppResource(subscription, resource));
+                const allResources: GenericResource[] = await uiUtils.listAllIterator(client.resources.list());
+                const appResources = allResources.map(resource => this.createAppResource(subscription, resource));
+
+                const allResourceGroups: ResourceGroup[] = await uiUtils.listAllIterator(client.resourceGroups.list());
+                const appResourcesResourceGroups = allResourceGroups.map(resource => this.fromResourceGroup(subscription, resource));
+
+                return appResources.concat(appResourcesResourceGroups);
             });
     }
 
     onDidChangeResource = this.onDidChangeResourceEmitter.event;
+
+    private fromResourceGroup(subscription: ApplicationSubscription, resourceGroup: ResourceGroup): ApplicationResource {
+        return {
+            subscription,
+            id: nonNullProp(resourceGroup, 'id'),
+            name: nonNullProp(resourceGroup, 'name'),
+            type: nonNullProp(resourceGroup, 'type'),
+            ...resourceGroup,
+        };
+    }
 
     private createAppResource(subscription: ApplicationSubscription, resource: GenericResource): ApplicationResource {
         const resourceId = nonNullProp(resource, 'id');
