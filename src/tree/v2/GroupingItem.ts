@@ -3,10 +3,10 @@ import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { BranchDataItemFactory } from './BranchDataItem';
 import { BranchDataProviderFactory } from './providers/BranchDataProviderManager';
-import { ResourceGroupItem } from './ResourceGroupItem';
+import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from './ResourceGroupsTreeContext';
 
-export class GroupingItem implements ResourceGroupItem {
+export class GroupingItem implements ResourceGroupsItem {
     private description: string | undefined;
 
     constructor(
@@ -19,7 +19,7 @@ export class GroupingItem implements ResourceGroupItem {
         public readonly resources: ApplicationResource[]) {
     }
 
-    async getChildren(): Promise<ResourceGroupItem[] | undefined> {
+    async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const resourceItems = await Promise.all(this.resources.map(
             async resource => {
                 const branchDataProvider = this.branchDataProviderFactory(resource);

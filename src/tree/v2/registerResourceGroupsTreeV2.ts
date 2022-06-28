@@ -4,14 +4,14 @@ import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupin
 import { createBranchDataItemFactory } from './BranchDataItem';
 import { createGroupingItemFactory } from './GroupingItem';
 import { BranchDataProviderManager } from './providers/BranchDataProviderManager';
-import { ResourceGroupItemCache } from './ResourceGroupItemCache';
+import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 import { ResourceGroupsTreeDataProvider } from './ResourceGroupsTreeDataProvider';
 
 export function registerResourceGroupsTreeV2(
     context: vscode.ExtensionContext,
     branchDataProviderManager: BranchDataProviderManager,
     resourceProviderManager: ApplicationResourceProviderManager): void {
-    const itemCache = new ResourceGroupItemCache();
+    const itemCache = new ResourceGroupsItemCache();
     const branchDataItemFactory = createBranchDataItemFactory(itemCache);
     const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => branchDataProviderManager.getApplicationResourceBranchDataProvider(resource));
     const resourceGroupingManager = new ApplicationResourceGroupingManager(groupingItemFactory);

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider } from '../../../api/v2/v2AzureResourcesApi';
-import { ResourceGroupItem } from '../ResourceGroupItem';
+import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { BuiltInResourceModelBase } from './BuiltInResourceModelBase';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -11,7 +11,7 @@ class StorageAccountItem implements BuiltInStorageAccountItem {
     constructor(private readonly applicationResource: ApplicationResource) {
     }
 
-    getChildren(): vscode.ProviderResult<ResourceGroupItem[]> {
+    getChildren(): vscode.ProviderResult<ResourceGroupsItem[]> {
         return [];
     }
 

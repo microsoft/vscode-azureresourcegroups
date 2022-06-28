@@ -1,16 +1,16 @@
-import { ResourceGroupItem } from './ResourceGroupItem';
+import { ResourceGroupsItem } from './ResourceGroupsItem';
 
-export class ResourceGroupItemCache {
-    private readonly branchItemToItemCache: Map<unknown, ResourceGroupItem> = new Map();
-    private readonly itemToBranchItemCache: Map<ResourceGroupItem, unknown> = new Map();
-    private readonly itemToChildrenCache: Map<ResourceGroupItem, ResourceGroupItem[]> = new Map();
+export class ResourceGroupsItemCache {
+    private readonly branchItemToItemCache: Map<unknown, ResourceGroupsItem> = new Map();
+    private readonly itemToBranchItemCache: Map<ResourceGroupsItem, unknown> = new Map();
+    private readonly itemToChildrenCache: Map<ResourceGroupsItem, ResourceGroupsItem[]> = new Map();
 
-    addBranchItem(branchItem: unknown, item: ResourceGroupItem): void {
+    addBranchItem(branchItem: unknown, item: ResourceGroupsItem): void {
         this.branchItemToItemCache.set(branchItem, item);
         this.itemToBranchItemCache.set(item, branchItem);
     }
 
-    addItem(item: ResourceGroupItem, children: ResourceGroupItem[]): void {
+    addItem(item: ResourceGroupsItem, children: ResourceGroupsItem[]): void {
         this.itemToChildrenCache.set(item, children);
     }
 
@@ -20,7 +20,7 @@ export class ResourceGroupItemCache {
         this.itemToChildrenCache.clear();
     }
 
-    evictItemChildren(item: ResourceGroupItem): void {
+    evictItemChildren(item: ResourceGroupsItem): void {
         const children = this.itemToChildrenCache.get(item);
 
         while (children?.pop()) {
@@ -39,11 +39,11 @@ export class ResourceGroupItemCache {
         }
     }
 
-    getItemForBranchItem(branchItem: unknown): ResourceGroupItem | undefined {
+    getItemForBranchItem(branchItem: unknown): ResourceGroupsItem | undefined {
         return this.branchItemToItemCache.get(branchItem);
     }
 
-    updateItemChildren(item: ResourceGroupItem, children: ResourceGroupItem[]): void {
+    updateItemChildren(item: ResourceGroupsItem, children: ResourceGroupsItem[]): void {
         this.itemToChildrenCache.set(item, children);
     }
 }
