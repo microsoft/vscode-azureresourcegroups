@@ -22,6 +22,12 @@ export class HelpTreeItem extends AzExtParentTreeItem {
             commandId: 'ms-azuretools.getStarted',
             iconPath: new ThemeIcon('star-empty')
         });
+        const openWalkthroughTI: AzExtTreeItem = new GenericTreeItem(this, {
+            label: localize('openWalkthrough', 'Open Azure extensions Walkthrough'),
+            contextValue: 'openWalkthrough',
+            commandId: 'ms-azuretools.openWalkthrough',
+            iconPath: new ThemeIcon('extensions')
+        });
         const reportIssueTI: AzExtTreeItem = new GenericTreeItem(this, {
             label: localize('reportIssue', 'Report Issue'),
             contextValue: 'reportIssue',
@@ -34,7 +40,7 @@ export class HelpTreeItem extends AzExtParentTreeItem {
             commandId: 'ms-azuretools.reviewIssues',
             iconPath: new ThemeIcon('issues')
         });
-        return [getStartedTI, reviewIssuesTI, reportIssueTI];
+        return [getStartedTI, openWalkthroughTI, reviewIssuesTI, reportIssueTI];
     }
 
     public hasMoreChildrenImpl(): boolean {

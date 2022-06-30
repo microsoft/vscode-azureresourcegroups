@@ -40,6 +40,7 @@ export function registerCommands(): void {
     registerCommand('ms-azuretools.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.helpTree.loadMore(node, context));
     registerCommand('ms-azuretools.reportIssue', reportIssue);
     registerCommand('ms-azuretools.reviewIssues', reviewIssues);
+    registerCommand('ms-azuretools.openWalkthrough', () => commands.executeCommand('workbench.action.openWalkthrough', `ms-azuretools.vscode-azureresourcegroups#azure-get-started`));
 
     // Suppress "Report an Issue" button for all errors in favor of the command
     registerErrorHandler(c => c.errorHandling.suppressReportIssue = true);
