@@ -23,7 +23,7 @@ export class HelpTreeItem extends AzExtParentTreeItem {
             iconPath: new ThemeIcon('star-empty')
         });
         const openWalkthroughTI: AzExtTreeItem = new GenericTreeItem(this, {
-            label: localize('openWalkthrough', 'Open Azure extensions Walkthrough'),
+            label: localize('openWalkthrough', 'Open Azure Extensions Walkthrough'),
             contextValue: 'openWalkthrough',
             commandId: 'ms-azuretools.openWalkthrough',
             iconPath: new ThemeIcon('extensions')
