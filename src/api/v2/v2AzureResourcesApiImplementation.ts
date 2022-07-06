@@ -1,6 +1,9 @@
+import { AzureWizard, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { BranchDataProviderManager } from '../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from './providers/ApplicationResourceProviderManager';
+import { QuickPickAppResourceStep } from './quickPickWizard/QuickPickAppResourceStep';
+import { QuickPickAppResourceWizardContext } from './quickPickWizard/QuickPickAppResourceWizardContext';
 import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
@@ -13,8 +16,22 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
         return '2.0.0';
     }
 
-    pickResource<TModel>(_options?: ResourcePickOptions | undefined): vscode.ProviderResult<TModel> {
-        throw new Error("Method not implemented.");
+    async pickResource<TModel>(actionContext: IActionContext, options: ResourcePickOptions): Promise<TModel | ApplicationResource> {
+        const promptSteps = [
+            new QuickPickAppResourceStep(this.resourceProviderManager, this.branchDataProviderManager, options),
+        ];
+
+        const wizardContext: QuickPickAppResourceWizardContext<TModel> = {
+            ...actionContext,
+            currentNode: undefined,
+            applicationResource: undefined,
+        };
+
+        const wizard = new AzureWizard(wizardContext, { hideStepCount: true, promptSteps, title: 'TODO' /* TODO: title */ });
+        await wizard.execute();
+
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        return (wizardContext.currentNode || wizardContext.applicationResource)!;
     }
 
     revealResource(_resourceId: string): Promise<void> {

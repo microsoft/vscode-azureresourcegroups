@@ -100,7 +100,9 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                                             refresh: item => this.onDidChangeTreeDataEmitter.fire(item),
                                         },
                                         this.resourceGroupingManager,
-                                        this.resourceProviderManager));
+                                        this.resourceProviderManager
+                                    )
+                                );
                             }
                         } else if (api.status === 'LoggedOut') {
                             return [

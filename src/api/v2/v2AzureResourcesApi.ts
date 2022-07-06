@@ -1,5 +1,5 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
-import { AzExtServiceClientCredentials } from '@microsoft/vscode-azext-utils';
+import { AzExtServiceClientCredentials, IActionContext } from '@microsoft/vscode-azext-utils';
 import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 
@@ -50,8 +50,8 @@ export interface ApplicationResourceProvider extends ResourceProviderBase<Applic
 }
 
 export interface ResourceQuickPickOptions {
-    readonly contexts?: string[];
-    readonly isParent?: boolean;
+    readonly contexts: string[];
+    readonly isLeaf: boolean;
 }
 
 export interface ResourceModelBase {
@@ -131,7 +131,7 @@ export interface ResourcePickOptions {
     /**
      * Set this to pick a child of the selected app resource
      */
-    expectedChildContextValue?: string | RegExp | (string | RegExp)[];
+    expectedChildContextValue?: ContextValueFilter;
 
     /**
      * Whether `AppResourceTreeItem`s should be resolved before displaying them as quick picks, or only once one has been selected
@@ -148,7 +148,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
     /**
      * Show a quick picker of app resources. Set `options.type` to filter the picks.
      */
-    pickResource<TModel>(options?: ResourcePickOptions): vscode.ProviderResult<TModel>
+    pickResource<TModel extends ResourceModelBase>(actionContext: IActionContext, options?: ResourcePickOptions): vscode.ProviderResult<TModel | ApplicationResource>;
 
     /**
      * Reveals an item in the application/workspace resource tree
@@ -204,3 +204,5 @@ export interface AzureResourcesApiManager {
      */
     getApi<T extends AzureResourcesApiBase>(versionRange: string): T | undefined
 }
+
+export type ContextValueFilter = string | RegExp | (string | RegExp)[];
