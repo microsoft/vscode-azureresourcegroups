@@ -10,6 +10,7 @@
 ### Changed
 - Make Resources and Workspace view visible by default [#310](https://github.com/microsoft/vscode-azureresourcegroups/pull/310)
 - Make location of "Edit Tags..." context menu item consistent [#313](https://github.com/microsoft/vscode-azureresourcegroups/pull/313)
+- Update @vscode/extension-telemetry to 0.6.2 [#317](https://github.com/microsoft/vscode-azureresourcegroups/pull/317)
 
 ### Fixed
 - Resources are not sorted alphabetically in the list when executing commands from command palette [#299](https://github.com/microsoft/vscode-azureresourcegroups/issues/299)
