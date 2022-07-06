@@ -85,8 +85,8 @@ export const azureExtensions: IAzExtMetadata[] = [
         name: 'vscode-azurecontainerapps',
         label: 'Container Apps',
         resourceTypes: [
-            'microsoft.app/containerapps',
-            'microsoft.app/managedenvironments'
+            //'microsoft.app/containerapps',
+            //'microsoft.app/managedenvironments'
         ],
         reportIssueCommandId: 'containerApps.reportIssue'
     }
