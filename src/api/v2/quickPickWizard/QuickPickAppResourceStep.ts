@@ -8,6 +8,7 @@ import { PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
 import { BranchDataProviderManager } from '../../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from '../providers/ApplicationResourceProviderManager';
 import { ApplicationResource, ResourceModelBase } from '../v2AzureResourcesApi';
+import { matchesContextValueFilter } from './ContextValueFilter';
 import { QuickPickAppResourceWizardContext } from './QuickPickAppResourceWizardContext';
 import { RecursiveQuickPickStep } from './RecursiveQuickPickStep';
 
@@ -20,7 +21,7 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
         super();
     }
 
-    public async prompt(wizardContext: QuickPickAppResourceWizardContext<TModel>): Promise<void> {
+    public override async prompt(wizardContext: QuickPickAppResourceWizardContext<TModel>): Promise<void> {
         const allResources = (await this.resourceProviderManager.getResources( /* TODO: subscription */)) || [];
 
         const matchingResources = allResources.filter(this.matchesAppResource);
@@ -28,6 +29,9 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
 
         const selected = await wizardContext.ui.showQuickPick(picks, { /* TODO: options */ });
         wizardContext.applicationResource = selected.data;
+
+        const bdp = this.branchDataProviderManager.getApplicationResourceBranchDataProvider(wizardContext.applicationResource);
+        wizardContext.currentNode = await Promise.resolve(bdp.getResourceItem(wizardContext.applicationResource)) as TModel;
     }
 
     public shouldPrompt(_wizardContext: QuickPickAppResourceWizardContext<TModel>): boolean {
@@ -36,6 +40,10 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
 
     public async getSubWizard(wizardContext: QuickPickAppResourceWizardContext<TModel>): Promise<IWizardOptions<QuickPickAppResourceWizardContext<TModel>> | undefined> {
         if (this.options.expectedChildContextValue) {
+            if (matchesContextValueFilter(wizardContext.currentNode as TModel, this.options.expectedChildContextValue)) {
+                return undefined;
+            }
+
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             const bdp = this.branchDataProviderManager.getApplicationResourceBranchDataProvider(wizardContext.applicationResource!);
             return {

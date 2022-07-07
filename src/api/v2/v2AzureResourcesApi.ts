@@ -1,7 +1,8 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
-import { AzExtServiceClientCredentials, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtServiceClientCredentials } from '@microsoft/vscode-azext-utils';
 import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
+import { ContextValueFilter } from './quickPickWizard/ContextValueFilter';
 
 /**
  * Information specific to the Subscription
@@ -148,7 +149,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
     /**
      * Show a quick picker of app resources. Set `options.type` to filter the picks.
      */
-    pickResource<TModel extends ResourceModelBase>(actionContext: IActionContext, options?: ResourcePickOptions): vscode.ProviderResult<TModel | ApplicationResource>;
+    pickResource<TModel extends ResourceModelBase>(options: ResourcePickOptions): vscode.ProviderResult<TModel>;
 
     /**
      * Reveals an item in the application/workspace resource tree
@@ -204,5 +205,3 @@ export interface AzureResourcesApiManager {
      */
     getApi<T extends AzureResourcesApiBase>(versionRange: string): T | undefined
 }
-
-export type ContextValueFilter = string | RegExp | (string | RegExp)[];

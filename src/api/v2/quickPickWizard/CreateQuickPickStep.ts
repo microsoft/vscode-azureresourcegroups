@@ -6,7 +6,8 @@
 import { IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { localize } from '../../../utils/localize';
-import { ContextValueFilter, ResourceModelBase } from '../v2AzureResourcesApi';
+import { ResourceModelBase } from '../v2AzureResourcesApi';
+import { ContextValueFilter } from './ContextValueFilter';
 import { GenericQuickPickStep } from './GenericQuickPickStep';
 import { QuickPickWizardContext } from './QuickPickWizardContext';
 

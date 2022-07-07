@@ -5,7 +5,8 @@
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, NoResourceFoundError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ContextValueFilter, ResourceModelBase } from '../v2AzureResourcesApi';
+import { ResourceModelBase } from '../v2AzureResourcesApi';
+import { ContextValueFilter, matchesContextValueFilter } from './ContextValueFilter';
 import { QuickPickWizardContext } from './QuickPickWizardContext';
 
 export class GenericQuickPickStep<TModel extends ResourceModelBase> extends AzureWizardPromptStep<QuickPickWizardContext<TModel>> {
@@ -30,7 +31,7 @@ export class GenericQuickPickStep<TModel extends ResourceModelBase> extends Azur
     protected async getPicks(wizardContext: QuickPickWizardContext<TModel>): Promise<IAzureQuickPickItem<TModel>[]> {
         const children = (await this.treeDataProvider.getChildren(wizardContext.currentNode)) || [];
 
-        const matchingChildren = children.filter(this.matchesContextValue);
+        const matchingChildren = children.filter(c => matchesContextValueFilter(c, this.contextValueFilter));
         const nonLeafChildren = children.filter(c => c.quickPickOptions?.isLeaf === false);
 
         let promptChoices: TModel[];
@@ -50,25 +51,6 @@ export class GenericQuickPickStep<TModel extends ResourceModelBase> extends Azur
         }
 
         return picks;
-    }
-
-    protected matchesContextValue(resource: TModel | undefined): boolean {
-        if (!resource?.quickPickOptions) {
-            return false;
-        }
-
-        const filterArray = Array.isArray(this.contextValueFilter) ? this.contextValueFilter : [this.contextValueFilter];
-
-        return filterArray.some(filter => {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            return resource.quickPickOptions!.contexts.some(contextValue => {
-                if (typeof filter === 'string') {
-                    return filter === contextValue;
-                } else {
-                    return filter.test(contextValue);
-                }
-            })
-        });
     }
 
     private async getQuickPickItem(resource: TModel): Promise<IAzureQuickPickItem<TModel>> {

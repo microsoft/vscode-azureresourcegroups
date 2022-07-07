@@ -1,4 +1,4 @@
-import { AzureWizard, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { BranchDataProviderManager } from '../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from './providers/ApplicationResourceProviderManager';
@@ -16,22 +16,24 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
         return '2.0.0';
     }
 
-    async pickResource<TModel>(actionContext: IActionContext, options: ResourcePickOptions): Promise<TModel | ApplicationResource> {
-        const promptSteps = [
-            new QuickPickAppResourceStep(this.resourceProviderManager, this.branchDataProviderManager, options),
-        ];
+    async pickResource<TModel>(options: ResourcePickOptions): Promise<TModel> {
+        return await callWithTelemetryAndErrorHandling<TModel>('pickResource', async (actionContext: IActionContext) => {
+            const promptSteps = [
+                new QuickPickAppResourceStep(this.resourceProviderManager, this.branchDataProviderManager, options),
+            ];
 
-        const wizardContext: QuickPickAppResourceWizardContext<TModel> = {
-            ...actionContext,
-            currentNode: undefined,
-            applicationResource: undefined,
-        };
+            const wizardContext: QuickPickAppResourceWizardContext<TModel> = {
+                ...actionContext,
+                currentNode: undefined,
+                applicationResource: undefined,
+            };
 
-        const wizard = new AzureWizard(wizardContext, { hideStepCount: true, promptSteps, title: 'TODO' /* TODO: title */ });
-        await wizard.execute();
+            const wizard = new AzureWizard(wizardContext, { hideStepCount: true, promptSteps, title: 'TODO' /* TODO: title */ });
+            await wizard.execute();
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        return (wizardContext.currentNode || wizardContext.applicationResource)!;
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            return wizardContext.currentNode!;
+        }) as TModel;
     }
 
     revealResource(_resourceId: string): Promise<void> {
