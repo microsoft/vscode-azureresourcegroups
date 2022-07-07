@@ -72,11 +72,11 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
         const filterArray = Array.isArray(this.options.filter) ? this.options.filter : [this.options.filter];
 
         return filterArray.some(filter => {
-            if (filter.type.toLowerCase() !== resource.type.toLowerCase()) {
+            if (filter.type !== resource.type) {
                 return false;
             }
 
-            if (filter.kind && filter.kind.toLowerCase() !== resource.kind?.toLowerCase()) {
+            if (filter.kind && filter.kind !== resource.kind) {
                 return false;
             }
 
