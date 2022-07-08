@@ -8,7 +8,7 @@ interface ResourceGroupsContribution {
 
 interface ExtensionPackage {
     readonly contributes?: {
-        readonly 'x-azResourcesV2'?: ResourceGroupsContribution[];
+        readonly 'x-azResourcesV2'?: ResourceGroupsContribution;
     };
 }
 
@@ -18,8 +18,8 @@ export class ResourceGroupsExtensionManager {
 
         const extensionAndContributions =
             vscode.extensions.all
-                .map(extension => ({ extension, contributions: (extension.packageJSON as ExtensionPackage)?.contributes?.['x-azResourcesV2'] ?? [] }))
-                .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution.activation?.onFetch?.find(t => t.toLowerCase() === type)) !== undefined);
+                .map(extension => ({ extension, contributions: (extension.packageJSON as ExtensionPackage)?.contributes?.['x-azResourcesV2']?.activation?.onFetch?.map(type => type.toLowerCase()) ?? [] }))
+                .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
 
         if (extensionAndContributions) {
             if (!extensionAndContributions.extension.isActive) {
