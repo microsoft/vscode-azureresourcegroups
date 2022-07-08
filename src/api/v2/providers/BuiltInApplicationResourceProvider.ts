@@ -38,11 +38,13 @@ export class BuiltInApplicationResourceProvider implements ApplicationResourcePr
 
     private fromResourceGroup(subscription: ApplicationSubscription, resourceGroup: ResourceGroup): ApplicationResource {
         return {
+            ...resourceGroup,
             subscription,
             id: nonNullProp(resourceGroup, 'id'),
             name: nonNullProp(resourceGroup, 'name'),
-            type: nonNullProp(resourceGroup, 'type'),
-            ...resourceGroup,
+            type: {
+                type: nonNullProp(resourceGroup, 'type').toLowerCase()
+            }
         };
     }
 
@@ -50,14 +52,16 @@ export class BuiltInApplicationResourceProvider implements ApplicationResourcePr
         const resourceId = nonNullProp(resource, 'id');
 
         return {
+            ...resource,
             subscription,
             id: resourceId,
             name: nonNullProp(resource, 'name'),
-            type: nonNullProp(resource, 'type'),
+            type: {
+                type: nonNullProp(resource, 'type').toLowerCase(),
+                kinds: resource.kind?.split(',')?.map(kind => kind.toLowerCase()),
+            },
             resourceGroup: getResourceGroupFromId(resourceId),
-            kind: resource.kind,
             location: resource.location,
-            ...resource
         };
     }
 }

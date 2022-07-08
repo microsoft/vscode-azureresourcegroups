@@ -20,6 +20,7 @@ import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResour
 import { revealTreeItem } from './api/revealTreeItem';
 import { ApplicationResourceProviderManager } from './api/v2/providers/ApplicationResourceProviderManager';
 import { BuiltInApplicationResourceProvider } from './api/v2/providers/BuiltInApplicationResourceProvider';
+import { ResourceGroupsExtensionManager } from './api/v2/ResourceGroupsExtensionManager';
 import { V2AzureResourcesApiImplementation } from './api/v2/v2AzureResourcesApiImplementation';
 import { AzureResourceProvider } from './AzureResourceProvider';
 import { registerCommands } from './commands/registerCommands';
@@ -35,7 +36,6 @@ import { GroupTreeItemBase } from './tree/GroupTreeItemBase';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { BranchDataProviderManager } from './tree/v2/providers/BranchDataProviderManager';
 import { BuiltInApplicationResourceBranchDataProvider } from './tree/v2/providers/BuiltInApplicationResourceBranchDataProvider';
-import { BuiltInStorageAccountBranchDataProvider } from './tree/v2/providers/BuiltInStorageAccountBranchDataProvider';
 import { registerResourceGroupsTreeV2 } from './tree/v2/registerResourceGroupsTreeV2';
 import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
 import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
@@ -100,13 +100,11 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         await vscode.commands.executeCommand('setContext', 'azure-account.signedIn', await ext.rootAccountTreeItem.getIsLoggedIn());
     });
 
-    const branchDataProviderManager = new BranchDataProviderManager(new BuiltInApplicationResourceBranchDataProvider());
+    const branchDataProviderManager = new BranchDataProviderManager(
+        new BuiltInApplicationResourceBranchDataProvider(),
+        new ResourceGroupsExtensionManager());
 
     context.subscriptions.push(branchDataProviderManager);
-
-    const storageAccountBranchDataProvider = new BuiltInStorageAccountBranchDataProvider();
-
-    context.subscriptions.push(storageAccountBranchDataProvider);
 
     const resourceProviderManager = new ApplicationResourceProviderManager();
 
@@ -117,8 +115,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         resourceProviderManager);
 
     context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider()));
-
-    context.subscriptions.push(v2Api.registerApplicationResourceBranchDataProvider('Microsoft.Storage/storageAccounts', storageAccountBranchDataProvider));
 
     return createApiProvider([
         new InternalAzureResourceGroupsExtensionApi({

@@ -1,5 +1,10 @@
 import * as vscode from 'vscode';
+import { ResourceGroupsExtensionManager } from '../../../api/v2/ResourceGroupsExtensionManager';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from "../../../api/v2/v2AzureResourcesApi";
+
+function normalizeType(type: string): string {
+    return type.toLowerCase();
+}
 
 export class BranchDataProviderManager extends vscode.Disposable {
     private readonly applicationResourceBranchDataProviders: { [key: string]: BranchDataProvider<ApplicationResource, ResourceModelBase> } = {};
@@ -8,7 +13,9 @@ export class BranchDataProviderManager extends vscode.Disposable {
 
     private readonly changeSubscriptions: { [key: string]: vscode.Disposable } = {};
 
-    constructor(private readonly defaultBranchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>) {
+    constructor(
+        private readonly defaultBranchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
+        private readonly extensionManager: ResourceGroupsExtensionManager) {
         super(
             () => {
                 Object.values(this.changeSubscriptions).forEach(subscription => <never>subscription.dispose());
@@ -24,19 +31,44 @@ export class BranchDataProviderManager extends vscode.Disposable {
     }
 
     addApplicationResourceBranchDataProvider(type: string, applicationResourceBranchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>): void {
+        type = normalizeType(type);
+
         this.applicationResourceBranchDataProviders[type] = applicationResourceBranchDataProvider;
 
         if (applicationResourceBranchDataProvider.onDidChangeTreeData) {
             this.changeSubscriptions[type] = applicationResourceBranchDataProvider.onDidChangeTreeData(e => this.onDidChangeTreeDataEmitter.fire(e));
         }
+
+        this.onDidChangeProvidersEmitter.fire();
     }
 
     getApplicationResourceBranchDataProvider(resource: ApplicationResource): BranchDataProvider<ApplicationResource, ResourceModelBase> {
-        return this.applicationResourceBranchDataProviders[resource.type] ?? this.defaultBranchDataProvider;
+        const provider = this.applicationResourceBranchDataProviders[resource.type.type];
+
+        if (provider) {
+            return provider;
+        }
+
+        // NOTE: The default branch data provider will be returned until the extension is loaded.
+        //       The extension will then register its branch data providers, resulting in a change event.
+        //       The tree will then be refreshed, resulting in this method being called again.
+        void this.extensionManager.activateApplicationResourceBranchDataProvider(resource.type.type);
+
+        return this.defaultBranchDataProvider;
     }
 
     removeApplicationResourceBranchDataProvider(type: string): void {
+        type = normalizeType(type);
+
+        const subscription = this.changeSubscriptions[type];
+
+        if (subscription) {
+            delete this.changeSubscriptions[type];
+        }
+
         delete this.applicationResourceBranchDataProviders[type];
+
+        this.onDidChangeProvidersEmitter.fire();
     }
 }
 

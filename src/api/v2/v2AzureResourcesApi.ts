@@ -17,7 +17,11 @@ export interface ApplicationSubscription {
 export interface ResourceBase {
     readonly id: string;
     readonly name: string;
+}
+
+export interface ApplicationResourceType {
     readonly type: string;
+    readonly kinds?: string[];
 }
 
 /**
@@ -26,7 +30,7 @@ export interface ResourceBase {
  */
 export interface ApplicationResource extends ResourceBase {
     readonly subscription: ApplicationSubscription;
-    readonly kind?: string;
+    readonly type: ApplicationResourceType;
     readonly location?: string;
     readonly resourceGroup?: string;
     /** Resource tags */
