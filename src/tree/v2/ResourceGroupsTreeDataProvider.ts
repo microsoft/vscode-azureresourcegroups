@@ -15,6 +15,7 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
     private readonly branchChangeSubscription: vscode.Disposable;
     private readonly groupingChangeSubscription: vscode.Disposable;
     private readonly providersChangeSubscription: vscode.Disposable;
+    private readonly refreshSubscription: vscode.Disposable;
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | null | undefined>();
 
     private api: AzureAccountExtensionApi | undefined;
@@ -24,6 +25,7 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
     constructor(
         branchDataProviderManager: BranchDataProviderManager,
         private readonly itemCache: ResourceGroupsItemCache,
+        refreshEvent: vscode.Event<void>,
         private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
         private readonly resourceProviderManager: ApplicationResourceProviderManager) {
         super(
@@ -32,6 +34,7 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                 this.groupingChangeSubscription.dispose();
                 this.filtersSubscription?.dispose();
                 this.providersChangeSubscription.dispose();
+                this.refreshSubscription.dispose();
                 this.statusSubscription?.dispose();
             });
 
@@ -51,6 +54,8 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
         //       as we're just rearranging known items; we might try caching resource items and only calling getTreeItem() on
         //       branch providers during the tree refresh that results from this (rather than getChildren() again).
         this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => this.onDidChangeTreeDataEmitter.fire());
+
+        this.refreshSubscription = refreshEvent(() => this.onDidChangeTreeDataEmitter.fire());
     }
 
     onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | null | undefined> = this.onDidChangeTreeDataEmitter.event;

@@ -50,6 +50,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
 
+    const refreshEventEmitter = new vscode.EventEmitter<void>();
+
+    context.subscriptions.push(refreshEventEmitter);
+
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
@@ -91,7 +95,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         context.subscriptions.push(ext.activationManager = new ExtensionActivationManager());
 
-        registerCommands();
+        registerCommands(refreshEventEmitter);
         registerApplicationResourceProvider(azureResourceProviderId, new AzureResourceProvider());
         registerApplicationResourceResolver('vscode-azureresourcegroups.wrapperResolver', wrapperResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.installableAppResourceResolver', installableAppResourceResolver);
@@ -108,7 +112,11 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     const resourceProviderManager = new ApplicationResourceProviderManager();
 
-    registerResourceGroupsTreeV2(context, branchDataProviderManager, resourceProviderManager);
+    registerResourceGroupsTreeV2(
+        context,
+        branchDataProviderManager,
+        refreshEventEmitter.event,
+        resourceProviderManager);
 
     const v2Api = new V2AzureResourcesApiImplementation(
         branchDataProviderManager,

@@ -273,7 +273,7 @@
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups",
+                    "when": "view == azureResourceGroups || view == azureResourceGroupsV2",
                     "group": "navigation@3"
                 },
                 {

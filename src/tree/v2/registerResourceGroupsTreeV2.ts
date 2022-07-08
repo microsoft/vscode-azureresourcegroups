@@ -10,6 +10,7 @@ import { ResourceGroupsTreeDataProvider } from './ResourceGroupsTreeDataProvider
 export function registerResourceGroupsTreeV2(
     context: vscode.ExtensionContext,
     branchDataProviderManager: BranchDataProviderManager,
+    refreshEvent: vscode.Event<void>,
     resourceProviderManager: ApplicationResourceProviderManager): void {
     const itemCache = new ResourceGroupsItemCache();
     const branchDataItemFactory = createBranchDataItemFactory(itemCache);
@@ -18,7 +19,7 @@ export function registerResourceGroupsTreeV2(
 
     context.subscriptions.push(resourceGroupingManager);
 
-    const treeDataProvider = new ResourceGroupsTreeDataProvider(branchDataProviderManager, itemCache, resourceGroupingManager, resourceProviderManager);
+    const treeDataProvider = new ResourceGroupsTreeDataProvider(branchDataProviderManager, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
 
     context.subscriptions.push(treeDataProvider);
 
