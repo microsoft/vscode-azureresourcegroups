@@ -8,7 +8,7 @@ import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
 import { ThemeIcon } from 'vscode';
-import { azureExtensions } from '../azureExtensions';
+import type { IAzExtMetadata } from '../azureExtensions';
 import { ext } from '../extensionVariables';
 import { createResourceClient } from './azureClients';
 import { localize } from './localize';
@@ -67,9 +67,9 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
     return groupConfig;
 }
 
-export function createAzureExtensionsGroupConfig(subscriptionId: string): GroupNodeConfiguration[] {
+export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], subscriptionId: string): GroupNodeConfiguration[] {
     const azExtGroupConfigs: GroupNodeConfiguration[] = [];
-    for (const azExt of azureExtensions) {
+    for (const azExt of extensions) {
         for (const resourceType of azExt.resourceTypes) {
             const type = typeof resourceType === 'string' ? resourceType : resourceType.name;
             const kind = azExt.name === 'vscode-azurefunctions' ? 'functionapp' : undefined;
@@ -118,6 +118,7 @@ export async function getArmTagKeys(context: IActionContext): Promise<Set<string
 // Execute `npm run listIcons` from root of repo to re-generate this list after adding an icon
 export const supportedIconTypes = [
     'microsoft.web/functionapp',
+    'microsoft.web/logicapp',
     'microsoft.web/hostingenvironments',
     'microsoft.web/kubeenvironments',
     'microsoft.web/serverfarms',
@@ -183,14 +184,8 @@ interface SupportedType {
 }
 
 function getName(type?: string, kind?: string): string | undefined {
-    type = type?.toLowerCase();
-    if (isFunctionApp(type, kind)) {
-        type = 'microsoft.web/functionapp';
-    }
-    if (type) {
-        return supportedTypes[type as SupportedTypes]?.displayName;
-    }
-    return undefined;
+    const rType: string = getResourceType(type, kind).toLowerCase();
+    return supportedTypes[rType as SupportedTypes]?.displayName;
 }
 
 // intersect with Record<stirng, SupportedType> so we can add info for resources we don't have icons for
@@ -200,6 +195,7 @@ const supportedTypes: SupportedTypeMap = {
     'microsoft.web/sites': { displayName: localize('webApp', 'App Services') },
     'microsoft.web/staticsites': { displayName: localize('staticWebApp', 'Static Web Apps') },
     'microsoft.web/functionapp': { displayName: localize('functionApp', 'Function App') },
+    'microsoft.web/logicapp': { displayName: localize('logicApp', 'Logic App') },
     'microsoft.compute/virtualmachines': { displayName: localize('virtualMachines', 'Virtual machines') },
     'microsoft.storage/storageaccounts': { displayName: localize('storageAccounts', 'Storage accounts') },
     'microsoft.network/networksecuritygroups': { displayName: localize('networkSecurityGroups', 'Network security groups') },
@@ -227,21 +223,39 @@ const supportedTypes: SupportedTypeMap = {
     'microsoft.web/serverfarms': { displayName: localize('serverFarms', 'App Service plans') },
     'microsoft.web/kubeenvironments': { displayName: localize('containerService', 'App Service Kubernetes Environment') },
     'microsoft.app/managedenvironments': { displayName: localize('containerAppsEnv', 'Container Apps Environment') },
-    'microsoft.app/containerapps': { displayName: localize('containerApp', 'Container Apps') },
+    'microsoft.app/containerapps': { displayName: localize('containerApp', 'Container Apps') }
 }
 
-export function isFunctionApp(type?: string, kind?: string): boolean {
+export function isFunctionApp(resource: GenericResource): boolean {
+    const { type, kind } = resource;
     if (type?.toLowerCase() === 'microsoft.web/sites') {
-        if (kind?.toLowerCase().includes('functionapp')) {
+        if (kind?.toLowerCase().includes('functionapp') && !kind?.toLowerCase().includes('workflowapp')) {
             return true;
         }
     }
     return false;
 }
 
+export function isLogicApp(resource: GenericResource): boolean {
+    const { type, kind } = resource;
+    if (type?.toLowerCase() === 'microsoft.web/sites') {
+        if (kind?.toLowerCase().includes('functionapp') && kind?.toLowerCase().includes('workflowapp')) {
+            return true;
+        }
+    }
+    return false;
+}
+
+export function isAppServiceApp(resource: GenericResource): boolean {
+    return !isFunctionApp(resource) && !isLogicApp(resource);
+}
+
 function getRelevantKind(type?: string, kind?: string): string | undefined {
-    if (isFunctionApp(type, kind)) {
+    if (isFunctionApp({ type, kind })) {
         return 'functionapp';
+    }
+    if (isLogicApp({ type, kind })) {
+        return 'logicapp';
     }
     return undefined;
 }
