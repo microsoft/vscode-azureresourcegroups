@@ -223,7 +223,7 @@ const supportedTypes: SupportedTypeMap = {
     'microsoft.web/serverfarms': { displayName: localize('serverFarms', 'App Service plans') },
     'microsoft.web/kubeenvironments': { displayName: localize('containerService', 'App Service Kubernetes Environment') },
     'microsoft.app/managedenvironments': { displayName: localize('containerAppsEnv', 'Container Apps Environment') },
-    'microsoft.app/containerapps': { displayName: localize('containerApp', 'Container Apps') }
+    'microsoft.app/containerapps': { displayName: localize('containerApp', 'Container Apps') },
 }
 
 export function isFunctionApp(resource: GenericResource): boolean {
