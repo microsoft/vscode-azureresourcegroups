@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { GenericResource } from "@azure/arm-resources";
+import { isAppServiceApp, isFunctionApp } from "./utils/azureUtils";
 import { localize } from "./utils/localize";
 
 export const azureExtensions: IAzExtMetadata[] = [
@@ -28,7 +29,7 @@ export const azureExtensions: IAzExtMetadata[] = [
         resourceTypes: [
             {
                 name: 'microsoft.web/sites',
-                matchesResource: r => !isFunctionApp(r)
+                matchesResource: isAppServiceApp
             }
         ],
         tutorial: {
@@ -113,8 +114,4 @@ export interface IAzExtResourceType {
 export interface IAzExtTutorial {
     label: string;
     url: string;
-}
-
-function isFunctionApp(resource: GenericResource): boolean {
-    return !!resource.kind?.toLowerCase().includes('functionapp');
 }
