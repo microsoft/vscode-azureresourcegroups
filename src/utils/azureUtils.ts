@@ -247,7 +247,9 @@ export function isLogicApp(resource: GenericResource): boolean {
 }
 
 export function isAppServiceApp(resource: GenericResource): boolean {
-    return !isFunctionApp(resource) && !isLogicApp(resource);
+    return resource.type?.toLowerCase() === 'microsoft.web/sites'
+        && !isFunctionApp(resource)
+        && !isLogicApp(resource);
 }
 
 function getRelevantKind(type?: string, kind?: string): string | undefined {
