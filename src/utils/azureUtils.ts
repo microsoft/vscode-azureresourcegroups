@@ -6,14 +6,14 @@
 import { GenericResource, ResourceManagementClient } from '@azure/arm-resources';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
+import { AzExtResourceType } from '@microsoft/vscode-azext-utils/azExtResourceType';
+import { AppResource, GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
 import { ThemeIcon } from 'vscode';
 import type { IAzExtMetadata } from '../azureExtensions';
 import { ext } from '../extensionVariables';
 import { createResourceClient } from './azureClients';
 import { localize } from './localize';
 import { treeUtils } from './treeUtils';
-import path = require('path');
 
 function parseResourceId(id: string): RegExpMatchArray {
     const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(.*)\/resourceGroups\/(.*)\/providers\/(.*)\/(.*)/i);
@@ -33,7 +33,7 @@ export function getResourceGroupFromId(id: string): string {
     return parseResourceId(id)[2];
 }
 
-export function createGroupConfigFromResource(resource: GenericResource, subscriptionId: string | undefined): GroupingConfig {
+export function createGroupConfigFromResource(resource: AppResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
     const groupConfig: GroupingConfig = {
         resourceGroup: {
@@ -42,10 +42,10 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
             contextValuesToAdd: ['azureResourceGroup']
         },
         resourceType: {
-            label: getName(resource.type, resource.kind) ?? resource.type ?? 'unknown',
-            id: getId(subscriptionId, resource.type, resource.kind),
-            iconPath: getIconPath(resource?.type ?? 'resource', resource.kind),
-            contextValuesToAdd: ['azureResourceTypeGroup', getResourceType(resource.type, resource.kind)]
+            label: azExtDisplayInfo[resource.azExtResourceType]?.displayName ?? resource.azExtResourceType,
+            id: `${subscriptionId}/${resource.azExtResourceType}`,
+            iconPath: getIconPath(resource.azExtResourceType),
+            contextValuesToAdd: ['azureResourceTypeGroup', resource.azExtResourceType]
         },
         location: {
             id: `${subscriptionId}/location/${resource.location}` ?? 'unknown',
@@ -55,12 +55,13 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
         }
     }
 
-    resource.tags ||= {};
-    for (const tag of Object.keys(resource.tags)) {
-        groupConfig[`armTag-${tag}`] = {
-            label: resource.tags[tag],
-            id: `${subscriptionId}/${tag}/${resource.tags[tag]}`,
-            icon: new ThemeIcon('tag')
+    if (resource.tags) {
+        for (const tag of Object.keys(resource.tags)) {
+            groupConfig[`armTag-${tag}`] = {
+                label: resource.tags[tag],
+                id: `${subscriptionId}/${tag}/${resource.tags[tag]}`,
+                icon: new ThemeIcon('tag')
+            }
         }
     }
 
@@ -70,33 +71,20 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
 export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], subscriptionId: string): GroupNodeConfiguration[] {
     const azExtGroupConfigs: GroupNodeConfiguration[] = [];
     for (const azExt of extensions) {
-        for (const resourceType of azExt.resourceTypes) {
+        for (const azExtResourceType of azExt.resourceTypes) {
             azExtGroupConfigs.push({
-                label: getName(type, kind) ?? type ?? 'unknown',
-                id: getId(subscriptionId, type, kind),
-                iconPath: getIconPath(type ?? 'resource', kind),
-                contextValuesToAdd: ['azureResourceTypeGroup', getResourceType(type, kind)]
+                label: azExtDisplayInfo[azExtResourceType]?.displayName ?? azExtResourceType,
+                id: `${subscriptionId}/${azExtResourceType}`,
+                iconPath: getIconPath(azExtResourceType),
+                contextValuesToAdd: ['azureResourceTypeGroup', azExtResourceType]
             });
         }
     }
     return azExtGroupConfigs;
 }
 
-function getId(subscriptionId?: string, type?: string, kind?: string): string {
-    const rType: string = getResourceType(type, kind);
-    return `${subscriptionId}/${rType}`;
-}
-
-export function getIconPath(type?: string, kind?: string): TreeItemIconPath {
-    let iconName: string;
-    const rType: string = getResourceType(type, kind).toLowerCase();
-    if (supportedIconTypes.includes(rType as SupportedTypes)) {
-        iconName = path.join('providers', rType);
-    } else {
-        iconName = 'resource';
-    }
-
-    return treeUtils.getIconPath(iconName);
+export function getIconPath(azExtResourceType?: AzExtResourceType): TreeItemIconPath {
+    return treeUtils.getIconPath(azExtResourceType ?? 'resources');
 }
 
 export async function getArmTagKeys(context: IActionContext): Promise<Set<string>> {
@@ -174,53 +162,43 @@ export const supportedIconTypes = [
     'microsoft.apimanagement/service',
 ] as const;
 
-type SupportedTypes = typeof supportedIconTypes[number];
-
-interface SupportedType {
+interface AzExtResourceTypeDisplayInfo {
     displayName: string;
 }
 
-function getName(type?: string, kind?: string): string | undefined {
-    const rType: string = getResourceType(type, kind).toLowerCase();
-    return supportedTypes[rType as SupportedTypes]?.displayName;
-}
-
-// intersect with Record<stirng, SupportedType> so we can add info for resources we don't have icons for
-type SupportedTypeMap = Partial<Record<SupportedTypes, SupportedType> & Record<string, SupportedType>>;
-
-const supportedTypes: SupportedTypeMap = {
-    'microsoft.web/sites': { displayName: localize('webApp', 'App Services') },
-    'microsoft.web/staticsites': { displayName: localize('staticWebApp', 'Static Web Apps') },
-    'microsoft.web/functionapp': { displayName: localize('functionApp', 'Function App') },
-    'microsoft.web/logicapp': { displayName: localize('logicApp', 'Logic App') },
-    'microsoft.compute/virtualmachines': { displayName: localize('virtualMachines', 'Virtual machines') },
-    'microsoft.storage/storageaccounts': { displayName: localize('storageAccounts', 'Storage accounts') },
-    'microsoft.network/networksecuritygroups': { displayName: localize('networkSecurityGroups', 'Network security groups') },
-    'microsoft.network/loadbalancers': { displayName: localize('loadBalancers', 'Load balancers') },
-    'microsoft.compute/disks': { displayName: localize('disks', 'Disks') },
-    'microsoft.compute/images': { displayName: localize('images', 'Images') },
-    'microsoft.compute/availabilitysets': { displayName: localize('availabilitySets', 'Availability sets') },
-    'microsoft.compute/virtualmachinescalesets': { displayName: localize('virtualMachineScaleSets', 'Virtual machine scale sets') },
-    'microsoft.network/virtualnetworks': { displayName: localize('virtualNetworks', 'Virtual networks') },
-    'microsoft.cdn/profiles': { displayName: localize('frontDoorAndcdnProfiles', 'Front Door and CDN profiles') },
-    'microsoft.network/publicipaddresses': { displayName: localize('publicIpAddresses', 'Public IP addresses') },
-    'microsoft.network/networkinterfaces': { displayName: localize('networkInterfaces', 'Network interfaces') },
-    'microsoft.network/networkwatchers': { displayName: localize('networkWatchers', 'Network watchers') },
-    'microsoft.batch/batchaccounts': { displayName: localize('batchAccounts', 'Batch accounts') },
-    'microsoft.containerregistry/registries': { displayName: localize('containerRegistry', 'Container registry') },
-    'microsoft.dbforpostgresql/servers': { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Standard)') },
-    'microsoft.dbforpostgresql/flexibleservers': { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Flexible)') },
-    'microsoft.dbformysql/servers': { displayName: localize('mysqlServers', 'MySql servers') },
-    'microsoft.sql/servers/databases': { displayName: localize('sqlDatabases', 'SQL databases') },
-    'microsoft.sql/servers': { displayName: localize('sqlServers', 'SQL servers') },
-    'microsoft.documentdb/databaseaccounts': { displayName: localize('documentDB', 'Azure Cosmos DB') },
-    'microsoft.operationalinsights/workspaces': { displayName: localize('operationalInsightsWorkspaces', 'Operational Insights workspaces') },
-    'microsoft.operationsmanagement/solutions': { displayName: localize('operationsManagementSolutions', 'Operations management solutions') },
-    'microsoft.insights/components': { displayName: localize('insightsComponents', 'Application Insights') },
-    'microsoft.web/serverfarms': { displayName: localize('serverFarms', 'App Service plans') },
-    'microsoft.web/kubeenvironments': { displayName: localize('containerService', 'App Service Kubernetes Environment') },
-    'microsoft.app/managedenvironments': { displayName: localize('containerAppsEnv', 'Container Apps Environment') },
-    'microsoft.app/containerapps': { displayName: localize('containerApp', 'Container Apps') },
+const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDisplayInfo>> = {
+    'AppServices': { displayName: localize('webApp', 'App Services') },
+    'StaticWebApps': { displayName: localize('staticWebApp', 'Static Web Apps') },
+    'FunctionApp': { displayName: localize('functionApp', 'Function App') },
+    'LogicApp': { displayName: localize('logicApp', 'Logic App') },
+    'VirtualMachines': { displayName: localize('virtualMachines', 'Virtual machines') },
+    'StorageAccounts': { displayName: localize('storageAccounts', 'Storage accounts') },
+    'NetworkSecurityGroups': { displayName: localize('networkSecurityGroups', 'Network security groups') },
+    'LoadBalancers': { displayName: localize('loadBalancers', 'Load balancers') },
+    'Disks': { displayName: localize('disks', 'Disks') },
+    'Images': { displayName: localize('images', 'Images') },
+    'AvailabilitySets': { displayName: localize('availabilitySets', 'Availability sets') },
+    'VirtualMachineScaleSets': { displayName: localize('virtualMachineScaleSets', 'Virtual machine scale sets') },
+    'VirtualNetworks': { displayName: localize('virtualNetworks', 'Virtual networks') },
+    'FrontDoorAndCdnProfiles': { displayName: localize('frontDoorAndcdnProfiles', 'Front Door and CDN profiles') },
+    'PublicIpAddresses': { displayName: localize('publicIpAddresses', 'Public IP addresses') },
+    'NetworkInterfaces': { displayName: localize('networkInterfaces', 'Network interfaces') },
+    'NetworkWatchers': { displayName: localize('networkWatchers', 'Network watchers') },
+    'BatchAccounts': { displayName: localize('batchAccounts', 'Batch accounts') },
+    'ContainerRegistry': { displayName: localize('containerRegistry', 'Container registry') },
+    'PostgresqlServersStandard': { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Standard)') },
+    'PostgresqlServersFlexible': { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Flexible)') },
+    'MysqlServers': { displayName: localize('mysqlServers', 'MySql servers') },
+    'SqlDatabases': { displayName: localize('sqlDatabases', 'SQL databases') },
+    'SqlServers': { displayName: localize('sqlServers', 'SQL servers') },
+    'AzureCosmosDb': { displayName: localize('documentDB', 'Azure Cosmos DB') },
+    'OperationalInsightsWorkspaces': { displayName: localize('operationalInsightsWorkspaces', 'Operational Insights workspaces') },
+    'OperationsManagementSolutions': { displayName: localize('operationsManagementSolutions', 'Operations management solutions') },
+    'ApplicationInsights': { displayName: localize('insightsComponents', 'Application Insights') },
+    'AppServicePlans': { displayName: localize('serverFarms', 'App Service plans') },
+    'AppServiceKubernetesEnvironment': { displayName: localize('containerService', 'App Service Kubernetes Environment') },
+    'ContainerAppsEnvironment': { displayName: localize('containerAppsEnv', 'Container Apps Environment') },
+    'ContainerApps': { displayName: localize('containerApp', 'Container Apps') },
 }
 
 export function isFunctionApp(resource: GenericResource): boolean {

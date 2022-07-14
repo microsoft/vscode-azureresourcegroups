@@ -55,11 +55,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         this.tags = resource.tags;
 
         this.isHidden = !azureExtensions.some(ext =>
-            ext.resourceTypes.some((type) => {
-                return typeof type === 'string' ?
-                    type.toLowerCase() === this.type?.toLowerCase() :
-                    type.name.toLowerCase() === this.type?.toLowerCase() && type.matchesResource(this.data)
-            }));
+            ext.resourceTypes.some(type => type === this.data.azExtResourceType));
     }
 
     /**
@@ -116,7 +112,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     }
 
     public get iconPath(): TreeItemIconPath {
-        return getIconPath(this.data.type, this.data.kind);
+        return getIconPath(this.data.azExtResourceType);
     }
 
     public get parent(): GroupTreeItemBase | undefined {
