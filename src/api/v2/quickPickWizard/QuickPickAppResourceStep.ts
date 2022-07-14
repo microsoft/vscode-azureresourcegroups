@@ -3,21 +3,34 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { AppResource, PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
+import { AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { BranchDataProviderManager } from '../../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from '../providers/ApplicationResourceProviderManager';
 import { ApplicationResource, Filter, ResourceModelBase } from '../v2AzureResourcesApi';
-import { ContextValueFilter } from './ContextValueFilter';
 import { QuickPickAppResourceWizardContext } from './QuickPickAppResourceWizardContext';
 import { RecursiveQuickPickStep } from './RecursiveQuickPickStep';
+
+export interface PickAppResourceOptions2 extends IAzureQuickPickOptions {
+    /**
+     * Set this to pick a child of the selected app resource
+     */
+    childFilter?: Filter<ResourceModelBase>;
+
+    /**
+     * Whether `AppResourceTreeItem`s should be resolved before displaying them as quick picks, or only once one has been selected
+     * If a client extension needs to change label/description/something visible on the quick pick via `resolve`, set to true,
+     * otherwise set to false. Default will be false.
+     */
+    resolveQuickPicksBeforeDisplay?: boolean;
+}
 
 export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends AzureWizardPromptStep<QuickPickAppResourceWizardContext<TModel>> {
     public constructor(
         private readonly resourceProviderManager: ApplicationResourceProviderManager,
         private readonly branchDataProviderManager: BranchDataProviderManager,
         private readonly filter?: Filter<AppResource> | Filter<AppResource>[],
-        private readonly options?: PickAppResourceOptions
+        private readonly options?: PickAppResourceOptions2
     ) {
         super();
     }
@@ -40,8 +53,8 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
     }
 
     public async getSubWizard(wizardContext: QuickPickAppResourceWizardContext<TModel>): Promise<IWizardOptions<QuickPickAppResourceWizardContext<TModel>> | undefined> {
-        if (this.options?.expectedChildContextValue) {
-            if (new ContextValueFilter(this.options.expectedChildContextValue).matches(wizardContext.currentNode as TModel)) {
+        if (this.options?.childFilter) {
+            if (this.options.childFilter?.matches(wizardContext.currentNode as TModel)) {
                 return undefined;
             }
 
@@ -50,7 +63,7 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
             return {
                 hideStepCount: true,
                 promptSteps: [
-                    new RecursiveQuickPickStep(bdp, new ContextValueFilter(this.options.expectedChildContextValue)),
+                    new RecursiveQuickPickStep(bdp, this.options.childFilter),
                 ],
             };
         }
