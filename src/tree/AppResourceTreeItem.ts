@@ -5,6 +5,7 @@
 
 import { ResourceGroup } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtResourceType } from "@microsoft/vscode-azext-utils/azExtResourceType";
 import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
 import { FileChangeType } from "vscode";
 import { azureExtensions } from "../azureExtensions";
@@ -31,6 +32,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
 
     public type: string;
     public kind?: string | undefined;
+    public azExtResourceType: AzExtResourceType;
     public location?: string | undefined;
     public tags?: { [propertyName: string]: string; } | undefined;
 

@@ -71,9 +71,6 @@ export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], s
     const azExtGroupConfigs: GroupNodeConfiguration[] = [];
     for (const azExt of extensions) {
         for (const resourceType of azExt.resourceTypes) {
-            const type = typeof resourceType === 'string' ? resourceType : resourceType.name;
-            const kind = azExt.name === 'vscode-azurefunctions' ? 'functionapp' : undefined;
-
             azExtGroupConfigs.push({
                 label: getName(type, kind) ?? type ?? 'unknown',
                 id: getId(subscriptionId, type, kind),
