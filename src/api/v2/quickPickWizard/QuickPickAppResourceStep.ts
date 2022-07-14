@@ -8,6 +8,7 @@ import { PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
 import { BranchDataProviderManager } from '../../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from '../providers/ApplicationResourceProviderManager';
 import { ApplicationResource, ResourceModelBase } from '../v2AzureResourcesApi';
+import { IAppResourceFilter } from './AppResourceFilter';
 import { matchesContextValueFilter } from './ContextValueFilter';
 import { QuickPickAppResourceWizardContext } from './QuickPickAppResourceWizardContext';
 import { RecursiveQuickPickStep } from './RecursiveQuickPickStep';
@@ -16,7 +17,8 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
     public constructor(
         private readonly resourceProviderManager: ApplicationResourceProviderManager,
         private readonly branchDataProviderManager: BranchDataProviderManager,
-        private readonly options: PickAppResourceOptions
+        private readonly filter?: IAppResourceFilter | IAppResourceFilter[],
+        private readonly options?: PickAppResourceOptions
     ) {
         super();
     }
@@ -39,7 +41,7 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
     }
 
     public async getSubWizard(wizardContext: QuickPickAppResourceWizardContext<TModel>): Promise<IWizardOptions<QuickPickAppResourceWizardContext<TModel>> | undefined> {
-        if (this.options.expectedChildContextValue) {
+        if (this.options?.expectedChildContextValue) {
             if (matchesContextValueFilter(wizardContext.currentNode as TModel, this.options.expectedChildContextValue)) {
                 return undefined;
             }
@@ -65,30 +67,12 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
     }
 
     private matchesAppResource(resource: ApplicationResource): boolean {
-        if (!this.options.filter) {
+        if (!this.filter) {
             return true;
         }
 
-        const filterArray = Array.isArray(this.options.filter) ? this.options.filter : [this.options.filter];
+        const filterArray = Array.isArray(this.filter) ? this.filter : [this.filter];
 
-        return filterArray.some(filter => {
-            if (filter.type !== resource.type) {
-                return false;
-            }
-
-            if (filter.kind && filter.kind !== resource.kind) {
-                return false;
-            }
-
-            if (filter.tags) {
-                for (const tag of Object.keys(filter.tags)) {
-                    if (filter.tags[tag] !== resource.tags?.[tag]) {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        })
+        return filterArray.some((filter) => filter.matches(resource));
     }
 }
