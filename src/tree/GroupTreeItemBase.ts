@@ -124,6 +124,12 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
         );
     }
 
+    public async refreshImpl(context: IActionContext): Promise<void> {
+        await Promise.all(
+            Object.values(this.treeMap).map(async resolvable => resolvable.resolve(true, context))
+        );
+    }
+
     private createToggleShowAllResourcesTreeItem(numOfResources: number, numOfTotalResources: number): GenericTreeItem {
         const label = !this._showAllResources ?
             localize('showingResources', 'Showing {0} of {1} resources. Click to reveal all resources.', numOfResources, numOfTotalResources) :
