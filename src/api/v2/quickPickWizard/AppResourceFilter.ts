@@ -4,12 +4,9 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AppResource, AppResourceFilter as AppResourceFilterOptions } from "@microsoft/vscode-azext-utils/hostapi";
+import { Filter } from "../v2AzureResourcesApi";
 
-export interface IAppResourceFilter {
-    matches: (resource: AppResource) => boolean;
-}
-
-export class AppResourceFilter implements IAppResourceFilter {
+export class AppResourceFilter implements Filter<AppResource> {
 
     constructor(private readonly options: AppResourceFilterOptions) { }
 

@@ -3,25 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceModelBase } from '../v2AzureResourcesApi';
+import { Filter, ResourceModelBase } from '../v2AzureResourcesApi';
 
-export type ContextValueFilter = string | RegExp | (string | RegExp)[];
+export class ContextValueFilter implements Filter<ResourceModelBase> {
 
-export function matchesContextValueFilter(resource: ResourceModelBase, filter: ContextValueFilter): boolean {
-    if (!resource?.quickPickOptions) {
-        return false;
+    constructor(private readonly expectedContextValue: string | RegExp | (string | RegExp)[]) { }
+
+    matches(resource: ResourceModelBase): boolean {
+
+        const filterArray = Array.isArray(this.expectedContextValue) ? this.expectedContextValue : [this.expectedContextValue];
+
+        if (!resource.quickPickOptions) {
+            return false;
+        }
+
+        return filterArray.some(filter => {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            return resource.quickPickOptions!.contexts.some(contextValue => {
+                if (typeof filter === 'string') {
+                    return filter === contextValue;
+                } else {
+                    return filter.test(contextValue);
+                }
+            })
+        });
     }
-
-    const filterArray = Array.isArray(filter) ? filter : [filter];
-
-    return filterArray.some(filter => {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        return resource.quickPickOptions!.contexts.some(contextValue => {
-            if (typeof filter === 'string') {
-                return filter === contextValue;
-            } else {
-                return filter.test(contextValue);
-            }
-        })
-    });
 }

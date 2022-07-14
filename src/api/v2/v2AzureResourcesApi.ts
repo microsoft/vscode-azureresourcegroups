@@ -205,3 +205,7 @@ export interface AzureResourcesApiManager {
      */
     getApi<T extends AzureResourcesApiBase>(versionRange: string): T | undefined
 }
+
+export interface Filter<T> {
+    matches(value: T): boolean;
+}

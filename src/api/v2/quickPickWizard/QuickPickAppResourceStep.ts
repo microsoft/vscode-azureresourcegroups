@@ -4,12 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
+import { AppResource, PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
 import { BranchDataProviderManager } from '../../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from '../providers/ApplicationResourceProviderManager';
-import { ApplicationResource, ResourceModelBase } from '../v2AzureResourcesApi';
-import { IAppResourceFilter } from './AppResourceFilter';
-import { matchesContextValueFilter } from './ContextValueFilter';
+import { ApplicationResource, Filter, ResourceModelBase } from '../v2AzureResourcesApi';
+import { ContextValueFilter } from './ContextValueFilter';
 import { QuickPickAppResourceWizardContext } from './QuickPickAppResourceWizardContext';
 import { RecursiveQuickPickStep } from './RecursiveQuickPickStep';
 
@@ -17,7 +16,7 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
     public constructor(
         private readonly resourceProviderManager: ApplicationResourceProviderManager,
         private readonly branchDataProviderManager: BranchDataProviderManager,
-        private readonly filter?: IAppResourceFilter | IAppResourceFilter[],
+        private readonly filter?: Filter<AppResource> | Filter<AppResource>[],
         private readonly options?: PickAppResourceOptions
     ) {
         super();
@@ -42,7 +41,7 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
 
     public async getSubWizard(wizardContext: QuickPickAppResourceWizardContext<TModel>): Promise<IWizardOptions<QuickPickAppResourceWizardContext<TModel>> | undefined> {
         if (this.options?.expectedChildContextValue) {
-            if (matchesContextValueFilter(wizardContext.currentNode as TModel, this.options.expectedChildContextValue)) {
+            if (new ContextValueFilter(this.options.expectedChildContextValue).matches(wizardContext.currentNode as TModel)) {
                 return undefined;
             }
 
@@ -51,7 +50,7 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
             return {
                 hideStepCount: true,
                 promptSteps: [
-                    new RecursiveQuickPickStep(bdp, this.options.expectedChildContextValue),
+                    new RecursiveQuickPickStep(bdp, new ContextValueFilter(this.options.expectedChildContextValue)),
                 ],
             };
         }
@@ -72,7 +71,6 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
         }
 
         const filterArray = Array.isArray(this.filter) ? this.filter : [this.filter];
-
         return filterArray.some((filter) => filter.matches(resource));
     }
 }

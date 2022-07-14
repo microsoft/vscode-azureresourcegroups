@@ -5,8 +5,7 @@
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, NoResourceFoundError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ResourceModelBase } from '../v2AzureResourcesApi';
-import { ContextValueFilter, matchesContextValueFilter } from './ContextValueFilter';
+import { Filter, ResourceModelBase } from '../v2AzureResourcesApi';
 import { QuickPickWizardContext } from './QuickPickWizardContext';
 
 export class GenericQuickPickStep<TModel extends ResourceModelBase> extends AzureWizardPromptStep<QuickPickWizardContext<TModel>> {
@@ -14,7 +13,7 @@ export class GenericQuickPickStep<TModel extends ResourceModelBase> extends Azur
 
     public constructor(
         protected readonly treeDataProvider: vscode.TreeDataProvider<TModel>,
-        protected readonly contextValueFilter: ContextValueFilter,
+        protected readonly contextValueFilter: Filter<TModel>,
     ) {
         super();
     }
@@ -31,7 +30,7 @@ export class GenericQuickPickStep<TModel extends ResourceModelBase> extends Azur
     protected async getPicks(wizardContext: QuickPickWizardContext<TModel>): Promise<IAzureQuickPickItem<TModel>[]> {
         const children = (await this.treeDataProvider.getChildren(wizardContext.currentNode)) || [];
 
-        const matchingChildren = children.filter(c => matchesContextValueFilter(c, this.contextValueFilter));
+        const matchingChildren = children.filter(this.contextValueFilter.matches);
         const nonLeafChildren = children.filter(c => c.quickPickOptions?.isLeaf === false);
 
         let promptChoices: TModel[];

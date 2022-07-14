@@ -10,7 +10,7 @@ import { QuickPickWizardContext } from './QuickPickWizardContext';
 
 export class RecursiveQuickPickStep<TModel extends ResourceModelBase> extends GenericQuickPickStep<TModel> {
     public async getSubWizard(wizardContext: QuickPickWizardContext<TModel>): Promise<IWizardOptions<QuickPickWizardContext<TModel>> | undefined> {
-        if (this.matchesContextValue(wizardContext.currentNode)) {
+        if (this.contextValueFilter.matches(wizardContext.currentNode as TModel)) {
             return undefined;
         } else {
             return {
