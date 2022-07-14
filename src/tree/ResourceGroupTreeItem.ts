@@ -63,17 +63,6 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
         return treeUtils.getIconPath('resourceGroup');
     }
 
-    public async getNumOfResources(context: IActionContext): Promise<number> {
-        // load/retrieve the first batch to check if there are more children
-        let resources = await this.getCachedChildren(context);
-
-        if (this.hasMoreChildrenImpl()) {
-            resources = await this.loadAllChildren(context);
-        }
-
-        return resources.length;
-    }
-
     public async refreshImpl(context: IActionContext): Promise<void> {
         const client: ResourceManagementClient = await createResourceClient([context, this.subscription]);
         this.data = await client.resourceGroups.get(this.name);

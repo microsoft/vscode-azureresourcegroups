@@ -56,7 +56,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
             ext.resourceTypes.some((type) => {
                 return typeof type === 'string' ?
                     type.toLowerCase() === this.type?.toLowerCase() :
-                    type.name.toLowerCase() === this.type?.toLowerCase()
+                    type.name.toLowerCase() === this.type?.toLowerCase() && type.matchesResource(this.data)
             }));
     }
 

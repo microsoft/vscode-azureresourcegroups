@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 0.5.4 - 2022-07-06
+
+### Added
+- Open walkthrough tree item to help view [#321](https://github.com/microsoft/vscode-azureresourcegroups/pull/321)
+
+### Changed
+- Make Resources and Workspace view visible by default [#310](https://github.com/microsoft/vscode-azureresourcegroups/pull/310)
+- Make location of "Edit Tags..." context menu item consistent [#313](https://github.com/microsoft/vscode-azureresourcegroups/pull/313)
+- Update @vscode/extension-telemetry to 0.6.2 [#317](https://github.com/microsoft/vscode-azureresourcegroups/pull/317)
+
+### Fixed
+- Resources are not sorted alphabetically in the list when executing commands from command palette [#299](https://github.com/microsoft/vscode-azureresourcegroups/issues/299)
+- The confirmation message is inconsistent when deleting a resource group from context menu and command palette [#308](https://github.com/microsoft/vscode-azureresourcegroups/issues/308)
+- Cannot select multiple files and folders at once for an attached storage account [#300](https://github.com/microsoft/vscode-azureresourcegroups/issues/300)
+- Extra "select subscription" step when creating a resource group by right clicking a subscription [#304](https://github.com/microsoft/vscode-azureresourcegroups/issues/304)
+
 ## 0.5.3 - 2022-06-09
 
 ### Fixed
