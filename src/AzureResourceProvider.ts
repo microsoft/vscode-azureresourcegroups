@@ -6,7 +6,7 @@
 import { GenericResource, ResourceManagementClient } from "@azure/arm-resources";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, IActionContext, ISubscriptionContext, nonNullProp } from "@microsoft/vscode-azext-utils";
-import { getAzExtResourceType } from "@microsoft/vscode-azext-utils/azExtResourceType";
+import { AzExtResourceType, getAzExtResourceType } from "@microsoft/vscode-azext-utils/azExtResourceType";
 import { AppResource, AppResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
 import { createResourceClient } from "./utils/azureClients";
 
@@ -30,7 +30,7 @@ export class AzureResourceProvider implements AppResourceProvider {
             type: nonNullProp(resource, 'type'),
             kind: resource.kind,
             location: resource.location,
-            azExtResourceType: getAzExtResourceType({ type: nonNullProp(resource, 'type'), kind: resource.kind })!,
+            azExtResourceType: getAzExtResourceType({ type: nonNullProp(resource, 'type'), kind: resource.kind }) ?? resource.type as AzExtResourceType,
             ...resource
         };
     }
