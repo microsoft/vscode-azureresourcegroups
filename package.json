@@ -332,14 +332,19 @@
                     "group": "9@1"
                 },
                 {
+                    "command": "azureResourceGroups.refresh",
+                    "when": "view == azureResourceGroups && viewItem =~ /group/",
+                    "group": "inline@1"
+                },
+                {
                     "command": "azureResourceGroups.focusGroup",
                     "when": "view == azureResourceGroups && viewItem =~ /(group).*(unfocused)/",
-                    "group": "inline"
+                    "group": "inline@2"
                 },
                 {
                     "command": "azureResourceGroups.unfocusGroup",
                     "when": "view == azureResourceGroups && viewItem =~ /(focused).*(group)/",
-                    "group": "inline"
+                    "group": "inline@2"
                 }
             ],
             "commandPalette": [
