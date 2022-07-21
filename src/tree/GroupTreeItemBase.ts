@@ -126,7 +126,7 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
 
     public async refreshImpl(context: IActionContext): Promise<void> {
         await Promise.all(
-            Object.values(this.treeMap).map(async resolvable => resolvable.resolve(true, context))
+            Object.values(this.treeMap).map(async ti => await ti.refresh(context))
         );
     }
 
