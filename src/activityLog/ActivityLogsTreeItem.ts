@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { ActivityStatus, AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
 import { commands, Disposable } from 'vscode';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
-import { ActivityStatus, ActivityTreeItem } from './ActivityTreeItem';
+import { ActivityTreeItem } from './ActivityTreeItem';
 
 export class ActivityLogTreeItem extends AzExtParentTreeItem implements Disposable {
     public label: string = localize('activityLog', 'Activity Log');
@@ -37,9 +37,9 @@ export class ActivityLogTreeItem extends AzExtParentTreeItem implements Disposab
     }
 
     public async clearActivities(context: IActionContext): Promise<void> {
-        Object.entries(this.activityTreeItems).forEach(([id, activity]: [string, ActivityTreeItem]) => {
-            if (activity.status === ActivityStatus.Done) {
-                activity.dispose();
+        Object.entries(this.activityTreeItems).forEach(([id, ti]: [string, ActivityTreeItem]) => {
+            if (ti.status !== ActivityStatus.Running && ti.status !== ActivityStatus.NotStarted) {
+                ti.dispose();
                 delete this.activityTreeItems[id];
             }
         });
@@ -48,7 +48,7 @@ export class ActivityLogTreeItem extends AzExtParentTreeItem implements Disposab
 
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
         // no status means activity hasn't started yet
-        return Object.values(this.activityTreeItems).filter((activity) => !!activity.status);
+        return Object.values(this.activityTreeItems).filter((activity) => activity.status !== ActivityStatus.NotStarted);
     }
 
     public compareChildrenImpl(item1: ActivityTreeItem, item2: ActivityTreeItem): number {

@@ -3,63 +3,51 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
-import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
+import { ActivityStatus, AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { Activity, OnErrorActivityData, OnProgressActivityData } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable, ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { localize } from "../utils/localize";
-
-export enum ActivityStatus {
-    Running = 'running',
-    Done = 'done'
-}
 
 export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable {
 
     public startedAtMs: number;
 
     public get contextValue(): string {
-        const contextValues = new Set(['azureActivity', ...(this.state.contextValuesToAdd ?? [])]);
+        const contextValues = new Set(['azureActivity', ...(this.activity.options.contextValuesToAdd ?? [])]);
         return Array.from(contextValues).sort().join(';');
     }
 
     public get label(): string {
-        return this.state.label;
+        return this.activity.options.label ?? localize('loading', 'Loading...');
     }
 
     public get description(): string | undefined {
-        if (this.status === ActivityStatus.Done) {
-            if (this.error) {
+        switch (this.status) {
+            case ActivityStatus.Failed:
                 return localize('failed', 'Failed');
-            } else {
+            case ActivityStatus.Succeeded:
                 return localize('succeeded', 'Succeeded');
-            }
-        } else {
-            return this.latestProgress?.message;
+            default:
+                return this.latestProgress?.message;
         }
     }
 
     public get iconPath(): TreeItemIconPath | undefined {
-        if (this.status === ActivityStatus.Done) {
-            if (this.error) {
+        switch (this.status) {
+            case ActivityStatus.Failed:
                 return new ThemeIcon('error', new ThemeColor('testing.iconFailed'));
-            } else {
+            case ActivityStatus.Succeeded:
                 return new ThemeIcon('pass', new ThemeColor('testing.iconPassed'));
-            }
+            default:
+                return new ThemeIcon('loading~spin');
         }
-        return new ThemeIcon('loading~spin');
     }
-
-    private state: ActivityTreeItemOptions = {
-        label: localize('loading', 'Loading...')
-    }
-
-    public initialCollapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None;
-
     public status?: ActivityStatus;
     public error?: unknown;
     private latestProgress?: { message?: string };
+    public initialCollapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None;
 
-    public constructor(parent: AzExtParentTreeItem, activity: Activity) {
+    public constructor(parent: AzExtParentTreeItem, public readonly activity: Activity) {
         super(parent);
         this.id = activity.id;
         this.setupListeners(activity);
@@ -73,8 +61,8 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     private readonly disposables: Disposable[] = [];
 
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        if (this.state.getChildren) {
-            return await this.state.getChildren(this);
+        if (this.activity.options.getChildren) {
+            return await this.activity.options.getChildren(this);
         }
         return [];
     }
@@ -87,25 +75,22 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
         void callWithTelemetryAndErrorHandling('activityOnProgress', async (context) => {
             context.telemetry.suppressIfSuccessful = true;
             this.latestProgress = data.message ? { message: data?.message } : this.latestProgress;
-            this.state = data;
             await this.refresh(context);
         });
     }
 
-    private onStart(data: OnStartActivityData): void {
+    private onStart(): void {
         void callWithTelemetryAndErrorHandling('activityOnStart', async (context) => {
             this.startedAtMs = Date.now();
             this.status = ActivityStatus.Running;
-            this.state = data;
             await this.refresh(context);
         });
     }
 
-    private onSuccess(data: OnSuccessActivityData): void {
+    private onSuccess(): void {
         void callWithTelemetryAndErrorHandling('activityOnSuccess', async (context) => {
-            this.state = data;
-            this.status = ActivityStatus.Done;
-            if (this.state.getChildren) {
+            this.status = ActivityStatus.Succeeded;
+            if (this.activity.options.getChildren) {
                 this.initialCollapsibleState = TreeItemCollapsibleState.Expanded;
             }
             await this.refresh(context);
@@ -114,8 +99,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
 
     private onError(data: OnErrorActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnError', async (context) => {
-            this.state = data;
-            this.status = ActivityStatus.Done;
+            this.status = ActivityStatus.Failed;
             this.error = data.error;
             this.initialCollapsibleState = TreeItemCollapsibleState.Expanded;
             await this.refresh(context);
