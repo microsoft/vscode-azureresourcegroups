@@ -147,6 +147,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         return Object.values(this.treeMap);
     }
 
+    public async refreshImpl(context: IActionContext): Promise<void> {
+        for (const ti of Object.values(this.treeMap)) {
+            void ti.refresh(context);
+        }
+    }
+
 
     public async createChildImpl(context: ICreateChildImplContext): Promise<ResourceGroupTreeItem> {
         const wizardContext: IResourceGroupWizardContext & ExecuteActivityContext = {

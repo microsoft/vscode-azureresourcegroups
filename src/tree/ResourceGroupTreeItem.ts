@@ -68,6 +68,7 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
         this.data = await client.resourceGroups.get(this.name);
         this.mTime = Date.now();
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+        await super.refreshImpl(context);
     }
 
     public async deleteTreeItemImpl(context: IActionContext): Promise<void> {
