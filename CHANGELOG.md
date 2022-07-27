@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.5.5 - 2022-07-27
+
+### Changed
+- Minimum version of VS Code is now 1.65.0 [#346](https://github.com/microsoft/vscode-azureresourcegroups/pull/346)
+
+### Fixed
+- When subscription or group is refreshed, refresh the children as well [#339](https://github.com/microsoft/vscode-azureresourcegroups/pull/339)
+- Resources are not re-resolved after installing extensions [#280](https://github.com/microsoft/vscode-azureresourcegroups/issues/280)
+- Fix displaying Logic Apps as Function Apps [#332](https://github.com/microsoft/vscode-azureresourcegroups/pull/332)
+- Unable to load resources when using Azure Stack [#296](https://github.com/microsoft/vscode-azureresourcegroups/issues/296)
+
 ## 0.5.4 - 2022-07-06
 
 ### Added
