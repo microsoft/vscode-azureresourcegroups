@@ -13,6 +13,8 @@
 - Fix displaying Logic Apps as Function Apps [#332](https://github.com/microsoft/vscode-azureresourcegroups/pull/332)
 - Unable to load resources when using Azure Stack [#296](https://github.com/microsoft/vscode-azureresourcegroups/issues/296)
 
+[All closed issues](https://github.com/microsoft/vscode-azureresourcegroups/milestone/15?closed=1)
+
 ## 0.5.4 - 2022-07-06
 
 ### Added
