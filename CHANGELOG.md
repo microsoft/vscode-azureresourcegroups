@@ -1,7 +1,5 @@
 # Change Log
 
-## Unreleased
-
 ## 0.5.5 - 2022-07-27
 
 ### Changed
