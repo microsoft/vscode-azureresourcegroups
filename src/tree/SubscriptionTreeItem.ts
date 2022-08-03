@@ -67,6 +67,10 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             .sort((a, b) => a.label.localeCompare(b.label))
             .sort((a, b) => a.group.localeCompare(b.group));
 
+        if (picks.length === 0) {
+            throw new NoResourceFoundError();
+        }
+
         const quickPickOptions: IAzureQuickPickOptions = {
             enableGrouping: !options?.filter,
             placeHolder: localize('selectResource', 'Select a resource'),
