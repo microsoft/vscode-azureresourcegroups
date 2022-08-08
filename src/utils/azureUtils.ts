@@ -167,7 +167,7 @@ interface SupportedType {
 
 export function getName(type?: string, kind?: string): string | undefined {
     type = type?.toLowerCase();
-    if (isFunctionApp(type, kind)) {
+    if (isFunctionAppType(type, kind)) {
         type = 'microsoft.web/functionapp';
     }
     if (type) {
@@ -214,14 +214,19 @@ const supportedTypes: SupportedTypeMap = {
     'microsoft.app/containerapps': { displayName: localize('containerApp', 'Container Apps') },
 }
 
-export function isFunctionApp(resource: GenericResource): boolean {
-    const { type, kind } = resource;
+export function isFunctionAppType(type: string | undefined, kind: string | undefined): boolean {
     if (type?.toLowerCase() === 'microsoft.web/sites') {
         if (kind?.toLowerCase().includes('functionapp') && !kind?.toLowerCase().includes('workflowapp')) {
             return true;
         }
     }
     return false;
+}
+
+export function isFunctionApp(resource: GenericResource): boolean {
+    const { type, kind } = resource;
+
+    return isFunctionAppType(type, kind);
 }
 
 export function isLogicApp(resource: GenericResource): boolean {

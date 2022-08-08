@@ -1,9 +1,8 @@
 import { GenericResource, ResourceGroup } from '@azure/arm-resources';
-import { uiUtils } from "@microsoft/vscode-azext-azureutils";
+import { getResourceGroupFromId, uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, IActionContext, ISubscriptionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { createResourceClient } from '../../../utils/azureClients';
-import { getResourceGroupFromId } from '../../../utils/azureUtils';
 import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions } from '../v2AzureResourcesApi';
 
 export class BuiltInApplicationResourceProvider implements ApplicationResourceProvider {
