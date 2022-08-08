@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceManagementClient } from '@azure/arm-resources';
-import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils/azExtResourceType';
 import { AppResource, GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
@@ -14,24 +14,6 @@ import { ext } from '../extensionVariables';
 import { createResourceClient } from './azureClients';
 import { localize } from './localize';
 import { treeUtils } from './treeUtils';
-
-function parseResourceId(id: string): RegExpMatchArray {
-    const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(.*)\/resourceGroups\/(.*)\/providers\/(.*)\/(.*)/i);
-
-    if (matches === null || matches.length < 3) {
-        throw new Error(localize('InvalidResourceId', 'Invalid Azure Resource Id'));
-    }
-
-    return matches;
-}
-
-export function getSubscriptionIdFromId(id: string): string {
-    return parseResourceId(id)[1];
-}
-
-export function getResourceGroupFromId(id: string): string {
-    return parseResourceId(id)[2];
-}
 
 export function createGroupConfigFromResource(resource: AppResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
