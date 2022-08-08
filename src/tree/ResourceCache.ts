@@ -7,6 +7,7 @@ import { ResourceGroup } from "@azure/arm-resources";
 import { IActionContext, nonNullProp } from "@microsoft/vscode-azext-utils";
 import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { ThemeIcon } from "vscode";
+import { azureExtensions } from "../azureExtensions";
 import { GroupBySettings } from "../commands/explorer/groupBy";
 import { ungroupedId } from "../constants";
 import { createAzureExtensionsGroupConfig } from "../utils/azureUtils";
@@ -82,7 +83,7 @@ export class ResourceCache {
                 break;
             case GroupBySettings.ResourceType:
                 // always create the groups for extensions that we support
-                const azExtGroupConfigs = createAzureExtensionsGroupConfig(nonNullProp(this._subscriptionTreeItem, 'id'));
+                const azExtGroupConfigs = createAzureExtensionsGroupConfig(azureExtensions, nonNullProp(this._subscriptionTreeItem, 'id'));
                 for (const azExtGroupConfig of azExtGroupConfigs) {
                     if (!treeMap[azExtGroupConfig.id]) {
                         const groupTreeItem = new GroupTreeItemBase(this._subscriptionTreeItem, azExtGroupConfig);
