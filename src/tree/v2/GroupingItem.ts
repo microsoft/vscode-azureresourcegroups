@@ -1,6 +1,7 @@
 import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { getIconPath } from '../../utils/azureUtils';
 import { BranchDataItemFactory } from './BranchDataItem';
 import { BranchDataProviderFactory } from './providers/BranchDataProviderManager';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
@@ -25,7 +26,13 @@ export class GroupingItem implements ResourceGroupsItem {
                 const branchDataProvider = this.branchDataProviderFactory(resource);
                 const resourceItem = await branchDataProvider.getResourceItem(resource);
 
-                return this.branchDataItemFactory(resourceItem, branchDataProvider);
+                const options = {
+                    defaults: {
+                        iconPath: getIconPath(resource.type.type)
+                    }
+                };
+
+                return this.branchDataItemFactory(resourceItem, branchDataProvider, options);
             }));
 
         return resourceItems;

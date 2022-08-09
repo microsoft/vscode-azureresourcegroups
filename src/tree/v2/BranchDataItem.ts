@@ -3,11 +3,16 @@ import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../.
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
+export type BranchDataItemOptions = {
+    defaults?: vscode.TreeItem;
+};
+
 export class BranchDataItem implements ResourceGroupsItem {
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
-        private readonly itemCache: ResourceGroupsItemCache) {
+        private readonly itemCache: ResourceGroupsItemCache,
+        private readonly options: BranchDataItemOptions | undefined) {
         itemCache.addBranchItem(this.branchItem, this);
     }
 
@@ -19,8 +24,13 @@ export class BranchDataItem implements ResourceGroupsItem {
         return children?.map(child => factory(child, this.branchDataProvider));
     }
 
-    getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        return this.branchDataProvider.getTreeItem(this.branchItem);
+    async getTreeItem(): Promise<vscode.TreeItem> {
+        const treeItem = await this.branchDataProvider.getTreeItem(this.branchItem);
+
+        return {
+            ...this.options?.defaults ?? {},
+            ...treeItem
+        }
     }
 
     id: string;
@@ -28,8 +38,8 @@ export class BranchDataItem implements ResourceGroupsItem {
     type: string;
 }
 
-export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>) => BranchDataItem;
+export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItem;
 
 export function createBranchDataItemFactory(itemCache: ResourceGroupsItemCache): BranchDataItemFactory {
-    return (branchItem, branchDataProvider) => new BranchDataItem(branchItem, branchDataProvider, itemCache);
+    return (branchItem, branchDataProvider, options) => new BranchDataItem(branchItem, branchDataProvider, itemCache, options);
 }

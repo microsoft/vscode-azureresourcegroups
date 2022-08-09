@@ -3,10 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ResourceManagementClient } from '@azure/arm-resources';
+import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { ext } from '../../extensionVariables';
 import { ResourceGroupTreeItem } from '../../tree/ResourceGroupTreeItem';
 import { SubscriptionTreeItem } from '../../tree/SubscriptionTreeItem';
+import { createResourceClient } from '../../utils/azureClients';
 import { localize } from '../../utils/localize';
 import { settingUtils } from '../../utils/settingUtils';
 
@@ -27,7 +30,7 @@ export async function deleteResourceGroup(context: IActionContext, primaryNode?:
 
     const deleteConfirmation: string | undefined = settingUtils.getWorkspaceSetting('deleteConfirmation');
     for (const node of selectedNodes) {
-        const numOfResources = await node.getNumOfResources(context);
+        const numOfResources = await getNumOfResources(context, node);
         const hasOneResource: boolean = numOfResources === 1;
 
         if (deleteConfirmation === 'ClickButton') {
@@ -54,4 +57,10 @@ export async function deleteResourceGroup(context: IActionContext, primaryNode?:
 
 function isNameEqual(val: string | undefined, node: ResourceGroupTreeItem): boolean {
     return !!val && val.toLowerCase() === node.name.toLowerCase();
+}
+
+async function getNumOfResources(context: IActionContext, node: ResourceGroupTreeItem): Promise<number> {
+    const client: ResourceManagementClient = await createResourceClient([context, node.subscription]);
+    const resources = await uiUtils.listAllIterator(client.resources.listByResourceGroup(node.name));
+    return resources.length;
 }

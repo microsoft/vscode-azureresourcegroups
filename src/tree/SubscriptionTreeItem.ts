@@ -64,7 +64,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         const picks = appResources.map((appResource) => ({ data: appResource, label: appResource.label, group: appResource.groupConfig.resourceType.label, description: appResource.groupConfig.resourceGroup.label }))
+            .sort((a, b) => a.label.localeCompare(b.label))
             .sort((a, b) => a.group.localeCompare(b.group));
+
+        if (picks.length === 0) {
+            throw new NoResourceFoundError();
+        }
 
         const quickPickOptions: IAzureQuickPickOptions = {
             enableGrouping: !options?.filter,
@@ -144,6 +149,12 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         }
 
         return Object.values(this.treeMap);
+    }
+
+    public async refreshImpl(context: IActionContext): Promise<void> {
+        for (const ti of Object.values(this.treeMap)) {
+            void ti.refresh(context);
+        }
     }
 
 
