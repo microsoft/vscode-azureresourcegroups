@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceGroup } from "@azure/arm-resources";
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
-import { AzExtResourceType } from "@microsoft/vscode-azext-utils/azExtResourceType";
+import { AzExtParentTreeItem, AzExtResourceType, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
 import { FileChangeType } from "vscode";
 import { azureExtensions } from "../azureExtensions";

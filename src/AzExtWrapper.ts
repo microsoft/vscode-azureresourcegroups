@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzExtResourceType, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
-import { AzExtResourceType } from "@microsoft/vscode-azext-utils/azExtResourceType";
 import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { commands, Extension, extensions } from "vscode";
 import { azureExtensions, IAzExtMetadata, IAzExtTutorial } from "./azureExtensions";

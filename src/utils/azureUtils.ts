@@ -5,8 +5,7 @@
 
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { AzExtResourceType } from '@microsoft/vscode-azext-utils/azExtResourceType';
+import { AzExtResourceType, IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { AppResource, GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
 import { ThemeIcon } from 'vscode';
 import type { IAzExtMetadata } from '../azureExtensions';
@@ -66,7 +65,7 @@ export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], s
 }
 
 export function getIconPath(azExtResourceType?: AzExtResourceType): TreeItemIconPath {
-    return treeUtils.getIconPath(azExtResourceType ?? 'resources');
+    return treeUtils.getIconPath(`azureIcons/${azExtResourceType}` ?? 'resources');
 }
 
 export async function getArmTagKeys(context: IActionContext): Promise<Set<string>> {
