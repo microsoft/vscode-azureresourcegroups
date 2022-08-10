@@ -65,6 +65,18 @@ export interface ResourceModelBase {
 }
 
 /**
+ * Represents a branch data provider resource model as returned by a context menu command.
+ */
+export interface WrappedResourceModel {
+    /**
+     * Unwraps the resource, returning the underlying branch data provider resource model.
+     *
+     * @remarks TODO: Should this be an async method (which might be viral for existing command implementations)?
+     */
+    unwrap<T extends ResourceModelBase>(): T | undefined;
+}
+
+/**
  * The interface that resource resolvers must implement
  */
 export interface BranchDataProvider<TResource extends ResourceBase, TModel extends ResourceModelBase> extends vscode.TreeDataProvider<TModel> {
@@ -173,7 +185,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
      * @param id The resolver ID. Must be unique.
      * @param resolver The resolver
      */
-    registerApplicationResourceBranchDataProvider<T>(id: string, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable;
+    registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(id: string, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable;
 
     /**
      * Registers a workspace resource provider
@@ -187,7 +199,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
      * @param id The resolver ID. Must be unique.
      * @param resolver The resolver
      */
-    registerWorkspaceResourceBranchDataProvider<T>(id: string, provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable;
+    registerWorkspaceResourceBranchDataProvider<T extends ResourceModelBase>(id: string, provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable;
 }
 
 export interface AzureResourcesApiBase {
