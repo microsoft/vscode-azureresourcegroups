@@ -72,7 +72,8 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                     return await element.getChildren();
                 } else {
                     // We're effectively redrawing the entire tree, so we need to clear the cache...
-                    this.itemCache.evictAll();
+                    // TODO: Isn't this already done within cacheChildren()?
+                    // this.itemCache.evictAll();
 
                     const api = await this.getApi();
 
