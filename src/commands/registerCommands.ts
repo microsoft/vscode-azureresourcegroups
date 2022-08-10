@@ -47,6 +47,8 @@ export function registerCommands(): void {
     registerReportIssueCommand('azureResourceGroups.reportIssue');
     registerCommand('azureResourceGroups.createResource', createResource);
     registerCommand('azureResourceGroups.refreshWorkspace', refreshWorkspace);
+    registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
+
     registerCommand('azureResourceGroups.groupBy.resourceGroup', buildGroupByCommand('resourceGroup'));
     registerCommand('azureResourceGroups.groupBy.resourceType', buildGroupByCommand('resourceType'));
     registerCommand('azureResourceGroups.groupBy.location', buildGroupByCommand('location'));
