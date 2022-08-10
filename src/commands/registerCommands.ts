@@ -46,8 +46,6 @@ export function registerCommands(): void {
     registerErrorHandler(c => c.errorHandling.suppressReportIssue = true);
     registerReportIssueCommand('azureResourceGroups.reportIssue');
     registerCommand('azureResourceGroups.createResource', createResource);
-    registerCommand('azureResourceGroups.refreshWorkspace', refreshWorkspace);
-    registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
 
     registerCommand('azureResourceGroups.groupBy.resourceGroup', buildGroupByCommand('resourceGroup'));
     registerCommand('azureResourceGroups.groupBy.resourceType', buildGroupByCommand('resourceType'));
@@ -66,4 +64,7 @@ export function registerCommands(): void {
         context.telemetry.properties.url = url;
         await openUrl(url)
     });
+
+    registerCommand('azureWorkspace.refresh', refreshWorkspace);
+    registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
 }
