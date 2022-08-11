@@ -4,34 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { GenericResource, ResourceManagementClient } from '@azure/arm-resources';
-import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
 import { ThemeIcon } from 'vscode';
-import { azureExtensions } from '../azureExtensions';
+import type { IAzExtMetadata } from '../azureExtensions';
 import { ext } from '../extensionVariables';
 import { createResourceClient } from './azureClients';
 import { localize } from './localize';
 import { treeUtils } from './treeUtils';
 import path = require('path');
-
-function parseResourceId(id: string): RegExpMatchArray {
-    const matches: RegExpMatchArray | null = id.match(/\/subscriptions\/(.*)\/resourceGroups\/(.*)\/providers\/(.*)\/(.*)/i);
-
-    if (matches === null || matches.length < 3) {
-        throw new Error(localize('InvalidResourceId', 'Invalid Azure Resource Id'));
-    }
-
-    return matches;
-}
-
-export function getSubscriptionIdFromId(id: string): string {
-    return parseResourceId(id)[1];
-}
-
-export function getResourceGroupFromId(id: string): string {
-    return parseResourceId(id)[2];
-}
 
 export function createGroupConfigFromResource(resource: GenericResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
@@ -67,9 +49,9 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
     return groupConfig;
 }
 
-export function createAzureExtensionsGroupConfig(subscriptionId: string): GroupNodeConfiguration[] {
+export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], subscriptionId: string): GroupNodeConfiguration[] {
     const azExtGroupConfigs: GroupNodeConfiguration[] = [];
-    for (const azExt of azureExtensions) {
+    for (const azExt of extensions) {
         for (const resourceType of azExt.resourceTypes) {
             const type = typeof resourceType === 'string' ? resourceType : resourceType.name;
             const kind = azExt.name === 'vscode-azurefunctions' ? 'functionapp' : undefined;
@@ -118,6 +100,7 @@ export async function getArmTagKeys(context: IActionContext): Promise<Set<string
 // Execute `npm run listIcons` from root of repo to re-generate this list after adding an icon
 export const supportedIconTypes = [
     'microsoft.web/functionapp',
+    'microsoft.web/logicapp',
     'microsoft.web/hostingenvironments',
     'microsoft.web/kubeenvironments',
     'microsoft.web/serverfarms',
@@ -171,6 +154,8 @@ export const supportedIconTypes = [
     'microsoft.cdn/profiles',
     'microsoft.cache/redis',
     'microsoft.batch/batchaccounts',
+    'microsoft.app/containerapps',
+    'microsoft.app/managedenvironments',
     'microsoft.apimanagement/service',
 ] as const;
 
@@ -182,7 +167,7 @@ interface SupportedType {
 
 export function getName(type?: string, kind?: string): string | undefined {
     type = type?.toLowerCase();
-    if (isFunctionApp(type, kind)) {
+    if (isFunctionAppType(type, kind)) {
         type = 'microsoft.web/functionapp';
     }
     if (type) {
@@ -198,6 +183,7 @@ const supportedTypes: SupportedTypeMap = {
     'microsoft.web/sites': { displayName: localize('webApp', 'App Services') },
     'microsoft.web/staticsites': { displayName: localize('staticWebApp', 'Static Web Apps') },
     'microsoft.web/functionapp': { displayName: localize('functionApp', 'Function App') },
+    'microsoft.web/logicapp': { displayName: localize('logicApp', 'Logic App') },
     'microsoft.compute/virtualmachines': { displayName: localize('virtualMachines', 'Virtual machines') },
     'microsoft.storage/storageaccounts': { displayName: localize('storageAccounts', 'Storage accounts') },
     'microsoft.network/networksecuritygroups': { displayName: localize('networkSecurityGroups', 'Network security groups') },
@@ -224,20 +210,47 @@ const supportedTypes: SupportedTypeMap = {
     'microsoft.insights/components': { displayName: localize('insightsComponents', 'Application Insights') },
     'microsoft.web/serverfarms': { displayName: localize('serverFarms', 'App Service plans') },
     'microsoft.web/kubeenvironments': { displayName: localize('containerService', 'App Service Kubernetes Environment') },
+    'microsoft.app/managedenvironments': { displayName: localize('containerAppsEnv', 'Container Apps Environment') },
+    'microsoft.app/containerapps': { displayName: localize('containerApp', 'Container Apps') },
 }
 
-export function isFunctionApp(type?: string, kind?: string): boolean {
+export function isFunctionAppType(type: string | undefined, kind: string | undefined): boolean {
     if (type?.toLowerCase() === 'microsoft.web/sites') {
-        if (kind?.toLowerCase().includes('functionapp')) {
+        if (kind?.toLowerCase().includes('functionapp') && !kind?.toLowerCase().includes('workflowapp')) {
             return true;
         }
     }
     return false;
 }
 
+export function isFunctionApp(resource: GenericResource): boolean {
+    const { type, kind } = resource;
+
+    return isFunctionAppType(type, kind);
+}
+
+export function isLogicApp(resource: GenericResource): boolean {
+    const { type, kind } = resource;
+    if (type?.toLowerCase() === 'microsoft.web/sites') {
+        if (kind?.toLowerCase().includes('functionapp') && kind?.toLowerCase().includes('workflowapp')) {
+            return true;
+        }
+    }
+    return false;
+}
+
+export function isAppServiceApp(resource: GenericResource): boolean {
+    return resource.type?.toLowerCase() === 'microsoft.web/sites'
+        && !isFunctionApp(resource)
+        && !isLogicApp(resource);
+}
+
 function getRelevantKind(type?: string, kind?: string): string | undefined {
-    if (isFunctionApp(type, kind)) {
+    if (isFunctionApp({ type, kind })) {
         return 'functionapp';
+    }
+    if (isLogicApp({ type, kind })) {
+        return 'logicapp';
     }
     return undefined;
 }
