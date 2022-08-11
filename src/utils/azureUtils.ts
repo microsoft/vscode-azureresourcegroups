@@ -7,6 +7,7 @@ import { ResourceManagementClient } from '@azure/arm-resources';
 import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzExtResourceType, IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { AppResource, GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
+import * as path from 'path';
 import { ThemeIcon } from 'vscode';
 import type { IAzExtMetadata } from '../azureExtensions';
 import { ext } from '../extensionVariables';
@@ -23,10 +24,10 @@ export function createGroupConfigFromResource(resource: AppResource, subscriptio
             contextValuesToAdd: ['azureResourceGroup']
         },
         resourceType: {
-            label: azExtDisplayInfo[resource.azExtResourceType]?.displayName ?? resource.azExtResourceType,
+            label: azExtDisplayInfo[resource.azExtResourceType ?? '']?.displayName ?? resource.azExtResourceType,
             id: `${subscriptionId}/${resource.azExtResourceType}`,
             iconPath: getIconPath(resource.azExtResourceType),
-            contextValuesToAdd: ['azureResourceTypeGroup', resource.azExtResourceType]
+            contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType] : [])]
         },
         location: {
             id: `${subscriptionId}/location/${resource.location}` ?? 'unknown',
@@ -65,7 +66,7 @@ export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], s
 }
 
 export function getIconPath(azExtResourceType?: AzExtResourceType): TreeItemIconPath {
-    return treeUtils.getIconPath(`azureIcons/${azExtResourceType}` ?? 'resources');
+    return treeUtils.getIconPath(azExtResourceType ? path.join('azureIcons', azExtResourceType) : 'resource');
 }
 
 export async function getArmTagKeys(context: IActionContext): Promise<Set<string>> {
