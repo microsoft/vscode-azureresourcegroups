@@ -55,7 +55,7 @@ export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], s
         for (const azExtResourceType of azExt.resourceTypes) {
             azExtGroupConfigs.push({
                 label: azExtDisplayInfo[azExtResourceType]?.displayName ?? azExtResourceType,
-                id: `${subscriptionId}/${azExtResourceType}`,
+                id: `${subscriptionId}/${azExtResourceType}`.toLowerCase(),
                 iconPath: getIconPath(azExtResourceType),
                 contextValuesToAdd: ['azureResourceTypeGroup', azExtResourceType]
             });
