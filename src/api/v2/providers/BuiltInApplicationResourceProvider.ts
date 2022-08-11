@@ -17,7 +17,21 @@ export class BuiltInApplicationResourceProvider implements ApplicationResourcePr
                     subscriptionPath: '',
                     tenantId: '',
                     userId: '',
-                    ...subscription
+                    ...subscription,
+                    credentials: {
+                        getToken: async (scopes?: string[]) => {
+                            const session = await subscription.authentication.getSession(scopes);
+
+                            if (session) {
+                                return {
+                                    token: session.accessToken
+                                }
+                            } else {
+                                return null;
+                            }
+                        },
+                        signRequest: () => { throw new Error('TODO: Not implemented (or localized)'); }
+                    }
                 };
 
                 const client = await createResourceClient([context, subContext]);
