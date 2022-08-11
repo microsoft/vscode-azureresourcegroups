@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IFindTreeItemContext, ITreeItemPickerContext } from '@microsoft/vscode-azext-utils';
-import { AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
+import { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 
@@ -24,7 +24,7 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
         return super.getParent(treeItem) as Promise<TModel>;
     }
 
-    public override getChildren(treeItem?: TModel & AzExtParentTreeItem): Promise<TModel[]> {
+    public override getChildren(treeItem: TModel & AzExtParentTreeItem): Promise<TModel[]> {
         // This method is redeclared to make TypeScript happier, but it's no more than a super call with extra casts
         return super.getChildren(treeItem) as Promise<TModel[]>;
     }
@@ -34,10 +34,14 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
     //#region BranchDataProvider
 
     public async getResourceItem(element: TResource): Promise<TModel> {
-        return this.resolver.resolveResource(/* TODO */'foo', element) as Promise<TModel>;
-    }
+        const oldAppResource: AppResource = {
+            ...element,
+            type: element.type.type,
+            kind: element.type.kinds?.join(';'),
+        };
 
-    public createResourceItem?: (() => vscode.ProviderResult<TResource>) | undefined;
+        return this.resolver.resolveResource(/* TODO */'foo', oldAppResource) as Promise<TModel>;
+    }
 
     //#endregion BranchDataProvider
 
@@ -51,15 +55,14 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
 
     public override async showTreeItemPicker<T extends AzExtTreeItem>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext & { canPickMany: true; }, startingTreeItem?: AzExtTreeItem): Promise<T[]>;
     public override async showTreeItemPicker<T extends AzExtTreeItem>(_expectedContextValues: string | RegExp | (string | RegExp)[], _context: ITreeItemPickerContext, _startingTreeItem?: AzExtTreeItem): Promise<T> {
-        // TODO
-        throw new Error('Not implemented');
+        throw new Error('Use the Resources extension API to do showTreeItemPicker');
     }
 
     public override async findTreeItem<T extends AzExtTreeItem>(_fullId: string, _context: IFindTreeItemContext): Promise<T | undefined> {
-        // TODO? Does this need to be implemented?
-        throw new Error('Not implemented');
+        throw new Error('Use the Resources extension API to do findTreeItem');
     }
 
+    // TODO: this (probably?) shouldn't remain in the code we release, but will be helpful in testing to ensure we never access the root
     // @ts-expect-error TypeScript is unhappy that we're overriding something that it doesn't know is secretly on the base class
     private override get _rootTreeItem(): AzExtParentTreeItem {
         throw new Error('The root tree item should not be accessed in a BranchDataProvider');
