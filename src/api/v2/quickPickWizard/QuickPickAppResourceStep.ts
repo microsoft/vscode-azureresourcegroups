@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardPromptStep, IAzureQuickPickItem, IAzureQuickPickOptions, IWizardOptions } from '@microsoft/vscode-azext-utils';
-import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
 import { BranchDataProviderManager } from '../../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from '../providers/ApplicationResourceProviderManager';
 import { ApplicationResource, Filter, ResourceModelBase } from '../v2AzureResourcesApi';
@@ -29,7 +28,7 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
     public constructor(
         private readonly resourceProviderManager: ApplicationResourceProviderManager,
         private readonly branchDataProviderManager: BranchDataProviderManager,
-        private readonly filter?: Filter<AppResource> | Filter<AppResource>[],
+        private readonly filter?: Filter<ApplicationResource> | Filter<ApplicationResource>[],
         private readonly options?: PickAppResourceOptions2
     ) {
         super();

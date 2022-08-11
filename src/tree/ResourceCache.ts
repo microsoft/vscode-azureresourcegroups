@@ -39,8 +39,8 @@ export class ResourceCache {
     }
 
     public set appResources(resources: AppResource[]) {
-        const { addedResources, deletedResources } = this.diffProvidedResources(this._appResources, resources);
-        this.deleteResourcesFromCache(this._appResources, deletedResources);
+        const { addedResources, deletedResources } = this.diffProvidedResources<AppResource>(this._appResources, resources);
+        this.deleteResourcesFromCache<AppResource>(this._appResources, deletedResources);
         this._appResources.push(...addedResources.map(added => AppResourceTreeItem.Create(this._subscriptionTreeItem, added)));
     }
 

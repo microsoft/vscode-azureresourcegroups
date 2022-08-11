@@ -1,6 +1,5 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtServiceClientCredentials } from '@microsoft/vscode-azext-utils';
-import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 import { ContextValueFilter } from './quickPickWizard/ContextValueFilter';
 
@@ -143,7 +142,7 @@ export interface ResourcePickOptions {
     /**
      * Options to filter the picks to resources that match any of the provided filters
      */
-    filter?: AppResourceFilter | AppResourceFilter[];
+    filter?: Filter<ApplicationResource>;
 
     /**
      * Set this to pick a child of the selected app resource
@@ -165,7 +164,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
     /**
      * Show a quick picker of app resources. Set `options.type` to filter the picks.
      */
-    pickResource<TModel extends ResourceModelBase>(options: ResourcePickOptions): vscode.ProviderResult<TModel>;
+    pickResource<TModel extends ResourceModelBase>(options: ResourcePickOptions): Promise<TModel>;
 
     /**
      * Reveals an item in the application/workspace resource tree
