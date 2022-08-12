@@ -163,7 +163,7 @@
                 "icon": "$(gear)"
             },
             {
-                "command": "azureResourceGroups.refreshWorkspace",
+                "command": "azureWorkspace.refresh",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
                 "icon": "$(refresh)"
@@ -265,7 +265,7 @@
                     "group": "navigation@3"
                 },
                 {
-                    "command": "azureResourceGroups.refreshWorkspace",
+                    "command": "azureWorkspace.refresh",
                     "when": "view == azureWorkspace",
                     "group": "navigation@10"
                 },
@@ -361,7 +361,7 @@
                     "when": "never"
                 },
                 {
-                    "command": "azureResourceGroups.refreshWorkspace",
+                    "command": "azureWorkspace.refresh",
                     "when": "never"
                 },
                 {
