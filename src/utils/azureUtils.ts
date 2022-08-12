@@ -17,6 +17,7 @@ import { treeUtils } from './treeUtils';
 
 export function createGroupConfigFromResource(resource: AppResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
+    const unknown = localize('unknown', 'Unknown');
     const groupConfig: GroupingConfig = {
         resourceGroup: {
             label: getResourceGroupFromId(id),
@@ -24,14 +25,14 @@ export function createGroupConfigFromResource(resource: AppResource, subscriptio
             contextValuesToAdd: ['azureResourceGroup']
         },
         resourceType: {
-            label: azExtDisplayInfo[resource.azExtResourceType ?? '']?.displayName ?? resource.azExtResourceType,
+            label: resource.azExtResourceType ? azExtDisplayInfo[resource.azExtResourceType ?? '']?.displayName ?? unknown : unknown,
             id: `${subscriptionId}/${resource.azExtResourceType}`,
             iconPath: getIconPath(resource.azExtResourceType),
             contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType] : [])]
         },
         location: {
             id: `${subscriptionId}/location/${resource.location}` ?? 'unknown',
-            label: resource.location ?? localize('unknown', 'Unknown'),
+            label: resource.location ?? unknown,
             icon: new ThemeIcon('globe'),
             contextValuesToAdd: ['azureLocationGroup']
         }
