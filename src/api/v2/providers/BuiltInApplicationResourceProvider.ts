@@ -1,8 +1,9 @@
 import { GenericResource, ResourceGroup } from '@azure/arm-resources';
 import { getResourceGroupFromId, uiUtils } from "@microsoft/vscode-azext-azureutils";
-import { callWithTelemetryAndErrorHandling, IActionContext, ISubscriptionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { createResourceClient } from '../../../utils/azureClients';
+import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
 import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions } from '../v2AzureResourcesApi';
 
 export class BuiltInApplicationResourceProvider implements ApplicationResourceProvider {
@@ -12,14 +13,7 @@ export class BuiltInApplicationResourceProvider implements ApplicationResourcePr
         return callWithTelemetryAndErrorHandling(
             'provideResources',
             async (context: IActionContext) => {
-                const subContext: ISubscriptionContext = {
-                    subscriptionDisplayName: '',
-                    subscriptionPath: '',
-                    tenantId: '',
-                    userId: '',
-                    ...subscription
-                };
-
+                const subContext = createSubscriptionContext(subscription);
                 const client = await createResourceClient([context, subContext]);
                 // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
 
