@@ -7,6 +7,7 @@ import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IFindTreeIte
 import { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
+import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
 
 export class CompatibleBranchDataProvider<TResource extends ApplicationResource, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel> {
     private readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();
@@ -40,7 +41,7 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
             kind: element.type.kinds?.join(';'),
         };
 
-        return this.resolver.resolveResource(/* TODO */'foo', oldAppResource) as Promise<TModel>;
+        return this.resolver.resolveResource(createSubscriptionContext(element.subscription), oldAppResource) as Promise<TModel>;
     }
 
     //#endregion BranchDataProvider
