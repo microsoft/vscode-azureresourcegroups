@@ -1,13 +1,16 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
-import { AzExtServiceClientCredentials } from '@microsoft/vscode-azext-utils';
 import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
+
+export interface ApplicationAuthentication {
+    getSession(scopes?: string[]): vscode.ProviderResult<vscode.AuthenticationSession>;
+}
 
 /**
  * Information specific to the Subscription
  */
 export interface ApplicationSubscription {
-    readonly credentials: AzExtServiceClientCredentials;
+    readonly authentication: ApplicationAuthentication;
     readonly displayName: string;
     readonly subscriptionId: string;
     readonly environment: Environment;
