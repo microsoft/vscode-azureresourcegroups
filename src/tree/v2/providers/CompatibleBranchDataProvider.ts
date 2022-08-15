@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IFindTreeItemContext, ITreeItemPickerContext } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IFindTreeItemContext, ISubscriptionContext, ITreeItemPickerContext } from '@microsoft/vscode-azext-utils';
 import { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
@@ -40,8 +40,9 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
             type: element.type.type,
             kind: element.type.kinds?.join(';'),
         };
+        const subscriptionContext: ISubscriptionContext = createSubscriptionContext(element.subscription);
 
-        return this.resolver.resolveResource(createSubscriptionContext(element.subscription), oldAppResource) as Promise<TModel>;
+        return await this.resolver.resolveResource(subscriptionContext, oldAppResource) as Promise<TModel>;
     }
 
     //#endregion BranchDataProvider
