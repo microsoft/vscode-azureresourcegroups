@@ -83,6 +83,21 @@ export interface WrappedResourceModel {
  */
 export interface BranchDataProvider<TResource extends ResourceBase, TModel extends ResourceModelBase> extends vscode.TreeDataProvider<TModel> {
     /**
+     * @deprecated This is implemented by the Resources API and does not need to be implemented by the
+     * {@link BranchDataProvider}.
+     */
+    getParent?: never;
+
+    /**
+     * Get the children of `element`. This differs from standard {@link vscode.TreeDataProvider}
+     * in that the `element` parameter will never be undefined.
+     *
+     * @param element The element from which the provider gets children. Cannot be `undefined`.
+     * @return Children of `element`.
+     */
+    getChildren(element: TModel): TModel[] | Thenable<TModel[]>;
+
+    /**
      * Called to get the provider's model element for a specific resource.
      * @remarks getChildren() assumes that the provider passes a known <T> model item, or undefined when getting the root children.
      *          However, we need to be able to pass a specific application resource which may not match the <T> model hierarchy used by the provider.
@@ -92,7 +107,7 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
     /**
      * (Optional) Called to create a new resource of the type (e.g. via Quick Pick).
      */
-    createResourceItem?: () => vscode.ProviderResult<TResource>;
+    createResourceItem?: () => TResource | Thenable<TResource>;
 }
 
 /**

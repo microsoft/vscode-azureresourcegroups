@@ -20,9 +20,9 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
 
     public override readonly onDidChangeTreeData = this.overrideOnDidChangeTreeDataEmitter.event;
 
-    public override getParent(treeItem: TModel): Promise<TModel> {
-        // This method is redeclared to make TypeScript happier, but it's no more than a super call with extra casts
-        return super.getParent(treeItem) as Promise<TModel>;
+    // @ts-expect-error `getParent` is not meant to be defined by `BranchDataProvider`s but is already defined by `AzExtTreeDataProvider`
+    public override getParent(_treeItem: TModel): Promise<TModel> {
+        throw new Error('Use the Resources extension API to do getParent');
     }
 
     public override getChildren(treeItem: TModel & AzExtParentTreeItem): Promise<TModel[]> {
