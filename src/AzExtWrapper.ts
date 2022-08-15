@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { GenericResource } from "@azure/arm-resources";
-import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { AzExtResourceType, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
+import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { commands, Extension, extensions } from "vscode";
-import { azureExtensions, IAzExtMetadata, IAzExtResourceType, IAzExtTutorial } from "./azureExtensions";
+import { azureExtensions, IAzExtMetadata, IAzExtTutorial } from "./azureExtensions";
 import { contributesKey } from "./constants";
 
 let wrappers: AzExtWrapper[] | undefined;
@@ -32,19 +32,14 @@ export function getInstalledExtensionPicks(): IAzureQuickPickItem<AzExtWrapper>[
 export class AzExtWrapper {
     public readonly id: string;
 
-    private readonly _resourceTypes: IAzExtResourceType[];
+    private readonly _resourceTypes: AzExtResourceType[];
     private readonly _data: IAzExtMetadata;
     private _verifiedReportIssueCommandId?: string;
 
     constructor(data: IAzExtMetadata) {
         this._data = data;
         this.id = `${data.publisher || 'ms-azuretools'}.${data.name}`;
-        this._resourceTypes = data.resourceTypes.map(rt => {
-            return typeof rt === 'object' ? rt : {
-                name: rt,
-                matchesResource: () => true
-            };
-        });
+        this._resourceTypes = data.resourceTypes;
     }
 
     public get name(): string {
@@ -59,10 +54,8 @@ export class AzExtWrapper {
         return this._data.tutorial;
     }
 
-    public matchesResourceType(resource: GenericResource): boolean {
-        return this._resourceTypes.some(rt => {
-            return rt.name === resource.type?.toLowerCase() && rt.matchesResource(resource);
-        });
+    public matchesResourceType(resource: AppResource): boolean {
+        return this._resourceTypes.some(rt => rt === resource.azExtResourceType);
     }
 
     public getCodeExtension(): Extension<AzureExtensionApiProvider> | undefined {
