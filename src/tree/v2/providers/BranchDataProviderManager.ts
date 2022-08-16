@@ -9,7 +9,7 @@ function normalizeType(type: string): string {
 export class BranchDataProviderManager extends vscode.Disposable {
     private readonly applicationResourceBranchDataProviders: { [key: string]: BranchDataProvider<ApplicationResource, ResourceModelBase> } = {};
     private readonly onDidChangeProvidersEmitter = new vscode.EventEmitter<void>();
-    private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceModelBase | null | undefined>();
+    private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceModelBase | ResourceModelBase[] | null | undefined>();
 
     private readonly changeSubscriptions: { [key: string]: vscode.Disposable } = {};
 
@@ -26,7 +26,7 @@ export class BranchDataProviderManager extends vscode.Disposable {
         return this.onDidChangeProvidersEmitter.event;
     }
 
-    get onDidChangeTreeData(): vscode.Event<void | ResourceModelBase | null | undefined> {
+    get onDidChangeTreeData(): vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined> {
         return this.onDidChangeTreeDataEmitter.event;
     }
 

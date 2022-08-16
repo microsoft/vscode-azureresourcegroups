@@ -2,6 +2,7 @@ import { AzExtServiceClientCredentials, nonNullProp } from '@microsoft/vscode-az
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../api/v2/providers/ApplicationResourceProviderManager';
+import { ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { localize } from '../../utils/localize';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
 import { AzureAccountExtensionApi } from './azure-account.api';
@@ -16,7 +17,7 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
     private readonly groupingChangeSubscription: vscode.Disposable;
     private readonly providersChangeSubscription: vscode.Disposable;
     private readonly refreshSubscription: vscode.Disposable;
-    private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | null | undefined>();
+    private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
 
     private api: AzureAccountExtensionApi | undefined;
     private filtersSubscription: vscode.Disposable | undefined;
@@ -41,12 +42,29 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
         this.providersChangeSubscription = branchDataProviderManager.onDidChangeProviders(() => this.onDidChangeTreeDataEmitter.fire());
 
         this.branchChangeSubscription = branchDataProviderManager.onDidChangeTreeData(
-            e => {
-                const item = this.itemCache.getItemForBranchItem(e);
+            (e: void | ResourceModelBase | ResourceModelBase[] | null | undefined) => {
+                const rgItems: ResourceGroupsItem[] = [];
 
-                if (item) {
-                    this.onDidChangeTreeDataEmitter.fire(item)
+                // eslint-disable-next-line no-extra-boolean-cast
+                if (!!e) {
+                    // e was defined, either a single item or array
+                    // Make an array for consistency
+                    const branchItems: unknown[] = Array.isArray(e) ? e : [e];
+
+                    for (const branchItem of branchItems) {
+                        const rgItem = this.itemCache.getItemForBranchItem(branchItem);
+
+                        if (rgItem) {
+                            rgItems.push(rgItem);
+                        }
+                    }
+                } else {
+                    // e was null/undefined/void
+                    // Translate it to fire on all elements for this branch data provider
+                    // TODO
                 }
+
+                this.onDidChangeTreeDataEmitter.fire(rgItems)
             });
 
         // TODO: This really belongs on the subscription item, but that then involves disposing of them during refresh,
@@ -58,7 +76,7 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
         this.refreshSubscription = refreshEvent(() => this.onDidChangeTreeDataEmitter.fire());
     }
 
-    onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | null | undefined> = this.onDidChangeTreeDataEmitter.event;
+    onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
 
     getTreeItem(element: ResourceGroupsItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
         return element.getTreeItem();
