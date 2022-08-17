@@ -28,7 +28,7 @@ export class GroupingItem implements ResourceGroupsItem {
 
                 const options = {
                     defaults: {
-                        iconPath: getIconPath(resource.type.type)
+                        iconPath: getIconPath(resource.azExtResourceType)
                     }
                 };
 
