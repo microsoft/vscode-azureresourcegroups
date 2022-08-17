@@ -18,10 +18,9 @@ import { treeUtils } from './treeUtils';
 export function createGroupConfigFromResource(resource: AppResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
     const unknown = localize('unknown', 'Unknown');
-    let iconPath: TreeItemIconPath;
-    if (resource.azExtResourceType !== AzExtResourceType.ContainerAppsEnvironment) {
-        iconPath = getIconPath(resource.azExtResourceType);
-    } else {
+    let iconPath = getIconPath(resource.azExtResourceType);
+    if (resource.azExtResourceType === AzExtResourceType.ContainerAppsEnvironment) {
+        // Even though the child is a ContainerAppsEnvironment we want to show the Container Apps icon
         iconPath = getIconPath(AzExtResourceType.ContainerApps);
     }
 
@@ -62,17 +61,10 @@ export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], s
     const azExtGroupConfigs: GroupNodeConfiguration[] = [];
     for (const azExt of extensions) {
         for (const azExtResourceType of azExt.resourceTypes) {
-            let iconPath: TreeItemIconPath;
-            if (azExtResourceType !== AzExtResourceType.ContainerAppsEnvironment) {
-                iconPath = getIconPath(azExtResourceType);
-            } else {
-                iconPath = getIconPath(AzExtResourceType.ContainerApps);
-            }
-
             azExtGroupConfigs.push({
                 label: azExtDisplayInfo[azExtResourceType]?.displayName ?? azExtResourceType,
                 id: `${subscriptionId}/${azExtResourceType}`.toLowerCase(),
-                iconPath,
+                iconPath: getIconPath(azExtResourceType),
                 contextValuesToAdd: ['azureResourceTypeGroup', azExtResourceType]
             });
         }
