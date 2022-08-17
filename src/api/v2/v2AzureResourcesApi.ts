@@ -1,6 +1,5 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
 import * as vscode from 'vscode';
-import { ContextValueFilter } from './quickPickWizard/ContextValueFilter';
 
 export interface ApplicationAuthentication {
     getSession(scopes?: string[]): vscode.ProviderResult<vscode.AuthenticationSession>;
@@ -150,7 +149,7 @@ export interface ResourcePickOptions {
     /**
      * Set this to pick a child of the selected app resource
      */
-    expectedChildContextValue?: ContextValueFilter;
+    childFilter?: Filter<ResourceModelBase>;
 
     /**
      * Whether `AppResourceTreeItem`s should be resolved before displaying them as quick picks, or only once one has been selected

@@ -30,7 +30,7 @@ export class GenericQuickPickStep<TModel extends ResourceModelBase> extends Azur
     protected async getPicks(wizardContext: QuickPickWizardContext<TModel>): Promise<IAzureQuickPickItem<TModel>[]> {
         const children = (await this.treeDataProvider.getChildren(wizardContext.currentNode)) || [];
 
-        const matchingChildren = children.filter(this.contextValueFilter.matches);
+        const matchingChildren = children.filter((value) => this.contextValueFilter.matches(value));
         const nonLeafChildren = children.filter(c => c.quickPickOptions?.isLeaf === false);
 
         let promptChoices: TModel[];

@@ -35,9 +35,12 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
     }
 
     public override async prompt(wizardContext: QuickPickAppResourceWizardContext<TModel>): Promise<void> {
-        const allResources = (await this.resourceProviderManager.getResources( /* TODO: subscription */)) || [];
 
-        const matchingResources = allResources.filter(this.matchesAppResource);
+        const allResources = (await this.resourceProviderManager.getResources(
+            wizardContext.applicationSubscription!
+        )) || [];
+
+        const matchingResources = allResources.filter(this.matchesAppResource.bind(this));
         const picks = matchingResources.map(r => this.getQuickPickItem(r));
 
         const selected = await wizardContext.ui.showQuickPick(picks, { /* TODO: options */ });

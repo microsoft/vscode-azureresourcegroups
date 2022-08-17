@@ -6,15 +6,14 @@
 import { IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { localize } from '../../../utils/localize';
-import { ResourceModelBase } from '../v2AzureResourcesApi';
-import { ContextValueFilter } from './ContextValueFilter';
+import { Filter, ResourceModelBase } from '../v2AzureResourcesApi';
 import { GenericQuickPickStep } from './GenericQuickPickStep';
 import { QuickPickWizardContext } from './QuickPickWizardContext';
 
 type CreateCallback = () => vscode.ProviderResult<never>;
 
 export class CreateQuickPickStep<TModel extends ResourceModelBase> extends GenericQuickPickStep<TModel> {
-    public constructor(treeDataProvider: vscode.TreeDataProvider<TModel>, contextValueFilter: ContextValueFilter, private readonly createCallback: CreateCallback) {
+    public constructor(treeDataProvider: vscode.TreeDataProvider<TModel>, contextValueFilter: Filter<ResourceModelBase>, private readonly createCallback: CreateCallback) {
         super(treeDataProvider, contextValueFilter);
     }
 

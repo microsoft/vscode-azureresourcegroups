@@ -4,21 +4,24 @@ import { BranchDataProviderManager } from '../../tree/v2/providers/BranchDataPro
 import { ApplicationResourceProviderManager } from './providers/ApplicationResourceProviderManager';
 import { QuickPickAppResourceStep } from './quickPickWizard/QuickPickAppResourceStep';
 import { QuickPickAppResourceWizardContext } from './quickPickWizard/QuickPickAppResourceWizardContext';
+import { QuickPickSubscriptionStep } from './quickPickWizard/QuickPickSubscriptionStep';
 import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     constructor(
         private readonly branchDataProviderManager: BranchDataProviderManager,
-        private readonly resourceProviderManager: ApplicationResourceProviderManager) {
-    }
+        private readonly resourceProviderManager: ApplicationResourceProviderManager,
+    ) { }
 
     get apiVersion(): string {
         return '2.0.0';
     }
 
-    async pickResource<TModel extends ResourceModelBase>(options: ResourcePickOptions): Promise<TModel> {
+    public async pickResource<TModel extends ResourceModelBase>(options: ResourcePickOptions): Promise<TModel> {
         return await callWithTelemetryAndErrorHandling<TModel>('pickResource', async (actionContext: IActionContext) => {
+
             const promptSteps = [
+                new QuickPickSubscriptionStep(),
                 new QuickPickAppResourceStep(this.resourceProviderManager, this.branchDataProviderManager, options.filter, options),
             ];
 
@@ -29,6 +32,7 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
             };
 
             const wizard = new AzureWizard(wizardContext, { hideStepCount: true, promptSteps, title: 'TODO' /* TODO: title */ });
+            await wizard.prompt();
             await wizard.execute();
 
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
