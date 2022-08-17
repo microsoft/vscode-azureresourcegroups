@@ -1,6 +1,6 @@
 import { GenericResource, ResourceGroup } from '@azure/arm-resources';
 import { getResourceGroupFromId, uiUtils } from "@microsoft/vscode-azext-azureutils";
-import { callWithTelemetryAndErrorHandling, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, getAzExtResourceType, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { createResourceClient } from '../../../utils/azureClients';
 import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
@@ -55,6 +55,10 @@ export class BuiltInApplicationResourceProvider implements ApplicationResourcePr
             },
             resourceGroup: getResourceGroupFromId(resourceId),
             location: resource.location,
+            azExtResourceType: getAzExtResourceType({
+                type: nonNullProp(resource, 'type'),
+                kind: resource.kind,
+            })
         };
     }
 }

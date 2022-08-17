@@ -70,6 +70,10 @@ export function getIconPath(azExtResourceType?: AzExtResourceType): TreeItemIcon
     return treeUtils.getIconPath(azExtResourceType ? path.join('azureIcons', azExtResourceType) : 'resource');
 }
 
+export function getName(azExtResourceType: AzExtResourceType): string | undefined {
+    return azExtDisplayInfo[azExtResourceType]?.displayName;
+}
+
 export async function getArmTagKeys(context: IActionContext): Promise<Set<string>> {
     const armTagKeys: Set<string> = new Set();
     for (const sub of (await ext.rootAccountTreeItem.getCachedChildren(context))) {
@@ -87,98 +91,38 @@ interface AzExtResourceTypeDisplayInfo {
     displayName: string;
 }
 
-export function getName(type?: string, kind?: string): string | undefined {
-    type = type?.toLowerCase();
-    if (isFunctionAppType(type, kind)) {
-        type = 'microsoft.web/functionapp';
-    }
-    if (type) {
-        return supportedTypes[type as SupportedTypes]?.displayName;
-    }
-    return undefined;
+const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDisplayInfo>> = {
+    ApplicationInsights: { displayName: localize('insightsComponents', 'Application Insights') },
+    AppServiceKubernetesEnvironment: { displayName: localize('containerService', 'App Service Kubernetes Environment') },
+    AppServicePlans: { displayName: localize('serverFarms', 'App Service plans') },
+    AppServices: { displayName: localize('webApp', 'App Services') },
+    AvailabilitySets: { displayName: localize('availabilitySets', 'Availability sets') },
+    AzureCosmosDb: { displayName: localize('documentDB', 'Azure Cosmos DB') },
+    BatchAccounts: { displayName: localize('batchAccounts', 'Batch accounts') },
+    ContainerApps: { displayName: localize('containerApp', 'Container Apps') },
+    ContainerAppsEnvironment: { displayName: localize('containerAppsEnv', 'Container Apps Environment') },
+    ContainerRegistry: { displayName: localize('containerRegistry', 'Container registry') },
+    Disks: { displayName: localize('disks', 'Disks') },
+    FrontDoorAndCdnProfiles: { displayName: localize('frontDoorAndcdnProfiles', 'Front Door and CDN profiles') },
+    FunctionApp: { displayName: localize('functionApp', 'Function App') },
+    Images: { displayName: localize('images', 'Images') },
+    LoadBalancers: { displayName: localize('loadBalancers', 'Load balancers') },
+    LogicApp: { displayName: localize('logicApp', 'Logic App') },
+    MysqlServers: { displayName: localize('mysqlServers', 'MySql servers') },
+    NetworkInterfaces: { displayName: localize('networkInterfaces', 'Network interfaces') },
+    NetworkSecurityGroups: { displayName: localize('networkSecurityGroups', 'Network security groups') },
+    NetworkWatchers: { displayName: localize('networkWatchers', 'Network watchers') },
+    OperationalInsightsWorkspaces: { displayName: localize('operationalInsightsWorkspaces', 'Operational Insights workspaces') },
+    OperationsManagementSolutions: { displayName: localize('operationsManagementSolutions', 'Operations management solutions') },
+    PostgresqlServersFlexible: { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Flexible)') },
+    PostgresqlServersStandard: { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Standard)') },
+    PublicIpAddresses: { displayName: localize('publicIpAddresses', 'Public IP addresses') },
+    SqlDatabases: { displayName: localize('sqlDatabases', 'SQL databases') },
+    SqlServers: { displayName: localize('sqlServers', 'SQL servers') },
+    StaticWebApps: { displayName: localize('staticWebApp', 'Static Web Apps') },
+    StorageAccounts: { displayName: localize('storageAccounts', 'Storage accounts') },
+    VirtualMachines: { displayName: localize('virtualMachines', 'Virtual machines') },
+    VirtualMachineScaleSets: { displayName: localize('virtualMachineScaleSets', 'Virtual machine scale sets') },
+    VirtualNetworks: { displayName: localize('virtualNetworks', 'Virtual networks') },
 }
 
-// intersect with Record<stirng, SupportedType> so we can add info for resources we don't have icons for
-type SupportedTypeMap = Partial<Record<SupportedTypes, SupportedType> & Record<string, SupportedType>>;
-
-const supportedTypes: SupportedTypeMap = {
-    'microsoft.web/sites': { displayName: localize('webApp', 'App Services') },
-    'microsoft.web/staticsites': { displayName: localize('staticWebApp', 'Static Web Apps') },
-    'microsoft.web/functionapp': { displayName: localize('functionApp', 'Function App') },
-    'microsoft.web/logicapp': { displayName: localize('logicApp', 'Logic App') },
-    'microsoft.compute/virtualmachines': { displayName: localize('virtualMachines', 'Virtual machines') },
-    'microsoft.storage/storageaccounts': { displayName: localize('storageAccounts', 'Storage accounts') },
-    'microsoft.network/networksecuritygroups': { displayName: localize('networkSecurityGroups', 'Network security groups') },
-    'microsoft.network/loadbalancers': { displayName: localize('loadBalancers', 'Load balancers') },
-    'microsoft.compute/disks': { displayName: localize('disks', 'Disks') },
-    'microsoft.compute/images': { displayName: localize('images', 'Images') },
-    'microsoft.compute/availabilitysets': { displayName: localize('availabilitySets', 'Availability sets') },
-    'microsoft.compute/virtualmachinescalesets': { displayName: localize('virtualMachineScaleSets', 'Virtual machine scale sets') },
-    'microsoft.network/virtualnetworks': { displayName: localize('virtualNetworks', 'Virtual networks') },
-    'microsoft.cdn/profiles': { displayName: localize('frontDoorAndcdnProfiles', 'Front Door and CDN profiles') },
-    'microsoft.network/publicipaddresses': { displayName: localize('publicIpAddresses', 'Public IP addresses') },
-    'microsoft.network/networkinterfaces': { displayName: localize('networkInterfaces', 'Network interfaces') },
-    'microsoft.network/networkwatchers': { displayName: localize('networkWatchers', 'Network watchers') },
-    'microsoft.batch/batchaccounts': { displayName: localize('batchAccounts', 'Batch accounts') },
-    'microsoft.containerregistry/registries': { displayName: localize('containerRegistry', 'Container registry') },
-    'microsoft.dbforpostgresql/servers': { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Standard)') },
-    'microsoft.dbforpostgresql/flexibleservers': { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Flexible)') },
-    'microsoft.dbformysql/servers': { displayName: localize('mysqlServers', 'MySql servers') },
-    'microsoft.sql/servers/databases': { displayName: localize('sqlDatabases', 'SQL databases') },
-    'microsoft.sql/servers': { displayName: localize('sqlServers', 'SQL servers') },
-    'microsoft.documentdb/databaseaccounts': { displayName: localize('documentDB', 'Azure Cosmos DB') },
-    'microsoft.operationalinsights/workspaces': { displayName: localize('operationalInsightsWorkspaces', 'Operational Insights workspaces') },
-    'microsoft.operationsmanagement/solutions': { displayName: localize('operationsManagementSolutions', 'Operations management solutions') },
-    'microsoft.insights/components': { displayName: localize('insightsComponents', 'Application Insights') },
-    'microsoft.web/serverfarms': { displayName: localize('serverFarms', 'App Service plans') },
-    'microsoft.web/kubeenvironments': { displayName: localize('containerService', 'App Service Kubernetes Environment') },
-    'microsoft.app/managedenvironments': { displayName: localize('containerAppsEnv', 'Container Apps Environment') },
-    'microsoft.app/containerapps': { displayName: localize('containerApp', 'Container Apps') },
-}
-
-export function isFunctionAppType(type: string | undefined, kind: string | undefined): boolean {
-    if (type?.toLowerCase() === 'microsoft.web/sites') {
-        if (kind?.toLowerCase().includes('functionapp') && !kind?.toLowerCase().includes('workflowapp')) {
-            return true;
-        }
-    }
-    return false;
-}
-
-export function isFunctionApp(resource: GenericResource): boolean {
-    const { type, kind } = resource;
-
-    return isFunctionAppType(type, kind);
-}
-
-export function isLogicApp(resource: GenericResource): boolean {
-    const { type, kind } = resource;
-    if (type?.toLowerCase() === 'microsoft.web/sites') {
-        if (kind?.toLowerCase().includes('functionapp') && kind?.toLowerCase().includes('workflowapp')) {
-            return true;
-        }
-    }
-    return false;
-}
-
-export function isAppServiceApp(resource: GenericResource): boolean {
-    return resource.type?.toLowerCase() === 'microsoft.web/sites'
-        && !isFunctionApp(resource)
-        && !isLogicApp(resource);
-}
-
-function getRelevantKind(type?: string, kind?: string): string | undefined {
-    if (isFunctionApp({ type, kind })) {
-        return 'functionapp';
-    }
-    if (isLogicApp({ type, kind })) {
-        return 'logicapp';
-    }
-    return undefined;
-}
-
-export function getResourceType(type?: string, kind?: string): string {
-    const relevantKind = getRelevantKind(type, kind);
-    const provider = type?.split('/')?.[0];
-    return relevantKind ? `${provider}/${relevantKind}` : type?.toLowerCase() ?? '';
-}
