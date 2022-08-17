@@ -24,22 +24,42 @@ export class ResourceGroupsItemCache {
     }
 
     evictItemChildren(item: ResourceGroupsItem): void {
+        // Get initial set of children to process...
         const children = this.itemToChildrenCache.get(item);
 
-        while (children?.pop()) {
-            const children = this.itemToChildrenCache.get(item);
-
-            children?.forEach(child => children.push(child));
-
-            const branchItem = this.itemToBranchItemCache.get(item);
-
-            if (branchItem) {
-                this.branchItemToItemCache.delete(branchItem);
-            }
-
-            this.itemToBranchItemCache.delete(item);
+        if (children) {
+            // Remove set (as we modify the set in place)...
             this.itemToChildrenCache.delete(item);
-            this.itemToParentCache.delete(item);
+
+            // Remove each child from the cache...
+            while (true) {
+                const child = children?.pop();
+
+                // Stop when we're out of children...
+                if (!child) {
+                    break;
+                }
+
+                // Get the children of the current child (i.e. the grandchildren)...
+                const grandChildren = this.itemToChildrenCache.get(child);
+
+                // Add any granchildren to the set of children to process...
+                grandChildren?.forEach(grandChild => children.push(grandChild));
+
+                //
+                // Remove the child from all the caches...
+                //
+
+                const branchItem = this.itemToBranchItemCache.get(child);
+
+                if (branchItem) {
+                    this.branchItemToItemCache.delete(branchItem);
+                }
+
+                this.itemToBranchItemCache.delete(child);
+                this.itemToChildrenCache.delete(child);
+                this.itemToParentCache.delete(child);
+            }
         }
     }
 
