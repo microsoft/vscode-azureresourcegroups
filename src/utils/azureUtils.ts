@@ -18,6 +18,13 @@ import { treeUtils } from './treeUtils';
 export function createGroupConfigFromResource(resource: AppResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
     const unknown = localize('unknown', 'Unknown');
+    let iconPath: TreeItemIconPath;
+    if (resource.azExtResourceType !== AzExtResourceType.ContainerAppsEnvironment) {
+        iconPath = getIconPath(resource.azExtResourceType);
+    } else {
+        iconPath = getIconPath(AzExtResourceType.ContainerApps);
+    }
+
     const groupConfig: GroupingConfig = {
         resourceGroup: {
             label: getResourceGroupFromId(id),
@@ -27,7 +34,7 @@ export function createGroupConfigFromResource(resource: AppResource, subscriptio
         resourceType: {
             label: resource.azExtResourceType ? azExtDisplayInfo[resource.azExtResourceType ?? '']?.displayName ?? unknown : unknown,
             id: `${subscriptionId}/${resource.azExtResourceType}`,
-            iconPath: getIconPath(resource.azExtResourceType),
+            iconPath,
             contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType] : [])]
         },
         location: {
@@ -55,10 +62,17 @@ export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], s
     const azExtGroupConfigs: GroupNodeConfiguration[] = [];
     for (const azExt of extensions) {
         for (const azExtResourceType of azExt.resourceTypes) {
+            let iconPath: TreeItemIconPath;
+            if (azExtResourceType !== AzExtResourceType.ContainerAppsEnvironment) {
+                iconPath = getIconPath(azExtResourceType);
+            } else {
+                iconPath = getIconPath(AzExtResourceType.ContainerApps);
+            }
+
             azExtGroupConfigs.push({
                 label: azExtDisplayInfo[azExtResourceType]?.displayName ?? azExtResourceType,
                 id: `${subscriptionId}/${azExtResourceType}`.toLowerCase(),
-                iconPath: getIconPath(azExtResourceType),
+                iconPath,
                 contextValuesToAdd: ['azureResourceTypeGroup', azExtResourceType]
             });
         }
@@ -95,8 +109,7 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     AvailabilitySets: { displayName: localize('availabilitySets', 'Availability sets') },
     AzureCosmosDb: { displayName: localize('documentDB', 'Azure Cosmos DB') },
     BatchAccounts: { displayName: localize('batchAccounts', 'Batch accounts') },
-    ContainerApps: { displayName: localize('containerApp', 'Container Apps') },
-    ContainerAppsEnvironment: { displayName: localize('containerAppsEnv', 'Container Apps Environment') },
+    ContainerAppsEnvironment: { displayName: localize('containerAppsEnv', 'Container Apps') },
     ContainerRegistry: { displayName: localize('containerRegistry', 'Container registry') },
     Disks: { displayName: localize('disks', 'Disks') },
     FrontDoorAndCdnProfiles: { displayName: localize('frontDoorAndcdnProfiles', 'Front Door and CDN profiles') },
