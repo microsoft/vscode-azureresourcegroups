@@ -3,20 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { GenericResource, ResourceManagementClient } from '@azure/arm-resources';
+import { ResourceManagementClient } from '@azure/arm-resources';
 import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
+import { AzExtResourceType, IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AppResource, GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
+import * as path from 'path';
 import { ThemeIcon } from 'vscode';
 import type { IAzExtMetadata } from '../azureExtensions';
 import { ext } from '../extensionVariables';
 import { createResourceClient } from './azureClients';
 import { localize } from './localize';
 import { treeUtils } from './treeUtils';
-import path = require('path');
 
-export function createGroupConfigFromResource(resource: GenericResource, subscriptionId: string | undefined): GroupingConfig {
+export function createGroupConfigFromResource(resource: AppResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
+    const unknown = localize('unknown', 'Unknown');
     const groupConfig: GroupingConfig = {
         resourceGroup: {
             label: getResourceGroupFromId(id),
@@ -24,25 +25,26 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
             contextValuesToAdd: ['azureResourceGroup']
         },
         resourceType: {
-            label: getName(resource.type, resource.kind) ?? resource.type ?? 'unknown',
-            id: getId(subscriptionId, resource.type, resource.kind),
-            iconPath: getIconPath(resource?.type ?? 'resource', resource.kind),
-            contextValuesToAdd: ['azureResourceTypeGroup', getResourceType(resource.type, resource.kind)]
+            label: resource.azExtResourceType ? azExtDisplayInfo[resource.azExtResourceType ?? '']?.displayName ?? unknown : unknown,
+            id: `${subscriptionId}/${resource.azExtResourceType}`,
+            iconPath: getIconPath(resource.azExtResourceType),
+            contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType] : [])]
         },
         location: {
             id: `${subscriptionId}/location/${resource.location}` ?? 'unknown',
-            label: resource.location ?? localize('unknown', 'Unknown'),
+            label: resource.location ?? unknown,
             icon: new ThemeIcon('globe'),
             contextValuesToAdd: ['azureLocationGroup']
         }
     }
 
-    resource.tags ||= {};
-    for (const tag of Object.keys(resource.tags)) {
-        groupConfig[`armTag-${tag}`] = {
-            label: resource.tags[tag],
-            id: `${subscriptionId}/${tag}/${resource.tags[tag]}`,
-            icon: new ThemeIcon('tag')
+    if (resource.tags) {
+        for (const tag of Object.keys(resource.tags)) {
+            groupConfig[`armTag-${tag}`] = {
+                label: resource.tags[tag],
+                id: `${subscriptionId}/${tag}/${resource.tags[tag]}`,
+                icon: new ThemeIcon('tag')
+            }
         }
     }
 
@@ -52,36 +54,20 @@ export function createGroupConfigFromResource(resource: GenericResource, subscri
 export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], subscriptionId: string): GroupNodeConfiguration[] {
     const azExtGroupConfigs: GroupNodeConfiguration[] = [];
     for (const azExt of extensions) {
-        for (const resourceType of azExt.resourceTypes) {
-            const type = typeof resourceType === 'string' ? resourceType : resourceType.name;
-            const kind = azExt.name === 'vscode-azurefunctions' ? 'functionapp' : undefined;
-
+        for (const azExtResourceType of azExt.resourceTypes) {
             azExtGroupConfigs.push({
-                label: getName(type, kind) ?? type ?? 'unknown',
-                id: getId(subscriptionId, type, kind),
-                iconPath: getIconPath(type ?? 'resource', kind),
-                contextValuesToAdd: ['azureResourceTypeGroup', getResourceType(type, kind)]
+                label: azExtDisplayInfo[azExtResourceType]?.displayName ?? azExtResourceType,
+                id: `${subscriptionId}/${azExtResourceType}`.toLowerCase(),
+                iconPath: getIconPath(azExtResourceType),
+                contextValuesToAdd: ['azureResourceTypeGroup', azExtResourceType]
             });
         }
     }
     return azExtGroupConfigs;
 }
 
-function getId(subscriptionId?: string, type?: string, kind?: string): string {
-    const rType: string = getResourceType(type, kind);
-    return `${subscriptionId}/${rType}`;
-}
-
-export function getIconPath(type?: string, kind?: string): TreeItemIconPath {
-    let iconName: string;
-    const rType: string = getResourceType(type, kind).toLowerCase();
-    if (supportedIconTypes.includes(rType as SupportedTypes)) {
-        iconName = path.join('providers', rType);
-    } else {
-        iconName = 'resource';
-    }
-
-    return treeUtils.getIconPath(iconName);
+export function getIconPath(azExtResourceType?: AzExtResourceType): TreeItemIconPath {
+    return treeUtils.getIconPath(azExtResourceType ? path.join('azureIcons', azExtResourceType) : 'resource');
 }
 
 export async function getArmTagKeys(context: IActionContext): Promise<Set<string>> {
@@ -97,71 +83,7 @@ export async function getArmTagKeys(context: IActionContext): Promise<Set<string
     return armTagKeys;
 }
 
-// Execute `npm run listIcons` from root of repo to re-generate this list after adding an icon
-export const supportedIconTypes = [
-    'microsoft.web/functionapp',
-    'microsoft.web/logicapp',
-    'microsoft.web/hostingenvironments',
-    'microsoft.web/kubeenvironments',
-    'microsoft.web/serverfarms',
-    'microsoft.web/sites',
-    'microsoft.web/staticsites',
-    'microsoft.storage/storageaccounts',
-    'microsoft.sql/servers',
-    'microsoft.sql/servers/databases',
-    'microsoft.signalrservice/signalr',
-    'microsoft.servicefabricmesh/applications',
-    'microsoft.servicefabric/clusters',
-    'microsoft.servicebus/namespaces',
-    'microsoft.operationsmanagement/solutions',
-    'microsoft.operationalinsights/workspaces',
-    'microsoft.notificationhubs/namespaces',
-    'microsoft.network/applicationgateways',
-    'microsoft.network/applicationsecuritygroups',
-    'microsoft.network/loadbalancers',
-    'microsoft.network/localnetworkgateways',
-    'microsoft.network/networkinterfaces',
-    'microsoft.network/networksecuritygroups',
-    'microsoft.network/networkwatchers',
-    'microsoft.network/publicipaddresses',
-    'microsoft.network/publicipprefixes',
-    'microsoft.network/routetables',
-    'microsoft.network/virtualnetworkgateways',
-    'microsoft.network/virtualnetworks',
-    'microsoft.managedidentity/userassignedidentities',
-    'microsoft.logic/workflows',
-    'microsoft.kubernetes/connectedclusters',
-    'microsoft.keyvault/vaults',
-    'microsoft.insights/components',
-    'microsoft.extendedlocation/customlocations',
-    'microsoft.eventhub/namespaces',
-    'microsoft.eventgrid/domains',
-    'microsoft.eventgrid/eventsubscriptions',
-    'microsoft.eventgrid/topics',
-    'microsoft.documentdb/databaseaccounts',
-    'microsoft.devtestlab/labs',
-    'microsoft.devices/iothubs',
-    'microsoft.dbforpostgresql/servers',
-    'microsoft.dbforpostgresql/flexibleservers',
-    'microsoft.dbformysql/servers',
-    'microsoft.containerservice/managedclusters',
-    'microsoft.containerregistry/registries',
-    'microsoft.compute/availabilitysets',
-    'microsoft.compute/disks',
-    'microsoft.compute/images',
-    'microsoft.compute/virtualmachines',
-    'microsoft.compute/virtualmachinescalesets',
-    'microsoft.cdn/profiles',
-    'microsoft.cache/redis',
-    'microsoft.batch/batchaccounts',
-    'microsoft.app/containerapps',
-    'microsoft.app/managedenvironments',
-    'microsoft.apimanagement/service',
-] as const;
-
-type SupportedTypes = typeof supportedIconTypes[number];
-
-interface SupportedType {
+interface AzExtResourceTypeDisplayInfo {
     displayName: string;
 }
 
