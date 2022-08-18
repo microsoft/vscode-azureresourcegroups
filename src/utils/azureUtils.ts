@@ -18,6 +18,12 @@ import { treeUtils } from './treeUtils';
 export function createGroupConfigFromResource(resource: AppResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
     const unknown = localize('unknown', 'Unknown');
+    let iconPath = getIconPath(resource.azExtResourceType);
+    if (resource.azExtResourceType === AzExtResourceType.ContainerAppsEnvironment) {
+        // Even though the child is a ContainerAppsEnvironment we want to show the Container Apps icon
+        iconPath = getIconPath(AzExtResourceType.ContainerApps);
+    }
+
     const groupConfig: GroupingConfig = {
         resourceGroup: {
             label: getResourceGroupFromId(id),
@@ -27,7 +33,7 @@ export function createGroupConfigFromResource(resource: AppResource, subscriptio
         resourceType: {
             label: resource.azExtResourceType ? azExtDisplayInfo[resource.azExtResourceType ?? '']?.displayName ?? unknown : unknown,
             id: `${subscriptionId}/${resource.azExtResourceType}`,
-            iconPath: getIconPath(resource.azExtResourceType),
+            iconPath,
             contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType] : [])]
         },
         location: {
@@ -95,8 +101,7 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     AvailabilitySets: { displayName: localize('availabilitySets', 'Availability sets') },
     AzureCosmosDb: { displayName: localize('documentDB', 'Azure Cosmos DB') },
     BatchAccounts: { displayName: localize('batchAccounts', 'Batch accounts') },
-    ContainerApps: { displayName: localize('containerApp', 'Container Apps') },
-    ContainerAppsEnvironment: { displayName: localize('containerAppsEnv', 'Container Apps Environment') },
+    ContainerAppsEnvironment: { displayName: localize('containerAppsEnv', 'Container Apps') },
     ContainerRegistry: { displayName: localize('containerRegistry', 'Container registry') },
     Disks: { displayName: localize('disks', 'Disks') },
     FrontDoorAndCdnProfiles: { displayName: localize('frontDoorAndcdnProfiles', 'Front Door and CDN profiles') },
