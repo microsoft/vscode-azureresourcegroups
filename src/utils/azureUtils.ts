@@ -9,7 +9,7 @@ import { AzExtResourceType, IActionContext, nonNullProp, TreeItemIconPath } from
 import { AppResource, GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
 import * as path from 'path';
 import { ThemeIcon } from 'vscode';
-import type { IAzExtMetadata } from '../azureExtensions';
+import { IAzExtMetadata, legacyTypeMap } from '../azureExtensions';
 import { ext } from '../extensionVariables';
 import { createResourceClient } from './azureClients';
 import { localize } from './localize';
@@ -28,7 +28,7 @@ export function createGroupConfigFromResource(resource: AppResource, subscriptio
             label: resource.azExtResourceType ? azExtDisplayInfo[resource.azExtResourceType ?? '']?.displayName ?? unknown : unknown,
             id: `${subscriptionId}/${resource.azExtResourceType}`,
             iconPath: getIconPath(resource.azExtResourceType),
-            contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType] : [])]
+            contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType] : []), ...(resource.azExtResourceType ? [legacyTypeMap[resource.azExtResourceType] ?? ''] : [])]
         },
         location: {
             id: `${subscriptionId}/location/${resource.location}` ?? 'unknown',
@@ -59,7 +59,7 @@ export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], s
                 label: azExtDisplayInfo[azExtResourceType]?.displayName ?? azExtResourceType,
                 id: `${subscriptionId}/${azExtResourceType}`.toLowerCase(),
                 iconPath: getIconPath(azExtResourceType),
-                contextValuesToAdd: ['azureResourceTypeGroup', azExtResourceType]
+                contextValuesToAdd: ['azureResourceTypeGroup', azExtResourceType, legacyTypeMap[azExtResourceType] ?? '']
             });
         }
     }
