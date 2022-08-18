@@ -67,7 +67,11 @@ export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], s
 }
 
 export function getIconPath(azExtResourceType?: AzExtResourceType): TreeItemIconPath {
-    return treeUtils.getIconPath(azExtResourceType ? path.join('azureIcons', azExtResourceType) : 'resource');
+    if (Object.keys(azExtDisplayInfo).includes(azExtResourceType ?? '')) {
+        return treeUtils.getIconPath(azExtResourceType ? path.join('azureIcons', azExtResourceType) : 'resource');
+    } else {
+        return treeUtils.getIconPath('resource');
+    }
 }
 
 export function getName(azExtResourceType: AzExtResourceType): string | undefined {
