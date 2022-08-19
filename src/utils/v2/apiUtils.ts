@@ -31,7 +31,7 @@ class ApiVersionError extends Error {
 }
 
 function getApiInternal<T extends AzureResourcesApiBase>(azExts: AzureResourcesApiRegistration[], extensionId: string, apiVersionRange: string, options: GetApiOptions | undefined): T {
-    return <T>callWithTelemetryAndErrorHandlingSync('getApi', (context: IActionContext) => {
+    return <T>callWithTelemetryAndErrorHandlingSync('v2.getApi', (context: IActionContext) => {
         context.errorHandling.rethrow = true;
         context.errorHandling.suppressDisplay = true;
         context.telemetry.properties.isActivationEvent = 'true';

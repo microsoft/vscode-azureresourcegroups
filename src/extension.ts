@@ -42,6 +42,8 @@ import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
 import { localize } from './utils/localize';
 import { createApiProvider } from './utils/v2/apiUtils';
 
+let v2Api: V2AzureResourcesApiImplementation | undefined = undefined;
+
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureResourcesApiManager> {
     ext.context = context;
     ext.ignoreBundle = ignoreBundle;
@@ -119,14 +121,26 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         refreshEventEmitter.event,
         resourceProviderManager);
 
+    const v2ApiFactory = () => {
+        if (v2Api === undefined) {
+            v2Api = new V2AzureResourcesApiImplementation(
+                branchDataProviderManager,
+                resourceProviderManager);
+
+            context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider()));
+        }
+
+        return v2Api;
+    }
+
     return createApiProvider(
         (<{ version: string }>context.extension.packageJSON).version,
         [
             {
-                apiVersion: '0.0.1',
+                apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
                 apiFactory: () => new InternalAzureResourceGroupsExtensionApi(
                     {
-                        apiVersion: '0.0.1',
+                        apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
                         appResourceTree: ext.appResourceTree,
                         appResourceTreeView: ext.appResourceTreeView,
                         workspaceResourceTree: ext.workspaceTree,
@@ -140,16 +154,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             },
             {
                 apiVersion: V2AzureResourcesApiImplementation.apiVersion,
-                apiFactory: () => {
-                    const v2Api = new V2AzureResourcesApiImplementation(
-                        branchDataProviderManager,
-                        resourceProviderManager);
-
-                    // TODO: This should be done only once.
-                    context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider()));
-
-                    return v2Api;
-                }
+                apiFactory: v2ApiFactory
             }
         ]);
 }
