@@ -575,11 +575,5 @@
     },
     "extensionDependencies": [
         "ms-vscode.azure-account"
-    ],
-    "__metadata": {
-        "id": "260e9ed1-160d-4f7e-807c-2eb076ba3846",
-        "publisherDisplayName": "Microsoft",
-        "publisherId": "52b787f2-79a9-4f32-99b4-393afe3005d3",
-        "isPreReleaseVersion": false
-    }
+    ]
 }
