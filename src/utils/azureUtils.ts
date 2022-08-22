@@ -34,7 +34,7 @@ export function createGroupConfigFromResource(resource: AppResource, subscriptio
             label: resource.azExtResourceType ? azExtDisplayInfo[resource.azExtResourceType ?? '']?.displayName ?? unknown : unknown,
             id: `${subscriptionId}/${resource.azExtResourceType}`,
             iconPath,
-            contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType] : []), ...(resource.azExtResourceType ? [legacyTypeMap[resource.azExtResourceType] ?? ''] : [])]
+            contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType] : [])]
         },
         location: {
             id: `${subscriptionId}/location/${resource.location}` ?? 'unknown',
