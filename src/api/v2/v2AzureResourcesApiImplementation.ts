@@ -1,4 +1,4 @@
-import { AzureWizard, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, callWithTelemetryAndErrorHandling, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { BranchDataProviderManager } from '../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from './providers/ApplicationResourceProviderManager';
@@ -37,8 +37,11 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
             await wizard.prompt();
             await wizard.execute();
 
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            return wizardContext.currentNode!;
+            if (!wizardContext.currentNode) {
+                throw new UserCancelledError();
+            }
+
+            return wizardContext.currentNode;
         }) as TModel;
     }
 
