@@ -12,6 +12,7 @@ export class WorkspaceTreeItem extends AzExtParentTreeItem {
     public contextValue: string = WorkspaceTreeItem.contextValue;
 
     public label: string = localize('workspace', 'Workspace');
+    public childTypeLabel: string = localize('attachedAccount', 'Attached Account');
 
     constructor() {
         super(undefined);
