@@ -74,8 +74,8 @@ export function getIconPath(azExtResourceType?: AzExtResourceType): TreeItemIcon
     }
 }
 
-export function getName(azExtResourceType: AzExtResourceType): string | undefined {
-    return azExtDisplayInfo[azExtResourceType]?.displayName;
+export function getName(azExtResourceType?: AzExtResourceType): string | undefined {
+    return azExtResourceType ? azExtDisplayInfo[azExtResourceType]?.displayName : undefined;
 }
 
 export async function getArmTagKeys(context: IActionContext): Promise<Set<string>> {
@@ -129,4 +129,3 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     VirtualMachineScaleSets: { displayName: localize('virtualMachineScaleSets', 'Virtual machine scale sets') },
     VirtualNetworks: { displayName: localize('virtualNetworks', 'Virtual networks') },
 }
-
