@@ -8,8 +8,10 @@ import { workspaceResourceProviders } from '../api/registerWorkspaceResourceProv
 import { localize } from '../utils/localize';
 
 export class WorkspaceTreeItem extends AzExtParentTreeItem {
+    public static contextValue: string = 'azureWorkspace';
+    public contextValue: string = WorkspaceTreeItem.contextValue;
+
     public label: string = localize('workspace', 'Workspace');
-    public contextValue: string = 'azureWorkspace';
 
     constructor() {
         super(undefined);
