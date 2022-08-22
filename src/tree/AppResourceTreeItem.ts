@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceGroup } from "@azure/arm-resources";
-import { AzExtParentTreeItem, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtResourceType, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
 import { FileChangeType } from "vscode";
 import { azureExtensions } from "../azureExtensions";
@@ -31,6 +31,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
 
     public type: string;
     public kind?: string | undefined;
+    public azExtResourceType: AzExtResourceType;
     public location?: string | undefined;
     public tags?: { [propertyName: string]: string; } | undefined;
 
@@ -53,11 +54,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         this.tags = resource.tags;
 
         this.isHidden = !azureExtensions.some(ext =>
-            ext.resourceTypes.some((type) => {
-                return typeof type === 'string' ?
-                    type.toLowerCase() === this.type?.toLowerCase() :
-                    type.name.toLowerCase() === this.type?.toLowerCase() && type.matchesResource(this.data)
-            }));
+            ext.resourceTypes.some(type => type === this.data.azExtResourceType));
     }
 
     /**
@@ -114,7 +111,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
     }
 
     public get iconPath(): TreeItemIconPath {
-        return getIconPath(this.data.type, this.data.kind);
+        return getIconPath(this.data.azExtResourceType);
     }
 
     public get parent(): GroupTreeItemBase | undefined {

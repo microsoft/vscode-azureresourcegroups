@@ -14,7 +14,7 @@ export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
         const treeItem = new vscode.TreeItem(this.resource.name ?? 'Unnamed Resource');
 
-        treeItem.iconPath = getIconPath(this.resource.type.type);
+        treeItem.iconPath = getIconPath(this.resource.azExtResourceType);
 
         return treeItem;
     }

@@ -1,4 +1,5 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
+import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 
@@ -34,6 +35,7 @@ export interface ApplicationResourceType {
 export interface ApplicationResource extends ResourceBase {
     readonly subscription: ApplicationSubscription;
     readonly type: ApplicationResourceType;
+    readonly azExtResourceType?: AzExtResourceType;
     readonly location?: string;
     readonly resourceGroup?: string;
     /** Resource tags */
