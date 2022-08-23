@@ -7,5 +7,13 @@ import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { ResourceModelBase } from '../v2AzureResourcesApi';
 
 export interface QuickPickWizardContext<TModel extends ResourceModelBase> extends IActionContext {
-    currentNode: TModel | undefined;
+    pickedNodes: TModel[];
+}
+
+export function getLastNode<TModel extends ResourceModelBase>(context: QuickPickWizardContext<TModel>): TModel | undefined {
+    if (context.pickedNodes.length) {
+        return context.pickedNodes[context.pickedNodes.length - 1];
+    }
+
+    return undefined;
 }

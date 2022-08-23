@@ -3,13 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, IAzureQuickPickItem, IWizardOptions, nonNullProp, nonNullValue, parseError } from '@microsoft/vscode-azext-utils';
 import { PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
 import { BranchDataProviderManager } from '../../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from '../providers/ApplicationResourceProviderManager';
 import { ApplicationResource, ResourceModelBase } from '../v2AzureResourcesApi';
 import { matchesContextValueFilter } from './ContextValueFilter';
 import { QuickPickAppResourceWizardContext } from './QuickPickAppResourceWizardContext';
+import { getLastNode } from './QuickPickWizardContext';
 import { RecursiveQuickPickStep } from './RecursiveQuickPickStep';
 
 export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends AzureWizardPromptStep<QuickPickAppResourceWizardContext<TModel>> {
@@ -22,16 +23,31 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
     }
 
     public override async prompt(wizardContext: QuickPickAppResourceWizardContext<TModel>): Promise<void> {
-        const allResources = (await this.resourceProviderManager.getResources( /* TODO: subscription */)) || [];
+        try {
+            const allResources = (await this.resourceProviderManager.getResources(nonNullProp(wizardContext, 'applicationSubscription'))) || [];
 
-        const matchingResources = allResources.filter(this.matchesAppResource);
-        const picks = matchingResources.map(r => this.getQuickPickItem(r));
+            const matchingResources = allResources.filter(this.matchesAppResource);
+            const picks = matchingResources.map(r => this.getQuickPickItem(r));
 
-        const selected = await wizardContext.ui.showQuickPick(picks, { /* TODO: options */ });
-        wizardContext.applicationResource = selected.data;
+            const selected = await wizardContext.ui.showQuickPick(picks, { /* TODO: options */ });
+            wizardContext.applicationResource = selected.data;
 
-        const bdp = this.branchDataProviderManager.getApplicationResourceBranchDataProvider(wizardContext.applicationResource);
-        wizardContext.currentNode = await Promise.resolve(bdp.getResourceItem(wizardContext.applicationResource)) as TModel;
+            const bdp = this.branchDataProviderManager.getApplicationResourceBranchDataProvider(wizardContext.applicationResource);
+            wizardContext.pickedNodes.push(
+                await Promise.resolve(bdp.getResourceItem(wizardContext.applicationResource) as TModel)
+            );
+        } catch (err) {
+            // TODO: this is duplicated from `GenericQuickPickStep` which isn't ideal
+            const error = parseError(err);
+            if (error.errorType === 'GoBackError') {
+                // Instead of wiping out a property value, which is the default wizard behavior for `GoBackError`, pop the most recent
+                // value off from the provenance of the picks
+                wizardContext.pickedNodes.pop();
+            }
+
+            // And rethrow
+            throw err;
+        }
     }
 
     public shouldPrompt(_wizardContext: QuickPickAppResourceWizardContext<TModel>): boolean {
@@ -40,12 +56,11 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
 
     public async getSubWizard(wizardContext: QuickPickAppResourceWizardContext<TModel>): Promise<IWizardOptions<QuickPickAppResourceWizardContext<TModel>> | undefined> {
         if (this.options.expectedChildContextValue) {
-            if (matchesContextValueFilter(wizardContext.currentNode as TModel, this.options.expectedChildContextValue)) {
+            if (matchesContextValueFilter(nonNullValue(getLastNode<TModel>(wizardContext), 'lastNode'), this.options.expectedChildContextValue)) {
                 return undefined;
             }
 
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            const bdp = this.branchDataProviderManager.getApplicationResourceBranchDataProvider(wizardContext.applicationResource!);
+            const bdp = this.branchDataProviderManager.getApplicationResourceBranchDataProvider(nonNullProp(wizardContext, 'applicationResource'));
             return {
                 hideStepCount: true,
                 promptSteps: [
@@ -71,6 +86,7 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
 
         const filterArray = Array.isArray(this.options.filter) ? this.options.filter : [this.options.filter];
 
+        // TODO: this filtering needs to be fixed
         return filterArray.some(filter => {
             if (filter.type !== resource.type) {
                 return false;
