@@ -9,7 +9,7 @@ import { AzExtResourceType, IActionContext, nonNullProp, TreeItemIconPath } from
 import { AppResource, GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
 import * as path from 'path';
 import { ThemeIcon } from 'vscode';
-import type { IAzExtMetadata } from '../azureExtensions';
+import { IAzExtMetadata, legacyTypeMap } from '../azureExtensions';
 import { ext } from '../extensionVariables';
 import { createResourceClient } from './azureClients';
 import { localize } from './localize';
@@ -65,7 +65,7 @@ export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], s
                 label: azExtDisplayInfo[azExtResourceType]?.displayName ?? azExtResourceType,
                 id: `${subscriptionId}/${azExtResourceType}`.toLowerCase(),
                 iconPath: getIconPath(azExtResourceType),
-                contextValuesToAdd: ['azureResourceTypeGroup', azExtResourceType]
+                contextValuesToAdd: ['azureResourceTypeGroup', azExtResourceType, legacyTypeMap[azExtResourceType] ?? '']
             });
         }
     }
