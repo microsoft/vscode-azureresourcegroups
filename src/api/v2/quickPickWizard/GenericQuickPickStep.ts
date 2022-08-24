@@ -66,7 +66,6 @@ export class GenericQuickPickStep<TModel extends ResourceModelBase> extends Azur
 
     protected async promptInternal(wizardContext: QuickPickWizardContext<TModel>): Promise<TModel> {
         const selected = await wizardContext.ui.showQuickPick(await this.getPicks(wizardContext), { /* TODO: options */ });
-        selected.data;
         wizardContext.pickedNodes.push(selected.data);
         return selected.data;
     }
