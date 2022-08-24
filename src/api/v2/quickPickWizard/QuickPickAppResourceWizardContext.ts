@@ -7,6 +7,7 @@ import { ApplicationResource, ApplicationSubscription, ResourceModelBase } from 
 import { QuickPickWizardContext } from './QuickPickWizardContext';
 
 export interface QuickPickAppResourceWizardContext<TModel extends ResourceModelBase> extends QuickPickWizardContext<TModel> {
+    applicationSubscription: ApplicationSubscription | undefined;
     applicationResource: ApplicationResource | undefined;
     applicationSubscription?: ApplicationSubscription;
 }

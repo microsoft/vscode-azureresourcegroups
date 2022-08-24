@@ -129,7 +129,9 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                                             environment: subscription.session.environment,
                                             isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud',
                                             subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
-                                        }));
+                                        }
+                                    )
+                                );
                             }
                         } else if (api.status === 'LoggedOut') {
                             return [

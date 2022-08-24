@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { localize } from '../../../utils/localize';
 import { Filter, ResourceModelBase } from '../v2AzureResourcesApi';
 import { GenericQuickPickStep } from './GenericQuickPickStep';
-import { QuickPickWizardContext } from './QuickPickWizardContext';
+import { getLastNode, QuickPickWizardContext } from './QuickPickWizardContext';
 
 type CreateCallback = () => vscode.ProviderResult<never>;
 
@@ -18,16 +18,20 @@ export class CreateQuickPickStep<TModel extends ResourceModelBase> extends Gener
     }
 
     public override async prompt(wizardContext: QuickPickWizardContext<TModel>): Promise<void> {
-        const picks: IAzureQuickPickItem<TModel | CreateCallback>[] = await this.getPicks(wizardContext);
-        picks.push(this.getCreatePick());
+        await super.prompt(wizardContext);
 
-        const selected = await wizardContext.ui.showQuickPick(picks, { /* TODO: options */ });
-        if (typeof selected.data === 'function') {
-            const callback = selected.data as CreateCallback;
+        const lastNode = getLastNode(wizardContext) as (TModel | CreateCallback);
+        if (typeof lastNode === 'function') {
+            // If the last node is a function, pop it off the list and execute it
+            const callback = wizardContext.pickedNodes.pop() as unknown as CreateCallback;
             await callback();
-        } else {
-            wizardContext.currentNode = selected.data;
         }
+    }
+
+    protected override async getPicks(wizardContext: QuickPickWizardContext<TModel>): Promise<IAzureQuickPickItem<TModel>[]> {
+        const picks: IAzureQuickPickItem<TModel | CreateCallback>[] = await super.getPicks(wizardContext);
+        picks.push(this.getCreatePick());
+        return picks as IAzureQuickPickItem<TModel>[];
     }
 
     private getCreatePick(): IAzureQuickPickItem<CreateCallback> {

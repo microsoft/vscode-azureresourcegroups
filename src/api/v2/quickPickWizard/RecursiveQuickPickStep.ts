@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IWizardOptions } from '@microsoft/vscode-azext-utils';
+import { IWizardOptions, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { ResourceModelBase } from '../v2AzureResourcesApi';
 import { GenericQuickPickStep } from './GenericQuickPickStep';
-import { QuickPickWizardContext } from './QuickPickWizardContext';
+import { getLastNode, QuickPickWizardContext } from './QuickPickWizardContext';
 
 export class RecursiveQuickPickStep<TModel extends ResourceModelBase> extends GenericQuickPickStep<TModel> {
     public async getSubWizard(wizardContext: QuickPickWizardContext<TModel>): Promise<IWizardOptions<QuickPickWizardContext<TModel>> | undefined> {
-        if (this.contextValueFilter.matches(wizardContext.currentNode as TModel)) {
+        if (this.contextValueFilter.matches(nonNullValue(getLastNode<TModel>(wizardContext)))) {
             return undefined;
         } else {
             return {

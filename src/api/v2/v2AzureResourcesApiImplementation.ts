@@ -1,10 +1,11 @@
-import { AzureWizard, callWithTelemetryAndErrorHandling, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, callWithTelemetryAndErrorHandling, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { BranchDataProviderManager } from '../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from './providers/ApplicationResourceProviderManager';
 import { QuickPickAppResourceStep } from './quickPickWizard/QuickPickAppResourceStep';
 import { QuickPickAppResourceWizardContext } from './quickPickWizard/QuickPickAppResourceWizardContext';
 import { QuickPickSubscriptionStep } from './quickPickWizard/QuickPickSubscriptionStep';
+import { getLastNode } from './quickPickWizard/QuickPickWizardContext';
 import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
@@ -29,7 +30,8 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
 
             const wizardContext: QuickPickAppResourceWizardContext<TModel> = {
                 ...actionContext,
-                currentNode: undefined,
+                pickedNodes: [],
+                applicationSubscription: undefined,
                 applicationResource: undefined,
             };
 
@@ -37,11 +39,7 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
             await wizard.prompt();
             await wizard.execute();
 
-            if (!wizardContext.currentNode) {
-                throw new UserCancelledError();
-            }
-
-            return wizardContext.currentNode;
+            return nonNullValue(getLastNode<TModel>(wizardContext), 'lastNode');
         }) as TModel;
     }
 

@@ -8,14 +8,15 @@ import { QuickPickWizardContext } from './QuickPickWizardContext';
 import { RecursiveQuickPickStep } from './RecursiveQuickPickStep';
 
 export class SkipIfOneQuickPickStep<TModel extends ResourceModelBase> extends RecursiveQuickPickStep<TModel> {
-    public override async prompt(wizardContext: QuickPickWizardContext<TModel>): Promise<void> {
+    protected async promptInternal(wizardContext: QuickPickWizardContext<TModel>): Promise<TModel> {
+        // Overrides `promptInternal` to skip the prompt if only one choice exists
         const picks = await this.getPicks(wizardContext);
 
         if (picks.length === 1) {
-            wizardContext.currentNode = picks[0].data;
+            return picks[0].data;
         } else {
-            const selected = await wizardContext.ui.showQuickPick(await this.getPicks(wizardContext), { /* TODO: options */ });
-            wizardContext.currentNode = selected.data;
+            const selected = await wizardContext.ui.showQuickPick(picks, { /* TODO: options */ });
+            return selected.data;
         }
     }
 }

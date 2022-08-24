@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureWizardPromptStep, IAzureQuickPickItem, NoResourceFoundError } from '@microsoft/vscode-azext-utils';
+import { AzureWizardPromptStep, IAzureQuickPickItem, NoResourceFoundError, parseError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { Filter, ResourceModelBase } from '../v2AzureResourcesApi';
 import { QuickPickWizardContext } from './QuickPickWizardContext';
@@ -19,8 +19,19 @@ export class GenericQuickPickStep<TModel extends ResourceModelBase> extends Azur
     }
 
     public async prompt(wizardContext: QuickPickWizardContext<TModel>): Promise<void> {
-        const selected = await wizardContext.ui.showQuickPick(await this.getPicks(wizardContext), { /* TODO: options */ });
-        wizardContext.currentNode = selected.data;
+        try {
+            await this.promptInternal(wizardContext);
+        } catch (err) {
+            const error = parseError(err);
+            if (error.errorType === 'GoBackError') {
+                // Instead of wiping out a property value, which is the default wizard behavior for `GoBackError`, pop the most recent
+                // value off from the provenance of the picks
+                wizardContext.pickedNodes.pop();
+            }
+
+            // And rethrow
+            throw err;
+        }
     }
 
     public shouldPrompt(_wizardContext: QuickPickWizardContext<TModel>): boolean {
@@ -28,7 +39,8 @@ export class GenericQuickPickStep<TModel extends ResourceModelBase> extends Azur
     }
 
     protected async getPicks(wizardContext: QuickPickWizardContext<TModel>): Promise<IAzureQuickPickItem<TModel>[]> {
-        const children = (await this.treeDataProvider.getChildren(wizardContext.currentNode)) || [];
+        const lastItem: TModel | undefined = wizardContext.pickedNodes.length ? wizardContext.pickedNodes[wizardContext.pickedNodes.length - 1] : undefined;
+        const children = (await this.treeDataProvider.getChildren(lastItem)) || [];
 
         const matchingChildren = children.filter((value) => this.contextValueFilter.matches(value));
         const nonLeafChildren = children.filter(c => c.quickPickOptions?.isLeaf === false);
@@ -50,6 +62,11 @@ export class GenericQuickPickStep<TModel extends ResourceModelBase> extends Azur
         }
 
         return picks;
+    }
+
+    protected async promptInternal(wizardContext: QuickPickWizardContext<TModel>): Promise<TModel> {
+        const selected = await wizardContext.ui.showQuickPick(await this.getPicks(wizardContext), { /* TODO: options */ });
+        return selected.data;
     }
 
     private async getQuickPickItem(resource: TModel): Promise<IAzureQuickPickItem<TModel>> {
