@@ -12,8 +12,8 @@ export class V2AzureResourcesApiWrapper implements V2AzureResourcesApi {
         return this.api.apiVersion;
     }
 
-    pickResource<TModel>(options?: ResourcePickOptions | undefined): vscode.ProviderResult<TModel> {
-        return this.callWithTelemetryAndErrorHandling('v2.pickResource', async () => await this.api.pickResource(options));
+    pickResource<TModel extends ResourceModelBase>(options: ResourcePickOptions): Promise<TModel> {
+        return this.callWithTelemetryAndErrorHandling<TModel>('v2.pickResource', async () => await this.api.pickResource(options));
     }
 
     revealResource(resourceId: string): Promise<void> {
