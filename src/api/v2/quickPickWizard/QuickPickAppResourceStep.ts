@@ -27,7 +27,7 @@ export interface PickAppResourceOptions2 extends IAzureQuickPickOptions {
 
 export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends AzureWizardPromptStep<QuickPickAppResourceWizardContext<TModel>> {
     public constructor(
-        private readonly resourceProviderManager: ApplicationResourceProviderManager,
+        private readonly getResources: ApplicationResourceProviderManager['getResources'],
         private readonly branchDataProviderManager: BranchDataProviderManager,
         private readonly filter?: Filter<ApplicationResource> | Filter<ApplicationResource>[],
         private readonly options?: PickAppResourceOptions2
@@ -37,7 +37,7 @@ export class QuickPickAppResourceStep<TModel extends ResourceModelBase> extends 
 
     public override async prompt(wizardContext: QuickPickAppResourceWizardContext<TModel>): Promise<void> {
         try {
-            const allResources = (await this.resourceProviderManager.getResources(nonNullProp(wizardContext, 'applicationSubscription'))) || [];
+            const allResources = (await this.getResources(nonNullProp(wizardContext, 'applicationSubscription'))) || [];
 
             const matchingResources = allResources.filter(this.matchesAppResource.bind(this));
             const picks = matchingResources.map(r => this.getQuickPickItem(r));

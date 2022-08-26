@@ -1,6 +1,7 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { ResourceGroupsItem } from '../../tree/v2/ResourceGroupsItem';
 
 export interface ApplicationAuthentication {
     getSession(scopes?: string[]): vscode.ProviderResult<vscode.AuthenticationSession>;
@@ -165,6 +166,11 @@ export interface ResourcePickOptions {
  * The current (v2) Azure Resources extension API.
  */
 export interface V2AzureResourcesApi extends AzureResourcesApiBase {
+    /**
+     * Show a quick picker of app resources. Set `options.type` to filter the picks.
+     */
+    pickResource2<TModel extends ResourceModelBase>(callback: (resourcesTreeDataProvider: vscode.TreeDataProvider<ResourceGroupsItem>) => Promise<TModel>): Promise<TModel>;
+
     /**
      * Show a quick picker of app resources. Set `options.type` to filter the picks.
      */
