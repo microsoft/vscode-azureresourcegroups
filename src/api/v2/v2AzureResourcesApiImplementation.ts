@@ -1,8 +1,8 @@
-import { AzureWizard, callWithTelemetryAndErrorHandling, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { appResourceExperience, AzExtResourceType, AzureWizard, callWithTelemetryAndErrorHandling, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { ContextValueFilter } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { BranchDataProviderManager } from '../../tree/v2/providers/BranchDataProviderManager';
-import { ResourceGroupsItem } from '../../tree/v2/ResourceGroupsItem';
 import { ApplicationResourceProviderManager } from './providers/ApplicationResourceProviderManager';
 import { QuickPickAppResourceStep } from './quickPickWizard/QuickPickAppResourceStep';
 import { QuickPickAppResourceWizardContext } from './quickPickWizard/QuickPickAppResourceWizardContext';
@@ -21,20 +21,17 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
         return V2AzureResourcesApiImplementation.apiVersion;
     }
 
-    public async pickResource2<TModel extends ResourceModelBase>(callback: (resourcesTreeDataProvider: vscode.TreeDataProvider<ResourceGroupsItem & ResourceModelBase>) => Promise<TModel>): Promise<TModel> {
-
-        // list subscriptions
-        // list remote resources
-        // list local resources
-        // get children of resource (both remote and local)
-
-
-        return await callback(ext.v2.resourceGroupsTreeDataProvider);
+    public async pickResource2<TModel extends ResourceModelBase>(type: AzExtResourceType, childFilter?: ContextValueFilter): Promise<TModel> {
+        return await callWithTelemetryAndErrorHandling<TModel>('pickResource2', async (actionContext: IActionContext) => {
+            actionContext.errorHandling.rethrow = true;
+            actionContext.errorHandling.suppressDisplay = true;
+            actionContext.errorHandling.rethrowUserCancelledError = true;
+            return await appResourceExperience<TModel>(actionContext, ext.v2.resourceGroupsTreeDataProvider, type, childFilter);
+        }) as TModel;
     }
 
     public async pickResource<TModel extends ResourceModelBase>(options: ResourcePickOptions): Promise<TModel> {
         return await callWithTelemetryAndErrorHandling<TModel>('pickResource', async (actionContext: IActionContext) => {
-
             const promptSteps = [
                 new QuickPickSubscriptionStep(),
                 new QuickPickAppResourceStep(this.resourceProviderManager, this.branchDataProviderManager, options.filter, options),

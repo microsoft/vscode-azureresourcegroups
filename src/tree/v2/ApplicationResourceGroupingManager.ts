@@ -84,7 +84,9 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
                 contextValues,
                 iconSelector(key),
                 labelSelector(key),
-                map[key]);
+                map[key],
+                key
+            );
         });
     }
 
