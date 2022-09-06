@@ -1,6 +1,6 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
-import { ContextValueFilter } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { ContextValueFilterableTreeNode } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 
 export interface ApplicationAuthentication {
@@ -166,10 +166,8 @@ export interface ResourcePickOptions {
  * The current (v2) Azure Resources extension API.
  */
 export interface V2AzureResourcesApi extends AzureResourcesApiBase {
-    /**
-     * Show a quick picker of app resources. Set `options.type` to filter the picks.
-     */
-    pickResource2<TModel extends ResourceModelBase>(type: AzExtResourceType, childFilter?: ContextValueFilter): Promise<TModel>;
+
+    getResourceGroupsTreeDataProvider(): vscode.TreeDataProvider<ContextValueFilterableTreeNode>;
 
     /**
      * Show a quick picker of app resources. Set `options.type` to filter the picks.

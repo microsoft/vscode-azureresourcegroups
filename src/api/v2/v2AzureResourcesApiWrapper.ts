@@ -1,4 +1,5 @@
 import { callWithTelemetryAndErrorHandling, callWithTelemetryAndErrorHandlingSync } from '@microsoft/vscode-azext-utils';
+import { ContextValueFilterableTreeNode } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
@@ -9,12 +10,12 @@ export class V2AzureResourcesApiWrapper implements V2AzureResourcesApi {
         private readonly extensionId: string) {
     }
 
-    public async pickResource2<TModel extends ResourceModelBase>(...args: Parameters<V2AzureResourcesApi['pickResource2']>): Promise<TModel> {
-        return await this.callWithTelemetryAndErrorHandling<TModel>('v2.pickResource2', async () => await this.api.pickResource2(...args));
-    }
-
     get apiVersion(): string {
         return this.api.apiVersion;
+    }
+
+    getResourceGroupsTreeDataProvider(): vscode.TreeDataProvider<ContextValueFilterableTreeNode> {
+        return this.api.getResourceGroupsTreeDataProvider();
     }
 
     pickResource<TModel extends ResourceModelBase>(options: ResourcePickOptions): Promise<TModel> {

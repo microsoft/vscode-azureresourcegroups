@@ -125,7 +125,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         if (v2Api === undefined) {
             v2Api = new V2AzureResourcesApiImplementation(
                 branchDataProviderManager,
-                resourceProviderManager);
+                resourceProviderManager,
+                ext.v2.resourceGroupsTreeDataProvider);
 
             context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider()));
         }
