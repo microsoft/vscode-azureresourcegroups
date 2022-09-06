@@ -238,6 +238,11 @@
                     "visibility": "visible"
                 },
                 {
+                    "id": "azureWorkspaceV2",
+                    "name": "Workspace (V2)",
+                    "visibility": "visible"
+                },
+                {
                     "id": "ms-azuretools.helpAndFeedback",
                     "name": "%ms-azuretools.helpAndFeedback%",
                     "visibility": "collapsed"
