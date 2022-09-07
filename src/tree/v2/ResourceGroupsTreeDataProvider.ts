@@ -82,6 +82,10 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
         return element.getTreeItem();
     }
 
+    getParent(element: ResourceGroupsItem): vscode.ProviderResult<ResourceGroupsItem> {
+        return this.itemCache.getParentForItem(element);
+    }
+
     async getChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
         return this.cacheChildren(
             element,
