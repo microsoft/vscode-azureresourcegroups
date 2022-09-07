@@ -29,7 +29,7 @@ export interface ApplicationResourceType {
 }
 
 /**
- * Represents an individual resource in Azure.
+ * Represents an individual resource in Azure.e
  * @remarks The `id` property is expected to be the Azure resource ID.
  */
 export interface ApplicationResource extends ResourceBase {
