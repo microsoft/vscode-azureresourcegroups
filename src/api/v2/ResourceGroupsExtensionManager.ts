@@ -4,6 +4,10 @@ interface ResourceGroupsContribution {
     readonly activation?: {
         readonly onFetch?: string[];
     }
+    readonly workspace: {
+        readonly branches?: { type: string }[];
+        readonly resources?: { type: string }[];
+    }
 }
 
 interface ExtensionPackage {
@@ -19,6 +23,30 @@ export class ResourceGroupsExtensionManager {
         const extensionAndContributions =
             vscode.extensions.all
                 .map(extension => ({ extension, contributions: (extension.packageJSON as ExtensionPackage)?.contributes?.['x-azResourcesV2']?.activation?.onFetch?.map(type => type.toLowerCase()) ?? [] }))
+                .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
+
+        if (extensionAndContributions) {
+            if (!extensionAndContributions.extension.isActive) {
+                await extensionAndContributions.extension.activate();
+            }
+        }
+    }
+
+    async activateWorkspaceResourceProviders(): Promise<void> {
+        const inActiveResourceContributors =
+            vscode.extensions.all
+                .map(extension => ({ extension, resources: (extension.packageJSON as ExtensionPackage)?.contributes?.['x-azResourcesV2']?.workspace?.resources ?? [] }))
+                .filter(extensionAndContributions => extensionAndContributions.resources.length > 0 && !extensionAndContributions.extension.isActive);
+
+        await Promise.all(inActiveResourceContributors.map(contributor => contributor.extension.activate()));
+    }
+
+    async activateWorkspaceResourceBranchDataProvider(type: string): Promise<void> {
+        type = type.toLowerCase();
+
+        const extensionAndContributions =
+            vscode.extensions.all
+                .map(extension => ({ extension, contributions: (extension.packageJSON as ExtensionPackage)?.contributes?.['x-azResourcesV2']?.workspace?.branches?.map(resources => resources.type.toLowerCase()) ?? [] }))
                 .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
 
         if (extensionAndContributions) {

@@ -102,6 +102,7 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
  */
 export interface WorkspaceResource extends ResourceBase {
     readonly folder: vscode.WorkspaceFolder;
+    readonly type: string;
 }
 
 /**
