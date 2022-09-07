@@ -6,8 +6,12 @@ import { WorkspaceTreeDataProvider } from './WorkspaceTreeDataProvider';
 export function registerWorkspaceTreeV2(
     branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
     context: vscode.ExtensionContext,
+    refreshEvent: vscode.Event<void>,
     workspaceResourceProviderManager: WorkspaceResourceProviderManager): void {
-    const treeDataProvider = new WorkspaceTreeDataProvider(branchDataProviderManager, workspaceResourceProviderManager);
+    const treeDataProvider = new WorkspaceTreeDataProvider(
+        branchDataProviderManager,
+        refreshEvent,
+        workspaceResourceProviderManager);
 
     context.subscriptions.push(treeDataProvider);
 

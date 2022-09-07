@@ -61,6 +61,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     context.subscriptions.push(refreshEventEmitter);
 
+    const refreshWorkspaceEmitter = new vscode.EventEmitter<void>();
+
+    context.subscriptions.push(refreshWorkspaceEmitter);
+
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
@@ -102,7 +106,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         context.subscriptions.push(ext.activationManager = new ExtensionActivationManager());
 
-        registerCommands(refreshEventEmitter);
+        registerCommands(refreshEventEmitter, () => refreshWorkspaceEmitter.fire());
         registerApplicationResourceProvider(azureResourceProviderId, new AzureResourceProvider());
         registerApplicationResourceResolver('vscode-azureresourcegroups.wrapperResolver', wrapperResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.installableAppResourceResolver', installableAppResourceResolver);
@@ -120,6 +124,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     context.subscriptions.push(branchDataProviderManager);
 
     const resourceProviderManager = new ApplicationResourceProviderManager();
+    const workspaceResourceBranchDataProviderManager = new WorkspaceResourceBranchDataProviderManager(
+        new WorkspaceDefaultBranchDataProvider(),
+        extensionManager);
     const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
 
     registerResourceGroupsTreeV2(
@@ -129,10 +136,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         resourceProviderManager);
 
     registerWorkspaceTreeV2(
-        new WorkspaceResourceBranchDataProviderManager(
-            new WorkspaceDefaultBranchDataProvider(),
-            extensionManager),
+        workspaceResourceBranchDataProviderManager,
         context,
+        refreshWorkspaceEmitter.event,
         workspaceResourceProviderManager);
 
     const v2ApiFactory = () => {
@@ -140,6 +146,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             v2Api = new V2AzureResourcesApiImplementation(
                 branchDataProviderManager,
                 resourceProviderManager,
+                workspaceResourceBranchDataProviderManager,
                 workspaceResourceProviderManager);
 
             context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider()));

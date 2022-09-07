@@ -287,6 +287,11 @@
                     "group": "navigation@10"
                 },
                 {
+                    "command": "azureWorkspace.refresh",
+                    "when": "view == azureWorkspaceV2",
+                    "group": "navigation@10"
+                },
+                {
                     "command": "azureResourceGroups.clearActivities",
                     "when": "view == azureActivityLog",
                     "group": "navigation@1"

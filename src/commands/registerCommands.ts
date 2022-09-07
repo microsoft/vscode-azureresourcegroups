@@ -27,7 +27,9 @@ import { toggleShowAllResources } from './toggleShowAllResources';
 import { viewProperties } from './viewProperties';
 import { refreshWorkspace } from './workspace/refreshWorkspace';
 
-export function registerCommands(refreshEventEmitter: vscode.EventEmitter<void>): void {
+export function registerCommands(
+    refreshEventEmitter: vscode.EventEmitter<void>,
+    onRefreshWorkspace: () => void): void {
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroup', deleteResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
@@ -68,6 +70,10 @@ export function registerCommands(refreshEventEmitter: vscode.EventEmitter<void>)
         await openUrl(url)
     });
 
-    registerCommand('azureWorkspace.refresh', refreshWorkspace);
+    registerCommand('azureWorkspace.refresh', async context => {
+        onRefreshWorkspace();
+
+        await refreshWorkspace(context);
+    });
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
 }

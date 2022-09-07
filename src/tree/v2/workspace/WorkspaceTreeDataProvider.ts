@@ -9,18 +9,27 @@ export class WorkspaceTreeDataProvider extends vscode.Disposable implements vsco
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | WorkspaceItem | WorkspaceItem[] | null | undefined>();
     private readonly providerManagerListener: vscode.Disposable;
 
+    private readonly refreshListener: vscode.Disposable;
+
     constructor(
         private readonly branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
+        refreshEvent: vscode.Event<void>,
         private readonly resourceProviderManager: WorkspaceResourceProviderManager) {
         super(
             () => {
                 this.onDidChangeTreeDataEmitter.dispose();
                 this.providerManagerListener.dispose();
+                this.refreshListener.dispose();
             });
 
         this.providerManagerListener = this.resourceProviderManager.onDidChangeResourceChange(
             () => {
                 // TODO: Currently resetting entire tree; need to whittle down to just the correct nodes (if possible).
+                this.onDidChangeTreeDataEmitter.fire();
+            });
+
+        this.refreshListener = refreshEvent(
+            () => {
                 this.onDidChangeTreeDataEmitter.fire();
             });
     }
