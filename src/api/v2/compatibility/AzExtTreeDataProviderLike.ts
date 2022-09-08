@@ -7,6 +7,10 @@ import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionConte
 import { Disposable, Event, TreeDataProvider, TreeItem, TreeView } from "vscode";
 import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
 
+/**
+ * An intermediate class that exists just to redeclare several events as abstract, so they
+ * can be re-redeclared as a accessors in {@link AzExtTreeDataProviderLike} below
+ */
 abstract class IntermediateAzExtTreeDataProviderLike extends AzExtTreeDataProvider {
     public abstract onDidChangeTreeData: Event<AzExtTreeItem | undefined>;
     public abstract onTreeItemCreate: Event<AzExtTreeItem>;
