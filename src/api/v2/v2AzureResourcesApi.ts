@@ -1,4 +1,5 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
+import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 
@@ -34,6 +35,7 @@ export interface ApplicationResourceType {
 export interface ApplicationResource extends ResourceBase {
     readonly subscription: ApplicationSubscription;
     readonly type: ApplicationResourceType;
+    readonly azExtResourceType?: AzExtResourceType;
     readonly location?: string;
     readonly resourceGroup?: string;
     /** Resource tags */
@@ -224,6 +226,13 @@ export interface AzureResourcesApiBase {
 }
 
 /**
+ *
+ */
+export interface GetApiOptions {
+    readonly extensionId?: string;
+}
+
+/**
  * Exported object of the Azure Resources extension.
  */
 export interface AzureResourcesApiManager {
@@ -236,5 +245,5 @@ export interface AzureResourcesApiManager {
      *
      * @returns The requested API or undefined, if not available.
      */
-    getApi<T extends AzureResourcesApiBase>(versionRange: string): T | undefined
+    getApi<T extends AzureResourcesApiBase>(versionRange: string, options?: GetApiOptions): T | undefined
 }
