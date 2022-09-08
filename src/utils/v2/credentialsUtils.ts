@@ -1,7 +1,7 @@
-import * as vscode from 'vscode';
 import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-dev';
-import { localize } from '../../utils/localize';
+import * as vscode from 'vscode';
 import { ApplicationSubscription } from '../../api/v2/v2AzureResourcesApi';
+import { localize } from '../../utils/localize';
 
 /**
  * Converts a VS Code authentication session to an Azure Track 1 & 2 compatible compatible credential.
@@ -34,10 +34,8 @@ export function createCredential(getSession: (scopes?: string[]) => vscode.Provi
  */
 export function createSubscriptionContext(subscription: ApplicationSubscription): ISubscriptionContext {
     return {
-        subscriptionDisplayName: '',
-        subscriptionPath: '',
-        tenantId: '',
-        userId: '',
+        subscriptionDisplayName: subscription.displayName,
+        userId: '', // TODO
         ...subscription,
         credentials: createCredential(subscription.authentication.getSession)
     };

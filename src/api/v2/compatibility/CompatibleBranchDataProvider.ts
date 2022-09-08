@@ -8,7 +8,7 @@ import type { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-u
 import * as vscode from 'vscode';
 import type { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
-import { CompatTreeItem } from '../compat/CompatTreeItem';
+import { CompatTreeItem } from './CompatTreeItem';
 
 export class CompatibleBranchDataProvider<TResource extends ApplicationResource, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel> {
     private readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();
@@ -79,13 +79,6 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
     public override async findTreeItem<T extends AzExtTreeItem>(_fullId: string, _context: IFindTreeItemContext): Promise<T | undefined> {
         throw new Error('Use the Resources extension API to do findTreeItem');
     }
-
-
-    // TODO: this (probably?) shouldn't remain in the code we release, but will be helpful in testing to ensure we never access the root
-    // @ts-expect-error TypeScript is unhappy that we're overriding something that it doesn't know is secretly on the base class
-    // private override get _rootTreeItem(): AzExtParentTreeItem {
-    // throw new Error('The root tree item should not be accessed in a BranchDataProvider');
-    // }
 
     //#endregion AzExtTreeDataProvider
 }
