@@ -6,6 +6,7 @@ import { createGroupingItemFactory } from './GroupingItem';
 import { BranchDataProviderManager } from './providers/BranchDataProviderManager';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 import { ResourceGroupsTreeDataProvider } from './ResourceGroupsTreeDataProvider';
+import { localize } from './../../utils/localize';
 
 export function registerResourceGroupsTreeV2(
     context: vscode.ExtensionContext,
@@ -23,5 +24,15 @@ export function registerResourceGroupsTreeV2(
 
     context.subscriptions.push(treeDataProvider);
 
-    context.subscriptions.push(vscode.window.registerTreeDataProvider('azureResourceGroupsV2', treeDataProvider));
+    const treeView = vscode.window.createTreeView(
+        'azureResourceGroupsV2',
+        {
+            canSelectMany: true,
+            showCollapseAll: true,
+            treeDataProvider
+        });
+
+    treeView.description = localize('remote', 'Remote');
+
+    context.subscriptions.push(treeView);
 }

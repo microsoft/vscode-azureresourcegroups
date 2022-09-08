@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { WorkspaceResourceProviderManager } from '../../../api/v2/providers/WorkspaceResourceProviderManager';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceTreeDataProvider } from './WorkspaceTreeDataProvider';
+import { localize } from './../../../utils/localize';
 
 export function registerWorkspaceTreeV2(
     branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
@@ -15,5 +16,14 @@ export function registerWorkspaceTreeV2(
 
     context.subscriptions.push(treeDataProvider);
 
-    context.subscriptions.push(vscode.window.registerTreeDataProvider('azureWorkspaceV2', treeDataProvider));
+    const treeView = vscode.window.createTreeView(
+        'azureWorkspaceV2',
+        {
+            canSelectMany: true,
+            treeDataProvider
+        });
+
+    treeView.description = localize('local', 'Local');
+
+    context.subscriptions.push(treeView);
 }
