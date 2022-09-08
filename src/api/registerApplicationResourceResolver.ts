@@ -4,8 +4,11 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
+import { ApplicationResource } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { Disposable } from "vscode";
 import { ext } from "../extensionVariables";
+import { CompatibleBranchDataProvider } from "../tree/v2/providers/CompatibleBranchDataProvider";
+import { BranchDataProvider, ResourceModelBase } from "./v2/v2AzureResourcesApi";
 
 export const applicationResourceResolvers: Record<string, AppResourceResolver> = {};
 
@@ -16,6 +19,10 @@ export function registerApplicationResourceResolver(id: string, resolver: AppRes
 
     applicationResourceResolvers[id] = resolver;
     ext.emitters.onDidRegisterResolver.fire(resolver);
+
+    const compat = new CompatibleBranchDataProvider(resolver, 'azureResourceGroups.loadMore');
+
+    ext.v2.api.registerApplicationResourceBranchDataProvider(id, compat as unknown as BranchDataProvider<ApplicationResource, ResourceModelBase>);
 
     return new Disposable(() => {
         delete applicationResourceResolvers[id];

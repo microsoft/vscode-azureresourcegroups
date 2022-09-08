@@ -4,10 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IFindTreeItemContext, ISubscriptionContext, ITreeItemPickerContext } from '@microsoft/vscode-azext-utils';
-import { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
+import type { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
-import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
+import type { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
+import { CompatTreeItem } from '../compat/CompatTreeItem';
 
 export class CompatibleBranchDataProvider<TResource extends ApplicationResource, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel> {
     private readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();
@@ -18,7 +19,10 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
 
     //#region TreeDataProvider
 
-    public override readonly onDidChangeTreeData = this.overrideOnDidChangeTreeDataEmitter.event;
+    // @ts-expect-error `getParent` is not meant to be defined by `BranchDataProvider`s but is already defined by `AzExtTreeDataProvider`
+    public override get onDidChangeTreeData(): Event<AzExtTreeItem | undefined> {
+        return this.overrideOnDidChangeTreeDataEmitter.event;
+    }
 
     // @ts-expect-error `getParent` is not meant to be defined by `BranchDataProvider`s but is already defined by `AzExtTreeDataProvider`
     public override getParent(_treeItem: TModel): Promise<TModel> {
@@ -42,7 +46,19 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
         };
         const subscriptionContext: ISubscriptionContext = createSubscriptionContext(element.subscription);
 
-        return await this.resolver.resolveResource(subscriptionContext, oldAppResource) as Promise<TModel>;
+        const resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
+
+        const ti = CompatTreeItem.Create(oldAppResource, resolved!, subscriptionContext) as unknown as TModel;
+
+        ti.treeDataProvider = this;
+        ti._treeDataProvider = this;
+
+        ti.parent = {
+            treeDataProvider: this,
+            valuesToMask: [],
+        }
+
+        return ti;
     }
 
     //#endregion BranchDataProvider
@@ -64,11 +80,12 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
         throw new Error('Use the Resources extension API to do findTreeItem');
     }
 
+
     // TODO: this (probably?) shouldn't remain in the code we release, but will be helpful in testing to ensure we never access the root
     // @ts-expect-error TypeScript is unhappy that we're overriding something that it doesn't know is secretly on the base class
-    private override get _rootTreeItem(): AzExtParentTreeItem {
-        throw new Error('The root tree item should not be accessed in a BranchDataProvider');
-    }
+    // private override get _rootTreeItem(): AzExtParentTreeItem {
+    // throw new Error('The root tree item should not be accessed in a BranchDataProvider');
+    // }
 
     //#endregion AzExtTreeDataProvider
 }
