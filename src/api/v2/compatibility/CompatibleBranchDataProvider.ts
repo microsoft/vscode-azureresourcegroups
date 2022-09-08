@@ -6,8 +6,8 @@
 import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IFindTreeItemContext, ISubscriptionContext, ITreeItemPickerContext } from '@microsoft/vscode-azext-utils';
 import { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
-import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
+import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../v2AzureResourcesApi';
 
 export class CompatibleBranchDataProvider<TResource extends ApplicationResource, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel> {
     private readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();

@@ -14,6 +14,8 @@ export interface ApplicationSubscription {
     readonly authentication: ApplicationAuthentication;
     readonly displayName: string;
     readonly subscriptionId: string;
+    readonly subscriptionPath: string;
+    readonly tenantId: string;
     readonly environment: Environment;
     readonly isCustomCloud: boolean;
 }
@@ -71,13 +73,13 @@ export interface ResourceModelBase {
 /**
  * Represents a branch data provider resource model as returned by a context menu command.
  */
-export interface WrappedResourceModel {
+export interface Box {
     /**
      * Unwraps the resource, returning the underlying branch data provider resource model.
      *
      * @remarks TODO: Should this be an async method (which might be viral for existing command implementations)?
      */
-    unwrap<T extends ResourceModelBase>(): T | undefined;
+    unwrap<T>(): T;
 }
 
 /**
