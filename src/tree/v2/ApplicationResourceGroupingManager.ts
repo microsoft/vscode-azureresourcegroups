@@ -1,12 +1,12 @@
+import { AzExtResourceType, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource } from '../../api/v2/v2AzureResourcesApi';
 import { GroupBySettings } from '../../commands/explorer/groupBy';
 import { ext } from '../../extensionVariables';
-import { settingUtils } from '../../utils/settingUtils';
-import { localize } from "../../utils/localize";
-import { treeUtils } from '../../utils/treeUtils';
-import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { getIconPath, getName } from '../../utils/azureUtils';
+import { localize } from "../../utils/localize";
+import { settingUtils } from '../../utils/settingUtils';
+import { treeUtils } from '../../utils/treeUtils';
 import { GroupingItem, GroupingItemFactory } from './GroupingItem';
 import { ResourceGroupsTreeContext } from './ResourceGroupsTreeContext';
 
@@ -19,17 +19,16 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
     constructor(
         private readonly groupingItemFactory: GroupingItemFactory) {
         super(
-            () =>
-            {
+            () => {
                 this.configSubscription.dispose();
             });
 
-            this.configSubscription = vscode.workspace.onDidChangeConfiguration(
-                e => {
-                    if (e.affectsConfiguration(`${ext.prefix}.groupBy`)) {
-                        this.onDidChangeGroupingEmitter.fire();
-                    }
-                });
+        this.configSubscription = vscode.workspace.onDidChangeConfiguration(
+            e => {
+                if (e.affectsConfiguration(`${ext.prefix}.groupBy`)) {
+                    this.onDidChangeGroupingEmitter.fire();
+                }
+            });
     }
 
     get onDidChangeGrouping(): vscode.Event<void> {
@@ -131,7 +130,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             key => key,
             () => treeUtils.getIconPath('resourceGroup'),
             initialGrouping,
-            [ 'azureResourceGroup' ]);
+            ['azureResourceGroup']);
 
         return groupedResources;
     }
@@ -140,8 +139,8 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         return this.groupBy(
             context,
             resources,
-            resource => resource.type.type, // TODO: Is resource type ever undefined?
-            key => getName(key) ?? key,
-            key => getIconPath(key)); // TODO: What's the default icon for a resource type?
+            resource => resource.azExtResourceType ?? resource.type.type, // TODO: Is resource type ever undefined?
+            key => getName(key as AzExtResourceType) ?? key,
+            key => getIconPath(key as AzExtResourceType)); // TODO: What's the default icon for a resource type?
     }
 }

@@ -4,13 +4,15 @@ import { ApplicationResourceProviderManager } from './providers/ApplicationResou
 import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
+    public static apiVersion: string = '2.0.0';
+
     constructor(
         private readonly branchDataProviderManager: BranchDataProviderManager,
         private readonly resourceProviderManager: ApplicationResourceProviderManager) {
     }
 
     get apiVersion(): string {
-        return '2.0.0';
+        return V2AzureResourcesApiImplementation.apiVersion;
     }
 
     pickResource<TModel>(_options?: ResourcePickOptions | undefined): vscode.ProviderResult<TModel> {
