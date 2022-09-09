@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, contextValueExperience, findByIdExperience, IActionContext, IFindTreeItemContext, isBox, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, contextValueExperience, findByIdExperience, IActionContext, IFindTreeItemContext, isWrapper, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
 import { Disposable, Event, TreeDataProvider, TreeItem, TreeView } from "vscode";
 import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
 
@@ -58,7 +58,7 @@ export class AzExtTreeDataProviderLike extends IntermediateAzExtTreeDataProvider
         // Unbox the item at the end
 
         const result = await findByIdExperience(context, this.tdp, fullId);
-        return isBox(result) ? result.unwrap<T>() : result as unknown as T;
+        return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
     }
 
     public override showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext & { canPickMany: true }, startingTreeItem?: AzExtTreeItem): Promise<T[]>;
@@ -74,7 +74,7 @@ export class AzExtTreeDataProviderLike extends IntermediateAzExtTreeDataProvider
             include: expectedContextValues,
         });
 
-        return isBox(result) ? result.unwrap<T>() : result as unknown as T;
+        return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
     }
 
     public override refresh(_context: IActionContext, _treeItem?: AzExtTreeItem | undefined): Promise<void> {

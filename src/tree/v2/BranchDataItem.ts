@@ -1,4 +1,4 @@
-import { Box } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import type { Wrapper } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
@@ -8,7 +8,7 @@ export type BranchDataItemOptions = {
     defaults?: vscode.TreeItem;
 };
 
-export class BranchDataItem implements ResourceGroupsItem, Box {
+export class BranchDataItem implements ResourceGroupsItem, Wrapper {
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
