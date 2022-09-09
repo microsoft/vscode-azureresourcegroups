@@ -8,61 +8,53 @@ import type { AppResource, ResolvedAppResourceBase } from "@microsoft/vscode-aze
 import { TreeItemCollapsibleState } from "vscode";
 import { getIconPath } from "../../../utils/azureUtils";
 
-export class CompatTreeItem extends AzExtParentTreeItem {
-
-    public resolveResult: ResolvedAppResourceBase | undefined | null;
-    public data: AppResource;
+/**
+ * Must immitate the behavior of AppResourceTreeItem
+ */
+export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTreeItem {
+    public static contextValue: string = 'azureResource';
     protected readonly contextValues: Set<string> = new Set<string>();
-
     public get contextValue(): string {
         return Array.from(this.contextValues.values()).sort().join(';');
     }
 
     public valuesToMask: string[] = [];
 
-    public static contextValue: string = 'azureResource';
+    public readonly resolveResult: ResolvedAppResourceBase;
+    public data: AppResource;
+    public readonly azExtResourceType: AzExtResourceType;
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
-
-    public type: string;
-    public kind?: string | undefined;
-    public azExtResourceType: AzExtResourceType;
-    public location?: string | undefined;
     public tags?: { [propertyName: string]: string; } | undefined;
 
-    public isHidden: boolean;
-
-    private constructor(resource: AppResource, resolved: ResolvedAppResourceBase, __subscription: ISubscriptionContext, __treeDataProvider: AzExtTreeDataProvider) {
-        const fakeParent: Partial<AzExtParentTreeItem> = {
-            treeDataProvider: __treeDataProvider,
-            valuesToMask: [],
-            subscription: __subscription,
-            parent: undefined,
-        };
-
-        super(fakeParent as unknown as AzExtParentTreeItem);
-
-        this.resolveResult = resolved;
-
-        this.data = resource;
-
-        this.contextValues.add(CompatTreeItem.contextValue);
-        resolved.contextValuesToAdd?.forEach((value: string) => this.contextValues.add(value));
-
-        this.type = resource.type;
-        this.kind = resource.kind;
-        this.location = resource.location;
-        this.tags = resource.tags;
+    public get id(): string {
+        return nonNullProp(this.data, 'id');
     }
 
-    public static Create(resource: AppResource, resolveResult: ResolvedAppResourceBase, subscription: ISubscriptionContext, treeDataProvider: AzExtTreeDataProvider): CompatTreeItem {
-        const resolvable: CompatTreeItem = new CompatTreeItem(resource, resolveResult, subscription, treeDataProvider);
-        const providerHandler: ProxyHandler<CompatTreeItem> = {
-            get: (target: CompatTreeItem, name: string): unknown => {
+    public get label(): string {
+        return nonNullProp(this.data, 'name');
+    }
+
+    public get iconPath(): TreeItemIconPath {
+        return getIconPath(this.data.azExtResourceType);
+    }
+
+    public get description(): string | undefined {
+        return this.resolveResult?.description;
+    }
+
+    public get collapsibleState(): TreeItemCollapsibleState | undefined {
+        return this.resolveResult?.initialCollapsibleState ?? !!this.resolveResult?.loadMoreChildrenImpl ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
+    }
+
+    public static Create(resource: AppResource, resolveResult: ResolvedAppResourceBase, subscription: ISubscriptionContext, treeDataProvider: AzExtTreeDataProvider): CompatibleResolvedApplicationResourceTreeItem {
+        const resolvable: CompatibleResolvedApplicationResourceTreeItem = new CompatibleResolvedApplicationResourceTreeItem(resource, resolveResult, subscription, treeDataProvider);
+        const providerHandler: ProxyHandler<CompatibleResolvedApplicationResourceTreeItem> = {
+            get: (target: CompatibleResolvedApplicationResourceTreeItem, name: string): unknown => {
                 return resolvable?.resolveResult?.[name] ?? target[name];
             },
-            set: (target: CompatTreeItem, name: string, value: unknown): boolean => {
+            set: (target: CompatibleResolvedApplicationResourceTreeItem, name: string, value: unknown): boolean => {
                 if (resolvable.resolveResult && Object.getOwnPropertyDescriptor(resolvable.resolveResult, name)?.writable) {
                     resolvable.resolveResult[name] = value;
                     return true;
@@ -76,7 +68,7 @@ export class CompatTreeItem extends AzExtParentTreeItem {
              * If resolved returns AzExtTreeItem or AzExtParentTreeItem depending on if resolveResult has loadMoreChildrenImpl defined
              * If not resolved, returns AppResourceTreeItem
              */
-            getPrototypeOf: (target: CompatTreeItem): CompatTreeItem | AzExtParentTreeItem | AzExtTreeItem => {
+            getPrototypeOf: (target: CompatibleResolvedApplicationResourceTreeItem): CompatibleResolvedApplicationResourceTreeItem | AzExtParentTreeItem | AzExtTreeItem => {
                 if (resolvable?.resolveResult) {
                     return resolvable.resolveResult.loadMoreChildrenImpl ? AzExtParentTreeItem.prototype : AzExtTreeItem.prototype
                 }
@@ -86,12 +78,22 @@ export class CompatTreeItem extends AzExtParentTreeItem {
         return new Proxy(resolvable, providerHandler);
     }
 
-    public get description(): string | undefined {
-        return this.resolveResult?.description;
-    }
+    private constructor(resource: AppResource, resolved: ResolvedAppResourceBase, __subscription: ISubscriptionContext, __treeDataProvider: AzExtTreeDataProvider) {
+        const fakeParent: Partial<AzExtParentTreeItem> = {
+            treeDataProvider: __treeDataProvider,
+            valuesToMask: [],
+            subscription: __subscription,
+            parent: undefined,
+        };
 
-    public get collapsibleState(): TreeItemCollapsibleState | undefined {
-        return this.resolveResult?.initialCollapsibleState ?? !!this.resolveResult?.loadMoreChildrenImpl ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
+        super(fakeParent as unknown as AzExtParentTreeItem);
+
+        this.resolveResult = resolved;
+        this.data = resource;
+        this.tags = resource.tags;
+
+        this.contextValues.add(CompatibleResolvedApplicationResourceTreeItem.contextValue);
+        resolved.contextValuesToAdd?.forEach((value: string) => this.contextValues.add(value));
     }
 
     public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
@@ -105,22 +107,6 @@ export class CompatTreeItem extends AzExtParentTreeItem {
 
     public hasMoreChildrenImpl(): boolean {
         return false;
-    }
-
-    public get name(): string {
-        return nonNullProp(this.data, 'name');
-    }
-
-    public get id(): string {
-        return nonNullProp(this.data, 'id');
-    }
-
-    public get label(): string {
-        return this.name;
-    }
-
-    public get iconPath(): TreeItemIconPath {
-        return getIconPath(this.data.azExtResourceType);
     }
 
     public async refreshImpl(): Promise<void> {

@@ -5,6 +5,16 @@ import { BuiltInResourceModelBase } from './BuiltInResourceModelBase';
 
 export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase {
     constructor(private readonly resource: ApplicationResource) {
+        this.id = resource.id;
+        this.name = resource.name;
+    }
+
+    id: string;
+    name: string;
+
+    // needed for view properties
+    public get data(): Record<string, unknown> {
+        return this.resource._raw;
     }
 
     getChildren(): vscode.ProviderResult<BuiltInResourceModelBase[]> {
@@ -16,10 +26,8 @@ export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase 
 
         treeItem.iconPath = getIconPath(this.resource.azExtResourceType);
 
+        treeItem.contextValue = 'azureResource';
+
         return treeItem;
     }
-
-    id: string;
-    name: string;
-    type: string;
 }

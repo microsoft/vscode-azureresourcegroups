@@ -29,6 +29,7 @@ export class BranchDataItem implements ResourceGroupsItem, Box {
 
         return {
             ...this.options?.defaults ?? {},
+            tooltip: 'Context value: ' + (treeItem.contextValue ?? ''),
             ...treeItem
         }
     }

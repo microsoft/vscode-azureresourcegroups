@@ -32,14 +32,6 @@
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"
             ],
-            // "skipFiles": [
-            //     "<node_internals>/**",
-            //     "/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/extensions/**/*",
-            //     "/Users/alex/.vscode-insiders/extensions/**/*",
-            //     "**/*/extensionHostProcess.js"
-            // ],
-            // "sourceMaps": true,
-            // "smartStep": true,
             "preLaunchTask": "${defaultBuildTask}",
             "env": {
                 "DEBUGTELEMETRY": "v",

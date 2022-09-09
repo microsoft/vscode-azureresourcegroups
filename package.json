@@ -309,8 +309,18 @@
                     "group": "1@1"
                 },
                 {
+                    "command": "azureResourceGroups.createResource",
+                    "when": "view == azureResourceGroupsV2 && viewItem == azureextensionui.azureSubscription",
+                    "group": "1@1"
+                },
+                {
                     "command": "azureResourceGroups.openInPortal",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
+                    "group": "9@1"
+                },
+                {
+                    "command": "azureResourceGroups.openInPortal",
+                    "when": "view == azureResourceGroupsV2 && viewItem == azureextensionui.azureSubscription",
                     "group": "9@1"
                 },
                 {
@@ -335,7 +345,7 @@
                 },
                 {
                     "command": "azureResourceGroups.openInPortal",
-                    "when": "view == azureResourceGroupsV2 && viewItem =~ /azureResource(?!Type)/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
                     "group": "9@2"
                 },
                 {

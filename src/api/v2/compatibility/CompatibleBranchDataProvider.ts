@@ -8,7 +8,7 @@ import type { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-u
 import * as vscode from 'vscode';
 import type { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
-import { CompatTreeItem } from './CompatTreeItem';
+import { CompatibleResolvedApplicationResourceTreeItem } from './CompatibleApplicationResourceTreeItem';
 
 export class CompatibleBranchDataProvider<TResource extends ApplicationResource, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel> {
     private readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();
@@ -48,7 +48,7 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
 
         const resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
 
-        const ti = CompatTreeItem.Create(oldAppResource, resolved!, subscriptionContext, this) as unknown as TModel;
+        const ti = CompatibleResolvedApplicationResourceTreeItem.Create(oldAppResource, resolved!, subscriptionContext, this) as unknown as TModel;
 
         return ti;
     }

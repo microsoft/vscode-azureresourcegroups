@@ -37,7 +37,8 @@ export class BuiltInApplicationResourceProvider implements ApplicationResourcePr
             name: nonNullProp(resourceGroup, 'name'),
             type: {
                 type: nonNullProp(resourceGroup, 'type').toLowerCase()
-            }
+            },
+            _raw: resourceGroup
         };
     }
 
@@ -58,7 +59,8 @@ export class BuiltInApplicationResourceProvider implements ApplicationResourcePr
             azExtResourceType: getAzExtResourceType({
                 type: nonNullProp(resource, 'type'),
                 kind: resource.kind
-            })
+            }),
+            _raw: resource
         };
     }
 }
