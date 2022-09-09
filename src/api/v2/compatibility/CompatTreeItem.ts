@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtResourceType, AzExtTreeItem, IActionContext, ISubscriptionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtResourceType, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ISubscriptionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import type { AppResource, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { TreeItemCollapsibleState } from "vscode";
 import { getIconPath } from "../../../utils/azureUtils";
@@ -20,28 +20,6 @@ export class CompatTreeItem extends AzExtParentTreeItem {
 
     public valuesToMask: string[] = [];
 
-    public get description(): string | undefined {
-        return this.resolveResult?.description;
-    }
-
-    public get collapsibleState(): TreeItemCollapsibleState | undefined {
-        return this.resolveResult?.initialCollapsibleState ?? !!this.resolveResult?.loadMoreChildrenImpl ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
-    }
-
-    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
-        if (this.resolveResult?.loadMoreChildrenImpl) {
-            // this is actually calling resolveResult.loadMoreChildrenImpl through the Proxy so that the function has the correct thisArg
-            return await this.loadMoreChildrenImpl(clearCache, context);
-        } else {
-            return [];
-        }
-    }
-
-    public hasMoreChildrenImpl(): boolean {
-        return false;
-    }
-
-    public parent?: AzExtParentTreeItem | undefined;
     public static contextValue: string = 'azureResource';
 
     public readonly cTime: number = Date.now();
@@ -55,12 +33,15 @@ export class CompatTreeItem extends AzExtParentTreeItem {
 
     public isHidden: boolean;
 
-    public override get subscription(): ISubscriptionContext {
-        return this.__subscription;
-    }
+    private constructor(resource: AppResource, resolved: ResolvedAppResourceBase, __subscription: ISubscriptionContext, __treeDataProvider: AzExtTreeDataProvider) {
+        const fakeParent: Partial<AzExtParentTreeItem> = {
+            treeDataProvider: __treeDataProvider,
+            valuesToMask: [],
+            subscription: __subscription,
+            parent: undefined,
+        };
 
-    private constructor(resource: AppResource, resolved: ResolvedAppResourceBase, private readonly __subscription: ISubscriptionContext) {
-        super(undefined as unknown as AzExtParentTreeItem);
+        super(fakeParent as unknown as AzExtParentTreeItem);
 
         this.resolveResult = resolved;
 
@@ -75,8 +56,8 @@ export class CompatTreeItem extends AzExtParentTreeItem {
         this.tags = resource.tags;
     }
 
-    public static Create(resource: AppResource, resolveResult: ResolvedAppResourceBase, subscription: ISubscriptionContext): CompatTreeItem {
-        const resolvable: CompatTreeItem = new CompatTreeItem(resource, resolveResult, subscription);
+    public static Create(resource: AppResource, resolveResult: ResolvedAppResourceBase, subscription: ISubscriptionContext, treeDataProvider: AzExtTreeDataProvider): CompatTreeItem {
+        const resolvable: CompatTreeItem = new CompatTreeItem(resource, resolveResult, subscription, treeDataProvider);
         const providerHandler: ProxyHandler<CompatTreeItem> = {
             get: (target: CompatTreeItem, name: string): unknown => {
                 return resolvable?.resolveResult?.[name] ?? target[name];
@@ -105,6 +86,27 @@ export class CompatTreeItem extends AzExtParentTreeItem {
         return new Proxy(resolvable, providerHandler);
     }
 
+    public get description(): string | undefined {
+        return this.resolveResult?.description;
+    }
+
+    public get collapsibleState(): TreeItemCollapsibleState | undefined {
+        return this.resolveResult?.initialCollapsibleState ?? !!this.resolveResult?.loadMoreChildrenImpl ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
+    }
+
+    public async loadMoreChildrenImpl(clearCache: boolean, context: IActionContext): Promise<AzExtTreeItem[]> {
+        if (this.resolveResult?.loadMoreChildrenImpl) {
+            // this is actually calling resolveResult.loadMoreChildrenImpl through the Proxy so that the function has the correct thisArg
+            return await this.loadMoreChildrenImpl(clearCache, context);
+        } else {
+            return [];
+        }
+    }
+
+    public hasMoreChildrenImpl(): boolean {
+        return false;
+    }
+
     public get name(): string {
         return nonNullProp(this.data, 'name');
     }
@@ -120,7 +122,6 @@ export class CompatTreeItem extends AzExtParentTreeItem {
     public get iconPath(): TreeItemIconPath {
         return getIconPath(this.data.azExtResourceType);
     }
-
 
     public async refreshImpl(): Promise<void> {
         this.mTime = Date.now();

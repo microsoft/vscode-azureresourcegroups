@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ApplicationResource, BranchDataProvider, ResourceModelBase, WrappedResourceModel } from '../../api/v2/v2AzureResourcesApi';
+import { ApplicationResource, Box, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
@@ -7,7 +7,7 @@ export type BranchDataItemOptions = {
     defaults?: vscode.TreeItem;
 };
 
-export class BranchDataItem implements ResourceGroupsItem, WrappedResourceModel {
+export class BranchDataItem implements ResourceGroupsItem, Box {
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
@@ -33,7 +33,7 @@ export class BranchDataItem implements ResourceGroupsItem, WrappedResourceModel 
         }
     }
 
-    unwrap<T extends ResourceModelBase>(): T | undefined {
+    unwrap<T>(): T {
         return this.branchItem as T;
     }
 

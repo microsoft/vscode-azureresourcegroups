@@ -263,7 +263,7 @@
             "view/title": [
                 {
                     "command": "azureResourceGroups.createResource",
-                    "when": "view == azureResourceGroups",
+                    "when": "view == azureResourceGroups || view == azureResourceGroupsV2",
                     "group": "navigation@1"
                 },
                 {
@@ -335,7 +335,7 @@
                 },
                 {
                     "command": "azureResourceGroups.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
+                    "when": "view == azureResourceGroupsV2 && viewItem =~ /azureResource(?!Type)/",
                     "group": "9@2"
                 },
                 {
@@ -350,7 +350,7 @@
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
+                    "when": "view == azureResourceGroupsV2 && viewItem =~ /azureResource(?!Type)/",
                     "group": "9@1"
                 },
                 {
@@ -590,7 +590,7 @@
         "@azure/arm-resources": "5.0.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.0.0",
         "@microsoft/vscode-azext-azureutils": "^0.3.4",
-        "@microsoft/vscode-azext-utils": "^0.3.14",
+        "@microsoft/vscode-azext-utils": "file:../vscode-azuretools/utils/microsoft-vscode-azext-utils-0.3.15.tgz",
         "fs-extra": "^8.1.0",
         "jsonc-parser": "^2.2.1",
         "open": "^8.0.4",

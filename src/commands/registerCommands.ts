@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtTreeItem, IActionContext, openUrl, registerCommand, registerCommandWithTreeNodeUnboxing, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { AzExtTreeItem, IActionContext, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
 import { clearActivities } from './activities/clearActivities';
@@ -32,11 +32,11 @@ export function registerCommands(refreshEventEmitter: vscode.EventEmitter<void>)
     registerCommand('azureResourceGroups.deleteResourceGroup', deleteResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
     registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.appResourceTree.loadMore(node, context));
-    registerCommand('azureResourceGroups.openInPortal', openInPortal);
+    registerCommandWithTreeNodeUnboxing('azureResourceGroups.openInPortal', openInPortal);
     registerCommand('azureResourceGroups.refresh', async (context: IActionContext, node?: AzExtTreeItem) => { await ext.appResourceTree.refresh(context, node); refreshEventEmitter.fire(); });
     registerCommand('azureResourceGroups.revealResource', revealResource);
     registerCommand('azureResourceGroups.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
-    registerCommand('azureResourceGroups.viewProperties', viewProperties);
+    registerCommandWithTreeNodeUnboxing('azureResourceGroups.viewProperties', viewProperties);
     registerCommand('azureResourceGroups.editTags', editTags);
 
     registerCommand('ms-azuretools.getStarted', getStarted);

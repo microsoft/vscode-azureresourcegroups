@@ -4,11 +4,10 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
-import { ApplicationResource } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { Disposable } from "vscode";
 import { ext } from "../extensionVariables";
-import { CompatibleBranchDataProvider } from "../tree/v2/providers/CompatibleBranchDataProvider";
-import { BranchDataProvider, ResourceModelBase } from "./v2/v2AzureResourcesApi";
+import { CompatibleBranchDataProvider } from "./v2/compatibility/CompatibleBranchDataProvider";
+import { ApplicationResource, BranchDataProvider, ResourceModelBase } from "./v2/v2AzureResourcesApi";
 
 export const applicationResourceResolvers: Record<string, AppResourceResolver> = {};
 

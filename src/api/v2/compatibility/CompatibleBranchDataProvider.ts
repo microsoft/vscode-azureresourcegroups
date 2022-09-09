@@ -14,7 +14,7 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
     private readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();
 
     public constructor(private readonly resolver: AppResourceResolver, loadMoreCommandId: string) {
-        super(undefined as unknown as AzExtParentTreeItem, loadMoreCommandId);
+        super({} as unknown as AzExtParentTreeItem, loadMoreCommandId);
     }
 
     //#region TreeDataProvider
@@ -48,15 +48,7 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
 
         const resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
 
-        const ti = CompatTreeItem.Create(oldAppResource, resolved!, subscriptionContext) as unknown as TModel;
-
-        ti.treeDataProvider = this;
-        ti._treeDataProvider = this;
-
-        ti.parent = {
-            treeDataProvider: this,
-            valuesToMask: [],
-        }
+        const ti = CompatTreeItem.Create(oldAppResource, resolved!, subscriptionContext, this) as unknown as TModel;
 
         return ti;
     }
