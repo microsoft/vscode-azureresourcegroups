@@ -19,6 +19,13 @@ export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase 
         return treeItem;
     }
 
+    public get quickPickOptions(): { readonly contextValues: string[]; readonly isLeaf: boolean; } {
+        return {
+            contextValues: [],
+            isLeaf: true,
+        };
+    }
+
     id: string;
     name: string;
     type: string;

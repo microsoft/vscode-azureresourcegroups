@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider } from '../../../api/v2/v2AzureResourcesApi';
+import { localize } from "../../../utils/localize";
 import { BuiltInApplicationResourceItem } from './BuiltInApplicationResourceItem';
 import { BuiltInResourceModelBase } from './BuiltInResourceModelBase';
-import { localize } from "../../../utils/localize";
 
 export class BuiltInApplicationResourceBranchDataProvider implements BranchDataProvider<ApplicationResource, BuiltInResourceModelBase> {
-    getChildren(element?: BuiltInResourceModelBase | undefined): vscode.ProviderResult<BuiltInResourceModelBase[]> {
+    getChildren(element: BuiltInResourceModelBase): vscode.ProviderResult<BuiltInResourceModelBase[]> {
         if (!element) {
             throw new Error(localize('UnexpectedElement', 'Expected a valid element.'));
         }
