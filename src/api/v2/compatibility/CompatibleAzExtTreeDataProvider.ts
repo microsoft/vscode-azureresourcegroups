@@ -9,15 +9,15 @@ import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
 
 /**
  * An intermediate class that exists just to redeclare several events as abstract, so they
- * can be re-redeclared as a accessors in {@link AzExtTreeDataProviderLike} below
+ * can be re-redeclared as a accessors in {@link CompatibleAzExtTreeDataProvider} below
  */
-abstract class IntermediateAzExtTreeDataProviderLike extends AzExtTreeDataProvider {
+abstract class IntermediateCompatibleAzExtTreeDataProvider extends AzExtTreeDataProvider {
     public abstract onDidChangeTreeData: Event<AzExtTreeItem | undefined>;
     public abstract onTreeItemCreate: Event<AzExtTreeItem>;
     public abstract onDidExpandOrRefreshExpandedTreeItem: Event<AzExtTreeItem>;
 }
 
-export class AzExtTreeDataProviderLike extends IntermediateAzExtTreeDataProviderLike {
+export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExtTreeDataProvider {
     public constructor(private readonly tdp: TreeDataProvider<ResourceGroupsItem>) {
         super(undefined as unknown as AzExtParentTreeItem, undefined as unknown as string);
     }
