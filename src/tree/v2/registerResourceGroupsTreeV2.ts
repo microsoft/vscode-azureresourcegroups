@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../api/v2/providers/ApplicationResourceProviderManager';
+import { ext } from '../../extensionVariables';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
 import { createBranchDataItemFactory } from './BranchDataItem';
 import { createGroupingItemFactory } from './GroupingItem';
@@ -19,9 +20,9 @@ export function registerResourceGroupsTreeV2(
 
     context.subscriptions.push(resourceGroupingManager);
 
-    const treeDataProvider = new ResourceGroupsTreeDataProvider(branchDataProviderManager, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
+    ext.v2.resourceGroupsTreeDataProvider = new ResourceGroupsTreeDataProvider(branchDataProviderManager, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
 
-    context.subscriptions.push(treeDataProvider);
+    context.subscriptions.push(ext.v2.resourceGroupsTreeDataProvider);
 
-    context.subscriptions.push(vscode.window.registerTreeDataProvider('azureResourceGroupsV2', treeDataProvider));
+    context.subscriptions.push(vscode.window.registerTreeDataProvider('azureResourceGroupsV2', ext.v2.resourceGroupsTreeDataProvider));
 }

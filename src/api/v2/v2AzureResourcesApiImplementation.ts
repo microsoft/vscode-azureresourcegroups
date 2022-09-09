@@ -1,22 +1,28 @@
+import { ContextValueFilterableTreeNode } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { BranchDataProviderManager } from '../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from './providers/ApplicationResourceProviderManager';
-import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
+import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     public static apiVersion: string = '2.0.0';
 
     constructor(
         private readonly branchDataProviderManager: BranchDataProviderManager,
-        private readonly resourceProviderManager: ApplicationResourceProviderManager) {
-    }
+        private readonly resourceProviderManager: ApplicationResourceProviderManager,
+        private readonly resourceGroupsTreeDataProvider: vscode.TreeDataProvider<ContextValueFilterableTreeNode>
+    ) { }
 
     get apiVersion(): string {
         return V2AzureResourcesApiImplementation.apiVersion;
     }
 
-    pickResource<TModel>(_options?: ResourcePickOptions | undefined): vscode.ProviderResult<TModel> {
-        throw new Error("Method not implemented.");
+    public getResourceGroupsTreeDataProvider(): vscode.TreeDataProvider<ContextValueFilterableTreeNode> {
+        return this.resourceGroupsTreeDataProvider;
+    }
+
+    public async pickResource<TModel extends ResourceModelBase>(): Promise<TModel> {
+        throw new Error("Method not implemented");
     }
 
     revealResource(_resourceId: string): Promise<void> {

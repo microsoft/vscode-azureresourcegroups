@@ -1,6 +1,6 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
-import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
+import { ContextValueFilterableTreeNode } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 
 export interface ApplicationAuthentication {
@@ -31,7 +31,7 @@ export interface ApplicationResourceType {
 }
 
 /**
- * Represents an individual resource in Azure.
+ * Represents an individual resource in Azure.e
  * @remarks The `id` property is expected to be the Azure resource ID.
  */
 export interface ApplicationResource extends ResourceBase {
@@ -63,8 +63,8 @@ export interface ApplicationResourceProvider extends ResourceProviderBase<Applic
 }
 
 export interface ResourceQuickPickOptions {
-    readonly contexts?: string[];
-    readonly isParent?: boolean;
+    readonly contexts: string[];
+    readonly isLeaf: boolean;
 }
 
 export interface ResourceModelBase {
@@ -166,12 +166,12 @@ export interface ResourcePickOptions {
     /**
      * Options to filter the picks to resources that match any of the provided filters
      */
-    filter?: AppResourceFilter | AppResourceFilter[];
+    filter?: Filter<ApplicationResource>;
 
     /**
      * Set this to pick a child of the selected app resource
      */
-    expectedChildContextValue?: string | RegExp | (string | RegExp)[];
+    childFilter?: Filter<ResourceModelBase>;
 
     /**
      * Whether `AppResourceTreeItem`s should be resolved before displaying them as quick picks, or only once one has been selected
@@ -185,10 +185,13 @@ export interface ResourcePickOptions {
  * The current (v2) Azure Resources extension API.
  */
 export interface V2AzureResourcesApi extends AzureResourcesApiBase {
+
+    getResourceGroupsTreeDataProvider(): vscode.TreeDataProvider<ContextValueFilterableTreeNode>;
+
     /**
      * Show a quick picker of app resources. Set `options.type` to filter the picks.
      */
-    pickResource<TModel>(options?: ResourcePickOptions): vscode.ProviderResult<TModel>
+    pickResource<TModel extends ResourceModelBase>(options: ResourcePickOptions): Promise<TModel>;
 
     /**
      * Reveals an item in the application/workspace resource tree
@@ -250,4 +253,8 @@ export interface AzureResourcesApiManager {
      * @returns The requested API or undefined, if not available.
      */
     getApi<T extends AzureResourcesApiBase>(versionRange: string, options?: GetApiOptions): T | undefined
+}
+
+export interface Filter<T> {
+    matches(value: T): boolean;
 }

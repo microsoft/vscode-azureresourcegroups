@@ -135,7 +135,9 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                                             subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
                                             subscriptionPath: subscription.subscription.id || 'TODO: ever undefined?',
                                             tenantId: subscription.session.tenantId,
-                                        }));
+                                        }
+                                    )
+                                );
                             }
                         } else if (api.status === 'LoggedOut') {
                             return [

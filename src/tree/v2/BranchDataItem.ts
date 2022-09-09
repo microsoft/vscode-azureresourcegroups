@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ApplicationResource, Box, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { ApplicationResource, Box, BranchDataProvider, ResourceModelBase, ResourceQuickPickOptions } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
@@ -22,6 +22,14 @@ export class BranchDataItem implements ResourceGroupsItem, Box {
         const factory = createBranchDataItemFactory(this.itemCache);
 
         return children?.map(child => factory(child, this.branchDataProvider));
+    }
+
+    public get resource(): ApplicationResource | undefined {
+        return this.branchItem.resource;
+    }
+
+    public get quickPickOptions(): ResourceQuickPickOptions | undefined {
+        return this.branchItem.quickPickOptions;
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {
