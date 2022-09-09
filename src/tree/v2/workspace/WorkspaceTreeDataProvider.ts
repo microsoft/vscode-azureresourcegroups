@@ -6,9 +6,9 @@ import { WorkspaceItem } from './WorkspaceItem';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 
 export class WorkspaceTreeDataProvider extends vscode.Disposable implements vscode.TreeDataProvider<WorkspaceItem> {
+    private readonly branchDataProviderManagerListener: vscode.Disposable;
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | WorkspaceItem | WorkspaceItem[] | null | undefined>();
     private readonly providerManagerListener: vscode.Disposable;
-
     private readonly refreshListener: vscode.Disposable;
 
     constructor(
@@ -17,10 +17,14 @@ export class WorkspaceTreeDataProvider extends vscode.Disposable implements vsco
         private readonly resourceProviderManager: WorkspaceResourceProviderManager) {
         super(
             () => {
+                this.branchDataProviderManagerListener.dispose();
                 this.onDidChangeTreeDataEmitter.dispose();
                 this.providerManagerListener.dispose();
                 this.refreshListener.dispose();
             });
+
+        // TODO: Whittle this down to only the resources that have changed.
+        this.branchDataProviderManagerListener = this.branchDataProviderManager.onDidChangeTreeData(() => this.onDidChangeTreeDataEmitter.fire());
 
         this.providerManagerListener = this.resourceProviderManager.onDidChangeResourceChange(
             () => {
