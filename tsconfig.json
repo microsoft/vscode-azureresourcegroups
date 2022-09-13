@@ -13,7 +13,7 @@
         "noImplicitReturns": true,
         "strictNullChecks": true,
         "noUnusedParameters": true,
-        "baseUrl": "./",
+        "str""baseUrl": "./",
         "paths": {
             "*": [
                 "node_modules/@types/*",
