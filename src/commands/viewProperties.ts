@@ -4,15 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
+import { pickAppResource } from '../api/pickAppResource';
 import { BuiltInApplicationResourceItem } from '../tree/v2/providers/BuiltInApplicationResourceItem';
 
-export async function viewProperties(context: IActionContext, node?: BuiltInApplicationResourceItem): Promise<void> {
+export async function viewProperties(context: IActionContext, node?: BuiltInApplicationResourceItem, foo: any, ...foos: any[]): Promise<void> {
     // TODO
-    // if (!node) {
-    //     node = await pickAppResource<AppResourceTreeItem>(context);
-    // }
-
-    if (node) {
-        await openReadOnlyJson({ fullId: node.id, label: node.name }, node.data);
+    if (!node) {
+        node = await pickAppResource<BuiltInApplicationResourceItem>(context);
     }
+
+    await openReadOnlyJson({ fullId: node.id, label: node.name }, node.data);
 }

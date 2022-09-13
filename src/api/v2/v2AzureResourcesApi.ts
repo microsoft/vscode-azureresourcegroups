@@ -1,5 +1,5 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
-import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
+import { AzExtResourceType, IActionContext } from '@microsoft/vscode-azext-utils';
 import { ContextValueFilterableTreeNode } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 
@@ -62,9 +62,17 @@ export interface ApplicationResourceProvider extends ResourceProviderBase<Applic
     getResources(subscription: ApplicationSubscription, options?: ProvideResourceOptions): vscode.ProviderResult<ApplicationResource[]>;
 }
 
+type CreateCallback<TNode = unknown> = (context: IActionContext) => TNode | Promise<TNode>;
+
+type CreateOptions<TNode = unknown> = {
+    label?: string;
+    callback: CreateCallback<TNode>;
+}
+
 export interface ResourceQuickPickOptions {
-    readonly contexts: string[];
+    readonly contextValues: string[];
     readonly isLeaf: boolean;
+    readonly createChild?: CreateOptions;
 }
 
 export interface ResourceModelBase {

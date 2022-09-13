@@ -38,7 +38,7 @@ export class BuiltInApplicationResourceProvider implements ApplicationResourcePr
             type: {
                 type: nonNullProp(resourceGroup, 'type').toLowerCase()
             },
-            _raw: resourceGroup
+            _raw: resourceGroup as unknown as Record<string, unknown>
         };
     }
 
@@ -60,7 +60,7 @@ export class BuiltInApplicationResourceProvider implements ApplicationResourcePr
                 type: nonNullProp(resource, 'type'),
                 kind: resource.kind
             }),
-            _raw: resource
+            _raw: resource as Record<string, unknown>
         };
     }
 }

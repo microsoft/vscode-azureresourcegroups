@@ -7,6 +7,7 @@ import { AzExtParentTreeItem, AzExtResourceType, AzExtTreeDataProvider, AzExtTre
 import type { AppResource, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { TreeItemCollapsibleState } from "vscode";
 import { getIconPath } from "../../../utils/azureUtils";
+import { ApplicationResource } from "../v2AzureResourcesApi";
 
 /**
  * Must immitate the behavior of AppResourceTreeItem
@@ -48,8 +49,8 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
         return this.resolveResult?.initialCollapsibleState ?? !!this.resolveResult?.loadMoreChildrenImpl ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
     }
 
-    public static Create(resource: AppResource, resolveResult: ResolvedAppResourceBase, subscription: ISubscriptionContext, treeDataProvider: AzExtTreeDataProvider): CompatibleResolvedApplicationResourceTreeItem {
-        const resolvable: CompatibleResolvedApplicationResourceTreeItem = new CompatibleResolvedApplicationResourceTreeItem(resource, resolveResult, subscription, treeDataProvider);
+    public static Create(resource: AppResource, resolveResult: ResolvedAppResourceBase, subscription: ISubscriptionContext, treeDataProvider: AzExtTreeDataProvider, applicationResource: ApplicationResource): CompatibleResolvedApplicationResourceTreeItem {
+        const resolvable: CompatibleResolvedApplicationResourceTreeItem = new CompatibleResolvedApplicationResourceTreeItem(resource, resolveResult, subscription, treeDataProvider, applicationResource);
         const providerHandler: ProxyHandler<CompatibleResolvedApplicationResourceTreeItem> = {
             get: (target: CompatibleResolvedApplicationResourceTreeItem, name: string): unknown => {
                 return resolvable?.resolveResult?.[name] ?? target[name];
@@ -78,7 +79,9 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
         return new Proxy(resolvable, providerHandler);
     }
 
-    private constructor(resource: AppResource, resolved: ResolvedAppResourceBase, __subscription: ISubscriptionContext, __treeDataProvider: AzExtTreeDataProvider) {
+    public readonly resource: ApplicationResource;
+
+    private constructor(resource: AppResource, resolved: ResolvedAppResourceBase, __subscription: ISubscriptionContext, __treeDataProvider: AzExtTreeDataProvider, applicationResource: ApplicationResource) {
         const fakeParent: Partial<AzExtParentTreeItem> = {
             treeDataProvider: __treeDataProvider,
             valuesToMask: [],
@@ -88,6 +91,7 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
 
         super(fakeParent as unknown as AzExtParentTreeItem);
 
+        this.resource = applicationResource;
         this.resolveResult = resolved;
         this.data = resource;
         this.tags = resource.tags;

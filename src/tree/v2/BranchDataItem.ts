@@ -1,3 +1,4 @@
+import { AzExtParentTreeItem, AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, Box, BranchDataProvider, ResourceModelBase, ResourceQuickPickOptions } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
@@ -29,7 +30,24 @@ export class BranchDataItem implements ResourceGroupsItem, Box {
     }
 
     public get quickPickOptions(): ResourceQuickPickOptions | undefined {
-        return this.branchItem.quickPickOptions;
+        if (this.branchItem.quickPickOptions) {
+            return this.branchItem.quickPickOptions;
+        }
+
+        const ti = this.branchItem as AzExtTreeItem;
+
+        const maybeParent = ti as AzExtParentTreeItem;
+
+        return {
+            contextValues: ti.contextValue.split(';'),
+            isLeaf: !maybeParent?.loadMoreChildrenImpl,
+            createChild: maybeParent.createChild ? {
+                callback(context) {
+                    return maybeParent.createChild(context);
+                },
+                label: maybeParent.createNewLabel ?? maybeParent.childTypeLabel ? `$(plus) Create new ${maybeParent.childTypeLabel}` : undefined
+            } : undefined
+        }
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {
