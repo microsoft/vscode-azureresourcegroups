@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 import { BranchDataProvider, ResourceModelBase, WorkspaceResource } from '../../../api/v2/v2AzureResourcesApi';
-import { WorkspaceItem } from "./WorkspaceItem";
+import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
-export class BranchDataProviderItem implements WorkspaceItem {
+export class BranchDataProviderItem implements ResourceGroupsItem {
     constructor(
         private readonly branchDataProvider: BranchDataProvider<WorkspaceResource, ResourceModelBase>,
         private readonly item: ResourceModelBase) {
     }
 
-    async getChildren(): Promise<WorkspaceItem[]> {
+    async getChildren(): Promise<ResourceGroupsItem[]> {
         const children = await this.branchDataProvider.getChildren(this.item);
 
         return children?.map(child => new BranchDataProviderItem(this.branchDataProvider, child)) ?? [];
