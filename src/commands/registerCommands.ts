@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, IActionContext, openUrl, registerCommand, registerCommandWithTreeNodeUnboxing, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
@@ -32,11 +32,11 @@ export function registerCommands(refreshEventEmitter: vscode.EventEmitter<void>)
     registerCommand('azureResourceGroups.deleteResourceGroup', deleteResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
     registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.appResourceTree.loadMore(node, context));
-    registerCommandWithTreeNodeUnboxing('azureResourceGroups.openInPortal', openInPortal);
+    registerCommandWithTreeNodeUnwrapping('azureResourceGroups.openInPortal', openInPortal);
     registerCommand('azureResourceGroups.refresh', async (context: IActionContext, node?: AzExtTreeItem) => { await ext.appResourceTree.refresh(context, node); refreshEventEmitter.fire(); });
     registerCommand('azureResourceGroups.revealResource', revealResource);
     registerCommand('azureResourceGroups.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
-    registerCommandWithTreeNodeUnboxing('azureResourceGroups.viewProperties', viewProperties);
+    registerCommandWithTreeNodeUnwrapping('azureResourceGroups.viewProperties', viewProperties);
     registerCommand('azureResourceGroups.editTags', editTags);
 
     registerCommand('ms-azuretools.getStarted', getStarted);

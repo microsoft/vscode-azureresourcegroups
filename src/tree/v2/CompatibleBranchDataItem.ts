@@ -1,7 +1,7 @@
-import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeItem, CompatibleContextValueFilterableTreeNode, CompatibleQuickPickOptions } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ApplicationResource, Box, BranchDataProvider, ResourceModelBase, ResourceQuickPickOptions } from '../../api/v2/v2AzureResourcesApi';
-import { CompatibleBranchDataItem } from './CompatibleBranchDataItem';
+import { ApplicationResource, Box, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { createBranchDataItemFactory } from './BranchDataItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
@@ -9,7 +9,7 @@ export type BranchDataItemOptions = {
     defaults?: vscode.TreeItem;
 };
 
-export class BranchDataItem implements ResourceGroupsItem, Box {
+export class CompatibleBranchDataItem implements ResourceGroupsItem, Box, CompatibleContextValueFilterableTreeNode {
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
@@ -30,8 +30,21 @@ export class BranchDataItem implements ResourceGroupsItem, Box {
         return this.branchItem.resource;
     }
 
-    public get quickPickOptions(): ResourceQuickPickOptions | undefined {
-        return this.branchItem.quickPickOptions;
+    public get quickPickOptions(): CompatibleQuickPickOptions {
+        const ti = this.branchItem as AzExtTreeItem;
+
+        const maybeParent = ti as AzExtParentTreeItem;
+
+        const createChild = maybeParent.createChild ? {
+            callback: maybeParent.createChild.bind(maybeParent) as typeof maybeParent.createChild,
+            label: maybeParent.createNewLabel ?? maybeParent.childTypeLabel ? `$(plus) Create new ${maybeParent.childTypeLabel}` : undefined
+        } : undefined
+
+        return {
+            contextValues: ti.contextValue.split(';'),
+            isLeaf: !maybeParent?.loadMoreChildrenImpl,
+            createChild,
+        }
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {
@@ -51,17 +64,4 @@ export class BranchDataItem implements ResourceGroupsItem, Box {
     id: string;
     name: string;
     type: string;
-}
-
-export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItem | CompatibleBranchDataItem;
-
-export function createBranchDataItemFactory(itemCache: ResourceGroupsItemCache): BranchDataItemFactory {
-    return (branchItem, branchDataProvider, options) => {
-        return isAzExtTreeItem(branchItem) ? new CompatibleBranchDataItem(branchItem, branchDataProvider, itemCache, options) : new BranchDataItem(branchItem, branchDataProvider, itemCache, options);
-    }
-}
-
-
-function isAzExtTreeItem(ti: unknown): ti is AzExtTreeItem {
-    return (ti as AzExtTreeItem)._isAzExtTreeItem;
 }
