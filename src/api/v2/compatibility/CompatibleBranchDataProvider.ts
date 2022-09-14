@@ -10,6 +10,9 @@ import type { ApplicationResource, BranchDataProvider, ResourceModelBase } from 
 import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
 import { CompatibleResolvedApplicationResourceTreeItem } from './CompatibleApplicationResourceTreeItem';
 
+/**
+ * Provides compatibility between an `AppResourceResolver` (v1) and a `BranchDataProvider` (v2)
+ */
 export class CompatibleBranchDataProvider<TResource extends ApplicationResource, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel> {
     private readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();
 
