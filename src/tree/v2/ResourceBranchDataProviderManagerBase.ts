@@ -22,6 +22,8 @@ export abstract class ResourceBranchDataProviderManagerBase<TBranchDataProvider 
     public readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
     addProvider(type: string, provider: TBranchDataProvider): void {
+        type = this.normalizeType(type);
+
         this.branchDataProviderMap.set(
             type,
             {
@@ -33,7 +35,10 @@ export abstract class ResourceBranchDataProviderManagerBase<TBranchDataProvider 
         this.onDidChangeTreeDataEmitter.fire();
     }
 
+    // TODO: We may need to allow for a more complicated type/kind mapping.
     getProvider(type: string): TBranchDataProvider {
+        type = this.normalizeType(type);
+
         const providerContext = this.branchDataProviderMap.get(type);
 
         if (providerContext) {
@@ -49,6 +54,8 @@ export abstract class ResourceBranchDataProviderManagerBase<TBranchDataProvider 
     }
 
     removeProvider(type: string): void {
+        type = this.normalizeType(type);
+
         const providerContext = this.branchDataProviderMap.get(type);
 
         if (providerContext) {
@@ -58,5 +65,9 @@ export abstract class ResourceBranchDataProviderManagerBase<TBranchDataProvider 
 
             this.onDidChangeTreeDataEmitter.fire();
         }
+    }
+
+    private normalizeType(type: string): string {
+        return type.toLowerCase();
     }
 }

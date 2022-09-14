@@ -119,7 +119,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     const branchDataProviderManager = new BranchDataProviderManager(
         new BuiltInApplicationResourceBranchDataProvider(),
-        extensionManager);
+        type => void extensionManager.activateApplicationResourceBranchDataProvider(type));
 
     context.subscriptions.push(branchDataProviderManager);
 

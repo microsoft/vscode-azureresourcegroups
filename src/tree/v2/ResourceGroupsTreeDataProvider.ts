@@ -15,7 +15,6 @@ import { SubscriptionItem } from './SubscriptionItem';
 export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupsItem> {
     private readonly branchChangeSubscription: vscode.Disposable;
     private readonly groupingChangeSubscription: vscode.Disposable;
-    private readonly providersChangeSubscription: vscode.Disposable;
     private readonly refreshSubscription: vscode.Disposable;
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
 
@@ -34,12 +33,9 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
                 this.branchChangeSubscription.dispose();
                 this.groupingChangeSubscription.dispose();
                 this.filtersSubscription?.dispose();
-                this.providersChangeSubscription.dispose();
                 this.refreshSubscription.dispose();
                 this.statusSubscription?.dispose();
             });
-
-        this.providersChangeSubscription = branchDataProviderManager.onDidChangeProviders(() => this.onDidChangeTreeDataEmitter.fire());
 
         this.branchChangeSubscription = branchDataProviderManager.onDidChangeTreeData(
             (e: void | ResourceModelBase | ResourceModelBase[] | null | undefined) => {
