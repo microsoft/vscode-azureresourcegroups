@@ -60,7 +60,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         }
     }
 
-    private groupBy(context: ResourceGroupsTreeContext, resources: ApplicationResource[], keySelector: (resource: ApplicationResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: ApplicationResource[] }, contextValues?: string[], resourceTypeSelector?: (key: string) => string | undefined): GroupingItem[] {
+    private groupBy(context: ResourceGroupsTreeContext, resources: ApplicationResource[], keySelector: (resource: ApplicationResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: ApplicationResource[] }, contextValues?: (key: string) => string[], resourceTypeSelector?: (key: string) => string | undefined): GroupingItem[] {
         initialGrouping = initialGrouping ?? {};
 
         const map = resources.reduce(
@@ -81,7 +81,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         return Object.keys(map).map(key => {
             return this.groupingItemFactory(
                 context,
-                contextValues,
+                contextValues?.(key),
                 iconSelector(key),
                 labelSelector(key),
                 map[key],
@@ -132,7 +132,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             key => key,
             () => treeUtils.getIconPath('resourceGroup'),
             initialGrouping,
-            ['azureResourceGroup']
+            () => ['azureResourceGroup']
         );
 
         return groupedResources;
@@ -146,7 +146,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             key => getName(key as AzExtResourceType) ?? key,
             key => getIconPath(key as AzExtResourceType),
             undefined,
-            undefined,
+            (key) => ['azureResourceTypeGroup', key],
             key => key
         ); // TODO: What's the default icon for a resource type?
     }

@@ -49,9 +49,10 @@ export class GroupingItem implements ResourceGroupsItem {
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = new vscode.TreeItem(this.label, vscode.TreeItemCollapsibleState.Collapsed);
 
-        treeItem.contextValue = this.contextValues?.join(' ');
+        treeItem.contextValue = this.contextValues?.sort().join(';');
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
+        treeItem.tooltip = treeItem.contextValue;
 
         return treeItem;
     }
