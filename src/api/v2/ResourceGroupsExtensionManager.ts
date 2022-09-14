@@ -4,6 +4,10 @@ interface ResourceGroupsContribution {
     readonly activation?: {
         readonly onFetch?: string[];
     }
+    readonly application: {
+        readonly branches?: { type: string }[];
+        readonly resources?: { type: string }[];
+    }
     readonly workspace: {
         readonly branches?: { type: string }[];
         readonly resources?: { type: string }[];
@@ -30,6 +34,15 @@ export class ResourceGroupsExtensionManager {
                 await extensionAndContributions.extension.activate();
             }
         }
+    }
+
+    async activateApplicationResourceProviders(): Promise<void> {
+        const inActiveResourceContributors =
+            vscode.extensions.all
+                .map(extension => ({ extension, resources: (extension.packageJSON as ExtensionPackage)?.contributes?.['x-azResourcesV2']?.application?.resources ?? [] }))
+                .filter(extensionAndContributions => extensionAndContributions.resources.length > 0 && !extensionAndContributions.extension.isActive);
+
+        await Promise.all(inActiveResourceContributors.map(contributor => contributor.extension.activate()));
     }
 
     async activateWorkspaceResourceProviders(): Promise<void> {

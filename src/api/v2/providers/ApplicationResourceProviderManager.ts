@@ -1,20 +1,20 @@
-import * as vscode from 'vscode';
 import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions } from '../v2AzureResourcesApi';
+import { ResourceProviderManagerBase } from './ResourceproviderManagerBase';
 
-export class ApplicationResourceProviderManager {
-    private readonly resourceProviders: ApplicationResourceProvider[] = [];
+function isArray<T>(maybeArray: T[] | null | undefined): maybeArray is T[] {
+    return Array.isArray(maybeArray);
+}
 
-    addResourceProvider(resourceProvider: ApplicationResourceProvider): void {
-        this.resourceProviders.push(resourceProvider);
+export class ApplicationResourceProviderManager extends ResourceProviderManagerBase<ApplicationResource, ApplicationResourceProvider> {
+    constructor(extensionActivator: () => Promise<void>) {
+        super(extensionActivator);
     }
 
-    removeResourceProvider(resourceProvider: ApplicationResourceProvider): void {
-        this.resourceProviders.splice(this.resourceProviders.indexOf(resourceProvider), 1);
-    }
+    async getResources(subscription: ApplicationSubscription, options?: ProvideResourceOptions | undefined): Promise<ApplicationResource[]> {
+        const resourceProviders = await this.getResourceProviders();
 
-    getResources(subscription: ApplicationSubscription, options?: ProvideResourceOptions | undefined): vscode.ProviderResult<ApplicationResource[]> {
-        return Promise.all(this.resourceProviders.map(resourceProvider => resourceProvider.getResources(subscription, options))).then(results => {
-            return results.reduce((acc, result) => acc?.concat(result ?? []), []);
-        });
+        const resources = await Promise.all(resourceProviders.map(resourceProvider => resourceProvider.getResources(subscription, options)));
+
+        return resources.filter(isArray).reduce((acc, result) => acc?.concat(result ?? []), []);
     }
 }
