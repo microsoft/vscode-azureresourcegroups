@@ -3,8 +3,7 @@ import { ResourceBase, ResourceProviderBase } from '../v2AzureResourcesApi';
 
 export abstract class ResourceProviderManagerBase<TResource extends ResourceBase, TResourceProvider extends ResourceProviderBase<TResource>> extends vscode.Disposable {
     private readonly onDidChangeResourceEventEmitter = new vscode.EventEmitter<TResource | undefined>();
-    private readonly resourceProviders: TResourceProvider[] = [];
-    private readonly providerListeners = new Map<TResourceProvider, vscode.Disposable>();
+    private readonly providers = new Map<TResourceProvider, { listener: vscode.Disposable | undefined }>();
 
     private isActivating = false;
 
@@ -13,8 +12,8 @@ export abstract class ResourceProviderManagerBase<TResource extends ResourceBase
     constructor(private readonly extensionActivator: () => Promise<void>) {
         super(
             () => {
-                for (const listener of this.providerListeners.values()) {
-                    listener.dispose();
+                for (const context of this.providers.values()) {
+                    context.listener?.dispose();
                 }
 
                 this.onDidChangeResourceEventEmitter.dispose();
@@ -24,11 +23,7 @@ export abstract class ResourceProviderManagerBase<TResource extends ResourceBase
     }
 
     addResourceProvider(resourceProvider: TResourceProvider): void {
-        this.resourceProviders.push(resourceProvider);
-
-        if (resourceProvider.onDidChangeResource) {
-            this.providerListeners.set(resourceProvider, resourceProvider.onDidChangeResource(resource => this.onDidChangeResourceEventEmitter.fire(resource)));
-        }
+        this.providers.set(resourceProvider, { listener: resourceProvider.onDidChangeResource?.(resource => this.onDidChangeResourceEventEmitter.fire(resource)) });
 
         if (!this.isActivating) {
             this.onDidChangeResourceEventEmitter.fire(undefined);
@@ -36,14 +31,12 @@ export abstract class ResourceProviderManagerBase<TResource extends ResourceBase
     }
 
     removeResourceProvider(resourceProvider: TResourceProvider): void {
-        this.resourceProviders.splice(this.resourceProviders.indexOf(resourceProvider), 1);
+        const context = this.providers.get(resourceProvider);
 
-        const listener = this.providerListeners.get(resourceProvider);
+        if (context) {
+            context.listener?.dispose();
 
-        if (listener) {
-            listener.dispose();
-
-            this.providerListeners.delete(resourceProvider);
+            this.providers.delete(resourceProvider);
         }
 
         if (!this.isActivating) {
@@ -54,7 +47,7 @@ export abstract class ResourceProviderManagerBase<TResource extends ResourceBase
     protected async getResourceProviders(): Promise<TResourceProvider[]> {
         await this.activateExtensions();
 
-        return this.resourceProviders;
+        return Array.from(this.providers.keys());
     }
 
     private async activateExtensions(): Promise<void> {
