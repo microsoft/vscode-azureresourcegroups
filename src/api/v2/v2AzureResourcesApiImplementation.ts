@@ -46,8 +46,8 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     }
 
     registerWorkspaceResourceBranchDataProvider<T extends ResourceModelBase>(type: string, provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable {
-        this.workspaceResourceBranchDataProviderManager.addBranchDataProvider(type, provider);
+        this.workspaceResourceBranchDataProviderManager.addProvider(type, provider);
 
-        return new vscode.Disposable(() => this.workspaceResourceBranchDataProviderManager.removeBranchDataProvider(type));
+        return new vscode.Disposable(() => this.workspaceResourceBranchDataProviderManager.removeProvider(type));
     }
 }

@@ -126,7 +126,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     const resourceProviderManager = new ApplicationResourceProviderManager(() => extensionManager.activateApplicationResourceProviders());
     const workspaceResourceBranchDataProviderManager = new WorkspaceResourceBranchDataProviderManager(
         new WorkspaceDefaultBranchDataProvider(),
-        extensionManager);
+        type => void extensionManager.activateWorkspaceResourceBranchDataProvider(type));
     const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
 
     registerResourceGroupsTreeV2(

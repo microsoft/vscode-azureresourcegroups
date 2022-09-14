@@ -56,7 +56,7 @@ export class WorkspaceTreeDataProvider extends vscode.Disposable implements vsco
     }
 
     private async getWorkspaceItemModel(resource: WorkspaceResource): Promise<WorkspaceItem> {
-        const branchDataProvider = this.branchDataProviderManager.getApplicationResourceBranchDataProvider(resource.type);
+        const branchDataProvider = this.branchDataProviderManager.getProvider(resource.type);
 
         const resourceItem = await branchDataProvider.getResourceItem(resource);
 
