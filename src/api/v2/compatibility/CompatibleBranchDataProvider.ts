@@ -17,6 +17,7 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
     private readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();
 
     public constructor(private readonly resolver: AppResourceResolver, loadMoreCommandId: string) {
+        // Using `{}` here so property assignment doesn't throw
         super({} as unknown as AzExtParentTreeItem, loadMoreCommandId);
     }
 
