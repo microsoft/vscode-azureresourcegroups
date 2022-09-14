@@ -1,6 +1,5 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
-import { AzExtResourceType, IActionContext } from '@microsoft/vscode-azext-utils';
-import { ContextValueFilterableTreeNode } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzExtResourceType, ContextValueFilterableTreeNode, FindableByIdTreeNodeV2 } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 
 export interface ApplicationAuthentication {
@@ -62,21 +61,7 @@ export interface ApplicationResourceProvider extends ResourceProviderBase<Applic
     getResources(subscription: ApplicationSubscription, options?: ProvideResourceOptions): vscode.ProviderResult<ApplicationResource[]>;
 }
 
-type CreateCallback<TNode = unknown> = (context: IActionContext) => TNode | Promise<TNode>;
-
-type CreateOptions<TNode = unknown> = {
-    label?: string;
-    callback: CreateCallback<TNode>;
-}
-
-export interface ResourceQuickPickOptions {
-    readonly contextValues: string[];
-    readonly isLeaf: boolean;
-    readonly createChild?: CreateOptions;
-}
-
-export interface ResourceModelBase {
-    readonly quickPickOptions?: ResourceQuickPickOptions;
+export interface ResourceModelBase extends Partial<FindableByIdTreeNodeV2> {
     readonly azureResourceId?: string;
 }
 
@@ -109,7 +94,7 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
      * @param element The element from which the provider gets children. Cannot be `undefined`.
      * @return Children of `element`.
      */
-    getChildren(element: TModel): TModel[] | Thenable<TModel[]>;
+    getChildren(element: TModel): vscode.ProviderResult<TModel[]>;
 
     /**
      * Called to get the provider's model element for a specific resource.

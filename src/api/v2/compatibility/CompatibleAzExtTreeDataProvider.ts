@@ -3,21 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, IFindTreeItemContext, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, contextValueExperience, findByIdExperience, IActionContext, IFindTreeItemContext, isWrapper, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
 import { Disposable, Event, TreeDataProvider, TreeItem, TreeView } from "vscode";
 import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
 
 /**
  * An intermediate class that exists just to redeclare several events as abstract, so they
- * can be re-redeclared as a accessors in {@link AzExtTreeDataProviderLike} below
+ * can be re-redeclared as a accessors in {@link CompatibleAzExtTreeDataProvider} below
  */
-abstract class IntermediateAzExtTreeDataProviderLike extends AzExtTreeDataProvider {
+abstract class IntermediateCompatibleAzExtTreeDataProvider extends AzExtTreeDataProvider {
     public abstract onDidChangeTreeData: Event<AzExtTreeItem | undefined>;
     public abstract onTreeItemCreate: Event<AzExtTreeItem>;
     public abstract onDidExpandOrRefreshExpandedTreeItem: Event<AzExtTreeItem>;
 }
 
-export class AzExtTreeDataProviderLike extends IntermediateAzExtTreeDataProviderLike {
+export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExtTreeDataProvider {
     public constructor(private readonly tdp: TreeDataProvider<ResourceGroupsItem>) {
         super(undefined as unknown as AzExtParentTreeItem, undefined as unknown as string);
     }
@@ -52,19 +52,29 @@ export class AzExtTreeDataProviderLike extends IntermediateAzExtTreeDataProvider
     }
     //#endregion Things that should not be called
 
-    public override findTreeItem<T extends AzExtTreeItem>(_fullId: string, _context: IFindTreeItemContext): Promise<T | undefined> {
+    public override async findTreeItem<T>(fullId: string, context: IFindTreeItemContext): Promise<T | undefined> {
         // Special handling for subscription tree item
         // Use the new finder experience
         // Unbox the item at the end
-        throw new Error('TODO: Implement this using the new find approach');
+
+        const result = await findByIdExperience(context, this.tdp, fullId);
+        return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
     }
 
-    public override showTreeItemPicker<T extends AzExtTreeItem>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext & { canPickMany: true }, startingTreeItem?: AzExtTreeItem): Promise<T[]>;
-    public override showTreeItemPicker<T extends AzExtTreeItem>(_expectedContextValues: string | RegExp | (string | RegExp)[], _context: ITreeItemPickerContext, _startingTreeItem?: AzExtTreeItem): Promise<T> {
+    public override showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext & { canPickMany: true }, startingTreeItem?: AzExtTreeItem): Promise<T[]>;
+    public override async showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext, _startingTreeItem?: AzExtTreeItem): Promise<T> {
+
         // Special handling for subscription tree item
         // Use the new finder experience
         // Unbox the item at the end
-        throw new Error('TODO: Implement this using the new find approach');
+
+        // TODO: support startingTreeItem
+
+        const result = await contextValueExperience(context, this.tdp, {
+            include: expectedContextValues,
+        });
+
+        return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
     }
 
     public override refresh(_context: IActionContext, _treeItem?: AzExtTreeItem | undefined): Promise<void> {

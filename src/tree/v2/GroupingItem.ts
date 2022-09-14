@@ -21,6 +21,13 @@ export class GroupingItem implements ResourceGroupsItem {
         public readonly resourceType?: string) {
     }
 
+    public get quickPickOptions(): { readonly contextValues: string[]; readonly isLeaf: boolean; } {
+        return {
+            contextValues: this.contextValues ?? [],
+            isLeaf: false
+        };
+    }
+
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const resourceItems = await Promise.all(this.resources.map(
             async resource => {
@@ -60,6 +67,8 @@ export class GroupingItem implements ResourceGroupsItem {
             this.context.refresh(this);
         }
     }
+
+    public id: string;
 }
 
 export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[], resourceType?: string) => GroupingItem;

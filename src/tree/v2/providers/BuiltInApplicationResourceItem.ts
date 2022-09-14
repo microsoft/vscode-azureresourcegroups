@@ -9,9 +9,6 @@ export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase 
         this.name = resource.name;
     }
 
-    id: string;
-    name: string;
-
     // needed for view properties
     public get data(): Record<string, unknown> {
         return this.resource._raw;
@@ -30,4 +27,15 @@ export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase 
 
         return treeItem;
     }
+
+    public get quickPickOptions(): { readonly contextValues: string[]; readonly isLeaf: boolean; } {
+        return {
+            contextValues: [],
+            isLeaf: true,
+        };
+    }
+
+    id: string;
+    name: string;
+    type: string;
 }

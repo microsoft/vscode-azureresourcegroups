@@ -1,6 +1,6 @@
-import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { isAzExtTreeItem, Wrapper } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ApplicationResource, Box, BranchDataProvider, ResourceModelBase, ResourceQuickPickOptions } from '../../api/v2/v2AzureResourcesApi';
+import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { CompatibleBranchDataItem } from './CompatibleBranchDataItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
@@ -9,7 +9,7 @@ export type BranchDataItemOptions = {
     defaults?: vscode.TreeItem;
 };
 
-export class BranchDataItem implements ResourceGroupsItem, Box {
+export class BranchDataItem implements ResourceGroupsItem, Wrapper {
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
@@ -30,10 +30,6 @@ export class BranchDataItem implements ResourceGroupsItem, Box {
         return this.branchItem.resource;
     }
 
-    public get quickPickOptions(): ResourceQuickPickOptions | undefined {
-        return this.branchItem.quickPickOptions;
-    }
-
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = await this.branchDataProvider.getTreeItem(this.branchItem);
 
@@ -48,6 +44,13 @@ export class BranchDataItem implements ResourceGroupsItem, Box {
         return this.branchItem as T;
     }
 
+    public get quickPickOptions(): { readonly contextValues: string[]; readonly isLeaf: boolean; } {
+        return this.branchItem.quickPickOptions ?? {
+            contextValues: [],
+            isLeaf: true,
+        };
+    }
+
     id: string;
     name: string;
     type: string;
@@ -59,9 +62,4 @@ export function createBranchDataItemFactory(itemCache: ResourceGroupsItemCache):
     return (branchItem, branchDataProvider, options) => {
         return isAzExtTreeItem(branchItem) ? new CompatibleBranchDataItem(branchItem, branchDataProvider, itemCache, options) : new BranchDataItem(branchItem, branchDataProvider, itemCache, options);
     }
-}
-
-
-function isAzExtTreeItem(ti: unknown): ti is AzExtTreeItem {
-    return (ti as AzExtTreeItem)._isAzExtTreeItem;
 }
