@@ -23,7 +23,7 @@ export function registerResourceGroupsTreeV2(
 
     ext.v2.resourceGroupsTreeDataProvider = new ResourceGroupsTreeDataProvider(branchDataProviderManager, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
 
-    context.subscriptions.push(ext.v2.resourceGroupsTreeDataProvider);
+    context.subscriptions.push(ext.v2.resourceGroupsTreeDataProvider as ResourceGroupsTreeDataProvider);
 
     context.subscriptions.push(vscode.window.registerTreeDataProvider('azureResourceGroupsV2', ext.v2.resourceGroupsTreeDataProvider));
 }

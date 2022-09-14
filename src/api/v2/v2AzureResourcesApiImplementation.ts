@@ -1,4 +1,4 @@
-import { ContextValueFilterableTreeNode } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { ContextValueFilterableTreeNode } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { BranchDataProviderManager } from '../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from './providers/ApplicationResourceProviderManager';

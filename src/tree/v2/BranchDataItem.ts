@@ -26,10 +26,6 @@ export class BranchDataItem implements ResourceGroupsItem, Wrapper {
         return children?.map(child => factory(child, this.branchDataProvider));
     }
 
-    public get resource(): ApplicationResource | undefined {
-        return this.branchItem.resource;
-    }
-
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = await this.branchDataProvider.getTreeItem(this.branchItem);
 

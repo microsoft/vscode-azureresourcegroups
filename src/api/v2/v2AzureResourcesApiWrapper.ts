@@ -1,5 +1,4 @@
-import { callWithTelemetryAndErrorHandling, callWithTelemetryAndErrorHandlingSync } from '@microsoft/vscode-azext-utils';
-import { ContextValueFilterableTreeNode } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { callWithTelemetryAndErrorHandling, callWithTelemetryAndErrorHandlingSync, ContextValueFilterableTreeNode } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 

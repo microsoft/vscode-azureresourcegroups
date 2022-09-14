@@ -1,5 +1,6 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtResourceType, ContextValueFilterableTreeNode, FindableByIdTreeNodeV2 } from '@microsoft/vscode-azext-utils';
+import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 
 export interface ApplicationAuthentication {
@@ -43,8 +44,9 @@ export interface ApplicationResource extends ResourceBase {
     readonly tags?: {
         [propertyName: string]: string;
     };
-
+    /** A copy of the raw resource intended for the viewProperties command */
     _raw: Record<string, unknown>;
+
     /* add more properties from GenericResource if needed */
 }
 
@@ -159,7 +161,7 @@ export interface ResourcePickOptions {
     /**
      * Options to filter the picks to resources that match any of the provided filters
      */
-    filter?: Filter<ApplicationResource>;
+    filter?: AppResourceFilter | AppResourceFilter[];
 
     /**
      * Set this to pick a child of the selected app resource

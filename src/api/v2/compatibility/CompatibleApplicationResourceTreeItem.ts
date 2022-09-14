@@ -82,14 +82,14 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
     public readonly resource: ApplicationResource;
 
     private constructor(resource: AppResource, resolved: ResolvedAppResourceBase, __subscription: ISubscriptionContext, __treeDataProvider: AzExtTreeDataProvider, applicationResource: ApplicationResource) {
-        const fakeParent: Partial<AzExtParentTreeItem> = {
-            treeDataProvider: __treeDataProvider,
-            valuesToMask: [],
-            subscription: __subscription,
-            parent: undefined,
-        };
-
-        super(fakeParent as unknown as AzExtParentTreeItem);
+        super(
+            (<Partial<AzExtParentTreeItem>>{
+                treeDataProvider: __treeDataProvider,
+                valuesToMask: [],
+                subscription: __subscription,
+                parent: undefined,
+            }) as unknown as AzExtParentTreeItem
+        );
 
         this.resource = applicationResource;
         this.resolveResult = resolved;

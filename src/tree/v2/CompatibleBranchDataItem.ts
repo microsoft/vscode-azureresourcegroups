@@ -26,10 +26,6 @@ export class CompatibleBranchDataItem implements ResourceGroupsItem, Box, Compat
         return children?.map(child => factory(child, this.branchDataProvider));
     }
 
-    public get resource(): ApplicationResource | undefined {
-        return this.branchItem.resource;
-    }
-
     public get quickPickOptions(): CompatibleQuickPickOptions {
         const ti = this.branchItem as AzExtTreeItem;
 
