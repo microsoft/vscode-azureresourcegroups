@@ -9,6 +9,11 @@ export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase 
         this.name = resource.name;
     }
 
+    // needed for view properties
+    public get data(): Record<string, unknown> {
+        return this.resource._raw;
+    }
+
     getChildren(): vscode.ProviderResult<BuiltInResourceModelBase[]> {
         return undefined;
     }

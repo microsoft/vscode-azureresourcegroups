@@ -350,7 +350,7 @@
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
+                    "when": "view == azureResourceGroupsV2 && viewItem =~ /azureResource(?!Type)/",
                     "group": "9@1"
                 },
                 {

@@ -44,6 +44,8 @@ export interface ApplicationResource extends ResourceBase {
     readonly tags?: {
         [propertyName: string]: string;
     };
+    /** A copy of the raw resource intended for the viewProperties command */
+    _raw: Record<string, unknown>;
     /* add more properties from GenericResource if needed */
 }
 
