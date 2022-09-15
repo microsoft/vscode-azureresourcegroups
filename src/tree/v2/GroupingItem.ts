@@ -1,4 +1,4 @@
-import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../utils/azureUtils';
@@ -19,6 +19,15 @@ export class GroupingItem implements ResourceGroupsItem {
         public readonly label: string,
         public readonly resources: ApplicationResource[],
         public readonly resourceType?: string) {
+    }
+
+    /**
+     * TODO: remove this.
+     * Only for compatibility with existing command logic. ("Create Funtion App...")
+     * @deprecated
+     */
+    public get subscription(): ISubscriptionContext {
+        return this.context.subscriptionContext;
     }
 
     public get quickPickOptions(): { readonly contextValues: string[]; readonly isLeaf: boolean; } {
