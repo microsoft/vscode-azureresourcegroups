@@ -3,7 +3,6 @@ import * as vscode from 'vscode';
 import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export class V2AzureResourcesApiWrapper implements V2AzureResourcesApi {
-
     constructor(
         private readonly api: V2AzureResourcesApi,
         private readonly extensionId: string) {
