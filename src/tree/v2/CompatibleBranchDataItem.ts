@@ -27,9 +27,7 @@ export class CompatibleBranchDataItem implements ResourceGroupsItem, Box, Compat
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const children = await this.branchDataProvider.getChildren(this.branchItem);
-
         const factory = createBranchDataItemFactory(this.itemCache);
-
         return children?.map(child => factory(child, this.branchDataProvider));
     }
 
