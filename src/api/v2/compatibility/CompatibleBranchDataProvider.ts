@@ -24,11 +24,14 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
     //#region TreeDataProvider
 
     // @ts-expect-error `getParent` is not meant to be defined by `BranchDataProvider`s but is already defined by `AzExtTreeDataProvider`
-    public override get onDidChangeTreeData(): Event<AzExtTreeItem | undefined> {
+    public override get onDidChangeTreeData(): vscode.Event<TModel | undefined> {
         return this.overrideOnDidChangeTreeDataEmitter.event;
     }
 
-    // @ts-expect-error `getParent` is not meant to be defined by `BranchDataProvider`s but is already defined by `AzExtTreeDataProvider`
+    public override set onDidChangeTreeData(_value: vscode.Event<TModel | undefined>) {
+        // Do nothing
+    }
+
     public override getParent(_treeItem: TModel): Promise<TModel> {
         throw new Error('Use the Resources extension API to do getParent');
     }
