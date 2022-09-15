@@ -166,7 +166,7 @@ export interface ResourcePickOptions {
     /**
      * Set this to pick a child of the selected app resource
      */
-    childFilter?: Filter<ResourceModelBase>;
+    childFilter?: string | RegExp | (string | RegExp)[];
 
     /**
      * Whether `AppResourceTreeItem`s should be resolved before displaying them as quick picks, or only once one has been selected
@@ -248,8 +248,4 @@ export interface AzureResourcesApiManager {
      * @returns The requested API or undefined, if not available.
      */
     getApi<T extends AzureResourcesApiBase>(versionRange: string, options?: GetApiOptions): T | undefined
-}
-
-export interface Filter<T> {
-    matches(value: T): boolean;
 }
