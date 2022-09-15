@@ -166,7 +166,7 @@ export interface ResourcePickOptions {
     /**
      * Set this to pick a child of the selected app resource
      */
-    childFilter?: string | RegExp | (string | RegExp)[];
+    expectedChildContextValue?: string | RegExp | (string | RegExp)[];
 
     /**
      * Whether `AppResourceTreeItem`s should be resolved before displaying them as quick picks, or only once one has been selected
