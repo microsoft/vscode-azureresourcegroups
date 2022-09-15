@@ -1,18 +1,20 @@
-import { AzExtParentTreeItem, AzExtTreeItem, CompatibleContextValueFilterableTreeNode, CompatibleQuickPickOptions, CreateOptions } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtTreeItem, CompatibleQuickPickOptions, CreateOptions } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { localize } from 'vscode-nls';
-import { ApplicationResource, Box, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
-import { BranchDataItemOptions, createBranchDataItemFactory } from './BranchDataItem';
+import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { BranchDataItem, BranchDataItemOptions } from './BranchDataItem';
+import { createBranchDataItemFactory } from './factories/branchDataItemFactory';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
-export class CompatibleBranchDataItem implements ResourceGroupsItem, Box, CompatibleContextValueFilterableTreeNode {
+export class CompatibleBranchDataItem extends BranchDataItem {
     constructor(
-        private readonly branchItem: ResourceModelBase,
-        private readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
-        private readonly itemCache: ResourceGroupsItemCache,
-        private readonly options: BranchDataItemOptions | undefined
+        protected readonly branchItem: ResourceModelBase,
+        protected readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
+        protected readonly itemCache: ResourceGroupsItemCache,
+        protected readonly options: BranchDataItemOptions | undefined
     ) {
+        super(branchItem, branchDataProvider, itemCache, options);
         itemCache.addBranchItem(this.branchItem, this);
     }
 

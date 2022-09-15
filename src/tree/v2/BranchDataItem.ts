@@ -1,7 +1,7 @@
-import { isAzExtTreeItem, Wrapper } from '@microsoft/vscode-azext-utils';
+import { Wrapper } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
-import { CompatibleBranchDataItem } from './CompatibleBranchDataItem';
+import { createBranchDataItemFactory } from './factories/branchDataItemFactory';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
@@ -11,10 +11,10 @@ export type BranchDataItemOptions = {
 
 export class BranchDataItem implements ResourceGroupsItem, Wrapper {
     constructor(
-        private readonly branchItem: ResourceModelBase,
-        private readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
-        private readonly itemCache: ResourceGroupsItemCache,
-        private readonly options: BranchDataItemOptions | undefined) {
+        protected readonly branchItem: ResourceModelBase,
+        protected readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
+        protected readonly itemCache: ResourceGroupsItemCache,
+        protected readonly options: BranchDataItemOptions | undefined) {
         itemCache.addBranchItem(this.branchItem, this);
     }
 
@@ -49,12 +49,4 @@ export class BranchDataItem implements ResourceGroupsItem, Wrapper {
     id: string;
     name: string;
     type: string;
-}
-
-export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItem | CompatibleBranchDataItem;
-
-export function createBranchDataItemFactory(itemCache: ResourceGroupsItemCache): BranchDataItemFactory {
-    return (branchItem, branchDataProvider, options) => {
-        return isAzExtTreeItem(branchItem) ? new CompatibleBranchDataItem(branchItem, branchDataProvider, itemCache, options) : new BranchDataItem(branchItem, branchDataProvider, itemCache, options);
-    }
 }
