@@ -1,46 +1,25 @@
 import * as vscode from 'vscode';
 import { WorkspaceResourceProviderManager } from '../../../api/v2/providers/WorkspaceResourceProviderManager';
 import { WorkspaceResource } from '../../../api/v2/v2AzureResourcesApi';
+import { BranchDataItem } from '../BranchDataItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
-import { BranchDataProviderItem } from './BranchDataProviderItem';
+import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
+import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 
-export class WorkspaceTreeDataProvider extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupsItem> {
-    private readonly branchDataProviderManagerListener: vscode.Disposable;
-    private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
-    private readonly providerManagerListener: vscode.Disposable;
-    private readonly refreshListener: vscode.Disposable;
-
+export class WorkspaceTreeDataProvider extends ResourceTreeDataProviderBase {
     constructor(
         private readonly branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
-        refreshEvent: vscode.Event<void>,
+        onRefresh: vscode.Event<void>,
         private readonly resourceProviderManager: WorkspaceResourceProviderManager) {
         super(
-            () => {
-                this.branchDataProviderManagerListener.dispose();
-                this.onDidChangeTreeDataEmitter.dispose();
-                this.providerManagerListener.dispose();
-                this.refreshListener.dispose();
-            });
-
-        // TODO: Whittle this down to only the resources that have changed.
-        this.branchDataProviderManagerListener = this.branchDataProviderManager.onDidChangeTreeData(() => this.onDidChangeTreeDataEmitter.fire());
-
-        this.providerManagerListener = this.resourceProviderManager.onDidChangeResourceChange(
-            () => {
-                // TODO: Currently resetting entire tree; need to whittle down to just the correct nodes (if possible).
-                this.onDidChangeTreeDataEmitter.fire();
-            });
-
-        this.refreshListener = refreshEvent(
-            () => {
-                this.onDidChangeTreeDataEmitter.fire();
-            });
+            new ResourceGroupsItemCache(),
+            branchDataProviderManager.onDidChangeTreeData,
+            resourceProviderManager.onDidChangeResourceChange,
+            onRefresh);
     }
 
-    onDidChangeTreeData?: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
-
-    async getChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
+    async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
         if (element) {
             return await element.getChildren();
         }
@@ -60,18 +39,6 @@ export class WorkspaceTreeDataProvider extends vscode.Disposable implements vsco
 
         const resourceItem = await branchDataProvider.getResourceItem(resource);
 
-        return new BranchDataProviderItem(branchDataProvider, resourceItem);
-    }
-
-    getTreeItem(element: ResourceGroupsItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        return element.getTreeItem();
-    }
-
-    getParent?(_element: ResourceGroupsItem): vscode.ProviderResult<ResourceGroupsItem> {
-        throw new Error('Method not implemented.');
-    }
-
-    resolveTreeItem?(_item: vscode.TreeItem, _element: ResourceGroupsItem, _token: vscode.CancellationToken): vscode.ProviderResult<vscode.TreeItem> {
-        throw new Error('Method not implemented.');
+        return new BranchDataItem(resourceItem, branchDataProvider, this.itemCache);
     }
 }

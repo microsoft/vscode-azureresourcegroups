@@ -12,7 +12,7 @@ export class BranchDataItem implements ResourceGroupsItem, WrappedResourceModel 
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
         private readonly itemCache: ResourceGroupsItemCache,
-        private readonly options: BranchDataItemOptions | undefined) {
+        private readonly options?: BranchDataItemOptions) {
         itemCache.addBranchItem(this.branchItem, this);
     }
 

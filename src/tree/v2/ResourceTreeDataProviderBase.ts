@@ -14,10 +14,10 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
         onDidChangeResource: vscode.Event<ResourceBase | undefined>,
         onRefresh: vscode.Event<void>,
-        callOnDispose: () => void) {
+        callOnDispose?: () => void) {
         super(
             () => {
-                callOnDispose();
+                callOnDispose?.();
 
                 this.branchTreeDataChangeSubscription.dispose();
                 this.refreshSubscription.dispose();
