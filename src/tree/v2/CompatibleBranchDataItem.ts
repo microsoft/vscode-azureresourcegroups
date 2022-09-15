@@ -1,24 +1,26 @@
 import { AzExtParentTreeItem, AzExtTreeItem, CompatibleContextValueFilterableTreeNode, CompatibleQuickPickOptions } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, Box, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
-import { createBranchDataItemFactory } from './BranchDataItem';
+import { BranchDataItemOptions, createBranchDataItemFactory } from './BranchDataItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
-
-export type BranchDataItemOptions = {
-    defaults?: vscode.TreeItem;
-};
 
 export class CompatibleBranchDataItem implements ResourceGroupsItem, Box, CompatibleContextValueFilterableTreeNode {
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
         private readonly itemCache: ResourceGroupsItemCache,
-        private readonly options: BranchDataItemOptions | undefined) {
+        private readonly options: BranchDataItemOptions | undefined
+    ) {
         itemCache.addBranchItem(this.branchItem, this);
     }
 
-    /** Needed for tree item picker PickAppResourceStep */
+    /**
+     * Needed for tree item picker PickAppResourceStep.
+     * This should only be defined for application resources.
+     *
+     * _TODO:_ Should this go somewhere else since it's only defined for application resources?
+     */
     public get resource(): ApplicationResource | undefined {
         return (this.branchItem as { resource?: ApplicationResource }).resource;
     }
@@ -53,7 +55,6 @@ export class CompatibleBranchDataItem implements ResourceGroupsItem, Box, Compat
 
         return {
             ...this.options?.defaults ?? {},
-            tooltip: 'Context value: ' + (treeItem.contextValue ?? ''),
             ...treeItem
         }
     }
