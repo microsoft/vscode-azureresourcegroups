@@ -31,10 +31,10 @@ export function createGroupConfigFromResource(resource: AppResource, subscriptio
             contextValuesToAdd: ['azureResourceGroup']
         },
         resourceType: {
-            label: resource.azExtResourceType ? azExtDisplayInfo[resource.azExtResourceType ?? '']?.displayName ?? unknown : unknown,
+            label: resource.azExtResourceType ? azExtDisplayInfo[resource.azExtResourceType ?? '']?.displayName ?? resource.azExtResourceType : unknown,
             id: `${subscriptionId}/${resource.azExtResourceType}`,
             iconPath,
-            contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType] : [])]
+            contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType, legacyTypeMap[resource.azExtResourceType] ?? ''] : [])]
         },
         location: {
             id: `${subscriptionId}/location/${resource.location}` ?? 'unknown',

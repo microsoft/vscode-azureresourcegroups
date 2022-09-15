@@ -90,7 +90,6 @@ export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
     FunctionApp: 'microsoft.web/functionapp',
     AppServices: 'microsoft.web/sites',
     StaticWebApps: 'microsoft.web/staticsites',
-    StorageAccounts: 'microsoft.storage/storageaccounts',
     VirtualMachines: 'microsoft.compute/virtualmachines',
     AzureCosmosDb: 'microsoft.documentdb/databaseaccounts',
     PostgresqlServersStandard: 'microsoft.dbforpostgresql/servers',
