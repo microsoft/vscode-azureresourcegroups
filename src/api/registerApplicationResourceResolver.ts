@@ -7,7 +7,6 @@ import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
 import { ext } from "../extensionVariables";
 import { CompatibleBranchDataProvider } from "./v2/compatibility/CompatibleBranchDataProvider";
-import { ApplicationResource, BranchDataProvider, ResourceModelBase } from "./v2/v2AzureResourcesApi";
 
 export const applicationResourceResolvers: Record<string, AppResourceResolver> = {};
 
@@ -21,7 +20,7 @@ export function registerApplicationResourceResolver(id: string, resolver: AppRes
 
     const compat = new CompatibleBranchDataProvider(resolver, 'azureResourceGroups.loadMore' /** TODO: what is the correct value for this? */);
 
-    ext.v2.api.registerApplicationResourceBranchDataProvider(id, compat as unknown as BranchDataProvider<ApplicationResource, ResourceModelBase>);
+    ext.v2.api.registerApplicationResourceBranchDataProvider(id, compat);
 
     return new Disposable(() => {
         delete applicationResourceResolvers[id];

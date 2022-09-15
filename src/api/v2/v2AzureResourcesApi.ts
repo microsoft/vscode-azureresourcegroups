@@ -81,12 +81,6 @@ export interface Box {
  */
 export interface BranchDataProvider<TResource extends ResourceBase, TModel extends ResourceModelBase> extends vscode.TreeDataProvider<TModel> {
     /**
-     * @deprecated This is implemented by the Resources API and does not need to be implemented by the
-     * {@link BranchDataProvider}.
-     */
-    getParent?: never;
-
-    /**
      * Get the children of `element`. This differs from standard {@link vscode.TreeDataProvider}
      * in that the `element` parameter will never be undefined.
      *
