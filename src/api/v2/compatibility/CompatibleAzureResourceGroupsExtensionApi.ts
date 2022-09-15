@@ -6,14 +6,13 @@
 import { AzExtTreeDataProvider, AzExtTreeItem, ITreeItemPickerContext } from '@microsoft/vscode-azext-utils';
 import { Activity, AppResourceResolver, AzureHostExtensionApi, AzureResourceGroupsExtensionApi, LocalResourceProvider, PickAppResourceOptions, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi';
 import { Disposable, TreeView } from 'vscode';
-import { CompatibleAzExtTreeDataProvider } from './CompatibleAzExtTreeDataProvider';
 
 export class CompatibleAzureResourceGroupsExtensionApi implements AzureHostExtensionApi, AzureResourceGroupsExtensionApi {
     public static apiVersion = '0.1.0';
 
-    #appResourceTree: CompatibleAzExtTreeDataProvider;
+    #appResourceTree: AzExtTreeDataProvider;
     #appResourceTreeView: TreeView<unknown>;
-    #workspaceResourceTree: CompatibleAzExtTreeDataProvider;
+    #workspaceResourceTree: AzExtTreeDataProvider;
     #workspaceResourceTreeView: TreeView<unknown>;
     #apiVersion: string;
     #revealTreeItem: (resourceId: string) => Promise<void>;
