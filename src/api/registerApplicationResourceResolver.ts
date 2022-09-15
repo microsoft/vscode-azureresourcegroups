@@ -21,7 +21,7 @@ export function registerApplicationResourceResolver(id: string, resolver: AppRes
 
     const compat = new CompatibleBranchDataProvider(resolver, 'azureResourceGroups.loadMore' /** TODO: what is the correct value for this? */);
 
-    ext.v2.api.registerApplicationResourceBranchDataProvider(id, compat as unknown as BranchDataProvider<ApplicationResource, ResourceModelBase>);
+    ext.v2.api.registerApplicationResourceBranchDataProvider(id, compat as unknown as BranchDataProvider<ApplicationResource, CompatibleBranchDataItem>);
 
     return new Disposable(() => {
         delete applicationResourceResolvers[id];
