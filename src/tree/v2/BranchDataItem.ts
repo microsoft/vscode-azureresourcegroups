@@ -1,6 +1,7 @@
-import type { Wrapper } from '@microsoft/vscode-azext-utils';
+import { isAzExtTreeItem, Wrapper } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { CompatibleBranchDataItem } from './CompatibleBranchDataItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
@@ -50,8 +51,10 @@ export class BranchDataItem implements ResourceGroupsItem, Wrapper {
     type: string;
 }
 
-export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItem;
+export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItem | CompatibleBranchDataItem;
 
 export function createBranchDataItemFactory(itemCache: ResourceGroupsItemCache): BranchDataItemFactory {
-    return (branchItem, branchDataProvider, options) => new BranchDataItem(branchItem, branchDataProvider, itemCache, options);
+    return (branchItem, branchDataProvider, options) => {
+        return isAzExtTreeItem(branchItem) ? new CompatibleBranchDataItem(branchItem, branchDataProvider, itemCache, options) : new BranchDataItem(branchItem, branchDataProvider, itemCache, options);
+    }
 }

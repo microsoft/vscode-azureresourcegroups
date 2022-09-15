@@ -43,7 +43,7 @@ export class BranchDataProviderManager extends vscode.Disposable {
     }
 
     getApplicationResourceBranchDataProvider(resource: ApplicationResource): BranchDataProvider<ApplicationResource, ResourceModelBase> {
-        const provider = this.applicationResourceBranchDataProviders[resource.type.type];
+        const provider = this.applicationResourceBranchDataProviders[resource.azExtResourceType?.toLowerCase() ?? resource.type.type];
 
         if (provider) {
             return provider;
@@ -52,7 +52,7 @@ export class BranchDataProviderManager extends vscode.Disposable {
         // NOTE: The default branch data provider will be returned until the extension is loaded.
         //       The extension will then register its branch data providers, resulting in a change event.
         //       The tree will then be refreshed, resulting in this method being called again.
-        void this.extensionManager.activateApplicationResourceBranchDataProvider(resource.type.type);
+        void this.extensionManager.activateApplicationResourceBranchDataProvider(resource.azExtResourceType ?? resource.type.type);
 
         return this.defaultBranchDataProvider;
     }

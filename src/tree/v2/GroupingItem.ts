@@ -17,7 +17,9 @@ export class GroupingItem implements ResourceGroupsItem {
         private readonly contextValues: string[] | undefined,
         private readonly iconPath: TreeItemIconPath | undefined,
         public readonly label: string,
-        public readonly resources: ApplicationResource[]) {
+        public readonly resources: ApplicationResource[],
+        public readonly resourceType: string | undefined
+    ) {
     }
 
     public get quickPickOptions(): { readonly contextValues: string[]; readonly isLeaf: boolean; } {
@@ -70,8 +72,8 @@ export class GroupingItem implements ResourceGroupsItem {
     public id: string;
 }
 
-export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[]) => GroupingItem;
+export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[], resourceType: string | undefined) => GroupingItem;
 
 export function createGroupingItemFactory(branchDataItemFactory: BranchDataItemFactory, branchDataProviderFactory: BranchDataProviderFactory): GroupingItemFactory {
-    return (context, contextValues, iconPath, label, resources) => new GroupingItem(context, branchDataItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources);
+    return (context, contextValues, iconPath, label, resources, resourceType) => new GroupingItem(context, branchDataItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources, resourceType);
 }

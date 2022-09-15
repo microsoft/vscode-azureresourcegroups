@@ -57,6 +57,37 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     context.subscriptions.push(refreshEventEmitter);
 
+    const branchDataProviderManager = new BranchDataProviderManager(
+        new BuiltInApplicationResourceBranchDataProvider(),
+        new ResourceGroupsExtensionManager());
+
+    context.subscriptions.push(branchDataProviderManager);
+
+    const resourceProviderManager = new ApplicationResourceProviderManager();
+
+    registerResourceGroupsTreeV2(
+        context,
+        branchDataProviderManager,
+        refreshEventEmitter.event,
+        resourceProviderManager);
+
+    const v2ApiFactory = () => {
+        if (v2Api === undefined) {
+            v2Api = new V2AzureResourcesApiImplementation(
+                branchDataProviderManager,
+                resourceProviderManager,
+                ext.v2.resourceGroupsTreeDataProvider);
+
+            ext.v2.api = v2Api;
+
+            context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider()));
+        }
+
+        return v2Api;
+    }
+
+    v2ApiFactory();
+
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
@@ -107,31 +138,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         await vscode.commands.executeCommand('setContext', 'azure-account.signedIn', await ext.rootAccountTreeItem.getIsLoggedIn());
     });
 
-    const branchDataProviderManager = new BranchDataProviderManager(
-        new BuiltInApplicationResourceBranchDataProvider(),
-        new ResourceGroupsExtensionManager());
 
-    context.subscriptions.push(branchDataProviderManager);
-
-    const resourceProviderManager = new ApplicationResourceProviderManager();
-
-    registerResourceGroupsTreeV2(
-        context,
-        branchDataProviderManager,
-        refreshEventEmitter.event,
-        resourceProviderManager);
-
-    const v2ApiFactory = () => {
-        if (v2Api === undefined) {
-            v2Api = new V2AzureResourcesApiImplementation(
-                branchDataProviderManager,
-                resourceProviderManager);
-
-            context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider()));
-        }
-
-        return v2Api;
-    }
 
     return createApiProvider(
         (<{ version: string }>context.extension.packageJSON).version,

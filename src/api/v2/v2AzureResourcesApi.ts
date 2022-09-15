@@ -1,5 +1,5 @@
 import type { Environment } from '@azure/ms-rest-azure-env';
-import { AzExtResourceType, FindableByIdTreeNodeV2 } from '@microsoft/vscode-azext-utils';
+import { AzExtResourceType, ContextValueFilterableTreeNode, FindableByIdTreeNodeV2 } from '@microsoft/vscode-azext-utils';
 import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 
@@ -177,10 +177,13 @@ export interface ResourcePickOptions {
  * The current (v2) Azure Resources extension API.
  */
 export interface V2AzureResourcesApi extends AzureResourcesApiBase {
+
+    getResourceGroupsTreeDataProvider(): vscode.TreeDataProvider<ContextValueFilterableTreeNode>;
+
     /**
      * Show a quick picker of app resources. Set `options.type` to filter the picks.
      */
-    pickResource<TModel>(options?: ResourcePickOptions): vscode.ProviderResult<TModel>
+    pickResource<TModel extends ResourceModelBase>(options?: ResourcePickOptions): Promise<TModel>
 
     /**
      * Reveals an item in the application/workspace resource tree
