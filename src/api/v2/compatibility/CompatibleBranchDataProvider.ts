@@ -80,8 +80,9 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
     }
 
     // @ts-expect-error TypeScript is unhappy that we're overriding something that it doesn't know is secretly on the base class
+    // This is assigned to in the constructor of AzExtTreeDataProvider
     private override set _rootTreeItem(_value: AzExtParentTreeItem) {
-        // Do nothing
+        // Do nothing!
     }
 
     //#endregion AzExtTreeDataProvider
