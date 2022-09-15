@@ -36,7 +36,6 @@ export class BranchDataItem implements ResourceGroupsItem, Wrapper {
 
         return {
             ...this.options?.defaults ?? {},
-            tooltip: 'Context value: ' + (treeItem.contextValue ?? ''),
             ...treeItem
         }
     }
