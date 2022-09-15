@@ -15,10 +15,6 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
         return V2AzureResourcesApiImplementation.apiVersion;
     }
 
-    public async pickResource<TModel extends ResourceModelBase>(): Promise<TModel> {
-        throw new Error("Method not implemented");
-    }
-
     revealResource(_resourceId: string): Promise<void> {
         throw new Error("Method not implemented.");
     }
