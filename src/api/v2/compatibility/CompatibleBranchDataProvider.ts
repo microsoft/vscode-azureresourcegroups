@@ -51,7 +51,6 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
         const subscriptionContext: ISubscriptionContext = createSubscriptionContext(element.subscription);
 
         const resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
-
         return CompatibleResolvedApplicationResourceTreeItem.Create(oldAppResource, resolved!, subscriptionContext, this, element) as unknown as TModel;
     }
 
