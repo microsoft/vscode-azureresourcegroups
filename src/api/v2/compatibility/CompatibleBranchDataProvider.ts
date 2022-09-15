@@ -73,5 +73,16 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
         throw new Error('Use the Resources extension API to do findTreeItem');
     }
 
+    // TODO: this (probably?) shouldn't remain in the code we release, but will be helpful in testing to ensure we never access the root
+    // @ts-expect-error TypeScript is unhappy that we're overriding something that it doesn't know is secretly on the base class
+    private override get _rootTreeItem(): AzExtParentTreeItem {
+        throw new Error('The root tree item should not be accessed in a BranchDataProvider');
+    }
+
+    // @ts-expect-error TypeScript is unhappy that we're overriding something that it doesn't know is secretly on the base class
+    private override set _rootTreeItem(_value: AzExtParentTreeItem) {
+        // Do nothing
+    }
+
     //#endregion AzExtTreeDataProvider
 }
