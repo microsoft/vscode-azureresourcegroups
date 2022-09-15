@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { ApplicationResourceProviderManager } from '../../api/v2/ApplicationResourceProviderManager';
-import { localize } from './../../utils/localize';
+import { ApplicationResourceProviderManager } from '../../../api/v2/ApplicationResourceProviderManager';
+import { localize } from './../../../utils/localize';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
-import { createBranchDataItemFactory } from './BranchDataItem';
+import { createBranchDataItemFactory } from '../BranchDataItem';
 import { createGroupingItemFactory } from './GroupingItem';
-import { ApplicationResourceBranchDataProviderManager } from './providers/ApplicationResourceBranchDataProviderManager';
-import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
+import { ApplicationResourceBranchDataProviderManager } from './ApplicationResourceBranchDataProviderManager';
+import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { ResourceGroupsTreeDataProvider } from './ResourceGroupsTreeDataProvider';
 
 export function registerResourceGroupsTreeV2(

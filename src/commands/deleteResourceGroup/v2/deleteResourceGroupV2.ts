@@ -7,7 +7,7 @@ import { AzureWizard, IActionContext, UserCancelledError } from '@microsoft/vsco
 import { ResourceGroupTreeItem } from '../../../tree/ResourceGroupTreeItem';
 import { localize } from '../../../utils/localize';
 import { settingUtils } from '../../../utils/settingUtils';
-import { GroupingItem } from '../../../tree/v2/GroupingItem';
+import { GroupingItem } from '../../../tree/v2/application/GroupingItem';
 import { DeleteResourceGroupContext } from '../DeleteResourceGroupContext';
 import { DeleteResourceGroupStep } from '../DeleteResourceGroupStep';
 import { createActivityContext } from '../../../utils/activityUtils';

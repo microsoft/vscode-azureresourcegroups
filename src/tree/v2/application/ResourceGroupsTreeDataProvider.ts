@@ -1,15 +1,15 @@
 import { AzExtServiceClientCredentials, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
-import { ApplicationResourceProviderManager } from '../../api/v2/ApplicationResourceProviderManager';
-import { ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
-import { localize } from '../../utils/localize';
+import { ApplicationResourceProviderManager } from '../../../api/v2/ApplicationResourceProviderManager';
+import { ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
+import { localize } from '../../../utils/localize';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
-import { AzureAccountExtensionApi } from './azure-account.api';
-import { GenericItem } from './GenericItem';
-import { ResourceGroupsItem } from './ResourceGroupsItem';
-import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
-import { ResourceTreeDataProviderBase } from './ResourceTreeDataProviderBase';
+import { AzureAccountExtensionApi } from '../azure-account.api';
+import { GenericItem } from '../GenericItem';
+import { ResourceGroupsItem } from '../ResourceGroupsItem';
+import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
+import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { SubscriptionItem } from './SubscriptionItem';
 
 export class ResourceGroupsTreeDataProvider extends ResourceTreeDataProviderBase {

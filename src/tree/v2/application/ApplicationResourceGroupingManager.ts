@@ -1,14 +1,14 @@
 import { AzExtResourceType, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ApplicationResource } from '../../api/v2/v2AzureResourcesApi';
-import { GroupBySettings } from '../../commands/explorer/groupBy';
-import { ext } from '../../extensionVariables';
-import { getIconPath, getName } from '../../utils/azureUtils';
-import { localize } from "../../utils/localize";
-import { settingUtils } from '../../utils/settingUtils';
-import { treeUtils } from '../../utils/treeUtils';
+import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
+import { GroupBySettings } from '../../../commands/explorer/groupBy';
+import { ext } from '../../../extensionVariables';
+import { getIconPath, getName } from '../../../utils/azureUtils';
+import { localize } from "../../../utils/localize";
+import { settingUtils } from '../../../utils/settingUtils';
+import { treeUtils } from '../../../utils/treeUtils';
 import { GroupingItem, GroupingItemFactory } from './GroupingItem';
-import { ResourceGroupsTreeContext } from './ResourceGroupsTreeContext';
+import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
 
 const unknownLabel = localize('unknown', 'unknown');
 
