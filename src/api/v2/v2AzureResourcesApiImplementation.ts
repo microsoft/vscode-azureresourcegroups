@@ -1,3 +1,4 @@
+import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { BranchDataProviderManager } from '../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from './providers/ApplicationResourceProviderManager';
@@ -15,10 +16,6 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
         return V2AzureResourcesApiImplementation.apiVersion;
     }
 
-    public async pickResource<TModel extends ResourceModelBase>(): Promise<TModel> {
-        throw new Error("Method not implemented");
-    }
-
     revealResource(_resourceId: string): Promise<void> {
         throw new Error("Method not implemented.");
     }
@@ -29,10 +26,10 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
         return new vscode.Disposable(() => this.resourceProviderManager.removeResourceProvider(provider));
     }
 
-    registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(id: string, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable {
-        this.branchDataProviderManager.addApplicationResourceBranchDataProvider(id, provider);
+    registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable {
+        this.branchDataProviderManager.addApplicationResourceBranchDataProvider(type, provider);
 
-        return new vscode.Disposable(() => this.branchDataProviderManager.removeApplicationResourceBranchDataProvider(id));
+        return new vscode.Disposable(() => this.branchDataProviderManager.removeApplicationResourceBranchDataProvider(type));
     }
 
     registerWorkspaceResourceProvider(_id: string, _provider: WorkspaceResourceProvider): vscode.Disposable {

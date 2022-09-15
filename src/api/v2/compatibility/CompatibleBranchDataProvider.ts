@@ -23,9 +23,13 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
 
     //#region TreeDataProvider
 
-    // @ts-expect-error `getParent` is not meant to be defined by `BranchDataProvider`s but is already defined by `AzExtTreeDataProvider`
-    public override get onDidChangeTreeData(): Event<AzExtTreeItem | undefined> {
+    // @ts-expect-error overriding a property with an accessor
+    public override get onDidChangeTreeData(): vscode.Event<TModel | undefined> {
         return this.overrideOnDidChangeTreeDataEmitter.event;
+    }
+
+    public override set onDidChangeTreeData(_: vscode.Event<TModel | undefined>) {
+        // Do nothing
     }
 
     // @ts-expect-error `getParent` is not meant to be defined by `BranchDataProvider`s but is already defined by `AzExtTreeDataProvider`
