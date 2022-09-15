@@ -79,8 +79,8 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
         throw new Error('The root tree item should not be accessed in a BranchDataProvider');
     }
 
-    // @ts-expect-error TypeScript is unhappy that we're overriding something that it doesn't know is secretly on the base class
     // This is assigned to in the constructor of AzExtTreeDataProvider
+    // @ts-expect-error TypeScript is unhappy that we're overriding something that it doesn't know is secretly on the base class
     private override set _rootTreeItem(_value: AzExtParentTreeItem) {
         // Do nothing!
     }
