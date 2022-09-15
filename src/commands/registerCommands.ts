@@ -32,7 +32,7 @@ export function registerCommands(refreshEventEmitter: vscode.EventEmitter<void>)
     registerCommand('azureResourceGroups.deleteResourceGroup', deleteResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
     registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.appResourceTree.loadMore(node, context));
-    registerCommandWithTreeNodeUnwrapping('azureResourceGroups.openInPortal', openInPortal);
+    registerCommand('azureResourceGroups.openInPortal', openInPortal);
     registerCommand('azureResourceGroups.refresh', async (context: IActionContext, node?: AzExtTreeItem) => { await ext.appResourceTree.refresh(context, node); refreshEventEmitter.fire(); });
     registerCommand('azureResourceGroups.revealResource', revealResource);
     registerCommand('azureResourceGroups.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
