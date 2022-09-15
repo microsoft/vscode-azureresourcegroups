@@ -1,15 +1,15 @@
 import * as vscode from 'vscode';
-import { BranchDataProviderManager } from '../../tree/v2/providers/BranchDataProviderManager';
+import { ApplicationResourceBranchDataProviderManager } from '../../tree/v2/providers/ApplicationResourceBranchDataProviderManager';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
 import { ApplicationResourceProviderManager } from './ApplicationResourceProviderManager';
-import { WorkspaceResourceProviderManager } from './WorkspaceResourceProviderManager';
 import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
+import { WorkspaceResourceProviderManager } from './WorkspaceResourceProviderManager';
 
 export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     public static apiVersion: string = '2.0.0';
 
     constructor(
-        private readonly branchDataProviderManager: BranchDataProviderManager,
+        private readonly branchDataProviderManager: ApplicationResourceBranchDataProviderManager,
         private readonly resourceProviderManager: ApplicationResourceProviderManager,
         private readonly workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
         private readonly workspaceResourceProviderManager: WorkspaceResourceProviderManager) {

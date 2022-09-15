@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider } from '../../../api/v2/v2AzureResourcesApi';
-import { BuiltInApplicationResourceItem } from './BuiltInApplicationResourceItem';
 import { localize } from "../../../utils/localize";
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
+import { DefaultApplicationResourceItem } from './DefaultApplicationResourceItem';
 
-export class BuiltInApplicationResourceBranchDataProvider implements BranchDataProvider<ApplicationResource, ResourceGroupsItem> {
+export class DefaultApplicationResourceBranchDataProvider implements BranchDataProvider<ApplicationResource, ResourceGroupsItem> {
     getChildren(element?: ResourceGroupsItem | undefined): vscode.ProviderResult<ResourceGroupsItem[]> {
         if (!element) {
             throw new Error(localize('UnexpectedElement', 'Expected a valid element.'));
@@ -14,7 +14,7 @@ export class BuiltInApplicationResourceBranchDataProvider implements BranchDataP
     }
 
     getResourceItem(element: ApplicationResource): ResourceGroupsItem | Thenable<ResourceGroupsItem> {
-        return new BuiltInApplicationResourceItem(element);
+        return new DefaultApplicationResourceItem(element);
     }
 
     // TODO: Implement change eventing.

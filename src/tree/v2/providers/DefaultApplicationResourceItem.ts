@@ -3,7 +3,7 @@ import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
-export class BuiltInApplicationResourceItem implements ResourceGroupsItem {
+export class DefaultApplicationResourceItem implements ResourceGroupsItem {
     constructor(private readonly resource: ApplicationResource) {
     }
 

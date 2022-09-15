@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../utils/azureUtils';
 import { BranchDataItemFactory } from './BranchDataItem';
-import { BranchDataProviderFactory } from './providers/BranchDataProviderManager';
+import { BranchDataProviderFactory } from './providers/ApplicationResourceBranchDataProviderManager';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from './ResourceGroupsTreeContext';
 

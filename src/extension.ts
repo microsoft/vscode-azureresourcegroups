@@ -17,12 +17,12 @@ import { registerApplicationResourceProvider } from './api/registerApplicationRe
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
 import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResourceProvider';
 import { revealTreeItem } from './api/revealTreeItem';
-import { DefaultApplicationResourceProvider } from './api/v2/DefaultApplicationResourceProvider';
 import { ApplicationResourceProviderManager } from './api/v2/ApplicationResourceProviderManager';
-import { WorkspaceResourceProviderManager } from './api/v2/WorkspaceResourceProviderManager';
+import { DefaultApplicationResourceProvider } from './api/v2/DefaultApplicationResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/v2/ResourceGroupsExtensionManager';
 import { AzureResourcesApiManager } from './api/v2/v2AzureResourcesApi';
 import { V2AzureResourcesApiImplementation } from './api/v2/v2AzureResourcesApiImplementation';
+import { WorkspaceResourceProviderManager } from './api/v2/WorkspaceResourceProviderManager';
 import { AzureResourceProvider } from './AzureResourceProvider';
 import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
@@ -35,8 +35,8 @@ import { wrapperResolver } from './resolvers/WrapperResolver';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { GroupTreeItemBase } from './tree/GroupTreeItemBase';
 import { HelpTreeItem } from './tree/HelpTreeItem';
-import { BranchDataProviderManager } from './tree/v2/providers/BranchDataProviderManager';
-import { BuiltInApplicationResourceBranchDataProvider } from './tree/v2/providers/BuiltInApplicationResourceBranchDataProvider';
+import { ApplicationResourceBranchDataProviderManager } from './tree/v2/providers/ApplicationResourceBranchDataProviderManager';
+import { DefaultApplicationResourceBranchDataProvider } from './tree/v2/providers/DefaultApplicationResourceBranchDataProvider';
 import { registerResourceGroupsTreeV2 } from './tree/v2/registerResourceGroupsTreeV2';
 import { registerWorkspaceTreeV2 } from './tree/v2/workspace/registerWorkspaceTreeV2';
 import { WorkspaceDefaultBranchDataProvider } from './tree/v2/workspace/WorkspaceDefaultBranchDataProvider';
@@ -117,8 +117,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     const extensionManager = new ResourceGroupsExtensionManager()
 
-    const branchDataProviderManager = new BranchDataProviderManager(
-        new BuiltInApplicationResourceBranchDataProvider(),
+    const branchDataProviderManager = new ApplicationResourceBranchDataProviderManager(
+        new DefaultApplicationResourceBranchDataProvider(),
         type => void extensionManager.activateApplicationResourceBranchDataProvider(type));
 
     context.subscriptions.push(branchDataProviderManager);
