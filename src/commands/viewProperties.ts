@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { appResourceExperience, IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
-import { ext } from '../extensionVariables';
-import { BuiltInApplicationResourceItem } from '../tree/v2/providers/BuiltInApplicationResourceItem';
+import { IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
+import { pickAppResource } from '../api/pickAppResource';
+import { AppResourceTreeItem } from '../tree/AppResourceTreeItem';
 
-export async function viewProperties(context: IActionContext, node?: BuiltInApplicationResourceItem): Promise<void> {
+export async function viewProperties(context: IActionContext, node?: AppResourceTreeItem): Promise<void> {
     if (!node) {
-        node = await appResourceExperience<BuiltInApplicationResourceItem>(context, ext.v2.resourceGroupsTreeDataProvider);
+        node = await pickAppResource<AppResourceTreeItem>(context);
     }
 
-    await openReadOnlyJson({ fullId: node.id, label: node.name }, node.data);
+    await openReadOnlyJson(node, node.data);
 }
