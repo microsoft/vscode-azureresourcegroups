@@ -6,6 +6,7 @@
 import { AzExtParentTreeItem, AzExtResourceType, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ISubscriptionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import type { AppResource, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { TreeItemCollapsibleState } from "vscode";
+import { createResolvableProxy } from "../../../tree/AppResourceTreeItem";
 import { getIconPath } from "../../../utils/azureUtils";
 import { ApplicationResource } from "../v2AzureResourcesApi";
 
@@ -51,32 +52,7 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
 
     public static Create(resource: AppResource, resolveResult: ResolvedAppResourceBase, subscription: ISubscriptionContext, treeDataProvider: AzExtTreeDataProvider, applicationResource: ApplicationResource): CompatibleResolvedApplicationResourceTreeItem {
         const resolvable: CompatibleResolvedApplicationResourceTreeItem = new CompatibleResolvedApplicationResourceTreeItem(resource, resolveResult, subscription, treeDataProvider, applicationResource);
-        const providerHandler: ProxyHandler<CompatibleResolvedApplicationResourceTreeItem> = {
-            get: (target: CompatibleResolvedApplicationResourceTreeItem, name: string): unknown => {
-                return resolvable?.resolveResult?.[name] ?? target[name];
-            },
-            set: (target: CompatibleResolvedApplicationResourceTreeItem, name: string, value: unknown): boolean => {
-                if (resolvable.resolveResult && Object.getOwnPropertyDescriptor(resolvable.resolveResult, name)?.writable) {
-                    resolvable.resolveResult[name] = value;
-                    return true;
-                }
-                target[name] = value;
-                return true;
-            },
-            /**
-             * Needed to be compatible with any usages of instanceof in utils/azureutils
-             *
-             * If resolved returns AzExtTreeItem or AzExtParentTreeItem depending on if resolveResult has loadMoreChildrenImpl defined
-             * If not resolved, returns AppResourceTreeItem
-             */
-            getPrototypeOf: (target: CompatibleResolvedApplicationResourceTreeItem): CompatibleResolvedApplicationResourceTreeItem | AzExtParentTreeItem | AzExtTreeItem => {
-                if (resolvable?.resolveResult) {
-                    return resolvable.resolveResult.loadMoreChildrenImpl ? AzExtParentTreeItem.prototype : AzExtTreeItem.prototype
-                }
-                return target;
-            }
-        }
-        return new Proxy(resolvable, providerHandler);
+        return createResolvableProxy(resolvable);
     }
 
     public readonly resource: ApplicationResource;
