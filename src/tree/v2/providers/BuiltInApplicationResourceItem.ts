@@ -5,8 +5,6 @@ import { BuiltInResourceModelBase } from './BuiltInResourceModelBase';
 
 export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase {
     constructor(private readonly resource: ApplicationResource) {
-        this.id = resource.id;
-        this.name = resource.name;
     }
 
     getChildren(): vscode.ProviderResult<BuiltInResourceModelBase[]> {
