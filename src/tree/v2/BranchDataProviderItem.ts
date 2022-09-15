@@ -7,7 +7,7 @@ export type BranchDataItemOptions = {
     defaults?: vscode.TreeItem;
 };
 
-export class BranchDataItem implements ResourceGroupsItem, WrappedResourceModel {
+export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResourceModel {
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
@@ -42,8 +42,8 @@ export class BranchDataItem implements ResourceGroupsItem, WrappedResourceModel 
     type: string;
 }
 
-export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItem;
+export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataProviderItem;
 
 export function createBranchDataItemFactory(itemCache: ResourceGroupsItemCache): BranchDataItemFactory {
-    return (branchItem, branchDataProvider, options) => new BranchDataItem(branchItem, branchDataProvider, itemCache, options);
+    return (branchItem, branchDataProvider, options) => new BranchDataProviderItem(branchItem, branchDataProvider, itemCache, options);
 }

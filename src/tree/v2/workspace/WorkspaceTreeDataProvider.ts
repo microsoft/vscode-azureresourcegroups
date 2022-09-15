@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { WorkspaceResourceProviderManager } from '../../../api/v2/WorkspaceResourceProviderManager';
 import { WorkspaceResource } from '../../../api/v2/v2AzureResourcesApi';
-import { BranchDataItem } from '../BranchDataItem';
+import { WorkspaceResourceProviderManager } from '../../../api/v2/WorkspaceResourceProviderManager';
+import { BranchDataProviderItem } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
@@ -39,6 +39,6 @@ export class WorkspaceTreeDataProvider extends ResourceTreeDataProviderBase {
 
         const resourceItem = await branchDataProvider.getResourceItem(resource);
 
-        return new BranchDataItem(resourceItem, branchDataProvider, this.itemCache);
+        return new BranchDataProviderItem(resourceItem, branchDataProvider, this.itemCache);
     }
 }
