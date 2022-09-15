@@ -1,4 +1,3 @@
-import { ContextValueFilterableTreeNode } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { BranchDataProviderManager } from '../../tree/v2/providers/BranchDataProviderManager';
 import { ApplicationResourceProviderManager } from './providers/ApplicationResourceProviderManager';
@@ -10,15 +9,10 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     constructor(
         private readonly branchDataProviderManager: BranchDataProviderManager,
         private readonly resourceProviderManager: ApplicationResourceProviderManager,
-        private readonly resourceGroupsTreeDataProvider: vscode.TreeDataProvider<ContextValueFilterableTreeNode>
     ) { }
 
     get apiVersion(): string {
         return V2AzureResourcesApiImplementation.apiVersion;
-    }
-
-    public getResourceGroupsTreeDataProvider(): vscode.TreeDataProvider<ContextValueFilterableTreeNode> {
-        return this.resourceGroupsTreeDataProvider;
     }
 
     public async pickResource<TModel extends ResourceModelBase>(): Promise<TModel> {

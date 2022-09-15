@@ -16,7 +16,6 @@ export function registerResourceGroupsTreeV2(
     const itemCache = new ResourceGroupsItemCache();
     const branchDataItemFactory = createBranchDataItemFactory(itemCache);
     const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => branchDataProviderManager.getApplicationResourceBranchDataProvider(resource));
-
     const resourceGroupingManager = new ApplicationResourceGroupingManager(groupingItemFactory);
 
     context.subscriptions.push(resourceGroupingManager);
