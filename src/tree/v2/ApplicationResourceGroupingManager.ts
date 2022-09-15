@@ -143,6 +143,8 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             resources,
             resource => resource.azExtResourceType ?? resource.type.type, // TODO: Is resource type ever undefined?
             key => getName(key as AzExtResourceType) ?? key,
-            key => getIconPath(key as AzExtResourceType)); // TODO: What's the default icon for a resource type?
+            key => getIconPath(key as AzExtResourceType),
+            undefined,
+            ['azureResourceTypeGroup']); // TODO: What's the default icon for a resource type?
     }
 }
