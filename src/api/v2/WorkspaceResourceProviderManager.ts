@@ -1,10 +1,12 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import * as vscode from 'vscode';
 import { ProvideResourceOptions, WorkspaceResource, WorkspaceResourceProvider } from "./v2AzureResourcesApi";
 import { ResourceProviderManagerBase } from './ResourceproviderManagerBase';
-
-function isArray<T>(maybeArray: T[] | null | undefined): maybeArray is T[] {
-    return Array.isArray(maybeArray);
-}
+import { isArray } from '../../utils/v2/isArray';
 
 export class WorkspaceResourceProviderManager extends ResourceProviderManagerBase<WorkspaceResource, WorkspaceResourceProvider> {
     constructor(extensionActivator: () => Promise<void>) {
