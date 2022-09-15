@@ -19,7 +19,7 @@ export function registerApplicationResourceResolver(id: string, resolver: AppRes
     applicationResourceResolvers[id] = resolver;
     ext.emitters.onDidRegisterResolver.fire(resolver);
 
-    const compat = new CompatibleBranchDataProvider(resolver, 'azureResourceGroups.loadMore');
+    const compat = new CompatibleBranchDataProvider(resolver, 'azureResourceGroups.loadMore' /** TODO: what is the correct value for this? */);
 
     ext.v2.api.registerApplicationResourceBranchDataProvider(id, compat as unknown as BranchDataProvider<ApplicationResource, ResourceModelBase>);
 
