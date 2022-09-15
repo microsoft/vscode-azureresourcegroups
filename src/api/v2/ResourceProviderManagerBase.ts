@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ResourceBase, ResourceProviderBase } from '../v2AzureResourcesApi';
+import { ResourceBase, ResourceProviderBase } from './v2AzureResourcesApi';
 
 export abstract class ResourceProviderManagerBase<TResource extends ResourceBase, TResourceProvider extends ResourceProviderBase<TResource>> extends vscode.Disposable {
     private readonly onDidChangeResourceEventEmitter = new vscode.EventEmitter<TResource | undefined>();

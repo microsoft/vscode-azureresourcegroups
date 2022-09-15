@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { WorkspaceResourceProviderManager } from '../../../api/v2/providers/WorkspaceResourceProviderManager';
+import { WorkspaceResourceProviderManager } from '../../../api/v2/WorkspaceResourceProviderManager';
 import { WorkspaceResource } from '../../../api/v2/v2AzureResourcesApi';
 import { BranchDataItem } from '../BranchDataItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';

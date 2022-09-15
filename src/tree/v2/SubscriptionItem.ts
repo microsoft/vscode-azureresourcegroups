@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ApplicationResourceProviderManager } from "../../api/v2/providers/ApplicationResourceProviderManager";
+import { ApplicationResourceProviderManager } from "../../api/v2/ApplicationResourceProviderManager";
 import { ApplicationSubscription } from "../../api/v2/v2AzureResourcesApi";
 import { treeUtils } from "../../utils/treeUtils";
 import { ApplicationResourceGroupingManager } from "./ApplicationResourceGroupingManager";

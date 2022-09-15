@@ -2,11 +2,11 @@ import { GenericResource, ResourceGroup } from '@azure/arm-resources';
 import { getResourceGroupFromId, uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, getAzExtResourceType, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { createResourceClient } from '../../../utils/azureClients';
-import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
-import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions } from '../v2AzureResourcesApi';
+import { createResourceClient } from '../../utils/azureClients';
+import { createSubscriptionContext } from '../../utils/v2/credentialsUtils';
+import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions } from './v2AzureResourcesApi';
 
-export class BuiltInApplicationResourceProvider implements ApplicationResourceProvider {
+export class DefaultApplicationResourceProvider implements ApplicationResourceProvider {
     private readonly onDidChangeResourceEmitter = new vscode.EventEmitter<ApplicationResource | undefined>();
 
     getResources(subscription: ApplicationSubscription, _options?: ProvideResourceOptions | undefined): Promise<ApplicationResource[] | undefined> {

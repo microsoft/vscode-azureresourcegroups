@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ProvideResourceOptions, WorkspaceResource, WorkspaceResourceProvider } from "../v2AzureResourcesApi";
+import { ProvideResourceOptions, WorkspaceResource, WorkspaceResourceProvider } from "./v2AzureResourcesApi";
 import { ResourceProviderManagerBase } from './ResourceproviderManagerBase';
 
 function isArray<T>(maybeArray: T[] | null | undefined): maybeArray is T[] {

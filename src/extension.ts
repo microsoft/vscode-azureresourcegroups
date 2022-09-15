@@ -17,8 +17,8 @@ import { registerApplicationResourceProvider } from './api/registerApplicationRe
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
 import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResourceProvider';
 import { revealTreeItem } from './api/revealTreeItem';
-import { ApplicationResourceProviderManager } from './api/v2/providers/ApplicationResourceProviderManager';
-import { BuiltInApplicationResourceProvider } from './api/v2/providers/BuiltInApplicationResourceProvider';
+import { DefaultApplicationResourceProvider } from './api/v2/providers/DefaultApplicationResourceProvider';
+import { ApplicationResourceProviderManager } from './api/v2/ApplicationResourceProviderManager';
 import { WorkspaceResourceProviderManager } from './api/v2/providers/WorkspaceResourceProviderManager';
 import { ResourceGroupsExtensionManager } from './api/v2/ResourceGroupsExtensionManager';
 import { AzureResourcesApiManager } from './api/v2/v2AzureResourcesApi';
@@ -149,7 +149,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 workspaceResourceBranchDataProviderManager,
                 workspaceResourceProviderManager);
 
-            context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider()));
+            context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new DefaultApplicationResourceProvider()));
         }
 
         return v2Api;

@@ -1,7 +1,7 @@
 import { AzExtServiceClientCredentials, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
-import { ApplicationResourceProviderManager } from '../../api/v2/providers/ApplicationResourceProviderManager';
+import { ApplicationResourceProviderManager } from '../../api/v2/ApplicationResourceProviderManager';
 import { ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { localize } from '../../utils/localize';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';

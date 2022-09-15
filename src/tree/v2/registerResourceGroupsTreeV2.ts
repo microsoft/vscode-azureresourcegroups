@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ApplicationResourceProviderManager } from '../../api/v2/providers/ApplicationResourceProviderManager';
+import { ApplicationResourceProviderManager } from '../../api/v2/ApplicationResourceProviderManager';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
 import { createBranchDataItemFactory } from './BranchDataItem';
 import { createGroupingItemFactory } from './GroupingItem';

@@ -1,4 +1,4 @@
-import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions } from '../v2AzureResourcesApi';
+import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions } from './v2AzureResourcesApi';
 import { ResourceProviderManagerBase } from './ResourceproviderManagerBase';
 
 function isArray<T>(maybeArray: T[] | null | undefined): maybeArray is T[] {

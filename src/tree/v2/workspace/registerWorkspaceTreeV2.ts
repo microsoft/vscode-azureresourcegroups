@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { WorkspaceResourceProviderManager } from '../../../api/v2/providers/WorkspaceResourceProviderManager';
+import { WorkspaceResourceProviderManager } from '../../../api/v2/WorkspaceResourceProviderManager';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceTreeDataProvider } from './WorkspaceTreeDataProvider';
 import { localize } from './../../../utils/localize';
