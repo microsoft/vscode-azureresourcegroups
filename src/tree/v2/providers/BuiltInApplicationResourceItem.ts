@@ -22,9 +22,7 @@ export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase 
         const treeItem = new vscode.TreeItem(this.resource.name ?? 'Unnamed Resource');
 
         treeItem.iconPath = getIconPath(this.resource.azExtResourceType);
-
         treeItem.contextValue = 'azureResource';
-
         return treeItem;
     }
 
