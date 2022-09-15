@@ -1,10 +1,7 @@
+import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceGroupsExtensionManager } from '../../../api/v2/ResourceGroupsExtensionManager';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from "../../../api/v2/v2AzureResourcesApi";
-
-function normalizeType(type: string): string {
-    return type.toLowerCase();
-}
 
 export class BranchDataProviderManager extends vscode.Disposable {
     private readonly applicationResourceBranchDataProviders: { [key: string]: BranchDataProvider<ApplicationResource, ResourceModelBase> } = {};
@@ -30,9 +27,7 @@ export class BranchDataProviderManager extends vscode.Disposable {
         return this.onDidChangeTreeDataEmitter.event;
     }
 
-    addApplicationResourceBranchDataProvider(type: string, applicationResourceBranchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>): void {
-        type = normalizeType(type);
-
+    addApplicationResourceBranchDataProvider(type: AzExtResourceType, applicationResourceBranchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>): void {
         this.applicationResourceBranchDataProviders[type] = applicationResourceBranchDataProvider;
 
         if (applicationResourceBranchDataProvider.onDidChangeTreeData) {
@@ -43,7 +38,7 @@ export class BranchDataProviderManager extends vscode.Disposable {
     }
 
     getApplicationResourceBranchDataProvider(resource: ApplicationResource): BranchDataProvider<ApplicationResource, ResourceModelBase> {
-        const provider = this.applicationResourceBranchDataProviders[resource.azExtResourceType?.toLowerCase() ?? resource.type.type];
+        const provider = this.applicationResourceBranchDataProviders[resource.azExtResourceType ?? resource.type.type];
 
         if (provider) {
             return provider;
@@ -57,9 +52,7 @@ export class BranchDataProviderManager extends vscode.Disposable {
         return this.defaultBranchDataProvider;
     }
 
-    removeApplicationResourceBranchDataProvider(type: string): void {
-        type = normalizeType(type);
-
+    removeApplicationResourceBranchDataProvider(type: AzExtResourceType): void {
         const subscription = this.changeSubscriptions[type];
 
         if (subscription) {
