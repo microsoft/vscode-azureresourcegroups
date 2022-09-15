@@ -8,7 +8,6 @@ import { ext } from '../extensionVariables';
 import { BuiltInApplicationResourceItem } from '../tree/v2/providers/BuiltInApplicationResourceItem';
 
 export async function viewProperties(context: IActionContext, node?: BuiltInApplicationResourceItem): Promise<void> {
-    // TODO
     if (!node) {
         node = await appResourceExperience<BuiltInApplicationResourceItem>(context, ext.v2.resourceGroupsTreeDataProvider);
     }
