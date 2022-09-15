@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider } from '../../../api/v2/v2AzureResourcesApi';
 import { BuiltInApplicationResourceItem } from './BuiltInApplicationResourceItem';
-import { BuiltInResourceModelBase } from './BuiltInResourceModelBase';
 import { localize } from "../../../utils/localize";
+import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
-export class BuiltInApplicationResourceBranchDataProvider implements BranchDataProvider<ApplicationResource, BuiltInResourceModelBase> {
-    getChildren(element?: BuiltInResourceModelBase | undefined): vscode.ProviderResult<BuiltInResourceModelBase[]> {
+export class BuiltInApplicationResourceBranchDataProvider implements BranchDataProvider<ApplicationResource, ResourceGroupsItem> {
+    getChildren(element?: ResourceGroupsItem | undefined): vscode.ProviderResult<ResourceGroupsItem[]> {
         if (!element) {
             throw new Error(localize('UnexpectedElement', 'Expected a valid element.'));
         }
@@ -13,14 +13,14 @@ export class BuiltInApplicationResourceBranchDataProvider implements BranchDataP
         return element.getChildren();
     }
 
-    getResourceItem(element: ApplicationResource): BuiltInResourceModelBase | Thenable<BuiltInResourceModelBase> {
+    getResourceItem(element: ApplicationResource): ResourceGroupsItem | Thenable<ResourceGroupsItem> {
         return new BuiltInApplicationResourceItem(element);
     }
 
     // TODO: Implement change eventing.
-    // onDidChangeTreeData?: vscode.Event<void | BuiltInResourceModelBase | null | undefined> | undefined;
+    // onDidChangeTreeData?: vscode.Event<void | ResourceGroupsItem | null | undefined> | undefined;
 
-    getTreeItem(element: BuiltInResourceModelBase): vscode.TreeItem | Thenable<vscode.TreeItem> {
+    getTreeItem(element: ResourceGroupsItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
         return element.getTreeItem();
     }
 }

@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
-import { BuiltInResourceModelBase } from './BuiltInResourceModelBase';
+import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
-export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase {
+export class BuiltInApplicationResourceItem implements ResourceGroupsItem {
     constructor(private readonly resource: ApplicationResource) {
     }
 
-    getChildren(): vscode.ProviderResult<BuiltInResourceModelBase[]> {
+    getChildren(): vscode.ProviderResult<ResourceGroupsItem[]> {
         return undefined;
     }
 

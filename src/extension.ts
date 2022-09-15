@@ -17,9 +17,9 @@ import { registerApplicationResourceProvider } from './api/registerApplicationRe
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
 import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResourceProvider';
 import { revealTreeItem } from './api/revealTreeItem';
-import { DefaultApplicationResourceProvider } from './api/v2/providers/DefaultApplicationResourceProvider';
+import { DefaultApplicationResourceProvider } from './api/v2/DefaultApplicationResourceProvider';
 import { ApplicationResourceProviderManager } from './api/v2/ApplicationResourceProviderManager';
-import { WorkspaceResourceProviderManager } from './api/v2/providers/WorkspaceResourceProviderManager';
+import { WorkspaceResourceProviderManager } from './api/v2/WorkspaceResourceProviderManager';
 import { ResourceGroupsExtensionManager } from './api/v2/ResourceGroupsExtensionManager';
 import { AzureResourcesApiManager } from './api/v2/v2AzureResourcesApi';
 import { V2AzureResourcesApiImplementation } from './api/v2/v2AzureResourcesApiImplementation';
