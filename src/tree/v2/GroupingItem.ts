@@ -18,8 +18,7 @@ export class GroupingItem implements ResourceGroupsItem {
         private readonly iconPath: TreeItemIconPath | undefined,
         public readonly label: string,
         public readonly resources: ApplicationResource[],
-        public readonly resourceType: string | undefined
-    ) {
+        public readonly resourceType: string | undefined) {
     }
 
     public get quickPickOptions(): { readonly contextValues: string[]; readonly isLeaf: boolean; } {
@@ -50,7 +49,7 @@ export class GroupingItem implements ResourceGroupsItem {
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = new vscode.TreeItem(this.label, vscode.TreeItemCollapsibleState.Collapsed);
 
-        treeItem.contextValue = this.contextValues?.sort().join(';');
+        treeItem.contextValue = this.contextValues?.join(' ');
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
 
