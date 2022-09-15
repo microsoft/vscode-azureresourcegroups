@@ -15,6 +15,11 @@ export class CompatibleBranchDataItem implements ResourceGroupsItem, Box, Compat
         itemCache.addBranchItem(this.branchItem, this);
     }
 
+    /** Needed for tree item picker PickAppResourceStep */
+    public get resource(): ApplicationResource | undefined {
+        return (this.branchItem as { resource?: ApplicationResource }).resource;
+    }
+
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const children = await this.branchDataProvider.getChildren(this.branchItem);
         const factory = createBranchDataItemFactory(this.itemCache);
