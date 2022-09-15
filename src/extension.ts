@@ -75,7 +75,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         if (v2Api === undefined) {
             v2Api = new V2AzureResourcesApiImplementation(
                 branchDataProviderManager,
-                resourceProviderManager);
+                resourceProviderManager,
+                ext.v2.resourceGroupsTreeDataProvider);
 
             ext.v2.api = v2Api;
 
