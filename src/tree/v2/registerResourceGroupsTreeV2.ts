@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../api/v2/providers/ApplicationResourceProviderManager';
 import { ext } from '../../extensionVariables';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
-import { createBranchDataItemFactory } from './BranchDataItem';
+import { createBranchDataItemFactory } from './factories/branchDataItemFactory';
 import { createGroupingItemFactory } from './GroupingItem';
 import { BranchDataProviderManager } from './providers/BranchDataProviderManager';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';

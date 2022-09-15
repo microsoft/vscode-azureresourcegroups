@@ -6,13 +6,14 @@
 import { AzExtTreeDataProvider, AzExtTreeItem, ITreeItemPickerContext } from '@microsoft/vscode-azext-utils';
 import { Activity, AppResourceResolver, AzureHostExtensionApi, AzureResourceGroupsExtensionApi, LocalResourceProvider, PickAppResourceOptions, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi';
 import { Disposable, TreeView } from 'vscode';
+import { CompatibleAzExtTreeDataProvider } from './CompatibleAzExtTreeDataProvider';
 
 export class CompatibleAzureResourceGroupsExtensionApi implements AzureHostExtensionApi, AzureResourceGroupsExtensionApi {
     public static apiVersion = '0.1.0';
 
-    #appResourceTree: AzExtTreeDataProvider;
+    #appResourceTree: CompatibleAzExtTreeDataProvider;
     #appResourceTreeView: TreeView<unknown>;
-    #workspaceResourceTree: AzExtTreeDataProvider;
+    #workspaceResourceTree: CompatibleAzExtTreeDataProvider;
     #workspaceResourceTreeView: TreeView<unknown>;
     #apiVersion: string;
     #revealTreeItem: (resourceId: string) => Promise<void>;
@@ -24,7 +25,7 @@ export class CompatibleAzureResourceGroupsExtensionApi implements AzureHostExten
     // This `Omit` is here because the interface expects those keys to be defined, but in this object they will not be
     // They are replaced with functions defined on this class that merely wrap the newly-named keys
     // TODO: when `tree`, `treeView`, and `registerLocalResourceProvider` are removed from the interface, this `Omit` can be removed
-    public constructor(options: Omit<AzureHostExtensionApi, 'tree' | 'treeView' | 'registerLocalResourceProvider'>) {
+    public constructor(options: Omit<AzureHostExtensionApi, 'tree' | 'treeView' | 'registerLocalResourceProvider'> & { appResourceTree: CompatibleAzExtTreeDataProvider, workspaceResourceTree: CompatibleAzExtTreeDataProvider }) {
         this.#appResourceTree = options.appResourceTree;
         this.#appResourceTreeView = options.appResourceTreeView;
         this.#workspaceResourceTree = options.workspaceResourceTree;
