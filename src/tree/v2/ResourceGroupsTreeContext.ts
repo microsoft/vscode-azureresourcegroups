@@ -2,10 +2,7 @@ import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { ResourceGroupsItem } from "./ResourceGroupsItem";
 
 export interface ResourceGroupsTreeContext {
-    /**
-     * TODO: Eliminate this; it's only here for existing command logic.
-     * @deprecated
-     */
+    // TODO: Eliminate this; it's only here for existing command logic.
     readonly subscriptionContext: ISubscriptionContext;
 
     getParent(item: ResourceGroupsItem): ResourceGroupsItem | undefined;
