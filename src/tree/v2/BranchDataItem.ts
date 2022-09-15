@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ApplicationResource, BranchDataProvider, ResourceModelBase, WrappedResourceModel } from '../../api/v2/v2AzureResourcesApi';
+import { BranchDataProvider, ResourceBase, ResourceModelBase, WrappedResourceModel } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
@@ -10,7 +10,7 @@ export type BranchDataItemOptions = {
 export class BranchDataItem implements ResourceGroupsItem, WrappedResourceModel {
     constructor(
         private readonly branchItem: ResourceModelBase,
-        private readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
+        private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
         private readonly itemCache: ResourceGroupsItemCache,
         private readonly options: BranchDataItemOptions | undefined) {
         itemCache.addBranchItem(this.branchItem, this);
@@ -42,7 +42,7 @@ export class BranchDataItem implements ResourceGroupsItem, WrappedResourceModel 
     type: string;
 }
 
-export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItem;
+export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItem;
 
 export function createBranchDataItemFactory(itemCache: ResourceGroupsItemCache): BranchDataItemFactory {
     return (branchItem, branchDataProvider, options) => new BranchDataItem(branchItem, branchDataProvider, itemCache, options);

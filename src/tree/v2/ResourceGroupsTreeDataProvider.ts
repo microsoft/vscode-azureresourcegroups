@@ -2,11 +2,11 @@ import { AzExtServiceClientCredentials, nonNullProp } from '@microsoft/vscode-az
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../api/v2/providers/ApplicationResourceProviderManager';
+import { ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { localize } from '../../utils/localize';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
 import { AzureAccountExtensionApi } from './azure-account.api';
 import { GenericItem } from './GenericItem';
-import { BranchDataProviderManager } from './providers/BranchDataProviderManager';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 import { ResourceTreeDataProviderBase } from './ResourceTreeDataProviderBase';
@@ -20,16 +20,16 @@ export class ResourceGroupsTreeDataProvider extends ResourceTreeDataProviderBase
     private statusSubscription: vscode.Disposable | undefined;
 
     constructor(
-        branchDataProviderManager: BranchDataProviderManager,
+        onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
         itemCache: ResourceGroupsItemCache,
-        refreshEvent: vscode.Event<void>,
+        onRefresh: vscode.Event<void>,
         private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
-        resourceProviderManager: ApplicationResourceProviderManager) {
+        private readonly resourceProviderManager: ApplicationResourceProviderManager) {
         super(
-            branchDataProviderManager,
             itemCache,
-            refreshEvent,
-            resourceProviderManager,
+            onDidChangeBranchTreeData,
+            resourceProviderManager.onDidChangeResourceChange,
+            onRefresh,
             () => {
                 this.groupingChangeSubscription.dispose();
                 this.filtersSubscription?.dispose();
@@ -47,10 +47,6 @@ export class ResourceGroupsTreeDataProvider extends ResourceTreeDataProviderBase
         if (element) {
             return await element.getChildren();
         } else {
-            // We're effectively redrawing the entire tree, so we need to clear the cache...
-            // TODO: Isn't this already done within cacheChildren()?
-            // this.itemCache.evictAll();
-
             const api = await this.getApi();
 
             if (api) {
