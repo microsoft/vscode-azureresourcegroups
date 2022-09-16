@@ -28,6 +28,9 @@ import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { azureResourceProviderId } from './constants';
 import { ext } from './extensionVariables';
+import { installableAppResourceResolver } from './resolvers/InstallableAppResourceResolver';
+import { shallowResourceResolver } from './resolvers/ShallowResourceResolver';
+import { wrapperResolver } from './resolvers/WrapperResolver';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { GroupTreeItemBase } from './tree/GroupTreeItemBase';
 import { HelpTreeItem } from './tree/HelpTreeItem';
@@ -127,9 +130,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         registerCommands(refreshEventEmitter);
         registerApplicationResourceProvider(azureResourceProviderId, new AzureResourceProvider());
-        // registerApplicationResourceResolver('vscode-azureresourcegroups.wrapperResolver', wrapperResolver);
-        // registerApplicationResourceResolver('vscode-azureresourcegroups.installableAppResourceResolver', installableAppResourceResolver);
-        // registerApplicationResourceResolver('vscode-azureresourcegroups.shallowResourceResolver', shallowResourceResolver);
+        registerApplicationResourceResolver('vscode-azureresourcegroups.wrapperResolver', wrapperResolver);
+        registerApplicationResourceResolver('vscode-azureresourcegroups.installableAppResourceResolver', installableAppResourceResolver);
+        registerApplicationResourceResolver('vscode-azureresourcegroups.shallowResourceResolver', shallowResourceResolver);
 
         await vscode.commands.executeCommand('setContext', 'azure-account.signedIn', await ext.rootAccountTreeItem.getIsLoggedIn());
     });
