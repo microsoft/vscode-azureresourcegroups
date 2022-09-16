@@ -3,6 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { AzExtResourceType } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
 import { ext } from "../extensionVariables";
@@ -12,19 +13,19 @@ import { ApplicationResource, BranchDataProvider } from "./v2/v2AzureResourcesAp
 
 export const applicationResourceResolvers: Record<string, AppResourceResolver> = {};
 
-export function registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): Disposable {
-    if (applicationResourceResolvers[id]) {
-        throw new Error(`Application resource resolver with id '${id}' has already been registered.`);
+export function registerApplicationResourceResolver(type: AzExtResourceType, resolver: AppResourceResolver): Disposable {
+    if (applicationResourceResolvers[type]) {
+        throw new Error(`Application resource resolver with id '${type}' has already been registered.`);
     }
 
-    applicationResourceResolvers[id] = resolver;
+    applicationResourceResolvers[type] = resolver;
     ext.emitters.onDidRegisterResolver.fire(resolver);
 
     const compat = new CompatibleBranchDataProvider(resolver, 'azureResourceGroups.loadMore' /** TODO: what is the correct value for this? */);
 
-    ext.v2.api.registerApplicationResourceBranchDataProvider(id, compat as unknown as BranchDataProvider<ApplicationResource, CompatibleBranchDataItem>);
+    ext.v2.api.registerApplicationResourceBranchDataProvider(type, compat as unknown as BranchDataProvider<ApplicationResource, CompatibleBranchDataItem>);
 
     return new Disposable(() => {
-        delete applicationResourceResolvers[id];
+        delete applicationResourceResolvers[type];
     });
 }
