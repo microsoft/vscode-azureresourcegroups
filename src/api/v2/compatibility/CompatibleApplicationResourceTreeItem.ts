@@ -34,6 +34,11 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
         return nonNullProp(this.data, 'id');
     }
 
+    // needed for view properties
+    public get azureResourceId(): string | undefined {
+        return this.resource.id;
+    }
+
     public get label(): string {
         return nonNullProp(this.data, 'name');
     }

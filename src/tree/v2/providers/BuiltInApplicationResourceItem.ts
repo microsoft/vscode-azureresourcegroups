@@ -8,9 +8,10 @@ export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase 
     }
 
     // needed for view properties
-    public get data(): Record<string, unknown> {
-        return this.resource._raw;
-    }
+    public readonly data = this.resource._raw;
+
+    public readonly name = this.resource.name;
+    public readonly azureResourceId = this.resource.id;
 
     getChildren(): vscode.ProviderResult<BuiltInResourceModelBase[]> {
         return undefined;
@@ -33,6 +34,5 @@ export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase 
     }
 
     id: string;
-    name: string;
     type: string;
 }

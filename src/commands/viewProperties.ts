@@ -12,5 +12,5 @@ export async function viewProperties(context: IActionContext, node?: BuiltInAppl
         node = await appResourceExperience<BuiltInApplicationResourceItem>(context, ext.v2.resourceGroupsTreeDataProvider);
     }
 
-    await openReadOnlyJson({ fullId: node.id, label: node.name }, node.data);
+    await openReadOnlyJson({ fullId: node.azureResourceId, label: node.name }, node.data);
 }

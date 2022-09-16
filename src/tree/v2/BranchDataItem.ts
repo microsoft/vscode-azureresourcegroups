@@ -18,6 +18,10 @@ export class BranchDataItem implements ResourceGroupsItem, Wrapper {
         itemCache.addBranchItem(this.branchItem, this);
     }
 
+    public get azureResourceId(): string | undefined {
+        return this.branchItem.azureResourceId;
+    }
+
     /** Needed for tree item picker PickAppResourceStep */
     public get resource(): ApplicationResource | undefined {
         return (this.branchItem as { resource?: ApplicationResource }).resource;
