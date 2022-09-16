@@ -38,7 +38,7 @@ export class CompatibleBranchDataItem extends BranchDataItem {
 
         return {
             contextValues: ti.contextValue.split(';'),
-            isLeaf: isAzExtParentTreeItem(ti),
+            isLeaf: !isAzExtParentTreeItem(ti),
             createChild,
         }
     }
