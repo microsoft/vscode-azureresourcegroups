@@ -7,14 +7,6 @@ import { BuiltInResourceModelBase } from './BuiltInResourceModelBase';
 export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase, CanViewProperties {
     constructor(private readonly resource: ApplicationResource) { }
 
-    public get viewProperties(): ViewPropertiesModel {
-        return {
-            id: this.resource.id,
-            label: this.resource.name,
-            data: this.resource._raw,
-        }
-    }
-
     getChildren(): vscode.ProviderResult<BuiltInResourceModelBase[]> {
         return undefined;
     }
@@ -33,6 +25,14 @@ export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase,
             contextValues: [],
             isLeaf: true,
         };
+    }
+
+    public get viewProperties(): ViewPropertiesModel {
+        return {
+            id: this.resource.id,
+            label: this.resource.name,
+            data: this.resource._raw,
+        }
     }
 
     id: string;

@@ -26,6 +26,10 @@ export interface CanViewProperties {
     viewProperties: ViewPropertiesModel;
 }
 
+export function canViewProperties(maybeCanViewProperties: unknown): maybeCanViewProperties is CanViewProperties {
+    return typeof maybeCanViewProperties === 'object' && !!(maybeCanViewProperties as CanViewProperties).viewProperties;
+}
+
 export async function viewProperties(context: IActionContext, node?: CanViewProperties & ContextValueFilterableTreeNode): Promise<void> {
     if (!node) {
         node = await appResourceExperience<BuiltInApplicationResourceItem>(context, ext.v2.resourceGroupsTreeDataProvider);
@@ -33,8 +37,4 @@ export async function viewProperties(context: IActionContext, node?: CanViewProp
 
     const { id, data, label } = node.viewProperties;
     await openReadOnlyJson({ fullId: id, label }, data);
-}
-
-export function canViewProperties(maybeCanViewProperties: unknown): maybeCanViewProperties is CanViewProperties {
-    return typeof maybeCanViewProperties === 'object' && !!(maybeCanViewProperties as CanViewProperties).viewProperties;
 }
