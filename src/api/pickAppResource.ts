@@ -25,7 +25,7 @@ function convertAppResourceFilterToAzExtResourceType(filter?: PickAppResourceOpt
 
     filter = Array.isArray(filter) ? filter : [filter];
 
-    return filterMap(filter, (f) => getAzExtResourceType({ type: f.type, kind: f.kind }))
+    return filterMap(filter, (f) => getAzExtResourceType(f))
 }
 
 function filterMap<T, TMapped>(
