@@ -1,15 +1,18 @@
 import * as vscode from 'vscode';
 import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
+import { CanViewProperties, ViewPropertiesModel } from '../../../commands/viewProperties';
 import { getIconPath } from '../../../utils/azureUtils';
 import { BuiltInResourceModelBase } from './BuiltInResourceModelBase';
 
-export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase {
-    constructor(private readonly resource: ApplicationResource) {
-    }
+export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase, CanViewProperties {
+    constructor(private readonly resource: ApplicationResource) { }
 
-    // needed for view properties
-    public get data(): Record<string, unknown> {
-        return this.resource._raw;
+    public get viewProperties(): ViewPropertiesModel {
+        return {
+            id: this.resource.id,
+            label: this.resource.name,
+            data: this.resource._raw,
+        }
     }
 
     getChildren(): vscode.ProviderResult<BuiltInResourceModelBase[]> {

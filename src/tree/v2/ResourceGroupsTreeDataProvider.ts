@@ -3,6 +3,7 @@ import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../api/v2/providers/ApplicationResourceProviderManager';
 import { ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { canViewProperties } from '../../commands/viewProperties';
 import { localize } from '../../utils/localize';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
 import { AzureAccountExtensionApi } from './azure-account.api';
@@ -78,8 +79,19 @@ export class ResourceGroupsTreeDataProvider extends vscode.Disposable implements
 
     onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
 
-    getTreeItem(element: ResourceGroupsItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        return element.getTreeItem();
+    async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
+
+        const contextValuesToAdd: string[] = [];
+        if (canViewProperties(element)) {
+            contextValuesToAdd.push('canViewProperties');
+        }
+
+        const ti = await element.getTreeItem();
+
+        ti.contextValue = [...(ti.contextValue?.split(';') ?? []), ...contextValuesToAdd].sort().join(';');
+
+        ti.tooltip = ti.contextValue;
+        return ti;
     }
 
     getParent(element: ResourceGroupsItem): vscode.ProviderResult<ResourceGroupsItem> {

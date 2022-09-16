@@ -1,6 +1,7 @@
 import { Wrapper } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { canViewProperties, ViewPropertiesModel } from '../../commands/viewProperties';
 import { createBranchDataItemFactory } from './factories/branchDataItemFactory';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
@@ -49,6 +50,13 @@ export class BranchDataItem implements ResourceGroupsItem, Wrapper {
             contextValues: [],
             isLeaf: true,
         };
+    }
+
+    public get viewProperties(): ViewPropertiesModel | undefined {
+        if (canViewProperties(this.branchItem)) {
+            return this.branchItem.viewProperties;
+        }
+        return undefined;
     }
 
     id: string;

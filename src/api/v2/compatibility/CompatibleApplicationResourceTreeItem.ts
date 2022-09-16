@@ -6,6 +6,7 @@
 import { AzExtParentTreeItem, AzExtResourceType, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ISubscriptionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import type { AppResource, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { TreeItemCollapsibleState } from "vscode";
+import { CanViewProperties, ViewPropertiesModel } from "../../../commands/viewProperties";
 import { createResolvableProxy } from "../../../tree/AppResourceTreeItem";
 import { getIconPath } from "../../../utils/azureUtils";
 import { ApplicationResource } from "../v2AzureResourcesApi";
@@ -13,7 +14,7 @@ import { ApplicationResource } from "../v2AzureResourcesApi";
 /**
  * Must immitate the behavior of AppResourceTreeItem
  */
-export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTreeItem {
+export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTreeItem implements CanViewProperties {
     public static contextValue: string = 'azureResource';
     protected readonly contextValues: Set<string> = new Set<string>();
     public get contextValue(): string {
@@ -32,6 +33,14 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
 
     public get id(): string {
         return nonNullProp(this.data, 'id');
+    }
+
+    public get viewProperties(): ViewPropertiesModel {
+        return {
+            id: this.data.id,
+            label: this.label,
+            data: this.data,
+        }
     }
 
     public get label(): string {
