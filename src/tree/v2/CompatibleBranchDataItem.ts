@@ -1,4 +1,4 @@
-import { AzExtParentTreeItem, AzExtTreeItem, CompatibleQuickPickOptions, CreateOptions } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, CompatibleQuickPickOptions, CreateOptions, isAzExtParentTreeItem } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { localize } from 'vscode-nls';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
@@ -27,20 +27,18 @@ export class CompatibleBranchDataItem extends BranchDataItem {
     public get quickPickOptions(): CompatibleQuickPickOptions {
         const ti = this.branchItem as AzExtTreeItem;
 
-        const maybeParent = ti as AzExtParentTreeItem;
-
-        const createChild: CreateOptions | undefined = maybeParent.createChild ?
+        const createChild: CreateOptions | undefined = isAzExtParentTreeItem(ti) ?
             {
-                callback: maybeParent.createChild.bind(maybeParent) as typeof maybeParent.createChild,
-                label: maybeParent.childTypeLabel ?
-                    localize('createNewItem', '$(plus) Create new {0}', maybeParent.childTypeLabel) :
+                callback: ti.createChild.bind(ti) as typeof ti.createChild,
+                label: ti.childTypeLabel ?
+                    localize('createNewItem', '$(plus) Create new {0}', ti.childTypeLabel) :
                     localize('createNew', '$(plus) Create new...'),
             } :
             undefined;
 
         return {
             contextValues: ti.contextValue.split(';'),
-            isLeaf: !maybeParent?.loadMoreChildrenImpl,
+            isLeaf: isAzExtParentTreeItem(ti),
             createChild,
         }
     }
