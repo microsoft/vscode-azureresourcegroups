@@ -30,13 +30,6 @@ export class SubscriptionItem implements ResourceGroupsItem {
         return treeItem;
     }
 
-    public get quickPickOptions(): { readonly contextValues: string[]; readonly isLeaf: boolean; } {
-        return {
-            contextValues: ['azureextensionui.azureSubscription'],
-            isLeaf: false,
-        };
-    }
-
     id: string;
     name: string;
     type: string;
