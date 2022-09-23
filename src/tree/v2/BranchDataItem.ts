@@ -44,13 +44,6 @@ export class BranchDataItem implements ResourceGroupsItem, Wrapper {
         return this.branchItem as T;
     }
 
-    public get quickPickOptions(): { readonly contextValues: string[]; readonly isLeaf: boolean; } {
-        return this.branchItem.quickPickOptions ?? {
-            contextValues: [],
-            isLeaf: true,
-        };
-    }
-
     id: string;
     name: string;
     type: string;

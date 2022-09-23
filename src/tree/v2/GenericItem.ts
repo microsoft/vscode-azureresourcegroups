@@ -33,12 +33,5 @@ export class GenericItem implements ResourceGroupsItem {
         return treeItem;
     }
 
-    public get quickPickOptions(): { readonly contextValues: string[]; readonly isLeaf: boolean; } {
-        return {
-            contextValues: [],
-            isLeaf: !!this.options?.children && this.options.children.length > 0,
-        }
-    }
-
     public id: string;
 }
