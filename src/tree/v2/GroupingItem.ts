@@ -2,7 +2,7 @@ import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../utils/azureUtils';
-import { BranchDataItemFactory } from './BranchDataItem';
+import { BranchDataItemFactory } from './factories/branchDataItemFactory';
 import { BranchDataProviderFactory } from './providers/BranchDataProviderManager';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from './ResourceGroupsTreeContext';

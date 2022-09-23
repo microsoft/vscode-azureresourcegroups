@@ -16,6 +16,7 @@ export class BuiltInApplicationResourceItem implements BuiltInResourceModelBase 
 
         treeItem.iconPath = getIconPath(this.resource.azExtResourceType);
 
+        treeItem.contextValue = 'azureResource';
         return treeItem;
     }
 

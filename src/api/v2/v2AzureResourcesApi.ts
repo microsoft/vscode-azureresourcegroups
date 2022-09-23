@@ -200,7 +200,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
      * @param id The resolver ID. Must be unique.
      * @param resolver The resolver
      */
-    registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(id: string, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable;
+    registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable;
 
     /**
      * Registers a workspace resource provider
