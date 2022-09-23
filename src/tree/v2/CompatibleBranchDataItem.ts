@@ -7,10 +7,10 @@ import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
 export class CompatibleBranchDataItem extends BranchDataItem {
     constructor(
-        protected readonly branchItem: ResourceModelBase,
-        protected readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
-        protected readonly itemCache: ResourceGroupsItemCache,
-        protected readonly options: BranchDataItemOptions | undefined
+        branchItem: ResourceModelBase,
+        branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
+        itemCache: ResourceGroupsItemCache,
+        options: BranchDataItemOptions | undefined
     ) {
         super(branchItem, branchDataProvider, itemCache, options);
         itemCache.addBranchItem(this.branchItem, this);
