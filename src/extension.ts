@@ -19,6 +19,7 @@ import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResour
 import { revealTreeItem } from './api/revealTreeItem';
 import { DefaultApplicationResourceProvider } from './api/v2/DefaultApplicationResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/v2/ResourceGroupsExtensionManager';
+import { ApplicationResourceProviderManager, WorkspaceResourceProviderManager } from './api/v2/ResourceProviderManagers';
 import { AzureResourcesApiManager } from './api/v2/v2AzureResourcesApi';
 import { V2AzureResourcesApiImplementation } from './api/v2/v2AzureResourcesApiImplementation';
 import { AzureResourceProvider } from './AzureResourceProvider';
@@ -43,7 +44,6 @@ import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
 import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
 import { localize } from './utils/localize';
 import { createApiProvider } from './utils/v2/apiUtils';
-import { ApplicationResourceProviderManager, WorkspaceResourceProviderManager } from './api/v2/ResourceproviderManagerBase';
 
 let v2Api: V2AzureResourcesApiImplementation | undefined = undefined;
 

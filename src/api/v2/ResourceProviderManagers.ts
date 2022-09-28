@@ -4,10 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { isArray } from '../../utils/v2/isArray';
 import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions, ResourceBase, ResourceProviderBase, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
-class ResourceProviderManagerBase<TResourceSource, TResource extends ResourceBase, TResourceProvider extends ResourceProviderBase<TResourceSource, TResource>> extends vscode.Disposable {
+export function isArray<T>(maybeArray: T[] | null | undefined): maybeArray is T[] {
+    return Array.isArray(maybeArray);
+}
+
+class ResourceProviderManager<TResourceSource, TResource extends ResourceBase, TResourceProvider extends ResourceProviderBase<TResourceSource, TResource>> extends vscode.Disposable {
     private readonly onDidChangeResourceEventEmitter = new vscode.EventEmitter<TResource | undefined>();
     private readonly providers = new Map<TResourceProvider, { listener: vscode.Disposable | undefined }>();
 
@@ -51,17 +54,13 @@ class ResourceProviderManagerBase<TResourceSource, TResource extends ResourceBas
     }
 
     async getResources(source: TResourceSource, options?: ProvideResourceOptions): Promise<TResource[]> {
-        const resourceProviders = await this.getResourceProviders();
+        await this.activateExtensions();
+
+        const resourceProviders = Array.from(this.providers.keys());
 
         const resources = await Promise.all(resourceProviders.map(resourceProvider => resourceProvider.getResources(source, options)));
 
         return resources.filter(isArray).reduce((acc, result) => acc?.concat(result ?? []), []);
-    }
-
-    protected async getResourceProviders(): Promise<TResourceProvider[]> {
-        await this.activateExtensions();
-
-        return Array.from(this.providers.keys());
     }
 
     private async activateExtensions(): Promise<void> {
@@ -78,8 +77,8 @@ class ResourceProviderManagerBase<TResourceSource, TResource extends ResourceBas
 // NOTE: TS doesn't seem to like exporting a type alias (i.e. you cannot instantiate it),
 //       so we still have to extend the class.
 
-export class ApplicationResourceProviderManager extends ResourceProviderManagerBase<ApplicationSubscription, ApplicationResource, ApplicationResourceProvider> {
+export class ApplicationResourceProviderManager extends ResourceProviderManager<ApplicationSubscription, ApplicationResource, ApplicationResourceProvider> {
 }
 
-export class WorkspaceResourceProviderManager extends ResourceProviderManagerBase<vscode.WorkspaceFolder, WorkspaceResource, WorkspaceResourceProvider> {
+export class WorkspaceResourceProviderManager extends ResourceProviderManager<vscode.WorkspaceFolder, WorkspaceResource, WorkspaceResourceProvider> {
 }

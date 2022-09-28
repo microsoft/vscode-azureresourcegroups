@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { WorkspaceResourceProviderManager } from '../../../api/v2/ResourceproviderManagerBase';
+import { WorkspaceResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { localize } from './../../../utils/localize';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceResourceTreeDataProvider } from './WorkspaceResourceTreeDataProvider';

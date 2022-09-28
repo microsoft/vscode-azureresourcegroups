@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import { ApplicationResourceProviderManager } from "../../../api/v2/ResourceProviderManagers";
 import { ApplicationSubscription } from "../../../api/v2/v2AzureResourcesApi";
 import { treeUtils } from "../../../utils/treeUtils";
-import { ApplicationResourceGroupingManager } from "./ApplicationResourceGroupingManager";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
-import { ApplicationResourceProviderManager } from "../../../api/v2/ResourceproviderManagerBase";
+import { ApplicationResourceGroupingManager } from "./ApplicationResourceGroupingManager";
 
 export class SubscriptionItem implements ResourceGroupsItem {
     constructor(

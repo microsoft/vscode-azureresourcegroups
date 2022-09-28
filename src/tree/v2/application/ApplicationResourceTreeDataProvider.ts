@@ -6,7 +6,7 @@
 import { AzExtServiceClientCredentials, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
-import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceproviderManagerBase';
+import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { localize } from '../../../utils/localize';
 import { AzureAccountExtensionApi } from '../azure-account.api';

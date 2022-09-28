@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceproviderManagerBase';
+import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { createBranchDataItemFactory } from '../BranchDataProviderItem';
 import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { localize } from './../../../utils/localize';

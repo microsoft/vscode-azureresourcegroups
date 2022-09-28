@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { WorkspaceResourceProviderManager } from '../../../api/v2/ResourceproviderManagerBase';
+import { WorkspaceResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { WorkspaceResource } from '../../../api/v2/v2AzureResourcesApi';
 import { BranchDataProviderItem } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';

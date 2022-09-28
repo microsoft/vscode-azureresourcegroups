@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import { ApplicationResourceBranchDataProviderManager } from '../../tree/v2/application/ApplicationResourceBranchDataProviderManager';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
-import { ApplicationResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceproviderManagerBase';
+import { ApplicationResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
 import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
