@@ -50,14 +50,14 @@ export interface ApplicationResource extends ResourceBase {
     /* add more properties from GenericResource if needed */
 }
 
-export interface ResourceProviderBase<TResourceSource, TResource extends ResourceBase> {
+export interface ResourceProvider<TResourceSource, TResource extends ResourceBase> {
     readonly onDidChangeResource?: vscode.Event<TResource | undefined>;
 
     /**
      * Called to supply the resources used as the basis for the resource group views.
      * @param source The source from which resources should be generated.
      */
-     getResources(source: TResourceSource, options?: ProvideResourceOptions): vscode.ProviderResult<TResource[]>;
+    getResources(source: TResourceSource, options?: ProvideResourceOptions): vscode.ProviderResult<TResource[]>;
 }
 
 export interface ProvideResourceOptions {
@@ -65,9 +65,7 @@ export interface ProvideResourceOptions {
     readonly maxResults?: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface ApplicationResourceProvider extends ResourceProviderBase<ApplicationSubscription, ApplicationResource> {
-}
+export type ApplicationResourceProvider = ResourceProvider<ApplicationSubscription, ApplicationResource>;
 
 export interface ResourceQuickPickOptions {
     readonly contexts?: string[];
@@ -127,9 +125,7 @@ export interface WorkspaceResource extends ResourceBase {
 /**
  * A provider for supplying items for the workspace resource tree (e.g., storage emulator, function apps in workspace, etc.)
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface WorkspaceResourceProvider extends ResourceProviderBase<vscode.WorkspaceFolder, WorkspaceResource> {
-}
+export type WorkspaceResourceProvider = ResourceProvider<vscode.WorkspaceFolder, WorkspaceResource>;
 
 export interface ResourcePickOptions {
     /**

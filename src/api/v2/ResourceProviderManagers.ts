@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions, ResourceBase, ResourceProviderBase, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
+import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions, ResourceBase, ResourceProvider, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export function isArray<T>(maybeArray: T[] | null | undefined): maybeArray is T[] {
     return Array.isArray(maybeArray);
 }
 
-class ResourceProviderManager<TResourceSource, TResource extends ResourceBase, TResourceProvider extends ResourceProviderBase<TResourceSource, TResource>> extends vscode.Disposable {
+class ResourceProviderManager<TResourceSource, TResource extends ResourceBase, TResourceProvider extends ResourceProvider<TResourceSource, TResource>> extends vscode.Disposable {
     private readonly onDidChangeResourceEventEmitter = new vscode.EventEmitter<TResource | undefined>();
     private readonly providers = new Map<TResourceProvider, { listener: vscode.Disposable | undefined }>();
 
