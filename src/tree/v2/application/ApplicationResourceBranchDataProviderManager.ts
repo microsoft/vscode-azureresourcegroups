@@ -13,7 +13,8 @@ export class ApplicationResourceBranchDataProviderManager extends ResourceBranch
     ) {
         super(
             defaultProvider,
-            extensionActivator);
+            extensionActivator
+        );
     }
 }
 

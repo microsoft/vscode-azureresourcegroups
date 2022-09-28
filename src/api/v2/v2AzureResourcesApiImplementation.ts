@@ -14,10 +14,10 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     public static apiVersion: string = '2.0.0';
 
     constructor(
-        private readonly branchDataProviderManager: ApplicationResourceBranchDataProviderManager,
-        private readonly resourceProviderManager: ApplicationResourceProviderManager,
-        private readonly workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
-        private readonly workspaceResourceProviderManager: WorkspaceResourceProviderManager) {
+        private readonly applicationResourceProviderManager: ApplicationResourceProviderManager,
+        private readonly applicationResourceBranchDataProviderManager: ApplicationResourceBranchDataProviderManager,
+        private readonly workspaceResourceProviderManager: WorkspaceResourceProviderManager,
+        private readonly workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager) {
     }
 
     get apiVersion(): string {
@@ -33,15 +33,15 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     }
 
     registerApplicationResourceProvider(_id: string, provider: ApplicationResourceProvider): vscode.Disposable {
-        this.resourceProviderManager.addResourceProvider(provider);
+        this.applicationResourceProviderManager.addResourceProvider(provider);
 
-        return new vscode.Disposable(() => this.resourceProviderManager.removeResourceProvider(provider));
+        return new vscode.Disposable(() => this.applicationResourceProviderManager.removeResourceProvider(provider));
     }
 
     registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(id: string, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable {
-        this.branchDataProviderManager.addProvider(id, provider);
+        this.applicationResourceBranchDataProviderManager.addProvider(id, provider);
 
-        return new vscode.Disposable(() => this.branchDataProviderManager.removeProvider(id));
+        return new vscode.Disposable(() => this.applicationResourceBranchDataProviderManager.removeProvider(id));
     }
 
     registerWorkspaceResourceProvider(_id: string, provider: WorkspaceResourceProvider): vscode.Disposable {

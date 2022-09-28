@@ -5,13 +5,13 @@
 
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../../api/v2/ApplicationResourceProviderManager';
-import { localize } from './../../../utils/localize';
-import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
 import { createBranchDataItemFactory } from '../BranchDataProviderItem';
-import { createGroupingItemFactory } from './GroupingItem';
-import { ApplicationResourceBranchDataProviderManager } from './ApplicationResourceBranchDataProviderManager';
 import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
-import { ResourceGroupsTreeDataProvider } from './ResourceGroupsTreeDataProvider';
+import { localize } from './../../../utils/localize';
+import { ApplicationResourceBranchDataProviderManager } from './ApplicationResourceBranchDataProviderManager';
+import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
+import { ApplicationResourceTreeDataProvider } from './ApplicationResourceTreeDataProvider';
+import { createGroupingItemFactory } from './GroupingItem';
 
 export function registerResourceGroupsTreeV2(
     context: vscode.ExtensionContext,
@@ -25,7 +25,7 @@ export function registerResourceGroupsTreeV2(
 
     context.subscriptions.push(resourceGroupingManager);
 
-    const treeDataProvider = new ResourceGroupsTreeDataProvider(branchDataProviderManager.onDidChangeTreeData, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
+    const treeDataProvider = new ApplicationResourceTreeDataProvider(branchDataProviderManager.onDidChangeTreeData, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
 
     context.subscriptions.push(treeDataProvider);
 

@@ -50,8 +50,14 @@ export interface ApplicationResource extends ResourceBase {
     /* add more properties from GenericResource if needed */
 }
 
-export interface ResourceProviderBase<TResource extends ResourceBase> {
+export interface ResourceProviderBase<TResourceSource, TResource extends ResourceBase> {
     readonly onDidChangeResource?: vscode.Event<TResource | undefined>;
+
+    /**
+     * Called to supply the resources used as the basis for the resource group views.
+     * @param source The source from which resources should be generated.
+     */
+     getResources(source: TResourceSource, options?: ProvideResourceOptions): vscode.ProviderResult<TResource[]>;
 }
 
 export interface ProvideResourceOptions {
@@ -59,8 +65,8 @@ export interface ProvideResourceOptions {
     readonly maxResults?: number;
 }
 
-export interface ApplicationResourceProvider extends ResourceProviderBase<ApplicationResource> {
-    getResources(subscription: ApplicationSubscription, options?: ProvideResourceOptions): vscode.ProviderResult<ApplicationResource[]>;
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface ApplicationResourceProvider extends ResourceProviderBase<ApplicationSubscription, ApplicationResource> {
 }
 
 export interface ResourceQuickPickOptions {
@@ -90,6 +96,14 @@ export interface WrappedResourceModel {
  */
 export interface BranchDataProvider<TResource extends ResourceBase, TModel extends ResourceModelBase> extends vscode.TreeDataProvider<TModel> {
     /**
+     * Get the children of `element` or root if no element is passed.
+     *
+     * @param element The element from which the provider gets children. Unlike a traditional TreeDataProvider, this will never be `undefined`.
+     * @return Children of `element` or root if no element is passed.
+     */
+    getChildren(element: TModel): vscode.ProviderResult<TModel[]>;
+
+    /**
      * Called to get the provider's model element for a specific resource.
      * @remarks getChildren() assumes that the provider passes a known <T> model item, or undefined when getting the root children.
      *          However, we need to be able to pass a specific application resource which may not match the <T> model hierarchy used by the provider.
@@ -113,12 +127,8 @@ export interface WorkspaceResource extends ResourceBase {
 /**
  * A provider for supplying items for the workspace resource tree (e.g., storage emulator, function apps in workspace, etc.)
  */
-export interface WorkspaceResourceProvider extends ResourceProviderBase<WorkspaceResource> {
-    /**
-     * Called to supply the tree nodes to the workspace resource tree
-     * @param folder A folder in the opened workspace
-     */
-    provideResources(folder: vscode.WorkspaceFolder, options?: ProvideResourceOptions): vscode.ProviderResult<WorkspaceResource[]>;
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface WorkspaceResourceProvider extends ResourceProviderBase<vscode.WorkspaceFolder, WorkspaceResource> {
 }
 
 export interface ResourcePickOptions {

@@ -9,15 +9,15 @@ import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../../api/v2/ApplicationResourceProviderManager';
 import { ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { localize } from '../../../utils/localize';
-import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
 import { AzureAccountExtensionApi } from '../azure-account.api';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
+import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
 import { SubscriptionItem } from './SubscriptionItem';
 
-export class ResourceGroupsTreeDataProvider extends ResourceTreeDataProviderBase {
+export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProviderBase {
     private readonly groupingChangeSubscription: vscode.Disposable;
 
     private api: AzureAccountExtensionApi | undefined;
@@ -52,7 +52,7 @@ export class ResourceGroupsTreeDataProvider extends ResourceTreeDataProviderBase
         if (element) {
             return await element.getChildren();
         } else {
-            const api = await this.getApi();
+            const api = await this.getAzureAccountExtensionApi();
 
             if (api) {
                 if (api.status === 'LoggedIn') {
@@ -130,7 +130,7 @@ export class ResourceGroupsTreeDataProvider extends ResourceTreeDataProviderBase
         return undefined;
     }
 
-    private async getApi(): Promise<AzureAccountExtensionApi | undefined> {
+    private async getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi | undefined> {
         if (!this.api) {
             const extension = vscode.extensions.getExtension<AzureExtensionApiProvider>('ms-vscode.azure-account');
 

@@ -144,10 +144,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     const v2ApiFactory = () => {
         if (v2Api === undefined) {
             v2Api = new V2AzureResourcesApiImplementation(
-                branchDataProviderManager,
                 resourceProviderManager,
-                workspaceResourceBranchDataProviderManager,
-                workspaceResourceProviderManager);
+                branchDataProviderManager,
+                workspaceResourceProviderManager,
+                workspaceResourceBranchDataProviderManager);
 
             context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new DefaultApplicationResourceProvider()));
         }

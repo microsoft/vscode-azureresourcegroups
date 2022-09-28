@@ -20,7 +20,7 @@ class WorkspaceResourceItem implements WorkspaceResourceModel {
 }
 
 export class WorkspaceDefaultBranchDataProvider implements BranchDataProvider<WorkspaceResource, WorkspaceResourceModel> {
-    getChildren(_element?: WorkspaceResourceModel | undefined): vscode.ProviderResult<WorkspaceResourceModel[]> {
+    getChildren(_element: WorkspaceResourceModel): vscode.ProviderResult<WorkspaceResourceModel[]> {
         return [];
     }
 

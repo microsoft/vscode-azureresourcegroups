@@ -12,7 +12,7 @@ import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 
-export class WorkspaceTreeDataProvider extends ResourceTreeDataProviderBase {
+export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderBase {
     constructor(
         private readonly branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
         onRefresh: vscode.Event<void>,
@@ -29,7 +29,7 @@ export class WorkspaceTreeDataProvider extends ResourceTreeDataProviderBase {
             return await element.getChildren();
         }
         else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-            const resources = await this.resourceProviderManager.provideResources(vscode.workspace.workspaceFolders[0]);
+            const resources = await this.resourceProviderManager.getResources(vscode.workspace.workspaceFolders[0]);
 
             if (resources) {
                 return Promise.all(resources.map(resource => this.getWorkspaceItemModel(resource)));

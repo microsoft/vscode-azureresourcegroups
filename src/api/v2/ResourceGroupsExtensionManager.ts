@@ -6,9 +6,6 @@
 import * as vscode from 'vscode';
 
 interface ResourceGroupsContribution {
-    readonly activation?: {
-        readonly onFetch?: string[];
-    }
     readonly application: {
         readonly branches?: { type: string }[];
         readonly resources?: { type: string }[];
@@ -25,13 +22,21 @@ interface ExtensionPackage {
     };
 }
 
+const v2ResourceContributionsKey = 'x-azResourcesV2';
+
+function getV2ResourceContributions(extension: vscode.Extension<unknown>): ResourceGroupsContribution | undefined {
+    const packageJson = extension.packageJSON as ExtensionPackage;
+
+    return packageJson?.contributes?.[v2ResourceContributionsKey];
+}
+
 export class ResourceGroupsExtensionManager {
     async activateApplicationResourceBranchDataProvider(type: string): Promise<void> {
         type = type.toLowerCase();
 
         const extensionAndContributions =
             vscode.extensions.all
-                .map(extension => ({ extension, contributions: (extension.packageJSON as ExtensionPackage)?.contributes?.['x-azResourcesV2']?.activation?.onFetch?.map(type => type.toLowerCase()) ?? [] }))
+                .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.application?.branches?.map(resource => resource.type.toLowerCase()) ?? [] }))
                 .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
 
         if (extensionAndContributions) {
@@ -42,21 +47,21 @@ export class ResourceGroupsExtensionManager {
     }
 
     async activateApplicationResourceProviders(): Promise<void> {
-        const inActiveResourceContributors =
+        const inactiveResourceContributors =
             vscode.extensions.all
-                .map(extension => ({ extension, resources: (extension.packageJSON as ExtensionPackage)?.contributes?.['x-azResourcesV2']?.application?.resources ?? [] }))
+                .map(extension => ({ extension, resources: getV2ResourceContributions(extension)?.application?.resources ?? [] }))
                 .filter(extensionAndContributions => extensionAndContributions.resources.length > 0 && !extensionAndContributions.extension.isActive);
 
-        await Promise.all(inActiveResourceContributors.map(contributor => contributor.extension.activate()));
+        await Promise.all(inactiveResourceContributors.map(contributor => contributor.extension.activate()));
     }
 
     async activateWorkspaceResourceProviders(): Promise<void> {
-        const inActiveResourceContributors =
+        const inactiveResourceContributors =
             vscode.extensions.all
-                .map(extension => ({ extension, resources: (extension.packageJSON as ExtensionPackage)?.contributes?.['x-azResourcesV2']?.workspace?.resources ?? [] }))
+                .map(extension => ({ extension, resources: getV2ResourceContributions(extension)?.workspace?.resources ?? [] }))
                 .filter(extensionAndContributions => extensionAndContributions.resources.length > 0 && !extensionAndContributions.extension.isActive);
 
-        await Promise.all(inActiveResourceContributors.map(contributor => contributor.extension.activate()));
+        await Promise.all(inactiveResourceContributors.map(contributor => contributor.extension.activate()));
     }
 
     async activateWorkspaceResourceBranchDataProvider(type: string): Promise<void> {
@@ -64,7 +69,7 @@ export class ResourceGroupsExtensionManager {
 
         const extensionAndContributions =
             vscode.extensions.all
-                .map(extension => ({ extension, contributions: (extension.packageJSON as ExtensionPackage)?.contributes?.['x-azResourcesV2']?.workspace?.branches?.map(resources => resources.type.toLowerCase()) ?? [] }))
+                .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.workspace?.branches?.map(resources => resources.type.toLowerCase()) ?? [] }))
                 .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
 
         if (extensionAndContributions) {

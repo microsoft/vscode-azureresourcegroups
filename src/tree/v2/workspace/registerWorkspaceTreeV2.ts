@@ -5,16 +5,16 @@
 
 import * as vscode from 'vscode';
 import { WorkspaceResourceProviderManager } from '../../../api/v2/WorkspaceResourceProviderManager';
-import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
-import { WorkspaceTreeDataProvider } from './WorkspaceTreeDataProvider';
 import { localize } from './../../../utils/localize';
+import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
+import { WorkspaceResourceTreeDataProvider } from './WorkspaceResourceTreeDataProvider';
 
 export function registerWorkspaceTreeV2(
     branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
     context: vscode.ExtensionContext,
     refreshEvent: vscode.Event<void>,
     workspaceResourceProviderManager: WorkspaceResourceProviderManager): void {
-    const treeDataProvider = new WorkspaceTreeDataProvider(
+    const treeDataProvider = new WorkspaceResourceTreeDataProvider(
         branchDataProviderManager,
         refreshEvent,
         workspaceResourceProviderManager);
@@ -25,6 +25,7 @@ export function registerWorkspaceTreeV2(
         'azureWorkspaceV2',
         {
             canSelectMany: true,
+            showCollapseAll: true,
             treeDataProvider
         });
 

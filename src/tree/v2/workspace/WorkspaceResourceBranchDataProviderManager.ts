@@ -13,6 +13,7 @@ export class WorkspaceResourceBranchDataProviderManager extends ResourceBranchDa
     ) {
         super(
             defaultProvider,
-            extensionActivator);
+            extensionActivator
+        );
     }
 }

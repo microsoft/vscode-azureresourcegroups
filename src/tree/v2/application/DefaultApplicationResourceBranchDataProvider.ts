@@ -5,16 +5,11 @@
 
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider } from '../../../api/v2/v2AzureResourcesApi';
-import { localize } from "../../../utils/localize";
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { DefaultApplicationResourceItem } from './DefaultApplicationResourceItem';
 
 export class DefaultApplicationResourceBranchDataProvider implements BranchDataProvider<ApplicationResource, ResourceGroupsItem> {
-    getChildren(element?: ResourceGroupsItem | undefined): vscode.ProviderResult<ResourceGroupsItem[]> {
-        if (!element) {
-            throw new Error(localize('UnexpectedElement', 'Expected a valid element.'));
-        }
-
+    getChildren(element: ResourceGroupsItem): vscode.ProviderResult<ResourceGroupsItem[]> {
         return element.getChildren();
     }
 

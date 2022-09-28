@@ -4,9 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ResourceBase, ResourceProviderBase } from './v2AzureResourcesApi';
+import { isArray } from '../../utils/v2/isArray';
+import { ProvideResourceOptions, ResourceBase, ResourceProviderBase } from './v2AzureResourcesApi';
 
-export abstract class ResourceProviderManagerBase<TResource extends ResourceBase, TResourceProvider extends ResourceProviderBase<TResource>> extends vscode.Disposable {
+export function reduceArrays<T>(arrays: (T[] | undefined | null)[]): T[] {
+    return arrays.filter(isArray).reduce((acc, result) => acc?.concat(result ?? []), []);
+}
+
+export abstract class ResourceProviderManagerBase<TResourceSource, TResource extends ResourceBase, TResourceProvider extends ResourceProviderBase<TResourceSource, TResource>> extends vscode.Disposable {
     private readonly onDidChangeResourceEventEmitter = new vscode.EventEmitter<TResource | undefined>();
     private readonly providers = new Map<TResourceProvider, { listener: vscode.Disposable | undefined }>();
 
@@ -47,6 +52,14 @@ export abstract class ResourceProviderManagerBase<TResource extends ResourceBase
         if (!this.isActivating) {
             this.onDidChangeResourceEventEmitter.fire(undefined);
         }
+    }
+
+    async getResources(source: TResourceSource, options?: ProvideResourceOptions): Promise<TResource[]> {
+        const resourceProviders = await this.getResourceProviders();
+
+        const resources = await Promise.all(resourceProviders.map(resourceProvider => resourceProvider.getResources(source, options)));
+
+        return resources.filter(isArray).reduce((acc, result) => acc?.concat(result ?? []), []);
     }
 
     protected async getResourceProviders(): Promise<TResourceProvider[]> {
