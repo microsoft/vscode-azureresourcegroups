@@ -5,13 +5,9 @@
 
 import * as vscode from 'vscode';
 import { isArray } from '../../utils/v2/isArray';
-import { ProvideResourceOptions, ResourceBase, ResourceProviderBase } from './v2AzureResourcesApi';
+import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions, ResourceBase, ResourceProviderBase, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
-export function reduceArrays<T>(arrays: (T[] | undefined | null)[]): T[] {
-    return arrays.filter(isArray).reduce((acc, result) => acc?.concat(result ?? []), []);
-}
-
-export abstract class ResourceProviderManagerBase<TResourceSource, TResource extends ResourceBase, TResourceProvider extends ResourceProviderBase<TResourceSource, TResource>> extends vscode.Disposable {
+class ResourceProviderManagerBase<TResourceSource, TResource extends ResourceBase, TResourceProvider extends ResourceProviderBase<TResourceSource, TResource>> extends vscode.Disposable {
     private readonly onDidChangeResourceEventEmitter = new vscode.EventEmitter<TResource | undefined>();
     private readonly providers = new Map<TResourceProvider, { listener: vscode.Disposable | undefined }>();
 
@@ -77,4 +73,13 @@ export abstract class ResourceProviderManagerBase<TResourceSource, TResource ext
             this.isActivating = false;
         }
     }
+}
+
+// NOTE: TS doesn't seem to like exporting a type alias (i.e. you cannot instantiate it),
+//       so we still have to extend the class.
+
+export class ApplicationResourceProviderManager extends ResourceProviderManagerBase<ApplicationSubscription, ApplicationResource, ApplicationResourceProvider> {
+}
+
+export class WorkspaceResourceProviderManager extends ResourceProviderManagerBase<vscode.WorkspaceFolder, WorkspaceResource, WorkspaceResourceProvider> {
 }
