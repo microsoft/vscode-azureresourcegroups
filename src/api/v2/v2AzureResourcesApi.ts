@@ -94,12 +94,17 @@ export interface WrappedResourceModel {
  */
 export interface BranchDataProvider<TResource extends ResourceBase, TModel extends ResourceModelBase> extends vscode.TreeDataProvider<TModel> {
     /**
-     * Get the children of `element` or root if no element is passed.
+     * Get the children of `element`.
      *
      * @param element The element from which the provider gets children. Unlike a traditional TreeDataProvider, this will never be `undefined`.
-     * @return Children of `element` or root if no element is passed.
+     * @return Children of `element`.
      */
     getChildren(element: TModel): vscode.ProviderResult<TModel[]>;
+
+    /**
+     * A BranchDataProvider need not (and should not) implement this function.
+     */
+    getParent?: never;
 
     /**
      * Called to get the provider's model element for a specific resource.

@@ -30,36 +30,45 @@ function getV2ResourceContributions(extension: vscode.Extension<unknown>): Resou
     return packageJson?.contributes?.[v2ResourceContributionsKey];
 }
 
+const builtInExtensionIdRegex = /^vscode\./i;
+
+function getInactiveExtensions(): vscode.Extension<unknown>[] {
+    return vscode.extensions
+        .all
+        // We don't need to activate extensions that are already active
+        .filter(extension => !extension.isActive)
+        // We don't need to look at any built-in extensions (often the majority of them)
+        .filter(extension => !builtInExtensionIdRegex.test(extension.id));
+}
+
 export class ResourceGroupsExtensionManager {
     async activateApplicationResourceBranchDataProvider(type: string): Promise<void> {
         type = type.toLowerCase();
 
         const extensionAndContributions =
-            vscode.extensions.all
+            getInactiveExtensions()
                 .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.application?.branches?.map(resource => resource.type.toLowerCase()) ?? [] }))
                 .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
 
         if (extensionAndContributions) {
-            if (!extensionAndContributions.extension.isActive) {
-                await extensionAndContributions.extension.activate();
-            }
+            await extensionAndContributions.extension.activate();
         }
     }
 
     async activateApplicationResourceProviders(): Promise<void> {
         const inactiveResourceContributors =
-            vscode.extensions.all
+            getInactiveExtensions()
                 .map(extension => ({ extension, resources: getV2ResourceContributions(extension)?.application?.resources ?? [] }))
-                .filter(extensionAndContributions => extensionAndContributions.resources.length > 0 && !extensionAndContributions.extension.isActive);
+                .filter(extensionAndContributions => extensionAndContributions.resources.length > 0);
 
         await Promise.all(inactiveResourceContributors.map(contributor => contributor.extension.activate()));
     }
 
     async activateWorkspaceResourceProviders(): Promise<void> {
         const inactiveResourceContributors =
-            vscode.extensions.all
+            getInactiveExtensions()
                 .map(extension => ({ extension, resources: getV2ResourceContributions(extension)?.workspace?.resources ?? [] }))
-                .filter(extensionAndContributions => extensionAndContributions.resources.length > 0 && !extensionAndContributions.extension.isActive);
+                .filter(extensionAndContributions => extensionAndContributions.resources.length > 0);
 
         await Promise.all(inactiveResourceContributors.map(contributor => contributor.extension.activate()));
     }
@@ -68,14 +77,12 @@ export class ResourceGroupsExtensionManager {
         type = type.toLowerCase();
 
         const extensionAndContributions =
-            vscode.extensions.all
+            getInactiveExtensions()
                 .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.workspace?.branches?.map(resources => resources.type.toLowerCase()) ?? [] }))
                 .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
 
         if (extensionAndContributions) {
-            if (!extensionAndContributions.extension.isActive) {
-                await extensionAndContributions.extension.activate();
-            }
+            await extensionAndContributions.extension.activate();
         }
     }
 }
