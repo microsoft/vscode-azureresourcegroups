@@ -12,8 +12,8 @@ import { getIconPath, getName } from '../../../utils/azureUtils';
 import { localize } from "../../../utils/localize";
 import { settingUtils } from '../../../utils/settingUtils';
 import { treeUtils } from '../../../utils/treeUtils';
-import { GroupingItem, GroupingItemFactory } from './GroupingItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
+import { GroupingItem, GroupingItemFactory } from './GroupingItem';
 
 const unknownLabel = localize('unknown', 'unknown');
 
@@ -144,7 +144,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         return this.groupBy(
             context,
             resources,
-            resource => resource.azExtResourceType ?? resource.type.type, // TODO: Is resource type ever undefined?
+            resource => resource.resourceType ?? resource.type.type, // TODO: Is resource type ever undefined?
             key => getName(key as AzExtResourceType) ?? key,
             key => getIconPath(key as AzExtResourceType)); // TODO: What's the default icon for a resource type?
     }

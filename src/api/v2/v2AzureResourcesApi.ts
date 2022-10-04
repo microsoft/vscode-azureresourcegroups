@@ -28,7 +28,7 @@ export interface ResourceBase {
     readonly name: string;
 }
 
-export interface ApplicationResourceType {
+export interface AzureResourceType {
     readonly type: string;
     readonly kinds?: string[];
 }
@@ -39,8 +39,8 @@ export interface ApplicationResourceType {
  */
 export interface ApplicationResource extends ResourceBase {
     readonly subscription: ApplicationSubscription;
-    readonly type: ApplicationResourceType;
-    readonly azExtResourceType?: AzExtResourceType;
+    readonly type: AzureResourceType;
+    readonly resourceType?: AzExtResourceType;
     readonly location?: string;
     readonly resourceGroup?: string;
     /** Resource tags */

@@ -19,7 +19,7 @@ export class DefaultApplicationResourceItem implements ResourceGroupsItem {
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
         const treeItem = new vscode.TreeItem(this.resource.name ?? 'Unnamed Resource');
 
-        treeItem.iconPath = getIconPath(this.resource.azExtResourceType);
+        treeItem.iconPath = getIconPath(this.resource.resourceType);
 
         return treeItem;
     }

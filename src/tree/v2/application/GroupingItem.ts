@@ -8,9 +8,9 @@ import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
 import { BranchDataItemFactory } from '../BranchDataProviderItem';
-import { BranchDataProviderFactory } from './ApplicationResourceBranchDataProviderManager';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
+import { BranchDataProviderFactory } from './ApplicationResourceBranchDataProviderManager';
 
 export class GroupingItem implements ResourceGroupsItem {
     private description: string | undefined;
@@ -33,7 +33,7 @@ export class GroupingItem implements ResourceGroupsItem {
 
                 const options = {
                     defaults: {
-                        iconPath: getIconPath(resource.azExtResourceType)
+                        iconPath: getIconPath(resource.resourceType)
                     }
                 };
 

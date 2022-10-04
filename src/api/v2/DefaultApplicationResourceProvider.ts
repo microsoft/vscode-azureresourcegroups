@@ -60,7 +60,7 @@ export class DefaultApplicationResourceProvider implements ApplicationResourcePr
             },
             resourceGroup: getResourceGroupFromId(resourceId),
             location: resource.location,
-            azExtResourceType: getAzExtResourceType({
+            resourceType: getAzExtResourceType({
                 type: nonNullProp(resource, 'type'),
                 kind: resource.kind
             })
