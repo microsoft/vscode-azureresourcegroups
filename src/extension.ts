@@ -17,9 +17,9 @@ import { registerApplicationResourceProvider } from './api/registerApplicationRe
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
 import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResourceProvider';
 import { revealTreeItem } from './api/revealTreeItem';
-import { ApplicationResourceProviderManager } from './api/v2/providers/ApplicationResourceProviderManager';
-import { BuiltInApplicationResourceProvider } from './api/v2/providers/BuiltInApplicationResourceProvider';
+import { DefaultApplicationResourceProvider } from './api/v2/DefaultApplicationResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/v2/ResourceGroupsExtensionManager';
+import { ApplicationResourceProviderManager, WorkspaceResourceProviderManager } from './api/v2/ResourceProviderManagers';
 import { AzureResourcesApiManager } from './api/v2/v2AzureResourcesApi';
 import { V2AzureResourcesApiImplementation } from './api/v2/v2AzureResourcesApiImplementation';
 import { AzureResourceProvider } from './AzureResourceProvider';
@@ -34,9 +34,12 @@ import { wrapperResolver } from './resolvers/WrapperResolver';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { GroupTreeItemBase } from './tree/GroupTreeItemBase';
 import { HelpTreeItem } from './tree/HelpTreeItem';
-import { BranchDataProviderManager } from './tree/v2/providers/BranchDataProviderManager';
-import { BuiltInApplicationResourceBranchDataProvider } from './tree/v2/providers/BuiltInApplicationResourceBranchDataProvider';
-import { registerResourceGroupsTreeV2 } from './tree/v2/registerResourceGroupsTreeV2';
+import { ApplicationResourceBranchDataProviderManager } from './tree/v2/application/ApplicationResourceBranchDataProviderManager';
+import { DefaultApplicationResourceBranchDataProvider } from './tree/v2/application/DefaultApplicationResourceBranchDataProvider';
+import { registerResourceGroupsTreeV2 } from './tree/v2/application/registerResourceGroupsTreeV2';
+import { registerWorkspaceTreeV2 } from './tree/v2/workspace/registerWorkspaceTreeV2';
+import { WorkspaceDefaultBranchDataProvider } from './tree/v2/workspace/WorkspaceDefaultBranchDataProvider';
+import { WorkspaceResourceBranchDataProviderManager } from './tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
 import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
 import { localize } from './utils/localize';
@@ -56,6 +59,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     const refreshEventEmitter = new vscode.EventEmitter<void>();
 
     context.subscriptions.push(refreshEventEmitter);
+
+    const refreshWorkspaceEmitter = new vscode.EventEmitter<void>();
+
+    context.subscriptions.push(refreshWorkspaceEmitter);
 
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
@@ -98,7 +105,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         context.subscriptions.push(ext.activationManager = new ExtensionActivationManager());
 
-        registerCommands(refreshEventEmitter);
+        registerCommands(refreshEventEmitter, () => refreshWorkspaceEmitter.fire());
         registerApplicationResourceProvider(azureResourceProviderId, new AzureResourceProvider());
         registerApplicationResourceResolver('vscode-azureresourcegroups.wrapperResolver', wrapperResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.installableAppResourceResolver', installableAppResourceResolver);
@@ -107,13 +114,19 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         await vscode.commands.executeCommand('setContext', 'azure-account.signedIn', await ext.rootAccountTreeItem.getIsLoggedIn());
     });
 
-    const branchDataProviderManager = new BranchDataProviderManager(
-        new BuiltInApplicationResourceBranchDataProvider(),
-        new ResourceGroupsExtensionManager());
+    const extensionManager = new ResourceGroupsExtensionManager()
+
+    const branchDataProviderManager = new ApplicationResourceBranchDataProviderManager(
+        new DefaultApplicationResourceBranchDataProvider(),
+        type => void extensionManager.activateApplicationResourceBranchDataProvider(type));
 
     context.subscriptions.push(branchDataProviderManager);
 
-    const resourceProviderManager = new ApplicationResourceProviderManager();
+    const resourceProviderManager = new ApplicationResourceProviderManager(() => extensionManager.activateApplicationResourceProviders());
+    const workspaceResourceBranchDataProviderManager = new WorkspaceResourceBranchDataProviderManager(
+        new WorkspaceDefaultBranchDataProvider(),
+        type => void extensionManager.activateWorkspaceResourceBranchDataProvider(type));
+    const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
 
     registerResourceGroupsTreeV2(
         context,
@@ -121,13 +134,21 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         refreshEventEmitter.event,
         resourceProviderManager);
 
+    registerWorkspaceTreeV2(
+        workspaceResourceBranchDataProviderManager,
+        context,
+        refreshWorkspaceEmitter.event,
+        workspaceResourceProviderManager);
+
     const v2ApiFactory = () => {
         if (v2Api === undefined) {
             v2Api = new V2AzureResourcesApiImplementation(
+                resourceProviderManager,
                 branchDataProviderManager,
-                resourceProviderManager);
+                workspaceResourceProviderManager,
+                workspaceResourceBranchDataProviderManager);
 
-            context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new BuiltInApplicationResourceProvider()));
+            context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new DefaultApplicationResourceProvider()));
         }
 
         return v2Api;

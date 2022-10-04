@@ -238,6 +238,11 @@
                     "visibility": "visible"
                 },
                 {
+                    "id": "azureWorkspaceV2",
+                    "name": "Workspace (V2)",
+                    "visibility": "visible"
+                },
+                {
                     "id": "ms-azuretools.helpAndFeedback",
                     "name": "%ms-azuretools.helpAndFeedback%",
                     "visibility": "collapsed"
@@ -279,6 +284,11 @@
                 {
                     "command": "azureWorkspace.refresh",
                     "when": "view == azureWorkspace",
+                    "group": "navigation@10"
+                },
+                {
+                    "command": "azureWorkspace.refresh",
+                    "when": "view == azureWorkspaceV2",
                     "group": "navigation@10"
                 },
                 {

@@ -1,11 +1,16 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
-import { getIconPath } from '../../utils/azureUtils';
-import { BranchDataItemFactory } from './BranchDataItem';
-import { BranchDataProviderFactory } from './providers/BranchDataProviderManager';
-import { ResourceGroupsItem } from './ResourceGroupsItem';
-import { ResourceGroupsTreeContext } from './ResourceGroupsTreeContext';
+import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
+import { getIconPath } from '../../../utils/azureUtils';
+import { BranchDataItemFactory } from '../BranchDataProviderItem';
+import { BranchDataProviderFactory } from './ApplicationResourceBranchDataProviderManager';
+import { ResourceGroupsItem } from '../ResourceGroupsItem';
+import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
 
 export class GroupingItem implements ResourceGroupsItem {
     private description: string | undefined;

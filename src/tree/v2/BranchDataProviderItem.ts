@@ -1,5 +1,10 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import * as vscode from 'vscode';
-import { ApplicationResource, BranchDataProvider, ResourceModelBase, WrappedResourceModel } from '../../api/v2/v2AzureResourcesApi';
+import { BranchDataProvider, ResourceBase, ResourceModelBase, WrappedResourceModel } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
@@ -7,12 +12,12 @@ export type BranchDataItemOptions = {
     defaults?: vscode.TreeItem;
 };
 
-export class BranchDataItem implements ResourceGroupsItem, WrappedResourceModel {
+export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResourceModel {
     constructor(
         private readonly branchItem: ResourceModelBase,
-        private readonly branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
+        private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
         private readonly itemCache: ResourceGroupsItemCache,
-        private readonly options: BranchDataItemOptions | undefined) {
+        private readonly options?: BranchDataItemOptions) {
         itemCache.addBranchItem(this.branchItem, this);
     }
 
@@ -42,8 +47,8 @@ export class BranchDataItem implements ResourceGroupsItem, WrappedResourceModel 
     type: string;
 }
 
-export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItem;
+export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataProviderItem;
 
 export function createBranchDataItemFactory(itemCache: ResourceGroupsItemCache): BranchDataItemFactory {
-    return (branchItem, branchDataProvider, options) => new BranchDataItem(branchItem, branchDataProvider, itemCache, options);
+    return (branchItem, branchDataProvider, options) => new BranchDataProviderItem(branchItem, branchDataProvider, itemCache, options);
 }
