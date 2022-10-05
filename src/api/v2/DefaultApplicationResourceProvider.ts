@@ -40,7 +40,7 @@ export class DefaultApplicationResourceProvider implements ApplicationResourcePr
             subscription,
             id: nonNullProp(resourceGroup, 'id'),
             name: nonNullProp(resourceGroup, 'name'),
-            type: {
+            azureResourceType: {
                 type: nonNullProp(resourceGroup, 'type').toLowerCase()
             }
         };
@@ -54,7 +54,7 @@ export class DefaultApplicationResourceProvider implements ApplicationResourcePr
             subscription,
             id: resourceId,
             name: nonNullProp(resource, 'name'),
-            type: {
+            azureResourceType: {
                 type: nonNullProp(resource, 'type').toLowerCase(),
                 kinds: resource.kind?.split(',')?.map(kind => kind.toLowerCase()),
             },

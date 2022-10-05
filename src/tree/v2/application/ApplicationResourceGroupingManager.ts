@@ -116,7 +116,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         const resourceGroups: ApplicationResource[] = [];
         const nonResourceGroups: ApplicationResource[] = [];
 
-        resources.forEach(resource => resource.type.type === 'microsoft.resources/resourcegroups' ? resourceGroups.push(resource) : nonResourceGroups.push(resource));
+        resources.forEach(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' ? resourceGroups.push(resource) : nonResourceGroups.push(resource));
 
         const keySelector: (resource: ApplicationResource) => string = resource => resource.resourceGroup?.toLowerCase() ?? unknownLabel; // TODO: Is resource group ever undefined? Should resource group be normalized on creation?
 
@@ -144,7 +144,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         return this.groupBy(
             context,
             resources,
-            resource => resource.resourceType ?? resource.type.type, // TODO: Is resource type ever undefined?
+            resource => resource.resourceType ?? resource.azureResourceType.type, // TODO: Is resource type ever undefined?
             key => getName(key as AzExtResourceType) ?? key,
             key => getIconPath(key as AzExtResourceType)); // TODO: What's the default icon for a resource type?
     }

@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResourceBranchDataProviderManager } from '../../tree/v2/application/ApplicationResourceBranchDataProviderManager';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
@@ -31,19 +32,19 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
         throw new Error("Method not implemented.");
     }
 
-    registerApplicationResourceProvider(_id: string, provider: ApplicationResourceProvider): vscode.Disposable {
+    registerApplicationResourceProvider(provider: ApplicationResourceProvider): vscode.Disposable {
         this.applicationResourceProviderManager.addResourceProvider(provider);
 
         return new vscode.Disposable(() => this.applicationResourceProviderManager.removeResourceProvider(provider));
     }
 
-    registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(id: string, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable {
-        this.applicationResourceBranchDataProviderManager.addProvider(id, provider);
+    registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable {
+        this.applicationResourceBranchDataProviderManager.addProvider(type, provider);
 
-        return new vscode.Disposable(() => this.applicationResourceBranchDataProviderManager.removeProvider(id));
+        return new vscode.Disposable(() => this.applicationResourceBranchDataProviderManager.removeProvider(type));
     }
 
-    registerWorkspaceResourceProvider(_id: string, provider: WorkspaceResourceProvider): vscode.Disposable {
+    registerWorkspaceResourceProvider(provider: WorkspaceResourceProvider): vscode.Disposable {
         this.workspaceResourceProviderManager.addResourceProvider(provider);
 
         return new vscode.Disposable(() => this.workspaceResourceProviderManager.removeResourceProvider(provider));

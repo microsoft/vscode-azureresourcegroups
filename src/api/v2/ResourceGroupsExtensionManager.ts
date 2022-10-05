@@ -3,16 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 
 interface ResourceGroupsContribution {
     readonly application: {
         readonly branches?: { type: string }[];
-        readonly resources?: { type: string }[];
+        readonly resources?: boolean;
     }
     readonly workspace: {
         readonly branches?: { type: string }[];
-        readonly resources?: { type: string }[];
+        readonly resources?: boolean;
     }
 }
 
@@ -42,13 +43,13 @@ function getInactiveExtensions(): vscode.Extension<unknown>[] {
 }
 
 export class ResourceGroupsExtensionManager {
-    async activateApplicationResourceBranchDataProvider(type: string): Promise<void> {
-        type = type.toLowerCase();
+    async activateApplicationResourceBranchDataProvider(type: AzExtResourceType): Promise<void> {
+        const normalizedType = type.toLowerCase();
 
         const extensionAndContributions =
             getInactiveExtensions()
                 .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.application?.branches?.map(resource => resource.type.toLowerCase()) ?? [] }))
-                .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
+                .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === normalizedType) !== undefined);
 
         if (extensionAndContributions) {
             await extensionAndContributions.extension.activate();
@@ -58,19 +59,17 @@ export class ResourceGroupsExtensionManager {
     async activateApplicationResourceProviders(): Promise<void> {
         const inactiveResourceContributors =
             getInactiveExtensions()
-                .map(extension => ({ extension, resources: getV2ResourceContributions(extension)?.application?.resources ?? [] }))
-                .filter(extensionAndContributions => extensionAndContributions.resources.length > 0);
+                .filter(extension => getV2ResourceContributions(extension)?.application?.resources);
 
-        await Promise.all(inactiveResourceContributors.map(contributor => contributor.extension.activate()));
+        await Promise.all(inactiveResourceContributors.map(extension => extension.activate()));
     }
 
     async activateWorkspaceResourceProviders(): Promise<void> {
         const inactiveResourceContributors =
             getInactiveExtensions()
-                .map(extension => ({ extension, resources: getV2ResourceContributions(extension)?.workspace?.resources ?? [] }))
-                .filter(extensionAndContributions => extensionAndContributions.resources.length > 0);
+            .filter(extension => getV2ResourceContributions(extension)?.workspace?.resources);
 
-        await Promise.all(inactiveResourceContributors.map(contributor => contributor.extension.activate()));
+        await Promise.all(inactiveResourceContributors.map(extension => extension.activate()));
     }
 
     async activateWorkspaceResourceBranchDataProvider(type: string): Promise<void> {

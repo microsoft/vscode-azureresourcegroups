@@ -148,7 +148,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 workspaceResourceProviderManager,
                 workspaceResourceBranchDataProviderManager);
 
-            context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new DefaultApplicationResourceProvider()));
+            context.subscriptions.push(v2Api.registerApplicationResourceProvider(new DefaultApplicationResourceProvider()));
         }
 
         return v2Api;
