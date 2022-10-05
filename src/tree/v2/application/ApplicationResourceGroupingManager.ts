@@ -6,6 +6,7 @@
 import { AzExtResourceType, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
+import { azureExtensions } from '../../../azureExtensions';
 import { GroupBySettings } from '../../../commands/explorer/groupBy';
 import { ext } from '../../../extensionVariables';
 import { getIconPath, getName } from '../../../utils/azureUtils';
@@ -141,11 +142,21 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
     }
 
     private groupByResourceType(context: ResourceGroupsTreeContext, resources: ApplicationResource[]): GroupingItem[] {
+        const initialGrouping = {};
+
+        // Pre-populate the initial grouping with the supported resource types...
+        azureExtensions.forEach(extension => {
+            extension.resourceTypes.forEach(resourceType => {
+                initialGrouping[resourceType] = [];
+            });
+        });
+
         return this.groupBy(
             context,
             resources,
             resource => resource.resourceType ?? resource.azureResourceType.type, // TODO: Is resource type ever undefined?
             key => getName(key as AzExtResourceType) ?? key,
-            key => getIconPath(key as AzExtResourceType)); // TODO: What's the default icon for a resource type?
+            key => getIconPath(key as AzExtResourceType),  // TODO: What's the default icon for a resource type?
+            initialGrouping);
     }
 }
