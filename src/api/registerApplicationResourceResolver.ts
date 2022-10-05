@@ -3,11 +3,10 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from "@microsoft/vscode-azext-utils";
+import { AzExtResourceType, AzExtTreeItem } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
 import { ext } from "../extensionVariables";
-import { CompatibleBranchDataItem } from "../tree/v2/CompatibleBranchDataItem";
 import { CompatibleBranchDataProvider } from "./v2/compatibility/CompatibleBranchDataProvider";
 import { ApplicationResource, BranchDataProvider } from "./v2/v2AzureResourcesApi";
 
@@ -23,7 +22,7 @@ export function registerApplicationResourceResolver(type: AzExtResourceType, res
 
     const compat = new CompatibleBranchDataProvider(resolver, 'azureResourceGroups.loadMore' /** TODO: what is the correct value for this? */);
 
-    ext.v2.api.registerApplicationResourceBranchDataProvider(type, compat as unknown as BranchDataProvider<ApplicationResource, CompatibleBranchDataItem>);
+    ext.v2.api.registerApplicationResourceBranchDataProvider(type, compat as unknown as BranchDataProvider<ApplicationResource, AzExtTreeItem>);
 
     return new Disposable(() => {
         delete applicationResourceResolvers[type];
