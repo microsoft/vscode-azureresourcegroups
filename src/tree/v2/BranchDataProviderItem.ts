@@ -5,7 +5,7 @@
 
 import { Wrapper } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ApplicationResource, BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
@@ -15,7 +15,7 @@ export type BranchDataItemOptions = {
 
 export class BranchDataProviderItem implements ResourceGroupsItem, Wrapper {
     constructor(
-        private readonly branchItem: ResourceModelBase,
+        protected readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
         private readonly itemCache: ResourceGroupsItemCache,
         private readonly options?: BranchDataItemOptions) {
@@ -37,11 +37,6 @@ export class BranchDataProviderItem implements ResourceGroupsItem, Wrapper {
             ...this.options?.defaults ?? {},
             ...treeItem
         }
-    }
-
-    /** Needed for tree item picker PickAppResourceStep */
-    public get resource(): ApplicationResource | undefined {
-        return (this.branchItem as { resource?: ApplicationResource }).resource;
     }
 
     unwrap<T>(): T {
