@@ -9,7 +9,7 @@ import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { ThemeIcon } from "vscode";
 import { azureExtensions } from "../azureExtensions";
 import { GroupBySettings } from "../commands/explorer/groupBy";
-import { ungroupedId } from "../constants";
+import { showHiddenTypesSettingKey, ungroupedId } from "../constants";
 import { createAzureExtensionsGroupConfig } from "../utils/azureUtils";
 import { localize } from "../utils/localize";
 import { settingUtils } from "../utils/settingUtils";
@@ -92,7 +92,7 @@ export class ResourceCache {
                 }
 
                 // delete groups that aren't supported by Azure extensions
-                if (!settingUtils.getWorkspaceSetting('showHiddenTypes')) {
+                if (!settingUtils.getWorkspaceSetting(showHiddenTypesSettingKey)) {
                     for (const id in treeMap) {
                         if (!azExtGroupConfigs.some(config => config.id === id)) {
                             delete treeMap[id];

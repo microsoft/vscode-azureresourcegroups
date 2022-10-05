@@ -8,6 +8,7 @@ import * as vscode from "vscode";
 import { ApplicationResourceProviderManager } from "../../../api/v2/ResourceProviderManagers";
 import { ApplicationSubscription } from "../../../api/v2/v2AzureResourcesApi";
 import { azureExtensions } from "../../../azureExtensions";
+import { showHiddenTypesSettingKey } from "../../../constants";
 import { settingUtils } from "../../../utils/settingUtils";
 import { treeUtils } from "../../../utils/treeUtils";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
@@ -30,7 +31,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
     async getChildren(): Promise<ResourceGroupsItem[]> {
         let resources = await this.resourceProviderManager.getResources(this.subscription);
 
-        const showHiddenTypes = settingUtils.getWorkspaceSetting('showHiddenTypes') as boolean;
+        const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
 
         if (!showHiddenTypes) {
             resources = resources.filter(resource => resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType));

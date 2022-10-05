@@ -10,7 +10,7 @@ import { AppResourceFilter, PickAppResourceOptions } from '@microsoft/vscode-aze
 import { ConfigurationChangeEvent, workspace } from 'vscode';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { GroupBySettings } from '../commands/explorer/groupBy';
-import { azureResourceProviderId, ungroupedId } from '../constants';
+import { azureResourceProviderId, showHiddenTypesSettingKey, ungroupedId } from '../constants';
 import { ext } from '../extensionVariables';
 import { createActivityContext } from '../utils/activityUtils';
 import { createResourceClient } from '../utils/azureClients';
@@ -37,7 +37,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         await this.getCachedChildren(context);
 
         let appResources = this.cache.appResources;
-        const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>('showHiddenTypes');
+        const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
         if (!showHiddenTypes) {
             appResources = GroupTreeItemBase.filterResources(this.cache.appResources);
         }

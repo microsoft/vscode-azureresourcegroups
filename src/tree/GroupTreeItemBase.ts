@@ -5,6 +5,7 @@
 
 import { AzExtParentTreeItem, AzExtTreeItem, GenericTreeItem, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
+import { showHiddenTypesSettingKey } from "../constants";
 import { ext } from "../extensionVariables";
 import { localize } from "../utils/localize";
 import { settingUtils } from "../utils/settingUtils";
@@ -65,7 +66,7 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
         let resources = Object.values(this.treeMap) as AzExtTreeItem[];
         const allResources = Object.values(this.treeMap) as AzExtTreeItem[];
 
-        const showHiddenTypes = settingUtils.getWorkspaceSetting('showHiddenTypes') as boolean;
+        const showHiddenTypes = settingUtils.getWorkspaceSetting(showHiddenTypesSettingKey) as boolean;
         if (!showHiddenTypes) {
             if (!this._showAllResources) {
                 resources = GroupTreeItemBase.filterResources(resources as AppResourceTreeItem[]);
@@ -92,7 +93,7 @@ export class GroupTreeItemBase extends AzExtParentTreeItem {
     }
 
     public compareChildrenImpl(item1: AppResourceTreeItem, item2: AppResourceTreeItem): number {
-        const showHiddenTypes = settingUtils.getWorkspaceSetting('showHiddenTypes') as boolean;
+        const showHiddenTypes = settingUtils.getWorkspaceSetting(showHiddenTypesSettingKey) as boolean;
         // if showHiddenTypes is off, then these should be pushed below toggleShowAllResourcesTreeItem
         if (!showHiddenTypes) {
             if (item1.isHidden && item2.isHidden) {
