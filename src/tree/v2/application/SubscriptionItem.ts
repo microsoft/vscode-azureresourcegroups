@@ -1,10 +1,15 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import * as vscode from "vscode";
-import { ApplicationResourceProviderManager } from "../../api/v2/providers/ApplicationResourceProviderManager";
-import { ApplicationSubscription } from "../../api/v2/v2AzureResourcesApi";
-import { treeUtils } from "../../utils/treeUtils";
+import { ApplicationResourceProviderManager } from "../../../api/v2/ResourceProviderManagers";
+import { ApplicationSubscription } from "../../../api/v2/v2AzureResourcesApi";
+import { treeUtils } from "../../../utils/treeUtils";
+import { ResourceGroupsItem } from "../ResourceGroupsItem";
+import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
 import { ApplicationResourceGroupingManager } from "./ApplicationResourceGroupingManager";
-import { ResourceGroupsItem } from "./ResourceGroupsItem";
-import { ResourceGroupsTreeContext } from "./ResourceGroupsTreeContext";
 
 export class SubscriptionItem implements ResourceGroupsItem {
     constructor(

@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtResourceType, FindableByIdTreeNodeV2 } from '@microsoft/vscode-azext-utils';
 import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
@@ -47,8 +52,14 @@ export interface ApplicationResource extends ResourceBase {
     /* add more properties from GenericResource if needed */
 }
 
-export interface ResourceProviderBase<TResource extends ResourceBase> {
+export interface ResourceProvider<TResourceSource, TResource extends ResourceBase> {
     readonly onDidChangeResource?: vscode.Event<TResource | undefined>;
+
+    /**
+     * Called to supply the resources used as the basis for the resource group views.
+     * @param source The source from which resources should be generated.
+     */
+    getResources(source: TResourceSource, options?: ProvideResourceOptions): vscode.ProviderResult<TResource[]>;
 }
 
 export interface ProvideResourceOptions {
@@ -56,9 +67,7 @@ export interface ProvideResourceOptions {
     readonly maxResults?: number;
 }
 
-export interface ApplicationResourceProvider extends ResourceProviderBase<ApplicationResource> {
-    getResources(subscription: ApplicationSubscription, options?: ProvideResourceOptions): vscode.ProviderResult<ApplicationResource[]>;
-}
+export type ApplicationResourceProvider = ResourceProvider<ApplicationSubscription, ApplicationResource>;
 
 export interface ResourceModelBase extends Partial<FindableByIdTreeNodeV2> {
     readonly azureResourceId?: string;
@@ -81,19 +90,17 @@ export interface Box {
  */
 export interface BranchDataProvider<TResource extends ResourceBase, TModel extends ResourceModelBase> extends vscode.TreeDataProvider<TModel> {
     /**
-     * @deprecated This is implemented by the Resources API and does not need to be implemented by the
-     * {@link BranchDataProvider}.
-     */
-    getParent?: never;
-
-    /**
-     * Get the children of `element`. This differs from standard {@link vscode.TreeDataProvider}
-     * in that the `element` parameter will never be undefined.
+     * Get the children of `element`.
      *
-     * @param element The element from which the provider gets children. Cannot be `undefined`.
+     * @param element The element from which the provider gets children. Unlike a traditional TreeDataProvider, this will never be `undefined`.
      * @return Children of `element`.
      */
     getChildren(element: TModel): vscode.ProviderResult<TModel[]>;
+
+    /**
+     * A BranchDataProvider need not (and should not) implement this function.
+     */
+    getParent?: never;
 
     /**
      * Called to get the provider's model element for a specific resource.
@@ -113,18 +120,13 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
  */
 export interface WorkspaceResource extends ResourceBase {
     readonly folder: vscode.WorkspaceFolder;
+    readonly type: string;
 }
 
 /**
  * A provider for supplying items for the workspace resource tree (e.g., storage emulator, function apps in workspace, etc.)
  */
-export interface WorkspaceResourceProvider extends ResourceProviderBase<WorkspaceResource> {
-    /**
-     * Called to supply the tree nodes to the workspace resource tree
-     * @param folder A folder in the opened workspace
-     */
-    provideResources(folder: vscode.WorkspaceFolder, options?: ProvideResourceOptions): vscode.ProviderResult<WorkspaceResource[]>;
-}
+export type WorkspaceResourceProvider = ResourceProvider<vscode.WorkspaceFolder, WorkspaceResource>;
 
 export interface ResourcePickOptions {
     /**
