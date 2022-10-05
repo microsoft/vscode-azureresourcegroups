@@ -16,7 +16,7 @@ import { treeUtils } from '../../../utils/treeUtils';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
 import { GroupingItem, GroupingItemFactory } from './GroupingItem';
 
-const unknownLabel = localize('unknown', 'unknown');
+const unknownLabel = localize('unknown', 'Unknown');
 
 export class ApplicationResourceGroupingManager extends vscode.Disposable {
     private readonly onDidChangeGroupingEmitter = new vscode.EventEmitter<void>();
@@ -151,10 +151,13 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             });
         });
 
+        // Exclude resource groups...
+        resources = resources.filter(resource => resource.azureResourceType.type !== 'microsoft.resources/resourcegroups');
+
         return this.groupBy(
             context,
             resources,
-            resource => resource.resourceType ?? resource.azureResourceType.type, // TODO: Is resource type ever undefined?
+            resource => resource.resourceType ?? unknownLabel, // TODO: Is resource type ever undefined?
             key => getName(key as AzExtResourceType) ?? key,
             key => getIconPath(key as AzExtResourceType),  // TODO: What's the default icon for a resource type?
             initialGrouping);
