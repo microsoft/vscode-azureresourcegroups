@@ -42,6 +42,8 @@
         "onCommand:azureResourceGroups.selectSubscriptions",
         "onCommand:azureResourceGroups.viewProperties",
         "onCommand:azureResourceGroups.showGroupOptions",
+        "onCommand:azureResourceGroups.pin",
+        "onCommand:azureResourceGroups.unpin",
         "onCommand:ms-azuretools.getStarted",
         "onCommand:ms-azuretools.reportIssue",
         "onCommand:ms-azuretools.reviewIssues",
@@ -201,6 +203,18 @@
             {
                 "command": "azureResourceGroups.showGroupOptions",
                 "title": "%azureResourceGroups.showGroupOptions%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.pin",
+                "title": "%azureResourceGroups.pin%",
+                "icon": "$(pin)",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.unpin",
+                "title": "%azureResourceGroups.unpin%",
+                "icon": "$(pinned)",
                 "category": "Azure"
             }
         ],
@@ -377,6 +391,16 @@
                     "command": "azureResourceGroups.unfocusGroup",
                     "when": "view == azureResourceGroups && viewItem =~ /(focused).*(group)/",
                     "group": "inline@2"
+                },
+                {
+                    "command": "azureResourceGroups.pin",
+                    "when": "(view == azureResourceGroupsV2 || view == azureWorkspaceV2) && viewItem =~ /pinnable/",
+                    "group": "inline@2"
+                },
+                {
+                    "command": "azureResourceGroups.unpin",
+                    "when": "(view == azureResourceGroupsV2 || view == azureWorkspaceV2) && viewItem =~ /pinned/",
+                    "group": "inline@2"
                 }
             ],
             "commandPalette": [
@@ -410,6 +434,14 @@
                 },
                 {
                     "command": "azureResourceGroups.toggleShowAllResources",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.pin",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.unpin",
                     "when": "never"
                 }
             ],
@@ -493,6 +525,19 @@
                         "type": "boolean",
                         "description": "%azureResourceGroups.autoOpenActivityPanel%",
                         "default": true
+                    },
+                    "azureResourceGroups.pinPersistence": {
+                        "type": "string",
+                        "description": "%azureResourceGroups.pinPersistence%",
+                        "default": "workspace",
+                        "enum": [
+                            "workspace",
+                            "global"
+                        ],
+                        "enumItemLabels": [
+                            "%azureResourceGroups.pinPersistence.workspace%",
+                            "%azureResourceGroups.pinPersistence.global%"
+                        ]
                     }
                 }
             }

@@ -6,11 +6,12 @@
 import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
+import { isPinned } from '../../../commands/explorer/pinning';
 import { getIconPath } from '../../../utils/azureUtils';
 import { BranchDataItemFactory } from '../BranchDataProviderItem';
-import { BranchDataProviderFactory } from './ApplicationResourceBranchDataProviderManager';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
+import { BranchDataProviderFactory } from './ApplicationResourceBranchDataProviderManager';
 
 export class GroupingItem implements ResourceGroupsItem {
     private description: string | undefined;
@@ -45,6 +46,10 @@ export class GroupingItem implements ResourceGroupsItem {
 
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = new vscode.TreeItem(this.label, vscode.TreeItemCollapsibleState.Collapsed);
+
+        // All grouping items are pinnable
+        const computedContextValues = this.contextValues || [];
+        computedContextValues.push(isPinned(this) ? 'pinned' : 'pinnable');
 
         treeItem.contextValue = this.contextValues?.join(' ');
         treeItem.description = this.description;

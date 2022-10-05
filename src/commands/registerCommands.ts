@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
 import { AzExtTreeItem, IActionContext, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+import * as vscode from 'vscode';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
 import { clearActivities } from './activities/clearActivities';
@@ -14,6 +14,7 @@ import { deleteResourceGroup } from './deleteResourceGroup/deleteResourceGroup';
 import { deleteResourceGroupV2 } from './deleteResourceGroup/v2/deleteResourceGroupV2';
 import { focusGroup } from './explorer/focusGroup';
 import { buildGroupByCommand } from './explorer/groupBy';
+import { pinTreeItem, unpinTreeItem } from './explorer/pinning';
 import { showGroupOptions } from './explorer/showGroupOptions';
 import { unfocusGroup } from './explorer/unfocusGroup';
 import { getStarted } from './helpAndFeedback/getStarted';
@@ -76,4 +77,7 @@ export function registerCommands(
         await refreshWorkspace(context);
     });
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
+
+    registerCommand('azureResourceGroups.pin', pinTreeItem);
+    registerCommand('azureResourceGroups.unpin', unpinTreeItem);
 }

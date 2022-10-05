@@ -31,5 +31,10 @@
     "azureResourceGroups.unfocusGroup": "Unfocus Group",
     "azureResourceGroups.clearActivities": "Clear Completed Activities",
     "azureResourceGroups.toggleShowAllResources": "Show/Hide Filtered Resources",
-    "azureResourceGroups.showGroupOptions": "Show Grouping Options"
+    "azureResourceGroups.showGroupOptions": "Show Grouping Options",
+    "azureResourceGroups.pin": "Pin",
+    "azureResourceGroups.unpin": "Unpin",
+    "azureResourceGroups.pinPersistence": "The setting to control whether pinned groups are persisted globally or per workspace.",
+    "azureResourceGroups.pinPersistence.workspace": "Persist pinned groups per workspace",
+    "azureResourceGroups.pinPersistence.global": "Persist pinned groups globally"
 }
