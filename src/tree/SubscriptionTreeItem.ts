@@ -196,7 +196,7 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
             context.telemetry.properties.isActivationEvent = 'true';
 
             if (e.affectsConfiguration(`${ext.prefix}.groupBy`) ||
-                e.affectsConfiguration(`${ext.prefix}.showHiddenTypes`)) {
+                e.affectsConfiguration(`${ext.prefix}.${showHiddenTypesSettingKey}`)) {
                 // reset the focusedGroup since it won't exist in this grouping
                 await ext.context.workspaceState.update('focusedGroup', '');
                 await this.refresh(context);
