@@ -148,6 +148,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         return v2Api;
     }
 
+    ext.v2.api = v2ApiFactory();
+
     return createApiProvider(
         (<{ version: string }>context.extension.packageJSON).version,
         [
