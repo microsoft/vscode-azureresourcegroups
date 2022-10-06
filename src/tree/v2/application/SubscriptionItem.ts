@@ -34,7 +34,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
         const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
 
         if (!showHiddenTypes) {
-            resources = resources.filter(resource => resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType));
+            resources = resources.filter(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' || (resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType)));
         }
 
         return this.resourceGroupingManager.groupResources(this.context, resources ?? []).sort((a, b) => a.label.localeCompare(b.label));

@@ -26,7 +26,8 @@ export class GroupingItem implements ResourceGroupsItem {
     }
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
-        const resourceItems = await Promise.all(this.resources.map(
+        const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));
+        const resourceItems = await Promise.all(sortedResources.map(
             async resource => {
                 const branchDataProvider = this.branchDataProviderFactory(resource);
                 const resourceItem = await branchDataProvider.getResourceItem(resource);
