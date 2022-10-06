@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { ApplicationResourceBranchDataProviderManager } from '../../tree/v2/application/ApplicationResourceBranchDataProviderManager';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
 import { ApplicationResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
-import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, ResourcePickOptions, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
+import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     public static apiVersion: string = '2.0.0';
@@ -21,10 +21,6 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
 
     get apiVersion(): string {
         return V2AzureResourcesApiImplementation.apiVersion;
-    }
-
-    pickResource<TModel>(_options?: ResourcePickOptions | undefined): vscode.ProviderResult<TModel> {
-        throw new Error("Method not implemented.");
     }
 
     revealResource(_resourceId: string): Promise<void> {

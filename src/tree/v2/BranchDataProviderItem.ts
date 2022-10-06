@@ -15,7 +15,7 @@ export type BranchDataItemOptions = {
 
 export class BranchDataProviderItem implements ResourceGroupsItem, Wrapper {
     constructor(
-        private readonly branchItem: ResourceModelBase,
+        protected readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
         private readonly itemCache: ResourceGroupsItemCache,
         private readonly options?: BranchDataItemOptions) {

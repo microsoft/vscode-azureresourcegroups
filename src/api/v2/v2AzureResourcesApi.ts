@@ -180,11 +180,6 @@ export interface ResourcePickOptions {
  */
 export interface V2AzureResourcesApi extends AzureResourcesApiBase {
     /**
-     * Show a quick picker of app resources. Set `options.type` to filter the picks.
-     */
-    pickResource<TModel>(options?: ResourcePickOptions): vscode.ProviderResult<TModel>
-
-    /**
      * Reveals an item in the application/workspace resource tree
      * @param resourceId The ID of the resource to reveal.
      */

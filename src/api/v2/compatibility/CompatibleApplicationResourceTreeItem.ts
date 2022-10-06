@@ -73,6 +73,9 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
         this.tags = resource.tags;
 
         this.contextValues.add(CompatibleResolvedApplicationResourceTreeItem.contextValue);
+        if (applicationResource.azExtResourceType) {
+            this.contextValues.add(applicationResource.azExtResourceType);
+        }
         resolved.contextValuesToAdd?.forEach((value: string) => this.contextValues.add(value));
     }
 

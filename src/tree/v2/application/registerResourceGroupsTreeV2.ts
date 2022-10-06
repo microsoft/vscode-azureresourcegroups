@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { ext } from '../../../extensionVariables';
-import { createBranchDataItemFactory } from '../BranchDataProviderItem';
+import { createApplicationResourceBranchDataItemFactory } from '../ApplicationResourceBranchDataItem';
 import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { localize } from './../../../utils/localize';
 import { ApplicationResourceBranchDataProviderManager } from './ApplicationResourceBranchDataProviderManager';
@@ -20,7 +20,7 @@ export function registerResourceGroupsTreeV2(
     refreshEvent: vscode.Event<void>,
     resourceProviderManager: ApplicationResourceProviderManager): void {
     const itemCache = new ResourceGroupsItemCache();
-    const branchDataItemFactory = createBranchDataItemFactory(itemCache);
+    const branchDataItemFactory = createApplicationResourceBranchDataItemFactory(itemCache);
     const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => branchDataProviderManager.getProvider(resource.azExtResourceType ?? resource.type.type));
     const resourceGroupingManager = new ApplicationResourceGroupingManager(groupingItemFactory);
 

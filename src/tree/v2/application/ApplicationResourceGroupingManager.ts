@@ -65,7 +65,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         }
     }
 
-    private groupBy(context: ResourceGroupsTreeContext, resources: ApplicationResource[], keySelector: (resource: ApplicationResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: ApplicationResource[] }, contextValues?: string[]): GroupingItem[] {
+    private groupBy(context: ResourceGroupsTreeContext, resources: ApplicationResource[], keySelector: (resource: ApplicationResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: ApplicationResource[] }, contextValues?: string[], resourceTypeSelector?: (key: string) => string | undefined): GroupingItem[] {
         initialGrouping = initialGrouping ?? {};
 
         const map = resources.reduce(
@@ -86,10 +86,12 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         return Object.keys(map).map(key => {
             return this.groupingItemFactory(
                 context,
-                contextValues,
+                [...(contextValues ?? []), key],
                 iconSelector(key),
                 labelSelector(key),
-                map[key]);
+                map[key],
+                resourceTypeSelector?.(key)
+            );
         });
     }
 
@@ -146,6 +148,9 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             resources,
             resource => resource.azExtResourceType ?? resource.type.type, // TODO: Is resource type ever undefined?
             key => getName(key as AzExtResourceType) ?? key,
-            key => getIconPath(key as AzExtResourceType)); // TODO: What's the default icon for a resource type?
+            key => getIconPath(key as AzExtResourceType), // TODO: What's the default icon for a resource type?
+            undefined,
+            ['azureResourceTypeGroup'],
+            key => key);
     }
 }
