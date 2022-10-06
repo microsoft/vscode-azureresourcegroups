@@ -25,13 +25,6 @@ export class GroupingItem implements ResourceGroupsItem {
         public readonly resources: ApplicationResource[]) {
     }
 
-    public get quickPickOptions(): { readonly contextValues: string[]; readonly isLeaf: boolean; } {
-        return {
-            contextValues: this.contextValues ?? [],
-            isLeaf: false
-        };
-    }
-
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const resourceItems = await Promise.all(this.resources.map(
             async resource => {
