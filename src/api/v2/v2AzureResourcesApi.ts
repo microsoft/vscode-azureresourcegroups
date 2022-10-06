@@ -195,9 +195,8 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
     revealResource(resourceId: string): Promise<void>;
 
     /**
-     * Registers an application provider.
-     * @param id The provider ID . Must be unique.
-     * @param provider The provider.
+     * Registers a provider of application resources.
+     * @param provider The resource provider.
      */
     registerApplicationResourceProvider(provider: ApplicationResourceProvider): vscode.Disposable;
 
@@ -209,15 +208,14 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
     registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable;
 
     /**
-     * Registers a workspace resource provider.
-     * @param id The provider ID. Must be unique.
-     * @param provider The provider
+     * Registers a provider of workspace resources.
+     * @param provider The resource provider.
      */
     registerWorkspaceResourceProvider(provider: WorkspaceResourceProvider): vscode.Disposable;
 
     /**
      * Registers a workspace resource branch data provider.
-     * @param type The workspace resource type assocaited with the provider. Must be unique.
+     * @param type The workspace resource type associated with the provider. Must be unique.
      * @param provider The branch data provider for the resource type.
      */
     registerWorkspaceResourceBranchDataProvider<T extends ResourceModelBase>(type: string, provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable;
