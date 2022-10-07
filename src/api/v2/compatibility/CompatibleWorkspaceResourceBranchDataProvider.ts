@@ -8,9 +8,6 @@ import type { WorkspaceResource } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 import type { BranchDataProvider, WorkspaceResource as v2WorkspaceResource } from '../v2AzureResourcesApi';
 
-/**
- * Provides compatibility between an `AppResourceResolver` (v1) and a `BranchDataProvider` (v2)
- */
 export class CompatibleWorkspaceResourceBranchDataProvider<TResource extends WorkspaceResource & v2WorkspaceResource> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TResource> {
     private readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TResource | undefined>();
 
@@ -18,6 +15,14 @@ export class CompatibleWorkspaceResourceBranchDataProvider<TResource extends Wor
         // Using `{}` here so property assignment doesn't throw
         super({} as unknown as AzExtParentTreeItem, loadMoreCommandId);
     }
+
+    //#region BranchDataProvider
+
+    public async getResourceItem(element: TResource): Promise<TResource> {
+        return element;
+    }
+
+    //#endregion BranchDataProvider
 
     //#region TreeDataProvider
 
@@ -41,14 +46,6 @@ export class CompatibleWorkspaceResourceBranchDataProvider<TResource extends Wor
     }
 
     //#endregion
-
-    //#region BranchDataProvider
-
-    public async getResourceItem(element: TResource): Promise<TResource> {
-        return element;
-    }
-
-    //#endregion BranchDataProvider
 
     //#region AzExtTreeDataProvider
 
