@@ -22,7 +22,7 @@ export function registerWorkspaceResourceProvider(resourceType: string, provider
         void refreshWorkspace(context);
 
         ext.v2.api.registerWorkspaceResourceProvider(resourceType, new CompatibilityWorkspaceResourceProvider(resourceType, provider));
-        ext.v2.api.registerWorkspaceResourceBranchDataProvider(resourceType, new CompatibleWorkspaceResourceBranchDataProvider('foo') as unknown as BranchDataProvider<WorkspaceResource, AzExtTreeItem>)
+        ext.v2.api.registerWorkspaceResourceBranchDataProvider(resourceType, new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore') as unknown as BranchDataProvider<WorkspaceResource, AzExtTreeItem>)
 
         return new Disposable(() => {
             delete workspaceResourceProviders[resourceType];

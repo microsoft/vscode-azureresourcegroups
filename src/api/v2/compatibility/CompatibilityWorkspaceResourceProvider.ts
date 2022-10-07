@@ -20,7 +20,7 @@ export class CompatibilityWorkspaceResourceProvider implements V2WorkspaceResour
         const resources = await this.provider.provideResources(
             // pass in stub parent
             {
-                treeDataProvider: new CompatibleWorkspaceResourceBranchDataProvider('foo'),
+                treeDataProvider: new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore'),
                 valuesToMask: [],
                 parent: undefined,
             } as unknown as AzExtParentTreeItem
