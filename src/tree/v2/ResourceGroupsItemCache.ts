@@ -76,6 +76,19 @@ export class ResourceGroupsItemCache {
         return this.itemToParentCache.get(item);
     }
 
+    getPathForItem(item: ResourceGroupsItem): string[] {
+        const path: string[] = [];
+
+        let currentItem: ResourceGroupsItem | undefined = item;
+
+        while (currentItem) {
+            path.push(currentItem.id);
+            currentItem = this.getParentForItem(currentItem);
+        }
+
+        return path.reverse();
+    }
+
     updateItemChildren(item: ResourceGroupsItem, children: ResourceGroupsItem[]): void {
         this.itemToChildrenCache.set(item, children);
         children.forEach(child => this.itemToParentCache.set(child, item));

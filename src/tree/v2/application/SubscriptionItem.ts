@@ -28,6 +28,8 @@ export class SubscriptionItem implements ResourceGroupsItem {
         private readonly subscription: ApplicationSubscription) {
     }
 
+    public readonly id: string = this.subscription.subscriptionId;
+
     async getChildren(): Promise<ResourceGroupsItem[]> {
         let resources = await this.resourceProviderManager.getResources(this.subscription);
 
@@ -49,8 +51,4 @@ export class SubscriptionItem implements ResourceGroupsItem {
 
         return treeItem;
     }
-
-    id: string;
-    name: string;
-    type: string;
 }
