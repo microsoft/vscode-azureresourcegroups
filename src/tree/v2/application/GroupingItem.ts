@@ -8,9 +8,9 @@ import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
 import { BranchDataItemFactory } from '../BranchDataProviderItem';
-import { BranchDataProviderFactory } from './ApplicationResourceBranchDataProviderManager';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
+import { BranchDataProviderFactory } from './ApplicationResourceBranchDataProviderManager';
 
 export class GroupingItem implements ResourceGroupsItem {
     private description: string | undefined;
@@ -26,14 +26,15 @@ export class GroupingItem implements ResourceGroupsItem {
     }
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
-        const resourceItems = await Promise.all(this.resources.map(
+        const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));
+        const resourceItems = await Promise.all(sortedResources.map(
             async resource => {
                 const branchDataProvider = this.branchDataProviderFactory(resource);
                 const resourceItem = await branchDataProvider.getResourceItem(resource);
 
                 const options = {
                     defaults: {
-                        iconPath: getIconPath(resource.azExtResourceType)
+                        iconPath: getIconPath(resource.resourceType)
                     }
                 };
 
