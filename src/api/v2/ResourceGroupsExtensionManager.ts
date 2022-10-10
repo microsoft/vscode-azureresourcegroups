@@ -44,12 +44,10 @@ function getInactiveExtensions(): vscode.Extension<unknown>[] {
 
 export class ResourceGroupsExtensionManager {
     async activateApplicationResourceBranchDataProvider(type: AzExtResourceType): Promise<void> {
-        const normalizedType = type.toLowerCase();
-
         const extensionAndContributions =
             getInactiveExtensions()
-                .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.application?.branches?.map(resource => resource.type.toLowerCase()) ?? [] }))
-                .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === normalizedType) !== undefined);
+                .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.application?.branches?.map(resource => resource.type) ?? [] }))
+                .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
 
         if (extensionAndContributions) {
             await extensionAndContributions.extension.activate();
@@ -73,11 +71,9 @@ export class ResourceGroupsExtensionManager {
     }
 
     async activateWorkspaceResourceBranchDataProvider(type: string): Promise<void> {
-        type = type.toLowerCase();
-
         const extensionAndContributions =
             getInactiveExtensions()
-                .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.workspace?.branches?.map(resources => resources.type.toLowerCase()) ?? [] }))
+                .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.workspace?.branches?.map(resources => resources.type) ?? [] }))
                 .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
 
         if (extensionAndContributions) {
