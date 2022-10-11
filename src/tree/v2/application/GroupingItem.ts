@@ -35,6 +35,7 @@ export class GroupingItem implements ResourceGroupsItem {
                 const resourceItem = await branchDataProvider.getResourceItem(resource);
 
                 const options = {
+                    defaultId: resource.id,
                     defaults: {
                         iconPath: getIconPath(resource.resourceType)
                     }
