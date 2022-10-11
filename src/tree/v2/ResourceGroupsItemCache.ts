@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { localize } from '../../utils/localize';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 
 export class ResourceGroupsItemCache {
@@ -10,13 +11,15 @@ export class ResourceGroupsItemCache {
     private readonly itemToBranchItemCache: Map<ResourceGroupsItem, unknown> = new Map();
     private readonly itemToChildrenCache: Map<ResourceGroupsItem, ResourceGroupsItem[]> = new Map();
     private readonly itemToParentCache: Map<ResourceGroupsItem, ResourceGroupsItem> = new Map();
+    private readonly rootItemCache: ResourceGroupsItem[] = [];
 
     addBranchItem(branchItem: unknown, item: ResourceGroupsItem): void {
         this.branchItemToItemCache.set(branchItem, item);
         this.itemToBranchItemCache.set(item, branchItem);
     }
 
-    addItem(item: ResourceGroupsItem, children: ResourceGroupsItem[]): void {
+    addRootItem(item: ResourceGroupsItem, children: ResourceGroupsItem[]): void {
+        this.rootItemCache.push(item);
         this.itemToChildrenCache.set(item, children);
         children.forEach(child => this.itemToParentCache.set(child, item));
     }
@@ -26,6 +29,7 @@ export class ResourceGroupsItemCache {
         this.itemToBranchItemCache.clear();
         this.itemToChildrenCache.clear();
         this.itemToParentCache.clear();
+        this.rootItemCache.length = 0;
     }
 
     evictItemChildren(item: ResourceGroupsItem): void {
@@ -87,6 +91,22 @@ export class ResourceGroupsItemCache {
         }
 
         return path.reverse();
+    }
+
+    getItemForPath(path: string[]): ResourceGroupsItem | undefined {
+        if (path.length === 0) {
+            throw new Error(localize('tree.ResourceGroupsItemCache.getItemForPath.invalidPathLength', 'Path must have at least one element.'));
+        }
+
+        let currentItem = this.rootItemCache.find(item => item.id === path[0]);
+
+        for (let i = 1; currentItem && i < path.length; i++) {
+            const children = this.itemToChildrenCache.get(currentItem);
+
+            currentItem = children?.find(item => item.id === path[i]);
+        }
+
+        return currentItem;
     }
 
     updateItemChildren(item: ResourceGroupsItem, children: ResourceGroupsItem[]): void {

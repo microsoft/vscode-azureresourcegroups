@@ -23,7 +23,7 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
         itemCache.addBranchItem(this.branchItem, this);
     }
 
-    readonly id: string = this?.options?.defaultId ?? this.branchItem.id ?? randomUUID();
+    readonly id: string = this.branchItem.id ?? this?.options?.defaultId ?? randomUUID();
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const children = await this.branchDataProvider.getChildren(this.branchItem);

@@ -82,7 +82,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
             if (element) {
                 this.itemCache.updateItemChildren(element, children);
             } else {
-                children.forEach(child => this.itemCache.addItem(child, []));
+                children.forEach(child => this.itemCache.addRootItem(child, []));
             }
         }
 
