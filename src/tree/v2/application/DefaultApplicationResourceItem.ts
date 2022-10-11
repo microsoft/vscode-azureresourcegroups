@@ -4,15 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
+import { ApplicationResource, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
-import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
-export class DefaultApplicationResourceItem implements ResourceGroupsItem {
+export class DefaultApplicationResourceItem implements ResourceModelBase {
     constructor(private readonly resource: ApplicationResource) {
     }
 
-    getChildren(): vscode.ProviderResult<ResourceGroupsItem[]> {
+    public readonly id: string = this.resource.id;
+
+    getChildren(): vscode.ProviderResult<DefaultApplicationResourceItem[]> {
         return undefined;
     }
 
@@ -23,8 +24,4 @@ export class DefaultApplicationResourceItem implements ResourceGroupsItem {
 
         return treeItem;
     }
-
-    id: string;
-    name: string;
-    type: string;
 }
