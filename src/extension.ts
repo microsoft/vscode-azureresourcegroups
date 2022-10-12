@@ -33,8 +33,8 @@ import { GroupTreeItemBase } from './tree/GroupTreeItemBase';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { ApplicationResourceBranchDataProviderManager } from './tree/v2/application/ApplicationResourceBranchDataProviderManager';
 import { DefaultApplicationResourceBranchDataProvider } from './tree/v2/application/DefaultApplicationResourceBranchDataProvider';
-import { registerResourceGroupsTreeV2 } from './tree/v2/application/registerResourceGroupsTreeV2';
-import { registerWorkspaceTreeV2 } from './tree/v2/workspace/registerWorkspaceTreeV2';
+import { registerApplicationTree } from './tree/v2/application/registerResourceGroupsTreeV2';
+import { registerWorkspaceTree } from './tree/v2/workspace/registerWorkspaceTreeV2';
 import { WorkspaceDefaultBranchDataProvider } from './tree/v2/workspace/WorkspaceDefaultBranchDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from './tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
@@ -122,17 +122,17 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         type => void extensionManager.activateWorkspaceResourceBranchDataProvider(type));
     const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
 
-    registerResourceGroupsTreeV2(
-        context,
+    const { applicationResourceTreeDataProvider } = registerApplicationTree(context, {
         branchDataProviderManager,
-        refreshEventEmitter.event,
-        resourceProviderManager);
+        resourceProviderManager,
+        refreshEvent: refreshEventEmitter.event,
+    });
 
-    registerWorkspaceTreeV2(
-        workspaceResourceBranchDataProviderManager,
-        context,
-        refreshWorkspaceEmitter.event,
-        workspaceResourceProviderManager);
+    const { workspaceResourceTreeDataProvider } = registerWorkspaceTree(context, {
+        branchDataProviderManager: workspaceResourceBranchDataProviderManager,
+        workspaceResourceProviderManager,
+        refreshEvent: refreshWorkspaceEmitter.event,
+    });
 
     const v2ApiFactory = () => {
         if (v2Api === undefined) {
@@ -140,7 +140,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 resourceProviderManager,
                 branchDataProviderManager,
                 workspaceResourceProviderManager,
-                workspaceResourceBranchDataProviderManager);
+                workspaceResourceBranchDataProviderManager,
+                applicationResourceTreeDataProvider,
+                workspaceResourceTreeDataProvider
+            );
 
             context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new DefaultApplicationResourceProvider()));
         }

@@ -179,6 +179,10 @@ export interface ResourcePickOptions {
  * The current (v2) Azure Resources extension API.
  */
 export interface V2AzureResourcesApi extends AzureResourcesApiBase {
+
+    applicationResourceTreeDataProvider: vscode.TreeDataProvider<unknown>;
+    workspaceResourceTreeDataProvider: vscode.TreeDataProvider<unknown>;
+
     /**
      * Reveals an item in the application/workspace resource tree
      * @param resourceId The ID of the resource to reveal.

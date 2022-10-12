@@ -14,11 +14,19 @@ import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupin
 import { ApplicationResourceTreeDataProvider } from './ApplicationResourceTreeDataProvider';
 import { createGroupingItemFactory } from './GroupingItem';
 
-export function registerResourceGroupsTreeV2(
-    context: vscode.ExtensionContext,
+interface RegisterApplicationTreeOptions {
     branchDataProviderManager: ApplicationResourceBranchDataProviderManager,
     refreshEvent: vscode.Event<void>,
-    resourceProviderManager: ApplicationResourceProviderManager): void {
+    resourceProviderManager: ApplicationResourceProviderManager
+}
+
+interface RegisterApplicationTreeResult {
+    applicationResourceTreeDataProvider: ApplicationResourceTreeDataProvider;
+}
+
+export function registerApplicationTree(context: vscode.ExtensionContext, options: RegisterApplicationTreeOptions): RegisterApplicationTreeResult {
+    const { branchDataProviderManager, resourceProviderManager, refreshEvent } = options;
+
     const itemCache = new ResourceGroupsItemCache();
     const branchDataItemFactory = createApplicationResourceBranchDataItemFactory(itemCache);
     const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => branchDataProviderManager.getProvider(resource.azExtResourceType ?? resource.type.type));
@@ -26,20 +34,24 @@ export function registerResourceGroupsTreeV2(
 
     context.subscriptions.push(resourceGroupingManager);
 
-    const treeDataProvider = new ApplicationResourceTreeDataProvider(branchDataProviderManager.onDidChangeTreeData, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
-    ext.v2.resourceGroupsTreeDataProvider = treeDataProvider;
+    const applicationResourceTreeDataProvider = new ApplicationResourceTreeDataProvider(branchDataProviderManager.onDidChangeTreeData, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
+    ext.v2.applicationResourceTreeDataProvider = applicationResourceTreeDataProvider;
 
-    context.subscriptions.push(treeDataProvider);
+    context.subscriptions.push(applicationResourceTreeDataProvider);
 
     const treeView = vscode.window.createTreeView(
         'azureResourceGroupsV2',
         {
             canSelectMany: true,
             showCollapseAll: true,
-            treeDataProvider
+            treeDataProvider: applicationResourceTreeDataProvider
         });
 
     treeView.description = localize('remote', 'Remote');
 
     context.subscriptions.push(treeView);
+
+    return {
+        applicationResourceTreeDataProvider
+    }
 }

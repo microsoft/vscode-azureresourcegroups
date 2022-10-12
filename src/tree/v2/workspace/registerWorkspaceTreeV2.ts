@@ -9,27 +9,39 @@ import { localize } from './../../../utils/localize';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceResourceTreeDataProvider } from './WorkspaceResourceTreeDataProvider';
 
-export function registerWorkspaceTreeV2(
+interface RegisterWorkspaceTreeOptions {
     branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
-    context: vscode.ExtensionContext,
     refreshEvent: vscode.Event<void>,
-    workspaceResourceProviderManager: WorkspaceResourceProviderManager): void {
-    const treeDataProvider = new WorkspaceResourceTreeDataProvider(
+    workspaceResourceProviderManager: WorkspaceResourceProviderManager
+}
+
+interface RegisterWorkspaceTreeResult {
+    workspaceResourceTreeDataProvider: WorkspaceResourceTreeDataProvider;
+}
+
+export function registerWorkspaceTree(context: vscode.ExtensionContext, options: RegisterWorkspaceTreeOptions): RegisterWorkspaceTreeResult {
+    const { branchDataProviderManager, refreshEvent, workspaceResourceProviderManager } = options;
+
+    const workspaceResourceTreeDataProvider = new WorkspaceResourceTreeDataProvider(
         branchDataProviderManager,
         refreshEvent,
         workspaceResourceProviderManager);
 
-    context.subscriptions.push(treeDataProvider);
+    context.subscriptions.push(workspaceResourceTreeDataProvider);
 
     const treeView = vscode.window.createTreeView(
         'azureWorkspaceV2',
         {
             canSelectMany: true,
             showCollapseAll: true,
-            treeDataProvider
+            treeDataProvider: workspaceResourceTreeDataProvider
         });
 
     treeView.description = localize('local', 'Local');
 
     context.subscriptions.push(treeView);
+
+    return {
+        workspaceResourceTreeDataProvider
+    }
 }

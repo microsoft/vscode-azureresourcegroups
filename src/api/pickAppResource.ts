@@ -8,7 +8,7 @@ import { PickAppResourceOptions } from "@microsoft/vscode-azext-utils/hostapi";
 import { ext } from "../extensionVariables";
 
 export async function pickAppResource<T extends AzExtTreeItem>(context: ITreeItemPickerContext, options?: PickAppResourceOptions): Promise<T> {
-    return await compatibilityPickAppResourceExperience<T>(context, ext.v2.resourceGroupsTreeDataProvider, {
+    return await compatibilityPickAppResourceExperience<T>(context, ext.v2.applicationResourceTreeDataProvider, {
         resourceTypes: convertAppResourceFilterToAzExtResourceType(options?.filter),
         childItemFilter: convertExpectedChildContextValueToContextValueFilter(options?.expectedChildContextValue)
     });

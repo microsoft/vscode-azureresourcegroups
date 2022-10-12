@@ -17,6 +17,14 @@ export class V2AzureResourcesApiWrapper implements V2AzureResourcesApi {
         return this.api.apiVersion;
     }
 
+    get applicationResourceTreeDataProvider(): vscode.TreeDataProvider<unknown> {
+        return this.callWithTelemetryAndErrorHandlingSync('v2.getApplicationResourceTreeDataProvider', () => this.api.applicationResourceTreeDataProvider);
+    }
+
+    get workspaceResourceTreeDataProvider(): vscode.TreeDataProvider<unknown> {
+        return this.callWithTelemetryAndErrorHandlingSync('v2.getWorkspaceResourceTreeDataProvider', () => this.api.workspaceResourceTreeDataProvider);
+    }
+
     revealResource(resourceId: string): Promise<void> {
         return this.callWithTelemetryAndErrorHandling('v2.revealResource', async () => await this.api.revealResource(resourceId));
     }

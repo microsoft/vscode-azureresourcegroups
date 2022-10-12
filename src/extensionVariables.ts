@@ -51,6 +51,6 @@ export namespace ext {
 
     export namespace v2 {
         export let api: V2AzureResourcesApi;
-        export let resourceGroupsTreeDataProvider: TreeDataProvider<ResourceGroupsItem>;
+        export let applicationResourceTreeDataProvider: TreeDataProvider<ResourceGroupsItem>;
     }
 }
