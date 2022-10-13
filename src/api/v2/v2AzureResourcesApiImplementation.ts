@@ -5,7 +5,9 @@
 
 import * as vscode from 'vscode';
 import { ApplicationResourceBranchDataProviderManager } from '../../tree/v2/application/ApplicationResourceBranchDataProviderManager';
+import { ApplicationResourceTreeDataProvider } from '../../tree/v2/application/ApplicationResourceTreeDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
+import { WorkspaceResourceTreeDataProvider } from '../../tree/v2/workspace/WorkspaceResourceTreeDataProvider';
 import { ApplicationResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
 import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
@@ -16,8 +18,10 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
         private readonly applicationResourceProviderManager: ApplicationResourceProviderManager,
         private readonly applicationResourceBranchDataProviderManager: ApplicationResourceBranchDataProviderManager,
         private readonly workspaceResourceProviderManager: WorkspaceResourceProviderManager,
-        private readonly workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager) {
-    }
+        private readonly workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
+        public readonly applicationResourceTreeDataProvider: ApplicationResourceTreeDataProvider,
+        public readonly workspaceResourceTreeDataProvider: WorkspaceResourceTreeDataProvider,
+    ) { }
 
     get apiVersion(): string {
         return V2AzureResourcesApiImplementation.apiVersion;
