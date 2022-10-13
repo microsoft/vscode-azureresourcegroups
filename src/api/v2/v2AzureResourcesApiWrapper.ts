@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType, callWithTelemetryAndErrorHandling, callWithTelemetryAndErrorHandlingSync } from '@microsoft/vscode-azext-utils';
+import { AzExtResourceType, callWithTelemetryAndErrorHandling, callWithTelemetryAndErrorHandlingSync, ResourceGroupsItem } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
@@ -17,11 +17,11 @@ export class V2AzureResourcesApiWrapper implements V2AzureResourcesApi {
         return this.api.apiVersion;
     }
 
-    get applicationResourceTreeDataProvider(): vscode.TreeDataProvider<unknown> {
+    get applicationResourceTreeDataProvider(): vscode.TreeDataProvider<ResourceGroupsItem> {
         return this.api.applicationResourceTreeDataProvider;
     }
 
-    get workspaceResourceTreeDataProvider(): vscode.TreeDataProvider<unknown> {
+    get workspaceResourceTreeDataProvider(): vscode.TreeDataProvider<ResourceGroupsItem> {
         return this.api.workspaceResourceTreeDataProvider;
     }
 

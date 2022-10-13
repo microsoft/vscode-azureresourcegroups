@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { Environment } from '@azure/ms-rest-azure-env';
-import { AzExtResourceType, FindableByIdTreeNodeV2 } from '@microsoft/vscode-azext-utils';
+import { AzExtResourceType, FindableByIdTreeNodeV2, ResourceGroupsItem } from '@microsoft/vscode-azext-utils';
 import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 
@@ -180,8 +180,8 @@ export interface ResourcePickOptions {
  */
 export interface V2AzureResourcesApi extends AzureResourcesApiBase {
 
-    applicationResourceTreeDataProvider: vscode.TreeDataProvider<unknown>;
-    workspaceResourceTreeDataProvider: vscode.TreeDataProvider<unknown>;
+    applicationResourceTreeDataProvider: vscode.TreeDataProvider<ResourceGroupsItem>;
+    workspaceResourceTreeDataProvider: vscode.TreeDataProvider<ResourceGroupsItem>;
 
     /**
      * Reveals an item in the application/workspace resource tree
