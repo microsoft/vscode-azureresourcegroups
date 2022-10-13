@@ -18,6 +18,8 @@ export class GenericItem implements ResourceGroupsItem {
     constructor(public readonly label: string, private readonly options?: GenericItemOptions) {
     }
 
+    readonly id: string = this.label;
+
     getChildren(): vscode.ProviderResult<ResourceGroupsItem[]> {
         return this.options?.children;
     }
@@ -37,6 +39,4 @@ export class GenericItem implements ResourceGroupsItem {
 
         return treeItem;
     }
-
-    public id: string;
 }

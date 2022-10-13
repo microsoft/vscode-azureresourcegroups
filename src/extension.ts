@@ -110,42 +110,45 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     const extensionManager = new ResourceGroupsExtensionManager()
 
-    const branchDataProviderManager = new ApplicationResourceBranchDataProviderManager(
+    const applicationResourceBranchDataProviderManager = new ApplicationResourceBranchDataProviderManager(
         new DefaultApplicationResourceBranchDataProvider(),
         type => void extensionManager.activateApplicationResourceBranchDataProvider(type));
 
-    context.subscriptions.push(branchDataProviderManager);
+    context.subscriptions.push(applicationResourceBranchDataProviderManager);
 
-    const resourceProviderManager = new ApplicationResourceProviderManager(() => extensionManager.activateApplicationResourceProviders());
+    const applicationResourceProviderManager = new ApplicationResourceProviderManager(() => extensionManager.activateApplicationResourceProviders());
+
+    applicationResourceProviderManager.addResourceProvider(new DefaultApplicationResourceProvider());
+
     const workspaceResourceBranchDataProviderManager = new WorkspaceResourceBranchDataProviderManager(
         new WorkspaceDefaultBranchDataProvider(),
         type => void extensionManager.activateWorkspaceResourceBranchDataProvider(type));
     const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
 
     const { applicationResourceTreeDataProvider } = registerApplicationTree(context, {
-        branchDataProviderManager,
-        resourceProviderManager,
+        branchDataProviderManager: applicationResourceBranchDataProviderManager,
+        applicationResourceProviderManager: applicationResourceProviderManager,
         refreshEvent: refreshEventEmitter.event,
     });
 
     const { workspaceResourceTreeDataProvider } = registerWorkspaceTree(context, {
-        branchDataProviderManager: workspaceResourceBranchDataProviderManager,
         workspaceResourceProviderManager,
+        branchDataProviderManager: workspaceResourceBranchDataProviderManager,
         refreshEvent: refreshWorkspaceEmitter.event,
     });
 
     const v2ApiFactory = () => {
         if (v2Api === undefined) {
             v2Api = new V2AzureResourcesApiImplementation(
-                resourceProviderManager,
-                branchDataProviderManager,
+                applicationResourceProviderManager,
+                applicationResourceBranchDataProviderManager,
                 workspaceResourceProviderManager,
                 workspaceResourceBranchDataProviderManager,
                 applicationResourceTreeDataProvider,
                 workspaceResourceTreeDataProvider
             );
 
-            context.subscriptions.push(v2Api.registerApplicationResourceProvider('TODO: is ID useful?', new DefaultApplicationResourceProvider()));
+            context.subscriptions.push(v2Api.registerApplicationResourceProvider(new DefaultApplicationResourceProvider()));
         }
 
         return v2Api;

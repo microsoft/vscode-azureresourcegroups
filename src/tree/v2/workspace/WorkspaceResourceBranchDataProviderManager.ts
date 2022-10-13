@@ -6,7 +6,7 @@
 import { BranchDataProvider, ResourceModelBase, WorkspaceResource } from '../../../api/v2/v2AzureResourcesApi';
 import { ResourceBranchDataProviderManagerBase } from '../ResourceBranchDataProviderManagerBase';
 
-export class WorkspaceResourceBranchDataProviderManager extends ResourceBranchDataProviderManagerBase<BranchDataProvider<WorkspaceResource, ResourceModelBase>> {
+export class WorkspaceResourceBranchDataProviderManager extends ResourceBranchDataProviderManagerBase<string, BranchDataProvider<WorkspaceResource, ResourceModelBase>> {
     constructor(
         defaultProvider: BranchDataProvider<WorkspaceResource, ResourceModelBase>,
         extensionActivator: (type: string) => void

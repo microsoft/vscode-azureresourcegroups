@@ -6,16 +6,17 @@
 import { AzExtResourceType, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
+import { azureExtensions } from '../../../azureExtensions';
 import { GroupBySettings } from '../../../commands/explorer/groupBy';
 import { ext } from '../../../extensionVariables';
 import { getIconPath, getName } from '../../../utils/azureUtils';
 import { localize } from "../../../utils/localize";
 import { settingUtils } from '../../../utils/settingUtils';
 import { treeUtils } from '../../../utils/treeUtils';
-import { GroupingItem, GroupingItemFactory } from './GroupingItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
+import { GroupingItem, GroupingItemFactory } from './GroupingItem';
 
-const unknownLabel = localize('unknown', 'unknown');
+const unknownLabel = localize('unknown', 'Unknown');
 
 export class ApplicationResourceGroupingManager extends vscode.Disposable {
     private readonly onDidChangeGroupingEmitter = new vscode.EventEmitter<void>();
@@ -118,7 +119,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         const resourceGroups: ApplicationResource[] = [];
         const nonResourceGroups: ApplicationResource[] = [];
 
-        resources.forEach(resource => resource.type.type === 'microsoft.resources/resourcegroups' ? resourceGroups.push(resource) : nonResourceGroups.push(resource));
+        resources.forEach(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' ? resourceGroups.push(resource) : nonResourceGroups.push(resource));
 
         const keySelector: (resource: ApplicationResource) => string = resource => resource.resourceGroup?.toLowerCase() ?? unknownLabel; // TODO: Is resource group ever undefined? Should resource group be normalized on creation?
 
@@ -143,13 +144,25 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
     }
 
     private groupByResourceType(context: ResourceGroupsTreeContext, resources: ApplicationResource[]): GroupingItem[] {
+        const initialGrouping = {};
+
+        // Pre-populate the initial grouping with the supported resource types...
+        azureExtensions.forEach(extension => {
+            extension.resourceTypes.forEach(resourceType => {
+                initialGrouping[resourceType] = [];
+            });
+        });
+
+        // Exclude resource groups...
+        resources = resources.filter(resource => resource.azureResourceType.type !== 'microsoft.resources/resourcegroups');
+
         return this.groupBy(
             context,
             resources,
-            resource => resource.azExtResourceType ?? resource.type.type, // TODO: Is resource type ever undefined?
+            resource => resource.resourceType ?? unknownLabel, // TODO: Is resource type ever undefined?
             key => getName(key as AzExtResourceType) ?? key,
             key => getIconPath(key as AzExtResourceType), // TODO: What's the default icon for a resource type?
-            undefined,
+            initialGrouping,
             ['azureResourceTypeGroup'],
             key => key);
     }

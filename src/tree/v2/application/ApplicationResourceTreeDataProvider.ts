@@ -3,11 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtServiceClientCredentials, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AzExtServiceClientCredentials, IActionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
+import { showHiddenTypesSettingKey } from '../../../constants';
+import { ext } from '../../../extensionVariables';
 import { localize } from '../../../utils/localize';
 import { AzureAccountExtensionApi } from '../azure-account.api';
 import { GenericItem } from '../GenericItem';
@@ -39,6 +41,19 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
                 this.groupingChangeSubscription.dispose();
                 this.filtersSubscription?.dispose();
                 this.statusSubscription?.dispose();
+            });
+
+        registerEvent(
+            'treeView.onDidChangeConfiguration',
+            vscode.workspace.onDidChangeConfiguration,
+            async (context: IActionContext, e: vscode.ConfigurationChangeEvent) => {
+                context.errorHandling.suppressDisplay = true;
+                context.telemetry.suppressIfSuccessful = true;
+                context.telemetry.properties.isActivationEvent = 'true';
+
+                if (e.affectsConfiguration(`${ext.prefix}.${showHiddenTypesSettingKey}`)) {
+                    this.onDidChangeTreeDataEmitter.fire();
+                }
             });
 
         // TODO: This really belongs on the subscription item, but that then involves disposing of them during refresh,

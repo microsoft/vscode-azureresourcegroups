@@ -22,12 +22,12 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
     public async getResourceItem(element: TResource): Promise<TModel> {
         const oldAppResource: AppResource = {
             ...element,
-            type: element.type.type,
-            kind: element.type.kinds?.join(';'),
+            type: element.azureResourceType.type,
+            kind: element.azureResourceType.kinds?.join(';'),
         };
         const subscriptionContext: ISubscriptionContext = createSubscriptionContext(element.subscription);
 
         const resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
-        return CompatibleResolvedApplicationResourceTreeItem.Create(oldAppResource, resolved!, subscriptionContext, this, element) as unknown as TModel;
+        return CompatibleResolvedApplicationResourceTreeItem.Create(element, resolved!, subscriptionContext, this, element) as unknown as TModel;
     }
 }

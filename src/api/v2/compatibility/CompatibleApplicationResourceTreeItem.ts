@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtResourceType, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ISubscriptionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
-import type { AppResource, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
+import type { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { TreeItemCollapsibleState } from "vscode";
 import { createResolvableProxy } from "../../../tree/AppResourceTreeItem";
 import { getIconPath } from "../../../utils/azureUtils";
@@ -20,18 +20,23 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
         return Array.from(this.contextValues.values()).sort().join(';');
     }
 
+    // override
+    public get effectiveId(): string | undefined {
+        return undefined;
+    }
+
     public valuesToMask: string[] = [];
 
     public readonly resolveResult: ResolvedAppResourceBase;
-    public data: AppResource;
+    public data: ApplicationResource;
     public readonly azExtResourceType: AzExtResourceType;
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
     public tags?: { [propertyName: string]: string; } | undefined;
 
-    public get id(): string {
-        return nonNullProp(this.data, 'id');
+    public get id(): string | undefined {
+        return undefined;
     }
 
     public get label(): string {
@@ -39,7 +44,7 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
     }
 
     public get iconPath(): TreeItemIconPath {
-        return getIconPath(this.data.azExtResourceType);
+        return getIconPath(this.data.resourceType);
     }
 
     public get description(): string | undefined {
@@ -50,14 +55,14 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
         return this.resolveResult?.initialCollapsibleState ?? !!this.resolveResult?.loadMoreChildrenImpl ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
     }
 
-    public static Create(resource: AppResource, resolveResult: ResolvedAppResourceBase, subscription: ISubscriptionContext, treeDataProvider: AzExtTreeDataProvider, applicationResource: ApplicationResource): CompatibleResolvedApplicationResourceTreeItem {
+    public static Create(resource: ApplicationResource, resolveResult: ResolvedAppResourceBase, subscription: ISubscriptionContext, treeDataProvider: AzExtTreeDataProvider, applicationResource: ApplicationResource): CompatibleResolvedApplicationResourceTreeItem {
         const resolvable: CompatibleResolvedApplicationResourceTreeItem = new CompatibleResolvedApplicationResourceTreeItem(resource, resolveResult, subscription, treeDataProvider, applicationResource);
         return createResolvableProxy(resolvable);
     }
 
     public readonly resource: ApplicationResource;
 
-    private constructor(resource: AppResource, resolved: ResolvedAppResourceBase, __subscription: ISubscriptionContext, __treeDataProvider: AzExtTreeDataProvider, applicationResource: ApplicationResource) {
+    private constructor(resource: ApplicationResource, resolved: ResolvedAppResourceBase, __subscription: ISubscriptionContext, __treeDataProvider: AzExtTreeDataProvider, applicationResource: ApplicationResource) {
         super(
             (<Partial<AzExtParentTreeItem>>{
                 treeDataProvider: __treeDataProvider,
@@ -73,8 +78,8 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
         this.tags = resource.tags;
 
         this.contextValues.add(CompatibleResolvedApplicationResourceTreeItem.contextValue);
-        if (applicationResource.azExtResourceType) {
-            this.contextValues.add(applicationResource.azExtResourceType);
+        if (applicationResource.resourceType) {
+            this.contextValues.add(applicationResource.resourceType);
         }
         resolved.contextValuesToAdd?.forEach((value: string) => this.contextValues.add(value));
     }

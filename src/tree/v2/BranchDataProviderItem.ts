@@ -4,12 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Wrapper } from '@microsoft/vscode-azext-utils';
+import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
 export type BranchDataItemOptions = {
+    defaultId?: string;
     defaults?: vscode.TreeItem;
 };
 
@@ -21,6 +23,8 @@ export class BranchDataProviderItem implements ResourceGroupsItem, Wrapper {
         private readonly options?: BranchDataItemOptions) {
         itemCache.addBranchItem(this.branchItem, this);
     }
+
+    readonly id: string = this.branchItem.id ?? this?.options?.defaultId ?? randomUUID();
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const children = await this.branchDataProvider.getChildren(this.branchItem);
@@ -35,17 +39,13 @@ export class BranchDataProviderItem implements ResourceGroupsItem, Wrapper {
 
         return {
             ...this.options?.defaults ?? {},
-            ...treeItem
+            ...treeItem,
         }
     }
 
     unwrap<T>(): T {
         return this.branchItem as T;
     }
-
-    id: string;
-    name: string;
-    type: string;
 }
 
 export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataProviderItem;

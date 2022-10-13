@@ -29,16 +29,16 @@ export class V2AzureResourcesApiWrapper implements V2AzureResourcesApi {
         return this.callWithTelemetryAndErrorHandling('v2.revealResource', async () => await this.api.revealResource(resourceId));
     }
 
-    registerApplicationResourceProvider(id: string, provider: ApplicationResourceProvider): vscode.Disposable {
-        return this.callWithTelemetryAndErrorHandlingSync('v2.registerApplicationResourceProvider', () => this.api.registerApplicationResourceProvider(id, provider));
+    registerApplicationResourceProvider(provider: ApplicationResourceProvider): vscode.Disposable {
+        return this.callWithTelemetryAndErrorHandlingSync('v2.registerApplicationResourceProvider', () => this.api.registerApplicationResourceProvider(provider));
     }
 
     registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable {
         return this.callWithTelemetryAndErrorHandlingSync('v2.registerApplicationResourceBranchDataProvider', () => this.api.registerApplicationResourceBranchDataProvider(type, provider));
     }
 
-    registerWorkspaceResourceProvider(id: string, provider: WorkspaceResourceProvider): vscode.Disposable {
-        return this.callWithTelemetryAndErrorHandlingSync('v2.registerWorkspaceResourceProvider', () => this.api.registerWorkspaceResourceProvider(id, provider));
+    registerWorkspaceResourceProvider(provider: WorkspaceResourceProvider): vscode.Disposable {
+        return this.callWithTelemetryAndErrorHandlingSync('v2.registerWorkspaceResourceProvider', () => this.api.registerWorkspaceResourceProvider(provider));
     }
 
     registerWorkspaceResourceBranchDataProvider<T extends ResourceModelBase>(id: string, provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable {

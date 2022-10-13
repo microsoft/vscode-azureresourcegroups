@@ -4,28 +4,25 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
+import { ApplicationResource, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
-import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
-export class DefaultApplicationResourceItem implements ResourceGroupsItem {
+export class DefaultApplicationResourceItem implements ResourceModelBase {
     constructor(private readonly resource: ApplicationResource) {
     }
 
-    getChildren(): vscode.ProviderResult<ResourceGroupsItem[]> {
+    public readonly id: string = this.resource.id;
+
+    getChildren(): vscode.ProviderResult<DefaultApplicationResourceItem[]> {
         return undefined;
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
         const treeItem = new vscode.TreeItem(this.resource.name ?? 'Unnamed Resource');
 
-        treeItem.iconPath = getIconPath(this.resource.azExtResourceType);
+        treeItem.iconPath = getIconPath(this.resource.resourceType);
 
         treeItem.contextValue = 'azureResource';
         return treeItem;
     }
-
-    id: string;
-    name: string;
-    type: string;
 }

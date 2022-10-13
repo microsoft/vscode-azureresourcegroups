@@ -27,15 +27,19 @@ export class GroupingItem implements ResourceGroupsItem {
     ) {
     }
 
+    readonly id: string = this.label;
+
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
-        const resourceItems = await Promise.all(this.resources.map(
+        const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));
+        const resourceItems = await Promise.all(sortedResources.map(
             async resource => {
                 const branchDataProvider = this.branchDataProviderFactory(resource);
                 const resourceItem = await branchDataProvider.getResourceItem(resource);
 
                 const options = {
+                    defaultId: resource.id,
                     defaults: {
-                        iconPath: getIconPath(resource.azExtResourceType)
+                        iconPath: getIconPath(resource.resourceType)
                     }
                 };
 
@@ -66,8 +70,6 @@ export class GroupingItem implements ResourceGroupsItem {
             this.context.refresh(this);
         }
     }
-
-    public id: string;
 }
 
 export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[], resourceType: string | undefined) => GroupingItem;

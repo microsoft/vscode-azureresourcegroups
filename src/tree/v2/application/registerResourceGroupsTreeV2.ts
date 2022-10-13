@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { ext } from '../../../extensionVariables';
-import { createApplicationResourceBranchDataItemFactory } from '../ApplicationResourceBranchDataItem';
+import { createBranchDataItemFactory } from '../BranchDataProviderItem';
 import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { localize } from './../../../utils/localize';
 import { ApplicationResourceBranchDataProviderManager } from './ApplicationResourceBranchDataProviderManager';
@@ -17,7 +17,7 @@ import { createGroupingItemFactory } from './GroupingItem';
 interface RegisterApplicationTreeOptions {
     branchDataProviderManager: ApplicationResourceBranchDataProviderManager,
     refreshEvent: vscode.Event<void>,
-    resourceProviderManager: ApplicationResourceProviderManager
+    applicationResourceProviderManager: ApplicationResourceProviderManager
 }
 
 interface RegisterApplicationTreeResult {
@@ -25,11 +25,11 @@ interface RegisterApplicationTreeResult {
 }
 
 export function registerApplicationTree(context: vscode.ExtensionContext, options: RegisterApplicationTreeOptions): RegisterApplicationTreeResult {
-    const { branchDataProviderManager, resourceProviderManager, refreshEvent } = options;
+    const { branchDataProviderManager, applicationResourceProviderManager: resourceProviderManager, refreshEvent } = options;
 
     const itemCache = new ResourceGroupsItemCache();
-    const branchDataItemFactory = createApplicationResourceBranchDataItemFactory(itemCache);
-    const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => branchDataProviderManager.getProvider(resource.azExtResourceType ?? resource.type.type));
+    const branchDataItemFactory = createBranchDataItemFactory(itemCache);
+    const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => branchDataProviderManager.getProvider(resource.resourceType));
     const resourceGroupingManager = new ApplicationResourceGroupingManager(groupingItemFactory);
 
     context.subscriptions.push(resourceGroupingManager);
