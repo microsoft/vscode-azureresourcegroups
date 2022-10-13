@@ -223,18 +223,8 @@
         "views": {
             "azure": [
                 {
-                    "id": "azureResourceGroups",
-                    "name": "Resources",
-                    "visibility": "visible"
-                },
-                {
                     "id": "azureResourceGroupsV2",
                     "name": "Resources (V2)",
-                    "visibility": "visible"
-                },
-                {
-                    "id": "azureWorkspace",
-                    "name": "Workspace",
                     "visibility": "visible"
                 },
                 {
