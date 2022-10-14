@@ -258,7 +258,7 @@
             "view/title": [
                 {
                     "command": "azureResourceGroups.createResource",
-                    "when": "view == azureResourceGroups",
+                    "when": "view == azureResourceGroupsV2",
                     "group": "navigation@1"
                 },
                 {
