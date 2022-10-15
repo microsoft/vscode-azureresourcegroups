@@ -46,13 +46,13 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
                             rgItems.push(rgItem);
                         }
                     }
+                    this.onDidChangeTreeDataEmitter.fire(rgItems)
                 } else {
                     // e was null/undefined/void
                     // Translate it to fire on all elements for this branch data provider
                     // TODO
+                    this.onDidChangeTreeDataEmitter.fire();
                 }
-
-                this.onDidChangeTreeDataEmitter.fire(rgItems)
             });
 
         this.refreshSubscription = onRefresh(() => this.onDidChangeTreeDataEmitter.fire());
