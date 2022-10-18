@@ -9,12 +9,12 @@ import { callWithTelemetryAndErrorHandling, getAzExtResourceType, IActionContext
 import * as vscode from 'vscode';
 import { createResourceClient } from '../../utils/azureClients';
 import { createSubscriptionContext } from '../../utils/v2/credentialsUtils';
-import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions } from './v2AzureResourcesApi';
+import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription } from './v2AzureResourcesApi';
 
 export class DefaultApplicationResourceProvider implements ApplicationResourceProvider {
     private readonly onDidChangeResourceEmitter = new vscode.EventEmitter<ApplicationResource | undefined>();
 
-    getResources(subscription: ApplicationSubscription, _options?: ProvideResourceOptions | undefined): Promise<ApplicationResource[] | undefined> {
+    getResources(subscription: ApplicationSubscription): Promise<ApplicationResource[] | undefined> {
         return callWithTelemetryAndErrorHandling(
             'provideResources',
             async (context: IActionContext) => {

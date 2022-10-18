@@ -5,7 +5,6 @@
 
 import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
-import { AppResourceFilter } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 
 export interface ApplicationAuthentication {
@@ -17,7 +16,7 @@ export interface ApplicationAuthentication {
  */
 export interface ApplicationSubscription {
     readonly authentication: ApplicationAuthentication;
-    readonly displayName: string;
+    readonly name: string;
     readonly subscriptionId: string;
     readonly environment: Environment;
     readonly isCustomCloud: boolean;
@@ -43,13 +42,12 @@ export interface ApplicationResource extends ResourceBase {
     readonly resourceType?: AzExtResourceType;
     readonly location?: string;
     readonly resourceGroup?: string;
-    /** Resource tags */
     readonly tags?: {
         [propertyName: string]: string;
     };
-    /* add more properties from GenericResource if needed */
 }
 
+// TODO: Can this be not exported?
 export interface ResourceProvider<TResourceSource, TResource extends ResourceBase> {
     readonly onDidChangeResource?: vscode.Event<TResource | undefined>;
 
@@ -57,30 +55,23 @@ export interface ResourceProvider<TResourceSource, TResource extends ResourceBas
      * Called to supply the resources used as the basis for the resource group views.
      * @param source The source from which resources should be generated.
      */
-    getResources(source: TResourceSource, options?: ProvideResourceOptions): vscode.ProviderResult<TResource[]>;
-}
-
-export interface ProvideResourceOptions {
-    readonly startAt?: number;
-    readonly maxResults?: number;
+    getResources(source: TResourceSource): vscode.ProviderResult<TResource[]>;
 }
 
 export type ApplicationResourceProvider = ResourceProvider<ApplicationSubscription, ApplicationResource>;
 
-export interface ResourceQuickPickOptions {
-    readonly contexts?: string[];
-    readonly isParent?: boolean;
+// TODO: Can this be combined with `unknown`?
+export interface ResourceModelBase {
+    readonly id?: string;
+    readonly azureResourceId?: string;
+    readonly portalUrl?: string;
 }
 
-export interface ResourceModelBase {
-    // TODO: Should IDs be optional?
-    readonly id?: string;
-    readonly quickPickOptions?: ResourceQuickPickOptions;
-    readonly azureResourceId?: string;
-}
+// TODO: Create application/workspace specific base model types.
 
 /**
  * Represents a branch data provider resource model as returned by a context menu command.
+ * TODO: Do we use this internally?
  */
 export interface WrappedResourceModel {
     /**
@@ -114,19 +105,19 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
      *          However, we need to be able to pass a specific application resource which may not match the <T> model hierarchy used by the provider.
      */
     getResourceItem(element: TResource): TModel | Thenable<TModel>;
-
-    /**
-     * (Optional) Called to create a new resource of the type (e.g. via Quick Pick).
-     */
-    createResourceItem?: () => vscode.ProviderResult<TResource>;
 }
+
+type WorkspaceResourceType = string;
 
 /**
  *
  */
 export interface WorkspaceResource extends ResourceBase {
     readonly folder: vscode.WorkspaceFolder;
-    readonly type: string;
+    /**
+     * Used to match to a branch data provider.
+     */
+    readonly resourceType: WorkspaceResourceType;
 }
 
 /**
@@ -134,68 +125,10 @@ export interface WorkspaceResource extends ResourceBase {
  */
 export type WorkspaceResourceProvider = ResourceProvider<vscode.WorkspaceFolder, WorkspaceResource>;
 
-export interface ResourcePickOptions {
-    /**
-     * If set to true, the last (and _only_ the last) stage of the tree item picker will show a multi-select quick pick
-     */
-    canPickMany?: boolean;
-
-    /**
-     * If set to false, the 'Create new...' pick will not be displayed.
-     * For example, this could be used when the command deletes a tree item.
-     */
-    canCreate?: boolean;
-
-    /**
-     * If set, the picker will call this function to if the user creates a resource.
-     * @param create A function that, if called, will create the resource.
-     */
-    onCreate?: (create: () => Promise<never>) => void;
-
-    /**
-     * If set to true, the quick pick dialog will not close when focus moves out. Defaults to `true`.
-     */
-    ignoreFocusOut?: boolean;
-
-    /**
-     * When no item is available for user to pick, this message will be displayed in the error notification.
-     * This will also suppress the report issue button.
-     */
-    noItemFoundErrorMessage?: string;
-
-    /**
-     * Options to filter the picks to resources that match any of the provided filters
-     */
-    filter?: AppResourceFilter | AppResourceFilter[];
-
-    /**
-     * Set this to pick a child of the selected app resource
-     */
-    expectedChildContextValue?: string | RegExp | (string | RegExp)[];
-
-    /**
-     * Whether `AppResourceTreeItem`s should be resolved before displaying them as quick picks, or only once one has been selected
-     * If a client extension needs to change label/description/something visible on the quick pick via `resolve`, set to true,
-     * otherwise set to false. Default will be false.
-     */
-    resolveQuickPicksBeforeDisplay?: boolean;
-}
-
 /**
  * The current (v2) Azure Resources extension API.
  */
 export interface V2AzureResourcesApi extends AzureResourcesApiBase {
-    /**
-     * Show a quick picker of app resources. Set `options.type` to filter the picks.
-     */
-    pickResource<TModel>(options?: ResourcePickOptions): vscode.ProviderResult<TModel>
-
-    /**
-     * Reveals an item in the application/workspace resource tree
-     * @param resourceId The ID of the resource to reveal.
-     */
-    revealResource(resourceId: string): Promise<void>;
-
     /**
      * Registers a provider of application resources.
      * @param provider The resource provider.
@@ -220,7 +153,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
      * @param type The workspace resource type associated with the provider. Must be unique.
      * @param provider The branch data provider for the resource type.
      */
-    registerWorkspaceResourceBranchDataProvider<T extends ResourceModelBase>(type: string, provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable;
+    registerWorkspaceResourceBranchDataProvider<T extends ResourceModelBase>(type: WorkspaceResourceType, provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable;
 }
 
 export interface AzureResourcesApiBase {

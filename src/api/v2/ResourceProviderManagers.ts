@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions, ResourceBase, ResourceProvider, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
+import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ResourceBase, ResourceProvider, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export function isArray<T>(maybeArray: T[] | null | undefined): maybeArray is T[] {
     return Array.isArray(maybeArray);
@@ -53,12 +53,12 @@ class ResourceProviderManager<TResourceSource, TResource extends ResourceBase, T
         }
     }
 
-    async getResources(source: TResourceSource, options?: ProvideResourceOptions): Promise<TResource[]> {
+    async getResources(source: TResourceSource): Promise<TResource[]> {
         await this.activateExtensions();
 
         const resourceProviders = Array.from(this.providers.keys());
 
-        const resources = await Promise.all(resourceProviders.map(resourceProvider => resourceProvider.getResources(source, options)));
+        const resources = await Promise.all(resourceProviders.map(resourceProvider => resourceProvider.getResources(source)));
 
         return resources.filter(isArray).reduce((acc, result) => acc?.concat(result ?? []), []);
     }
