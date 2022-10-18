@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { BranchDataProvider, ResourceBase, ResourceModelBase } from "../v2AzureResourcesApi";
 
 export class CompatibleBranchDataProviderBase<TResource extends ResourceBase, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel> {
-    private readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();
+    protected readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();
 
     public constructor(loadMoreCommandId: string) {
         // Using `{}` here so property assignment doesn't throw
