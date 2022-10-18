@@ -15,8 +15,8 @@ import { CompatibleBranchDataProviderBase } from './CompatibleBranchDataProvider
  */
 export class CompatibleBranchDataProvider<TResource extends ApplicationResource, TModel extends AzExtTreeItem & ResourceModelBase> extends CompatibleBranchDataProviderBase<TResource, TModel> {
     public constructor(private readonly resolver: AppResourceResolver, loadMoreCommandId: string) {
-        // Using `{}` here so property assignment doesn't throw
         super(loadMoreCommandId);
+        resolver.onDidChangeTreeData?.((e) => this.overrideOnDidChangeTreeDataEmitter.fire(e as unknown as TModel | undefined));
     }
 
     public async getResourceItem(element: TResource): Promise<TModel> {
