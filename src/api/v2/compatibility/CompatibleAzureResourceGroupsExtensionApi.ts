@@ -9,13 +9,13 @@ import { Disposable, TreeView } from 'vscode';
 import { CompatibleAzExtTreeDataProvider } from './CompatibleAzExtTreeDataProvider';
 
 export class CompatibleAzureResourceGroupsExtensionApi implements AzureHostExtensionApi, AzureResourceGroupsExtensionApi {
-    public static apiVersion = '0.1.0';
+    public static apiVersion = '0.0.1';
 
     #appResourceTree: CompatibleAzExtTreeDataProvider;
     #appResourceTreeView: TreeView<unknown>;
     #workspaceResourceTree: CompatibleAzExtTreeDataProvider;
     #workspaceResourceTreeView: TreeView<unknown>;
-    #apiVersion: string;
+    #apiVersion: '0.0.1';
     #revealTreeItem: (resourceId: string) => Promise<void>;
     #registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
     #registerWorkspaceResourceProvider: (id: string, resolver: WorkspaceResourceProvider) => Disposable;
@@ -54,7 +54,7 @@ export class CompatibleAzureResourceGroupsExtensionApi implements AzureHostExten
         return this.#workspaceResourceTreeView;
     }
 
-    public get apiVersion(): string {
+    public get apiVersion(): '0.0.1' {
         return this.#apiVersion;
     }
 

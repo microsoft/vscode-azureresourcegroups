@@ -8,13 +8,13 @@ import { Activity, AppResourceResolver, AzureHostExtensionApi, AzureResourceGrou
 import { Disposable, TreeView } from 'vscode';
 
 export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensionApi, AzureResourceGroupsExtensionApi {
-    public static apiVersion = '0.0.1';
+    public static apiVersion: '0.0.1' = '0.0.1';
 
     #appResourceTree: AzExtTreeDataProvider;
     #appResourceTreeView: TreeView<unknown>;
     #workspaceResourceTree: AzExtTreeDataProvider;
     #workspaceResourceTreeView: TreeView<unknown>;
-    #apiVersion: string;
+    #apiVersion: '0.0.1';
     #revealTreeItem: (resourceId: string) => Promise<void>;
     #registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
     #registerWorkspaceResourceProvider: (id: string, resolver: WorkspaceResourceProvider) => Disposable;
@@ -53,7 +53,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         return this.#workspaceResourceTreeView;
     }
 
-    public get apiVersion(): string {
+    public get apiVersion(): '0.0.1' {
         return this.#apiVersion;
     }
 

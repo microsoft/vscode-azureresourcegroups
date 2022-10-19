@@ -32,7 +32,7 @@ export class CompatibilityWorkspaceResourceProvider implements V2WorkspaceResour
                     {
                         // omit id because it's already in the treeItem
                         folder: source,
-                        type: this.resourceType,
+                        resourceType: this.resourceType,
                         name: resource.label,
                     } as WorkspaceResource
                 );
