@@ -30,7 +30,7 @@ export function registerWorkspaceTree(context: vscode.ExtensionContext, options:
     context.subscriptions.push(workspaceResourceTreeDataProvider);
 
     const treeView = vscode.window.createTreeView(
-        'azureWorkspaceV2',
+        'azureWorkspace',
         {
             canSelectMany: true,
             showCollapseAll: true,

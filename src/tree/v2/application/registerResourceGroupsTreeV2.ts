@@ -40,7 +40,7 @@ export function registerApplicationTree(context: vscode.ExtensionContext, option
     context.subscriptions.push(applicationResourceTreeDataProvider);
 
     const treeView = vscode.window.createTreeView(
-        'azureResourceGroupsV2',
+        'azureResourceGroups',
         {
             canSelectMany: true,
             showCollapseAll: true,
