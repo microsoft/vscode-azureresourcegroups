@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
-import { BranchDataProvider, ResourceBase, ResourceModelBase, WrappedResourceModel } from '../../api/v2/v2AzureResourcesApi';
+import { BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
@@ -13,6 +13,16 @@ export type BranchDataItemOptions = {
     defaultId?: string;
     defaults?: vscode.TreeItem;
 };
+
+/**
+ * Represents a branch data provider resource model as returned by a context menu command.
+ */
+ export interface WrappedResourceModel {
+    /**
+     * Unwraps the resource, returning the underlying branch data provider resource model.
+     */
+    unwrap<T extends ResourceModelBase>(): T | undefined;
+}
 
 export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResourceModel {
     constructor(
