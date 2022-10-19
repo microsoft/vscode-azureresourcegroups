@@ -12,7 +12,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     private readonly branchTreeDataChangeSubscription: vscode.Disposable;
     private readonly refreshSubscription: vscode.Disposable;
     private readonly resourceProviderManagerListener: vscode.Disposable;
-    protected readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+    public readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
 
     constructor(
         protected readonly itemCache: ResourceGroupsItemCache,

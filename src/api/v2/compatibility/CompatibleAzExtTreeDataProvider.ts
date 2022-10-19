@@ -3,9 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, contextValueExperience, findByIdExperience, IActionContext, IFindTreeItemContext, isWrapper, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
-import { Disposable, Event, TreeDataProvider, TreeItem, TreeView } from "vscode";
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, compatibilitySubscriptionExperience, contextValueExperience, findByIdExperience, IActionContext, IFindTreeItemContext, isWrapper, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
+import { Disposable, Event, TreeItem, TreeView } from "vscode";
+import { SubscriptionTreeItem } from "../../../tree/SubscriptionTreeItem";
 import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
+import { ResourceTreeDataProviderBase } from "../../../tree/v2/ResourceTreeDataProviderBase";
 
 /**
  * An intermediate class that exists just to redeclare several events as abstract, so they
@@ -18,8 +20,8 @@ abstract class IntermediateCompatibleAzExtTreeDataProvider extends AzExtTreeData
 }
 
 export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExtTreeDataProvider {
-    public constructor(private readonly tdp: TreeDataProvider<ResourceGroupsItem>) {
-        super(undefined as unknown as AzExtParentTreeItem, undefined as unknown as string);
+    public constructor(private readonly tdp: ResourceTreeDataProviderBase) {
+        super({} as unknown as AzExtParentTreeItem, undefined as unknown as string);
     }
 
     //#region Things that should not be called
@@ -27,12 +29,16 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
         throw new Error('This method should never be called');
     }
 
-    public override getParent(_treeItem: AzExtTreeItem): Promise<AzExtTreeItem | undefined> {
-        throw new Error('This method should never be called');
+    public override getParent(treeItem: AzExtTreeItem): Promise<AzExtTreeItem | undefined> {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        return this.tdp.getParent(treeItem);
     }
 
-    public override getTreeItem(_treeItem: AzExtTreeItem): TreeItem {
-        throw new Error('This method should never be called');
+    public override getTreeItem(treeItem: AzExtTreeItem): TreeItem {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        return this.tdp.getTreeItem(treeItem);
     }
 
     public get onDidChangeTreeData(): Event<AzExtTreeItem | undefined> {
@@ -48,7 +54,9 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
     }
 
     public override getChildren(_treeItem?: AzExtParentTreeItem): Promise<AzExtTreeItem[]> {
-        throw new Error('This method should never be called'); // TODO: But CosmosDB does currently call it
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        return this.tdp.getChildren(_treeItem);
     }
     //#endregion Things that should not be called
 
@@ -63,10 +71,10 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
 
     public override showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext & { canPickMany: true }, startingTreeItem?: AzExtTreeItem): Promise<T[]>;
     public override async showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext, _startingTreeItem?: AzExtTreeItem): Promise<T> {
-
-        // Special handling for subscription tree item
-        // Use the new finder experience
-        // Unbox the item at the end
+        if (expectedContextValues === SubscriptionTreeItem.contextValue) {
+            const result = compatibilitySubscriptionExperience(context, this.tdp);
+            return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
+        }
 
         // TODO: support startingTreeItem
 
@@ -77,15 +85,19 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
         return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
     }
 
-    public override refresh(_context: IActionContext, _treeItem?: AzExtTreeItem | undefined): Promise<void> {
+    public override refresh(_context: IActionContext, treeItem?: AzExtTreeItem | undefined): Promise<void> {
+
         // Flush the cache at and below the given treeItem
         // Trigger a refresh at the given treeItem
-        throw new Error('TODO: Implement this using the new tree');
+        this.tdp.onDidChangeTreeDataEmitter.fire(treeItem as unknown as ResourceGroupsItem);
+
+        return Promise.resolve();
     }
 
-    public override refreshUIOnly(_treeItem: AzExtTreeItem | undefined): void {
-        // Trigger a refresh at the given treeItem
-        throw new Error('TODO: Implement this using the new tree');
+    public override refreshUIOnly(treeItem: AzExtTreeItem | undefined): void {
+
+        this.tdp.onDidChangeTreeDataEmitter.fire(treeItem as unknown as ResourceGroupsItem);
+
     }
 
     public override loadMore(_treeItem: AzExtTreeItem, _context: IActionContext): Promise<void> {
