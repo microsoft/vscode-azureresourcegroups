@@ -72,8 +72,9 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
     public override showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext & { canPickMany: true }, startingTreeItem?: AzExtTreeItem): Promise<T[]>;
     public override async showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext, _startingTreeItem?: AzExtTreeItem): Promise<T> {
         if (expectedContextValues === SubscriptionTreeItem.contextValue) {
-            const result = compatibilitySubscriptionExperience(context, this.tdp);
-            return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
+            const result = await compatibilitySubscriptionExperience(context, this.tdp);
+            const subscription = isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
+            return { subscription } as T;
         }
 
         // TODO: support startingTreeItem
