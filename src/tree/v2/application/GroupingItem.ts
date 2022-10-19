@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, BranchDataProvider, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
@@ -25,6 +25,10 @@ export class GroupingItem implements ResourceGroupsItem {
         public readonly resources: ApplicationResource[],
         public readonly resourceType: string | undefined
     ) {
+    }
+
+    public get subscription(): ISubscriptionContext {
+        return this.context.subscriptionContext;
     }
 
     readonly id: string = this.label;
