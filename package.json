@@ -223,12 +223,12 @@
         "views": {
             "azure": [
                 {
-                    "id": "azureResourceGroupsV2",
+                    "id": "azureResourceGroups",
                     "name": "Resources (V2)",
                     "visibility": "visible"
                 },
                 {
-                    "id": "azureWorkspaceV2",
+                    "id": "azureWorkspace",
                     "name": "Workspace (V2)",
                     "visibility": "visible"
                 },
@@ -258,27 +258,22 @@
             "view/title": [
                 {
                     "command": "azureResourceGroups.createResource",
-                    "when": "view == azureResourceGroupsV2",
+                    "when": "view == azureResourceGroups",
                     "group": "navigation@1"
                 },
                 {
                     "submenu": "azureResourceGroups.groupBy",
-                    "when": "view == azureResourceGroups || view == azureResourceGroupsV2",
+                    "when": "view == azureResourceGroups",
                     "group": "navigation@2"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups || view == azureResourceGroupsV2",
+                    "when": "view == azureResourceGroups",
                     "group": "navigation@3"
                 },
                 {
                     "command": "azureWorkspace.refresh",
                     "when": "view == azureWorkspace",
-                    "group": "navigation@10"
-                },
-                {
-                    "command": "azureWorkspace.refresh",
-                    "when": "view == azureWorkspaceV2",
                     "group": "navigation@10"
                 },
                 {
@@ -299,11 +294,6 @@
                     "group": "inline"
                 },
                 {
-                    "command": "azureResourceGroups.selectSubscriptions",
-                    "when": "view == azureResourceGroupsV2 && viewItem == azureextensionui.azureSubscription",
-                    "group": "inline"
-                },
-                {
                     "command": "azureResourceGroups.createResource",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "1@1"
@@ -319,13 +309,8 @@
                     "group": "9@2"
                 },
                 {
-                    "command": "azureResourceGroups.deleteResourceGroup",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
-                    "group": "1@1"
-                },
-                {
                     "command": "azureResourceGroups.deleteResourceGroupV2",
-                    "when": "view == azureResourceGroupsV2 && viewItem =~ /azureResourceGroup/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
                     "group": "1@1"
                 },
                 {
@@ -357,16 +342,6 @@
                     "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem =~ /group/",
                     "group": "inline@1"
-                },
-                {
-                    "command": "azureResourceGroups.focusGroup",
-                    "when": "view == azureResourceGroups && viewItem =~ /(group).*(unfocused)/",
-                    "group": "inline@2"
-                },
-                {
-                    "command": "azureResourceGroups.unfocusGroup",
-                    "when": "view == azureResourceGroups && viewItem =~ /(focused).*(group)/",
-                    "group": "inline@2"
                 }
             ],
             "commandPalette": [
