@@ -74,7 +74,7 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
         if (expectedContextValues === SubscriptionTreeItem.contextValue) {
             const result = await compatibilitySubscriptionExperience(context, this.tdp);
             const subscription = isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
-            return { subscription } as T;
+            return { subscription } as unknown as T;
         }
 
         // TODO: support startingTreeItem

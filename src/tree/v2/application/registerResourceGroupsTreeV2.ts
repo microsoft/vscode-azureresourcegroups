@@ -5,7 +5,6 @@
 
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
-import { ext } from '../../../extensionVariables';
 import { createBranchDataItemFactory } from '../BranchDataProviderItem';
 import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { localize } from './../../../utils/localize';
@@ -35,7 +34,6 @@ export function registerApplicationTree(context: vscode.ExtensionContext, option
     context.subscriptions.push(resourceGroupingManager);
 
     const applicationResourceTreeDataProvider = new ApplicationResourceTreeDataProvider(branchDataProviderManager.onDidChangeTreeData, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
-    ext.v2.applicationResourceTreeDataProvider = applicationResourceTreeDataProvider;
 
     context.subscriptions.push(applicationResourceTreeDataProvider);
 
