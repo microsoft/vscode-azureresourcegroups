@@ -113,8 +113,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 applicationResourceTreeDataProvider,
                 workspaceResourceTreeDataProvider
             );
-
-            context.subscriptions.push(v2Api.registerApplicationResourceProvider(new DefaultApplicationResourceProvider()));
         }
 
         return v2Api;
