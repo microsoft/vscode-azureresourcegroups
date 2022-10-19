@@ -40,7 +40,7 @@ export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderB
     }
 
     private async getWorkspaceItemModel(resource: WorkspaceResource): Promise<ResourceGroupsItem> {
-        const branchDataProvider = this.branchDataProviderManager.getProvider(resource.type);
+        const branchDataProvider = this.branchDataProviderManager.getProvider(resource.resourceType);
 
         const resourceItem = await branchDataProvider.getResourceItem(resource);
 

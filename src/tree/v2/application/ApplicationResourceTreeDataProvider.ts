@@ -99,9 +99,7 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
                                     authentication: {
                                         getSession: () => session
                                     },
-                                    subscriptionPath: nonNullProp(subscription.subscription, 'id'),
-                                    tenantId: subscription.session.tenantId,
-                                    displayName: subscription.subscription.displayName || 'TODO: ever undefined?',
+                                    name: subscription.subscription.displayName || 'TODO: ever undefined?',
                                     environment: subscription.session.environment,
                                     isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud',
                                     subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
