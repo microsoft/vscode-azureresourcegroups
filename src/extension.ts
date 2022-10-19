@@ -49,9 +49,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     context.subscriptions.push(refreshEventEmitter);
 
-    const refreshWorkspaceEmitter = new vscode.EventEmitter<void>();
+    ext.emitters.refreshWorkspace = new vscode.EventEmitter<void>();
 
-    context.subscriptions.push(refreshWorkspaceEmitter);
+    context.subscriptions.push(ext.emitters.refreshWorkspace = new vscode.EventEmitter<void>());
 
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
@@ -71,7 +71,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.activityLogTree = new AzExtTreeDataProvider(ext.activityLogTreeItem, 'azureActivityLog.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('azureActivityLog', { treeDataProvider: ext.activityLogTree }));
 
-        registerCommands(refreshEventEmitter, () => refreshWorkspaceEmitter.fire());
+        registerCommands(refreshEventEmitter, () => ext.emitters.refreshWorkspace.fire());
     });
 
     const extensionManager = new ResourceGroupsExtensionManager()
@@ -100,7 +100,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     const { workspaceResourceTreeDataProvider } = registerWorkspaceTree(context, {
         workspaceResourceProviderManager,
         branchDataProviderManager: workspaceResourceBranchDataProviderManager,
-        refreshEvent: refreshWorkspaceEmitter.event,
+        refreshEvent: ext.emitters.refreshWorkspace.event,
     });
 
     const v2ApiFactory = () => {

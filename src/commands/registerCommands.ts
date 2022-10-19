@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
 import { AzExtTreeItem, IActionContext, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+import * as vscode from 'vscode';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
 import { clearActivities } from './activities/clearActivities';
@@ -25,7 +25,6 @@ import { revealResource } from './revealResource';
 import { editTags } from './tags/editTags';
 import { toggleShowAllResources } from './toggleShowAllResources';
 import { viewProperties } from './viewProperties';
-import { refreshWorkspace } from './workspace/refreshWorkspace';
 
 export function registerCommands(
     refreshEventEmitter: vscode.EventEmitter<void>,
@@ -70,10 +69,9 @@ export function registerCommands(
         await openUrl(url)
     });
 
-    registerCommand('azureWorkspace.refresh', async context => {
+    registerCommand('azureWorkspace.refresh', () => {
         onRefreshWorkspace();
-
-        await refreshWorkspace(context);
+        ext.emitters.refreshWorkspace.fire();
     });
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
 }

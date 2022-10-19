@@ -17,16 +17,16 @@ export const workspaceResourceProviders: Record<string, WorkspaceResourceProvide
 export function registerWorkspaceResourceProvider(resourceType: string, provider: WorkspaceResourceProvider): Disposable {
     workspaceResourceProviders[resourceType] = provider;
 
-    return callWithTelemetryAndErrorHandlingSync('registerWorkspaceResourceProvider', (context) => {
+    return callWithTelemetryAndErrorHandlingSync('registerWorkspaceResourceProvider', () => {
 
-        void refreshWorkspace(context);
+        void refreshWorkspace();
 
         ext.v2.api.registerWorkspaceResourceProvider(new CompatibilityWorkspaceResourceProvider(resourceType, provider));
         ext.v2.api.registerWorkspaceResourceBranchDataProvider(resourceType, new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore') as unknown as BranchDataProvider<WorkspaceResource, AzExtTreeItem>)
 
         return new Disposable(() => {
             delete workspaceResourceProviders[resourceType];
-            void refreshWorkspace(context);
+            refreshWorkspace();
         });
     }) as Disposable;
 }
