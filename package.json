@@ -575,7 +575,6 @@
     "devDependencies": {
         "@microsoft/eslint-config-azuretools": "^0.1.0",
         "@microsoft/vscode-azext-dev": "^0.1.4",
-        "@types/fs-extra": "^8.0.1",
         "@types/gulp": "^4.0.6",
         "@types/mocha": "^7.0.2",
         "@types/node": "^14.0.0",
@@ -601,7 +600,6 @@
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.0.0",
         "@microsoft/vscode-azext-azureutils": "^0.3.4",
         "@microsoft/vscode-azext-utils": "^0.3.14",
-        "fs-extra": "^8.1.0",
         "jsonc-parser": "^2.2.1",
         "open": "^8.0.4",
         "semver": "^7.3.7",
