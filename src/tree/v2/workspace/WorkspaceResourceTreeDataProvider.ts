@@ -28,13 +28,23 @@ export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderB
         if (element) {
             return await element.getChildren();
         }
-        else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-            const resources = await this.resourceProviderManager.getResources(vscode.workspace.workspaceFolders[0]);
+        else {
+            if (vscode.workspace.workspaceFolders === undefined || vscode.workspace.workspaceFolders.length === 0) {
+                await vscode.commands.executeCommand('setContext', 'azureWorkspace.state', 'noWorkspace');
+            }
+            else {
+                const resources = await this.resourceProviderManager.getResources(vscode.workspace.workspaceFolders[0]);
 
-            if (resources) {
-                return Promise.all(resources.map(resource => this.getWorkspaceItemModel(resource)));
+                if (resources.length === 0) {
+                    await vscode.commands.executeCommand('setContext', 'azureWorkspace.state', 'noWorkspaceResources');
+                } else {
+                    return Promise.all(resources.map(resource => this.getWorkspaceItemModel(resource)));
+                }
             }
         }
+
+        // NOTE: Returning zero children indicates to VS Code that is should display a "welcome view".
+        //       The one chosen for display depends on the context set above.
 
         return [];
     }

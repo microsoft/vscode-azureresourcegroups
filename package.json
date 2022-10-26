@@ -252,6 +252,16 @@
             {
                 "view": "azureActivityLog",
                 "contents": "View all of your recent activities and quickly access resources you've recently created. \n [Create an Azure resource](command:azureResourceGroups.createResource)"
+            },
+            {
+                "view": "azureWorkspace",
+                "contents": "No workspace has been opened.",
+                "when": "azureWorkspace.state == 'noWorkspace'"
+            },
+            {
+                "view": "azureWorkspace",
+                "contents": "No local workspace resources exist.",
+                "when": "azureWorkspace.state == 'noWorkspaceResources'"
             }
         ],
         "menus": {
