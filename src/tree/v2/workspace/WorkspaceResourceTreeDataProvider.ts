@@ -36,7 +36,7 @@ export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderB
                 const resources = await this.resourceProviderManager.getResources(vscode.workspace.workspaceFolders[0]);
 
                 if (resources.length === 0) {
-                    await vscode.commands.executeCommand('setContext', 'azureWorkspace.state', 'noWorkspaceResources');
+                    await vscode.commands.executeCommand('setContext', 'azureWorkspace.state', this.resourceProviderManager.hasResourceProviders ? 'noWorkspaceResources' : 'noWorkspaceResourceProviders');
                 } else {
                     return Promise.all(resources.map(resource => this.getWorkspaceItemModel(resource)));
                 }

@@ -262,6 +262,11 @@
                 "view": "azureWorkspace",
                 "contents": "No local workspace resources exist.",
                 "when": "azureWorkspace.state == 'noWorkspaceResources'"
+            },
+            {
+                "view": "azureWorkspace",
+                "contents": "No local workspace resource providers exist.",
+                "when": "azureWorkspace.state == 'noWorkspaceResourceProviders'"
             }
         ],
         "menus": {
