@@ -12,7 +12,7 @@ export class CompatibleBranchDataProviderBase<TResource extends ResourceBase, TM
 
     public constructor(loadMoreCommandId: string) {
         // Using `{}` here so property assignment doesn't throw
-        super({} as unknown as AzExtParentTreeItem, loadMoreCommandId);
+        super({ valuesToMask: [] } as unknown as AzExtParentTreeItem, loadMoreCommandId);
     }
 
     //#region TreeDataProvider

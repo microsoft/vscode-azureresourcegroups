@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { isWrapper } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
@@ -63,8 +64,11 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
 
-    getTreeItem(element: ResourceGroupsItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        return element.getTreeItem();
+    async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
+        const t = await element.getTreeItem();
+        t.id = this.getId(element);
+        t.tooltip = t.id;
+        return t;
     }
 
     async getChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
@@ -89,9 +93,59 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         return children;
     }
 
-    getParent(element: ResourceGroupsItem): vscode.ProviderResult<ResourceGroupsItem> {
+    getParent(element: ResourceGroupsItem): ResourceGroupsItem | undefined {
         return this.itemCache.getParentForItem(element);
     }
 
+    public isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
+        return element?.isAncestorOf?.(id) || id.startsWith(this.getId(element) + '/');
+    }
+
+    public async findItem<T>(id: string): Promise<T | undefined> {
+        let element: ResourceGroupsItem | undefined = undefined;
+
+        outerLoop: while (true) {
+
+            const cachedChildren = this.itemCache.getChildrenForItem(element);
+            const children: ResourceGroupsItem[] | null | undefined = cachedChildren?.length ? cachedChildren : await this.getChildren(element);
+
+            if (!children) {
+                return;
+            }
+
+            for (const child of children) {
+                if (this.getId(child) === id) {
+                    return isWrapper(child) ? child.unwrap<T>() : child as unknown as T;
+                } else if (this.isAncestorOf(child, id)) {
+                    element = child;
+                    continue outerLoop;
+                }
+            }
+
+            return undefined;
+        }
+    }
+
     protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;
+
+    private getId(element: ResourceGroupsItem): string {
+        let parent: ResourceGroupsItem | undefined = this.getParent(element);
+        let fullId = element.id;
+        if (!fullId.startsWith('/')) {
+            fullId = `/${fullId}`;
+        }
+        while (parent) {
+            let id = parent.id;
+            if (!id.startsWith('/')) {
+                id = `/${id}`;
+            }
+            // don't include grouping item IDs to the full ID
+            if (!id.startsWith('/groupings')) {
+                fullId = id + fullId;
+            }
+            parent = this.getParent(parent);
+        }
+
+        return fullId;
+    }
 }

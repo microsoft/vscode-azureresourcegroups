@@ -8,6 +8,8 @@ import * as vscode from 'vscode';
 export interface ResourceGroupsItem {
     readonly id: string;
 
+    isAncestorOf?(id: string): boolean;
+
     getChildren(): vscode.ProviderResult<ResourceGroupsItem[]>;
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem>;
 }

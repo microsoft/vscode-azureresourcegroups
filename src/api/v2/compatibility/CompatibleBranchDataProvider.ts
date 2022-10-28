@@ -6,6 +6,7 @@
 import { AzExtTreeItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import type { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import type { ApplicationResource, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
+import { getApplicationResourceId } from '../../../tree/v2/application/DefaultApplicationResourceItem';
 import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
 import { CompatibleResolvedApplicationResourceTreeItem } from './CompatibleApplicationResourceTreeItem';
 import { CompatibleBranchDataProviderBase } from './CompatibleBranchDataProviderBase';
@@ -27,6 +28,22 @@ export class CompatibleBranchDataProvider<TResource extends ApplicationResource,
         const subscriptionContext: ISubscriptionContext = createSubscriptionContext(element.subscription);
 
         const resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
-        return CompatibleResolvedApplicationResourceTreeItem.Create(element, resolved!, subscriptionContext, this, element) as unknown as TModel;
+        if (!resolved) {
+            throw new Error(`Could not resolve resource.`);
+        }
+
+        // override fullId to be the Azure resource id
+        const fullId = element.id.toString();
+        Object.defineProperty(resolved, 'fullId', {
+            get: () => fullId,
+        });
+
+        // override id to be the Azure resource id minus the subscription
+        const id = getApplicationResourceId(fullId);
+        Object.defineProperty(resolved, 'id', {
+            get: () => id,
+        });
+
+        return CompatibleResolvedApplicationResourceTreeItem.Create(element, resolved, subscriptionContext, this, element) as unknown as TModel;
     }
 }

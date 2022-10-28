@@ -28,7 +28,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
         private readonly subscription: ApplicationSubscription) {
     }
 
-    public readonly id: string = this.subscription.subscriptionId;
+    public readonly id: string = `subscriptions/${this.subscription.subscriptionId}`;
 
     async getChildren(): Promise<ResourceGroupsItem[]> {
         let resources = await this.resourceProviderManager.getResources(this.subscription);
@@ -47,7 +47,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
 
         treeItem.contextValue = 'azureextensionui.azureSubscription';
         treeItem.iconPath = treeUtils.getIconPath('azureSubscription');
-        treeItem.id = this.subscription.subscriptionId;
+        treeItem.id = this.id;
 
         return treeItem;
     }

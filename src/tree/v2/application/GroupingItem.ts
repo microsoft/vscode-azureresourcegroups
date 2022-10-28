@@ -31,7 +31,13 @@ export class GroupingItem implements ResourceGroupsItem {
         return this.context.subscriptionContext;
     }
 
-    readonly id: string = this.label;
+    readonly id: string = `groupings/${this.label}`;
+
+    isAncestorOf(id: string): boolean {
+        return this.resources.some(resource =>
+            id === resource.id || id.startsWith(resource.id)
+        );
+    }
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));
@@ -59,6 +65,7 @@ export class GroupingItem implements ResourceGroupsItem {
         treeItem.contextValue = this.contextValues?.sort().join(';');
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
+        treeItem.id = this.id;
 
         return treeItem;
     }

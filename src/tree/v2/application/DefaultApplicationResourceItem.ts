@@ -8,10 +8,9 @@ import { ApplicationResource, ResourceModelBase } from '../../../api/v2/v2AzureR
 import { getIconPath } from '../../../utils/azureUtils';
 
 export class DefaultApplicationResourceItem implements ResourceModelBase {
-    constructor(private readonly resource: ApplicationResource) {
-    }
+    constructor(private readonly resource: ApplicationResource) { }
 
-    public readonly id: string = this.resource.id;
+    public readonly id: string = getApplicationResourceId(this.resource.id);
 
     getChildren(): vscode.ProviderResult<DefaultApplicationResourceItem[]> {
         return undefined;
@@ -23,6 +22,13 @@ export class DefaultApplicationResourceItem implements ResourceModelBase {
         treeItem.iconPath = getIconPath(this.resource.resourceType);
 
         treeItem.contextValue = 'azureResource';
+        treeItem.id = this.id;
+
         return treeItem;
     }
+}
+
+export function getApplicationResourceId(id: string): string {
+    const splitId = id.split(/(resourceGroups)/);
+    return splitId[1] + splitId[2];
 }
