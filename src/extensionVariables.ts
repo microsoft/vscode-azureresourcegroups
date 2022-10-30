@@ -10,6 +10,7 @@ import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { V2AzureResourcesApi } from "./api/v2/v2AzureResourcesApi";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureAccountTreeItem } from "./tree/AzureAccountTreeItem";
+import { ApplicationResourceTreeDataProvider } from "./tree/v2/application/ApplicationResourceTreeDataProvider";
 import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 
 namespace extEmitters {
@@ -51,5 +52,6 @@ export namespace ext {
 
     export namespace v2 {
         export let api: V2AzureResourcesApi;
+        export let appResourceTree: ApplicationResourceTreeDataProvider;
     }
 }

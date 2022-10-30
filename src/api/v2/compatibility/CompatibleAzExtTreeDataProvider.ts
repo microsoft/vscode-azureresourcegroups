@@ -4,10 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, compatibilitySubscriptionExperience, contextValueExperience, IActionContext, IFindTreeItemContext, isWrapper, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
-import { Disposable, Event, TreeItem, TreeView } from "vscode";
+import { Disposable, Event, EventEmitter, TreeItem, TreeView } from "vscode";
 import { SubscriptionTreeItem } from "../../../tree/SubscriptionTreeItem";
 import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
 import { ResourceTreeDataProviderBase } from "../../../tree/v2/ResourceTreeDataProviderBase";
+import { ResourceModelBase } from "../v2AzureResourcesApi";
 
 /**
  * An intermediate class that exists just to redeclare several events as abstract, so they
@@ -20,7 +21,7 @@ abstract class IntermediateCompatibleAzExtTreeDataProvider extends AzExtTreeData
 }
 
 export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExtTreeDataProvider {
-    public constructor(private readonly tdp: ResourceTreeDataProviderBase) {
+    public constructor(private readonly tdp: ResourceTreeDataProviderBase, private readonly onDidChangeTreeDataEmitter: EventEmitter<void | ResourceModelBase | ResourceModelBase[] | null | undefined>) {
         super(
             {
                 valuesToMask: [] // make sure addTreeItemValuesToMask doesn't throw
@@ -70,7 +71,8 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
         // Use the new finder experience
         // Unbox the item at the end
 
-        return await this.tdp.findItem(fullId);
+        const item = await this.tdp.findItem(fullId);
+        return isWrapper(item) ? item.unwrap<T>() : item as unknown as T;
 
         // const result = await findByIdExperience(context, this.tdp, fullId);
         // return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
@@ -97,14 +99,14 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
 
         // Flush the cache at and below the given treeItem
         // Trigger a refresh at the given treeItem
-        this.tdp.onDidChangeTreeDataEmitter.fire(treeItem as unknown as ResourceGroupsItem);
+        this.onDidChangeTreeDataEmitter.fire(treeItem as unknown as ResourceGroupsItem);
 
         return Promise.resolve();
     }
 
     public override refreshUIOnly(treeItem: AzExtTreeItem | undefined): void {
 
-        this.tdp.onDidChangeTreeDataEmitter.fire(treeItem as unknown as ResourceGroupsItem);
+        this.onDidChangeTreeDataEmitter.fire(treeItem as unknown as ResourceGroupsItem);
 
     }
 

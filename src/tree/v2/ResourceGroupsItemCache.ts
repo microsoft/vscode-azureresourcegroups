@@ -120,4 +120,29 @@ export class ResourceGroupsItemCache {
         this.itemToChildrenCache.set(item, children);
         children.forEach(child => this.itemToParentCache.set(child, item));
     }
+
+    getId(element: ResourceGroupsItem): string {
+        let parent: ResourceGroupsItem | undefined = this.getParentForItem(element);
+        let fullId = element.id;
+        if (!fullId.startsWith('/')) {
+            fullId = `/${fullId}`;
+        }
+        while (parent) {
+            let id = parent.id;
+            if (!id.startsWith('/')) {
+                id = `/${id}`;
+            }
+            // don't include grouping item IDs to the full ID
+            if (!id.startsWith('/groupings')) {
+                fullId = id + fullId;
+            }
+            parent = this.getParentForItem(parent);
+        }
+
+        return fullId;
+    }
+
+    public isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
+        return element?.isAncestorOf?.(id) || id.startsWith(this.getId(element) + '/');
+    }
 }

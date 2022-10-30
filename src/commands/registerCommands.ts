@@ -34,7 +34,10 @@ export function registerCommands(
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
     registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.appResourceTree.loadMore(node, context));
     registerCommand('azureResourceGroups.openInPortal', openInPortal);
-    registerCommand('azureResourceGroups.refresh', async (context: IActionContext, node?: AzExtTreeItem) => { await ext.appResourceTree.refresh(context, node); refreshEventEmitter.fire(); });
+    registerCommand('azureResourceGroups.refresh', async (context: IActionContext, node?: AzExtTreeItem) => {
+        // await ext.appResourceTree.refresh(context, node); refreshEventEmitter.fire();
+        await revealResource(context, '/subscriptions/570117a0-fe37-4dde-ae48-b692c1b25f70/resourceGroups/weiningerfunc38/providers/Microsoft.Web/sites/weininger-func-38')
+    });
     registerCommand('azureResourceGroups.revealResource', revealResource);
     registerCommand('azureResourceGroups.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
     registerCommand('azureResourceGroups.viewProperties', viewProperties);

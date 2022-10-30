@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { isWrapper } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
@@ -13,7 +12,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     private readonly branchTreeDataChangeSubscription: vscode.Disposable;
     private readonly refreshSubscription: vscode.Disposable;
     private readonly resourceProviderManagerListener: vscode.Disposable;
-    public readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+    protected readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
 
     constructor(
         protected readonly itemCache: ResourceGroupsItemCache,
@@ -66,27 +65,31 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
         const t = await element.getTreeItem();
-        t.id = this.getId(element);
+        t.id = this.itemCache.getId(element);
         t.tooltip = t.id;
         return t;
     }
 
     async getChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
+        return this.cacheGetChildren(element, () => this.onGetChildren(element), this.itemCache);
+    }
+
+    private async cacheGetChildren(element: ResourceGroupsItem | undefined, getChildren: () => Promise<ResourceGroupsItem[] | null | undefined>, cache: ResourceGroupsItemCache) {
         if (element) {
             // TODO: Do we really need to evict before generating new children, or can we just update after the fact?
             //       Since the callback is async, could change notifications show up while doing this?
-            this.itemCache.evictItemChildren(element);
+            cache.evictItemChildren(element);
         } else {
-            this.itemCache.evictAll();
+            cache.evictAll();
         }
 
-        const children = await this.onGetChildren(element);
+        const children = await getChildren();
 
         if (children) {
             if (element) {
-                this.itemCache.updateItemChildren(element, children);
+                cache.updateItemChildren(element, children);
             } else {
-                children.forEach(child => this.itemCache.addRootItem(child, []));
+                children.forEach(child => cache.addRootItem(child, []));
             }
         }
 
@@ -97,26 +100,23 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         return this.itemCache.getParentForItem(element);
     }
 
-    public isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
-        return element?.isAncestorOf?.(id) || id.startsWith(this.getId(element) + '/');
-    }
-
-    public async findItem<T>(id: string): Promise<T | undefined> {
+    public async findItem(id: string, useGlobalCache: boolean = false): Promise<ResourceGroupsItem | undefined> {
+        const itemCache = useGlobalCache ? this.itemCache : new ResourceGroupsItemCache();
         let element: ResourceGroupsItem | undefined = undefined;
 
         outerLoop: while (true) {
 
-            const cachedChildren = this.itemCache.getChildrenForItem(element);
-            const children: ResourceGroupsItem[] | null | undefined = cachedChildren?.length ? cachedChildren : await this.getChildren(element);
+            const cachedChildren = itemCache.getChildrenForItem(element);
+            const children: ResourceGroupsItem[] | null | undefined = cachedChildren?.length ? cachedChildren : await this.cacheGetChildren(element, () => this.onGetChildren(element), itemCache);
 
             if (!children) {
                 return;
             }
 
             for (const child of children) {
-                if (this.getId(child) === id) {
-                    return isWrapper(child) ? child.unwrap<T>() : child as unknown as T;
-                } else if (this.isAncestorOf(child, id)) {
+                if (itemCache.getId(child) === id) {
+                    return child;
+                } else if (itemCache.isAncestorOf(child, id)) {
                     element = child;
                     continue outerLoop;
                 }
@@ -127,25 +127,4 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;
-
-    private getId(element: ResourceGroupsItem): string {
-        let parent: ResourceGroupsItem | undefined = this.getParent(element);
-        let fullId = element.id;
-        if (!fullId.startsWith('/')) {
-            fullId = `/${fullId}`;
-        }
-        while (parent) {
-            let id = parent.id;
-            if (!id.startsWith('/')) {
-                id = `/${id}`;
-            }
-            // don't include grouping item IDs to the full ID
-            if (!id.startsWith('/groupings')) {
-                fullId = id + fullId;
-            }
-            parent = this.getParent(parent);
-        }
-
-        return fullId;
-    }
 }

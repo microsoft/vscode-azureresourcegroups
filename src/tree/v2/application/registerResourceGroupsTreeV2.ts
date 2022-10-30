@@ -5,6 +5,7 @@
 
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
+import { ext } from '../../../extensionVariables';
 import { createBranchDataItemFactory } from '../BranchDataProviderItem';
 import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { localize } from './../../../utils/localize';
@@ -44,6 +45,9 @@ export function registerApplicationTree(context: vscode.ExtensionContext, option
             showCollapseAll: true,
             treeDataProvider: applicationResourceTreeDataProvider
         });
+
+    ext.appResourceTreeView = treeView;
+    ext.v2.appResourceTree = applicationResourceTreeDataProvider
 
     treeView.description = localize('remote', 'Remote');
 
