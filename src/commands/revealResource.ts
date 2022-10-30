@@ -16,12 +16,14 @@ export async function revealResource(context: IActionContext, arg: AppResource |
     context.telemetry.properties.resourceType = parseAzureResourceId(resourceId).provider.replace(/\//g, '|');
 
     try {
-        const node = await ext.v2.appResourceTree.findItem(resourceId, true);
-        if (node) {
-            // await ext.appResourceTree.refresh(context);
-            await ext.appResourceTreeView.reveal(node);
+        const node = await ext.v2.appResourceTree.findItem(resourceId);
 
-            // await ext.appResourceTreeView.reveal(node);
+        if (node) {
+            console.log('reveal started');
+            ext.v2.appResourceTree.lockCache = true;
+            await ext.v2.applicationResourceTreeView.reveal(node);
+            ext.v2.appResourceTree.lockCache = false;
+            console.log('reveal is done');
         }
     } catch (error) {
         context.telemetry.properties.revealError = parseError(error).message;

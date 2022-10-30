@@ -24,7 +24,10 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
     public constructor(private readonly tdp: ResourceTreeDataProviderBase, private readonly onDidChangeTreeDataEmitter: EventEmitter<void | ResourceModelBase | ResourceModelBase[] | null | undefined>) {
         super(
             {
-                valuesToMask: [] // make sure addTreeItemValuesToMask doesn't throw
+                valuesToMask: [], // make sure addTreeItemValuesToMask doesn't throw
+                id: '',
+                fullId: '',
+                label: '',
             } as unknown as AzExtParentTreeItem,
             undefined as unknown as string
         );

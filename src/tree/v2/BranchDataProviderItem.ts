@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { isAzExtTreeItem, Wrapper } from '@microsoft/vscode-azext-utils';
+import { ApplicationResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
@@ -31,6 +32,11 @@ export class BranchDataProviderItem implements ResourceGroupsItem, Wrapper {
             this.id = this.branchItem.id ?? this?.options?.defaultId ?? randomUUID();
         }
     }
+
+    public get resource(): ApplicationResource {
+        return this.branchItem['resource'] as ApplicationResource;
+    }
+
 
     readonly id: string;
 
