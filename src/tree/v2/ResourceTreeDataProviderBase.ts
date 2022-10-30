@@ -100,7 +100,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         return this.itemCache.getParentForItem(element);
     }
 
-    public async findItem(id: string, useGlobalCache: boolean = false): Promise<ResourceGroupsItem | undefined> {
+    public async findItem(id: string, useGlobalCache: boolean = true): Promise<ResourceGroupsItem | undefined> {
         const itemCache = useGlobalCache ? this.itemCache : new ResourceGroupsItemCache();
         let element: ResourceGroupsItem | undefined = undefined;
 
