@@ -78,7 +78,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         });
 
         this.onDidChangeTreeData((e) => {
-            console.log('onDidChangeTreeData', e, this);
+            console.log('onDidChangeTreeData', e, this.lockCache);
         });
     }
 
