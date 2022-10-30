@@ -14,7 +14,16 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     private readonly resourceProviderManagerListener: vscode.Disposable;
     protected readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
 
-    public lockCache: boolean = false;
+    private readonly gatedOnDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+
+    private lockCache: boolean = false;
+
+    async runWithGate<T>(callback: () => Promise<T>): Promise<T> {
+        this.lockCache = true;
+        const result = await callback();
+        this.lockCache = false;
+        return result;
+    }
 
     constructor(
         protected readonly itemCache: ResourceGroupsItemCache,
@@ -48,41 +57,31 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
                             rgItems.push(rgItem);
                         }
                     }
-
-                    if (!this.lockCache) {
-                        this.onDidChangeTreeDataEmitter.fire(rgItems);
-                    }
-
+                    this.onDidChangeTreeDataEmitter.fire(rgItems);
                 } else {
                     // e was null/undefined/void
                     // Translate it to fire on all elements for this branch data provider
                     // TODO
-
-                    if (!this.lockCache) {
-                        this.onDidChangeTreeDataEmitter.fire();
-                    }
+                    this.onDidChangeTreeDataEmitter.fire();
                 }
             });
 
-        this.refreshSubscription = onRefresh(() => {
-            if (!this.lockCache) {
-                this.onDidChangeTreeDataEmitter.fire()
-            }
-        });
+        this.refreshSubscription = onRefresh(() => () => this.onDidChangeTreeDataEmitter.fire());
 
         // TODO: If only individual resources change, just update the tree related to those resources.
-        this.resourceProviderManagerListener = onDidChangeResource(() => {
-            if (!this.lockCache) {
-                this.onDidChangeTreeDataEmitter.fire()
-            }
-        });
+        this.resourceProviderManagerListener = onDidChangeResource(() => this.onDidChangeTreeDataEmitter.fire());
 
-        this.onDidChangeTreeData((e) => {
-            console.log('onDidChangeTreeData', e, this.lockCache);
+        this.onDidChangeTreeDataEmitter.event((e) => {
+            if (!this.lockCache) {
+                this.gatedOnDidChangeTreeDataEmitter.fire(e);
+                console.log(this.constructor.name, 'fired onDidChangeTreeData', e);
+            } else {
+                console.log(this.constructor.name, 'suppressed onDidChangeTreeData', e);
+            }
         });
     }
 
-    onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
+    onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.gatedOnDidChangeTreeDataEmitter.event;
 
     async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
 

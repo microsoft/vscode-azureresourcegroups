@@ -19,13 +19,13 @@ export function createCompatibleTreeView(treeView: TreeView<ResourceGroupsItem>,
     (treeView as InternalTreeView)._reveal = treeView.reveal.bind(treeView) as typeof treeView.reveal;
 
     treeView.reveal = async (element, options) => {
-        treeDataProvider.lockCache = true;
-        console.log('reveal started');
-        // convert AzExtTreeItem into BranchDataProviderItem that VS Code knows how to reveal
-        const item = isAzExtTreeItem(element) ? await treeDataProvider.findItem((element as AzExtTreeItem).fullId) : element;
-        await (treeView as InternalTreeView)._reveal(item, options);
-        console.log('reveal finished');
-        treeDataProvider.lockCache = false;
+        await treeDataProvider.runWithGate(async () => {
+            console.log('reveal started');
+            // convert AzExtTreeItem into BranchDataProviderItem that VS Code knows how to reveal
+            const item = isAzExtTreeItem(element) ? await treeDataProvider.findItem((element as AzExtTreeItem).fullId) : element;
+            await (treeView as InternalTreeView)._reveal(item, options);
+            console.log('reveal finished');
+        });
     }
 
     return treeView as TreeView<AzExtTreeItem>;

@@ -159,14 +159,8 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
                 if (this.api) {
                     await this.api.waitForFilters();
 
-                    this.filtersSubscription = this.api.onFiltersChanged(() => {
-                        if (!this.lockCache) {
-                            this.onDidChangeTreeDataEmitter.fire();
-                        }
-                    });
-                    this.statusSubscription = this.api.onStatusChanged(() => {
-                        this.onDidChangeTreeDataEmitter.fire();
-                    });
+                    this.filtersSubscription = this.api.onFiltersChanged(() => this.onDidChangeTreeDataEmitter.fire());
+                    this.statusSubscription = this.api.onStatusChanged(() => this.onDidChangeTreeDataEmitter.fire());
                 }
             }
         }

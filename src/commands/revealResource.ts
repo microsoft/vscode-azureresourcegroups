@@ -17,13 +17,8 @@ export async function revealResource(context: IActionContext, arg: AppResource |
 
     try {
         const node = await ext.v2.appResourceTree.findItem(resourceId);
-
         if (node) {
-            console.log('reveal started');
-            ext.v2.appResourceTree.lockCache = true;
             await ext.v2.applicationResourceTreeView.reveal(node);
-            ext.v2.appResourceTree.lockCache = false;
-            console.log('reveal is done');
         }
     } catch (error) {
         context.telemetry.properties.revealError = parseError(error).message;
