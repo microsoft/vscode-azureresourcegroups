@@ -7,6 +7,7 @@ import { AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from
 import { ext } from "../extensionVariables";
 import { AppResourceTreeItem } from "../tree/AppResourceTreeItem";
 
+// TODO: is this ever invoked?
 export async function revealTreeItem(resource: string | AppResourceTreeItem): Promise<void> {
     return await callWithTelemetryAndErrorHandling('api.revealTreeItem', async (context: IActionContext) => {
         let node: AzExtTreeItem | undefined;
