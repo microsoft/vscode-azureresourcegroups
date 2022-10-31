@@ -3,22 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
-import { ext } from "../extensionVariables";
-import { AppResourceTreeItem } from "../tree/AppResourceTreeItem";
+import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
+import { revealResource } from "../commands/revealResource";
 
-// TODO: is this ever invoked?
-export async function revealTreeItem(resource: string | AppResourceTreeItem): Promise<void> {
+// TODO: remove this from the API, it's never called by any client extensions
+export async function revealTreeItem(resource: string): Promise<void> {
     return await callWithTelemetryAndErrorHandling('api.revealTreeItem', async (context: IActionContext) => {
-        let node: AzExtTreeItem | undefined;
-        if (typeof resource === 'string') {
-            node = await ext.appResourceTree.findTreeItem(resource, { ...context, loadAll: true });
-        } else {
-            node = resource;
-        }
-
-        if (node) {
-            await ext.appResourceTreeView.reveal(node, { select: true, focus: true, expand: false });
-        }
+        await revealResource(context, resource);
     });
 }
