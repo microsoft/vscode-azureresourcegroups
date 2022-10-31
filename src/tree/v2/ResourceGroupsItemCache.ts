@@ -142,7 +142,7 @@ export class ResourceGroupsItemCache {
         return fullId;
     }
 
-    public isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
+    isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
         return element?.isAncestorOf?.(id) || id.startsWith(this.getId(element) + '/');
     }
 }

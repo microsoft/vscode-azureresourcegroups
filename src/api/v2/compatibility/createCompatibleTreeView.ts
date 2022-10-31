@@ -13,10 +13,11 @@ export interface InternalTreeView extends TreeView<ResourceGroupsItem> {
 }
 
 /**
- * Creates a TreeView for compatibility with v1.5 extensions.
- * - Modify `reveal` to handle AzExtTreeItems
+ * Modify `TreeView.reveal` so that it:
+ * - Handles `AzExtTreeItem`s *(for v1.5 compatibility)*
+ * - Calls `ResourceTreeDataProviderBase.reveal` instead of directly calling `TreeView.reveal`
  */
-export function createCompatibleTreeView(treeView: TreeView<ResourceGroupsItem>, treeDataProvider: ResourceTreeDataProviderBase): TreeView<AzExtTreeItem> {
+export function wrapReveal(treeView: TreeView<ResourceGroupsItem>, treeDataProvider: ResourceTreeDataProviderBase): TreeView<AzExtTreeItem> {
     (treeView as InternalTreeView)._reveal = treeView.reveal.bind(treeView) as typeof treeView.reveal;
 
     treeView.reveal = async (element, options) => {

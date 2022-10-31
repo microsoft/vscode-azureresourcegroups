@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { createCompatibleTreeView } from '../../../api/v2/compatibility/createCompatibleTreeView';
+import { wrapReveal } from '../../../api/v2/compatibility/createCompatibleTreeView';
 import { WorkspaceResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { ext } from '../../../extensionVariables';
 import { localize } from './../../../utils/localize';
@@ -41,7 +41,7 @@ export function registerWorkspaceTree(context: vscode.ExtensionContext, options:
             treeDataProvider: workspaceResourceTreeDataProvider
         });
 
-    ext.workspaceTreeView = createCompatibleTreeView(treeView, workspaceResourceTreeDataProvider);
+    ext.workspaceTreeView = wrapReveal(treeView, workspaceResourceTreeDataProvider);
     treeView.description = localize('local', 'Local');
 
     context.subscriptions.push(treeView);

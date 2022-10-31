@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { createCompatibleTreeView } from '../../../api/v2/compatibility/createCompatibleTreeView';
+import { wrapReveal } from '../../../api/v2/compatibility/createCompatibleTreeView';
 import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { ext } from '../../../extensionVariables';
 import { createBranchDataItemFactory } from '../BranchDataProviderItem';
@@ -47,7 +47,7 @@ export function registerApplicationTree(context: vscode.ExtensionContext, option
             treeDataProvider: applicationResourceTreeDataProvider
         });
 
-    ext.appResourceTreeView = createCompatibleTreeView(treeView, applicationResourceTreeDataProvider);
+    ext.appResourceTreeView = wrapReveal(treeView, applicationResourceTreeDataProvider);
     ext.v2.appResourceTree = applicationResourceTreeDataProvider
     ext.v2.applicationResourceTreeView = treeView;
 
