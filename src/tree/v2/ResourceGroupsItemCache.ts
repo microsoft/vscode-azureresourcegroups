@@ -93,8 +93,14 @@ export class ResourceGroupsItemCache {
         let currentItem: ResourceGroupsItem | undefined = item;
 
         while (currentItem) {
-            path.push(currentItem.id);
-            currentItem = this.getParentForItem(currentItem);
+            const nextItem = this.getParentForItem(currentItem);
+
+            // if item has custom ancestor logic, exclude its id from the path of other items
+            if (!currentItem.isAncestorOf || item === currentItem) {
+                path.push(currentItem.id);
+            }
+
+            currentItem = nextItem;
         }
 
         return path.reverse();
@@ -122,24 +128,7 @@ export class ResourceGroupsItemCache {
     }
 
     getId(element: ResourceGroupsItem): string {
-        let parent: ResourceGroupsItem | undefined = this.getParentForItem(element);
-        let fullId = element.id;
-        if (!fullId.startsWith('/')) {
-            fullId = `/${fullId}`;
-        }
-        while (parent) {
-            let id = parent.id;
-            if (!id.startsWith('/')) {
-                id = `/${id}`;
-            }
-            // don't include grouping item IDs to the full ID
-            if (!id.startsWith('/groupings')) {
-                fullId = id + fullId;
-            }
-            parent = this.getParentForItem(parent);
-        }
-
-        return fullId;
+        return '/' + this.getPathForItem(element).join('/');
     }
 
     isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
