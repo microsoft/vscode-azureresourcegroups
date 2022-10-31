@@ -113,7 +113,9 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
             // TODO: Do we really need to evict before generating new children, or can we just update after the fact?
             //       Since the callback is async, could change notifications show up while doing this?
             // Don't do this, it breaks reveal a lot
-            // cache.evictItemChildren(element);
+            if (!this.isRevealing) {
+                cache.evictItemChildren(element);
+            }
         } else {
             // this is being called while VS Code is processing a reveal call, making the reveal fail
             if (!this.isRevealing) {
