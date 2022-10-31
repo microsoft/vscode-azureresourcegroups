@@ -16,7 +16,6 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     private readonly refreshSubscription: vscode.Disposable;
     private readonly resourceProviderManagerListener: vscode.Disposable;
     protected readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
-
     private readonly gatedOnDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
 
     private isRevealing: boolean = false;
@@ -89,51 +88,15 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.gatedOnDidChangeTreeDataEmitter.event;
 
     async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
-
         const item = this.itemCache.getItemForBranchItem(element) ?? element;
-
-        // Verified that this isn't needed. Since reveal is wrapped with method to convert branchItems to items.
-        // if (!item.getTreeItem) {
-        // item = (await this.findItem(element.fullId))!;
-        // }
-
         const t = await item.getTreeItem();
-        // incorrectly changing t.id to '/test'. Cache doesn't have parent
         t.id = this.itemCache.getId(item);
         t.tooltip = t.id;
         return t;
     }
 
     async getChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
-        return this.cacheGetChildren(element, () => this.onGetChildren(element), this.itemCache);
-    }
-
-    private async cacheGetChildren(element: ResourceGroupsItem | undefined, getChildren: () => Promise<ResourceGroupsItem[] | null | undefined>, cache: ResourceGroupsItemCache) {
-        if (element) {
-            // TODO: Do we really need to evict before generating new children, or can we just update after the fact?
-            //       Since the callback is async, could change notifications show up while doing this?
-            // Don't do this, it breaks reveal a lot
-            if (!this.isRevealing) {
-                cache.evictItemChildren(element);
-            }
-        } else {
-            // this is being called while VS Code is processing a reveal call, making the reveal fail
-            if (!this.isRevealing) {
-                cache.evictAll();
-            }
-        }
-
-        const children = await getChildren();
-
-        if (children) {
-            if (element) {
-                cache.updateItemChildren(element, children);
-            } else {
-                children.forEach(child => cache.addRootItem(child, []));
-            }
-        }
-
-        return children;
+        return this.cacheGetChildren(element, () => this.onGetChildren(element));
     }
 
     getParent(element: ResourceGroupsItem): ResourceGroupsItem | undefined {
@@ -141,23 +104,22 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     // setting to true makes reveal work
-    public async findItem(id: string, useGlobalCache: boolean = true): Promise<ResourceGroupsItem | undefined> {
-        const itemCache = useGlobalCache ? this.itemCache : new ResourceGroupsItemCache();
+    async findItem(id: string): Promise<ResourceGroupsItem | undefined> {
         let element: ResourceGroupsItem | undefined = undefined;
 
         outerLoop: while (true) {
 
-            const cachedChildren = itemCache.getChildrenForItem(element);
-            const children: ResourceGroupsItem[] | null | undefined = cachedChildren?.length ? cachedChildren : await this.cacheGetChildren(element, () => this.onGetChildren(element), itemCache);
+            const cachedChildren = this.itemCache.getChildrenForItem(element);
+            const children: ResourceGroupsItem[] | null | undefined = cachedChildren?.length ? cachedChildren : await this.getChildren(element);
 
             if (!children) {
                 return;
             }
 
             for (const child of children) {
-                if (itemCache.getId(child) === id) {
+                if (this.itemCache.getId(child) === id) {
                     return child;
-                } else if (itemCache.isAncestorOf(child, id)) {
+                } else if (this.itemCache.isAncestorOf(child, id)) {
                     element = child;
                     continue outerLoop;
                 }
@@ -168,4 +130,31 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;
+
+    private async cacheGetChildren(element: ResourceGroupsItem | undefined, getChildren: () => Promise<ResourceGroupsItem[] | null | undefined>) {
+        if (element) {
+            // TODO: Do we really need to evict before generating new children, or can we just update after the fact?
+            //       Since the callback is async, could change notifications show up while doing this?
+            if (!this.isRevealing) {
+                this.itemCache.evictItemChildren(element);
+            }
+        } else {
+            // this is being called while VS Code is processing a reveal call, making the reveal fail
+            if (!this.isRevealing) {
+                this.itemCache.evictAll();
+            }
+        }
+
+        const children = await getChildren();
+
+        if (children) {
+            if (element) {
+                this.itemCache.updateItemChildren(element, children);
+            } else {
+                children.forEach(child => this.itemCache.addRootItem(child, []));
+            }
+        }
+
+        return children;
+    }
 }
