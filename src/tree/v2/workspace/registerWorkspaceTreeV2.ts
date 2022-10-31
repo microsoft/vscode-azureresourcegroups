@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { wrapReveal } from '../../../api/v2/compatibility/createCompatibleTreeView';
 import { WorkspaceResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { ext } from '../../../extensionVariables';
+import { createTreeView } from '../createTreeView';
 import { localize } from './../../../utils/localize';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceResourceTreeDataProvider } from './WorkspaceResourceTreeDataProvider';
@@ -33,18 +34,16 @@ export function registerWorkspaceTree(context: vscode.ExtensionContext, options:
 
     ext.v2.workspaceResourceTree = workspaceResourceTreeDataProvider;
 
-    const treeView = vscode.window.createTreeView(
-        'azureWorkspace',
-        {
-            canSelectMany: true,
-            showCollapseAll: true,
-            treeDataProvider: workspaceResourceTreeDataProvider
-        });
-
-    ext.workspaceTreeView = wrapReveal(treeView, workspaceResourceTreeDataProvider);
-    treeView.description = localize('local', 'Local');
+    const treeView = createTreeView('azureWorkspace', {
+        treeDataProvider: workspaceResourceTreeDataProvider,
+        canSelectMany: true,
+        showCollapseAll: true,
+        description: localize('local', 'Local'),
+    });
 
     context.subscriptions.push(treeView);
+
+    ext.workspaceTreeView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
 
     return {
         workspaceResourceTreeDataProvider

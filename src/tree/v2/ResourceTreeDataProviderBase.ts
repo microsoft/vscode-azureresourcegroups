@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { InternalTreeView } from '../../api/v2/compatibility/createCompatibleTreeView';
 import { ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { InternalTreeView } from './createTreeView';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 

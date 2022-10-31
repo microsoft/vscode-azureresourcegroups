@@ -3,13 +3,27 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, isAzExtTreeItem } from "@microsoft/vscode-azext-utils";
-import { TreeView } from "vscode";
-import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
-import { ResourceTreeDataProviderBase } from "../../../tree/v2/ResourceTreeDataProviderBase";
+import { isAzExtTreeItem } from "@microsoft/vscode-azext-utils";
+import { TreeView, TreeViewOptions, window } from "vscode";
+import { ResourceGroupsItem } from "./ResourceGroupsItem";
+import { ResourceTreeDataProviderBase } from "./ResourceTreeDataProviderBase";
 
 export interface InternalTreeView extends TreeView<ResourceGroupsItem> {
     _reveal: TreeView<ResourceGroupsItem>['reveal'];
+}
+
+interface InternalTreeViewOptions extends TreeViewOptions<ResourceGroupsItem> {
+    treeDataProvider: ResourceTreeDataProviderBase;
+    description?: string;
+}
+
+export function createTreeView(viewId: string, options: InternalTreeViewOptions): TreeView<ResourceGroupsItem> {
+    const treeView = window.createTreeView(viewId, options);
+    wrapReveal(treeView, options.treeDataProvider);
+
+    treeView.description = options.description;
+
+    return treeView;
 }
 
 /**
@@ -17,7 +31,7 @@ export interface InternalTreeView extends TreeView<ResourceGroupsItem> {
  * - Handles `AzExtTreeItem`s *(for v1.5 compatibility)*
  * - Calls `ResourceTreeDataProviderBase.reveal` instead of directly calling `TreeView.reveal`
  */
-export function wrapReveal(treeView: TreeView<ResourceGroupsItem>, treeDataProvider: ResourceTreeDataProviderBase): TreeView<AzExtTreeItem> {
+function wrapReveal(treeView: TreeView<ResourceGroupsItem>, treeDataProvider: ResourceTreeDataProviderBase): void {
     (treeView as InternalTreeView)._reveal = treeView.reveal.bind(treeView) as typeof treeView.reveal;
 
     treeView.reveal = async (element, options) => {
@@ -25,6 +39,4 @@ export function wrapReveal(treeView: TreeView<ResourceGroupsItem>, treeDataProvi
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         await treeDataProvider.reveal(treeView as InternalTreeView, item!, options);
     }
-
-    return treeView as unknown as TreeView<AzExtTreeItem>;
 }
