@@ -34,9 +34,7 @@ export function registerCommands(
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
     registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.appResourceTree.loadMore(node, context));
     registerCommand('azureResourceGroups.openInPortal', openInPortal);
-    registerCommand('azureResourceGroups.refresh', async (context: IActionContext, node?: AzExtTreeItem) => {
-        await ext.appResourceTree.refresh(context, node); refreshEventEmitter.fire();
-    });
+    registerCommand('azureResourceGroups.refresh', async (context: IActionContext, node?: AzExtTreeItem) => { await ext.appResourceTree.refresh(context, node); refreshEventEmitter.fire(); });
     registerCommand('azureResourceGroups.revealResource', revealResource);
     registerCommand('azureResourceGroups.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
     registerCommand('azureResourceGroups.viewProperties', viewProperties);
