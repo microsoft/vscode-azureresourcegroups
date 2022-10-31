@@ -4,9 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { InternalTreeView } from '../../api/v2/compatibility/createCompatibleTreeView';
 import { ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
+
+type RevealOptions = Parameters<vscode.TreeView<ResourceGroupsItem>['reveal']>['1'];
 
 export abstract class ResourceTreeDataProviderBase extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupsItem> {
     private readonly branchTreeDataChangeSubscription: vscode.Disposable;
@@ -16,13 +19,15 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     private readonly gatedOnDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
 
-    private lockCache: boolean = false;
+    private isRevealing: boolean = false;
 
-    async runWithGate<T>(callback: () => Promise<T>): Promise<T> {
-        this.lockCache = true;
-        const result = await callback();
-        this.lockCache = false;
-        return result;
+    async reveal(treeView: InternalTreeView, element: ResourceGroupsItem, options?: RevealOptions): Promise<void> {
+        try {
+            this.isRevealing = true;
+            await treeView._reveal(element, options);
+        } finally {
+            this.isRevealing = false;
+        }
     }
 
     constructor(
@@ -72,7 +77,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         this.resourceProviderManagerListener = onDidChangeResource(() => this.onDidChangeTreeDataEmitter.fire());
 
         this.onDidChangeTreeDataEmitter.event((e) => {
-            if (!this.lockCache) {
+            if (!this.isRevealing) {
                 this.gatedOnDidChangeTreeDataEmitter.fire(e);
                 console.log(this.constructor.name, 'fired onDidChangeTreeData', e);
             } else {
@@ -85,11 +90,12 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
 
-        let item = this.itemCache.getItemForBranchItem(element) ?? element;
+        const item = this.itemCache.getItemForBranchItem(element) ?? element;
 
-        if (!item.getTreeItem) {
-            item = (await this.findItem(element.fullId))!;
-        }
+        // Verified that this isn't needed. Since reveal is wrapped with method to convert branchItems to items.
+        // if (!item.getTreeItem) {
+        // item = (await this.findItem(element.fullId))!;
+        // }
 
         const t = await item.getTreeItem();
         // incorrectly changing t.id to '/test'. Cache doesn't have parent
@@ -110,7 +116,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
             // cache.evictItemChildren(element);
         } else {
             // this is being called while VS Code is processing a reveal call, making the reveal fail
-            if (!this.lockCache) {
+            if (!this.isRevealing) {
                 cache.evictAll();
             }
         }

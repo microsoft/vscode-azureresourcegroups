@@ -3,11 +3,12 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, isAzExtTreeItem, ResourceGroupsItem } from "@microsoft/vscode-azext-utils";
+import { AzExtTreeItem, isAzExtTreeItem } from "@microsoft/vscode-azext-utils";
 import { TreeView } from "vscode";
+import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
 import { ResourceTreeDataProviderBase } from "../../../tree/v2/ResourceTreeDataProviderBase";
 
-interface InternalTreeView extends TreeView<ResourceGroupsItem> {
+export interface InternalTreeView extends TreeView<ResourceGroupsItem> {
     _reveal: TreeView<ResourceGroupsItem>['reveal'];
 }
 
@@ -19,14 +20,10 @@ export function createCompatibleTreeView(treeView: TreeView<ResourceGroupsItem>,
     (treeView as InternalTreeView)._reveal = treeView.reveal.bind(treeView) as typeof treeView.reveal;
 
     treeView.reveal = async (element, options) => {
-        await treeDataProvider.runWithGate(async () => {
-            console.log('reveal started');
-            // convert AzExtTreeItem into BranchDataProviderItem that VS Code knows how to reveal
-            const item = isAzExtTreeItem(element) ? await treeDataProvider.findItem((element as AzExtTreeItem).fullId) : element;
-            await (treeView as InternalTreeView)._reveal(item, options);
-            console.log('reveal finished');
-        });
+        const item: ResourceGroupsItem | undefined = isAzExtTreeItem(element) ? await treeDataProvider.findItem(element.fullId) : element;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        await treeDataProvider.reveal(treeView as InternalTreeView, item!, options);
     }
 
-    return treeView as TreeView<AzExtTreeItem>;
+    return treeView as unknown as TreeView<AzExtTreeItem>;
 }
