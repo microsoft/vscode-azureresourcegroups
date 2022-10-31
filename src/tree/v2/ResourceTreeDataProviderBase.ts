@@ -15,19 +15,14 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     private readonly branchTreeDataChangeSubscription: vscode.Disposable;
     private readonly refreshSubscription: vscode.Disposable;
     private readonly resourceProviderManagerListener: vscode.Disposable;
+    private readonly onDidChangeTreeDataEmitterListener: vscode.Disposable;
+
     protected readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
-    private readonly gatedOnDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
 
     private isRevealing: boolean = false;
+    private readonly onDidChangeTreeDataEventQueue: Set<(void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined)> = new Set();
 
-    async reveal(treeView: InternalTreeView, element: ResourceGroupsItem, options?: RevealOptions): Promise<void> {
-        try {
-            this.isRevealing = true;
-            await treeView._reveal(element, options);
-        } finally {
-            this.isRevealing = false;
-        }
-    }
+    readonly onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>;
 
     constructor(
         protected readonly itemCache: ResourceGroupsItemCache,
@@ -35,14 +30,17 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         onDidChangeResource: vscode.Event<ResourceBase | undefined>,
         onRefresh: vscode.Event<void>,
         callOnDispose?: () => void) {
-        super(
-            () => {
-                callOnDispose?.();
+        super(() => {
+            callOnDispose?.();
 
-                this.branchTreeDataChangeSubscription.dispose();
-                this.refreshSubscription.dispose();
-                this.resourceProviderManagerListener.dispose();
-            });
+            this.branchTreeDataChangeSubscription.dispose();
+            this.refreshSubscription.dispose();
+            this.resourceProviderManagerListener.dispose();
+            this.onDidChangeTreeDataEmitterListener.dispose();
+        });
+
+        const gatedOnDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+        this.onDidChangeTreeData = gatedOnDidChangeTreeDataEmitter.event;
 
         this.branchTreeDataChangeSubscription = onDidChangeBranchTreeData(
             (e: void | ResourceModelBase | ResourceModelBase[] | null | undefined) => {
@@ -75,17 +73,14 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         // TODO: If only individual resources change, just update the tree related to those resources.
         this.resourceProviderManagerListener = onDidChangeResource(() => this.onDidChangeTreeDataEmitter.fire());
 
-        this.onDidChangeTreeDataEmitter.event((e) => {
+        this.onDidChangeTreeDataEmitterListener = this.onDidChangeTreeDataEmitter.event((e) => {
             if (!this.isRevealing) {
-                this.gatedOnDidChangeTreeDataEmitter.fire(e);
-                console.log(this.constructor.name, 'fired onDidChangeTreeData', e);
+                gatedOnDidChangeTreeDataEmitter.fire(e);
             } else {
-                console.log(this.constructor.name, 'suppressed onDidChangeTreeData', e);
+                this.onDidChangeTreeDataEventQueue.add(e);
             }
         });
     }
-
-    onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.gatedOnDidChangeTreeDataEmitter.event;
 
     async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
         // TODO: do we need this?
@@ -106,6 +101,17 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     getParent(element: ResourceGroupsItem): ResourceGroupsItem | undefined {
         return this.itemCache.getParentForItem(element);
+    }
+
+    async reveal(treeView: InternalTreeView, element: ResourceGroupsItem, options?: RevealOptions): Promise<void> {
+        try {
+            this.isRevealing = true;
+            await treeView._reveal(element, options);
+        } finally {
+            this.isRevealing = false;
+            this.onDidChangeTreeDataEventQueue.forEach(e => this.onDidChangeTreeDataEmitter.fire(e));
+            this.onDidChangeTreeDataEventQueue.clear();
+        }
     }
 
     // setting to true makes reveal work
