@@ -23,6 +23,7 @@ export class CompatibilityWorkspaceResourceProvider implements V2WorkspaceResour
                 treeDataProvider: new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore'),
                 valuesToMask: [],
                 parent: undefined,
+                // id or label will be prepended to children fullId property, so set to empty string
                 id: '',
                 label: ''
             } as unknown as AzExtParentTreeItem
