@@ -10,9 +10,10 @@ import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
 export type BranchDataItemOptions = {
+    contextValues?: string[];
     defaultId?: string;
     defaults?: vscode.TreeItem;
-    portalUrl?: vscode.Uri | undefined;
+    portalUrl?: vscode.Uri;
 };
 
 /**
@@ -23,6 +24,14 @@ export type BranchDataItemOptions = {
      * Unwraps the resource, returning the underlying branch data provider resource model.
      */
     unwrap<T extends ResourceModelBase>(): T | undefined;
+}
+
+function appendContextValues(originalValues: string | undefined, newValues: string[]): string {
+    const set = new Set<string>(originalValues?.split(' ') ?? []);
+
+    newValues?.forEach(value => set.add(value));
+
+    return Array.from(set).join(' ');
 }
 
 export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResourceModel {
@@ -49,10 +58,16 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = await this.branchDataProvider.getTreeItem(this.branchItem);
 
-        return {
+        const realTreeItem = {
             ...this.options?.defaults ?? {},
             ...treeItem
+        };
+
+        if (this.options?.contextValues && this.options.contextValues.length > 0) {
+            realTreeItem.contextValue = appendContextValues(realTreeItem.contextValue, this.options.contextValues);
         }
+
+        return realTreeItem;
     }
 
     unwrap<T extends ResourceModelBase>(): T | undefined {

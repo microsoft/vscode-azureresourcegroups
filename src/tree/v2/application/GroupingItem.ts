@@ -44,9 +44,9 @@ export class GroupingItem implements ResourceGroupsItem {
                 const resourceItem = await branchDataProvider.getResourceItem(resource);
 
                 const options = {
+                    contextValues: [ 'azureResource' ],
                     defaultId: resource.id,
                     defaults: {
-                        contextValue: 'azureResource',
                         iconPath: getIconPath(resource.resourceType)
                     },
                     portalUrl: resourceItem.portalUrl ?? createPortalUrl(resource.subscription, resource.id)
