@@ -68,7 +68,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
                 }
             });
 
-        this.refreshSubscription = onRefresh(() => () => this.onDidChangeTreeDataEmitter.fire());
+        this.refreshSubscription = onRefresh(() => this.onDidChangeTreeDataEmitter.fire());
 
         // TODO: If only individual resources change, just update the tree related to those resources.
         this.resourceProviderManagerListener = onDidChangeResource(() => this.onDidChangeTreeDataEmitter.fire());
