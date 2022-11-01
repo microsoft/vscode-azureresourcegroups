@@ -121,6 +121,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     ext.v2.api = v2ApiFactory();
 
+    ext.appResourceTree = new CompatibleAzExtTreeDataProvider(applicationResourceTreeDataProvider);
+    ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
+
     return createApiProvider(
         (<{ version: string }>context.extension.packageJSON).version,
         [
@@ -129,9 +132,9 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                 apiFactory: () => new InternalAzureResourceGroupsExtensionApi(
                     {
                         apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
-                        appResourceTree: new CompatibleAzExtTreeDataProvider(applicationResourceTreeDataProvider),
+                        appResourceTree: ext.appResourceTree,
                         appResourceTreeView: ext.appResourceTreeView,
-                        workspaceResourceTree: new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider),
+                        workspaceResourceTree: ext.workspaceTree,
                         workspaceResourceTreeView: ext.workspaceTreeView,
                         revealTreeItem,
                         registerApplicationResourceResolver,

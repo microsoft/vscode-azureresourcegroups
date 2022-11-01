@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, compatibilitySubscriptionExperience, contextValueExperience, findByIdExperience, IActionContext, IFindTreeItemContext, isWrapper, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, compatibilitySubscriptionExperience, contextValueExperience, IActionContext, IFindTreeItemContext, isWrapper, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
 import { Disposable, Event, TreeItem, TreeView } from "vscode";
 import { SubscriptionTreeItem } from "../../../tree/SubscriptionTreeItem";
 import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
@@ -21,7 +21,15 @@ abstract class IntermediateCompatibleAzExtTreeDataProvider extends AzExtTreeData
 
 export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExtTreeDataProvider {
     public constructor(private readonly tdp: ResourceTreeDataProviderBase) {
-        super({} as unknown as AzExtParentTreeItem, undefined as unknown as string);
+        super(
+            {
+                valuesToMask: [], // make sure addTreeItemValuesToMask doesn't throw
+                id: '',
+                fullId: '',
+                label: '',
+            } as unknown as AzExtParentTreeItem,
+            undefined as unknown as string
+        );
     }
 
     //#region Things that should not be called
@@ -60,13 +68,13 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
     }
     //#endregion Things that should not be called
 
-    public override async findTreeItem<T>(fullId: string, context: IFindTreeItemContext): Promise<T | undefined> {
+    public override async findTreeItem<T>(fullId: string, _context: IFindTreeItemContext): Promise<T | undefined> {
         // Special handling for subscription tree item
         // Use the new finder experience
         // Unbox the item at the end
 
-        const result = await findByIdExperience(context, this.tdp, fullId);
-        return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
+        const item = await this.tdp.findItem(fullId);
+        return isWrapper(item) ? item.unwrap<T>() : item as unknown as T;
     }
 
     public override showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext & { canPickMany: true }, startingTreeItem?: AzExtTreeItem): Promise<T[]>;

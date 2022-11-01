@@ -76,6 +76,13 @@ export class ResourceGroupsItemCache {
         return this.branchItemToItemCache.get(branchItem);
     }
 
+    getChildrenForItem(item?: ResourceGroupsItem): ResourceGroupsItem[] | undefined {
+        if (!item) {
+            return this.rootItemCache;
+        }
+        return this.itemToChildrenCache.get(item);
+    }
+
     getParentForItem(item: ResourceGroupsItem): ResourceGroupsItem | undefined {
         return this.itemToParentCache.get(item);
     }
@@ -86,8 +93,14 @@ export class ResourceGroupsItemCache {
         let currentItem: ResourceGroupsItem | undefined = item;
 
         while (currentItem) {
-            path.push(currentItem.id);
-            currentItem = this.getParentForItem(currentItem);
+            const nextItem = this.getParentForItem(currentItem);
+
+            // if item has custom ancestor logic, exclude its id from the path of other items
+            if (!currentItem.isAncestorOf || item === currentItem) {
+                path.push(currentItem.id);
+            }
+
+            currentItem = nextItem;
         }
 
         return path.reverse();
@@ -112,5 +125,13 @@ export class ResourceGroupsItemCache {
     updateItemChildren(item: ResourceGroupsItem, children: ResourceGroupsItem[]): void {
         this.itemToChildrenCache.set(item, children);
         children.forEach(child => this.itemToParentCache.set(child, item));
+    }
+
+    getId(element: ResourceGroupsItem): string {
+        return '/' + this.getPathForItem(element).join('/');
+    }
+
+    isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
+        return element?.isAncestorOf?.(id) || id.startsWith(this.getId(element) + '/');
     }
 }

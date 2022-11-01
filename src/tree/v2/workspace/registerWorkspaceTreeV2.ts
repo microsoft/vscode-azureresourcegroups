@@ -3,8 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { WorkspaceResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
+import { ext } from '../../../extensionVariables';
 import { localize } from './../../../utils/localize';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceResourceTreeDataProvider } from './WorkspaceResourceTreeDataProvider';
@@ -29,6 +31,8 @@ export function registerWorkspaceTree(context: vscode.ExtensionContext, options:
 
     context.subscriptions.push(workspaceResourceTreeDataProvider);
 
+    ext.v2.workspaceResourceTree = workspaceResourceTreeDataProvider;
+
     const treeView = vscode.window.createTreeView(
         'azureWorkspace',
         {
@@ -40,6 +44,8 @@ export function registerWorkspaceTree(context: vscode.ExtensionContext, options:
     treeView.description = localize('local', 'Local');
 
     context.subscriptions.push(treeView);
+
+    ext.workspaceTreeView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
 
     return {
         workspaceResourceTreeDataProvider

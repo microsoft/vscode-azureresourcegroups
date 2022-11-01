@@ -3,8 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
+import { ext } from '../../../extensionVariables';
 import { createBranchDataItemFactory } from '../BranchDataProviderItem';
 import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { localize } from './../../../utils/localize';
@@ -37,6 +39,8 @@ export function registerApplicationTree(context: vscode.ExtensionContext, option
 
     context.subscriptions.push(applicationResourceTreeDataProvider);
 
+    ext.v2.applicationResourceTree = applicationResourceTreeDataProvider;
+
     const treeView = vscode.window.createTreeView(
         'azureResourceGroups',
         {
@@ -48,6 +52,9 @@ export function registerApplicationTree(context: vscode.ExtensionContext, option
     treeView.description = localize('remote', 'Remote');
 
     context.subscriptions.push(treeView);
+
+    ext.appResourceTreeView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
+    ext.v2.applicationResourceTreeView = treeView;
 
     return {
         applicationResourceTreeDataProvider

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Wrapper } from '@microsoft/vscode-azext-utils';
+import { isAzExtTreeItem, Wrapper } from '@microsoft/vscode-azext-utils';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
@@ -21,10 +21,19 @@ export class BranchDataProviderItem implements ResourceGroupsItem, Wrapper {
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
         private readonly itemCache: ResourceGroupsItemCache,
         private readonly options?: BranchDataItemOptions) {
+
         itemCache.addBranchItem(this.branchItem, this);
+
+        if (isAzExtTreeItem(branchItem)) {
+            // for compatibility, use the label if the id is undefined
+            this.id = branchItem.id ?? branchItem.label;
+        } else {
+            this.id = this.branchItem.id ?? this?.options?.defaultId ?? randomUUID();
+        }
     }
 
-    readonly id: string = this.branchItem.id ?? this?.options?.defaultId ?? randomUUID();
+
+    readonly id: string;
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const children = await this.branchDataProvider.getChildren(this.branchItem);
