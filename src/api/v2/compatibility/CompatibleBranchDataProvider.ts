@@ -6,8 +6,8 @@
 import { AzExtTreeItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import type { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import type { ApplicationResource, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
-import { getApplicationResourceId } from '../../../tree/v2/application/DefaultApplicationResourceItem';
 import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
+import { getApplicationResourceId } from '../../../utils/v2/getApplicationResourceId';
 import { CompatibleResolvedApplicationResourceTreeItem } from './CompatibleApplicationResourceTreeItem';
 import { CompatibleBranchDataProviderBase } from './CompatibleBranchDataProviderBase';
 

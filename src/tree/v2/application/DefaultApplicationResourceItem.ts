@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
+import { getApplicationResourceId } from '../../../utils/v2/getApplicationResourceId';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
 export class DefaultApplicationResourceItem implements ResourceGroupsItem {
@@ -25,9 +26,4 @@ export class DefaultApplicationResourceItem implements ResourceGroupsItem {
 
         return treeItem;
     }
-}
-
-export function getApplicationResourceId(id: string): string {
-    const splitId = id.split(/(resourceGroups)/);
-    return splitId[1] + splitId[2];
 }
