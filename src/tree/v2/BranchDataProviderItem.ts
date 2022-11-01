@@ -12,6 +12,7 @@ import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 export type BranchDataItemOptions = {
     defaultId?: string;
     defaults?: vscode.TreeItem;
+    portalUrl?: vscode.Uri | undefined;
 };
 
 /**
@@ -34,6 +35,8 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
     }
 
     readonly id: string = this.branchItem.id ?? this?.options?.defaultId ?? randomUUID();
+
+    readonly portalUrl: vscode.Uri | undefined = this.options?.portalUrl;
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const children = await this.branchDataProvider.getChildren(this.branchItem);
