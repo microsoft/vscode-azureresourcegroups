@@ -34,9 +34,7 @@ export class GroupingItem implements ResourceGroupsItem {
     readonly id: string = `groupings/${this.label}`;
 
     isAncestorOf(id: string): boolean {
-        return this.resources.some(resource =>
-            id === resource.id || id.startsWith(resource.id)
-        );
+        return this.resources.some(resource => id === resource.id || id.startsWith(resource.id));
     }
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
