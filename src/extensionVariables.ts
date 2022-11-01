@@ -30,21 +30,9 @@ namespace extEvents {
  */
 export namespace ext {
     export let context: ExtensionContext;
-    /**
-     * For compatibility
-     */
     export let appResourceTree: AzExtTreeDataProvider;
-    /**
-     * For compatibility
-     */
     export let appResourceTreeView: TreeView<AzExtTreeItem>;
-    /**
-     * For compatibility
-     */
     export let workspaceTree: AzExtTreeDataProvider;
-    /**
-     * For compatibility
-     */
     export let workspaceTreeView: TreeView<AzExtTreeItem>;
 
     export let activityLogTree: AzExtTreeDataProvider;
