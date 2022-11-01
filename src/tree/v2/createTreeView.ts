@@ -14,27 +14,31 @@ export interface InternalTreeView extends TreeView<ResourceGroupsItem> {
 
 interface InternalTreeViewOptions extends TreeViewOptions<ResourceGroupsItem> {
     treeDataProvider: ResourceTreeDataProviderBase;
+    /**
+     * See {@link TreeView.description}
+     */
     description?: string;
 }
 
+/**
+ * Wrapper for `window.createTreeView`
+ * - sets the `description` if present in options
+ * - modifies `TreeView.reveal` {@link ResourceTreeDataProviderBase.reveal}
+ */
 export function createTreeView(viewId: string, options: InternalTreeViewOptions): TreeView<ResourceGroupsItem> {
     const treeView = window.createTreeView(viewId, options);
-    wrapReveal(treeView, options.treeDataProvider);
-
     treeView.description = options.description;
+
+    modifyReveal(treeView, options.treeDataProvider);
 
     return treeView;
 }
 
-/**
- * Modify `TreeView.reveal` so that it:
- * - Handles `AzExtTreeItem`s *(for v1.5 compatibility)*
- * - Calls `ResourceTreeDataProviderBase.reveal` instead of directly calling `TreeView.reveal`
- */
-function wrapReveal(treeView: TreeView<ResourceGroupsItem>, treeDataProvider: ResourceTreeDataProviderBase): void {
+function modifyReveal(treeView: TreeView<ResourceGroupsItem>, treeDataProvider: ResourceTreeDataProviderBase): void {
     (treeView as InternalTreeView)._reveal = treeView.reveal.bind(treeView) as typeof treeView.reveal;
 
     treeView.reveal = async (element, options) => {
+        // For compatibility: convert AzExtTreeItems into ResourceGroupsItems
         const item: ResourceGroupsItem | undefined = isAzExtTreeItem(element) ? await treeDataProvider.findItem(element.fullId) : element;
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         await treeDataProvider.reveal(treeView as InternalTreeView, item!, options);

@@ -103,6 +103,11 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         return this.itemCache.getParentForItem(element);
     }
 
+    /**
+     * Calls `TreeView.reveal` and while executing:
+     * - Defers firing `onDidChangeTreeData` events
+     * - Prevents updates to the cache
+     */
     async reveal(treeView: InternalTreeView, element: ResourceGroupsItem, options?: RevealOptions): Promise<void> {
         try {
             this.isRevealing = true;
@@ -114,7 +119,6 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         }
     }
 
-    // setting to true makes reveal work
     async findItem(id: string): Promise<ResourceGroupsItem | undefined> {
         let element: ResourceGroupsItem | undefined = undefined;
 
