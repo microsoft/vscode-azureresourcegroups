@@ -26,9 +26,7 @@
             "runtimeExecutable": "${execPath}",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-cosmosdb",
-                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurefunctions",
-                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azureappservice",
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurestorage",
             ],
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"
