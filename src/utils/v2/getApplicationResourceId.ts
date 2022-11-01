@@ -4,7 +4,6 @@
 *--------------------------------------------------------------------------------------------*/
 
 /**
- *
  * @param resourceId Azure resource Id
  * @returns Azure resource id minus the subscription part
  */
