@@ -44,7 +44,7 @@ export function registerApplicationTree(context: vscode.ExtensionContext, option
 
     context.subscriptions.push(applicationResourceTreeDataProvider);
 
-    ext.v2.appResourceTree = applicationResourceTreeDataProvider;
+    ext.v2.applicationResourceTree = applicationResourceTreeDataProvider;
 
     const treeView = createTreeView('azureResourceGroups', {
         treeDataProvider: applicationResourceTreeDataProvider,

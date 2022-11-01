@@ -58,7 +58,7 @@ export namespace ext {
         export let applicationResourceTreeView: TreeView<ResourceGroupsItem>;
         export let workspaceResourceTreeView: TreeView<ResourceGroupsItem>;
 
-        export let appResourceTree: ApplicationResourceTreeDataProvider;
+        export let applicationResourceTree: ApplicationResourceTreeDataProvider;
         export let workspaceResourceTree: WorkspaceResourceTreeDataProvider;
     }
 }

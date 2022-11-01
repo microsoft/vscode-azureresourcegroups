@@ -16,7 +16,7 @@ export async function revealResource(context: IActionContext, arg: AppResource |
     context.telemetry.properties.resourceType = parseAzureResourceId(resourceId).provider.replace(/\//g, '|');
 
     try {
-        const node = await ext.v2.appResourceTree.findItem(resourceId);
+        const node = await ext.v2.applicationResourceTree.findItem(resourceId);
         if (node) {
             await ext.v2.applicationResourceTreeView.reveal(node);
         }
