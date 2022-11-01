@@ -33,6 +33,7 @@ export class BranchDataProviderItem implements ResourceGroupsItem, Wrapper {
         }
     }
 
+    // TODO: put application resource specific things into a separate class
     public get resource(): ApplicationResource {
         return this.branchItem['resource'] as ApplicationResource;
     }
