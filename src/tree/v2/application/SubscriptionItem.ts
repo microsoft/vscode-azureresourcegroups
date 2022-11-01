@@ -47,7 +47,6 @@ export class SubscriptionItem implements ResourceGroupsItem {
 
         treeItem.contextValue = 'azureextensionui.azureSubscription';
         treeItem.iconPath = treeUtils.getIconPath('azureSubscription');
-        treeItem.id = this.id;
 
         return treeItem;
     }
