@@ -106,7 +106,6 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     /**
      * Calls `TreeView.reveal` and while executing:
      * - Defers firing `onDidChangeTreeData` events
-     * - Prevents updates to the cache
      */
     async reveal(treeView: InternalTreeView, element: ResourceGroupsItem, options?: RevealOptions): Promise<void> {
         try {
@@ -123,10 +122,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         let element: ResourceGroupsItem | undefined = undefined;
 
         outerLoop: while (true) {
-
-            // const cachedChildren = this.itemCache.getChildrenForItem(element);
-            const cachedChildren = [];
-            const children: ResourceGroupsItem[] | null | undefined = cachedChildren?.length ? cachedChildren : await this.getChildren(element);
+            const children: ResourceGroupsItem[] | null | undefined = await this.getChildren(element);
 
             if (!children) {
                 return;
@@ -148,19 +144,6 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;
 
     private async cacheGetChildren(element: ResourceGroupsItem | undefined, getChildren: () => Promise<ResourceGroupsItem[] | null | undefined>) {
-        if (element) {
-            // TODO: Do we really need to evict before generating new children, or can we just update after the fact?
-            //       Since the callback is async, could change notifications show up while doing this?
-            if (!this.isRevealing) {
-                // this.itemCache.evictItemChildren(element);
-            }
-        } else {
-            // this is being called while VS Code is processing a reveal call, making the reveal fail
-            if (!this.isRevealing) {
-                // this.itemCache.evictAll();
-            }
-        }
-
         const children = await getChildren();
 
         if (children) {
