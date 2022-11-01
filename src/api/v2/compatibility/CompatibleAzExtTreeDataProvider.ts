@@ -76,9 +76,6 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
 
         const item = await this.tdp.findItem(fullId);
         return isWrapper(item) ? item.unwrap<T>() : item as unknown as T;
-
-        // const result = await findByIdExperience(context, this.tdp, fullId);
-        // return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
     }
 
     public override showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext & { canPickMany: true }, startingTreeItem?: AzExtTreeItem): Promise<T[]>;
