@@ -124,7 +124,8 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
         outerLoop: while (true) {
 
-            const cachedChildren = this.itemCache.getChildrenForItem(element);
+            // const cachedChildren = this.itemCache.getChildrenForItem(element);
+            const cachedChildren = [];
             const children: ResourceGroupsItem[] | null | undefined = cachedChildren?.length ? cachedChildren : await this.getChildren(element);
 
             if (!children) {
@@ -151,12 +152,12 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
             // TODO: Do we really need to evict before generating new children, or can we just update after the fact?
             //       Since the callback is async, could change notifications show up while doing this?
             if (!this.isRevealing) {
-                this.itemCache.evictItemChildren(element);
+                // this.itemCache.evictItemChildren(element);
             }
         } else {
             // this is being called while VS Code is processing a reveal call, making the reveal fail
             if (!this.isRevealing) {
-                this.itemCache.evictAll();
+                // this.itemCache.evictAll();
             }
         }
 
