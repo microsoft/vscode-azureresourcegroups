@@ -103,6 +103,7 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
                                     environment: subscription.session.environment,
                                     isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud',
                                     subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
+                                    tenantId: subscription.session.tenantId
                                 }));
                     }
                 } else if (api.status === 'LoggedOut') {

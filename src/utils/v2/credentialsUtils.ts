@@ -41,7 +41,6 @@ export function createSubscriptionContext(subscription: ApplicationSubscription)
     return {
         subscriptionDisplayName: '',
         subscriptionPath: '',
-        tenantId: '',
         userId: '',
         ...subscription,
         credentials: createCredential(subscription.authentication.getSession)

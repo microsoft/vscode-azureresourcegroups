@@ -132,7 +132,7 @@ export interface ApplicationSubscription {
     /**
      * The tenant to which this subscription belongs or undefined, if not associated with a specific tenant.
      */
-    readonly tenantId?: string;
+    readonly tenantId: string;
 }
 
 /**

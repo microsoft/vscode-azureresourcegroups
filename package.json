@@ -320,7 +320,7 @@
                 },
                 {
                     "command": "azureResourceGroups.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
+                    "when": "view == azureResourceGroups && viewItem =~ /hasPortalUrl/",
                     "group": "9@2"
                 },
                 {
