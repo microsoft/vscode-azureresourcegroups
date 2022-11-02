@@ -79,13 +79,6 @@ export class ResourceGroupsItemCache {
         return this.branchItemToItemCache.get(branchItem);
     }
 
-    getChildrenForItem(item?: ResourceGroupsItem): ResourceGroupsItem[] | undefined {
-        if (!item) {
-            return this.rootItemCache;
-        }
-        return this.itemToChildrenCache.get(item);
-    }
-
     getParentForItem(item: InternalResourceGroupsItem): ResourceGroupsItem | undefined {
         return item.parent;
     }
