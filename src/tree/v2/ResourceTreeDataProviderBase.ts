@@ -108,7 +108,11 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     private async cacheGetChildren(element: ResourceGroupsItem | undefined, getChildren: () => Promise<ResourceGroupsItem[] | null | undefined>): Promise<ResourceGroupsItem[] | null | undefined> {
         const children: ResourceGroupsItem[] | undefined | null = await getChildren();
 
-        if (!element) {
+        if (element) {
+            // TODO: Do we really need to evict before generating new children, or can we just update after the fact?
+            //       Since the callback is async, could change notifications show up while doing this?
+            this.itemCache.evictItemChildren(element);
+        } else {
             this.itemCache.evictAll();
         }
 
