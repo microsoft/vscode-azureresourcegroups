@@ -6,12 +6,13 @@
 import * as vscode from 'vscode';
 import { ApplicationResource, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
+import { getApplicationResourceId } from '../../../utils/v2/getApplicationResourceId';
 
 export class DefaultApplicationResourceItem implements ResourceModelBase {
     constructor(private readonly resource: ApplicationResource) {
     }
 
-    public readonly id: string = this.resource.id;
+    public readonly id: string = getApplicationResourceId(this.resource.id);
 
     getChildren(): vscode.ProviderResult<DefaultApplicationResourceItem[]> {
         return undefined;
