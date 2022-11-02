@@ -137,8 +137,12 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;
 
-    private async cacheGetChildren(element: ResourceGroupsItem | undefined, getChildren: () => Promise<ResourceGroupsItem[] | null | undefined>) {
-        const children = await getChildren();
+    private async cacheGetChildren(element: ResourceGroupsItem | undefined, getChildren: () => Promise<ResourceGroupsItem[] | null | undefined>): Promise<ResourceGroupsItem[] | null | undefined> {
+        const children: ResourceGroupsItem[] | undefined | null = await getChildren();
+
+        if (!element) {
+            this.itemCache.evictAll();
+        }
 
         if (children) {
             if (element) {
