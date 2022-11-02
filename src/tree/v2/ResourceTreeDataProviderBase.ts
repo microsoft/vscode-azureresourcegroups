@@ -116,7 +116,8 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         let element: ResourceGroupsItem | undefined = undefined;
 
         outerLoop: while (true) {
-            const children: ResourceGroupsItem[] | null | undefined = await this.getChildren(element);
+            const cachedChildren = this.itemCache.getChildrenForItem(element);
+            const children: ResourceGroupsItem[] | null | undefined = cachedChildren?.length ? cachedChildren : await this.getChildren(element);
 
             if (!children) {
                 return;
