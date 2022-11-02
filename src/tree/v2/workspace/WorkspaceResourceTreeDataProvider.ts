@@ -15,13 +15,15 @@ import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceB
 export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderBase {
     constructor(
         private readonly branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
+        itemCache: ResourceGroupsItemCache,
         onRefresh: vscode.Event<void>,
         private readonly resourceProviderManager: WorkspaceResourceProviderManager) {
         super(
-            new ResourceGroupsItemCache(),
+            itemCache,
             branchDataProviderManager.onDidChangeTreeData,
             resourceProviderManager.onDidChangeResourceChange,
-            onRefresh);
+            onRefresh
+        );
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {

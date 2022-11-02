@@ -6,6 +6,7 @@
 import { isAzExtTreeItem } from "@microsoft/vscode-azext-utils";
 import { TreeView, TreeViewOptions, window } from "vscode";
 import { ResourceGroupsItem } from "./ResourceGroupsItem";
+import { ResourceGroupsItemCache } from "./ResourceGroupsItemCache";
 import { ResourceTreeDataProviderBase } from "./ResourceTreeDataProviderBase";
 
 export interface InternalTreeView extends TreeView<ResourceGroupsItem> {
@@ -14,6 +15,7 @@ export interface InternalTreeView extends TreeView<ResourceGroupsItem> {
 
 interface InternalTreeViewOptions extends TreeViewOptions<ResourceGroupsItem> {
     treeDataProvider: ResourceTreeDataProviderBase;
+    itemCache: ResourceGroupsItemCache;
     /**
      * See {@link TreeView.description}
      */
@@ -29,17 +31,17 @@ export function createTreeView(viewId: string, options: InternalTreeViewOptions)
     const treeView = window.createTreeView(viewId, options);
     treeView.description = options.description;
 
-    modifyReveal(treeView, options.treeDataProvider);
+    modifyReveal(treeView, options.treeDataProvider, options.itemCache);
 
     return treeView;
 }
 
-function modifyReveal(treeView: TreeView<ResourceGroupsItem>, treeDataProvider: ResourceTreeDataProviderBase): void {
+function modifyReveal(treeView: TreeView<ResourceGroupsItem>, treeDataProvider: ResourceTreeDataProviderBase, itemCache: ResourceGroupsItemCache): void {
     (treeView as InternalTreeView)._reveal = treeView.reveal.bind(treeView) as typeof treeView.reveal;
 
     treeView.reveal = async (element, options) => {
         // For compatibility: convert AzExtTreeItems into ResourceGroupsItems
-        const item: ResourceGroupsItem | undefined = isAzExtTreeItem(element) ? await treeDataProvider.findItem(element.fullId) : element;
+        const item: ResourceGroupsItem | undefined = isAzExtTreeItem(element) ? itemCache.getItemForBranchItem(element) ?? await treeDataProvider.findItem(element.fullId) : element;
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         await treeDataProvider.reveal(treeView as InternalTreeView, item!, options);
     }

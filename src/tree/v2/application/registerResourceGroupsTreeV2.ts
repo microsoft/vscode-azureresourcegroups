@@ -48,6 +48,7 @@ export function registerApplicationTree(context: vscode.ExtensionContext, option
 
     const treeView = createTreeView('azureResourceGroups', {
         treeDataProvider: applicationResourceTreeDataProvider,
+        itemCache,
         canSelectMany: true,
         showCollapseAll: true,
         description: localize('remote', 'Remote'),
