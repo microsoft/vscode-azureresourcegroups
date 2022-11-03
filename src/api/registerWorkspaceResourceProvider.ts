@@ -19,7 +19,7 @@ export function registerWorkspaceResourceProvider(resourceType: string, provider
 
     return callWithTelemetryAndErrorHandlingSync('registerWorkspaceResourceProvider', () => {
 
-        void refreshWorkspace();
+        refreshWorkspace();
 
         ext.v2.api.registerWorkspaceResourceProvider(new CompatibilityWorkspaceResourceProvider(resourceType, provider));
         ext.v2.api.registerWorkspaceResourceBranchDataProvider(resourceType, new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore') as unknown as BranchDataProvider<WorkspaceResource, AzExtTreeItem>)
