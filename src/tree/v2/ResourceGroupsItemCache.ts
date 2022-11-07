@@ -129,7 +129,7 @@ export class ResourceGroupsItemCache {
     }
 
     isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
-        return element?.isAncestorOf?.(id) || id.startsWith(this.getId(element) + '/');
+        return element.isAncestorOf?.(id) ?? id.startsWith(this.getId(element) + '/');
     }
 
     private createInternalResourceGroupsItem(child: ResourceGroupsItem, parent: ResourceGroupsItem): InternalResourceGroupsItem {
