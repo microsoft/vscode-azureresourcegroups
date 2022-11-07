@@ -120,8 +120,8 @@ export class ResourceGroupsItemCache {
 
     updateItemChildren(item: ResourceGroupsItem, children: ResourceGroupsItem[]): InternalResourceGroupsItem[] {
         this.itemToChildrenCache.set(item, children);
-        // cache the parent on the item
-        return children.map(child => Object.assign(child, { parent: item }));
+        // cache the parent on the child items
+        return children.map(child => this.createInternalResourceGroupsItem(child, item));
     }
 
     getId(element: ResourceGroupsItem): string {
@@ -130,5 +130,10 @@ export class ResourceGroupsItemCache {
 
     isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
         return element?.isAncestorOf?.(id) || id.startsWith(this.getId(element) + '/');
+    }
+
+    private createInternalResourceGroupsItem(child: ResourceGroupsItem, parent: ResourceGroupsItem): InternalResourceGroupsItem {
+        (child as ResourceGroupsItem & { parent: ResourceGroupsItem }).parent = parent;
+        return child as InternalResourceGroupsItem;
     }
 }
