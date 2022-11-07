@@ -5,7 +5,7 @@
 
 import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
-import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
+import type { Activity } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 
 /**
