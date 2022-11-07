@@ -5,6 +5,7 @@
 
 import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
+import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 
 /**
@@ -147,7 +148,7 @@ export interface AzureResourceType {
     /**
      * The (general) type of resource.
      */
-     readonly type: string;
+    readonly type: string;
 }
 
 /**
@@ -259,6 +260,13 @@ export type WorkspaceResourceBranchDataProvider<TModel extends WorkspaceResource
  * The current (v2) Azure Resources extension API.
  */
 export interface V2AzureResourcesApi extends AzureResourcesApiBase {
+    /**
+     * Registers an activity to appear in the activity window.
+     *
+     * @param activity The activity information to show.
+     */
+     registerActivity(activity: Activity): Promise<void>;
+
     /**
      * Registers a provider of application resources.
      *
