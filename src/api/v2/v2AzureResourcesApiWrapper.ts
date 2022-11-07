@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType, callWithTelemetryAndErrorHandlingSync } from '@microsoft/vscode-azext-utils';
+import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
@@ -15,6 +16,10 @@ export class V2AzureResourcesApiWrapper implements V2AzureResourcesApi {
 
     get apiVersion(): string {
         return this.api.apiVersion;
+    }
+
+    registerActivity(activity: Activity): Promise<void> {
+        return this.callWithTelemetryAndErrorHandlingSync('v2.registerActivity', () => this.api.registerActivity(activity));
     }
 
     registerApplicationResourceProvider(provider: ApplicationResourceProvider): vscode.Disposable {

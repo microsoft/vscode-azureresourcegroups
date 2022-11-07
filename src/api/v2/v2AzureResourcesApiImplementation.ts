@@ -4,7 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
+import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
+import { registerActivity } from '../../activityLog/registerActivity';
 import { ApplicationResourceBranchDataProviderManager } from '../../tree/v2/application/ApplicationResourceBranchDataProviderManager';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
 import { ApplicationResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
@@ -22,6 +24,10 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
 
     get apiVersion(): string {
         return V2AzureResourcesApiImplementation.apiVersion;
+    }
+
+    registerActivity(activity: Activity): Promise<void> {
+        return registerActivity(activity);
     }
 
     registerApplicationResourceProvider(provider: ApplicationResourceProvider): vscode.Disposable {
