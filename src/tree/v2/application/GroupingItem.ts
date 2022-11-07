@@ -37,7 +37,7 @@ export class GroupingItem implements ResourceGroupsItem {
     readonly id: string = `groupings/${this.label}`;
 
     isAncestorOf(id: string): boolean {
-        return this.resources.some(resource => id === resource.id || id.startsWith(resource.id));
+        return this.resources.some(resource => id.startsWith(resource.id));
     }
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
@@ -48,7 +48,7 @@ export class GroupingItem implements ResourceGroupsItem {
                 const resourceItem = await branchDataProvider.getResourceItem(resource);
 
                 const options = {
-                    contextValues: [ 'azureResource' ],
+                    contextValues: ['azureResource'],
                     defaultId: resource.id,
                     defaults: {
                         iconPath: getIconPath(resource.resourceType)
