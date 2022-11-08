@@ -44,7 +44,7 @@ export class GroupingItem implements ResourceGroupsItem {
                 const resourceItem = await branchDataProvider.getResourceItem(resource);
 
                 const options = {
-                    contextValues: [ 'azureResource' ],
+                    contextValues: ['azureResource'],
                     defaultId: resource.id,
                     defaults: {
                         iconPath: getIconPath(resource.resourceType)
@@ -66,6 +66,10 @@ export class GroupingItem implements ResourceGroupsItem {
         treeItem.iconPath = this.iconPath;
 
         return treeItem;
+    }
+
+    getParent(): vscode.ProviderResult<ResourceGroupsItem> {
+        return this.context.getParent(this);
     }
 
     async withDescription(description: string, callback: () => Promise<void>): Promise<void> {

@@ -90,7 +90,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     getParent(element: ResourceGroupsItem): vscode.ProviderResult<ResourceGroupsItem> {
-        return this.itemCache.getParentForItem(element);
+        return element.getParent?.();
     }
 
     protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;

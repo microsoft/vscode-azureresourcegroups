@@ -51,4 +51,8 @@ export class SubscriptionItem implements ResourceGroupsItem {
 
         return treeItem;
     }
+
+    getParent(): vscode.ProviderResult<ResourceGroupsItem> {
+        return undefined;
+    }
 }
