@@ -38,7 +38,8 @@ export function registerApplicationTree(context: vscode.ExtensionContext, option
 
     const applicationResourceTreeDataProvider = new ApplicationResourceTreeDataProvider(
         branchDataProviderManager.onDidChangeTreeData,
-        itemCache, refreshEvent,
+        itemCache,
+        refreshEvent,
         resourceGroupingManager,
         resourceProviderManager);
 
