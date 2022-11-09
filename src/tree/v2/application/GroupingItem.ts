@@ -34,7 +34,7 @@ export class GroupingItem implements ResourceGroupsItem {
         public readonly resources: ApplicationResource[]) {
     }
 
-    readonly id: string = this.label;
+    readonly id: string = `groupings/${this.label}`;
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));
@@ -44,7 +44,7 @@ export class GroupingItem implements ResourceGroupsItem {
                 const resourceItem = await branchDataProvider.getResourceItem(resource);
 
                 const options = {
-                    contextValues: [ 'azureResource' ],
+                    contextValues: ['azureResource'],
                     defaultId: resource.id,
                     defaults: {
                         iconPath: getIconPath(resource.resourceType)

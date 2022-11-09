@@ -4,13 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from '../../utils/localize';
+import { GroupingItem } from './application/GroupingItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
+
+interface InternalResourceGroupsItem extends ResourceGroupsItem {
+    /**
+     * Reference to the parent of this item. Only used within ResourceGroupsItemCache.
+     */
+    readonly parent?: InternalResourceGroupsItem;
+}
 
 export class ResourceGroupsItemCache {
     private readonly branchItemToItemCache: Map<unknown, ResourceGroupsItem> = new Map();
     private readonly itemToBranchItemCache: Map<ResourceGroupsItem, unknown> = new Map();
     private readonly itemToChildrenCache: Map<ResourceGroupsItem, ResourceGroupsItem[]> = new Map();
-    private readonly itemToParentCache: Map<ResourceGroupsItem, ResourceGroupsItem> = new Map();
     private readonly rootItemCache: ResourceGroupsItem[] = [];
 
     addBranchItem(branchItem: unknown, item: ResourceGroupsItem): void {
@@ -21,14 +28,12 @@ export class ResourceGroupsItemCache {
     addRootItem(item: ResourceGroupsItem, children: ResourceGroupsItem[]): void {
         this.rootItemCache.push(item);
         this.itemToChildrenCache.set(item, children);
-        children.forEach(child => this.itemToParentCache.set(child, item));
     }
 
     evictAll(): void {
         this.branchItemToItemCache.clear();
         this.itemToBranchItemCache.clear();
         this.itemToChildrenCache.clear();
-        this.itemToParentCache.clear();
         this.rootItemCache.length = 0;
     }
 
@@ -67,7 +72,6 @@ export class ResourceGroupsItemCache {
 
                 this.itemToBranchItemCache.delete(child);
                 this.itemToChildrenCache.delete(child);
-                this.itemToParentCache.delete(child);
             }
         }
     }
@@ -76,8 +80,8 @@ export class ResourceGroupsItemCache {
         return this.branchItemToItemCache.get(branchItem);
     }
 
-    getParentForItem(item: ResourceGroupsItem): ResourceGroupsItem | undefined {
-        return this.itemToParentCache.get(item);
+    getParentForItem(item: InternalResourceGroupsItem): ResourceGroupsItem | undefined {
+        return item.parent;
     }
 
     getPathForItem(item: ResourceGroupsItem): string[] {
@@ -86,8 +90,13 @@ export class ResourceGroupsItemCache {
         let currentItem: ResourceGroupsItem | undefined = item;
 
         while (currentItem) {
-            path.push(currentItem.id);
-            currentItem = this.getParentForItem(currentItem);
+            const nextItem = this.getParentForItem(currentItem);
+
+            if (!currentItem.id.includes('groupings') || item === currentItem) {
+                path.push(currentItem.id);
+            }
+
+            currentItem = nextItem;
         }
 
         return path.reverse();
@@ -109,8 +118,25 @@ export class ResourceGroupsItemCache {
         return currentItem;
     }
 
-    updateItemChildren(item: ResourceGroupsItem, children: ResourceGroupsItem[]): void {
+    updateItemChildren(item: ResourceGroupsItem, children: ResourceGroupsItem[]): InternalResourceGroupsItem[] {
         this.itemToChildrenCache.set(item, children);
-        children.forEach(child => this.itemToParentCache.set(child, item));
+        // cache the parent on the child items
+        return children.map(child => this.createInternalResourceGroupsItem(child, item));
+    }
+
+    getId(element: ResourceGroupsItem): string {
+        return '/' + this.getPathForItem(element).join('/');
+    }
+
+    isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
+        if (element instanceof GroupingItem) {
+            return element.resources.some(resource => id.startsWith(resource.id));
+        }
+        return id.startsWith(this.getId(element) + '/');
+    }
+
+    private createInternalResourceGroupsItem(child: ResourceGroupsItem, parent: ResourceGroupsItem): InternalResourceGroupsItem {
+        (child as ResourceGroupsItem & { parent: ResourceGroupsItem }).parent = parent;
+        return child as InternalResourceGroupsItem;
     }
 }
