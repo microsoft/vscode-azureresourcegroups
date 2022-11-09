@@ -76,8 +76,7 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
         if (this.branchDataProvider.getParent) {
             const branchItem = await this.branchDataProvider.getParent(this);
             if (branchItem) {
-                const item = this.itemCache.getItemForBranchItem(branchItem);
-                return item;
+                return branchItem as ResourceGroupsItem;
             }
             return this.itemCache.getParentForItem(this);
         }
