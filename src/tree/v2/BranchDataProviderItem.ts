@@ -78,6 +78,7 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
             if (branchItem) {
                 return branchItem as ResourceGroupsItem;
             }
+            // if this is an application resource, only RGs knows the parent
             return this.itemCache.getParentForItem(this);
         }
 
