@@ -36,10 +36,6 @@ export class GroupingItem implements ResourceGroupsItem {
 
     readonly id: string = `groupings/${this.label}`;
 
-    isAncestorOf(id: string): boolean {
-        return this.resources.some(resource => id.startsWith(resource.id));
-    }
-
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));
         const resourceItems = await Promise.all(sortedResources.map(
