@@ -8,7 +8,6 @@ import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
 import { AzExtWrapper, getAzureExtensions } from '../../../AzExtWrapper';
 import { getIconPath } from '../../../utils/azureUtils';
 import { localize } from "../../../utils/localize";
-import { getApplicationResourceId } from '../../../utils/v2/getApplicationResourceId';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
@@ -19,7 +18,7 @@ export class DefaultApplicationResourceItem implements ResourceGroupsItem {
         this.resourceTypeExtension = getAzureExtensions().find(ext => ext.matchesApplicationResourceType(resource));
     }
 
-    public readonly id: string = getApplicationResourceId(this.resource.id);
+    public readonly id: string = this.resource.id;
 
     getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         if (this.resourceTypeExtension && !this.resourceTypeExtension.isInstalled()) {
