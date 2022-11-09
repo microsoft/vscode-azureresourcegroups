@@ -5,6 +5,7 @@
 
 import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
+import type { Activity } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 import { ResourceGroupsItem } from '../../tree/v2/ResourceGroupsItem';
 
@@ -133,7 +134,7 @@ export interface ApplicationSubscription {
     /**
      * The tenant to which this subscription belongs or undefined, if not associated with a specific tenant.
      */
-    readonly tenantId?: string;
+    readonly tenantId: string;
 }
 
 /**
@@ -269,6 +270,13 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
      * @param resourceId The ID of the resource to reveal.
      */
     revealResource(resourceId: string): Promise<void>;
+
+    /**
+     * Registers an activity to appear in the activity window.
+     *
+     * @param activity The activity information to show.
+     */
+     registerActivity(activity: Activity): Promise<void>;
 
     /**
      * Registers a provider of application resources.

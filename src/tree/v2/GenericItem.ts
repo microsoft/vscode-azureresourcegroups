@@ -11,6 +11,7 @@ export interface GenericItemOptions {
     readonly children?: ResourceGroupsItem[];
     readonly commandArgs?: unknown[];
     readonly commandId?: string;
+    readonly contextValue?: string;
     readonly iconPath?: TreeItemIconPath;
 }
 
@@ -35,6 +36,7 @@ export class GenericItem implements ResourceGroupsItem {
             };
         }
 
+        treeItem.contextValue = this.options?.contextValue;
         treeItem.iconPath = this.options?.iconPath;
 
         return treeItem;

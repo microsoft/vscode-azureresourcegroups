@@ -63,8 +63,13 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
 
-    getTreeItem(element: ResourceGroupsItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        return element.getTreeItem();
+    async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
+        const treeItem = await element.getTreeItem();
+        treeItem.id = this.itemCache.getId(element);
+
+        // TODO: remove this when we're done working with ids
+        treeItem.tooltip = treeItem.id;
+        return treeItem;
     }
 
     async getChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {

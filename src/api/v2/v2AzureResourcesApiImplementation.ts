@@ -4,7 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
+import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
+import { registerActivity } from '../../activityLog/registerActivity';
 import { ApplicationResourceBranchDataProviderManager } from '../../tree/v2/application/ApplicationResourceBranchDataProviderManager';
 import { ApplicationResourceTreeDataProvider } from '../../tree/v2/application/ApplicationResourceTreeDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
@@ -30,6 +32,10 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
 
     revealResource(_resourceId: string): Promise<void> {
         throw new Error("Method not implemented.");
+    }
+
+    registerActivity(activity: Activity): Promise<void> {
+        return registerActivity(activity);
     }
 
     registerApplicationResourceProvider(provider: ApplicationResourceProvider): vscode.Disposable {

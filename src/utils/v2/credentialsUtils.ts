@@ -39,10 +39,9 @@ export function createCredential(getSession: (scopes?: string[]) => vscode.Provi
  */
 export function createSubscriptionContext(subscription: ApplicationSubscription): ISubscriptionContext {
     return {
-        subscriptionDisplayName: subscription.name,
-        userId: '', // TODO,
-        subscriptionPath: subscription.subscriptionId,
-        tenantId: subscription.tenantId ?? '',
+        subscriptionDisplayName: '',
+        subscriptionPath: '',
+        userId: '',
         ...subscription,
         credentials: createCredential(subscription.authentication.getSession)
     };

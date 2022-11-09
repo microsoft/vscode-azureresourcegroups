@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ApplicationResource, BranchDataProvider } from '../../../api/v2/v2AzureResourcesApi';
+import { ApplicationResource, ApplicationResourceModel, BranchDataProvider } from '../../../api/v2/v2AzureResourcesApi';
 import { DefaultApplicationResourceItem } from './DefaultApplicationResourceItem';
 
-export class DefaultApplicationResourceBranchDataProvider implements BranchDataProvider<ApplicationResource, DefaultApplicationResourceItem> {
-    getChildren(element: DefaultApplicationResourceItem): vscode.ProviderResult<DefaultApplicationResourceItem[]> {
+export class DefaultApplicationResourceBranchDataProvider implements BranchDataProvider<ApplicationResource, ApplicationResourceModel> {
+    getChildren(element: DefaultApplicationResourceItem): vscode.ProviderResult<ApplicationResourceModel[]> {
         return element.getChildren();
     }
 

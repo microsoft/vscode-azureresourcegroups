@@ -18,6 +18,10 @@ class ResourceProviderManager<TResourceSource, TResource extends ResourceBase, T
 
     public readonly onDidChangeResourceChange: vscode.Event<TResource | undefined>;
 
+    get hasResourceProviders(): boolean {
+        return this.providers.size > 0;
+    }
+
     constructor(private readonly extensionActivator: () => Promise<void>) {
         super(
             () => {
