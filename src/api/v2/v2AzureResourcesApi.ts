@@ -69,8 +69,6 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
      */
     getChildren(element: TModel): vscode.ProviderResult<TModel[]>;
 
-    getParent?(element: TModel): vscode.ProviderResult<TModel>;
-
     /**
      * Called to get the provider's model element for a specific resource.
      *
