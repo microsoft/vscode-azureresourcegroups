@@ -5,6 +5,7 @@
 
 import { localize } from '../../utils/localize';
 import { GroupingItem } from './application/GroupingItem';
+import { BranchDataProviderItem } from './BranchDataProviderItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 
 interface InternalResourceGroupsItem extends ResourceGroupsItem {
@@ -120,6 +121,11 @@ export class ResourceGroupsItemCache {
 
     updateItemChildren(item: ResourceGroupsItem, children: ResourceGroupsItem[]): InternalResourceGroupsItem[] {
         this.itemToChildrenCache.set(item, children);
+
+        if (item instanceof BranchDataProviderItem) {
+            return children;
+        }
+
         // cache the parent on the child items
         return children.map(child => this.createInternalResourceGroupsItem(child, item));
     }
