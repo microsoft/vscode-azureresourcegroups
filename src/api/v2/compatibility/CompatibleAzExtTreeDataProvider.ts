@@ -24,11 +24,6 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
         super({} as unknown as AzExtParentTreeItem, undefined as unknown as string);
     }
 
-    //#region Things that should not be called
-    public override trackTreeItemCollapsibleState(_treeView: TreeView<AzExtTreeItem>): Disposable {
-        throw new Error('This method should never be called');
-    }
-
     public override getParent(treeItem: AzExtTreeItem): Promise<AzExtTreeItem | undefined> {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
@@ -41,24 +36,11 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
         return this.tdp.getTreeItem(treeItem);
     }
 
-    public get onDidChangeTreeData(): Event<AzExtTreeItem | undefined> {
-        throw new Error('This accessor should never be called');
-    }
-
-    public get onTreeItemCreate(): Event<AzExtTreeItem> {
-        throw new Error('This accessor should never be called');
-    }
-
-    public get onDidExpandOrRefreshExpandedTreeItem(): Event<AzExtTreeItem> {
-        throw new Error('This accessor should never be called');
-    }
-
     public override getChildren(_treeItem?: AzExtParentTreeItem): Promise<AzExtTreeItem[]> {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         return this.tdp.getChildren(_treeItem);
     }
-    //#endregion Things that should not be called
 
     public override async findTreeItem<T>(fullId: string, context: IFindTreeItemContext): Promise<T | undefined> {
         // Special handling for subscription tree item
@@ -104,5 +86,29 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
     public override loadMore(_treeItem: AzExtTreeItem, _context: IActionContext): Promise<void> {
         // TODO: unknown how this will be implemented?
         throw new Error('TODO: Implement this using the new load more approach');
+    }
+
+    //#region Things that should not be called
+    public override trackTreeItemCollapsibleState(_treeView: TreeView<AzExtTreeItem>): Disposable {
+        throw new ShouldNeverBeCalledError('trackTreeItemCollapsibleState method');
+    }
+
+    public get onDidChangeTreeData(): Event<AzExtTreeItem | undefined> {
+        throw new ShouldNeverBeCalledError('onDidChangeTreeData accessor');
+    }
+
+    public get onTreeItemCreate(): Event<AzExtTreeItem> {
+        throw new ShouldNeverBeCalledError('onTreeItemCreate accessor');
+    }
+
+    public get onDidExpandOrRefreshExpandedTreeItem(): Event<AzExtTreeItem> {
+        throw new ShouldNeverBeCalledError('onDidExpandOrRefreshExpandedTreeItem accessor');
+    }
+    //#endregion Things that should not be called
+}
+
+class ShouldNeverBeCalledError extends Error {
+    constructor(methodName: string) {
+        super(`${methodName} should never be called.`);
     }
 }
