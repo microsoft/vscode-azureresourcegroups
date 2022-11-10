@@ -27,12 +27,12 @@ export interface WrappedResourceModel {
 }
 
 function appendContextValues(originalValues: string | undefined, optionsValues: string[] | undefined, extraValues: string[] | undefined): string {
-    const set = new Set<string>(originalValues?.split(' ') ?? []);
+    const set = new Set<string>(originalValues?.split(';') ?? []);
 
     optionsValues?.forEach(value => set.add(value));
     extraValues?.forEach(value => set.add(value));
 
-    return Array.from(set).join(' ');
+    return Array.from(set).join(';');
 }
 
 export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResourceModel {
