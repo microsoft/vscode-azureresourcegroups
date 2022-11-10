@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
-import { ApplicationResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { ApplicationResource, ApplicationResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
@@ -37,7 +37,7 @@ function appendContextValues(originalValues: string | undefined, optionsValues: 
 
 export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResourceModel {
     constructor(
-        protected readonly branchItem: ResourceModelBase,
+        private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
         private readonly itemCache: ResourceGroupsItemCache,
         private readonly options?: BranchDataItemOptions) {
@@ -47,6 +47,10 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
     readonly id: string = this.branchItem.id ?? this?.options?.defaultId ?? randomUUID();
 
     readonly portalUrl: vscode.Uri | undefined = this.options?.portalUrl;
+
+    get resource(): ApplicationResource {
+        return this.branchItem['resource'] as ApplicationResource;
+    }
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const children = await this.branchDataProvider.getChildren(this.branchItem);
@@ -72,7 +76,7 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
         };
     }
 
-    unwrap<T>(): T {
+    unwrap<T extends ResourceModelBase>(): T | undefined {
         return this.branchItem as T;
     }
 }

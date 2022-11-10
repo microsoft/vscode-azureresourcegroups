@@ -39,14 +39,11 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
 
     private constructor(root: AzExtParentTreeItem, resource: AppResource) {
         super(root);
-
-        if (root) {
-            this.rootGroupTreeItem = root;
-            this.rootGroupConfig = <GroupNodeConfiguration><unknown>root;
-            this.groupConfig = createGroupConfigFromResource(resource, root.id);
-        }
+        this.rootGroupTreeItem = root;
+        this.rootGroupConfig = <GroupNodeConfiguration><unknown>root;
 
         this.data = resource;
+        this.groupConfig = createGroupConfigFromResource(resource, root.id);
 
         this.contextValues.add(AppResourceTreeItem.contextValue);
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
