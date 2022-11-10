@@ -8,7 +8,7 @@ import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ApplicationResource, ApplicationResourceBranchDataProvider, ApplicationResourceModel, ApplicationSubscription } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
-import { BranchDataItemFactory } from '../BranchDataProviderItem';
+import { BranchDataItemFactory, BranchDataItemOptions } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
 import { BranchDataProviderFactory } from './ApplicationResourceBranchDataProviderManager';
@@ -43,13 +43,17 @@ export class GroupingItem implements ResourceGroupsItem {
                 const branchDataProvider = this.branchDataProviderFactory(resource);
                 const resourceItem = await branchDataProvider.getResourceItem(resource);
 
-                const options = {
+                const options: BranchDataItemOptions = {
                     contextValues: ['azureResource'],
                     defaultId: resource.id,
                     defaults: {
                         iconPath: getIconPath(resource.resourceType)
                     },
-                    portalUrl: resourceItem.portalUrl ?? createPortalUrl(resource.subscription, resource.id)
+                    portalUrl: resourceItem.portalUrl ?? createPortalUrl(resource.subscription, resource.id),
+                    viewProperties: {
+                        label: resource.name,
+                        data: resource.raw
+                    }
                 };
 
                 return this.branchDataItemFactory(resourceItem, branchDataProvider, options);

@@ -4,13 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
-import { pickAppResource } from '../api/pickAppResource';
-import { AppResourceTreeItem } from '../tree/AppResourceTreeItem';
+import { randomUUID } from 'crypto';
+import { ApplicationResourceModel } from '../api/v2/v2AzureResourcesApi';
+import { localize } from '../utils/localize';
 
-export async function viewProperties(context: IActionContext, node?: AppResourceTreeItem): Promise<void> {
+export async function viewProperties(_context: IActionContext, node?: ApplicationResourceModel): Promise<void> {
     if (!node) {
-        node = await pickAppResource<AppResourceTreeItem>(context);
+        // TODO: Reenable this once we have a way to pick resources.
+        // node = await pickAppResource<AppResourceTreeItem>(context);
+
+        throw new Error(localize('commands.viewProperties.noSelectedResource', 'A resource must be selected.'));
     }
 
-    await openReadOnlyJson(node, node.data);
+    if (!node.viewProperties) {
+        throw new Error(localize('commands.viewProperties.noProperties', 'The selected resource has no properties to view.'));
+    }
+
+    await openReadOnlyJson({ fullId: node.id ?? randomUUID(), label: node.viewProperties.label }, node.viewProperties.data);
 }
