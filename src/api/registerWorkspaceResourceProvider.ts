@@ -8,8 +8,8 @@ import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi
 import { Disposable } from "vscode";
 import { refreshWorkspace } from "../commands/workspace/refreshWorkspace";
 import { ext } from "../extensionVariables";
-import { CompatibilityWorkspaceResourceProvider } from "./v2/compatibility/CompatibilityWorkspaceResourceProvider";
-import { CompatibleWorkspaceResourceBranchDataProvider } from "./v2/compatibility/CompatibleWorkspaceResourceBranchDataProvider";
+import { CompatibilityWorkspaceResourceProvider } from "./v2/compatibility/workspace/CompatibilityWorkspaceResourceProvider";
+import { CompatibleWorkspaceResourceBranchDataProvider } from "./v2/compatibility/workspace/CompatibleWorkspaceResourceBranchDataProvider";
 import { BranchDataProvider, WorkspaceResource } from "./v2/v2AzureResourcesApi";
 
 export const workspaceResourceProviders: Record<string, WorkspaceResourceProvider> = {};

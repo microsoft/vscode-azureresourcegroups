@@ -6,7 +6,7 @@
 import { AzExtParentTreeItem, AzExtTreeItem } from "@microsoft/vscode-azext-utils";
 import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
 import { Event, WorkspaceFolder } from "vscode";
-import { WorkspaceResource, WorkspaceResourceProvider as V2WorkspaceResourceProvider } from "../../v2/v2AzureResourcesApi";
+import { WorkspaceResource, WorkspaceResourceProvider as V2WorkspaceResourceProvider } from "../../v2AzureResourcesApi";
 import { CompatibleWorkspaceResourceBranchDataProvider } from "./CompatibleWorkspaceResourceBranchDataProvider";
 
 export class CompatibilityWorkspaceResourceProvider implements V2WorkspaceResourceProvider {

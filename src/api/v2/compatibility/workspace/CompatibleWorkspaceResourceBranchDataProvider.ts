@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { WorkspaceResource } from '@microsoft/vscode-azext-utils/hostapi';
-import type { WorkspaceResource as v2WorkspaceResource } from '../v2AzureResourcesApi';
-import { CompatibleBranchDataProviderBase } from './CompatibleBranchDataProviderBase';
+import type { WorkspaceResource as v2WorkspaceResource } from '../../v2AzureResourcesApi';
+import { CompatibleBranchDataProviderBase } from '../CompatibleBranchDataProviderBase';
 
 export class CompatibleWorkspaceResourceBranchDataProvider<TResource extends WorkspaceResource & v2WorkspaceResource> extends CompatibleBranchDataProviderBase<TResource, TResource> {
     public async getResourceItem(element: TResource): Promise<TResource> {

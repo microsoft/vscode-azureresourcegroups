@@ -6,9 +6,9 @@
 import { AzExtParentTreeItem, AzExtResourceType, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ISubscriptionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import type { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { TreeItemCollapsibleState } from "vscode";
-import { createResolvableProxy } from "../../../tree/AppResourceTreeItem";
-import { getIconPath } from "../../../utils/azureUtils";
-import { ApplicationResource } from "../v2AzureResourcesApi";
+import { createResolvableProxy } from "../../../../tree/AppResourceTreeItem";
+import { getIconPath } from "../../../../utils/azureUtils";
+import { ApplicationResource } from "../../v2AzureResourcesApi";
 
 /**
  * Must immitate the behavior of AppResourceTreeItem
