@@ -50,7 +50,7 @@ export class GroupingItem implements ResourceGroupsItem {
                         iconPath: getIconPath(resource.resourceType)
                     },
                     portalUrl: resourceItem.portalUrl ?? createPortalUrl(resource.subscription, resource.id),
-                    viewProperties: {
+                    viewProperties: resourceItem.viewProperties ?? {
                         label: resource.name,
                         data: resource.raw
                     }
