@@ -5,7 +5,6 @@
 
 import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
-import { BranchDataProviderItem } from './BranchDataProviderItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
@@ -66,11 +65,6 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
         const treeItem = await element.getTreeItem();
-
-        if (!(element instanceof BranchDataProviderItem)) {
-            treeItem.id = this.itemCache.getId(element);
-        }
-
         // TODO: remove this when we're done working with ids
         treeItem.tooltip = treeItem.id;
         return treeItem;

@@ -89,6 +89,7 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
                                     },
                                     getParent: item => this.itemCache.getParentForItem(item),
                                     refresh: item => this.onDidChangeTreeDataEmitter.fire(item),
+                                    itemCache: this.itemCache,
                                 },
                                 this.resourceGroupingManager,
                                 this.resourceProviderManager,

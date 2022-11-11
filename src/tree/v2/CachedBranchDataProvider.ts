@@ -51,7 +51,7 @@ export class CachedBranchDataProvider<TBranchDataProvider extends BranchDataProv
         return this.branchDataProvider.resolveTreeItem?.(item, element, token);
     }
 
-    getId(element: CachedResourceModelBase): string {
+    private getId(element: CachedResourceModelBase): string {
         return this.getPathForItem(element).join('/');
     }
 

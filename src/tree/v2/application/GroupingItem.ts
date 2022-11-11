@@ -64,6 +64,7 @@ export class GroupingItem implements ResourceGroupsItem {
         treeItem.contextValue = this.contextValues?.join(' ');
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
+        treeItem.id = this.context.itemCache.getId(this);
 
         return treeItem;
     }

@@ -47,11 +47,8 @@ export class SubscriptionItem implements ResourceGroupsItem {
 
         treeItem.contextValue = 'azureextensionui.azureSubscription';
         treeItem.iconPath = treeUtils.getIconPath('azureSubscription');
+        treeItem.id = this.context.itemCache.getId(this);
 
         return treeItem;
-    }
-
-    getParent(): vscode.ProviderResult<ResourceGroupsItem> {
-        return undefined;
     }
 }
