@@ -74,9 +74,9 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
 
     async getParent(): Promise<ResourceGroupsItem | undefined> {
         if (this.branchDataProvider.getParent) {
-            const branchItem = await this.branchDataProvider.getParent(this);
+            const branchItem = await this.branchDataProvider.getParent(this.branchItem);
             if (branchItem) {
-                return branchItem as ResourceGroupsItem;
+                return this.itemCache.getItemForBranchItem(branchItem);
             }
             // if this is an application resource, only RGs knows the parent
             return this.itemCache.getParentForItem(this);
