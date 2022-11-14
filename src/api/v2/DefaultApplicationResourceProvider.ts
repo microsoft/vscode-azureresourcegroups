@@ -42,7 +42,8 @@ export class DefaultApplicationResourceProvider implements ApplicationResourcePr
             name: nonNullProp(resourceGroup, 'name'),
             azureResourceType: {
                 type: nonNullProp(resourceGroup, 'type').toLowerCase()
-            }
+            },
+            raw: resourceGroup,
         };
     }
 
@@ -63,7 +64,8 @@ export class DefaultApplicationResourceProvider implements ApplicationResourcePr
             resourceType: getAzExtResourceType({
                 type: nonNullProp(resource, 'type'),
                 kind: resource.kind
-            })
+            }),
+            raw: resource,
         };
     }
 }
