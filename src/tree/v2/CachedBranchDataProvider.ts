@@ -9,7 +9,7 @@ import { BranchDataProvider, ResourceBase, ResourceModelBase } from "../../api/v
 type BranchDataProviderBase = BranchDataProvider<ResourceBase, ResourceModelBase>;
 
 type CachedResourceModelBase = ResourceModelBase & {
-    parent?: CachedResourceModelBase;
+    _rgApiCachedParent?: CachedResourceModelBase;
 }
 
 /**
@@ -32,7 +32,7 @@ export class CachedBranchDataProvider<TBranchDataProvider extends BranchDataProv
     }
 
     getParent(element: CachedResourceModelBase): ProviderResult<ResourceModelBase> {
-        return element.parent;
+        return element._rgApiCachedParent;
     }
 
     getResourceItem(element: ResourceBase): ResourceModelBase | Thenable<ResourceModelBase> {
@@ -61,7 +61,7 @@ export class CachedBranchDataProvider<TBranchDataProvider extends BranchDataProv
         let currentItem: CachedResourceModelBase | undefined = item;
 
         while (currentItem) {
-            const nextItem: CachedResourceModelBase | undefined = currentItem.parent;
+            const nextItem: CachedResourceModelBase | undefined = currentItem._rgApiCachedParent;
 
             if (currentItem.id) {
                 path.push(currentItem.id);
@@ -74,7 +74,7 @@ export class CachedBranchDataProvider<TBranchDataProvider extends BranchDataProv
     }
 
     private updateItemChildren(parent: ResourceModelBase, children: ResourceModelBase[]): CachedResourceModelBase[] {
-        (children as CachedResourceModelBase[]).forEach(child => child.parent = parent);
+        (children as CachedResourceModelBase[]).forEach(child => child._rgApiCachedParent = parent);
         return children;
     }
 }
