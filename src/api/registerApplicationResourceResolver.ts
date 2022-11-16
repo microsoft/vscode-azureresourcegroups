@@ -10,7 +10,7 @@ import { ext } from "../extensionVariables";
 import { CompatibleApplicationResourceBranchDataProvider } from "./v2/compatibility/application/CompatibleApplicationResourceBranchDataProvider";
 import { ApplicationResource, BranchDataProvider } from "./v2/v2AzureResourcesApi";
 
-export const applicationResourceResolvers: Record<string, AppResourceResolver> = {};
+export const applicationResourceResolvers: Partial<Record<AzExtResourceType, AppResourceResolver>> = {};
 
 export function registerApplicationResourceResolver(type: AzExtResourceType, resolver: AppResourceResolver): Disposable {
     if (applicationResourceResolvers[type]) {
