@@ -5,11 +5,12 @@
 
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
-import { createBranchDataItemFactory } from '../BranchDataProviderItem';
+import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { localize } from './../../../utils/localize';
 import { ApplicationResourceBranchDataProviderManager } from './ApplicationResourceBranchDataProviderManager';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
+import { createResourceItemFactory } from './ApplicationResourceItem';
 import { ApplicationResourceTreeDataProvider } from './ApplicationResourceTreeDataProvider';
 import { createGroupingItemFactory } from './GroupingItem';
 
@@ -19,7 +20,7 @@ export function registerResourceGroupsTreeV2(
     refreshEvent: vscode.Event<void>,
     resourceProviderManager: ApplicationResourceProviderManager): void {
     const itemCache = new ResourceGroupsItemCache();
-    const branchDataItemFactory = createBranchDataItemFactory(itemCache);
+    const branchDataItemFactory = createResourceItemFactory<ApplicationResource>(itemCache);
     const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => branchDataProviderManager.getProvider(resource.resourceType));
     const resourceGroupingManager = new ApplicationResourceGroupingManager(groupingItemFactory);
 
