@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from '../../utils/localize';
-import { GroupingItem } from './application/GroupingItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 
 interface InternalResourceGroupsItem extends ResourceGroupsItem {
@@ -126,13 +125,6 @@ export class ResourceGroupsItemCache {
 
     getId(element: ResourceGroupsItem): string {
         return '/' + this.getPathForItem(element).join('/');
-    }
-
-    isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
-        if (element instanceof GroupingItem) {
-            return element.resources.some(resource => id.startsWith(resource.id));
-        }
-        return id.startsWith(this.getId(element) + '/');
     }
 
     private createInternalResourceGroupsItem(child: ResourceGroupsItem, parent: ResourceGroupsItem): InternalResourceGroupsItem {
