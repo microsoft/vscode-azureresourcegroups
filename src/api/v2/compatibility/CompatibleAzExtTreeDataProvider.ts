@@ -36,10 +36,10 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
         return this.tdp.getTreeItem(treeItem);
     }
 
-    public override getChildren(_treeItem?: AzExtParentTreeItem): Promise<AzExtTreeItem[]> {
+    public override getChildren(treeItem?: AzExtParentTreeItem): Promise<AzExtTreeItem[]> {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        return this.tdp.getChildren(_treeItem);
+        return this.tdp.getChildren(treeItem);
     }
 
     public override async findTreeItem<T>(fullId: string, context: IFindTreeItemContext): Promise<T | undefined> {
