@@ -8,7 +8,7 @@ import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
 import { ext } from "../extensionVariables";
 import { CompatibleApplicationResourceBranchDataProvider } from "./v2/compatibility/application/CompatibleApplicationResourceBranchDataProvider";
-import { ApplicationResource, BranchDataProvider } from "./v2/v2AzureResourcesApi";
+import { ApplicationResourceBranchDataProvider } from "./v2/v2AzureResourcesApi";
 
 export const applicationResourceResolvers: Partial<Record<AzExtResourceType, AppResourceResolver>> = {};
 
@@ -22,7 +22,7 @@ export function registerApplicationResourceResolver(type: AzExtResourceType, res
 
     const compat = new CompatibleApplicationResourceBranchDataProvider(resolver, 'azureResourceGroups.loadMore' /** TODO: what is the correct value for this? */);
 
-    ext.v2.api.registerApplicationResourceBranchDataProvider(type, compat as unknown as BranchDataProvider<ApplicationResource, AzExtTreeItem>);
+    ext.v2.api.registerApplicationResourceBranchDataProvider(type, compat as unknown as ApplicationResourceBranchDataProvider<AzExtTreeItem>);
 
     return new Disposable(() => {
         delete applicationResourceResolvers[type];
