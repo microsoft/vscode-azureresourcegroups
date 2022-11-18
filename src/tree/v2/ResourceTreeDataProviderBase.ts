@@ -98,5 +98,32 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         return this.itemCache.getParentForItem(element);
     }
 
+    async findItemById(id: string): Promise<ResourceGroupsItem | undefined> {
+        let element: ResourceGroupsItem | undefined = undefined;
+
+        outerLoop: while (true) {
+            const children: ResourceGroupsItem[] | null | undefined = await this.getChildren(element);
+
+            if (!children) {
+                return;
+            }
+
+            for (const child of children) {
+                if (this.itemCache.getId(child) === id) {
+                    return child;
+                } else if (this.isAncestorOf(child, id)) {
+                    element = child;
+                    continue outerLoop;
+                }
+            }
+
+            return undefined;
+        }
+    }
+
+    protected isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
+        return id.startsWith(this.itemCache.getId(element) + '/');
+    }
+
     protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;
 }
