@@ -69,6 +69,9 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
                 valuesToMask: [],
                 subscription: __subscription,
                 parent: undefined,
+                removeChildFromCache: () => {
+                    //
+                },
             }) as unknown as AzExtParentTreeItem
         );
 
