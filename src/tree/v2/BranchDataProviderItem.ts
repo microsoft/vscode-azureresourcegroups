@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
-import { ApplicationResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { ApplicationResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '../../api/v2/v2AzureResourcesApi';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
@@ -14,6 +14,7 @@ export type BranchDataItemOptions = {
     defaultId?: string;
     defaults?: vscode.TreeItem;
     portalUrl?: vscode.Uri;
+    viewProperties?: ViewPropertiesModel;
 };
 
 /**
@@ -27,12 +28,12 @@ export interface WrappedResourceModel {
 }
 
 function appendContextValues(originalValues: string | undefined, optionsValues: string[] | undefined, extraValues: string[] | undefined): string {
-    const set = new Set<string>(originalValues?.split(' ') ?? []);
+    const set = new Set<string>(originalValues?.split(';') ?? []);
 
     optionsValues?.forEach(value => set.add(value));
     extraValues?.forEach(value => set.add(value));
 
-    return Array.from(set).join(' ');
+    return Array.from(set).join(';');
 }
 
 export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResourceModel {
@@ -47,6 +48,7 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
     readonly id: string = this.branchItem.id ?? this?.options?.defaultId ?? randomUUID();
 
     readonly portalUrl: vscode.Uri | undefined = this.options?.portalUrl;
+    readonly viewProperties?: ViewPropertiesModel = this.options?.viewProperties;
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const children = await this.branchDataProvider.getChildren(this.branchItem);
@@ -57,13 +59,18 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
         //       having to create specialized item types for application and workspace resources and their
         //       requisite factories.
 
-        return children?.map(child => factory(child, this.branchDataProvider, { portalUrl: (child as ApplicationResourceModel).portalUrl }));
+        return children?.map(child =>
+            factory(child, this.branchDataProvider, {
+                portalUrl: (child as ApplicationResourceModel).portalUrl,
+                viewProperties: (child as ApplicationResourceModel).viewProperties,
+            })
+        );
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = await this.branchDataProvider.getTreeItem(this.branchItem);
 
-        const contextValue = appendContextValues(treeItem.contextValue, this.options?.contextValues, this.portalUrl ? ['hasPortalUrl'] : undefined);
+        const contextValue = appendContextValues(treeItem.contextValue, this.options?.contextValues, this.getExtraContextValues());
 
         return {
             ...this.options?.defaults ?? {},
@@ -87,6 +94,17 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
 
     unwrap<T extends ResourceModelBase>(): T | undefined {
         return this.branchItem as T;
+    }
+
+    private getExtraContextValues(): string[] {
+        const extraValues: string[] = [];
+        if (this.portalUrl) {
+            extraValues.push('hasPortalUrl');
+        }
+        if (this.viewProperties) {
+            extraValues.push('hasProperties');
+        }
+        return extraValues;
     }
 }
 

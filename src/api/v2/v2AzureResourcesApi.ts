@@ -181,6 +181,23 @@ export interface ApplicationResource extends ResourceBase {
     readonly tags?: {
         [propertyName: string]: string;
     };
+
+    /**
+     * A copy of the raw resource.
+     */
+    readonly raw: {};
+}
+
+export interface ViewPropertiesModel {
+    /**
+     * File name displayed in VS Code.
+     */
+    label: string;
+
+    /**
+     * Raw data associated with the resource to populate the properties file.
+     */
+    data: {};
 }
 
 /**
@@ -198,6 +215,11 @@ export interface ApplicationResourceModel extends ResourceModelBase {
      * The URL of the area of Azure portal related to this item.
      */
     readonly portalUrl?: vscode.Uri;
+
+    /**
+     * Define to enable the "View Properties" command.
+     */
+    readonly viewProperties?: ViewPropertiesModel;
 }
 
 /**

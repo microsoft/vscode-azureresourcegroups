@@ -17,6 +17,7 @@ import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
+import { GroupingItem } from './GroupingItem';
 import { SubscriptionItem } from './SubscriptionItem';
 
 export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProviderBase {
@@ -158,6 +159,13 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
         }
 
         return undefined;
+    }
+
+    protected override isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
+        if (element instanceof GroupingItem) {
+            return element.resources.some(resource => id.startsWith(resource.id));
+        }
+        return super.isAncestorOf(element, id)
     }
 
     private async getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi | undefined> {
