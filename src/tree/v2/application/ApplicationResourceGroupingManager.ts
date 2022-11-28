@@ -87,12 +87,12 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
 
         return Object.keys(map).map(key => {
             return this.groupingItemFactory(
-                parent,
                 context,
                 contextValues,
                 iconSelector(key),
                 labelSelector(key),
-                map[key]);
+                map[key],
+                parent);
         });
     }
 

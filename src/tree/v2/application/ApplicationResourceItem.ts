@@ -11,11 +11,11 @@ import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
 export class ApplicationResourceItem<T extends ResourceBase> extends BranchDataProviderItem {
     constructor(
-        private readonly parent: ResourceGroupsItem,
         public readonly resource: T,
         branchItem: ResourceModelBase,
         branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
         itemCache: BranchDataItemCache,
+        private readonly parent?: ResourceGroupsItem,
         options?: BranchDataItemOptions) {
         super(branchItem, branchDataProvider, itemCache, options);
     }
@@ -33,8 +33,8 @@ export class ApplicationResourceItem<T extends ResourceBase> extends BranchDataP
     }
 }
 
-export type ResourceItemFactory<T extends ResourceBase> = (parent: ResourceGroupsItem, resource: T, branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => ApplicationResourceItem<T>;
+export type ResourceItemFactory<T extends ResourceBase> = (resource: T, branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, parent?: ResourceGroupsItem, options?: BranchDataItemOptions) => ApplicationResourceItem<T>;
 
 export function createResourceItemFactory<T extends ResourceBase>(itemCache: BranchDataItemCache): ResourceItemFactory<T> {
-    return (parent, resource, branchItem, branchDataProvider, options) => new ApplicationResourceItem(parent, resource, branchItem, branchDataProvider, itemCache, options);
+    return (resource, branchItem, branchDataProvider, parent, options) => new ApplicationResourceItem(resource, branchItem, branchDataProvider, itemCache, parent, options);
 }
