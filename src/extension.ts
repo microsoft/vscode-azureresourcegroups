@@ -37,7 +37,6 @@ import { HelpTreeItem } from './tree/HelpTreeItem';
 import { ApplicationResourceBranchDataProviderManager } from './tree/v2/application/ApplicationResourceBranchDataProviderManager';
 import { DefaultApplicationResourceBranchDataProvider } from './tree/v2/application/DefaultApplicationResourceBranchDataProvider';
 import { registerResourceGroupsTreeV2 } from './tree/v2/application/registerResourceGroupsTreeV2';
-import { CachedBranchDataProvider } from './tree/v2/CachedBranchDataProvider';
 import { registerWorkspaceTreeV2 } from './tree/v2/workspace/registerWorkspaceTreeV2';
 import { WorkspaceDefaultBranchDataProvider } from './tree/v2/workspace/WorkspaceDefaultBranchDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from './tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
@@ -118,7 +117,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     const extensionManager = new ResourceGroupsExtensionManager()
 
     const branchDataProviderManager = new ApplicationResourceBranchDataProviderManager(
-        new CachedBranchDataProvider(new DefaultApplicationResourceBranchDataProvider()),
+        new DefaultApplicationResourceBranchDataProvider(),
         type => void extensionManager.activateApplicationResourceBranchDataProvider(type));
 
     context.subscriptions.push(branchDataProviderManager);
