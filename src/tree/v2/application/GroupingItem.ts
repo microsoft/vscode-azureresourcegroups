@@ -36,7 +36,7 @@ export class GroupingItem implements ResourceGroupsItem {
         public readonly resources: ApplicationResource[]) {
     }
 
-    readonly id = `/subscriptions/${this.context.subscriptionContext.subscriptionId}/groupings/${this.label}`;
+    readonly id: string = `/subscriptions/${this.context.subscriptionContext.subscriptionId}/groupings/${this.label}`;
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));

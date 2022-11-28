@@ -106,7 +106,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     protected isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
-        return id.startsWith(element.id);
+        return id.startsWith(element.id + '/');
     }
 
     protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;

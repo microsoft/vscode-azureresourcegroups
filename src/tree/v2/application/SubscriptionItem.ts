@@ -28,7 +28,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
         private readonly subscription: ApplicationSubscription) {
     }
 
-    readonly id = `/subscriptions/${this.subscription.subscriptionId}`;
+    public readonly id: string = `/subscriptions/${this.subscription.subscriptionId}`;
 
     async getChildren(): Promise<ResourceGroupsItem[]> {
         let resources = await this.resourceProviderManager.getResources(this.subscription);
