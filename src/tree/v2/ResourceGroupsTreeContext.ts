@@ -5,15 +5,10 @@
 
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { ResourceGroupsItem } from "./ResourceGroupsItem";
-import { ResourceGroupsItemCache } from "./ResourceGroupsItemCache";
 
 export interface ResourceGroupsTreeContext {
     // TODO: Eliminate this; it's only here for existing command logic.
     readonly subscriptionContext: ISubscriptionContext;
 
-    getParent(item: ResourceGroupsItem): ResourceGroupsItem | undefined;
-
     refresh(item: ResourceGroupsItem): void;
-
-    itemCache: ResourceGroupsItemCache;
 }

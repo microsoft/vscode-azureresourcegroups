@@ -6,9 +6,9 @@
 import * as vscode from 'vscode';
 import { WorkspaceResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { WorkspaceResource } from '../../../api/v2/v2AzureResourcesApi';
+import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataProviderItem } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
-import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 
@@ -18,7 +18,7 @@ export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderB
         onRefresh: vscode.Event<void>,
         private readonly resourceProviderManager: WorkspaceResourceProviderManager) {
         super(
-            new ResourceGroupsItemCache(),
+            new BranchDataItemCache(),
             branchDataProviderManager.onDidChangeTreeData,
             resourceProviderManager.onDidChangeResourceChange,
             onRefresh);

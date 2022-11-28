@@ -12,9 +12,9 @@ import { showHiddenTypesSettingKey } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../utils/localize';
 import { AzureAccountExtensionApi } from '../azure-account.api';
+import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
-import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
 import { GroupingItem } from './GroupingItem';
@@ -29,7 +29,7 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
-        itemCache: ResourceGroupsItemCache,
+        itemCache: BranchDataItemCache,
         onRefresh: vscode.Event<void>,
         private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
         private readonly resourceProviderManager: ApplicationResourceProviderManager) {
@@ -88,9 +88,7 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
                                         environment: subscription.session.environment,
                                         isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud'
                                     },
-                                    getParent: item => this.itemCache.getParentForItem(item),
                                     refresh: item => this.onDidChangeTreeDataEmitter.fire(item),
-                                    itemCache: this.itemCache,
                                 },
                                 this.resourceGroupingManager,
                                 this.resourceProviderManager,

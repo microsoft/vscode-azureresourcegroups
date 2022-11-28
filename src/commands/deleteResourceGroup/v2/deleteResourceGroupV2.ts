@@ -5,12 +5,12 @@
 
 import { AzureWizard, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { ResourceGroupTreeItem } from '../../../tree/ResourceGroupTreeItem';
+import { GroupingItem } from '../../../tree/v2/application/GroupingItem';
+import { createActivityContext } from '../../../utils/activityUtils';
 import { localize } from '../../../utils/localize';
 import { settingUtils } from '../../../utils/settingUtils';
-import { GroupingItem } from '../../../tree/v2/application/GroupingItem';
 import { DeleteResourceGroupContext } from '../DeleteResourceGroupContext';
 import { DeleteResourceGroupStep } from '../DeleteResourceGroupStep';
-import { createActivityContext } from '../../../utils/activityUtils';
 
 export async function deleteResourceGroupV2(context: IActionContext, primaryNode?: GroupingItem, selectedNodes?: GroupingItem[]): Promise<void> {
     if (!selectedNodes) {
@@ -70,7 +70,7 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
                 })
             .finally(
                 () => {
-                    const parent = node.context.getParent(node);
+                    const parent = node.parent;
 
                     if (parent) {
                         node.context.refresh(parent);

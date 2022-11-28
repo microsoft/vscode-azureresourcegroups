@@ -28,7 +28,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
         private readonly subscription: ApplicationSubscription) {
     }
 
-    public readonly id: string = `subscriptions/${this.subscription.subscriptionId}`;
+    readonly id = `/subscriptions/${this.subscription.subscriptionId}`;
 
     async getChildren(): Promise<ResourceGroupsItem[]> {
         let resources = await this.resourceProviderManager.getResources(this.subscription);
@@ -39,7 +39,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
             resources = resources.filter(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' || (resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType)));
         }
 
-        return this.resourceGroupingManager.groupResources(this.context, resources ?? []).sort((a, b) => a.label.localeCompare(b.label));
+        return this.resourceGroupingManager.groupResources(this, this.context, resources ?? []).sort((a, b) => a.label.localeCompare(b.label));
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
@@ -47,7 +47,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
 
         treeItem.contextValue = 'azureextensionui.azureSubscription';
         treeItem.iconPath = treeUtils.getIconPath('azureSubscription');
-        treeItem.id = this.context.itemCache.getId(this);
+        treeItem.id = this.id;
 
         return treeItem;
     }

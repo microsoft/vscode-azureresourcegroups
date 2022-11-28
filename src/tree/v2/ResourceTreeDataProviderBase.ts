@@ -5,8 +5,8 @@
 
 import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { BranchDataItemCache } from './BranchDataItemCache';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
-import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
 export abstract class ResourceTreeDataProviderBase extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupsItem> {
     private readonly branchTreeDataChangeSubscription: vscode.Disposable;
@@ -15,7 +15,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     protected readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
 
     constructor(
-        protected readonly itemCache: ResourceGroupsItemCache,
+        protected readonly itemCache: BranchDataItemCache,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
         onDidChangeResource: vscode.Event<ResourceBase | undefined>,
         onRefresh: vscode.Event<void>,
@@ -71,25 +71,11 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     async getChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
-        if (element) {
-            // TODO: Do we really need to evict before generating new children, or can we just update after the fact?
-            //       Since the callback is async, could change notifications show up while doing this?
-            this.itemCache.evictItemChildren(element);
-        } else {
+        if (!element) {
             this.itemCache.evictAll();
         }
 
-        const children = await this.onGetChildren(element);
-
-        if (children) {
-            if (element) {
-                this.itemCache.updateItemChildren(element, children);
-            } else {
-                children.forEach(child => this.itemCache.addRootItem(child, []));
-            }
-        }
-
-        return children;
+        return await this.onGetChildren(element);
     }
 
     getParent(element: ResourceGroupsItem): vscode.ProviderResult<ResourceGroupsItem> {
@@ -107,7 +93,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
             }
 
             for (const child of children) {
-                if (this.itemCache.getId(child) === id) {
+                if (child.id === id) {
                     return child;
                 } else if (this.isAncestorOf(child, id)) {
                     element = child;
@@ -120,7 +106,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     protected isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
-        return id.startsWith(this.itemCache.getId(element) + '/');
+        return id.startsWith(element.id);
     }
 
     protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;
