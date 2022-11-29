@@ -6,17 +6,17 @@
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 
 export class BranchDataItemCache {
-    private readonly branchItemToItemCache: Map<unknown, ResourceGroupsItem> = new Map();
+    private readonly branchItemToResourceGroupsItemCache: Map<unknown, ResourceGroupsItem> = new Map();
 
     addBranchItem(branchItem: unknown, item: ResourceGroupsItem): void {
-        this.branchItemToItemCache.set(branchItem, item);
+        this.branchItemToResourceGroupsItemCache.set(branchItem, item);
     }
 
     evictAll(): void {
-        this.branchItemToItemCache.clear();
+        this.branchItemToResourceGroupsItemCache.clear();
     }
 
     getItemForBranchItem(branchItem: unknown): ResourceGroupsItem | undefined {
-        return this.branchItemToItemCache.get(branchItem);
+        return this.branchItemToResourceGroupsItemCache.get(branchItem);
     }
 }
