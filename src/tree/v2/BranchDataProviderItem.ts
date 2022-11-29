@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
-import { ApplicationResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '../../api/v2/v2AzureResourcesApi';
+import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '../../api/v2/v2AzureResourcesApi';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 
@@ -61,8 +61,8 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
 
         return children?.map(child =>
             factory(child, this.branchDataProvider, {
-                portalUrl: (child as ApplicationResourceModel).portalUrl,
-                viewProperties: (child as ApplicationResourceModel).viewProperties,
+                portalUrl: (child as AzureResourceModel).portalUrl,
+                viewProperties: (child as AzureResourceModel).viewProperties,
             })
         );
     }

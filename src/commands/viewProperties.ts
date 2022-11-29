@@ -5,10 +5,10 @@
 
 import { IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
 import { randomUUID } from 'crypto';
-import { ApplicationResourceModel } from '../api/v2/v2AzureResourcesApi';
+import { AzureResourceModel } from '../api/v2/v2AzureResourcesApi';
 import { localize } from '../utils/localize';
 
-export async function viewProperties(_context: IActionContext, node?: ApplicationResourceModel): Promise<void> {
+export async function viewProperties(_context: IActionContext, node?: AzureResourceModel): Promise<void> {
     if (!node) {
         // TODO: Reenable this once we have a way to pick resources.
         // node = await pickAppResource<AppResourceTreeItem>(context);

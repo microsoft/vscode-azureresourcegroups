@@ -5,28 +5,28 @@
 
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
-import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
+import { AzureResource } from '../../../api/v2/v2AzureResourcesApi';
+import { localize } from '../../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { localize } from './../../../utils/localize';
-import { ApplicationResourceBranchDataProviderManager } from './ApplicationResourceBranchDataProviderManager';
-import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
-import { createResourceItemFactory } from './ApplicationResourceItem';
-import { ApplicationResourceTreeDataProvider } from './ApplicationResourceTreeDataProvider';
+import { AzureResourceBranchDataProviderManager } from './AzureResourceBranchDataProviderManager';
+import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
+import { createResourceItemFactory } from './AzureResourceItem';
+import { AzureResourceTreeDataProvider } from './AzureResourceTreeDataProvider';
 import { createGroupingItemFactory } from './GroupingItem';
 
 export function registerResourceGroupsTreeV2(
     context: vscode.ExtensionContext,
-    branchDataProviderManager: ApplicationResourceBranchDataProviderManager,
+    branchDataProviderManager: AzureResourceBranchDataProviderManager,
     refreshEvent: vscode.Event<void>,
     resourceProviderManager: ApplicationResourceProviderManager): void {
     const itemCache = new BranchDataItemCache();
-    const branchDataItemFactory = createResourceItemFactory<ApplicationResource>(itemCache);
+    const branchDataItemFactory = createResourceItemFactory<AzureResource>(itemCache);
     const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => branchDataProviderManager.getProvider(resource.resourceType));
-    const resourceGroupingManager = new ApplicationResourceGroupingManager(groupingItemFactory);
+    const resourceGroupingManager = new AzureResourceGroupingManager(groupingItemFactory);
 
     context.subscriptions.push(resourceGroupingManager);
 
-    const treeDataProvider = new ApplicationResourceTreeDataProvider(branchDataProviderManager.onDidChangeTreeData, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
+    const treeDataProvider = new AzureResourceTreeDataProvider(branchDataProviderManager.onDidChangeTreeData, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
 
     context.subscriptions.push(treeDataProvider);
 
