@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
+import { AzureResource } from '../../../api/v2/v2AzureResourcesApi';
 import { AzExtWrapper, getAzureExtensions } from '../../../AzExtWrapper';
 import { getIconPath } from '../../../utils/azureUtils';
 import { localize } from "../../../utils/localize";
@@ -14,7 +14,7 @@ import { ResourceGroupsItem } from '../ResourceGroupsItem';
 export class DefaultApplicationResourceItem implements ResourceGroupsItem {
     private readonly resourceTypeExtension: AzExtWrapper | undefined;
 
-    constructor(private readonly resource: ApplicationResource) {
+    constructor(private readonly resource: AzureResource) {
         this.resourceTypeExtension = getAzureExtensions().find(ext => ext.matchesApplicationResourceType(resource));
     }
 

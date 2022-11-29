@@ -9,12 +9,12 @@ import { callWithTelemetryAndErrorHandling, getAzExtResourceType, IActionContext
 import * as vscode from 'vscode';
 import { createResourceClient } from '../../utils/azureClients';
 import { createSubscriptionContext } from '../../utils/v2/credentialsUtils';
-import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription } from './v2AzureResourcesApi';
+import { AzureResource, AzureResourceProvider, AzureSubscription } from './v2AzureResourcesApi';
 
-export class DefaultApplicationResourceProvider implements ApplicationResourceProvider {
-    private readonly onDidChangeResourceEmitter = new vscode.EventEmitter<ApplicationResource | undefined>();
+export class DefaultApplicationResourceProvider implements AzureResourceProvider {
+    private readonly onDidChangeResourceEmitter = new vscode.EventEmitter<AzureResource | undefined>();
 
-    getResources(subscription: ApplicationSubscription): Promise<ApplicationResource[] | undefined> {
+    getResources(subscription: AzureSubscription): Promise<AzureResource[] | undefined> {
         return callWithTelemetryAndErrorHandling(
             'provideResources',
             async (context: IActionContext) => {
@@ -34,7 +34,7 @@ export class DefaultApplicationResourceProvider implements ApplicationResourcePr
 
     onDidChangeResource = this.onDidChangeResourceEmitter.event;
 
-    private fromResourceGroup(subscription: ApplicationSubscription, resourceGroup: ResourceGroup): ApplicationResource {
+    private fromResourceGroup(subscription: AzureSubscription, resourceGroup: ResourceGroup): AzureResource {
         return {
             ...resourceGroup,
             subscription,
@@ -47,7 +47,7 @@ export class DefaultApplicationResourceProvider implements ApplicationResourcePr
         };
     }
 
-    private createAppResource(subscription: ApplicationSubscription, resource: GenericResource): ApplicationResource {
+    private createAppResource(subscription: AzureSubscription, resource: GenericResource): AzureResource {
         const resourceId = nonNullProp(resource, 'id');
 
         return {

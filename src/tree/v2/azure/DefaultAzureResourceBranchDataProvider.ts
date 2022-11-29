@@ -4,15 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ApplicationResource, ApplicationResourceModel, BranchDataProvider } from '../../../api/v2/v2AzureResourcesApi';
+import { AzureResource, AzureResourceModel, BranchDataProvider } from '../../../api/v2/v2AzureResourcesApi';
 import { DefaultApplicationResourceItem } from './DefaultApplicationResourceItem';
 
-export class DefaultApplicationResourceBranchDataProvider implements BranchDataProvider<ApplicationResource, ApplicationResourceModel> {
-    getChildren(element: DefaultApplicationResourceItem): vscode.ProviderResult<ApplicationResourceModel[]> {
+export class DefaultAzureResourceBranchDataProvider implements BranchDataProvider<AzureResource, AzureResourceModel> {
+    getChildren(element: DefaultApplicationResourceItem): vscode.ProviderResult<AzureResourceModel[]> {
         return element.getChildren();
     }
 
-    getResourceItem(element: ApplicationResource): DefaultApplicationResourceItem | Thenable<DefaultApplicationResourceItem> {
+    getResourceItem(element: AzureResource): DefaultApplicationResourceItem | Thenable<DefaultApplicationResourceItem> {
         return new DefaultApplicationResourceItem(element);
     }
 

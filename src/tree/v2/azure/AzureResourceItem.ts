@@ -9,7 +9,7 @@ import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataItemOptions, BranchDataProviderItem } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
-export class ApplicationResourceItem<T extends ResourceBase> extends BranchDataProviderItem {
+export class AzureResourceItem<T extends ResourceBase> extends BranchDataProviderItem {
     constructor(
         public readonly resource: T,
         branchItem: ResourceModelBase,
@@ -33,8 +33,8 @@ export class ApplicationResourceItem<T extends ResourceBase> extends BranchDataP
     }
 }
 
-export type ResourceItemFactory<T extends ResourceBase> = (resource: T, branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, parent?: ResourceGroupsItem, options?: BranchDataItemOptions) => ApplicationResourceItem<T>;
+export type ResourceItemFactory<T extends ResourceBase> = (resource: T, branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, parent?: ResourceGroupsItem, options?: BranchDataItemOptions) => AzureResourceItem<T>;
 
 export function createResourceItemFactory<T extends ResourceBase>(itemCache: BranchDataItemCache): ResourceItemFactory<T> {
-    return (resource, branchItem, branchDataProvider, parent, options) => new ApplicationResourceItem(resource, branchItem, branchDataProvider, itemCache, parent, options);
+    return (resource, branchItem, branchDataProvider, parent, options) => new AzureResourceItem(resource, branchItem, branchDataProvider, itemCache, parent, options);
 }

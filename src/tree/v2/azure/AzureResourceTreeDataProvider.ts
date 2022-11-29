@@ -16,11 +16,11 @@ import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
-import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
+import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { GroupingItem } from './GroupingItem';
 import { SubscriptionItem } from './SubscriptionItem';
 
-export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProviderBase {
+export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase {
     private readonly groupingChangeSubscription: vscode.Disposable;
 
     private api: AzureAccountExtensionApi | undefined;
@@ -31,7 +31,7 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
         itemCache: BranchDataItemCache,
         onRefresh: vscode.Event<void>,
-        private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
+        private readonly resourceGroupingManager: AzureResourceGroupingManager,
         private readonly resourceProviderManager: ApplicationResourceProviderManager) {
         super(
             itemCache,

@@ -6,14 +6,14 @@
 import { AzExtResourceType } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ApplicationResourceProviderManager } from "../../../api/v2/ResourceProviderManagers";
-import { ApplicationSubscription } from "../../../api/v2/v2AzureResourcesApi";
+import { AzureSubscription } from "../../../api/v2/v2AzureResourcesApi";
 import { azureExtensions } from "../../../azureExtensions";
 import { showHiddenTypesSettingKey } from "../../../constants";
 import { settingUtils } from "../../../utils/settingUtils";
 import { treeUtils } from "../../../utils/treeUtils";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
-import { ApplicationResourceGroupingManager } from "./ApplicationResourceGroupingManager";
+import { AzureResourceGroupingManager } from "./AzureResourceGroupingManager";
 
 const supportedResourceTypes: AzExtResourceType[] =
     azureExtensions
@@ -23,9 +23,9 @@ const supportedResourceTypes: AzExtResourceType[] =
 export class SubscriptionItem implements ResourceGroupsItem {
     constructor(
         private readonly context: ResourceGroupsTreeContext,
-        private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
+        private readonly resourceGroupingManager: AzureResourceGroupingManager,
         private readonly resourceProviderManager: ApplicationResourceProviderManager,
-        private readonly subscription: ApplicationSubscription) {
+        private readonly subscription: AzureSubscription) {
     }
 
     public readonly id: string = `/subscriptions/${this.subscription.subscriptionId}`;
