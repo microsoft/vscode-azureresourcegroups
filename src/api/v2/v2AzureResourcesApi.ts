@@ -70,13 +70,6 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
     getChildren(element: TModel): vscode.ProviderResult<TModel[]>;
 
     /**
-     * A branch data provider need not (and should not) implement this function.
-     *
-     * @remarks While VS Code would normally call this function on a tree data provider, it is not used by the Azure Resource extension as part of a branch data provider.
-     */
-    getParent?: never;
-
-    /**
      * Called to get the provider's model element for a specific resource.
      *
      * @remarks getChildren() assumes that the provider passes a known (TModel) model item, or undefined when getting the "root" children.

@@ -26,14 +26,14 @@ export class GroupingItem implements ResourceGroupsItem {
     private description: string | undefined;
 
     constructor(
-        public readonly parent: ResourceGroupsItem,
         public readonly context: ResourceGroupsTreeContext,
         private readonly resourceItemFactory: ResourceItemFactory<ApplicationResource>,
         private readonly branchDataProviderFactory: (ApplicationResource) => ApplicationResourceBranchDataProvider<ApplicationResourceModel>,
         private readonly contextValues: string[] | undefined,
         private readonly iconPath: TreeItemIconPath | undefined,
         public readonly label: string,
-        public readonly resources: ApplicationResource[]) {
+        public readonly resources: ApplicationResource[],
+        public readonly parent?: ResourceGroupsItem) {
     }
 
     readonly id: string = `/subscriptions/${this.context.subscriptionContext.subscriptionId}/groupings/${this.label}`;
@@ -58,7 +58,7 @@ export class GroupingItem implements ResourceGroupsItem {
                     }
                 };
 
-                return this.resourceItemFactory(resource, resourceItem, branchDataProvider, options);
+                return this.resourceItemFactory(resource, resourceItem, branchDataProvider, this, options);
             }));
 
         return resourceItems;
@@ -75,6 +75,10 @@ export class GroupingItem implements ResourceGroupsItem {
         return treeItem;
     }
 
+    getParent(): vscode.ProviderResult<ResourceGroupsItem> {
+        return this.parent;
+    }
+
     async withDescription(description: string, callback: () => Promise<void>): Promise<void> {
         this.description = description;
         this.context.refresh(this);
@@ -88,8 +92,8 @@ export class GroupingItem implements ResourceGroupsItem {
     }
 }
 
-export type GroupingItemFactory = (parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[]) => GroupingItem;
+export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[], parent: ResourceGroupsItem,) => GroupingItem;
 
 export function createGroupingItemFactory(branchDataItemFactory: ResourceItemFactory<ApplicationResource>, branchDataProviderFactory: BranchDataProviderFactory): GroupingItemFactory {
-    return (parent, context, contextValues, iconPath, label, resources) => new GroupingItem(parent, context, branchDataItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources);
+    return (context, contextValues, iconPath, label, resources, parent) => new GroupingItem(context, branchDataItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources, parent);
 }

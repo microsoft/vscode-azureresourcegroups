@@ -79,6 +79,17 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
         };
     }
 
+    async getParent(): Promise<ResourceGroupsItem | undefined> {
+        if (this.branchDataProvider.getParent) {
+            const branchItem = await this.branchDataProvider.getParent(this.branchItem);
+            if (branchItem) {
+                return this.itemCache.getItemForBranchItem(branchItem);
+            }
+        }
+
+        return undefined;
+    }
+
     unwrap<T extends ResourceModelBase>(): T | undefined {
         return this.branchItem as T;
     }
