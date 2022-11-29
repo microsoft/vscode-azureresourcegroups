@@ -12,11 +12,12 @@ import { showHiddenTypesSettingKey } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../utils/localize';
 import { AzureAccountExtensionApi } from '../azure-account.api';
+import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
-import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
+import { GroupingItem } from './GroupingItem';
 import { SubscriptionItem } from './SubscriptionItem';
 
 export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProviderBase {
@@ -28,7 +29,7 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
-        itemCache: ResourceGroupsItemCache,
+        itemCache: BranchDataItemCache,
         onRefresh: vscode.Event<void>,
         private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
         private readonly resourceProviderManager: ApplicationResourceProviderManager) {
@@ -87,7 +88,6 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
                                         environment: subscription.session.environment,
                                         isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud'
                                     },
-                                    getParent: item => this.itemCache.getParentForItem(item),
                                     refresh: item => this.onDidChangeTreeDataEmitter.fire(item),
                                 },
                                 this.resourceGroupingManager,
@@ -157,6 +157,13 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
         }
 
         return undefined;
+    }
+
+    protected override isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
+        if (element instanceof GroupingItem) {
+            return element.resources.some(resource => id.startsWith(resource.id));
+        }
+        return super.isAncestorOf(element, id)
     }
 
     private async getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi | undefined> {

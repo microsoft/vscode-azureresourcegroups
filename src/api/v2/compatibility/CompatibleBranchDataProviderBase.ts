@@ -7,13 +7,15 @@ import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IFindTreeIte
 import * as vscode from 'vscode';
 import { BranchDataProvider, ResourceBase, ResourceModelBase } from "../v2AzureResourcesApi";
 
-export class CompatibleBranchDataProviderBase<TResource extends ResourceBase, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel> {
+export abstract class CompatibleBranchDataProviderBase<TResource extends ResourceBase, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel> {
     protected readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();
 
     public constructor(loadMoreCommandId: string) {
         // Using `{}` here so property assignment doesn't throw
         super({} as unknown as AzExtParentTreeItem, loadMoreCommandId);
     }
+
+    abstract getResourceItem(element: TResource): TModel | Thenable<TModel>;
 
     //#region TreeDataProvider
 
@@ -26,12 +28,11 @@ export class CompatibleBranchDataProviderBase<TResource extends ResourceBase, TM
         // Do nothing
     }
 
-    // @ts-expect-error `getParent` is not meant to be defined by `BranchDataProvider`s but is already defined by `AzExtTreeDataProvider`
     public override getParent(_treeItem: TModel): Promise<TModel> {
         throw new Error('Use the Resources extension API to do getParent');
     }
 
-    public override getChildren(treeItem: TModel & AzExtParentTreeItem): Promise<TModel[]> {
+    public override async getChildren(treeItem: TModel & AzExtParentTreeItem): Promise<TModel[]> {
         // This method is redeclared to make TypeScript happier, but it's no more than a super call with extra casts
         return super.getChildren(treeItem) as Promise<TModel[]>;
     }

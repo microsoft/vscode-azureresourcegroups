@@ -8,10 +8,11 @@ import { ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-
 import * as vscode from 'vscode';
 import { ApplicationResource, ApplicationResourceBranchDataProvider, ApplicationResourceModel, ApplicationSubscription } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
-import { BranchDataItemFactory } from '../BranchDataProviderItem';
+import { BranchDataItemOptions } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
 import { BranchDataProviderFactory } from './ApplicationResourceBranchDataProviderManager';
+import { ResourceItemFactory } from './ApplicationResourceItem';
 
 // TODO: This should be moved to the common library, for use by other extensions.
 function createPortalUrl(subscription: ApplicationSubscription, id: string, options?: OpenInPortalOptions): vscode.Uri {
@@ -26,21 +27,21 @@ export class GroupingItem implements ResourceGroupsItem {
 
     constructor(
         public readonly context: ResourceGroupsTreeContext,
-        private readonly branchDataItemFactory: BranchDataItemFactory,
+        private readonly resourceItemFactory: ResourceItemFactory<ApplicationResource>,
         private readonly branchDataProviderFactory: (ApplicationResource) => ApplicationResourceBranchDataProvider<ApplicationResourceModel>,
         private readonly contextValues: string[] | undefined,
         private readonly iconPath: TreeItemIconPath | undefined,
         public readonly label: string,
         public readonly resources: ApplicationResource[],
-        public readonly resourceType: string | undefined
-    ) {
-    }
+        public readonly resourceType: string | undefined,
+        public readonly parent?: ResourceGroupsItem
+    ) { }
 
     public get subscription(): ISubscriptionContext {
         return this.context.subscriptionContext;
     }
 
-    readonly id: string = `groupings/${this.label}`;
+    readonly id: string = `/subscriptions/${this.context.subscriptionContext.subscriptionId}/groupings/${this.label}`;
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));
@@ -49,16 +50,20 @@ export class GroupingItem implements ResourceGroupsItem {
                 const branchDataProvider = this.branchDataProviderFactory(resource);
                 const resourceItem = await branchDataProvider.getResourceItem(resource);
 
-                const options = {
+                const options: BranchDataItemOptions = {
                     contextValues: ['azureResource'],
                     defaultId: resource.id,
                     defaults: {
                         iconPath: getIconPath(resource.resourceType)
                     },
-                    portalUrl: resourceItem.portalUrl ?? createPortalUrl(resource.subscription, resource.id)
+                    portalUrl: resourceItem.portalUrl ?? createPortalUrl(resource.subscription, resource.id),
+                    viewProperties: resourceItem.viewProperties ?? {
+                        label: resource.name,
+                        data: resource.raw
+                    }
                 };
 
-                return this.branchDataItemFactory(resourceItem, branchDataProvider, options);
+                return this.resourceItemFactory(resource, resourceItem, branchDataProvider, this, options);
             }));
 
         return resourceItems;
@@ -70,8 +75,13 @@ export class GroupingItem implements ResourceGroupsItem {
         treeItem.contextValue = this.contextValues?.sort().join(';');
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
+        treeItem.id = this.id;
 
         return treeItem;
+    }
+
+    getParent(): vscode.ProviderResult<ResourceGroupsItem> {
+        return this.parent;
     }
 
     async withDescription(description: string, callback: () => Promise<void>): Promise<void> {
@@ -87,8 +97,8 @@ export class GroupingItem implements ResourceGroupsItem {
     }
 }
 
-export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[], resourceType: string | undefined) => GroupingItem;
+export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[], resourceType: string | undefined, parent: ResourceGroupsItem) => GroupingItem;
 
-export function createGroupingItemFactory(branchDataItemFactory: BranchDataItemFactory, branchDataProviderFactory: BranchDataProviderFactory): GroupingItemFactory {
-    return (context, contextValues, iconPath, label, resources, resourceType) => new GroupingItem(context, branchDataItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources, resourceType);
+export function createGroupingItemFactory(resourceItemFactory: ResourceItemFactory<ApplicationResource>, branchDataProviderFactory: BranchDataProviderFactory): GroupingItemFactory {
+    return (context, contextValues, iconPath, label, resources, resourceType, parent) => new GroupingItem(context, resourceItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources, resourceType, parent);
 }

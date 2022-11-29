@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, contextValueExperience, findByIdExperience, IActionContext, IFindTreeItemContext, isWrapper, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, contextValueExperience, IActionContext, isWrapper, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
 import { Disposable, Event, TreeItem, TreeView } from "vscode";
 import { SubscriptionTreeItem } from "../../../tree/SubscriptionTreeItem";
 import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
@@ -21,7 +21,7 @@ abstract class IntermediateCompatibleAzExtTreeDataProvider extends AzExtTreeData
 
 export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExtTreeDataProvider {
     public constructor(private readonly tdp: ResourceTreeDataProviderBase) {
-        super({} as unknown as AzExtParentTreeItem, undefined as unknown as string);
+        super({ valuesToMask: [] } as unknown as AzExtParentTreeItem, undefined as unknown as string);
     }
 
     public override getParent(treeItem: AzExtTreeItem): Promise<AzExtTreeItem | undefined> {
@@ -42,12 +42,8 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
         return this.tdp.getChildren(treeItem);
     }
 
-    public override async findTreeItem<T>(fullId: string, context: IFindTreeItemContext): Promise<T | undefined> {
-        // Special handling for subscription tree item
-        // Use the new finder experience
-        // Unbox the item at the end
-
-        const result = await findByIdExperience(context, this.tdp, fullId);
+    public override async findTreeItem<T>(fullId: string): Promise<T | undefined> {
+        const result = await this.tdp.findItemById(fullId);
         return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
     }
 

@@ -3,17 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { isAzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
-import { ApplicationResource, ApplicationResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
+import { ApplicationResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '../../api/v2/v2AzureResourcesApi';
+import { BranchDataItemCache } from './BranchDataItemCache';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
-import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
 export type BranchDataItemOptions = {
     contextValues?: string[];
     defaultId?: string;
     defaults?: vscode.TreeItem;
     portalUrl?: vscode.Uri;
+    viewProperties?: ViewPropertiesModel;
 };
 
 /**
@@ -39,18 +41,21 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
-        private readonly itemCache: ResourceGroupsItemCache,
+        private readonly itemCache: BranchDataItemCache,
         private readonly options?: BranchDataItemOptions) {
         itemCache.addBranchItem(this.branchItem, this);
+
+        if (isAzExtTreeItem(this.branchItem)) {
+            this.id = this.branchItem.fullId;
+        } else {
+            this.id = this.branchItem.id ?? this?.options?.defaultId ?? randomUUID();
+        }
     }
 
-    readonly id: string = this.branchItem.id ?? this?.options?.defaultId ?? randomUUID();
+    public readonly id: string;
 
     readonly portalUrl: vscode.Uri | undefined = this.options?.portalUrl;
-
-    get resource(): ApplicationResource {
-        return this.branchItem['resource'] as ApplicationResource;
-    }
+    readonly viewProperties?: ViewPropertiesModel = this.options?.viewProperties;
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const children = await this.branchDataProvider.getChildren(this.branchItem);
@@ -61,13 +66,18 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
         //       having to create specialized item types for application and workspace resources and their
         //       requisite factories.
 
-        return children?.map(child => factory(child, this.branchDataProvider, { portalUrl: (child as ApplicationResourceModel).portalUrl }));
+        return children?.map(child =>
+            factory(child, this.branchDataProvider, {
+                portalUrl: (child as ApplicationResourceModel).portalUrl,
+                viewProperties: (child as ApplicationResourceModel).viewProperties,
+            })
+        );
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = await this.branchDataProvider.getTreeItem(this.branchItem);
 
-        const contextValue = appendContextValues(treeItem.contextValue, this.options?.contextValues, this.portalUrl ? ['hasPortalUrl'] : undefined);
+        const contextValue = appendContextValues(treeItem.contextValue, this.options?.contextValues, this.getExtraContextValues());
 
         return {
             ...this.options?.defaults ?? {},
@@ -76,13 +86,35 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
         };
     }
 
+    async getParent(): Promise<ResourceGroupsItem | undefined> {
+        if (this.branchDataProvider.getParent) {
+            const branchItem = await this.branchDataProvider.getParent(this.branchItem);
+            if (branchItem) {
+                return this.itemCache.getItemForBranchItem(branchItem);
+            }
+        }
+
+        return undefined;
+    }
+
     unwrap<T extends ResourceModelBase>(): T | undefined {
         return this.branchItem as T;
+    }
+
+    private getExtraContextValues(): string[] {
+        const extraValues: string[] = [];
+        if (this.portalUrl) {
+            extraValues.push('hasPortalUrl');
+        }
+        if (this.viewProperties) {
+            extraValues.push('hasProperties');
+        }
+        return extraValues;
     }
 }
 
 export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataProviderItem;
 
-export function createBranchDataItemFactory(itemCache: ResourceGroupsItemCache): BranchDataItemFactory {
+export function createBranchDataItemFactory(itemCache: BranchDataItemCache): BranchDataItemFactory {
     return (branchItem, branchDataProvider, options) => new BranchDataProviderItem(branchItem, branchDataProvider, itemCache, options);
 }

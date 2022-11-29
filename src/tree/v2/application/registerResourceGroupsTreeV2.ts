@@ -5,11 +5,12 @@
 
 import * as vscode from 'vscode';
 import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
-import { createBranchDataItemFactory } from '../BranchDataProviderItem';
-import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
+import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
+import { BranchDataItemCache } from '../BranchDataItemCache';
 import { localize } from './../../../utils/localize';
 import { ApplicationResourceBranchDataProviderManager } from './ApplicationResourceBranchDataProviderManager';
 import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
+import { createResourceItemFactory } from './ApplicationResourceItem';
 import { ApplicationResourceTreeDataProvider } from './ApplicationResourceTreeDataProvider';
 import { createGroupingItemFactory } from './GroupingItem';
 
@@ -26,8 +27,8 @@ interface RegisterApplicationTreeResult {
 export function registerApplicationTree(context: vscode.ExtensionContext, options: RegisterApplicationTreeOptions): RegisterApplicationTreeResult {
     const { branchDataProviderManager, applicationResourceProviderManager: resourceProviderManager, refreshEvent } = options;
 
-    const itemCache = new ResourceGroupsItemCache();
-    const branchDataItemFactory = createBranchDataItemFactory(itemCache);
+    const itemCache = new BranchDataItemCache();
+    const branchDataItemFactory = createResourceItemFactory<ApplicationResource>(itemCache);
     const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => branchDataProviderManager.getProvider(resource.resourceType));
     const resourceGroupingManager = new ApplicationResourceGroupingManager(groupingItemFactory);
 

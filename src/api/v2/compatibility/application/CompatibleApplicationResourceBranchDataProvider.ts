@@ -27,6 +27,13 @@ export class CompatibleApplicationResourceBranchDataProvider<TResource extends A
         const subscriptionContext: ISubscriptionContext = createSubscriptionContext(element.subscription);
 
         const resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
-        return CompatibleResolvedApplicationResourceTreeItem.Create(element, resolved!, subscriptionContext, this, element) as unknown as TModel;
+        const result = CompatibleResolvedApplicationResourceTreeItem.Create(element, resolved!, subscriptionContext, this, element) as unknown as TModel;
+        Object.defineProperty(result, 'fullId', {
+            get: () => {
+                return element.id;
+            }
+        });
+
+        return result;
     }
 }

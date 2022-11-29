@@ -71,13 +71,6 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
     getChildren(element: TModel): vscode.ProviderResult<TModel[]>;
 
     /**
-     * A branch data provider need not (and should not) implement this function.
-     *
-     * @remarks While VS Code would normally call this function on a tree data provider, it is not used by the Azure Resource extension as part of a branch data provider.
-     */
-    getParent?: never;
-
-    /**
      * Called to get the provider's model element for a specific resource.
      *
      * @remarks getChildren() assumes that the provider passes a known (TModel) model item, or undefined when getting the "root" children.
@@ -189,6 +182,23 @@ export interface ApplicationResource extends ResourceBase {
     readonly tags?: {
         [propertyName: string]: string;
     };
+
+    /**
+     * A copy of the raw resource.
+     */
+    readonly raw: {};
+}
+
+export interface ViewPropertiesModel {
+    /**
+     * File name displayed in VS Code.
+     */
+    label: string;
+
+    /**
+     * Raw data associated with the resource to populate the properties file.
+     */
+    data: {};
 }
 
 /**
@@ -206,6 +216,11 @@ export interface ApplicationResourceModel extends ResourceModelBase {
      * The URL of the area of Azure portal related to this item.
      */
     readonly portalUrl?: vscode.Uri;
+
+    /**
+     * Define to enable the "View Properties" command.
+     */
+    readonly viewProperties?: ViewPropertiesModel;
 }
 
 /**
@@ -276,7 +291,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
      *
      * @param activity The activity information to show.
      */
-     registerActivity(activity: Activity): Promise<void>;
+    registerActivity(activity: Activity): Promise<void>;
 
     /**
      * Registers a provider of application resources.
