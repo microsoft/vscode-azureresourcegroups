@@ -6,8 +6,8 @@
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { ApplicationResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '../../api/v2/v2AzureResourcesApi';
+import { BranchDataItemCache } from './BranchDataItemCache';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
-import { ResourceGroupsItemCache } from './ResourceGroupsItemCache';
 
 export type BranchDataItemOptions = {
     contextValues?: string[];
@@ -40,7 +40,7 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
-        private readonly itemCache: ResourceGroupsItemCache,
+        private readonly itemCache: BranchDataItemCache,
         private readonly options?: BranchDataItemOptions) {
         itemCache.addBranchItem(this.branchItem, this);
     }
@@ -97,6 +97,6 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
 
 export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataProviderItem;
 
-export function createBranchDataItemFactory(itemCache: ResourceGroupsItemCache): BranchDataItemFactory {
+export function createBranchDataItemFactory(itemCache: BranchDataItemCache): BranchDataItemFactory {
     return (branchItem, branchDataProvider, options) => new BranchDataProviderItem(branchItem, branchDataProvider, itemCache, options);
 }

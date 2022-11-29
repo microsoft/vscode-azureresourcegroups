@@ -26,6 +26,7 @@ export class GroupingItem implements ResourceGroupsItem {
     private description: string | undefined;
 
     constructor(
+        public readonly parent: ResourceGroupsItem,
         public readonly context: ResourceGroupsTreeContext,
         private readonly resourceItemFactory: ResourceItemFactory<ApplicationResource>,
         private readonly branchDataProviderFactory: (ApplicationResource) => ApplicationResourceBranchDataProvider<ApplicationResourceModel>,
@@ -35,7 +36,7 @@ export class GroupingItem implements ResourceGroupsItem {
         public readonly resources: ApplicationResource[]) {
     }
 
-    readonly id: string = `groupings/${this.label}`;
+    readonly id: string = `/subscriptions/${this.context.subscriptionContext.subscriptionId}/groupings/${this.label}`;
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));
@@ -69,6 +70,7 @@ export class GroupingItem implements ResourceGroupsItem {
         treeItem.contextValue = this.contextValues?.join(' ');
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
+        treeItem.id = this.id;
 
         return treeItem;
     }
@@ -86,8 +88,8 @@ export class GroupingItem implements ResourceGroupsItem {
     }
 }
 
-export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[]) => GroupingItem;
+export type GroupingItemFactory = (parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[]) => GroupingItem;
 
 export function createGroupingItemFactory(branchDataItemFactory: ResourceItemFactory<ApplicationResource>, branchDataProviderFactory: BranchDataProviderFactory): GroupingItemFactory {
-    return (context, contextValues, iconPath, label, resources) => new GroupingItem(context, branchDataItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources);
+    return (parent, context, contextValues, iconPath, label, resources) => new GroupingItem(parent, context, branchDataItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources);
 }
