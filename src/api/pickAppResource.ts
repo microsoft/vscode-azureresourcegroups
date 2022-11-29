@@ -3,12 +3,12 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType, AzExtTreeItem, compatibilityPickAppResourceExperience, ContextValueFilter, getAzExtResourceType, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
+import { AzExtResourceType, AzExtTreeItem, ContextValueFilter, getAzExtResourceType, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
 import { PickAppResourceOptions } from "@microsoft/vscode-azext-utils/hostapi";
 import { ext } from "../extensionVariables";
 
 export async function pickAppResource<T extends AzExtTreeItem>(context: ITreeItemPickerContext, options?: PickAppResourceOptions): Promise<T> {
-    return await compatibilityPickAppResourceExperience<T>(context, ext.v2.api.applicationResourceTreeDataProvider, {
+    return await PickTreeItemWithCompatibility.resource<T>(context, ext.v2.api.applicationResourceTreeDataProvider, {
         resourceTypes: convertAppResourceFilterToAzExtResourceType(options?.filter),
         childItemFilter: convertExpectedChildContextValueToContextValueFilter(options?.expectedChildContextValue)
     });

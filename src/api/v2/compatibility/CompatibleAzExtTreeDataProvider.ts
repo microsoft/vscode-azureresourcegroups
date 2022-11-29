@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, compatibilitySubscriptionExperience, contextValueExperience, findByIdExperience, IActionContext, IFindTreeItemContext, isWrapper, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, contextValueExperience, findByIdExperience, IActionContext, IFindTreeItemContext, isWrapper, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
 import { Disposable, Event, TreeItem, TreeView } from "vscode";
 import { SubscriptionTreeItem } from "../../../tree/SubscriptionTreeItem";
 import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
@@ -54,7 +54,7 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
     public override showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext & { canPickMany: true }, startingTreeItem?: AzExtTreeItem): Promise<T[]>;
     public override async showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext, _startingTreeItem?: AzExtTreeItem): Promise<T> {
         if (expectedContextValues === SubscriptionTreeItem.contextValue) {
-            const result = await compatibilitySubscriptionExperience(context, this.tdp);
+            const result = await PickTreeItemWithCompatibility.subscription(context, this.tdp);
             const subscription = isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
             return { subscription } as unknown as T;
         }
