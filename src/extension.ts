@@ -36,8 +36,8 @@ import { GroupTreeItemBase } from './tree/GroupTreeItemBase';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { AzureResourceBranchDataProviderManager } from './tree/v2/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/v2/azure/DefaultAzureResourceBranchDataProvider';
-import { registerResourceGroupsTreeV2 } from './tree/v2/azure/registerResourceGroupsTreeV2';
-import { registerWorkspaceTreeV2 } from './tree/v2/workspace/registerWorkspaceTreeV2';
+import { registerAzureTree } from './tree/v2/azure/registerAzureTree';
+import { registerWorkspaceTree } from './tree/v2/workspace/registerWorkspaceTree';
 import { WorkspaceDefaultBranchDataProvider } from './tree/v2/workspace/WorkspaceDefaultBranchDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from './tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
@@ -116,38 +116,38 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     const extensionManager = new ResourceGroupsExtensionManager()
 
-    const branchDataProviderManager = new AzureResourceBranchDataProviderManager(
+    const azureResourceBranchDataProviderManager = new AzureResourceBranchDataProviderManager(
         new DefaultAzureResourceBranchDataProvider(),
         type => void extensionManager.activateApplicationResourceBranchDataProvider(type));
 
-    context.subscriptions.push(branchDataProviderManager);
+    context.subscriptions.push(azureResourceBranchDataProviderManager);
 
-    const applicationResourceProviderManager = new AzureResourceProviderManager(() => extensionManager.activateApplicationResourceProviders());
+    const azureResourceProviderManager = new AzureResourceProviderManager(() => extensionManager.activateApplicationResourceProviders());
 
-    applicationResourceProviderManager.addResourceProvider(new DefaultApplicationResourceProvider());
+    azureResourceProviderManager.addResourceProvider(new DefaultApplicationResourceProvider());
 
     const workspaceResourceBranchDataProviderManager = new WorkspaceResourceBranchDataProviderManager(
         new WorkspaceDefaultBranchDataProvider(),
         type => void extensionManager.activateWorkspaceResourceBranchDataProvider(type));
     const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
 
-    registerResourceGroupsTreeV2(
-        context,
-        branchDataProviderManager,
-        refreshEventEmitter.event,
-        applicationResourceProviderManager);
+    registerAzureTree(context, {
+        azureResourceProviderManager,
+        azureResourceBranchDataProviderManager,
+        refreshEvent: refreshEventEmitter.event,
+    });
 
-    registerWorkspaceTreeV2(
+    registerWorkspaceTree(context, {
+        workspaceResourceProviderManager,
         workspaceResourceBranchDataProviderManager,
-        context,
-        refreshWorkspaceEmitter.event,
-        workspaceResourceProviderManager);
+        refreshEvent: refreshEventEmitter.event,
+    });
 
     const v2ApiFactory = () => {
         if (v2Api === undefined) {
             v2Api = new V2AzureResourcesApiImplementation(
-                applicationResourceProviderManager,
-                branchDataProviderManager,
+                azureResourceProviderManager,
+                azureResourceBranchDataProviderManager,
                 workspaceResourceProviderManager,
                 workspaceResourceBranchDataProviderManager);
         }
