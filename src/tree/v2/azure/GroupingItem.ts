@@ -97,7 +97,7 @@ export class GroupingItem implements ResourceGroupsItem {
     }
 }
 
-export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: ApplicationResource[], resourceType: string | undefined, parent: ResourceGroupsItem) => GroupingItem;
+export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: AzureResource[], resourceType: string | undefined, parent: ResourceGroupsItem) => GroupingItem;
 
 export function createGroupingItemFactory(resourceItemFactory: ResourceItemFactory<AzureResource>, branchDataProviderFactory: BranchDataProviderFactory): GroupingItemFactory {
     return (context, contextValues, iconPath, label, resources, resourceType, parent) => new GroupingItem(context, resourceItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources, resourceType, parent);

@@ -8,7 +8,7 @@ import type { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/host
 import { TreeItemCollapsibleState } from "vscode";
 import { createResolvableProxy } from "../../../../tree/AppResourceTreeItem";
 import { getIconPath } from "../../../../utils/azureUtils";
-import { ApplicationResource } from "../../v2AzureResourcesApi";
+import { AzureResource } from "../../v2AzureResourcesApi";
 
 /**
  * Must immitate the behavior of AppResourceTreeItem
@@ -28,7 +28,7 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
     public valuesToMask: string[] = [];
 
     public readonly resolveResult: ResolvedAppResourceBase;
-    public data: ApplicationResource;
+    public data: AzureResource;
     public readonly azExtResourceType: AzExtResourceType;
 
     public readonly cTime: number = Date.now();
@@ -55,14 +55,14 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
         return this.resolveResult?.initialCollapsibleState ?? !!this.resolveResult?.loadMoreChildrenImpl ? TreeItemCollapsibleState.Collapsed : TreeItemCollapsibleState.None;
     }
 
-    public static Create(resource: ApplicationResource, resolveResult: ResolvedAppResourceBase, subscription: ISubscriptionContext, treeDataProvider: AzExtTreeDataProvider, applicationResource: ApplicationResource): CompatibleResolvedApplicationResourceTreeItem {
-        const resolvable: CompatibleResolvedApplicationResourceTreeItem = new CompatibleResolvedApplicationResourceTreeItem(resource, resolveResult, subscription, treeDataProvider, applicationResource);
+    public static Create(resource: AzureResource, resolveResult: ResolvedAppResourceBase, subscription: ISubscriptionContext, treeDataProvider: AzExtTreeDataProvider, azureResource: AzureResource): CompatibleResolvedApplicationResourceTreeItem {
+        const resolvable: CompatibleResolvedApplicationResourceTreeItem = new CompatibleResolvedApplicationResourceTreeItem(resource, resolveResult, subscription, treeDataProvider, azureResource);
         return createResolvableProxy(resolvable);
     }
 
-    public readonly resource: ApplicationResource;
+    public readonly resource: AzureResource;
 
-    private constructor(resource: ApplicationResource, resolved: ResolvedAppResourceBase, __subscription: ISubscriptionContext, __treeDataProvider: AzExtTreeDataProvider, applicationResource: ApplicationResource) {
+    private constructor(resource: AzureResource, resolved: ResolvedAppResourceBase, __subscription: ISubscriptionContext, __treeDataProvider: AzExtTreeDataProvider, azureResource: AzureResource) {
         super(
             (<Partial<AzExtParentTreeItem>>{
                 treeDataProvider: __treeDataProvider,
@@ -75,14 +75,14 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
             }) as unknown as AzExtParentTreeItem
         );
 
-        this.resource = applicationResource;
+        this.resource = azureResource;
         this.resolveResult = resolved;
         this.data = resource;
         this.tags = resource.tags;
 
         this.contextValues.add(CompatibleResolvedApplicationResourceTreeItem.contextValue);
-        if (applicationResource.resourceType) {
-            this.contextValues.add(applicationResource.resourceType);
+        if (azureResource.resourceType) {
+            this.contextValues.add(azureResource.resourceType);
         }
         resolved.contextValuesToAdd?.forEach((value: string) => this.contextValues.add(value));
     }

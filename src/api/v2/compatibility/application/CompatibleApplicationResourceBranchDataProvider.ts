@@ -6,14 +6,14 @@
 import { AzExtTreeItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import type { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import { createSubscriptionContext } from '../../../../utils/v2/credentialsUtils';
-import type { ApplicationResource, ResourceModelBase } from '../../v2AzureResourcesApi';
+import type { AzureResource, ResourceModelBase } from '../../v2AzureResourcesApi';
 import { CompatibleBranchDataProviderBase } from '../CompatibleBranchDataProviderBase';
 import { CompatibleResolvedApplicationResourceTreeItem } from './CompatibleApplicationResourceTreeItem';
 
 /**
  * Provides compatibility between an `AppResourceResolver` (v1) and a `BranchDataProvider` (v2)
  */
-export class CompatibleApplicationResourceBranchDataProvider<TResource extends ApplicationResource, TModel extends AzExtTreeItem & ResourceModelBase> extends CompatibleBranchDataProviderBase<TResource, TModel> {
+export class CompatibleApplicationResourceBranchDataProvider<TResource extends AzureResource, TModel extends AzExtTreeItem & ResourceModelBase> extends CompatibleBranchDataProviderBase<TResource, TModel> {
     public constructor(private readonly resolver: AppResourceResolver, loadMoreCommandId: string) {
         super(loadMoreCommandId);
     }
