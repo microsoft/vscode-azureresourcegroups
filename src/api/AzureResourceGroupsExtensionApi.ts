@@ -8,13 +8,13 @@ import { Activity, AppResourceResolver, AzureHostExtensionApi, AzureResourceGrou
 import { Disposable, TreeView } from 'vscode';
 
 export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensionApi, AzureResourceGroupsExtensionApi {
-    public static apiVersion: '0.0.1' = '0.0.1';
+    public static apiVersion = '0.0.1';
 
     #appResourceTree: AzExtTreeDataProvider;
-    #appResourceTreeView: TreeView<unknown>;
+    #appResourceTreeView: TreeView<AzExtTreeItem>;
     #workspaceResourceTree: AzExtTreeDataProvider;
-    #workspaceResourceTreeView: TreeView<unknown>;
-    #apiVersion: '0.0.1';
+    #workspaceResourceTreeView: TreeView<AzExtTreeItem>;
+    #apiVersion: string;
     #revealTreeItem: (resourceId: string) => Promise<void>;
     #registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
     #registerWorkspaceResourceProvider: (id: string, resolver: WorkspaceResourceProvider) => Disposable;
@@ -41,7 +41,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         return this.#appResourceTree;
     }
 
-    public get appResourceTreeView(): TreeView<unknown> {
+    public get appResourceTreeView(): TreeView<AzExtTreeItem> {
         return this.#appResourceTreeView;
     }
 
@@ -49,11 +49,11 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         return this.#workspaceResourceTree;
     }
 
-    public get workspaceResourceTreeView(): TreeView<unknown> {
+    public get workspaceResourceTreeView(): TreeView<AzExtTreeItem> {
         return this.#workspaceResourceTreeView;
     }
 
-    public get apiVersion(): '0.0.1' {
+    public get apiVersion(): string {
         return this.#apiVersion;
     }
 
@@ -83,7 +83,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         return this.appResourceTree;
     }
 
-    public get treeView(): TreeView<unknown> {
+    public get treeView(): TreeView<AzExtTreeItem> {
         return this.appResourceTreeView;
     }
 

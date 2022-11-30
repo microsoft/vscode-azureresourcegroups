@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, contextValueExperience, IActionContext, isWrapper, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, isWrapper, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
 import { Disposable, Event, TreeItem, TreeView } from "vscode";
-import { SubscriptionTreeItem } from "../../../tree/SubscriptionTreeItem";
 import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
 import { ResourceTreeDataProviderBase } from "../../../tree/v2/ResourceTreeDataProviderBase";
 
@@ -48,20 +47,8 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
     }
 
     public override showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext & { canPickMany: true }, startingTreeItem?: AzExtTreeItem): Promise<T[]>;
-    public override async showTreeItemPicker<T>(expectedContextValues: string | RegExp | (string | RegExp)[], context: ITreeItemPickerContext, _startingTreeItem?: AzExtTreeItem): Promise<T> {
-        if (expectedContextValues === SubscriptionTreeItem.contextValue) {
-            const result = await PickTreeItemWithCompatibility.subscription(context, this.tdp);
-            const subscription = isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
-            return { subscription } as unknown as T;
-        }
-
-        // TODO: support startingTreeItem
-
-        const result = await contextValueExperience(context, this.tdp, {
-            include: expectedContextValues,
-        });
-
-        return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
+    public override async showTreeItemPicker<T>(_expectedContextValues: string | RegExp | (string | RegExp)[], _context: ITreeItemPickerContext, _startingTreeItem?: AzExtTreeItem): Promise<T> {
+        throw new Error('TODO: Implement using new picker approach');
     }
 
     public override refresh(_context: IActionContext, treeItem?: AzExtTreeItem | undefined): Promise<void> {

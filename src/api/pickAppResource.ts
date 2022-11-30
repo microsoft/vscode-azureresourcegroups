@@ -3,43 +3,18 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType, AzExtTreeItem, ContextValueFilter, getAzExtResourceType, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
+import { AzExtTreeItem, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
 import { PickAppResourceOptions } from "@microsoft/vscode-azext-utils/hostapi";
 import { ext } from "../extensionVariables";
+import { SubscriptionTreeItem } from "../tree/SubscriptionTreeItem";
 
 export async function pickAppResource<T extends AzExtTreeItem>(context: ITreeItemPickerContext, options?: PickAppResourceOptions): Promise<T> {
-    return await PickTreeItemWithCompatibility.resource<T>(context, ext.v2.api.applicationResourceTreeDataProvider, {
-        resourceTypes: convertAppResourceFilterToAzExtResourceType(options?.filter),
-        childItemFilter: convertExpectedChildContextValueToContextValueFilter(options?.expectedChildContextValue)
-    });
-}
+    const subscription: SubscriptionTreeItem = await ext.appResourceTree.showTreeItemPicker(SubscriptionTreeItem.contextValue, context);
+    const appResource = await subscription.pickAppResource(context, options);
 
-function convertExpectedChildContextValueToContextValueFilter(expectedChildContextValue?: PickAppResourceOptions['expectedChildContextValue']): ContextValueFilter | undefined {
-    return expectedChildContextValue ? { include: expectedChildContextValue } : undefined
-}
-
-function convertAppResourceFilterToAzExtResourceType(filter?: PickAppResourceOptions['filter']): AzExtResourceType[] | undefined {
-    if (!filter) {
-        return undefined;
+    if (options?.expectedChildContextValue) {
+        return ext.appResourceTree.showTreeItemPicker(options.expectedChildContextValue, context, appResource);
+    } else {
+        return appResource as unknown as T;
     }
-
-    filter = Array.isArray(filter) ? filter : [filter];
-
-    return filterMap(filter, getAzExtResourceType);
-}
-
-function filterMap<T, TMapped>(
-    source: T[],
-    predicateMapper: (item: T, index: number) => TMapped | null | undefined,
-): TMapped[] {
-    let index = 0;
-    return source.reduce<TMapped[]>((accumulator, current) => {
-        const mapped = predicateMapper(current, index++);
-        // handles null or undefined
-        // eslint-disable-next-line eqeqeq
-        if (mapped != null) {
-            accumulator.push(mapped);
-        }
-        return accumulator;
-    }, []);
 }
