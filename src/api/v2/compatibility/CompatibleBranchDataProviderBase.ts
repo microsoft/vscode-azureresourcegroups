@@ -7,7 +7,7 @@ import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IFindTreeIte
 import * as vscode from 'vscode';
 import { BranchDataProvider, ResourceBase, ResourceModelBase } from "../v2AzureResourcesApi";
 
-export abstract class CompatibleBranchDataProviderBase<TResource extends ResourceBase, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel> {
+export abstract class CompatibleBranchDataProviderBase<TResource extends ResourceBase, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel>, vscode.Disposable {
     protected readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();
 
     public constructor(loadMoreCommandId: string) {
@@ -69,4 +69,9 @@ export abstract class CompatibleBranchDataProviderBase<TResource extends Resourc
     }
 
     //#endregion AzExtTreeDataProvider
+
+    public dispose(): void {
+        super.dispose();
+        this.overrideOnDidChangeTreeDataEmitter.dispose();
+    }
 }
