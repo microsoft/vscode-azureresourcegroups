@@ -15,38 +15,31 @@ import { AzureResourceTreeDataProvider } from './AzureResourceTreeDataProvider';
 import { createGroupingItemFactory } from './GroupingItem';
 
 interface RegisterApplicationTreeOptions {
-    branchDataProviderManager: AzureResourceBranchDataProviderManager,
-    resourceProviderManager: AzureResourceProviderManager,
+    azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
+    azureResourceProviderManager: AzureResourceProviderManager,
     refreshEvent: vscode.Event<void>,
 }
 
-interface RegisterApplicationTreeResult {
-    azureResourceTreeDataProvider: AzureResourceTreeDataProvider;
-}
-
-export function registerAzureTree(context: vscode.ExtensionContext, options: RegisterApplicationTreeOptions): RegisterApplicationTreeResult {
-    const { branchDataProviderManager, resourceProviderManager: resourceProviderManager, refreshEvent } = options;
+export function registerAzureTree(context: vscode.ExtensionContext, options: RegisterApplicationTreeOptions): void {
+    const { azureResourceBranchDataProviderManager, azureResourceProviderManager: resourceProviderManager, refreshEvent } = options;
 
     const itemCache = new BranchDataItemCache();
     const branchDataItemFactory = createResourceItemFactory<AzureResource>(itemCache);
-    const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => branchDataProviderManager.getProvider(resource.resourceType));
+    const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => azureResourceBranchDataProviderManager.getProvider(resource.resourceType));
 
     const resourceGroupingManager = new AzureResourceGroupingManager(groupingItemFactory);
     context.subscriptions.push(resourceGroupingManager);
 
-    const azureResourceTreeDataProvider = new AzureResourceTreeDataProvider(branchDataProviderManager.onDidChangeTreeData, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
+    const azureResourceTreeDataProvider =
+        new AzureResourceTreeDataProvider(azureResourceBranchDataProviderManager.onDidChangeTreeData, itemCache, refreshEvent, resourceGroupingManager, resourceProviderManager);
     context.subscriptions.push(azureResourceTreeDataProvider);
 
-    const treeView = vscode.window.createTreeView(
-        'azureResourceGroups',
-        {
-            canSelectMany: true,
-            showCollapseAll: true,
-            treeDataProvider: azureResourceTreeDataProvider
-        });
+    const treeView = vscode.window.createTreeView('azureResourceGroups', {
+        canSelectMany: true,
+        showCollapseAll: true,
+        treeDataProvider: azureResourceTreeDataProvider,
+    });
     context.subscriptions.push(treeView);
 
     treeView.description = localize('remote', 'Remote');
-
-    return { azureResourceTreeDataProvider };
 }
