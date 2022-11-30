@@ -5,7 +5,7 @@
 
 import { AzExtResourceType, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ApplicationResource } from '../../../api/v2/v2AzureResourcesApi';
+import { AzureResource } from '../../../api/v2/v2AzureResourcesApi';
 import { azureExtensions } from '../../../azureExtensions';
 import { GroupBySettings } from '../../../commands/explorer/groupBy';
 import { ext } from '../../../extensionVariables';
@@ -19,7 +19,7 @@ import { GroupingItem, GroupingItemFactory } from './GroupingItem';
 
 const unknownLabel = localize('unknown', 'Unknown');
 
-export class ApplicationResourceGroupingManager extends vscode.Disposable {
+export class AzureResourceGroupingManager extends vscode.Disposable {
     private readonly onDidChangeGroupingEmitter = new vscode.EventEmitter<void>();
     private readonly configSubscription: vscode.Disposable;
 
@@ -42,7 +42,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         return this.onDidChangeGroupingEmitter.event;
     }
 
-    groupResources(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: ApplicationResource[]): GroupingItem[] {
+    groupResources(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[]): GroupingItem[] {
         const groupBy = settingUtils.getWorkspaceSetting<string>('groupBy');
 
         if (groupBy?.startsWith('armTag')) {
@@ -67,7 +67,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         }
     }
 
-    private groupBy(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: ApplicationResource[], keySelector: (resource: ApplicationResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: ApplicationResource[] }, contextValues?: string[], resourceTypeSelector?: (key: string) => string | undefined): GroupingItem[] {
+    private groupBy(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[], keySelector: (resource: AzureResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: AzureResource[] }, contextValues?: string[], resourceTypeSelector?: (key: string) => string | undefined): GroupingItem[] {
         initialGrouping = initialGrouping ?? {};
 
         const map = resources.reduce(
@@ -97,7 +97,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         });
     }
 
-    private groupByArmTag(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: ApplicationResource[], tag: string): GroupingItem[] {
+    private groupByArmTag(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[], tag: string): GroupingItem[] {
         const ungroupedKey = 'ungrouped';
         return this.groupBy(
             parent,
@@ -108,7 +108,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             key => new vscode.ThemeIcon(key !== ungroupedKey ? 'tag' : 'json'));
     }
 
-    private groupByLocation(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: ApplicationResource[]): GroupingItem[] {
+    private groupByLocation(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[]): GroupingItem[] {
         return this.groupBy(
             parent,
             context,
@@ -118,13 +118,13 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
             () => new vscode.ThemeIcon('globe'));
     }
 
-    private groupByResourceGroup(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: ApplicationResource[]): GroupingItem[] {
-        const resourceGroups: ApplicationResource[] = [];
-        const nonResourceGroups: ApplicationResource[] = [];
+    private groupByResourceGroup(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[]): GroupingItem[] {
+        const resourceGroups: AzureResource[] = [];
+        const nonResourceGroups: AzureResource[] = [];
 
         resources.forEach(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' ? resourceGroups.push(resource) : nonResourceGroups.push(resource));
 
-        const keySelector: (resource: ApplicationResource) => string = resource => resource.resourceGroup?.toLowerCase() ?? unknownLabel; // TODO: Is resource group ever undefined? Should resource group be normalized on creation?
+        const keySelector: (resource: AzureResource) => string = resource => resource.resourceGroup?.toLowerCase() ?? unknownLabel; // TODO: Is resource group ever undefined? Should resource group be normalized on creation?
 
         const initialGrouping = resourceGroups.reduce(
             (previous, next) => {
@@ -147,7 +147,7 @@ export class ApplicationResourceGroupingManager extends vscode.Disposable {
         return groupedResources;
     }
 
-    private groupByResourceType(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: ApplicationResource[]): GroupingItem[] {
+    private groupByResourceType(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[]): GroupingItem[] {
         const initialGrouping = {};
 
         // Pre-populate the initial grouping with the supported resource types...

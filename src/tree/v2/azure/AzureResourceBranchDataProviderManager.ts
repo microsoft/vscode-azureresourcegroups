@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType } from "@microsoft/vscode-azext-utils";
-import { ApplicationResource, BranchDataProvider, ResourceModelBase } from "../../../api/v2/v2AzureResourcesApi";
+import { AzureResource, BranchDataProvider, ResourceModelBase } from "../../../api/v2/v2AzureResourcesApi";
 import { ResourceBranchDataProviderManagerBase } from '../ResourceBranchDataProviderManagerBase';
 
-export class ApplicationResourceBranchDataProviderManager extends ResourceBranchDataProviderManagerBase<AzExtResourceType, BranchDataProvider<ApplicationResource, ResourceModelBase>>{
+export class AzureResourceBranchDataProviderManager extends ResourceBranchDataProviderManagerBase<AzExtResourceType, BranchDataProvider<AzureResource, ResourceModelBase>>{
     constructor(
-        defaultProvider: BranchDataProvider<ApplicationResource, ResourceModelBase>,
+        defaultProvider: BranchDataProvider<AzureResource, ResourceModelBase>,
         extensionActivator: (type: AzExtResourceType) => void
     ) {
         super(
@@ -19,5 +19,5 @@ export class ApplicationResourceBranchDataProviderManager extends ResourceBranch
     }
 }
 
-export type BranchDataProviderFactory = (resource: ApplicationResource) => BranchDataProvider<ApplicationResource, ResourceModelBase>;
+export type BranchDataProviderFactory = (resource: AzureResource) => BranchDataProvider<AzureResource, ResourceModelBase>;
 

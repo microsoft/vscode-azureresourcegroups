@@ -10,7 +10,7 @@ import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceB
 import { WorkspaceResourceTreeDataProvider } from './WorkspaceResourceTreeDataProvider';
 
 interface RegisterWorkspaceTreeOptions {
-    branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
+    workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
     refreshEvent: vscode.Event<void>,
     workspaceResourceProviderManager: WorkspaceResourceProviderManager
 }
@@ -20,28 +20,20 @@ interface RegisterWorkspaceTreeResult {
 }
 
 export function registerWorkspaceTree(context: vscode.ExtensionContext, options: RegisterWorkspaceTreeOptions): RegisterWorkspaceTreeResult {
-    const { branchDataProviderManager, refreshEvent, workspaceResourceProviderManager } = options;
+    const { workspaceResourceBranchDataProviderManager, workspaceResourceProviderManager, refreshEvent } = options;
 
-    const workspaceResourceTreeDataProvider = new WorkspaceResourceTreeDataProvider(
-        branchDataProviderManager,
-        refreshEvent,
-        workspaceResourceProviderManager);
-
+    const workspaceResourceTreeDataProvider =
+        new WorkspaceResourceTreeDataProvider(workspaceResourceBranchDataProviderManager, refreshEvent, workspaceResourceProviderManager);
     context.subscriptions.push(workspaceResourceTreeDataProvider);
 
-    const treeView = vscode.window.createTreeView(
-        'azureWorkspace',
-        {
-            canSelectMany: true,
-            showCollapseAll: true,
-            treeDataProvider: workspaceResourceTreeDataProvider
-        });
+    const treeView = vscode.window.createTreeView('azureWorkspace', {
+        canSelectMany: true,
+        showCollapseAll: true,
+        treeDataProvider: workspaceResourceTreeDataProvider,
+    });
+    context.subscriptions.push(treeView);
 
     treeView.description = localize('local', 'Local');
 
-    context.subscriptions.push(treeView);
-
-    return {
-        workspaceResourceTreeDataProvider
-    }
+    return { workspaceResourceTreeDataProvider };
 }

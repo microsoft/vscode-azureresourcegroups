@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ResourceBase, ResourceProvider, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
+import { AzureResource, AzureResourceProvider, AzureSubscription, ResourceBase, ResourceProvider, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export function isArray<T>(maybeArray: T[] | null | undefined): maybeArray is T[] {
     return Array.isArray(maybeArray);
@@ -81,7 +81,7 @@ class ResourceProviderManager<TResourceSource, TResource extends ResourceBase, T
 // NOTE: TS doesn't seem to like exporting a type alias (i.e. you cannot instantiate it),
 //       so we still have to extend the class.
 
-export class ApplicationResourceProviderManager extends ResourceProviderManager<ApplicationSubscription, ApplicationResource, ApplicationResourceProvider> {
+export class AzureResourceProviderManager extends ResourceProviderManager<AzureSubscription, AzureResource, AzureResourceProvider> {
 }
 
 export class WorkspaceResourceProviderManager extends ResourceProviderManager<vscode.WorkspaceFolder, WorkspaceResource, WorkspaceResourceProvider> {

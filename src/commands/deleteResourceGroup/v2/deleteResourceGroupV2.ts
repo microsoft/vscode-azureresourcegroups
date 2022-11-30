@@ -5,7 +5,7 @@
 
 import { AzureWizard, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { ResourceGroupTreeItem } from '../../../tree/ResourceGroupTreeItem';
-import { GroupingItem } from '../../../tree/v2/application/GroupingItem';
+import { GroupingItem } from '../../../tree/v2/azure/GroupingItem';
 import { createActivityContext } from '../../../utils/activityUtils';
 import { localize } from '../../../utils/localize';
 import { settingUtils } from '../../../utils/settingUtils';

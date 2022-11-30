@@ -7,22 +7,22 @@ import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 import { registerActivity } from '../../activityLog/registerActivity';
-import { ApplicationResourceBranchDataProviderManager } from '../../tree/v2/application/ApplicationResourceBranchDataProviderManager';
-import { ApplicationResourceTreeDataProvider } from '../../tree/v2/application/ApplicationResourceTreeDataProvider';
+import { AzureResourceBranchDataProviderManager } from '../../tree/v2/azure/AzureResourceBranchDataProviderManager';
+import { AzureResourceTreeDataProvider } from '../../tree/v2/azure/AzureResourceTreeDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceResourceTreeDataProvider } from '../../tree/v2/workspace/WorkspaceResourceTreeDataProvider';
-import { ApplicationResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
-import { ApplicationResource, ApplicationResourceProvider, BranchDataProvider, ResourceModelBase, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
+import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
+import { AzureResource, AzureResourceProvider, BranchDataProvider, ResourceModelBase, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     public static apiVersion: string = '2.0.0';
 
     constructor(
-        private readonly applicationResourceProviderManager: ApplicationResourceProviderManager,
-        private readonly applicationResourceBranchDataProviderManager: ApplicationResourceBranchDataProviderManager,
+        private readonly applicationResourceProviderManager: AzureResourceProviderManager,
+        private readonly applicationResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
         private readonly workspaceResourceProviderManager: WorkspaceResourceProviderManager,
         private readonly workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
-        public readonly applicationResourceTreeDataProvider: ApplicationResourceTreeDataProvider,
+        public readonly applicationResourceTreeDataProvider: AzureResourceTreeDataProvider,
         public readonly workspaceResourceTreeDataProvider: WorkspaceResourceTreeDataProvider,
     ) { }
 
@@ -38,13 +38,13 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
         return registerActivity(activity);
     }
 
-    registerApplicationResourceProvider(provider: ApplicationResourceProvider): vscode.Disposable {
+    registerApplicationResourceProvider(provider: AzureResourceProvider): vscode.Disposable {
         this.applicationResourceProviderManager.addResourceProvider(provider);
 
         return new vscode.Disposable(() => this.applicationResourceProviderManager.removeResourceProvider(provider));
     }
 
-    registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<ApplicationResource, T>): vscode.Disposable {
+    registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<AzureResource, T>): vscode.Disposable {
         this.applicationResourceBranchDataProviderManager.addProvider(type, provider);
 
         return new vscode.Disposable(() => this.applicationResourceBranchDataProviderManager.removeProvider(type));

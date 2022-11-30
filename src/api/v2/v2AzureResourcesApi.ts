@@ -84,7 +84,7 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
 /**
  * Represents a means of obtaining authentication data for an application subscription.
  */
-export interface ApplicationAuthentication {
+export interface AzureAuthentication {
     /**
      * Gets a VS Code authentication session for an application subscription.
      *
@@ -98,11 +98,11 @@ export interface ApplicationAuthentication {
 /**
  * Represents an Azure subscription.
  */
-export interface ApplicationSubscription {
+export interface AzureSubscription {
     /**
      * Access to the authentication session associated with this subscription.
      */
-    readonly authentication: ApplicationAuthentication;
+    readonly authentication: AzureAuthentication;
 
     /**
      * The Azure environment to which this subscription belongs.
@@ -148,7 +148,7 @@ export interface AzureResourceType {
 /**
  * Represents an individual resource in Azure.
  */
-export interface ApplicationResource extends ResourceBase {
+export interface AzureResource extends ResourceBase {
     /**
      * The Azure-designated type of this resource.
      */
@@ -174,7 +174,7 @@ export interface ApplicationResource extends ResourceBase {
     /**
      * The Azure subscription to which this resource belongs.
      */
-    readonly subscription: ApplicationSubscription;
+    readonly subscription: AzureSubscription;
 
     /**
      * The tags associated with this resource.
@@ -204,7 +204,7 @@ export interface ViewPropertiesModel {
 /**
  * Represents a model of an individual application resource or its child items.
  */
-export interface ApplicationResourceModel extends ResourceModelBase {
+export interface AzureResourceModel extends ResourceModelBase {
     /**
      * The Azure ID of this resource.
      *
@@ -226,12 +226,12 @@ export interface ApplicationResourceModel extends ResourceModelBase {
 /**
  * A provider for supplying items for the application resource tree (e.g. Cosmos DB, Storage, etc.).
  */
-export type ApplicationResourceProvider = ResourceProvider<ApplicationSubscription, ApplicationResource>;
+export type AzureResourceProvider = ResourceProvider<AzureSubscription, AzureResource>;
 
 /**
  * A provider for visualizing items in the application resource tree (e.g. Cosmos DB, Storage, etc.).
  */
-export type ApplicationResourceBranchDataProvider<TModel extends ApplicationResourceModel> = BranchDataProvider<ApplicationResource, TModel>;
+export type AzureResourceBranchDataProvider<TModel extends AzureResourceModel> = BranchDataProvider<AzureResource, TModel>;
 
 /**
  * Respresents a specific type of workspace resource.
@@ -300,7 +300,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
      *
      * @returns A disposable that unregisters the provider when disposed.
      */
-    registerApplicationResourceProvider(provider: ApplicationResourceProvider): vscode.Disposable;
+    registerApplicationResourceProvider(provider: AzureResourceProvider): vscode.Disposable;
 
     /**
      * Registers an application resource branch data provider.
@@ -310,7 +310,7 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
      *
      * @returns A disposable that unregisters the provider.
      */
-    registerApplicationResourceBranchDataProvider<TModel extends ApplicationResourceModel>(type: AzExtResourceType, provider: ApplicationResourceBranchDataProvider<TModel>): vscode.Disposable;
+    registerApplicationResourceBranchDataProvider<TModel extends AzureResourceModel>(type: AzExtResourceType, provider: AzureResourceBranchDataProvider<TModel>): vscode.Disposable;
 
     /**
      * Registers a provider of workspace resources.
