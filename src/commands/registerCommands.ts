@@ -25,6 +25,7 @@ import { revealResource } from './revealResource';
 import { editTags } from './tags/editTags';
 import { toggleShowAllResources } from './toggleShowAllResources';
 import { viewProperties } from './viewProperties';
+import { refreshWorkspace } from './workspace/refreshWorkspace';
 
 export function registerCommands(
     refreshEventEmitter: vscode.EventEmitter<void>,
@@ -71,7 +72,7 @@ export function registerCommands(
 
     registerCommand('azureWorkspace.refresh', () => {
         onRefreshWorkspace();
-        ext.emitters.refreshWorkspace.fire();
+        refreshWorkspace();
     });
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
 }
