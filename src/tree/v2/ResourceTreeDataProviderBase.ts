@@ -12,7 +12,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     private readonly branchTreeDataChangeSubscription: vscode.Disposable;
     private readonly refreshSubscription: vscode.Disposable;
     private readonly resourceProviderManagerListener: vscode.Disposable;
-    public readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+    private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
 
     constructor(
         protected readonly itemCache: BranchDataItemCache,
@@ -62,6 +62,10 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
+
+    notifyTreeDataChanged(data: void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined): void {
+        this.onDidChangeTreeDataEmitter.fire(data);
+    }
 
     async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
         const treeItem = await element.getTreeItem();

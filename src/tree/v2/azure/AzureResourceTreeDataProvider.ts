@@ -53,7 +53,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                 context.telemetry.properties.isActivationEvent = 'true';
 
                 if (e.affectsConfiguration(`${ext.prefix}.${showHiddenTypesSettingKey}`)) {
-                    this.onDidChangeTreeDataEmitter.fire();
+                    super.notifyTreeDataChanged();
                 }
             });
 
@@ -61,7 +61,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         //       and I'm not sure of the mechanics of that.  Ideally grouping mode changes shouldn't require new network calls,
         //       as we're just rearranging known items; we might try caching resource items and only calling getTreeItem() on
         //       branch providers during the tree refresh that results from this (rather than getChildren() again).
-        this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => this.onDidChangeTreeDataEmitter.fire());
+        this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => super.notifyTreeDataChanged());
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
@@ -88,7 +88,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                                         environment: subscription.session.environment,
                                         isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud'
                                     },
-                                    refresh: item => this.onDidChangeTreeDataEmitter.fire(item),
+                                    refresh: item => super.notifyTreeDataChanged(item),
                                 },
                                 this.resourceGroupingManager,
                                 this.resourceProviderManager,
@@ -180,8 +180,8 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                 if (this.api) {
                     await this.api.waitForFilters();
 
-                    this.filtersSubscription = this.api.onFiltersChanged(() => this.onDidChangeTreeDataEmitter.fire());
-                    this.statusSubscription = this.api.onStatusChanged(() => this.onDidChangeTreeDataEmitter.fire());
+                    this.filtersSubscription = this.api.onFiltersChanged(() => super.notifyTreeDataChanged());
+                    this.statusSubscription = this.api.onStatusChanged(() => super.notifyTreeDataChanged());
                 }
             }
         }

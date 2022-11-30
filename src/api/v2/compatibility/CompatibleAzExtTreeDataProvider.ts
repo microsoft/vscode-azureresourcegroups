@@ -68,14 +68,14 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
 
         // Flush the cache at and below the given treeItem
         // Trigger a refresh at the given treeItem
-        this.tdp.onDidChangeTreeDataEmitter.fire(treeItem as unknown as ResourceGroupsItem);
+        this.tdp.notifyTreeDataChanged(treeItem as unknown as ResourceGroupsItem);
 
         return Promise.resolve();
     }
 
     public override refreshUIOnly(treeItem: AzExtTreeItem | undefined): void {
 
-        this.tdp.onDidChangeTreeDataEmitter.fire(treeItem as unknown as ResourceGroupsItem);
+        this.tdp.notifyTreeDataChanged(treeItem as unknown as ResourceGroupsItem);
 
     }
 
