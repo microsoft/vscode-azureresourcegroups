@@ -11,8 +11,8 @@ import { WorkspaceResourceTreeDataProvider } from './WorkspaceResourceTreeDataPr
 
 interface RegisterWorkspaceTreeOptions {
     workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
+    workspaceResourceProviderManager: WorkspaceResourceProviderManager,
     refreshEvent: vscode.Event<void>,
-    workspaceResourceProviderManager: WorkspaceResourceProviderManager
 }
 
 interface RegisterWorkspaceTreeResult {
