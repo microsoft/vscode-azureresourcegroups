@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { OpenInPortalOptions } from '@microsoft/vscode-azext-azureutils';
-import { ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AzExtResourceType, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
@@ -33,7 +33,7 @@ export class GroupingItem implements ResourceGroupsItem {
         private readonly iconPath: TreeItemIconPath | undefined,
         public readonly label: string,
         public readonly resources: AzureResource[],
-        public readonly resourceType: string | undefined,
+        public readonly resourceType: AzExtResourceType | undefined,
         public readonly parent?: ResourceGroupsItem
     ) { }
 
@@ -97,7 +97,7 @@ export class GroupingItem implements ResourceGroupsItem {
     }
 }
 
-export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: AzureResource[], resourceType: string | undefined, parent: ResourceGroupsItem) => GroupingItem;
+export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: AzureResource[], resourceType: AzExtResourceType | undefined, parent: ResourceGroupsItem) => GroupingItem;
 
 export function createGroupingItemFactory(resourceItemFactory: ResourceItemFactory<AzureResource>, branchDataProviderFactory: BranchDataProviderFactory): GroupingItemFactory {
     return (context, contextValues, iconPath, label, resources, resourceType, parent) => new GroupingItem(context, resourceItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources, resourceType, parent);
