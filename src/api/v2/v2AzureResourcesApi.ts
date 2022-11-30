@@ -7,7 +7,6 @@ import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import type { Activity } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
-import { ResourceGroupsItem } from '../../tree/v2/ResourceGroupsItem';
 
 /**
  * Represents the base type for all application and workspace resources.
@@ -277,8 +276,8 @@ export type WorkspaceResourceBranchDataProvider<TModel extends WorkspaceResource
  */
 export interface V2AzureResourcesApi extends AzureResourcesApiBase {
 
-    applicationResourceTreeDataProvider: vscode.TreeDataProvider<ResourceGroupsItem>;
-    workspaceResourceTreeDataProvider: vscode.TreeDataProvider<ResourceGroupsItem>;
+    applicationResourceTreeDataProvider: vscode.TreeDataProvider<unknown>;
+    workspaceResourceTreeDataProvider: vscode.TreeDataProvider<unknown>;
 
     /**
      * Reveals an item in the application/workspace resource tree
