@@ -9,14 +9,14 @@ import * as vscode from 'vscode';
 import { registerActivity } from '../../activityLog/registerActivity';
 import { AzureResourceBranchDataProviderManager } from '../../tree/v2/azure/AzureResourceBranchDataProviderManager';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
-import { ApplicationResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
+import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
 import { AzureResource, AzureResourceProvider, BranchDataProvider, ResourceModelBase, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
 export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
     public static apiVersion: string = '2.0.0';
 
     constructor(
-        private readonly applicationResourceProviderManager: ApplicationResourceProviderManager,
+        private readonly applicationResourceProviderManager: AzureResourceProviderManager,
         private readonly applicationResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
         private readonly workspaceResourceProviderManager: WorkspaceResourceProviderManager,
         private readonly workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager) {
