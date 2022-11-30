@@ -43,6 +43,7 @@ export class DefaultApplicationResourceItem implements ResourceGroupsItem {
         const treeItem = new vscode.TreeItem(this.resource.name ?? 'Unnamed Resource', isResourceTypeExtensionInstalled === false ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 
         treeItem.iconPath = getIconPath(this.resource.resourceType);
+        treeItem.contextValue = 'azureResource';
 
         return treeItem;
     }
