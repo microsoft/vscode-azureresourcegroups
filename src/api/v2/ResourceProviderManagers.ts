@@ -81,7 +81,7 @@ class ResourceProviderManager<TResourceSource, TResource extends ResourceBase, T
 // NOTE: TS doesn't seem to like exporting a type alias (i.e. you cannot instantiate it),
 //       so we still have to extend the class.
 
-export class ApplicationResourceProviderManager extends ResourceProviderManager<AzureSubscription, AzureResource, AzureResourceProvider> {
+export class AzureResourceProviderManager extends ResourceProviderManager<AzureSubscription, AzureResource, AzureResourceProvider> {
 }
 
 export class WorkspaceResourceProviderManager extends ResourceProviderManager<vscode.WorkspaceFolder, WorkspaceResource, WorkspaceResourceProvider> {

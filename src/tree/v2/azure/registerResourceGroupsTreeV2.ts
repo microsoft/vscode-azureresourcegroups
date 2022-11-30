@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
+import { AzureResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { AzureResource } from '../../../api/v2/v2AzureResourcesApi';
 import { localize } from '../../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
@@ -18,7 +18,7 @@ export function registerResourceGroupsTreeV2(
     context: vscode.ExtensionContext,
     branchDataProviderManager: AzureResourceBranchDataProviderManager,
     refreshEvent: vscode.Event<void>,
-    resourceProviderManager: ApplicationResourceProviderManager): void {
+    resourceProviderManager: AzureResourceProviderManager): void {
     const itemCache = new BranchDataItemCache();
     const branchDataItemFactory = createResourceItemFactory<AzureResource>(itemCache);
     const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => branchDataProviderManager.getProvider(resource.resourceType));
