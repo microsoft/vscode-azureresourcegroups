@@ -5,7 +5,7 @@
 
 import { AzExtResourceType } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
-import { ApplicationResourceProviderManager } from "../../../api/v2/ResourceProviderManagers";
+import { AzureResourceProviderManager } from "../../../api/v2/ResourceProviderManagers";
 import { AzureSubscription } from "../../../api/v2/v2AzureResourcesApi";
 import { azureExtensions } from "../../../azureExtensions";
 import { showHiddenTypesSettingKey } from "../../../constants";
@@ -24,7 +24,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
     constructor(
         private readonly context: ResourceGroupsTreeContext,
         private readonly resourceGroupingManager: AzureResourceGroupingManager,
-        private readonly resourceProviderManager: ApplicationResourceProviderManager,
+        private readonly resourceProviderManager: AzureResourceProviderManager,
         private readonly subscription: AzureSubscription) {
     }
 

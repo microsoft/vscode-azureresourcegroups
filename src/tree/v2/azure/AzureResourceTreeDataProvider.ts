@@ -6,7 +6,7 @@
 import { AzExtServiceClientCredentials, IActionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import * as vscode from 'vscode';
-import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
+import { AzureResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { showHiddenTypesSettingKey } from '../../../constants';
 import { ext } from '../../../extensionVariables';
@@ -32,7 +32,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         itemCache: BranchDataItemCache,
         onRefresh: vscode.Event<void>,
         private readonly resourceGroupingManager: AzureResourceGroupingManager,
-        private readonly resourceProviderManager: ApplicationResourceProviderManager) {
+        private readonly resourceProviderManager: AzureResourceProviderManager) {
         super(
             itemCache,
             onDidChangeBranchTreeData,
