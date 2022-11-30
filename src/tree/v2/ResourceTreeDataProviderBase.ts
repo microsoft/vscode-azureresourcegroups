@@ -95,7 +95,6 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
             for (const child of children) {
                 if (child.id === id) {
                     return child;
-                    // child.id is 'postgres' while we are actually needing to use the fullId.
                 } else if (this.isAncestorOf(child, id)) {
                     element = child;
                     continue outerLoop;
