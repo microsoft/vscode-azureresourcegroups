@@ -14,13 +14,13 @@ import { createResourceItemFactory } from './AzureResourceItem';
 import { AzureResourceTreeDataProvider } from './AzureResourceTreeDataProvider';
 import { createGroupingItemFactory } from './GroupingItem';
 
-interface RegisterApplicationTreeOptions {
+interface RegisterAzureTreeOptions {
     azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
     azureResourceProviderManager: AzureResourceProviderManager,
     refreshEvent: vscode.Event<void>,
 }
 
-export function registerAzureTree(context: vscode.ExtensionContext, options: RegisterApplicationTreeOptions): void {
+export function registerAzureTree(context: vscode.ExtensionContext, options: RegisterAzureTreeOptions): void {
     const { azureResourceBranchDataProviderManager, azureResourceProviderManager: resourceProviderManager, refreshEvent } = options;
 
     const itemCache = new BranchDataItemCache();
