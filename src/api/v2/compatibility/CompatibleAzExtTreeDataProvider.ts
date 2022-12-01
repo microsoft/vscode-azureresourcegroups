@@ -66,7 +66,6 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
     public override refreshUIOnly(treeItem: AzExtTreeItem | undefined): void {
 
         this.tdp.notifyTreeDataChanged(treeItem as unknown as ResourceGroupsItem);
-
     }
 
     public override loadMore(_treeItem: AzExtTreeItem, _context: IActionContext): Promise<void> {
