@@ -12,7 +12,7 @@ export class BranchDataItemCache {
         this.branchItemToResourceGroupsItemCache.set(branchItem, item);
     }
 
-    evictAll(): void {
+    clear(): void {
         this.branchItemToResourceGroupsItemCache.clear();
     }
 
