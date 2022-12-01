@@ -20,7 +20,7 @@ interface RegisterAzureTreeOptions {
     refreshEvent: vscode.Event<void>,
 }
 
-export function registerAzureTree(context: vscode.ExtensionContext, options: RegisterAzureTreeOptions): void {
+export function registerAzureTree(context: vscode.ExtensionContext, options: RegisterAzureTreeOptions): AzureResourceTreeDataProvider {
     const { azureResourceBranchDataProviderManager, azureResourceProviderManager: resourceProviderManager, refreshEvent } = options;
 
     const itemCache = new BranchDataItemCache();
@@ -42,4 +42,6 @@ export function registerAzureTree(context: vscode.ExtensionContext, options: Reg
     context.subscriptions.push(treeView);
 
     treeView.description = localize('remote', 'Remote');
+
+    return azureResourceTreeDataProvider;
 }

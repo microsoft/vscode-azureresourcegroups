@@ -15,7 +15,7 @@ interface RegisterWorkspaceTreeOptions {
     refreshEvent: vscode.Event<void>,
 }
 
-export function registerWorkspaceTree(context: vscode.ExtensionContext, options: RegisterWorkspaceTreeOptions): void {
+export function registerWorkspaceTree(context: vscode.ExtensionContext, options: RegisterWorkspaceTreeOptions): WorkspaceResourceTreeDataProvider {
     const { workspaceResourceBranchDataProviderManager, workspaceResourceProviderManager, refreshEvent } = options;
 
     const workspaceResourceTreeDataProvider =
@@ -30,4 +30,6 @@ export function registerWorkspaceTree(context: vscode.ExtensionContext, options:
     context.subscriptions.push(treeView);
 
     treeView.description = localize('local', 'Local');
+
+    return workspaceResourceTreeDataProvider;
 }
