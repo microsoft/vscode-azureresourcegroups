@@ -92,13 +92,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         type => void extensionManager.activateWorkspaceResourceBranchDataProvider(type));
     const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
 
-    const { azureResourceTreeDataProvider } = registerAzureTree(context, {
+    const azureResourceTreeDataProvider = registerAzureTree(context, {
         azureResourceProviderManager,
         azureResourceBranchDataProviderManager,
         refreshEvent: refreshEventEmitter.event,
     });
 
-    const { workspaceResourceTreeDataProvider } = registerWorkspaceTree(context, {
+    const workspaceResourceTreeDataProvider = registerWorkspaceTree(context, {
         workspaceResourceProviderManager,
         workspaceResourceBranchDataProviderManager,
         refreshEvent: refreshEventEmitter.event,

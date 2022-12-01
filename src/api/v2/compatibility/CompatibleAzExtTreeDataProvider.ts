@@ -18,6 +18,9 @@ abstract class IntermediateCompatibleAzExtTreeDataProvider extends AzExtTreeData
     public abstract onDidExpandOrRefreshExpandedTreeItem: Event<AzExtTreeItem>;
 }
 
+/**
+ * Used for v1 API `api.appResourceTree` and `api.workspaceResourceTree` in place of `AzExtTreeDataProvider`.
+ */
 export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExtTreeDataProvider {
     public constructor(private readonly tdp: ResourceTreeDataProviderBase) {
         super({ valuesToMask: [] } as unknown as AzExtParentTreeItem, undefined as unknown as string);
@@ -63,7 +66,6 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
     public override refreshUIOnly(treeItem: AzExtTreeItem | undefined): void {
 
         this.tdp.notifyTreeDataChanged(treeItem as unknown as ResourceGroupsItem);
-
     }
 
     public override loadMore(_treeItem: AzExtTreeItem, _context: IActionContext): Promise<void> {
