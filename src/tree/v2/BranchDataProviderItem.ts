@@ -55,8 +55,8 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
 
         const factory = createBranchDataItemFactory(this.itemCache);
 
-        // NOTE: The blind case to ApplicationResourceModel is a bit awkward, but I feel like it's better than
-        //       having to create specialized item types for application and workspace resources and their
+        // NOTE: The blind case to AzureResourceModel is a bit awkward, but I feel like it's better than
+        //       having to create specialized item types for Azure and workspace resources and their
         //       requisite factories.
 
         return children?.map(child =>

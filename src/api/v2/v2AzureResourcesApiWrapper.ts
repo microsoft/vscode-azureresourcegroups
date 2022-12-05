@@ -22,12 +22,12 @@ export class V2AzureResourcesApiWrapper implements V2AzureResourcesApi {
         return this.callWithTelemetryAndErrorHandlingSync('v2.registerActivity', () => this.api.registerActivity(activity));
     }
 
-    registerApplicationResourceProvider(provider: AzureResourceProvider): vscode.Disposable {
-        return this.callWithTelemetryAndErrorHandlingSync('v2.registerApplicationResourceProvider', () => this.api.registerApplicationResourceProvider(provider));
+    registerAzureResourceProvider(provider: AzureResourceProvider): vscode.Disposable {
+        return this.callWithTelemetryAndErrorHandlingSync('v2.registerAzureResourceProvider', () => this.api.registerAzureResourceProvider(provider));
     }
 
-    registerApplicationResourceBranchDataProvider<T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<AzureResource, T>): vscode.Disposable {
-        return this.callWithTelemetryAndErrorHandlingSync('v2.registerApplicationResourceBranchDataProvider', () => this.api.registerApplicationResourceBranchDataProvider(type, provider));
+    registerAzureResourceBranchDataProvider<T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<AzureResource, T>): vscode.Disposable {
+        return this.callWithTelemetryAndErrorHandlingSync('v2.registerAzureResourceBranchDataProvider', () => this.api.registerAzureResourceBranchDataProvider(type, provider));
     }
 
     registerWorkspaceResourceProvider(provider: WorkspaceResourceProvider): vscode.Disposable {

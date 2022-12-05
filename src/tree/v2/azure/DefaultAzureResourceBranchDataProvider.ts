@@ -5,21 +5,21 @@
 
 import * as vscode from 'vscode';
 import { AzureResource, AzureResourceModel, BranchDataProvider } from '../../../api/v2/v2AzureResourcesApi';
-import { DefaultApplicationResourceItem } from './DefaultApplicationResourceItem';
+import { DefaultAzureResourceItem } from './DefaultAzureResourceItem';
 
 export class DefaultAzureResourceBranchDataProvider implements BranchDataProvider<AzureResource, AzureResourceModel> {
-    getChildren(element: DefaultApplicationResourceItem): vscode.ProviderResult<AzureResourceModel[]> {
+    getChildren(element: DefaultAzureResourceItem): vscode.ProviderResult<AzureResourceModel[]> {
         return element.getChildren();
     }
 
-    getResourceItem(element: AzureResource): DefaultApplicationResourceItem | Thenable<DefaultApplicationResourceItem> {
-        return new DefaultApplicationResourceItem(element);
+    getResourceItem(element: AzureResource): DefaultAzureResourceItem | Thenable<DefaultAzureResourceItem> {
+        return new DefaultAzureResourceItem(element);
     }
 
     // TODO: Implement change eventing.
     // onDidChangeTreeData?: vscode.Event<void | ResourceGroupsItem | null | undefined> | undefined;
 
-    getTreeItem(element: DefaultApplicationResourceItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
+    getTreeItem(element: DefaultAzureResourceItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
         return element.getTreeItem();
     }
 }
