@@ -11,7 +11,7 @@ import { createResourceClient } from '../../utils/azureClients';
 import { createSubscriptionContext } from '../../utils/v2/credentialsUtils';
 import { AzureResource, AzureResourceProvider, AzureSubscription } from './v2AzureResourcesApi';
 
-export class DefaultApplicationResourceProvider implements AzureResourceProvider {
+export class DefaultAzureResourceProvider implements AzureResourceProvider {
     private readonly onDidChangeResourceEmitter = new vscode.EventEmitter<AzureResource | undefined>();
 
     getResources(subscription: AzureSubscription): Promise<AzureResource[] | undefined> {
