@@ -6,5 +6,5 @@
 import { ext } from "../../extensionVariables";
 
 export function refreshWorkspace(): void {
-    ext.emitters.refreshWorkspace.fire();
+    ext.emitters.refreshWorkspaceTree.fire();
 }
