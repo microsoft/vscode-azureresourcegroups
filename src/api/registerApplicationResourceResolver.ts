@@ -22,7 +22,7 @@ export function registerApplicationResourceResolver(type: AzExtResourceType, res
         ext.emitters.onDidRegisterResolver.fire(resolver);
 
         const compat = new CompatibleApplicationResourceBranchDataProvider(resolver, 'azureResourceGroups.loadMore' /** TODO: what is the correct value for this? */);
-        const disposable = ext.v2.api.registerApplicationResourceBranchDataProvider(type, compat as unknown as AzureResourceBranchDataProvider<AzExtTreeItem>);
+        const disposable = ext.v2.api.registerAzureResourceBranchDataProvider(type, compat as unknown as AzureResourceBranchDataProvider<AzExtTreeItem>);
 
         return new Disposable(() => {
             delete applicationResourceResolvers[type];
