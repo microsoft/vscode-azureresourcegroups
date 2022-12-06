@@ -28,7 +28,7 @@ export class GroupingItem implements ResourceGroupsItem {
     constructor(
         public readonly context: ResourceGroupsTreeContext,
         private readonly resourceItemFactory: ResourceItemFactory<AzureResource>,
-        private readonly branchDataProviderFactory: (ApplicationResource) => AzureResourceBranchDataProvider<AzureResourceModel>,
+        private readonly branchDataProviderFactory: (azureResource: AzureResource) => AzureResourceBranchDataProvider<AzureResourceModel>,
         private readonly contextValues: string[] | undefined,
         private readonly iconPath: TreeItemIconPath | undefined,
         public readonly label: string,

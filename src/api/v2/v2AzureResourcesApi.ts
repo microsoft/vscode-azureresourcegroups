@@ -9,7 +9,7 @@ import type { Activity } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 
 /**
- * Represents the base type for all application and workspace resources.
+ * Represents the base type for all Azure and workspace resources.
  */
 export interface ResourceBase {
     /**
@@ -38,7 +38,7 @@ export interface ResourceModelBase {
 }
 
 /**
- * The base interface for providers of application and workspace resources.
+ * The base interface for providers of Azure and workspace resources.
  */
 export interface ResourceProvider<TResourceSource, TResource extends ResourceBase> {
     /**
@@ -57,7 +57,7 @@ export interface ResourceProvider<TResourceSource, TResource extends ResourceBas
 }
 
 /**
- * The base interface for visualizers of application and workspace resources.
+ * The base interface for visualizers of Azure and workspace resources.
  */
 export interface BranchDataProvider<TResource extends ResourceBase, TModel extends ResourceModelBase> extends vscode.TreeDataProvider<TModel> {
     /**
@@ -81,11 +81,11 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
 }
 
 /**
- * Represents a means of obtaining authentication data for an application subscription.
+ * Represents a means of obtaining authentication data for an Azure subscription.
  */
 export interface AzureAuthentication {
     /**
-     * Gets a VS Code authentication session for an application subscription.
+     * Gets a VS Code authentication session for an Azure subscription.
      *
      * @param scopes The scopes for which the authentication is needed.
      *
@@ -201,7 +201,7 @@ export interface ViewPropertiesModel {
 }
 
 /**
- * Represents a model of an individual application resource or its child items.
+ * Represents a model of an individual Azure resource or its child items.
  */
 export interface AzureResourceModel extends ResourceModelBase {
     /**
@@ -223,12 +223,12 @@ export interface AzureResourceModel extends ResourceModelBase {
 }
 
 /**
- * A provider for supplying items for the application resource tree (e.g. Cosmos DB, Storage, etc.).
+ * A provider for supplying items for the Azure resource tree (e.g. Cosmos DB, Storage, etc.).
  */
 export type AzureResourceProvider = ResourceProvider<AzureSubscription, AzureResource>;
 
 /**
- * A provider for visualizing items in the application resource tree (e.g. Cosmos DB, Storage, etc.).
+ * A provider for visualizing items in the Azure resource tree (e.g. Cosmos DB, Storage, etc.).
  */
 export type AzureResourceBranchDataProvider<TModel extends AzureResourceModel> = BranchDataProvider<AzureResource, TModel>;
 
@@ -287,23 +287,23 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
     registerActivity(activity: Activity): Promise<void>;
 
     /**
-     * Registers a provider of application resources.
+     * Registers a provider of Azure resources.
      *
      * @param provider The resource provider.
      *
      * @returns A disposable that unregisters the provider when disposed.
      */
-    registerApplicationResourceProvider(provider: AzureResourceProvider): vscode.Disposable;
+    registerAzureResourceProvider(provider: AzureResourceProvider): vscode.Disposable;
 
     /**
-     * Registers an application resource branch data provider.
+     * Registers an Azure resource branch data provider.
      *
-     * @param type The Azure application resource type associated with the provider. Must be unique.
+     * @param type The Azure resource type associated with the provider. Must be unique.
      * @param resolver The branch data provider for the resource type.
      *
      * @returns A disposable that unregisters the provider.
      */
-    registerApplicationResourceBranchDataProvider<TModel extends AzureResourceModel>(type: AzExtResourceType, provider: AzureResourceBranchDataProvider<TModel>): vscode.Disposable;
+    registerAzureResourceBranchDataProvider<TModel extends AzureResourceModel>(type: AzExtResourceType, provider: AzureResourceBranchDataProvider<TModel>): vscode.Disposable;
 
     /**
      * Registers a provider of workspace resources.

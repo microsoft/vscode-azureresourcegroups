@@ -11,7 +11,7 @@ import { localize } from "../../../utils/localize";
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
-export class DefaultApplicationResourceItem implements ResourceGroupsItem {
+export class DefaultAzureResourceItem implements ResourceGroupsItem {
     private readonly resourceTypeExtension: AzExtWrapper | undefined;
 
     constructor(private readonly resource: AzureResource) {

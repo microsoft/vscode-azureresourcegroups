@@ -17,7 +17,7 @@ import { registerApplicationResourceResolver } from './api/registerApplicationRe
 import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResourceProvider';
 import { revealTreeItem } from './api/revealTreeItem';
 import { CompatibleAzExtTreeDataProvider } from './api/v2/compatibility/CompatibleAzExtTreeDataProvider';
-import { DefaultApplicationResourceProvider } from './api/v2/DefaultApplicationResourceProvider';
+import { DefaultAzureResourceProvider } from './api/v2/DefaultAzureResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/v2/ResourceGroupsExtensionManager';
 import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './api/v2/ResourceProviderManagers';
 import { AzureResourcesApiManager } from './api/v2/v2AzureResourcesApi';
@@ -85,7 +85,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     const azureResourceProviderManager = new AzureResourceProviderManager(() => extensionManager.activateApplicationResourceProviders());
 
-    azureResourceProviderManager.addResourceProvider(new DefaultApplicationResourceProvider());
+    azureResourceProviderManager.addResourceProvider(new DefaultAzureResourceProvider());
 
     const workspaceResourceBranchDataProviderManager = new WorkspaceResourceBranchDataProviderManager(
         new WorkspaceDefaultBranchDataProvider(),
