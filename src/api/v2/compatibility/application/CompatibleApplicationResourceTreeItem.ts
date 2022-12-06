@@ -11,7 +11,7 @@ import { getIconPath } from "../../../../utils/azureUtils";
 import { AzureResource } from "../../v2AzureResourcesApi";
 
 /**
- * Must imitate the behavior of AppResourceTreeItem
+ * Must imitate the behavior of ResolvedAppResourceBase
  */
 export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTreeItem {
     public static contextValue: string = 'azureResource';
