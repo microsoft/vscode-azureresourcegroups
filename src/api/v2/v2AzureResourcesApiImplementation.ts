@@ -8,17 +8,24 @@ import { AzureResource, AzureResourceProvider, BranchDataProvider, ResourceModel
 import * as vscode from 'vscode';
 import { registerActivity } from '../../activityLog/registerActivity';
 import { AzureResourceBranchDataProviderManager } from '../../tree/v2/azure/AzureResourceBranchDataProviderManager';
+import { AzureResourceTreeDataProvider } from '../../tree/v2/azure/AzureResourceTreeDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
+import { WorkspaceResourceTreeDataProvider } from '../../tree/v2/workspace/WorkspaceResourceTreeDataProvider';
 import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
 
 export function createV2AzureResourcesApi(
     azureResourceProviderManager: AzureResourceProviderManager,
     azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
+    azureResourceTreeDataProvider: AzureResourceTreeDataProvider,
     workspaceResourceProviderManager: WorkspaceResourceProviderManager,
-    workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager): v2AzureResourcesApi {
+    workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
+    workspaceResourceTreeDataProvider: WorkspaceResourceTreeDataProvider): v2AzureResourcesApi {
 
     return {
         apiVersion: '2.0.0',
+
+        azureResourceTreeDataProvider,
+        workspaceResourceTreeDataProvider,
 
         registerActivity,
 

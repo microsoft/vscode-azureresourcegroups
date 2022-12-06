@@ -5,7 +5,7 @@
 
 import { AzExtResourceType, callWithTelemetryAndErrorHandlingSync } from '@microsoft/vscode-azext-utils';
 import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
-import { AzureResource, AzureResourceProvider, BranchDataProvider, ResourceModelBase, v2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzureResource, AzureResourceProvider, BranchDataProvider, ResourceGroupsTreeDataProvider, ResourceModelBase, v2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 
 export class V2AzureResourcesApiWrapper implements v2AzureResourcesApi {
@@ -16,6 +16,14 @@ export class V2AzureResourcesApiWrapper implements v2AzureResourcesApi {
 
     get apiVersion(): string {
         return this.api.apiVersion;
+    }
+
+    get azureResourceTreeDataProvider(): ResourceGroupsTreeDataProvider {
+        return this.api.azureResourceTreeDataProvider;
+    }
+
+    get workspaceResourceTreeDataProvider(): ResourceGroupsTreeDataProvider {
+        return this.api.workspaceResourceTreeDataProvider;
     }
 
     registerActivity(activity: Activity): Promise<void> {

@@ -110,8 +110,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
             v2Api = createV2AzureResourcesApi(
                 azureResourceProviderManager,
                 azureResourceBranchDataProviderManager,
+                azureResourceTreeDataProvider,
                 workspaceResourceProviderManager,
-                workspaceResourceBranchDataProviderManager
+                workspaceResourceBranchDataProviderManager,
+                workspaceResourceTreeDataProvider,
             );
         }
 
