@@ -18,13 +18,17 @@ export function registerWorkspaceResourceProvider(resourceType: string, provider
     workspaceResourceProviders[resourceType] = provider;
 
     return callWithTelemetryAndErrorHandlingSync('registerWorkspaceResourceProvider', () => {
+        const disposables: Disposable[] = [];
 
         refreshWorkspace();
 
-        ext.v2.api.registerWorkspaceResourceProvider(new CompatibilityWorkspaceResourceProvider(resourceType, provider));
-        ext.v2.api.registerWorkspaceResourceBranchDataProvider(resourceType, new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore') as unknown as BranchDataProvider<WorkspaceResource, AzExtTreeItem>)
+        disposables.push(ext.v2.api.registerWorkspaceResourceProvider(new CompatibilityWorkspaceResourceProvider(resourceType, provider)));
+        disposables.push(ext.v2.api.registerWorkspaceResourceBranchDataProvider(resourceType, new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore') as unknown as BranchDataProvider<WorkspaceResource, AzExtTreeItem>));
 
         return new Disposable(() => {
+            for (const disposable of disposables) {
+                disposable.dispose();
+            }
             delete workspaceResourceProviders[resourceType];
             refreshWorkspace();
         });
