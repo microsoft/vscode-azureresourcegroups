@@ -8,6 +8,7 @@
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import type { AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
+import { v2AzureResourcesApi } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
@@ -21,7 +22,7 @@ import { DefaultAzureResourceProvider } from './api/v2/DefaultAzureResourceProvi
 import { ResourceGroupsExtensionManager } from './api/v2/ResourceGroupsExtensionManager';
 import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './api/v2/ResourceProviderManagers';
 import { AzureResourcesApiManager } from './api/v2/v2AzureResourcesApi';
-import { V2AzureResourcesApiImplementation } from './api/v2/v2AzureResourcesApiImplementation';
+import { createV2AzureResourcesApi } from './api/v2/v2AzureResourcesApiImplementation';
 import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
@@ -35,7 +36,7 @@ import { WorkspaceDefaultBranchDataProvider } from './tree/v2/workspace/Workspac
 import { WorkspaceResourceBranchDataProviderManager } from './tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
 import { createApiProvider } from './utils/v2/apiUtils';
 
-let v2Api: V2AzureResourcesApiImplementation | undefined = undefined;
+let v2Api: v2AzureResourcesApi | undefined = undefined;
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureResourcesApiManager> {
     ext.context = context;
@@ -106,7 +107,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     const v2ApiFactory = () => {
         if (v2Api === undefined) {
-            v2Api = new V2AzureResourcesApiImplementation(
+            v2Api = createV2AzureResourcesApi(
                 azureResourceProviderManager,
                 azureResourceBranchDataProviderManager,
                 workspaceResourceProviderManager,
@@ -137,7 +138,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                     })
             },
             {
-                apiVersion: V2AzureResourcesApiImplementation.apiVersion,
+                apiVersion: '2.0.0',
                 apiFactory: v2ApiFactory
             }
         ]);

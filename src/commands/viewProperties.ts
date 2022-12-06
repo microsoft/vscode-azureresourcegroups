@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
+import { AzureResourceModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { randomUUID } from 'crypto';
-import { AzureResourceModel } from '../api/v2/v2AzureResourcesApi';
 import { localize } from '../utils/localize';
 
 export async function viewProperties(_context: IActionContext, node?: AzureResourceModel): Promise<void> {

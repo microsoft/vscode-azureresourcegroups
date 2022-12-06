@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandlingSync, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureExtensionApi } from '@microsoft/vscode-azext-utils/api';
 import * as semver from 'semver';
-import { AzureResourcesApiBase, AzureResourcesApiManager, GetApiOptions } from '../../api/v2/v2AzureResourcesApi';
+import { AzureResourcesApiManager, GetApiOptions } from '../../api/v2/v2AzureResourcesApi';
 import { localize } from '../localize';
 
-export type AzureResourcesApiRegistration = { apiVersion: string, apiFactory: (options?: GetApiOptions) => AzureResourcesApiBase };
+export type AzureResourcesApiRegistration = { apiVersion: string, apiFactory: (options?: GetApiOptions) => AzureExtensionApi };
 
 export function createApiProvider(extensionId: string, azExts: AzureResourcesApiRegistration[]): AzureResourcesApiManager {
     for (const azExt of azExts) {
@@ -18,7 +19,7 @@ export function createApiProvider(extensionId: string, azExts: AzureResourcesApi
     }
 
     return {
-        getApi: <T extends AzureResourcesApiBase>(versionRange: string, options?: GetApiOptions): T | undefined => getApiInternal<T>(azExts, extensionId, versionRange, options)
+        getApi: <T extends AzureExtensionApi>(versionRange: string, options?: GetApiOptions): T | undefined => getApiInternal<T>(azExts, extensionId, versionRange, options)
     };
 }
 
@@ -30,7 +31,7 @@ class ApiVersionError extends Error {
     }
 }
 
-function getApiInternal<T extends AzureResourcesApiBase>(azExts: AzureResourcesApiRegistration[], extensionId: string, apiVersionRange: string, options: GetApiOptions | undefined): T {
+function getApiInternal<T extends AzureExtensionApi>(azExts: AzureResourcesApiRegistration[], extensionId: string, apiVersionRange: string, options: GetApiOptions | undefined): T {
     return <T>callWithTelemetryAndErrorHandlingSync('v2.getApi', (context: IActionContext) => {
         context.errorHandling.rethrow = true;
         context.errorHandling.suppressDisplay = true;
