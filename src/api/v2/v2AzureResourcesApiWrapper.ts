@@ -26,10 +26,6 @@ export class V2AzureResourcesApiWrapper implements V2AzureResourcesApi {
         return this.api.workspaceResourceTreeDataProvider;
     }
 
-    revealResource(resourceId: string): Promise<void> {
-        return this.callWithTelemetryAndErrorHandlingSync('v2.revealResource', () => this.api.revealResource(resourceId));
-    }
-
     registerActivity(activity: Activity): Promise<void> {
         return this.callWithTelemetryAndErrorHandlingSync('v2.registerActivity', () => this.api.registerActivity(activity));
     }

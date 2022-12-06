@@ -30,10 +30,6 @@ export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
         return V2AzureResourcesApiImplementation.apiVersion;
     }
 
-    revealResource(_resourceId: string): Promise<void> {
-        throw new Error("Method not implemented.");
-    }
-
     registerActivity(activity: Activity): Promise<void> {
         return registerActivity(activity);
     }

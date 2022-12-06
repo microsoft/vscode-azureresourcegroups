@@ -280,12 +280,6 @@ export interface V2AzureResourcesApi extends AzureResourcesApiBase {
     workspaceResourceTreeDataProvider: vscode.TreeDataProvider<unknown>;
 
     /**
-     * Reveals an item in the application/workspace resource tree
-     * @param resourceId The ID of the resource to reveal.
-     */
-    revealResource(resourceId: string): Promise<void>;
-
-    /**
      * Registers an activity to appear in the activity window.
      *
      * @param activity The activity information to show.
