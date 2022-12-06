@@ -5,12 +5,12 @@
 
 import { AzExtTreeItem, callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
 import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
+import { BranchDataProvider, WorkspaceResource } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { Disposable } from "vscode";
 import { refreshWorkspace } from "../commands/workspace/refreshWorkspace";
 import { ext } from "../extensionVariables";
 import { CompatibilityWorkspaceResourceProvider } from "./v2/compatibility/workspace/CompatibilityWorkspaceResourceProvider";
 import { CompatibleWorkspaceResourceBranchDataProvider } from "./v2/compatibility/workspace/CompatibleWorkspaceResourceBranchDataProvider";
-import { BranchDataProvider, WorkspaceResource } from "./v2/v2AzureResourcesApi";
 
 export const workspaceResourceProviders: Record<string, WorkspaceResourceProvider> = {};
 

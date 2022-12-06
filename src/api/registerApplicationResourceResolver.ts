@@ -5,10 +5,10 @@
 
 import { AzExtResourceType, AzExtTreeItem, callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
+import { AzureResourceBranchDataProvider } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { Disposable } from "vscode";
 import { ext } from "../extensionVariables";
 import { CompatibleApplicationResourceBranchDataProvider } from "./v2/compatibility/application/CompatibleApplicationResourceBranchDataProvider";
-import { AzureResourceBranchDataProvider } from "./v2/v2AzureResourcesApi";
 
 export const applicationResourceResolvers: Partial<Record<AzExtResourceType, AppResourceResolver>> = {};
 
