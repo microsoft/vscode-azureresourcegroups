@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { OpenInPortalOptions } from '@microsoft/vscode-azext-azureutils';
-import { AzExtResourceType, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AzExtResourceType, createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
@@ -73,7 +73,7 @@ export class GroupingItem implements ResourceGroupsItem {
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = new vscode.TreeItem(this.label, vscode.TreeItemCollapsibleState.Collapsed);
 
-        treeItem.contextValue = this.contextValues?.sort().join(';');
+        treeItem.contextValue = createContextValue(this.contextValues ?? []);
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
         treeItem.id = this.id;
