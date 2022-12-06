@@ -12,8 +12,6 @@ import { AzureResourceProvider } from '../../../hostapi.v2.internal';
 import { createResourceClient } from '../../utils/azureClients';
 import { createSubscriptionContext } from '../../utils/v2/credentialsUtils';
 
-
-
 export class DefaultAzureResourceProvider implements AzureResourceProvider {
     private readonly onDidChangeResourceEmitter = new vscode.EventEmitter<AzureResource | undefined>();
 
