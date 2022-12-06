@@ -8,8 +8,8 @@
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import type { AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
-import { v2AzureResourcesApi } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { v2AzureResourcesApiInternal } from '../hostapi.v2.internal';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
 import { InternalAzureResourceGroupsExtensionApi } from './api/AzureResourceGroupsExtensionApi';
@@ -36,7 +36,7 @@ import { WorkspaceDefaultBranchDataProvider } from './tree/v2/workspace/Workspac
 import { WorkspaceResourceBranchDataProviderManager } from './tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
 import { createApiProvider } from './utils/v2/apiUtils';
 
-let v2Api: v2AzureResourcesApi | undefined = undefined;
+let v2Api: v2AzureResourcesApiInternal | undefined = undefined;
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureResourcesApiManager> {
     ext.context = context;

@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
-import { AzureResource, AzureResourceProvider, BranchDataProvider, ResourceModelBase, v2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzureResource, AzureResourceProvider, BranchDataProvider, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { v2AzureResourcesApiInternal } from '../../../hostapi.v2.internal';
 import { registerActivity } from '../../activityLog/registerActivity';
 import { AzureResourceBranchDataProviderManager } from '../../tree/v2/azure/AzureResourceBranchDataProviderManager';
 import { AzureResourceTreeDataProvider } from '../../tree/v2/azure/AzureResourceTreeDataProvider';
@@ -19,26 +20,26 @@ export function createV2AzureResourcesApi(
     azureResourceTreeDataProvider: AzureResourceTreeDataProvider,
     workspaceResourceProviderManager: WorkspaceResourceProviderManager,
     workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
-    workspaceResourceTreeDataProvider: WorkspaceResourceTreeDataProvider): v2AzureResourcesApi {
+    workspaceResourceTreeDataProvider: WorkspaceResourceTreeDataProvider): v2AzureResourcesApiInternal {
 
     return {
         apiVersion: '2.0.0',
 
+        registerActivity,
+
         azureResourceTreeDataProvider,
         workspaceResourceTreeDataProvider,
 
-        registerActivity,
-
-        registerAzureResourceProvider: (provider: AzureResourceProvider): vscode.Disposable => {
+        registerAzureResourceProvider: (provider: AzureResourceProvider) => {
             azureResourceProviderManager.addResourceProvider(provider);
             return new vscode.Disposable(() => azureResourceProviderManager.removeResourceProvider(provider));
         },
-        registerAzureResourceBranchDataProvider: <T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<AzureResource, T>): vscode.Disposable => {
+        registerAzureResourceBranchDataProvider: <T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<AzureResource, T>) => {
             azureResourceBranchDataProviderManager.addProvider(type, provider);
             return new vscode.Disposable(() => azureResourceBranchDataProviderManager.removeProvider(type));
         },
 
-        registerWorkspaceResourceProvider: (provider: WorkspaceResourceProvider): vscode.Disposable => {
+        registerWorkspaceResourceProvider: (provider: WorkspaceResourceProvider) => {
             workspaceResourceProviderManager.addResourceProvider(provider);
             return new vscode.Disposable(() => workspaceResourceProviderManager.removeResourceProvider(provider));
         },
