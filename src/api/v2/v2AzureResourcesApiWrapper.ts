@@ -5,12 +5,13 @@
 
 import { AzExtResourceType, callWithTelemetryAndErrorHandlingSync } from '@microsoft/vscode-azext-utils';
 import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
-import { AzureResource, AzureResourceProvider, BranchDataProvider, ResourceGroupsTreeDataProvider, ResourceModelBase, v2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzureResource, BranchDataProvider, ResourceGroupsTreeDataProvider, ResourceModelBase, v2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { AzureResourceProvider, v2AzureResourcesApiInternal } from '../../../hostapi.v2.internal';
 
 export class V2AzureResourcesApiWrapper implements v2AzureResourcesApi {
     constructor(
-        private readonly api: v2AzureResourcesApi,
+        private readonly api: v2AzureResourcesApiInternal,
         private readonly extensionId: string) {
     }
 

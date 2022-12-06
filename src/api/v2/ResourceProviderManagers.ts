@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureResource, AzureResourceProvider, AzureSubscription, ResourceBase, ResourceProvider, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzureResource, AzureSubscription, ResourceBase, ResourceProvider, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { AzureResourceProvider } from '../../../hostapi.v2.internal';
 
 export function isArray<T>(maybeArray: T[] | null | undefined): maybeArray is T[] {
     return Array.isArray(maybeArray);

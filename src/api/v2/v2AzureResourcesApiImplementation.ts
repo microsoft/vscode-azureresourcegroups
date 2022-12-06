@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
-import { AzureResource, AzureResourceProvider, BranchDataProvider, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzureResource, BranchDataProvider, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { v2AzureResourcesApiInternal } from '../../../hostapi.v2.internal';
+import { AzureResourceProvider, v2AzureResourcesApiInternal } from '../../../hostapi.v2.internal';
 import { registerActivity } from '../../activityLog/registerActivity';
 import { AzureResourceBranchDataProviderManager } from '../../tree/v2/azure/AzureResourceBranchDataProviderManager';
 import { AzureResourceTreeDataProvider } from '../../tree/v2/azure/AzureResourceTreeDataProvider';
