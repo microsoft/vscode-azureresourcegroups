@@ -45,6 +45,7 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
         private readonly options?: BranchDataItemOptions) {
         itemCache.addBranchItem(this.branchItem, this);
 
+        // Use AzExtTreeItem.fullId as id for compatibility.
         if (isAzExtTreeItem(this.branchItem)) {
             this.id = this.branchItem.fullId;
         } else {
