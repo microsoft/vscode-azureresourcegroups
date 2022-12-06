@@ -12,7 +12,7 @@ import { CompatibleWorkspaceResourceBranchDataProvider } from "./CompatibleWorks
 export class CompatibilityWorkspaceResourceProvider implements V2WorkspaceResourceProvider {
     constructor(private readonly resourceType: string, private readonly provider: WorkspaceResourceProvider) { }
 
-    // TODO: not sure what to do with this?
+    // No comparable mechanism in v1, leave as undefined
     onDidChangeResource?: Event<WorkspaceResource | undefined> = undefined;
 
     public async getResources(source: WorkspaceFolder): Promise<WorkspaceResource[]> {
