@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { AzureResource } from '../../../api/v2/v2AzureResourcesApi';
 import { AzExtWrapper, getAzureExtensions } from '../../../AzExtWrapper';
 import { getIconPath } from '../../../utils/azureUtils';
 import { localize } from "../../../utils/localize";

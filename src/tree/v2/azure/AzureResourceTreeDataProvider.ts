@@ -5,9 +5,9 @@
 
 import { AzExtServiceClientCredentials, IActionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
+import { ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { AzureResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
-import { ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { showHiddenTypesSettingKey } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { localize } from '../../../utils/localize';

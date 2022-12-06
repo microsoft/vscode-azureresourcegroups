@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { isAzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
-import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '../../api/v2/v2AzureResourcesApi';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 

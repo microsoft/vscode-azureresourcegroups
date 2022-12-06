@@ -5,8 +5,8 @@
 
 import { OpenInPortalOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtResourceType, createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription } from '../../../api/v2/v2AzureResourcesApi';
 import { getIconPath } from '../../../utils/azureUtils';
 import { BranchDataItemOptions } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
