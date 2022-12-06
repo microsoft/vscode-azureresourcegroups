@@ -37,6 +37,7 @@ export class GroupingItem implements ResourceGroupsItem {
         public readonly parent?: ResourceGroupsItem
     ) { }
 
+    // Needed for context menu commands on the group tree items. E.g. "Create..."
     public get subscription(): ISubscriptionContext {
         return this.context.subscriptionContext;
     }
