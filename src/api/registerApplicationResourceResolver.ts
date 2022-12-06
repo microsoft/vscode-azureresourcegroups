@@ -13,7 +13,7 @@ import { AzureResourceBranchDataProvider } from "./v2/v2AzureResourcesApi";
 export const applicationResourceResolvers: Partial<Record<AzExtResourceType, AppResourceResolver>> = {};
 
 export function registerApplicationResourceResolver(type: AzExtResourceType, resolver: AppResourceResolver): Disposable {
-    return callWithTelemetryAndErrorHandlingSync('registerApplicationResourceProvider', () => {
+    return callWithTelemetryAndErrorHandlingSync('registerApplicationResourceResolver', () => {
         if (applicationResourceResolvers[type]) {
             throw new Error(`Application resource resolver with id '${type}' has already been registered.`);
         }
@@ -23,10 +23,11 @@ export function registerApplicationResourceResolver(type: AzExtResourceType, res
 
         const compat = new CompatibleApplicationResourceBranchDataProvider(resolver, 'azureResourceGroups.loadMore' /** TODO: what is the correct value for this? */);
 
-        ext.v2.api.registerApplicationResourceBranchDataProvider(type, compat as unknown as AzureResourceBranchDataProvider<AzExtTreeItem>);
+        const disposable = ext.v2.api.registerApplicationResourceBranchDataProvider(type, compat as unknown as AzureResourceBranchDataProvider<AzExtTreeItem>);
 
         return new Disposable(() => {
             delete applicationResourceResolvers[type];
+            disposable.dispose();
         });
     }) as Disposable;
 }
