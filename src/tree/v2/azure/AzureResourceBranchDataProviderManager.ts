@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType } from "@microsoft/vscode-azext-utils";
-import { AzureResource, BranchDataProvider, ResourceModelBase } from "../../../api/v2/v2AzureResourcesApi";
+import { AzureResource, BranchDataProvider, ResourceModelBase } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { ResourceBranchDataProviderManagerBase } from '../ResourceBranchDataProviderManagerBase';
 
 export class AzureResourceBranchDataProviderManager extends ResourceBranchDataProviderManagerBase<AzExtResourceType, BranchDataProvider<AzureResource, ResourceModelBase>>{

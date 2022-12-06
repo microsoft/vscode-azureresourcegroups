@@ -4,53 +4,48 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
-import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
+import { AzureResource, BranchDataProvider, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { AzureResourceProvider, v2AzureResourcesApiInternal } from '../../../hostapi.v2.internal';
 import { registerActivity } from '../../activityLog/registerActivity';
 import { AzureResourceBranchDataProviderManager } from '../../tree/v2/azure/AzureResourceBranchDataProviderManager';
+import { AzureResourceTreeDataProvider } from '../../tree/v2/azure/AzureResourceTreeDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
+import { WorkspaceResourceTreeDataProvider } from '../../tree/v2/workspace/WorkspaceResourceTreeDataProvider';
 import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
-import { AzureResource, AzureResourceProvider, BranchDataProvider, ResourceModelBase, V2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from './v2AzureResourcesApi';
 
-export class V2AzureResourcesApiImplementation implements V2AzureResourcesApi {
-    public static apiVersion: string = '2.0.0';
+export function createV2AzureResourcesApi(
+    azureResourceProviderManager: AzureResourceProviderManager,
+    azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
+    azureResourceTreeDataProvider: AzureResourceTreeDataProvider,
+    workspaceResourceProviderManager: WorkspaceResourceProviderManager,
+    workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
+    workspaceResourceTreeDataProvider: WorkspaceResourceTreeDataProvider): v2AzureResourcesApiInternal {
 
-    constructor(
-        private readonly azureResourceProviderManager: AzureResourceProviderManager,
-        private readonly azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
-        private readonly workspaceResourceProviderManager: WorkspaceResourceProviderManager,
-        private readonly workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager) {
-    }
+    return {
+        apiVersion: '2.0.0',
 
-    get apiVersion(): string {
-        return V2AzureResourcesApiImplementation.apiVersion;
-    }
+        registerActivity,
 
-    registerActivity(activity: Activity): Promise<void> {
-        return registerActivity(activity);
-    }
+        azureResourceTreeDataProvider,
+        workspaceResourceTreeDataProvider,
 
-    registerAzureResourceProvider(provider: AzureResourceProvider): vscode.Disposable {
-        this.azureResourceProviderManager.addResourceProvider(provider);
+        registerAzureResourceProvider: (provider: AzureResourceProvider) => {
+            azureResourceProviderManager.addResourceProvider(provider);
+            return new vscode.Disposable(() => azureResourceProviderManager.removeResourceProvider(provider));
+        },
+        registerAzureResourceBranchDataProvider: <T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<AzureResource, T>) => {
+            azureResourceBranchDataProviderManager.addProvider(type, provider);
+            return new vscode.Disposable(() => azureResourceBranchDataProviderManager.removeProvider(type));
+        },
 
-        return new vscode.Disposable(() => this.azureResourceProviderManager.removeResourceProvider(provider));
-    }
-
-    registerAzureResourceBranchDataProvider<T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<AzureResource, T>): vscode.Disposable {
-        this.azureResourceBranchDataProviderManager.addProvider(type, provider);
-
-        return new vscode.Disposable(() => this.azureResourceBranchDataProviderManager.removeProvider(type));
-    }
-
-    registerWorkspaceResourceProvider(provider: WorkspaceResourceProvider): vscode.Disposable {
-        this.workspaceResourceProviderManager.addResourceProvider(provider);
-
-        return new vscode.Disposable(() => this.workspaceResourceProviderManager.removeResourceProvider(provider));
-    }
-
-    registerWorkspaceResourceBranchDataProvider<T extends ResourceModelBase>(type: string, provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable {
-        this.workspaceResourceBranchDataProviderManager.addProvider(type, provider);
-
-        return new vscode.Disposable(() => this.workspaceResourceBranchDataProviderManager.removeProvider(type));
+        registerWorkspaceResourceProvider: (provider: WorkspaceResourceProvider) => {
+            workspaceResourceProviderManager.addResourceProvider(provider);
+            return new vscode.Disposable(() => workspaceResourceProviderManager.removeResourceProvider(provider));
+        },
+        registerWorkspaceResourceBranchDataProvider: <T extends ResourceModelBase>(type: string, provider: BranchDataProvider<WorkspaceResource, T>) => {
+            workspaceResourceBranchDataProviderManager.addProvider(type, provider);
+            return new vscode.Disposable(() => workspaceResourceBranchDataProviderManager.removeProvider(type));
+        },
     }
 }

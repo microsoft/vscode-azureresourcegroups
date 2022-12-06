@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AzureResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { AzureResource } from '../../../api/v2/v2AzureResourcesApi';
 import { azureExtensions } from '../../../azureExtensions';
 import { GroupBySettings } from '../../../commands/explorer/groupBy';
 import { ext } from '../../../extensionVariables';

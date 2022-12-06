@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType } from "@microsoft/vscode-azext-utils";
+import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as vscode from "vscode";
 import { AzureResourceProviderManager } from "../../../api/v2/ResourceProviderManagers";
-import { AzureSubscription } from "../../../api/v2/v2AzureResourcesApi";
 import { azureExtensions } from "../../../azureExtensions";
 import { showHiddenTypesSettingKey } from "../../../constants";
 import { settingUtils } from "../../../utils/settingUtils";

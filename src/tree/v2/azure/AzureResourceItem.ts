@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { BranchDataProvider, ResourceBase, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { TreeItem } from 'vscode';
-import { BranchDataProvider, ResourceBase, ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataItemOptions, BranchDataProviderItem } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
