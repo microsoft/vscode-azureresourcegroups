@@ -15,7 +15,8 @@ import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 namespace extEmitters {
     export let onDidChangeFocusedGroup: EventEmitter<void>;
     export let onDidRegisterResolver: EventEmitter<AppResourceResolver>;
-    export let refreshWorkspace: EventEmitter<void>;
+    export let refreshWorkspaceTree: EventEmitter<void>;
+    export let refreshAzureTree: EventEmitter<void>;
 }
 
 namespace extEvents {
