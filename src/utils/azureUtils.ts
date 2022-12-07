@@ -76,6 +76,10 @@ export function getIconPath(azExtResourceType?: AzExtResourceType): TreeItemIcon
     return treeUtils.getIconPath(azExtResourceType ? path.join('azureIcons', azExtResourceType) : 'resource');
 }
 
+export function getName(azExtResourceType?: AzExtResourceType): string | undefined {
+    return azExtResourceType ? azExtDisplayInfo[azExtResourceType]?.displayName : undefined;
+}
+
 export async function getArmTagKeys(context: IActionContext): Promise<Set<string>> {
     const armTagKeys: Set<string> = new Set();
     for (const sub of (await ext.rootAccountTreeItem.getCachedChildren(context))) {
