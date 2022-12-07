@@ -9,7 +9,7 @@ import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-az
 import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import type { AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
-import { v2AzureResourcesApiInternal } from '../hostapi.v2.internal';
+import { AzureResourcesApiInternal } from '../hostapi.v2.internal';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
 import { InternalAzureResourceGroupsExtensionApi } from './api/AzureResourceGroupsExtensionApi';
@@ -18,11 +18,11 @@ import { registerApplicationResourceResolver } from './api/registerApplicationRe
 import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResourceProvider';
 import { revealTreeItem } from './api/revealTreeItem';
 import { CompatibleAzExtTreeDataProvider } from './api/v2/compatibility/CompatibleAzExtTreeDataProvider';
+import { createAzureResourcesHostApi } from './api/v2/createAzureResourcesHostApi';
 import { DefaultAzureResourceProvider } from './api/v2/DefaultAzureResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/v2/ResourceGroupsExtensionManager';
 import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './api/v2/ResourceProviderManagers';
 import { AzureResourcesApiManager } from './api/v2/v2AzureResourcesApi';
-import { createV2AzureResourcesApi } from './api/v2/v2AzureResourcesApiImplementation';
 import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
@@ -36,7 +36,7 @@ import { WorkspaceDefaultBranchDataProvider } from './tree/v2/workspace/Workspac
 import { WorkspaceResourceBranchDataProviderManager } from './tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
 import { createApiProvider } from './utils/v2/apiUtils';
 
-let v2Api: v2AzureResourcesApiInternal | undefined = undefined;
+let v2Api: AzureResourcesApiInternal | undefined = undefined;
 
 export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureResourcesApiManager> {
     ext.context = context;
@@ -102,14 +102,20 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     const v2ApiFactory = () => {
         if (v2Api === undefined) {
-            v2Api = createV2AzureResourcesApi(
-                azureResourceProviderManager,
-                azureResourceBranchDataProviderManager,
-                azureResourceTreeDataProvider,
-                workspaceResourceProviderManager,
-                workspaceResourceBranchDataProviderManager,
-                workspaceResourceTreeDataProvider,
-            );
+            v2Api = {
+                apiVersion: '2.0.0',
+                resources: createAzureResourcesHostApi(
+                    azureResourceProviderManager,
+                    azureResourceBranchDataProviderManager,
+                    azureResourceTreeDataProvider,
+                    workspaceResourceProviderManager,
+                    workspaceResourceBranchDataProviderManager,
+                    workspaceResourceTreeDataProvider,
+                ),
+                activity: {
+                    registerActivity
+                },
+            }
         }
 
         return v2Api;
