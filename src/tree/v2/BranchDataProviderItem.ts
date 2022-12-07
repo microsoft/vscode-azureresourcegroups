@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { isAzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
@@ -43,9 +44,16 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
         private readonly itemCache: BranchDataItemCache,
         private readonly options?: BranchDataItemOptions) {
         itemCache.addBranchItem(this.branchItem, this);
+
+        // Use AzExtTreeItem.fullId as id for compatibility.
+        if (isAzExtTreeItem(this.branchItem)) {
+            this.id = this.branchItem.fullId;
+        } else {
+            this.id = this.branchItem.id ?? this?.options?.defaultId ?? randomUUID();
+        }
     }
 
-    readonly id: string = this.branchItem.id ?? this?.options?.defaultId ?? randomUUID();
+    public readonly id: string;
 
     readonly portalUrl: vscode.Uri | undefined = this.options?.portalUrl;
     readonly viewProperties?: ViewPropertiesModel = this.options?.viewProperties;

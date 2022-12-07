@@ -67,7 +67,7 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
         }
     }
 
-    private groupBy(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[], keySelector: (resource: AzureResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: AzureResource[] }, contextValues?: string[]): GroupingItem[] {
+    private groupBy(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[], keySelector: (resource: AzureResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: AzureResource[] }, contextValues?: string[], resourceTypeSelector?: (key: string) => AzExtResourceType | undefined): GroupingItem[] {
         initialGrouping = initialGrouping ?? {};
 
         const map = resources.reduce(
@@ -88,10 +88,11 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
         return Object.keys(map).map(key => {
             return this.groupingItemFactory(
                 context,
-                contextValues,
+                [...(contextValues ?? []), key],
                 iconSelector(key),
                 labelSelector(key),
                 map[key],
+                resourceTypeSelector?.(key),
                 parent);
         });
     }
@@ -165,7 +166,9 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
             resources,
             resource => resource.resourceType ?? unknownLabel, // TODO: Is resource type ever undefined?
             key => getName(key as AzExtResourceType) ?? key,
-            key => getIconPath(key as AzExtResourceType),  // TODO: What's the default icon for a resource type?
-            initialGrouping);
+            key => getIconPath(key as AzExtResourceType), // TODO: What's the default icon for a resource type?
+            initialGrouping,
+            ['azureResourceTypeGroup'],
+            key => key as AzExtResourceType);
     }
 }

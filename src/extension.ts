@@ -47,13 +47,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
 
-    const refreshEventEmitter = new vscode.EventEmitter<void>();
-
-    context.subscriptions.push(refreshEventEmitter);
-
-    ext.emitters.refreshWorkspace = new vscode.EventEmitter<void>();
-
-    context.subscriptions.push(ext.emitters.refreshWorkspace = new vscode.EventEmitter<void>());
+    context.subscriptions.push(ext.emitters.refreshAzureTree = new vscode.EventEmitter<void>());
+    context.subscriptions.push(ext.emitters.refreshWorkspaceTree = new vscode.EventEmitter<void>());
 
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
@@ -73,7 +68,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.activityLogTree = new AzExtTreeDataProvider(ext.activityLogTreeItem, 'azureActivityLog.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('azureActivityLog', { treeDataProvider: ext.activityLogTree }));
 
-        registerCommands(refreshEventEmitter, () => ext.emitters.refreshWorkspace.fire());
+        registerCommands();
     });
 
     const extensionManager = new ResourceGroupsExtensionManager()
@@ -96,13 +91,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     const azureResourceTreeDataProvider = registerAzureTree(context, {
         azureResourceProviderManager,
         azureResourceBranchDataProviderManager,
-        refreshEvent: refreshEventEmitter.event,
+        refreshEvent: ext.emitters.refreshAzureTree.event,
     });
 
     const workspaceResourceTreeDataProvider = registerWorkspaceTree(context, {
         workspaceResourceProviderManager,
         workspaceResourceBranchDataProviderManager,
-        refreshEvent: refreshEventEmitter.event,
+        refreshEvent: ext.emitters.refreshWorkspaceTree.event,
     });
 
     const v2ApiFactory = () => {
@@ -119,6 +114,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         return v2Api;
     }
+
+    ext.v2.api = v2ApiFactory();
 
     return createApiProvider(
         (<{ version: string }>context.extension.packageJSON).version,

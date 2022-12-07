@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { OpenInPortalOptions } from '@microsoft/vscode-azext-azureutils';
-import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AzExtResourceType, createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { getIconPath } from '../../../utils/azureUtils';
@@ -33,7 +33,13 @@ export class GroupingItem implements ResourceGroupsItem {
         private readonly iconPath: TreeItemIconPath | undefined,
         public readonly label: string,
         public readonly resources: AzureResource[],
-        public readonly parent?: ResourceGroupsItem) {
+        public readonly resourceType: AzExtResourceType | undefined,
+        public readonly parent?: ResourceGroupsItem
+    ) { }
+
+    // Needed for context menu commands on the group tree items. E.g. "Create..."
+    public get subscription(): ISubscriptionContext {
+        return this.context.subscriptionContext;
     }
 
     readonly id: string = `/subscriptions/${this.context.subscriptionContext.subscriptionId}/groupings/${this.label}`;
@@ -67,7 +73,7 @@ export class GroupingItem implements ResourceGroupsItem {
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = new vscode.TreeItem(this.label, vscode.TreeItemCollapsibleState.Collapsed);
 
-        treeItem.contextValue = this.contextValues?.join(' ');
+        treeItem.contextValue = createContextValue(this.contextValues ?? []);
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
         treeItem.id = this.id;
@@ -92,8 +98,8 @@ export class GroupingItem implements ResourceGroupsItem {
     }
 }
 
-export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: AzureResource[], parent: ResourceGroupsItem,) => GroupingItem;
+export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: AzureResource[], resourceType: AzExtResourceType | undefined, parent: ResourceGroupsItem) => GroupingItem;
 
-export function createGroupingItemFactory(branchDataItemFactory: ResourceItemFactory<AzureResource>, branchDataProviderFactory: BranchDataProviderFactory): GroupingItemFactory {
-    return (context, contextValues, iconPath, label, resources, parent) => new GroupingItem(context, branchDataItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources, parent);
+export function createGroupingItemFactory(resourceItemFactory: ResourceItemFactory<AzureResource>, branchDataProviderFactory: BranchDataProviderFactory): GroupingItemFactory {
+    return (context, contextValues, iconPath, label, resources, resourceType, parent) => new GroupingItem(context, resourceItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources, resourceType, parent);
 }

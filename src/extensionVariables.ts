@@ -6,6 +6,7 @@
 import { AzExtTreeDataProvider, AzExtTreeItem, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { DiagnosticCollection, Disposable, Event, EventEmitter, ExtensionContext, TreeView } from "vscode";
+import { v2AzureResourcesApiInternal } from "../hostapi.v2.internal";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureAccountTreeItem } from "./tree/AzureAccountTreeItem";
@@ -14,7 +15,8 @@ import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 namespace extEmitters {
     export let onDidChangeFocusedGroup: EventEmitter<void>;
     export let onDidRegisterResolver: EventEmitter<AppResourceResolver>;
-    export let refreshWorkspace: EventEmitter<void>;
+    export let refreshWorkspaceTree: EventEmitter<void>;
+    export let refreshAzureTree: EventEmitter<void>;
 }
 
 namespace extEvents {
@@ -47,4 +49,8 @@ export namespace ext {
 
     export const emitters = extEmitters;
     export const events = extEvents;
+
+    export namespace v2 {
+        export let api: v2AzureResourcesApiInternal;
+    }
 }

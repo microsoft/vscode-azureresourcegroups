@@ -3,23 +3,35 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
+import { AzExtTreeItem, callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
 import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
+import { BranchDataProvider, WorkspaceResource } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { Disposable } from "vscode";
 import { refreshWorkspace } from "../commands/workspace/refreshWorkspace";
+import { ext } from "../extensionVariables";
+import { CompatibilityWorkspaceResourceProvider } from "./v2/compatibility/workspace/CompatibilityWorkspaceResourceProvider";
+import { CompatibleWorkspaceResourceBranchDataProvider } from "./v2/compatibility/workspace/CompatibleWorkspaceResourceBranchDataProvider";
 
 export const workspaceResourceProviders: Record<string, WorkspaceResourceProvider> = {};
 
 export function registerWorkspaceResourceProvider(resourceType: string, provider: WorkspaceResourceProvider): Disposable {
     workspaceResourceProviders[resourceType] = provider;
 
-    return callWithTelemetryAndErrorHandlingSync('registerWorkspaceResourceProvider', (context) => {
+    return callWithTelemetryAndErrorHandlingSync('registerWorkspaceResourceProvider', () => {
+        const disposables: Disposable[] = [];
 
-        void refreshWorkspace(context);
+        refreshWorkspace();
+
+        disposables.push(ext.v2.api.registerWorkspaceResourceProvider(new CompatibilityWorkspaceResourceProvider(resourceType, provider)));
+        disposables.push(ext.v2.api.registerWorkspaceResourceBranchDataProvider(resourceType, new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore') as unknown as BranchDataProvider<WorkspaceResource, AzExtTreeItem>));
 
         return new Disposable(() => {
+            for (const disposable of disposables) {
+                disposable.dispose();
+            }
             delete workspaceResourceProviders[resourceType];
-            void refreshWorkspace(context);
+            refreshWorkspace();
         });
     }) as Disposable;
 }
+
