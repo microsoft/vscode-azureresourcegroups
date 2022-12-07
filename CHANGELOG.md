@@ -1,5 +1,14 @@
 # Change Log
 
+## 0.5.6 - 2022-09-08
+
+### Added
+- Azure Container Apps extension view to the Resources explorer
+
+### Fixed
+- Fix Workspace view loadMore [#357](https://github.com/microsoft/vscode-azureresourcegroups/pull/357)
+- Throw NoResourceFoundError [#354](https://github.com/microsoft/vscode-azureresourcegroups/pull/354)
+
 ## 0.5.5 - 2022-07-27
 
 ### Changed
