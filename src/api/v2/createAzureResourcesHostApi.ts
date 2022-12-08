@@ -16,14 +16,14 @@ import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from '
 export function createAzureResourcesHostApi(
     azureResourceProviderManager: AzureResourceProviderManager,
     azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
-    azureResourcesTreeDataProvider: AzureResourceTreeDataProvider,
+    azureResourceTreeDataProvider: AzureResourceTreeDataProvider,
     workspaceResourceProviderManager: WorkspaceResourceProviderManager,
     workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
-    workspaceResourcesTreeDataProvider: WorkspaceResourceTreeDataProvider): AzureResourcesHostApiInternal {
+    workspaceResourceTreeDataProvider: WorkspaceResourceTreeDataProvider): AzureResourcesHostApiInternal {
 
     return {
-        azureResourcesTreeDataProvider,
-        workspaceResourcesTreeDataProvider,
+        azureResourceTreeDataProvider,
+        workspaceResourceTreeDataProvider,
 
         registerAzureResourceProvider: (provider: AzureResourceProvider) => {
             azureResourceProviderManager.addResourceProvider(provider);

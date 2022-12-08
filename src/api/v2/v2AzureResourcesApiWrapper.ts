@@ -21,8 +21,8 @@ export function createWrappedAzureResourcesApi(api: AzureResourcesApiInternal, e
             registerActivity: api.activity.registerActivity.bind(api) as typeof api.activity.registerActivity,
         }),
         resources: {
-            azureResourcesTreeDataProvider: api.resources.azureResourcesTreeDataProvider,
-            workspaceResourcesTreeDataProvider: api.resources.workspaceResourcesTreeDataProvider,
+            azureResourceTreeDataProvider: api.resources.azureResourceTreeDataProvider,
+            workspaceResourceTreeDataProvider: api.resources.workspaceResourceTreeDataProvider,
             ...wrap({
                 registerAzureResourceBranchDataProvider: api.resources.registerAzureResourceBranchDataProvider.bind(api) as typeof api.resources.registerAzureResourceBranchDataProvider,
                 registerAzureResourceProvider: api.resources.registerAzureResourceProvider.bind(api) as typeof api.resources.registerAzureResourceProvider,
