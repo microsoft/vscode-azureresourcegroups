@@ -6,27 +6,22 @@
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import { AzureResource, BranchDataProvider, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { AzureResourceProvider, v2AzureResourcesApiInternal } from '../../../hostapi.v2.internal';
-import { registerActivity } from '../../activityLog/registerActivity';
+import { AzureResourceProvider, AzureResourcesHostApiInternal } from '../../../hostapi.v2.internal';
 import { AzureResourceBranchDataProviderManager } from '../../tree/v2/azure/AzureResourceBranchDataProviderManager';
 import { AzureResourceTreeDataProvider } from '../../tree/v2/azure/AzureResourceTreeDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceResourceTreeDataProvider } from '../../tree/v2/workspace/WorkspaceResourceTreeDataProvider';
 import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
 
-export function createV2AzureResourcesApi(
+export function createAzureResourcesHostApi(
     azureResourceProviderManager: AzureResourceProviderManager,
     azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
     azureResourceTreeDataProvider: AzureResourceTreeDataProvider,
     workspaceResourceProviderManager: WorkspaceResourceProviderManager,
     workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
-    workspaceResourceTreeDataProvider: WorkspaceResourceTreeDataProvider): v2AzureResourcesApiInternal {
+    workspaceResourceTreeDataProvider: WorkspaceResourceTreeDataProvider): AzureResourcesHostApiInternal {
 
     return {
-        apiVersion: '2.0.0',
-
-        registerActivity,
-
         azureResourceTreeDataProvider,
         workspaceResourceTreeDataProvider,
 

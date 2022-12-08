@@ -11,9 +11,9 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
     public static apiVersion = '0.0.1';
 
     #appResourceTree: AzExtTreeDataProvider;
-    #appResourceTreeView: TreeView<AzExtTreeItem>;
+    #appResourceTreeView: TreeView<unknown>;
     #workspaceResourceTree: AzExtTreeDataProvider;
-    #workspaceResourceTreeView: TreeView<AzExtTreeItem>;
+    #workspaceResourceTreeView: TreeView<unknown>;
     #apiVersion: string;
     #revealTreeItem: (resourceId: string) => Promise<void>;
     #registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
@@ -41,7 +41,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         return this.#appResourceTree;
     }
 
-    public get appResourceTreeView(): TreeView<AzExtTreeItem> {
+    public get appResourceTreeView(): TreeView<unknown> {
         return this.#appResourceTreeView;
     }
 
@@ -49,7 +49,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         return this.#workspaceResourceTree;
     }
 
-    public get workspaceResourceTreeView(): TreeView<AzExtTreeItem> {
+    public get workspaceResourceTreeView(): TreeView<unknown> {
         return this.#workspaceResourceTreeView;
     }
 
@@ -83,7 +83,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         return this.appResourceTree;
     }
 
-    public get treeView(): TreeView<AzExtTreeItem> {
+    public get treeView(): TreeView<unknown> {
         return this.appResourceTreeView;
     }
 

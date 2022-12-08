@@ -3,9 +3,8 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
 import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
-import { BranchDataProvider, WorkspaceResource } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { Disposable } from "vscode";
 import { refreshWorkspace } from "../commands/workspace/refreshWorkspace";
 import { ext } from "../extensionVariables";
@@ -22,8 +21,8 @@ export function registerWorkspaceResourceProvider(resourceType: string, provider
 
         refreshWorkspace();
 
-        disposables.push(ext.v2.api.registerWorkspaceResourceProvider(new CompatibilityWorkspaceResourceProvider(resourceType, provider)));
-        disposables.push(ext.v2.api.registerWorkspaceResourceBranchDataProvider(resourceType, new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore') as unknown as BranchDataProvider<WorkspaceResource, AzExtTreeItem>));
+        disposables.push(ext.v2.api.resources.registerWorkspaceResourceProvider(new CompatibilityWorkspaceResourceProvider(resourceType, provider)));
+        disposables.push(ext.v2.api.resources.registerWorkspaceResourceBranchDataProvider(resourceType, new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore')));
 
         return new Disposable(() => {
             for (const disposable of disposables) {

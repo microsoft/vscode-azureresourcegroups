@@ -3,63 +3,61 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType, callWithTelemetryAndErrorHandlingSync } from '@microsoft/vscode-azext-utils';
-import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
-import { AzureResource, BranchDataProvider, ResourceGroupsTreeDataProvider, ResourceModelBase, v2AzureResourcesApi, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
-import * as vscode from 'vscode';
-import { AzureResourceProvider, v2AzureResourcesApiInternal } from '../../../hostapi.v2.internal';
+import { callWithTelemetryAndErrorHandlingSync, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureResourcesApiInternal } from '../../../hostapi.v2.internal';
 
-export class V2AzureResourcesApiWrapper implements v2AzureResourcesApi {
-    constructor(
-        private readonly api: v2AzureResourcesApiInternal,
-        private readonly extensionId: string) {
+export function createWrappedAzureResourcesApi(api: AzureResourcesApiInternal, extensionId: string): AzureResourcesApiInternal {
+
+    function wrap<TFunctions extends Record<string, (...args: unknown[]) => unknown>>(functions: TFunctions): TFunctions {
+        return wrapFunctionsInTelemetry(functions, {
+            callbackIdPrefix: 'v2.',
+            beforeHook: context => context.telemetry.properties.callingExtensionId = extensionId,
+        });
     }
 
-    get apiVersion(): string {
-        return this.api.apiVersion;
-    }
+    return Object.freeze({
+        apiVersion: api.apiVersion,
+        activity: wrap({
+            registerActivity: api.activity.registerActivity.bind(api) as typeof api.activity.registerActivity,
+        }),
+        resources: {
+            azureResourceTreeDataProvider: api.resources.azureResourceTreeDataProvider,
+            workspaceResourceTreeDataProvider: api.resources.workspaceResourceTreeDataProvider,
+            ...wrap({
+                registerAzureResourceBranchDataProvider: api.resources.registerAzureResourceBranchDataProvider.bind(api) as typeof api.resources.registerAzureResourceBranchDataProvider,
+                registerAzureResourceProvider: api.resources.registerAzureResourceProvider.bind(api) as typeof api.resources.registerAzureResourceProvider,
+                registerWorkspaceResourceProvider: api.resources.registerWorkspaceResourceProvider.bind(api) as typeof api.resources.registerWorkspaceResourceProvider,
+                registerWorkspaceResourceBranchDataProvider: api.resources.registerWorkspaceResourceBranchDataProvider.bind(api) as typeof api.resources.registerWorkspaceResourceBranchDataProvider,
+            }),
+        }
+    });
+}
 
-    get azureResourceTreeDataProvider(): ResourceGroupsTreeDataProvider {
-        return this.api.azureResourceTreeDataProvider;
-    }
+interface WrapFunctionsInTelemetryOptions {
+    /**
+     * Called before each function is executed. Intended for adding telemetry properties.
+     */
+    beforeHook?(context: IActionContext): void;
+    /**
+     * Optionally add a prefix to all function callbackIds.
+     */
+    callbackIdPrefix?: string;
+}
 
-    get workspaceResourceTreeDataProvider(): ResourceGroupsTreeDataProvider {
-        return this.api.workspaceResourceTreeDataProvider;
-    }
+function wrapFunctionsInTelemetry<TFunctions extends Record<string, (...args: unknown[]) => unknown>>(functions: TFunctions, options?: WrapFunctionsInTelemetryOptions): TFunctions {
+    const wrappedFunctions = {};
 
-    registerActivity(activity: Activity): Promise<void> {
-        return this.callWithTelemetryAndErrorHandlingSync('v2.registerActivity', () => this.api.registerActivity(activity));
-    }
-
-    registerAzureResourceProvider(provider: AzureResourceProvider): vscode.Disposable {
-        return this.callWithTelemetryAndErrorHandlingSync('v2.registerAzureResourceProvider', () => this.api.registerAzureResourceProvider(provider));
-    }
-
-    registerAzureResourceBranchDataProvider<T extends ResourceModelBase>(type: AzExtResourceType, provider: BranchDataProvider<AzureResource, T>): vscode.Disposable {
-        return this.callWithTelemetryAndErrorHandlingSync('v2.registerAzureResourceBranchDataProvider', () => this.api.registerAzureResourceBranchDataProvider(type, provider));
-    }
-
-    registerWorkspaceResourceProvider(provider: WorkspaceResourceProvider): vscode.Disposable {
-        return this.callWithTelemetryAndErrorHandlingSync('v2.registerWorkspaceResourceProvider', () => this.api.registerWorkspaceResourceProvider(provider));
-    }
-
-    registerWorkspaceResourceBranchDataProvider<T extends ResourceModelBase>(id: string, provider: BranchDataProvider<WorkspaceResource, T>): vscode.Disposable {
-        return this.callWithTelemetryAndErrorHandlingSync('v2.registerWorkspaceResourceBranchDataProvider', () => this.api.registerWorkspaceResourceBranchDataProvider<T>(id, provider));
-    }
-
-    private callWithTelemetryAndErrorHandlingSync<T>(callbackId: string, func: () => T): T {
-        const response = callWithTelemetryAndErrorHandlingSync(
-            callbackId,
-            context => {
-                context.telemetry.properties.callingExtensionId = this.extensionId;
+    Object.entries(functions).forEach(([functionName, func]) => {
+        wrappedFunctions[functionName] = (...args: Parameters<typeof func>): ReturnType<typeof func> => {
+            return callWithTelemetryAndErrorHandlingSync((options?.callbackIdPrefix ?? '') + functionName, context => {
                 context.errorHandling.rethrow = true;
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.suppressReportIssue = true;
-
-                return func();
+                options?.beforeHook?.(context);
+                return func(args);
             });
+        }
+    });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        return response!;
-    }
+    return wrappedFunctions as TFunctions;
 }
