@@ -85,5 +85,5 @@ class ResourceProviderManager<TResourceSource, TResource extends ResourceBase, T
 export class AzureResourceProviderManager extends ResourceProviderManager<AzureSubscription, AzureResource, AzureResourceProvider> {
 }
 
-export class WorkspaceResourceProviderManager extends ResourceProviderManager<vscode.WorkspaceFolder, WorkspaceResource, WorkspaceResourceProvider> {
+export class WorkspaceResourceProviderManager extends ResourceProviderManager<vscode.WorkspaceFolder | undefined, WorkspaceResource, WorkspaceResourceProvider> {
 }
