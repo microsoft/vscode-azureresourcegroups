@@ -15,7 +15,10 @@ export class CompatibilityWorkspaceResourceProvider implements V2WorkspaceResour
     // No comparable mechanism in v1, leave as undefined
     onDidChangeResource?: Event<WorkspaceResource | undefined> = undefined;
 
-    public async getResources(source: WorkspaceFolder): Promise<WorkspaceResource[]> {
+    public async getResources(source: WorkspaceFolder | undefined): Promise<WorkspaceResource[]> {
+        if (source) {
+            return [];
+        }
 
         const resources = await this.provider.provideResources(
             // pass in stub parent
