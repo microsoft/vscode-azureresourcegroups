@@ -15,7 +15,12 @@ export class CompatibilityWorkspaceResourceProvider implements V2WorkspaceResour
     // No comparable mechanism in v1, leave as undefined
     onDidChangeResource?: Event<WorkspaceResource | undefined> = undefined;
 
-    public async getResources(source: WorkspaceFolder): Promise<WorkspaceResource[]> {
+    public async getResources(source: WorkspaceFolder | undefined): Promise<WorkspaceResource[]> {
+        // For compatibility, and to avoid duplicating resources, we'll only return resources when undefined is passed.
+        // See https://github.com/microsoft/vscode-azureresourcegroups/pull/451
+        if (source) {
+            return [];
+        }
 
         const resources = await this.provider.provideResources(
             // pass in stub parent
