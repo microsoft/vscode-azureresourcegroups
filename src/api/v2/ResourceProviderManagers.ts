@@ -61,7 +61,7 @@ class ResourceProviderManager<TResourceSource, TResource extends ResourceBase, T
     async getResources(source: TResourceSource): Promise<TResource[]> {
         await this.activateExtensions();
 
-        const resourceProviders: TResourceProvider[] = Array.from(this.providers.keys());
+        const resourceProviders = Array.from(this.providers.keys());
 
         const resources = await Promise.all(resourceProviders.map(resourceProvider => resourceProvider.getResources(source)));
 
