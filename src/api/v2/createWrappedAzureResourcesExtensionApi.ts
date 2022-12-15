@@ -6,7 +6,7 @@
 import { callWithTelemetryAndErrorHandlingSync, IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzureResourcesApiInternal } from '../../../hostapi.v2.internal';
 
-export function createWrappedAzureResourcesApi(api: AzureResourcesApiInternal, extensionId: string): AzureResourcesApiInternal {
+export function createWrappedAzureResourcesExtensionApi(api: AzureResourcesApiInternal, extensionId: string): AzureResourcesApiInternal {
 
     function wrap<TFunctions extends Record<string, (...args: unknown[]) => unknown>>(functions: TFunctions): TFunctions {
         return wrapFunctionsInTelemetry(functions, {
@@ -54,7 +54,7 @@ function wrapFunctionsInTelemetry<TFunctions extends Record<string, (...args: un
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.suppressReportIssue = true;
                 options?.beforeHook?.(context);
-                return func(args);
+                return func(...args);
             });
         }
     });
