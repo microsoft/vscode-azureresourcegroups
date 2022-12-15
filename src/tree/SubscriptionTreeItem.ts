@@ -3,16 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceGroup, ResourceManagementClient } from '@azure/arm-resources';
-import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep, SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzExtParentTreeItem, AzExtTreeItem, AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, getAzExtResourceType, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, ICreateChildImplContext, ISubscriptionContext, nonNullOrEmptyValue, nonNullProp, NoResourceFoundError, registerEvent } from '@microsoft/vscode-azext-utils';
+import { ResourceManagementClient } from '@azure/arm-resources';
+import { SubscriptionTreeItemBase, uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { AzExtParentTreeItem, AzExtTreeItem, getAzExtResourceType, IActionContext, IAzureQuickPickItem, IAzureQuickPickOptions, ISubscriptionContext, nonNullProp, NoResourceFoundError, registerEvent } from '@microsoft/vscode-azext-utils';
 import { AppResourceFilter, PickAppResourceOptions } from '@microsoft/vscode-azext-utils/hostapi';
 import { ConfigurationChangeEvent, workspace } from 'vscode';
 import { applicationResourceProviders } from '../api/registerApplicationResourceProvider';
 import { GroupBySettings } from '../commands/explorer/groupBy';
 import { azureResourceProviderId, showHiddenTypesSettingKey, ungroupedId } from '../constants';
 import { ext } from '../extensionVariables';
-import { createActivityContext } from '../utils/activityUtils';
 import { createResourceClient } from '../utils/azureClients';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
@@ -154,31 +153,6 @@ export class SubscriptionTreeItem extends SubscriptionTreeItemBase {
         for (const ti of Object.values(this.treeMap)) {
             void ti.refresh(context);
         }
-    }
-
-
-    public async createChildImpl(context: ICreateChildImplContext): Promise<ResourceGroupTreeItem> {
-        const wizardContext: IResourceGroupWizardContext & ExecuteActivityContext = {
-            ...context, ...this.subscription, suppress403Handling: true,
-            ...(await createActivityContext()),
-        };
-
-        const title: string = localize('createResourceGroup', 'Create Resource Group');
-        const promptSteps: AzureWizardPromptStep<IResourceGroupWizardContext>[] = [new ResourceGroupNameStep()];
-        LocationListStep.addStep(wizardContext, promptSteps);
-        const executeSteps: AzureWizardExecuteStep<IResourceGroupWizardContext>[] = [new ResourceGroupCreateStep()];
-        const wizard: AzureWizard<IResourceGroupWizardContext & ExecuteActivityContext> = new AzureWizard(wizardContext, { title, promptSteps, executeSteps });
-        await wizard.prompt();
-        const newResourceGroupName = nonNullProp(wizardContext, 'newResourceGroupName');
-        wizardContext.activityTitle = localize('createResourceGroup', 'Create Resource Group "{0}"', newResourceGroupName);
-        context.showCreatingTreeItem(newResourceGroupName);
-        await wizard.execute();
-        return new ResourceGroupTreeItem(this, {
-            label: nonNullProp(wizardContext, 'newResourceGroupName'),
-            id: nonNullOrEmptyValue(nonNullProp(wizardContext, 'resourceGroup').id)
-        },
-            (): Promise<ResourceGroup> => Promise.resolve(nonNullProp(wizardContext, 'resourceGroup'))
-        );
     }
 
     public registerRefreshEvents(): void {
