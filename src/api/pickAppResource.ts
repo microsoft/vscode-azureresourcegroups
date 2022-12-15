@@ -33,7 +33,7 @@ function filterMap<T, TMapped>(source: T[], predicateMapper: (item: T, index: nu
         const mapped = predicateMapper(current, index++);
         // handles null or undefined
         // eslint-disable-next-line eqeqeq
-        if (mapped != null) {
+        if (mapped !== null && mapped !== undefined) {
             accumulator.push(mapped);
         }
         return accumulator;
