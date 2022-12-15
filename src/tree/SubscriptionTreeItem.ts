@@ -18,7 +18,7 @@ import { settingUtils } from '../utils/settingUtils';
 import { AppResourceTreeItem } from './AppResourceTreeItem';
 import { GroupTreeItemBase } from './GroupTreeItemBase';
 import { GroupTreeMap, ResourceCache } from './ResourceCache';
-import { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
+import type { ResourceGroupTreeItem } from './ResourceGroupTreeItem';
 
 interface PickResourceGroupOptions {
     canPickMany?: boolean;
