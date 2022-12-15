@@ -31,8 +31,6 @@ function filterMap<T, TMapped>(source: T[], predicateMapper: (item: T, index: nu
     let index = 0;
     return source.reduce<TMapped[]>((accumulator, current) => {
         const mapped = predicateMapper(current, index++);
-        // handles null or undefined
-        // eslint-disable-next-line eqeqeq
         if (mapped !== null && mapped !== undefined) {
             accumulator.push(mapped);
         }
