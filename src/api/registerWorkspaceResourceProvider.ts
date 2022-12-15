@@ -6,7 +6,6 @@
 import { callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
 import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
-import { refreshWorkspace } from "../commands/workspace/refreshWorkspace";
 import { ext } from "../extensionVariables";
 import { CompatibilityWorkspaceResourceProvider } from "./v2/compatibility/workspace/CompatibilityWorkspaceResourceProvider";
 import { CompatibleWorkspaceResourceBranchDataProvider } from "./v2/compatibility/workspace/CompatibleWorkspaceResourceBranchDataProvider";
@@ -19,7 +18,7 @@ export function registerWorkspaceResourceProvider(resourceType: string, provider
     return callWithTelemetryAndErrorHandlingSync('registerWorkspaceResourceProvider', () => {
         const disposables: Disposable[] = [];
 
-        refreshWorkspace();
+        ext.actions.refreshWorkspaceTree();
 
         disposables.push(ext.v2.api.resources.registerWorkspaceResourceProvider(new CompatibilityWorkspaceResourceProvider(resourceType, provider)));
         disposables.push(ext.v2.api.resources.registerWorkspaceResourceBranchDataProvider(resourceType, new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore')));
@@ -29,7 +28,7 @@ export function registerWorkspaceResourceProvider(resourceType: string, provider
                 disposable.dispose();
             }
             delete workspaceResourceProviders[resourceType];
-            refreshWorkspace();
+            ext.actions.refreshWorkspaceTree();
         });
     }) as Disposable;
 }
