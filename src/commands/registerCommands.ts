@@ -24,7 +24,6 @@ import { revealResource } from './revealResource';
 import { editTags } from './tags/editTags';
 import { toggleShowAllResources } from './toggleShowAllResources';
 import { viewProperties } from './viewProperties';
-import { refreshWorkspace } from './workspace/refreshWorkspace';
 
 export function registerCommands(): void {
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
@@ -32,7 +31,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
     registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.appResourceTree.loadMore(node, context));
     registerCommand('azureResourceGroups.openInPortal', openInPortal);
-    registerCommand('azureResourceGroups.refresh', async () => { ext.emitters.refreshAzureTree.fire(); });
+    registerCommand('azureResourceGroups.refresh', ext.actions.refreshAzureTree);
     registerCommand('azureResourceGroups.revealResource', revealResource);
     registerCommand('azureResourceGroups.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
     registerCommand('azureResourceGroups.viewProperties', viewProperties);
@@ -67,6 +66,6 @@ export function registerCommands(): void {
         await openUrl(url)
     });
 
-    registerCommand('azureWorkspace.refresh', refreshWorkspace);
+    registerCommand('azureWorkspace.refresh', ext.actions.refreshWorkspaceTree);
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
 }
