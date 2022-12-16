@@ -15,7 +15,6 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
     #workspaceResourceTree: AzExtTreeDataProvider;
     #workspaceResourceTreeView: TreeView<unknown>;
     #apiVersion: string;
-    #revealTreeItem: (resourceId: string) => Promise<void>;
     #registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
     #registerWorkspaceResourceProvider: (id: string, resolver: WorkspaceResourceProvider) => Disposable;
     #registerActivity: (activity: Activity) => Promise<void>;
@@ -30,7 +29,6 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         this.#workspaceResourceTree = options.workspaceResourceTree;
         this.#workspaceResourceTreeView = options.workspaceResourceTreeView;
         this.#apiVersion = options.apiVersion;
-        this.#revealTreeItem = options.revealTreeItem;
         this.#registerApplicationResourceResolver = options.registerApplicationResourceResolver;
         this.#registerWorkspaceResourceProvider = options.registerWorkspaceResourceProvider;
         this.#registerActivity = options.registerActivity;
@@ -55,10 +53,6 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
 
     public get apiVersion(): string {
         return this.#apiVersion;
-    }
-
-    public async revealTreeItem(resourceId: string): Promise<void> {
-        return await this.#revealTreeItem(resourceId);
     }
 
     public async pickAppResource<T extends AzExtTreeItem>(context: ITreeItemPickerContext, options?: PickAppResourceOptions): Promise<T> {

@@ -17,7 +17,6 @@ import { InternalAzureResourceGroupsExtensionApi } from './api/AzureResourceGrou
 import { pickAppResource } from './api/pickAppResource';
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
 import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResourceProvider';
-import { revealTreeItem } from './api/revealTreeItem';
 import { CompatibleAzExtTreeDataProvider } from './api/v2/compatibility/CompatibleAzExtTreeDataProvider';
 import { createAzureResourcesHostApi } from './api/v2/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/v2/createWrappedAzureResourcesExtensionApi';
@@ -138,7 +137,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                     appResourceTreeView: ext.appResourceTreeView,
                     workspaceResourceTree: new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider),
                     workspaceResourceTreeView: ext.workspaceTreeView,
-                    revealTreeItem,
                     registerApplicationResourceResolver,
                     registerWorkspaceResourceProvider,
                     registerActivity,
