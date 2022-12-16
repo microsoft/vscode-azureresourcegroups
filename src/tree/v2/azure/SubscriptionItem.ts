@@ -25,7 +25,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
         private readonly context: ResourceGroupsTreeContext,
         private readonly resourceGroupingManager: AzureResourceGroupingManager,
         private readonly resourceProviderManager: AzureResourceProviderManager,
-        private readonly subscription: AzureSubscription) {
+        public readonly subscription: AzureSubscription) {
     }
 
     public readonly id: string = `/subscriptions/${this.subscription.subscriptionId}`;
