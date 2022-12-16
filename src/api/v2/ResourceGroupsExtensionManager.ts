@@ -5,9 +5,10 @@
 
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { contributesKey } from '../../constants';
 
 interface ResourceGroupsContribution {
-    readonly application: {
+    readonly azure: {
         readonly branches?: { type: string }[];
         readonly resources?: boolean;
     }
@@ -19,16 +20,14 @@ interface ResourceGroupsContribution {
 
 interface ExtensionPackage {
     readonly contributes?: {
-        readonly 'x-azResourcesV2'?: ResourceGroupsContribution;
+        readonly [contributesKey]?: ResourceGroupsContribution;
     };
 }
-
-const v2ResourceContributionsKey = 'x-azResourcesV2';
 
 function getV2ResourceContributions(extension: vscode.Extension<unknown>): ResourceGroupsContribution | undefined {
     const packageJson = extension.packageJSON as ExtensionPackage;
 
-    return packageJson?.contributes?.[v2ResourceContributionsKey];
+    return packageJson?.contributes?.[contributesKey];
 }
 
 const builtInExtensionIdRegex = /^vscode\./i;
@@ -46,7 +45,7 @@ export class ResourceGroupsExtensionManager {
     async activateApplicationResourceBranchDataProvider(type: AzExtResourceType): Promise<void> {
         const extensionAndContributions =
             getInactiveExtensions()
-                .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.application?.branches?.map(resource => resource.type) ?? [] }))
+                .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.azure?.branches?.map(resource => resource.type) ?? [] }))
                 .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
 
         if (extensionAndContributions) {
@@ -57,7 +56,7 @@ export class ResourceGroupsExtensionManager {
     async activateApplicationResourceProviders(): Promise<void> {
         const inactiveResourceContributors =
             getInactiveExtensions()
-                .filter(extension => getV2ResourceContributions(extension)?.application?.resources);
+                .filter(extension => getV2ResourceContributions(extension)?.azure?.resources);
 
         await Promise.all(inactiveResourceContributors.map(extension => extension.activate()));
     }
@@ -65,7 +64,7 @@ export class ResourceGroupsExtensionManager {
     async activateWorkspaceResourceProviders(): Promise<void> {
         const inactiveResourceContributors =
             getInactiveExtensions()
-            .filter(extension => getV2ResourceContributions(extension)?.workspace?.resources);
+                .filter(extension => getV2ResourceContributions(extension)?.workspace?.resources);
 
         await Promise.all(inactiveResourceContributors.map(extension => extension.activate()));
     }

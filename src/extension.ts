@@ -6,7 +6,8 @@
 'use strict';
 
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, callWithTelemetryAndErrorHandling, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzureExtensionApiProvider, GetApiOptions } from '@microsoft/vscode-azext-utils/api';
 import type { AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
 import { AzureResourcesApiInternal } from '../hostapi.v2.internal';
@@ -19,10 +20,10 @@ import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResour
 import { revealTreeItem } from './api/revealTreeItem';
 import { CompatibleAzExtTreeDataProvider } from './api/v2/compatibility/CompatibleAzExtTreeDataProvider';
 import { createAzureResourcesHostApi } from './api/v2/createAzureResourcesHostApi';
+import { createWrappedAzureResourcesExtensionApi } from './api/v2/createWrappedAzureResourcesExtensionApi';
 import { DefaultAzureResourceProvider } from './api/v2/DefaultAzureResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/v2/ResourceGroupsExtensionManager';
 import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './api/v2/ResourceProviderManagers';
-import { AzureResourcesApiManager } from './api/v2/v2AzureResourcesApi';
 import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
@@ -34,11 +35,8 @@ import { registerAzureTree } from './tree/v2/azure/registerAzureTree';
 import { registerWorkspaceTree } from './tree/v2/workspace/registerWorkspaceTree';
 import { WorkspaceDefaultBranchDataProvider } from './tree/v2/workspace/WorkspaceDefaultBranchDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from './tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
-import { createApiProvider } from './utils/v2/apiUtils';
 
-let v2Api: AzureResourcesApiInternal | undefined = undefined;
-
-export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureResourcesApiManager> {
+export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
     ext.context = context;
     ext.ignoreBundle = ignoreBundle;
     ext.outputChannel = createAzExtOutputChannel('Azure Resource Groups', ext.prefix);
@@ -105,53 +103,51 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         refreshEvent: refreshAzureTreeEmitter.event,
     });
 
-    const v2ApiFactory = () => {
-        if (v2Api === undefined) {
-            v2Api = {
-                apiVersion: '2.0.0',
-                resources: createAzureResourcesHostApi(
-                    azureResourceProviderManager,
-                    azureResourceBranchDataProviderManager,
-                    azureResourceTreeDataProvider,
-                    workspaceResourceProviderManager,
-                    workspaceResourceBranchDataProviderManager,
-                    workspaceResourceTreeDataProvider,
-                ),
-                activity: {
-                    registerActivity
+    const v2ApiFactory: AzureExtensionApiFactory<AzureResourcesApiInternal> = {
+        apiVersion: '2.0.0',
+        createApi: (options: GetApiOptions) => {
+            return createWrappedAzureResourcesExtensionApi(
+                {
+                    apiVersion: '2.0.0',
+                    resources: createAzureResourcesHostApi(
+                        azureResourceProviderManager,
+                        azureResourceBranchDataProviderManager,
+                        azureResourceTreeDataProvider,
+                        workspaceResourceProviderManager,
+                        workspaceResourceBranchDataProviderManager,
+                        workspaceResourceTreeDataProvider,
+                    ),
+                    activity: {
+                        registerActivity
+                    },
                 },
-            }
+                options.extensionId ?? 'unknown'
+            );
         }
+    };
 
-        return v2Api;
-    }
-
-    ext.v2.api = v2ApiFactory();
+    ext.v2.api = v2ApiFactory.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
 
     return createApiProvider(
-        (<{ version: string }>context.extension.packageJSON).version,
         [
             {
                 apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
-                apiFactory: () => new InternalAzureResourceGroupsExtensionApi(
-                    {
-                        apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
-                        appResourceTree: new CompatibleAzExtTreeDataProvider(azureResourceTreeDataProvider),
-                        appResourceTreeView: ext.appResourceTreeView,
-                        workspaceResourceTree: new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider),
-                        workspaceResourceTreeView: ext.workspaceTreeView,
-                        revealTreeItem,
-                        registerApplicationResourceResolver,
-                        registerWorkspaceResourceProvider,
-                        registerActivity,
-                        pickAppResource,
-                    })
+                createApi: () => new InternalAzureResourceGroupsExtensionApi({
+                    apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
+                    appResourceTree: new CompatibleAzExtTreeDataProvider(azureResourceTreeDataProvider),
+                    appResourceTreeView: ext.appResourceTreeView,
+                    workspaceResourceTree: new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider),
+                    workspaceResourceTreeView: ext.workspaceTreeView,
+                    revealTreeItem,
+                    registerApplicationResourceResolver,
+                    registerWorkspaceResourceProvider,
+                    registerActivity,
+                    pickAppResource,
+                }),
             },
-            {
-                apiVersion: '2.0.0',
-                apiFactory: v2ApiFactory
-            }
-        ]);
+            v2ApiFactory,
+        ]
+    );
 }
 
 export function deactivateInternal(): void {
