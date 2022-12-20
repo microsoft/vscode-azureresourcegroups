@@ -76,7 +76,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
             context.telemetry.measurements.tagDiagnosticsLength = diagnostics.length;
 
             const showErrors: MessageItem = { title: localize('showErrors', 'Show Errors') };
-            const message: string = localize('errorsExist', 'Failed to upload tags for {0}.', this.getDisplayName(model));
+            const message: string = localize('errorsExist', 'Failed to upload tags for {0}.', this.getDetailedName(model));
             void window.showErrorMessage(message, showErrors).then(async (result) => {
                 if (result === showErrors) {
                     const openedUri: Uri | undefined = window.activeTextEditor?.document.uri;
@@ -94,7 +94,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
             // This won't be displayed, but might as well track the first diagnostic for telemetry
             throw new Error(diagnostics[0].message);
         } else {
-            const confirmMessage: string = localize('confirmTags', 'Are you sure you want to update tags for {0}?', this.getDisplayName(model));
+            const confirmMessage: string = localize('confirmTags', 'Are you sure you want to update tags for {0}?', this.getDetailedName(model));
             const update: MessageItem = { title: localize('update', 'Update') };
             await context.ui.showWarningMessage(confirmMessage, { modal: true }, update);
 
@@ -109,7 +109,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
             const client: ResourceManagementClient = await createResourceClient([context, subscriptionContext]);
             await client.tagsOperations.updateAtScope(model.id, { properties: { tags }, operation: 'Replace' });
 
-            const updatedMessage: string = localize('updatedTags', 'Successfully updated tags for {0}.', this.getDisplayName(model));
+            const updatedMessage: string = localize('updatedTags', 'Successfully updated tags for {0}.', this.getDetailedName(model));
             void window.showInformationMessage(updatedMessage);
             ext.outputChannel.appendLog(updatedMessage);
         }
@@ -136,7 +136,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
         return await node.getTags();
     }
 
-    private getDisplayName(node: ITagsModel): string {
+    private getDetailedName(node: ITagsModel): string {
         return `${node.displayType} "${node.displayName}"`;
     }
 }
