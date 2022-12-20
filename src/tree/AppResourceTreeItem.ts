@@ -6,7 +6,6 @@
 import { ResourceGroup } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzExtResourceType, AzExtTreeItem, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { AppResource, GroupableResource, GroupingConfig, GroupNodeConfiguration, ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
-import { FileChangeType } from "vscode";
 import { azureExtensions } from "../azureExtensions";
 import { GroupBySettings } from "../commands/explorer/groupBy";
 import { ungroupedId } from "../constants";
@@ -46,7 +45,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
         this.groupConfig = createGroupConfigFromResource(resource, root.id);
 
         this.contextValues.add(AppResourceTreeItem.contextValue);
-        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+        // ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
 
         this.type = resource.type;
         this.kind = resource.kind;
@@ -102,7 +101,7 @@ export class AppResourceTreeItem extends ResolvableTreeItemBase implements Group
 
     public async refreshImpl(context: IActionContext): Promise<void> {
         this.mTime = Date.now();
-        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+        // ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
         await super.refreshImpl(context);
     }
 

@@ -8,16 +8,16 @@ import { AzureResource } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { ext } from "../../extensionVariables";
 import { AzureResourceItem } from "../../tree/v2/azure/AzureResourceItem";
 
-export async function editTags(context: IActionContext, item?: AzureResourceItem<AzureResource>): Promise<void> {
+export async function editTags(_context: IActionContext, item?: AzureResourceItem<AzureResource>): Promise<void> {
     if (!item) {
         // todo
         // node = await pickAppResource<AppResourceTreeItem>(context);
         throw new Error("A resource must be selected.");
     }
 
-    if (!item.tags) {
+    if (!item.tagsModel) {
         throw new Error("Editing tags is not supported for this resource.");
     }
 
-    await ext.tagFS.showTextDocument(item.tags);
+    await ext.tagFS.showTextDocument(item.tagsModel);
 }

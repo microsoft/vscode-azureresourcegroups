@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceManagementClient, Tags } from "@azure/arm-resources";
-import { AzExtTreeFileSystem, AzExtTreeFileSystemItem, callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { uiUtils } from "@microsoft/vscode-azext-azureutils";
+import { AzExtTreeFileSystem, AzExtTreeFileSystemItem, callWithTelemetryAndErrorHandling, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import { AzureResource, AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as jsonc from 'jsonc-parser';
 import * as os from "os";
@@ -27,24 +28,25 @@ export interface ITagsModel extends AzExtTreeFileSystemItem {
     mTime: number;
 }
 
-export class EditableTags implements ITagsModel {
-
+export class ResourceTags implements ITagsModel {
     constructor(private readonly resource: AzureResource) { }
-    cTime: number;
-    mTime: number;
 
     readonly id: string = this.resource.id;
     readonly subscription: AzureSubscription = this.resource.subscription;
 
     readonly displayName: string = this.resource.name;
-    readonly displayType: "resource";
+    readonly displayType: ITagsModel['displayType'] = 'resource';
+
+    cTime: number;
+    mTime: number;
 
     async getTags(): Promise<Tags> {
         return await callWithTelemetryAndErrorHandling('getTags', async (context): Promise<Tags | undefined> => {
             const subscriptionContext = createSubscriptionContext(this.resource.subscription);
             const client = await createResourceClient([context, subscriptionContext]);
-            const resource = await client.resources.getById(this.resource.id, '2022-03-01');
-            return resource.tags;
+            // use list because getById is only available for certain api versions and locations
+            const resources = await uiUtils.listAllIterator(client.resources.listByResourceGroup(nonNullValue(this.resource.resourceGroup)));
+            return resources.find(r => r.id === this.id)?.tags;
         }) ?? {};
     }
 }

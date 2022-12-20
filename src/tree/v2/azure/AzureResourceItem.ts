@@ -5,7 +5,7 @@
 
 import { AzureResource, BranchDataProvider, ResourceBase, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { FileChangeType, TreeItem } from 'vscode';
-import { EditableTags } from '../../../commands/tags/TagFileSystem';
+import { ResourceTags } from '../../../commands/tags/TagFileSystem';
 import { ext } from '../../../extensionVariables';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataItemOptions, BranchDataProviderItem } from '../BranchDataProviderItem';
@@ -21,16 +21,15 @@ export class AzureResourceItem<T extends AzureResource> extends BranchDataProvid
         options?: BranchDataItemOptions) {
         super(branchItem, branchDataProvider, itemCache, options);
 
-        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this.tags });
+        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this.tagsModel });
     }
 
     readonly id = this.resource.id;
+    readonly tagsModel = new ResourceTags(this.resource);
 
     override async getParent(): Promise<ResourceGroupsItem | undefined> {
         return this.parent;
     }
-
-    tags = new EditableTags(this.resource);
 
     override async getTreeItem(): Promise<TreeItem> {
         const treeItem = await super.getTreeItem();
