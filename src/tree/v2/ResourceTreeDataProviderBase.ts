@@ -82,7 +82,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         return await this.onGetChildren(element);
     }
 
-    getParent(element: ResourceGroupsItem): vscode.ProviderResult<ResourceGroupsItem | null | undefined> {
+    getParent(element: ResourceGroupsItem): vscode.ProviderResult<ResourceGroupsItem> {
         return element.getParent?.();
     }
 
