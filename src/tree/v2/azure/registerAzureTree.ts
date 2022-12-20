@@ -3,10 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { AzureResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { AzureResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
+import { ext } from '../../../extensionVariables';
 import { BranchDataItemCache } from '../BranchDataItemCache';
+import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { localize } from './../../../utils/localize';
 import { AzureResourceBranchDataProviderManager } from './AzureResourceBranchDataProviderManager';
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
@@ -17,7 +20,7 @@ import { createGroupingItemFactory } from './GroupingItem';
 interface RegisterAzureTreeOptions {
     azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
     azureResourceProviderManager: AzureResourceProviderManager,
-    refreshEvent: vscode.Event<void>,
+    refreshEvent: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
 }
 
 export function registerAzureTree(context: vscode.ExtensionContext, options: RegisterAzureTreeOptions): AzureResourceTreeDataProvider {
@@ -42,6 +45,8 @@ export function registerAzureTree(context: vscode.ExtensionContext, options: Reg
     context.subscriptions.push(treeView);
 
     treeView.description = localize('remote', 'Remote');
+
+    ext.appResourceTreeView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
 
     return azureResourceTreeDataProvider;
 }

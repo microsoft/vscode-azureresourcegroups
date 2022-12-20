@@ -10,6 +10,7 @@ import { AzureResourcesApiInternal } from "../hostapi.v2.internal";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureAccountTreeItem } from "./tree/AzureAccountTreeItem";
+import { ResourceGroupsItem } from "./tree/v2/ResourceGroupsItem";
 import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 
 namespace extEmitters {
@@ -23,8 +24,8 @@ namespace extEvents {
 }
 
 export namespace extActions {
-    export let refreshWorkspaceTree: () => void;
-    export let refreshAzureTree: () => void;
+    export let refreshWorkspaceTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
+    export let refreshAzureTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
 }
 
 /**

@@ -6,6 +6,7 @@
 import { AzExtTreeItem, IActionContext, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
+import { ResourceGroupsItem } from '../tree/v2/ResourceGroupsItem';
 import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
@@ -31,7 +32,8 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
     registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.appResourceTree.loadMore(node, context));
     registerCommand('azureResourceGroups.openInPortal', openInPortal);
-    registerCommand('azureResourceGroups.refresh', ext.actions.refreshAzureTree);
+    registerCommand('azureResourceGroups.refresh', () => ext.actions.refreshAzureTree()); // don't pass in selected node to always refresh entire tree
+    registerCommand('azureResourceGroups.refreshAzureItem', (_context, node?: ResourceGroupsItem) => ext.actions.refreshAzureTree(node));
     registerCommand('azureResourceGroups.revealResource', revealResource);
     registerCommand('azureResourceGroups.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
     registerCommand('azureResourceGroups.viewProperties', viewProperties);
@@ -66,6 +68,6 @@ export function registerCommands(): void {
         await openUrl(url)
     });
 
-    registerCommand('azureWorkspace.refresh', ext.actions.refreshWorkspaceTree);
+    registerCommand('azureWorkspace.refresh', () => ext.actions.refreshWorkspaceTree()); // don't pass in selected node to always refresh entire tree
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
 }

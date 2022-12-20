@@ -111,6 +111,12 @@
                 "icon": "$(refresh)"
             },
             {
+                "command": "azureResourceGroups.refreshAzureItem",
+                "title": "%azureResourceGroups.refresh%",
+                "category": "Azure",
+                "icon": "$(refresh)"
+            },
+            {
                 "command": "azureResourceGroups.revealResource",
                 "title": "%azureResourceGroups.revealResource%",
                 "category": "Azure"
@@ -319,7 +325,7 @@
                     "group": "9@1"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureResourceGroups.refreshAzureItem",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "9@2"
                 },
@@ -339,7 +345,7 @@
                     "group": "9@2"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureResourceGroups.refreshAzureItem",
                     "when": "view == azureResourceGroups && viewItem =~ /azureResource/",
                     "group": "9@3"
                 },
@@ -359,7 +365,7 @@
                     "group": "9@1"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureResourceGroups.refreshAzureItem",
                     "when": "view == azureResourceGroups && viewItem =~ /group/",
                     "group": "inline@1"
                 }
