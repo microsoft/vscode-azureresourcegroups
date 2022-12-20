@@ -15,7 +15,7 @@ import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceB
 export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderBase {
     constructor(
         private readonly branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
-        onRefresh: vscode.Event<void>,
+        onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
         private readonly resourceProviderManager: WorkspaceResourceProviderManager) {
         super(
             new BranchDataItemCache(),

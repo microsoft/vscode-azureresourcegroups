@@ -31,6 +31,7 @@ import { HelpTreeItem } from './tree/HelpTreeItem';
 import { AzureResourceBranchDataProviderManager } from './tree/v2/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/v2/azure/DefaultAzureResourceBranchDataProvider';
 import { registerAzureTree } from './tree/v2/azure/registerAzureTree';
+import { ResourceGroupsItem } from './tree/v2/ResourceGroupsItem';
 import { registerWorkspaceTree } from './tree/v2/workspace/registerWorkspaceTree';
 import { WorkspaceDefaultBranchDataProvider } from './tree/v2/workspace/WorkspaceDefaultBranchDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from './tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
@@ -44,13 +45,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
 
-    const refreshAzureTreeEmitter = new vscode.EventEmitter<void>();
+    const refreshAzureTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);
-    const refreshWorkspaceTreeEmitter = new vscode.EventEmitter<void>();
+    const refreshWorkspaceTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
     context.subscriptions.push(refreshWorkspaceTreeEmitter);
 
-    ext.actions.refreshWorkspaceTree = () => refreshWorkspaceTreeEmitter.fire();
-    ext.actions.refreshAzureTree = () => refreshAzureTreeEmitter.fire();
+    ext.actions.refreshWorkspaceTree = (data) => refreshWorkspaceTreeEmitter.fire(data);
+    ext.actions.refreshAzureTree = (data) => refreshAzureTreeEmitter.fire(data);
 
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
@@ -99,7 +100,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     const workspaceResourceTreeDataProvider = registerWorkspaceTree(context, {
         workspaceResourceProviderManager,
         workspaceResourceBranchDataProviderManager,
-        refreshEvent: refreshAzureTreeEmitter.event,
+        refreshEvent: refreshWorkspaceTreeEmitter.event,
     });
 
     const v2ApiFactory: AzureExtensionApiFactory<AzureResourcesApiInternal> = {
