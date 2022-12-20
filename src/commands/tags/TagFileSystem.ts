@@ -52,8 +52,7 @@ export class ResourceTags implements ITagsModel {
 }
 
 /**
- * For now this file system only supports editing tags.
- * However, the scheme was left generic so that it could support editing other stuff in this extension without needing to create a whole new file system
+ * File system for editing resource tags.
  */
 export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
     public static scheme: string = 'azureResourceGroups';
