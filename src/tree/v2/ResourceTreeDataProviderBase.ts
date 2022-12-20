@@ -18,7 +18,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         protected readonly itemCache: BranchDataItemCache,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
         onDidChangeResource: vscode.Event<ResourceBase | undefined>,
-        onRefresh: vscode.Event<void>,
+        onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
         callOnDispose?: () => void) {
         super(
             () => {
@@ -55,7 +55,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
                 }
             });
 
-        this.refreshSubscription = onRefresh(() => this.onDidChangeTreeDataEmitter.fire());
+        this.refreshSubscription = onRefresh((e) => this.onDidChangeTreeDataEmitter.fire(e));
 
         // TODO: If only individual resources change, just update the tree related to those resources.
         this.resourceProviderManagerListener = onDidChangeResource(() => this.onDidChangeTreeDataEmitter.fire());

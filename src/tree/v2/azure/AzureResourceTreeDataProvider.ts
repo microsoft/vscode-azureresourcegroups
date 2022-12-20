@@ -30,7 +30,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
         itemCache: BranchDataItemCache,
-        onRefresh: vscode.Event<void>,
+        onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
         private readonly resourceGroupingManager: AzureResourceGroupingManager,
         private readonly resourceProviderManager: AzureResourceProviderManager) {
         super(
