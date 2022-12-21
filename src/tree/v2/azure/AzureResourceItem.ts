@@ -3,13 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BranchDataProvider, ResourceBase, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
-import { TreeItem } from 'vscode';
+import { AzureResource, BranchDataProvider, ResourceBase, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { FileChangeType, TreeItem } from 'vscode';
+import { ResourceTags } from '../../../commands/tags/TagFileSystem';
+import { ext } from '../../../extensionVariables';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataItemOptions, BranchDataProviderItem } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
-export class AzureResourceItem<T extends ResourceBase> extends BranchDataProviderItem {
+export class AzureResourceItem<T extends AzureResource> extends BranchDataProviderItem {
     constructor(
         public readonly resource: T,
         branchItem: ResourceModelBase,
@@ -18,9 +20,12 @@ export class AzureResourceItem<T extends ResourceBase> extends BranchDataProvide
         private readonly parent?: ResourceGroupsItem,
         options?: BranchDataItemOptions) {
         super(branchItem, branchDataProvider, itemCache, options);
+
+        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this.tagsModel });
     }
 
     readonly id = this.resource.id;
+    readonly tagsModel = new ResourceTags(this.resource);
 
     override async getParent(): Promise<ResourceGroupsItem | undefined> {
         return this.parent;
@@ -33,8 +38,8 @@ export class AzureResourceItem<T extends ResourceBase> extends BranchDataProvide
     }
 }
 
-export type ResourceItemFactory<T extends ResourceBase> = (resource: T, branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, parent?: ResourceGroupsItem, options?: BranchDataItemOptions) => AzureResourceItem<T>;
+export type ResourceItemFactory<T extends AzureResource> = (resource: T, branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, parent?: ResourceGroupsItem, options?: BranchDataItemOptions) => AzureResourceItem<T>;
 
-export function createResourceItemFactory<T extends ResourceBase>(itemCache: BranchDataItemCache): ResourceItemFactory<T> {
+export function createResourceItemFactory<T extends AzureResource>(itemCache: BranchDataItemCache): ResourceItemFactory<T> {
     return (resource, branchItem, branchDataProvider, parent, options) => new AzureResourceItem(resource, branchItem, branchDataProvider, itemCache, parent, options);
 }
