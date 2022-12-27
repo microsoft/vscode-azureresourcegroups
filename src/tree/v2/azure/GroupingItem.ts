@@ -7,6 +7,7 @@ import { OpenInPortalOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtResourceType, createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { ext } from '../../../extensionVariables';
 import { getIconPath } from '../../../utils/azureUtils';
 import { BranchDataItemOptions } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
@@ -29,6 +30,7 @@ export class GroupingItem implements ResourceGroupsItem {
         public readonly context: ResourceGroupsTreeContext,
         private readonly resourceItemFactory: ResourceItemFactory<AzureResource>,
         private readonly branchDataProviderFactory: (azureResource: AzureResource) => AzureResourceBranchDataProvider<AzureResourceModel>,
+        private readonly onChangeBranchDataProviders: vscode.Event<AzExtResourceType>,
         private readonly contextValues: string[] | undefined,
         private readonly iconPath: TreeItemIconPath | undefined,
         public readonly label: string,
@@ -46,6 +48,14 @@ export class GroupingItem implements ResourceGroupsItem {
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));
+
+        this.onChangeBranchDataProviders((type: AzExtResourceType) => {
+            const azExtResourceTypes: AzExtResourceType[] = sortedResources.map(r => r.resourceType) as AzExtResourceType[];
+            if (azExtResourceTypes.includes(type)) {
+                ext.actions.refreshAzureTree(this);
+            }
+        });
+
         const resourceItems = await Promise.all(sortedResources.map(
             async resource => {
                 const branchDataProvider = this.branchDataProviderFactory(resource);
@@ -100,6 +110,6 @@ export class GroupingItem implements ResourceGroupsItem {
 
 export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: AzureResource[], resourceType: AzExtResourceType | undefined, parent: ResourceGroupsItem) => GroupingItem;
 
-export function createGroupingItemFactory(resourceItemFactory: ResourceItemFactory<AzureResource>, branchDataProviderFactory: BranchDataProviderFactory): GroupingItemFactory {
-    return (context, contextValues, iconPath, label, resources, resourceType, parent) => new GroupingItem(context, resourceItemFactory, branchDataProviderFactory, contextValues, iconPath, label, resources, resourceType, parent);
+export function createGroupingItemFactory(resourceItemFactory: ResourceItemFactory<AzureResource>, branchDataProviderFactory: BranchDataProviderFactory, onChangeBranchDataProvider: vscode.Event<AzExtResourceType>): GroupingItemFactory {
+    return (context, contextValues, iconPath, label, resources, resourceType, parent) => new GroupingItem(context, resourceItemFactory, branchDataProviderFactory, onChangeBranchDataProvider, contextValues, iconPath, label, resources, resourceType, parent);
 }

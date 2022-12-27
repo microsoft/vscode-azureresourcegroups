@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBranchDataProvider extends BranchDataProvider<ResourceBase, ResourceModelBase>> extends vscode.Disposable {
     private readonly branchDataProviderMap = new Map<TResourceType, { provider: TBranchDataProvider, listener: vscode.Disposable | undefined }>();
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceModelBase | ResourceModelBase[] | undefined | null>();
+    private readonly onDidChangeBranchDataProvidersEmitter = new vscode.EventEmitter<TResourceType>()
 
     constructor(
         private readonly defaultProvider: TBranchDataProvider,
@@ -17,6 +18,7 @@ export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBran
         super(
             () => {
                 this.onDidChangeTreeDataEmitter.dispose();
+                this.onDidChangeBranchDataProvidersEmitter.dispose();
 
                 for (const providerContext of this.branchDataProviderMap.values()) {
                     providerContext.listener?.dispose();
@@ -25,6 +27,7 @@ export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBran
     }
 
     public readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
+    public readonly onChangeBranchDataProviders: vscode.Event<TResourceType> = this.onDidChangeBranchDataProvidersEmitter.event;
 
     addProvider(type: TResourceType, provider: TBranchDataProvider): void {
         this.branchDataProviderMap.set(
@@ -35,7 +38,7 @@ export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBran
             }
         );
 
-        this.onDidChangeTreeDataEmitter.fire();
+        this.onDidChangeBranchDataProvidersEmitter.fire(type);
     }
 
     getProvider(type: TResourceType | undefined): TBranchDataProvider {
@@ -62,8 +65,7 @@ export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBran
             providerContext.listener?.dispose();
 
             this.branchDataProviderMap.delete(type);
-
-            this.onDidChangeTreeDataEmitter.fire();
+            this.onDidChangeBranchDataProvidersEmitter.fire(type);
         }
     }
 }
