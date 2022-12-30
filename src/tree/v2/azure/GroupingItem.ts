@@ -5,7 +5,7 @@
 
 import { OpenInPortalOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtResourceType, createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { ITagsModel, ResourceTags } from '../../../commands/tags/TagFileSystem';
 import { getIconPath } from '../../../utils/azureUtils';
@@ -26,6 +26,7 @@ function createPortalUrl(subscription: AzureSubscription, id: string, options?: 
 export class GroupingItem implements ResourceGroupsItem {
     private description: string | undefined;
 
+    readonly viewProperties?: ViewPropertiesModel;
     readonly tagsModel?: ITagsModel;
 
     constructor(
@@ -42,6 +43,10 @@ export class GroupingItem implements ResourceGroupsItem {
     ) {
         if (resourceGroup) {
             this.tagsModel = new ResourceTags(resourceGroup);
+            this.viewProperties = {
+                label: resourceGroup.name,
+                data: resourceGroup.raw
+            };
         }
     }
 
