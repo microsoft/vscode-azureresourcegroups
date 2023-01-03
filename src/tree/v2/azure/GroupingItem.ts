@@ -30,7 +30,7 @@ export class GroupingItem implements ResourceGroupsItem {
         public readonly context: ResourceGroupsTreeContext,
         private readonly resourceItemFactory: ResourceItemFactory<AzureResource>,
         private readonly branchDataProviderFactory: (azureResource: AzureResource) => AzureResourceBranchDataProvider<AzureResourceModel>,
-        private readonly onChangeBranchDataProviders: vscode.Event<AzExtResourceType>,
+        private readonly onDidChangeBranchDataProviders: vscode.Event<AzExtResourceType>,
         private readonly contextValues: string[] | undefined,
         private readonly iconPath: TreeItemIconPath | undefined,
         public readonly label: string,
@@ -49,7 +49,7 @@ export class GroupingItem implements ResourceGroupsItem {
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));
 
-        this.onChangeBranchDataProviders((type: AzExtResourceType) => {
+        this.onDidChangeBranchDataProviders((type: AzExtResourceType) => {
             const azExtResourceTypes = sortedResources.map(r => r.resourceType);
             if (azExtResourceTypes.includes(type)) {
                 ext.actions.refreshAzureTree(this);
