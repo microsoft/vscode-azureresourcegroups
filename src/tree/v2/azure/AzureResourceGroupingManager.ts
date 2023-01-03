@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { AzExtResourceType, nonNullValue, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { AzureResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { azureExtensions } from '../../../azureExtensions';
@@ -67,7 +67,7 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
         }
     }
 
-    private groupBy(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[], keySelector: (resource: AzureResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: AzureResource[] }, contextValues?: string[], resourceTypeSelector?: (key: string) => AzExtResourceType | undefined): GroupingItem[] {
+    private groupBy(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[], keySelector: (resource: AzureResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: AzureResource[] }, contextValues?: string[], resourceTypeSelector?: (key: string) => AzExtResourceType | undefined, resourceGroupSelector?: (key: string) => AzureResource): GroupingItem[] {
         initialGrouping = initialGrouping ?? {};
 
         const map = resources.reduce(
@@ -93,7 +93,8 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
                 labelSelector(key),
                 map[key],
                 resourceTypeSelector?.(key),
-                parent);
+                parent,
+                resourceGroupSelector?.(key));
         });
     }
 
@@ -142,7 +143,9 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
             key => key,
             () => treeUtils.getIconPath('resourceGroup'),
             initialGrouping,
-            ['azureResourceGroup']);
+            ['azureResourceGroup'],
+            undefined,
+            key => nonNullValue(resourceGroups.find(resource => resource.name.toLowerCase() === key.toLowerCase())));
 
         return groupedResources;
     }

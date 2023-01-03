@@ -29,13 +29,15 @@ export interface ITagsModel extends AzExtTreeFileSystemItem {
 }
 
 export class ResourceTags implements ITagsModel {
-    constructor(private readonly resource: AzureResource) { }
+    constructor(private readonly resource: AzureResource) {
+        this.displayType = resource.resourceGroup ? 'resource' : 'resource group';
+    }
 
     readonly id: string = this.resource.id;
     readonly subscription: AzureSubscription = this.resource.subscription;
 
     readonly displayName: string = this.resource.name;
-    readonly displayType: ITagsModel['displayType'] = 'resource';
+    readonly displayType: ITagsModel['displayType'];
 
     cTime: number;
     mTime: number;
@@ -44,9 +46,15 @@ export class ResourceTags implements ITagsModel {
         return await callWithTelemetryAndErrorHandling('getTags', async (context): Promise<Tags | undefined> => {
             const subscriptionContext = createSubscriptionContext(this.resource.subscription);
             const client = await createResourceClient([context, subscriptionContext]);
-            // use list because getById is only available for certain api versions and locations
-            const resources = await uiUtils.listAllIterator(client.resources.listByResourceGroup(nonNullValue(this.resource.resourceGroup)));
-            return resources.find(r => r.id === this.id)?.tags;
+
+            if (this.resource.resourceGroup) {
+                // use list because getById is only available for certain api versions and locations
+                const resources = await uiUtils.listAllIterator(client.resources.listByResourceGroup(nonNullValue(this.resource.resourceGroup)));
+                return resources.find(r => r.id === this.id)?.tags;
+            } else {
+                const resourceGroup = await client.resourceGroups.get(nonNullValue(this.resource.name));
+                return resourceGroup.tags;
+            }
         }) ?? {};
     }
 }
