@@ -50,7 +50,7 @@ export class GroupingItem implements ResourceGroupsItem {
         const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));
 
         this.onChangeBranchDataProviders((type: AzExtResourceType) => {
-            const azExtResourceTypes: AzExtResourceType[] = sortedResources.map(r => r.resourceType) as AzExtResourceType[];
+            const azExtResourceTypes = sortedResources.map(r => r.resourceType);
             if (azExtResourceTypes.includes(type)) {
                 ext.actions.refreshAzureTree(this);
             }
