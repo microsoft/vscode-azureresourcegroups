@@ -28,7 +28,7 @@ export function registerAzureTree(context: vscode.ExtensionContext, options: Reg
 
     const itemCache = new BranchDataItemCache();
     const branchDataItemFactory = createResourceItemFactory<AzureResource>(itemCache);
-    const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => azureResourceBranchDataProviderManager.getProvider(resource.resourceType));
+    const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => azureResourceBranchDataProviderManager.getProvider(resource.resourceType), azureResourceBranchDataProviderManager.onChangeBranchDataProviders.bind(azureResourceBranchDataProviderManager));
 
     const resourceGroupingManager = new AzureResourceGroupingManager(groupingItemFactory);
     context.subscriptions.push(resourceGroupingManager);
