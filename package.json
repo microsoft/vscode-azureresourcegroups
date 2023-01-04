@@ -202,14 +202,14 @@
                 {
                     "id": "azure",
                     "title": "Azure",
-                    "icon": "resources/azure.svg"
+                    "icon": "$(azure)"
                 }
             ],
             "panel": [
                 {
                     "id": "azurePanel",
                     "title": "Azure",
-                    "icon": "resources/azure.svg"
+                    "icon": "$(azure)"
                 }
             ]
         },
@@ -236,7 +236,7 @@
                     "id": "azureActivityLog",
                     "name": "Activity Log",
                     "visibility": "collapsed",
-                    "icon": "resources/azure.svg",
+                    "icon": "$(azure)",
                     "type": "tree"
                 }
             ]
