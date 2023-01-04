@@ -20,8 +20,9 @@ export function registerWorkspaceResourceProvider(resourceType: string, provider
 
         ext.actions.refreshWorkspaceTree();
 
-        disposables.push(ext.v2.api.resources.registerWorkspaceResourceProvider(new CompatibilityWorkspaceResourceProvider(resourceType, provider)));
-        disposables.push(ext.v2.api.resources.registerWorkspaceResourceBranchDataProvider(resourceType, new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore')));
+        const compatBranchDataProvider = new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore');
+        disposables.push(ext.v2.api.resources.registerWorkspaceResourceProvider(new CompatibilityWorkspaceResourceProvider(resourceType, provider, compatBranchDataProvider)));
+        disposables.push(ext.v2.api.resources.registerWorkspaceResourceBranchDataProvider(resourceType, compatBranchDataProvider));
 
         return new Disposable(() => {
             for (const disposable of disposables) {

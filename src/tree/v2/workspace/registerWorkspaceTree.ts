@@ -7,6 +7,8 @@ import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { WorkspaceResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { ext } from '../../../extensionVariables';
+import { BranchDataItemCache } from '../BranchDataItemCache';
+import { createTreeView } from '../createTreeView';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { localize } from './../../../utils/localize';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
@@ -21,14 +23,17 @@ interface RegisterWorkspaceTreeOptions {
 export function registerWorkspaceTree(context: vscode.ExtensionContext, options: RegisterWorkspaceTreeOptions): WorkspaceResourceTreeDataProvider {
     const { workspaceResourceBranchDataProviderManager, workspaceResourceProviderManager, refreshEvent } = options;
 
+    const itemCache = new BranchDataItemCache();
     const workspaceResourceTreeDataProvider =
-        new WorkspaceResourceTreeDataProvider(workspaceResourceBranchDataProviderManager, refreshEvent, workspaceResourceProviderManager);
+        new WorkspaceResourceTreeDataProvider(workspaceResourceBranchDataProviderManager, refreshEvent, workspaceResourceProviderManager, itemCache);
     context.subscriptions.push(workspaceResourceTreeDataProvider);
 
-    const treeView = vscode.window.createTreeView('azureWorkspace', {
+    const treeView = createTreeView('azureWorkspace', {
         canSelectMany: true,
         showCollapseAll: true,
         treeDataProvider: workspaceResourceTreeDataProvider,
+        description: localize('local', 'Local'),
+        itemCache,
     });
     context.subscriptions.push(treeView);
 
