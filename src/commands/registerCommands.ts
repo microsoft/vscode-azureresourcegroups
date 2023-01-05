@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtTreeItem, IActionContext, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
-import * as vscode from 'vscode';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
 import { ResourceGroupsItem } from '../tree/v2/ResourceGroupsItem';

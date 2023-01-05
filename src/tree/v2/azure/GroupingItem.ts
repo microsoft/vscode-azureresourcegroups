@@ -7,6 +7,7 @@ import { OpenInPortalOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtResourceType, createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { isPinned } from '../../../commands/explorer/pinning';
 import { ITagsModel, ResourceTags } from '../../../commands/tags/TagFileSystem';
 import { ext } from '../../../extensionVariables';
 import { getIconPath } from '../../../utils/azureUtils';
@@ -95,6 +96,10 @@ export class GroupingItem implements ResourceGroupsItem {
 
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = new vscode.TreeItem(this.label, vscode.TreeItemCollapsibleState.Collapsed);
+
+        // All grouping items are pinnable
+        const computedContextValues = this.contextValues || [];
+        computedContextValues.push(isPinned(this) ? 'pinned' : 'pinnable');
 
         treeItem.contextValue = createContextValue(this.contextValues ?? []);
         treeItem.description = this.description;

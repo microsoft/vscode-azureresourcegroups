@@ -8,12 +8,14 @@ import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as vscode from "vscode";
 import { AzureResourceProviderManager } from "../../../api/v2/ResourceProviderManagers";
 import { azureExtensions } from "../../../azureExtensions";
+import { isPinned } from "../../../commands/explorer/pinning";
 import { showHiddenTypesSettingKey } from "../../../constants";
 import { settingUtils } from "../../../utils/settingUtils";
 import { treeUtils } from "../../../utils/treeUtils";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
 import { AzureResourceGroupingManager } from "./AzureResourceGroupingManager";
+import { GroupingItem } from "./GroupingItem";
 
 const supportedResourceTypes: AzExtResourceType[] =
     azureExtensions
@@ -39,7 +41,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
             resources = resources.filter(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' || (resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType)));
         }
 
-        return this.resourceGroupingManager.groupResources(this, this.context, resources ?? []).sort((a, b) => a.label.localeCompare(b.label));
+        return this.resourceGroupingManager.groupResources(this, this.context, resources ?? []).sort(compareGroupTreeItems);
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
@@ -50,5 +52,21 @@ export class SubscriptionItem implements ResourceGroupsItem {
         treeItem.id = this.id;
 
         return treeItem;
+    }
+}
+
+function compareGroupTreeItems(a: GroupingItem, b: GroupingItem): number {
+    const aIsPinned = isPinned(a);
+    const bIsPinned = isPinned(b);
+
+    if (aIsPinned && !bIsPinned) {
+        // A is pinned and B is not pinned, so A should come first
+        return -1;
+    } else if (!aIsPinned && bIsPinned) {
+        // A is not pinned and B is pinned, so B should come first
+        return 1;
+    } else {
+        // A and B are both pinned or both unpinned, compare by label alone
+        return a.label.localeCompare(b.label);
     }
 }
