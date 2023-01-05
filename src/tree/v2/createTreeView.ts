@@ -36,6 +36,9 @@ export function createTreeView(viewId: string, options: InternalTreeViewOptions)
     return treeView;
 }
 
+/**
+ * v1.5 compatibility for TreeView.reveal
+ */
 function modifyReveal(treeView: TreeView<ResourceGroupsItem>, treeDataProvider: ResourceTreeDataProviderBase, itemCache: BranchDataItemCache): void {
     (treeView as InternalTreeView)._reveal = treeView.reveal.bind(treeView) as typeof treeView.reveal;
 
