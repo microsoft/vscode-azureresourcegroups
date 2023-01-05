@@ -3,21 +3,30 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { AzExtResourceType, callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
 import { ext } from "../extensionVariables";
+import { CompatibleApplicationResourceBranchDataProvider } from "./v2/compatibility/application/CompatibleApplicationResourceBranchDataProvider";
 
-export const applicationResourceResolvers: Record<string, AppResourceResolver> = {};
+export const applicationResourceResolvers: Partial<Record<AzExtResourceType, AppResourceResolver>> = {};
 
-export function registerApplicationResourceResolver(id: string, resolver: AppResourceResolver): Disposable {
-    if (applicationResourceResolvers[id]) {
-        throw new Error(`Application resource resolver with id '${id}' has already been registered.`);
-    }
+export function registerApplicationResourceResolver(type: AzExtResourceType, resolver: AppResourceResolver): Disposable {
+    return callWithTelemetryAndErrorHandlingSync('registerApplicationResourceResolver', () => {
+        if (applicationResourceResolvers[type]) {
+            throw new Error(`Application resource resolver with id '${type}' has already been registered.`);
+        }
 
-    applicationResourceResolvers[id] = resolver;
-    ext.emitters.onDidRegisterResolver.fire(resolver);
+        applicationResourceResolvers[type] = resolver;
+        ext.emitters.onDidRegisterResolver.fire(resolver);
 
-    return new Disposable(() => {
-        delete applicationResourceResolvers[id];
-    });
+        const compat = new CompatibleApplicationResourceBranchDataProvider(resolver, 'azureResourceGroups.loadMore' /** TODO: what is the correct value for this? */);
+        const disposable = ext.v2.api.resources.registerAzureResourceBranchDataProvider(type, compat);
+
+        return new Disposable(() => {
+            delete applicationResourceResolvers[type];
+            disposable.dispose();
+            compat.dispose();
+        });
+    }) as Disposable;
 }

@@ -4,12 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
-import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
-import { revealTreeItem } from '../api/revealTreeItem';
 import { ext } from '../extensionVariables';
-import { AppResourceTreeItem } from '../tree/AppResourceTreeItem';
-import { SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
+import { ResourceGroupsItem } from '../tree/v2/ResourceGroupsItem';
+import { ResourceTreeDataProviderBase } from '../tree/v2/ResourceTreeDataProviderBase';
 
 export async function revealResource(context: IActionContext, resourceId: string): Promise<void>;
 export async function revealResource(context: IActionContext, resource: AppResource): Promise<void>;
@@ -19,12 +18,9 @@ export async function revealResource(context: IActionContext, arg: AppResource |
     context.telemetry.properties.resourceType = parseAzureResourceId(resourceId).provider.replace(/\//g, '|');
 
     try {
-        const subscriptionNode: SubscriptionTreeItem | undefined = await ext.appResourceTree.findTreeItem(`/subscriptions/${parseAzureResourceId(resourceId).subscriptionId}`, { ...context, loadAll: true });
-        const appResourceNode: AppResourceTreeItem | undefined = await subscriptionNode?.findAppResourceByResourceId(context, resourceId);
-        if (appResourceNode) {
-            // ensure the parent node loaded this AppResourceTreeItem
-            await appResourceNode.parent?.getCachedChildren(context);
-            await revealTreeItem(appResourceNode);
+        const item: ResourceGroupsItem | undefined = await (ext.v2.api.resources.azureResourceTreeDataProvider as ResourceTreeDataProviderBase).findItemById(resourceId);
+        if (item) {
+            await ext.appResourceTreeView.reveal(item as unknown as AzExtTreeItem, { expand: false, focus: true, select: true });
         }
     } catch (error) {
         context.telemetry.properties.revealError = parseError(error).message;

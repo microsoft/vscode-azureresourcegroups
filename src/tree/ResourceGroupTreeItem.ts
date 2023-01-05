@@ -6,10 +6,8 @@
 import { ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { AzExtParentTreeItem, AzureWizard, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { GroupNodeConfiguration } from "@microsoft/vscode-azext-utils/hostapi";
-import { FileChangeType } from "vscode";
 import { DeleteResourceGroupContext } from "../commands/deleteResourceGroup/DeleteResourceGroupContext";
 import { DeleteResourceGroupStep } from "../commands/deleteResourceGroup/DeleteResourceGroupStep";
-import { ext } from "../extensionVariables";
 import { createActivityContext } from "../utils/activityUtils";
 import { createResourceClient } from "../utils/azureClients";
 import { localize } from "../utils/localize";
@@ -34,7 +32,7 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
             this.data = rg;
         });
 
-        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+        // ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
     }
 
     public static createFromResourceGroup(parent: AzExtParentTreeItem, rg: ResourceGroup): ResourceGroupTreeItem {
@@ -67,7 +65,7 @@ export class ResourceGroupTreeItem extends GroupTreeItemBase {
         const client: ResourceManagementClient = await createResourceClient([context, this.subscription]);
         this.data = await client.resourceGroups.get(this.name);
         this.mTime = Date.now();
-        ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
+        // ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this });
         await super.refreshImpl(context);
     }
 

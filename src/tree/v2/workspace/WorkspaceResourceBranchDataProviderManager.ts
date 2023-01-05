@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BranchDataProvider, ResourceModelBase, WorkspaceResource } from '../../../api/v2/v2AzureResourcesApi';
+import { BranchDataProvider, ResourceModelBase, WorkspaceResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { ResourceBranchDataProviderManagerBase } from '../ResourceBranchDataProviderManagerBase';
 
-export class WorkspaceResourceBranchDataProviderManager extends ResourceBranchDataProviderManagerBase<BranchDataProvider<WorkspaceResource, ResourceModelBase>> {
+export class WorkspaceResourceBranchDataProviderManager extends ResourceBranchDataProviderManagerBase<string, BranchDataProvider<WorkspaceResource, ResourceModelBase>> {
     constructor(
         defaultProvider: BranchDataProvider<WorkspaceResource, ResourceModelBase>,
         extensionActivator: (type: string) => void

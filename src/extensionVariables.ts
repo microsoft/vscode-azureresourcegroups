@@ -6,9 +6,11 @@
 import { AzExtTreeDataProvider, AzExtTreeItem, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { DiagnosticCollection, Disposable, Event, EventEmitter, ExtensionContext, TreeView } from "vscode";
+import { AzureResourcesApiInternal } from "../hostapi.v2.internal";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureAccountTreeItem } from "./tree/AzureAccountTreeItem";
+import { ResourceGroupsItem } from "./tree/v2/ResourceGroupsItem";
 import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 
 namespace extEmitters {
@@ -19,6 +21,11 @@ namespace extEmitters {
 namespace extEvents {
     export let onDidChangeFocusedGroup: Event<void>;
     export let onDidRegisterResolver: Event<AppResourceResolver>;
+}
+
+export namespace extActions {
+    export let refreshWorkspaceTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
+    export let refreshAzureTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
 }
 
 /**
@@ -46,4 +53,10 @@ export namespace ext {
 
     export const emitters = extEmitters;
     export const events = extEvents;
+
+    export namespace v2 {
+        export let api: AzureResourcesApiInternal;
+    }
+
+    export const actions = extActions;
 }

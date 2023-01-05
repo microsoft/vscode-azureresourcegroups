@@ -11,12 +11,15 @@ export interface GenericItemOptions {
     readonly children?: ResourceGroupsItem[];
     readonly commandArgs?: unknown[];
     readonly commandId?: string;
+    readonly contextValue?: string;
     readonly iconPath?: TreeItemIconPath;
 }
 
 export class GenericItem implements ResourceGroupsItem {
     constructor(public readonly label: string, private readonly options?: GenericItemOptions) {
     }
+
+    readonly id: string = this.label;
 
     getChildren(): vscode.ProviderResult<ResourceGroupsItem[]> {
         return this.options?.children;
@@ -33,6 +36,7 @@ export class GenericItem implements ResourceGroupsItem {
             };
         }
 
+        treeItem.contextValue = this.options?.contextValue;
         treeItem.iconPath = this.options?.iconPath;
 
         return treeItem;

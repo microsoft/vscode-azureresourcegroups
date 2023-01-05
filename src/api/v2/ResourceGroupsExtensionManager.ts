@@ -3,31 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { contributesKey } from '../../constants';
 
 interface ResourceGroupsContribution {
-    readonly application: {
+    readonly azure: {
         readonly branches?: { type: string }[];
-        readonly resources?: { type: string }[];
+        readonly resources?: boolean;
     }
     readonly workspace: {
         readonly branches?: { type: string }[];
-        readonly resources?: { type: string }[];
+        readonly resources?: boolean;
     }
 }
 
 interface ExtensionPackage {
     readonly contributes?: {
-        readonly 'x-azResourcesV2'?: ResourceGroupsContribution;
+        readonly [contributesKey]?: ResourceGroupsContribution;
     };
 }
-
-const v2ResourceContributionsKey = 'x-azResourcesV2';
 
 function getV2ResourceContributions(extension: vscode.Extension<unknown>): ResourceGroupsContribution | undefined {
     const packageJson = extension.packageJSON as ExtensionPackage;
 
-    return packageJson?.contributes?.[v2ResourceContributionsKey];
+    return packageJson?.contributes?.[contributesKey];
 }
 
 const builtInExtensionIdRegex = /^vscode\./i;
@@ -42,12 +42,10 @@ function getInactiveExtensions(): vscode.Extension<unknown>[] {
 }
 
 export class ResourceGroupsExtensionManager {
-    async activateApplicationResourceBranchDataProvider(type: string): Promise<void> {
-        type = type.toLowerCase();
-
+    async activateApplicationResourceBranchDataProvider(type: AzExtResourceType): Promise<void> {
         const extensionAndContributions =
             getInactiveExtensions()
-                .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.application?.branches?.map(resource => resource.type.toLowerCase()) ?? [] }))
+                .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.azure?.branches?.map(resource => resource.type) ?? [] }))
                 .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
 
         if (extensionAndContributions) {
@@ -58,27 +56,23 @@ export class ResourceGroupsExtensionManager {
     async activateApplicationResourceProviders(): Promise<void> {
         const inactiveResourceContributors =
             getInactiveExtensions()
-                .map(extension => ({ extension, resources: getV2ResourceContributions(extension)?.application?.resources ?? [] }))
-                .filter(extensionAndContributions => extensionAndContributions.resources.length > 0);
+                .filter(extension => getV2ResourceContributions(extension)?.azure?.resources);
 
-        await Promise.all(inactiveResourceContributors.map(contributor => contributor.extension.activate()));
+        await Promise.all(inactiveResourceContributors.map(extension => extension.activate()));
     }
 
     async activateWorkspaceResourceProviders(): Promise<void> {
         const inactiveResourceContributors =
             getInactiveExtensions()
-                .map(extension => ({ extension, resources: getV2ResourceContributions(extension)?.workspace?.resources ?? [] }))
-                .filter(extensionAndContributions => extensionAndContributions.resources.length > 0);
+                .filter(extension => getV2ResourceContributions(extension)?.workspace?.resources);
 
-        await Promise.all(inactiveResourceContributors.map(contributor => contributor.extension.activate()));
+        await Promise.all(inactiveResourceContributors.map(extension => extension.activate()));
     }
 
     async activateWorkspaceResourceBranchDataProvider(type: string): Promise<void> {
-        type = type.toLowerCase();
-
         const extensionAndContributions =
             getInactiveExtensions()
-                .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.workspace?.branches?.map(resources => resources.type.toLowerCase()) ?? [] }))
+                .map(extension => ({ extension, contributions: getV2ResourceContributions(extension)?.workspace?.branches?.map(resources => resources.type) ?? [] }))
                 .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
 
         if (extensionAndContributions) {

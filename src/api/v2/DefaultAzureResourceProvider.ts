@@ -6,15 +6,16 @@
 import { GenericResource, ResourceGroup } from '@azure/arm-resources';
 import { getResourceGroupFromId, uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, getAzExtResourceType, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AzureResource, AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { AzureResourceProvider } from '../../../hostapi.v2.internal';
 import { createResourceClient } from '../../utils/azureClients';
 import { createSubscriptionContext } from '../../utils/v2/credentialsUtils';
-import { ApplicationResource, ApplicationResourceProvider, ApplicationSubscription, ProvideResourceOptions } from './v2AzureResourcesApi';
 
-export class DefaultApplicationResourceProvider implements ApplicationResourceProvider {
-    private readonly onDidChangeResourceEmitter = new vscode.EventEmitter<ApplicationResource | undefined>();
+export class DefaultAzureResourceProvider implements AzureResourceProvider {
+    private readonly onDidChangeResourceEmitter = new vscode.EventEmitter<AzureResource | undefined>();
 
-    getResources(subscription: ApplicationSubscription, _options?: ProvideResourceOptions | undefined): Promise<ApplicationResource[] | undefined> {
+    getResources(subscription: AzureSubscription): Promise<AzureResource[] | undefined> {
         return callWithTelemetryAndErrorHandling(
             'provideResources',
             async (context: IActionContext) => {
@@ -34,19 +35,20 @@ export class DefaultApplicationResourceProvider implements ApplicationResourcePr
 
     onDidChangeResource = this.onDidChangeResourceEmitter.event;
 
-    private fromResourceGroup(subscription: ApplicationSubscription, resourceGroup: ResourceGroup): ApplicationResource {
+    private fromResourceGroup(subscription: AzureSubscription, resourceGroup: ResourceGroup): AzureResource {
         return {
             ...resourceGroup,
             subscription,
             id: nonNullProp(resourceGroup, 'id'),
             name: nonNullProp(resourceGroup, 'name'),
-            type: {
+            azureResourceType: {
                 type: nonNullProp(resourceGroup, 'type').toLowerCase()
-            }
+            },
+            raw: resourceGroup,
         };
     }
 
-    private createAppResource(subscription: ApplicationSubscription, resource: GenericResource): ApplicationResource {
+    private createAppResource(subscription: AzureSubscription, resource: GenericResource): AzureResource {
         const resourceId = nonNullProp(resource, 'id');
 
         return {
@@ -54,16 +56,17 @@ export class DefaultApplicationResourceProvider implements ApplicationResourcePr
             subscription,
             id: resourceId,
             name: nonNullProp(resource, 'name'),
-            type: {
+            azureResourceType: {
                 type: nonNullProp(resource, 'type').toLowerCase(),
                 kinds: resource.kind?.split(',')?.map(kind => kind.toLowerCase()),
             },
             resourceGroup: getResourceGroupFromId(resourceId),
             location: resource.location,
-            azExtResourceType: getAzExtResourceType({
+            resourceType: getAzExtResourceType({
                 type: nonNullProp(resource, 'type'),
                 kind: resource.kind
-            })
+            }),
+            raw: resource,
         };
     }
 }

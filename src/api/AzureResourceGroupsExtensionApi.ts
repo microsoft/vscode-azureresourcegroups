@@ -11,11 +11,10 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
     public static apiVersion = '0.0.1';
 
     #appResourceTree: AzExtTreeDataProvider;
-    #appResourceTreeView: TreeView<AzExtTreeItem>;
+    #appResourceTreeView: TreeView<unknown>;
     #workspaceResourceTree: AzExtTreeDataProvider;
-    #workspaceResourceTreeView: TreeView<AzExtTreeItem>;
+    #workspaceResourceTreeView: TreeView<unknown>;
     #apiVersion: string;
-    #revealTreeItem: (resourceId: string) => Promise<void>;
     #registerApplicationResourceResolver: (id: string, resolver: AppResourceResolver) => Disposable;
     #registerWorkspaceResourceProvider: (id: string, resolver: WorkspaceResourceProvider) => Disposable;
     #registerActivity: (activity: Activity) => Promise<void>;
@@ -30,7 +29,6 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         this.#workspaceResourceTree = options.workspaceResourceTree;
         this.#workspaceResourceTreeView = options.workspaceResourceTreeView;
         this.#apiVersion = options.apiVersion;
-        this.#revealTreeItem = options.revealTreeItem;
         this.#registerApplicationResourceResolver = options.registerApplicationResourceResolver;
         this.#registerWorkspaceResourceProvider = options.registerWorkspaceResourceProvider;
         this.#registerActivity = options.registerActivity;
@@ -41,7 +39,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         return this.#appResourceTree;
     }
 
-    public get appResourceTreeView(): TreeView<AzExtTreeItem> {
+    public get appResourceTreeView(): TreeView<unknown> {
         return this.#appResourceTreeView;
     }
 
@@ -49,16 +47,12 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         return this.#workspaceResourceTree;
     }
 
-    public get workspaceResourceTreeView(): TreeView<AzExtTreeItem> {
+    public get workspaceResourceTreeView(): TreeView<unknown> {
         return this.#workspaceResourceTreeView;
     }
 
     public get apiVersion(): string {
         return this.#apiVersion;
-    }
-
-    public async revealTreeItem(resourceId: string): Promise<void> {
-        return await this.#revealTreeItem(resourceId);
     }
 
     public async pickAppResource<T extends AzExtTreeItem>(context: ITreeItemPickerContext, options?: PickAppResourceOptions): Promise<T> {
@@ -83,7 +77,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         return this.appResourceTree;
     }
 
-    public get treeView(): TreeView<AzExtTreeItem> {
+    public get treeView(): TreeView<unknown> {
         return this.appResourceTreeView;
     }
 

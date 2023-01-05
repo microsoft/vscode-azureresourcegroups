@@ -4,9 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ResourceModelBase } from '../../api/v2/v2AzureResourcesApi';
 
-export interface ResourceGroupsItem extends ResourceModelBase{
+export interface ResourceGroupsItem {
+    readonly id: string;
+
+    getParent?(): vscode.ProviderResult<ResourceGroupsItem>;
     getChildren(): vscode.ProviderResult<ResourceGroupsItem[]>;
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem>;
 }

@@ -3,21 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtServiceClientCredentials, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AzExtServiceClientCredentials, IActionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
+import { ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { ApplicationResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
-import { ResourceModelBase } from '../../../api/v2/v2AzureResourcesApi';
+import { AzureResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
+import { showHiddenTypesSettingKey } from '../../../constants';
+import { ext } from '../../../extensionVariables';
 import { localize } from '../../../utils/localize';
 import { AzureAccountExtensionApi } from '../azure-account.api';
+import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
-import { ResourceGroupsItemCache } from '../ResourceGroupsItemCache';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
-import { ApplicationResourceGroupingManager } from './ApplicationResourceGroupingManager';
+import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
+import { GroupingItem } from './GroupingItem';
 import { SubscriptionItem } from './SubscriptionItem';
 
-export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProviderBase {
+export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase {
     private readonly groupingChangeSubscription: vscode.Disposable;
 
     private api: AzureAccountExtensionApi | undefined;
@@ -26,10 +29,10 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
-        itemCache: ResourceGroupsItemCache,
-        onRefresh: vscode.Event<void>,
-        private readonly resourceGroupingManager: ApplicationResourceGroupingManager,
-        private readonly resourceProviderManager: ApplicationResourceProviderManager) {
+        itemCache: BranchDataItemCache,
+        onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
+        private readonly resourceGroupingManager: AzureResourceGroupingManager,
+        private readonly resourceProviderManager: AzureResourceProviderManager) {
         super(
             itemCache,
             onDidChangeBranchTreeData,
@@ -41,11 +44,24 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
                 this.statusSubscription?.dispose();
             });
 
+        registerEvent(
+            'treeView.onDidChangeConfiguration',
+            vscode.workspace.onDidChangeConfiguration,
+            async (context: IActionContext, e: vscode.ConfigurationChangeEvent) => {
+                context.errorHandling.suppressDisplay = true;
+                context.telemetry.suppressIfSuccessful = true;
+                context.telemetry.properties.isActivationEvent = 'true';
+
+                if (e.affectsConfiguration(`${ext.prefix}.${showHiddenTypesSettingKey}`)) {
+                    this.notifyTreeDataChanged();
+                }
+            });
+
         // TODO: This really belongs on the subscription item, but that then involves disposing of them during refresh,
         //       and I'm not sure of the mechanics of that.  Ideally grouping mode changes shouldn't require new network calls,
         //       as we're just rearranging known items; we might try caching resource items and only calling getTreeItem() on
         //       branch providers during the tree refresh that results from this (rather than getChildren() again).
-        this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => this.onDidChangeTreeDataEmitter.fire());
+        this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => this.notifyTreeDataChanged());
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
@@ -59,9 +75,6 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
                     if (api.filters.length === 0) {
                         return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), { commandId: 'azure-account.selectSubscriptions' })]
                     } else {
-                        // TODO: This needs to be environment-specific (in terms of default scopes).
-                        const session = await vscode.authentication.getSession('microsoft', ['https://management.azure.com/.default', 'offline_access'], { createIfNone: true });
-
                         return api.filters.map(
                             subscription => new SubscriptionItem(
                                 {
@@ -75,19 +88,35 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
                                         environment: subscription.session.environment,
                                         isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud'
                                     },
-                                    getParent: item => this.itemCache.getParentForItem(item),
-                                    refresh: item => this.onDidChangeTreeDataEmitter.fire(item),
+                                    refresh: item => this.notifyTreeDataChanged(item),
                                 },
                                 this.resourceGroupingManager,
                                 this.resourceProviderManager,
                                 {
                                     authentication: {
-                                        getSession: () => session
+                                        getSession: async scopes => {
+                                            const token = await subscription.session.credentials2.getToken(scopes ?? []);
+
+                                            if (!token) {
+                                                return undefined;
+                                            }
+
+                                            return {
+                                                accessToken: token.token,
+                                                account: {
+                                                    id: subscription.session.userId,
+                                                    label: subscription.session.userId
+                                                },
+                                                id: 'microsoft',
+                                                scopes: scopes ?? []
+                                            };
+                                        }
                                     },
-                                    displayName: subscription.subscription.displayName || 'TODO: ever undefined?',
+                                    name: subscription.subscription.displayName || 'TODO: ever undefined?',
                                     environment: subscription.session.environment,
                                     isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud',
                                     subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
+                                    tenantId: subscription.session.tenantId
                                 }));
                     }
                 } else if (api.status === 'LoggedOut') {
@@ -130,6 +159,13 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
         return undefined;
     }
 
+    protected override isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
+        if (element instanceof GroupingItem) {
+            return element.resources.some(resource => id.startsWith(resource.id));
+        }
+        return super.isAncestorOf(element, id)
+    }
+
     private async getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi | undefined> {
         if (!this.api) {
             const extension = vscode.extensions.getExtension<AzureExtensionApiProvider>('ms-vscode.azure-account');
@@ -144,8 +180,8 @@ export class ApplicationResourceTreeDataProvider extends ResourceTreeDataProvide
                 if (this.api) {
                     await this.api.waitForFilters();
 
-                    this.filtersSubscription = this.api.onFiltersChanged(() => this.onDidChangeTreeDataEmitter.fire());
-                    this.statusSubscription = this.api.onStatusChanged(() => this.onDidChangeTreeDataEmitter.fire());
+                    this.filtersSubscription = this.api.onFiltersChanged(() => this.notifyTreeDataChanged());
+                    this.statusSubscription = this.api.onStatusChanged(() => this.notifyTreeDataChanged());
                 }
             }
         }
