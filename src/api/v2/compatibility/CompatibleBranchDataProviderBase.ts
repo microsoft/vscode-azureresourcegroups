@@ -28,8 +28,8 @@ export abstract class CompatibleBranchDataProviderBase<TResource extends Resourc
         // Do nothing
     }
 
-    public override getParent(_treeItem: TModel): Promise<TModel> {
-        throw new Error('Use the Resources extension API to do getParent');
+    public override getParent(treeItem: TModel): Promise<TModel | undefined> {
+        return Promise.resolve(treeItem.parent as TModel);
     }
 
     public override async getChildren(treeItem: TModel & AzExtParentTreeItem): Promise<TModel[]> {
