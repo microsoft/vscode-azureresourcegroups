@@ -101,7 +101,7 @@ export class GroupingItem implements ResourceGroupsItem {
         const computedContextValues = this.contextValues || [];
         computedContextValues.push(isPinned(this) ? 'pinned' : 'pinnable');
 
-        treeItem.contextValue = createContextValue(this.contextValues ?? []);
+        treeItem.contextValue = createContextValue([...(this.contextValues ?? []), ...computedContextValues]);
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
         treeItem.id = this.id;

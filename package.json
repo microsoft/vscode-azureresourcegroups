@@ -395,12 +395,12 @@
                 },
                 {
                     "command": "azureResourceGroups.pin",
-                    "when": "(view == azureResourceGroupsV2 || view == azureWorkspaceV2) && viewItem =~ /pinnable/",
+                    "when": "view =~ /azure(Workspace|ResourceGroups)/ && viewItem =~ /pinnable/",
                     "group": "inline@2"
                 },
                 {
                     "command": "azureResourceGroups.unpin",
-                    "when": "(view == azureResourceGroupsV2 || view == azureWorkspaceV2) && viewItem =~ /pinned/",
+                    "when": "view =~ /azure(Workspace|ResourceGroups)/ && viewItem =~ /pinned/",
                     "group": "inline@2"
                 }
             ],
