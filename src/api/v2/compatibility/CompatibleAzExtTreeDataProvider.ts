@@ -23,7 +23,7 @@ abstract class IntermediateCompatibleAzExtTreeDataProvider extends AzExtTreeData
  */
 export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExtTreeDataProvider {
     public constructor(private readonly tdp: ResourceTreeDataProviderBase) {
-        super({ valuesToMask: [] } as unknown as AzExtParentTreeItem, undefined as unknown as string);
+        super({ valuesToMask: [], fullId: '' } as unknown as AzExtParentTreeItem, undefined as unknown as string);
     }
 
     public override getParent(treeItem: AzExtTreeItem): Promise<AzExtTreeItem | undefined> {
