@@ -36,6 +36,16 @@ export class AzureResourceItem<T extends AzureResource> extends BranchDataProvid
         treeItem.id = this.id;
         return treeItem;
     }
+
+    protected override getExtraContextValues(): string[] {
+        const values = super.getExtraContextValues();
+
+        if (this.resource.resourceType) {
+            values.push(this.resource.resourceType);
+        }
+
+        return values;
+    }
 }
 
 export type ResourceItemFactory<T extends AzureResource> = (resource: T, branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, parent?: ResourceGroupsItem, options?: BranchDataItemOptions) => AzureResourceItem<T>;
