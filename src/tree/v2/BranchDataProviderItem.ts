@@ -102,7 +102,7 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
         return this.branchItem as T;
     }
 
-    private getExtraContextValues(): string[] {
+    protected getExtraContextValues(): string[] {
         const extraValues: string[] = [];
         if (this.portalUrl) {
             extraValues.push('hasPortalUrl');
