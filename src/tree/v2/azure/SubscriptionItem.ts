@@ -11,6 +11,7 @@ import { azureExtensions } from "../../../azureExtensions";
 import { showHiddenTypesSettingKey } from "../../../constants";
 import { settingUtils } from "../../../utils/settingUtils";
 import { treeUtils } from "../../../utils/treeUtils";
+import { createSubscriptionContext } from "../../../utils/v2/credentialsUtils";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
 import { AzureResourceGroupingManager } from "./AzureResourceGroupingManager";
@@ -25,13 +26,16 @@ export class SubscriptionItem implements ResourceGroupsItem {
         private readonly context: ResourceGroupsTreeContext,
         private readonly resourceGroupingManager: AzureResourceGroupingManager,
         private readonly resourceProviderManager: AzureResourceProviderManager,
-        public readonly subscription: AzureSubscription) {
+        public readonly v2Subscription: AzureSubscription) {
     }
 
-    public readonly id: string = `/subscriptions/${this.subscription.subscriptionId}`;
+    public readonly id: string = `/subscriptions/${this.v2Subscription.subscriptionId}`;
+
+    // for v1.5 compatibility
+    public readonly subscription = createSubscriptionContext(this.v2Subscription);
 
     async getChildren(): Promise<ResourceGroupsItem[]> {
-        let resources = await this.resourceProviderManager.getResources(this.subscription);
+        let resources = await this.resourceProviderManager.getResources(this.v2Subscription);
 
         const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
 
@@ -43,7 +47,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        const treeItem = new vscode.TreeItem(this.subscription.name ?? 'Unnamed', vscode.TreeItemCollapsibleState.Collapsed);
+        const treeItem = new vscode.TreeItem(this.v2Subscription.name ?? 'Unnamed', vscode.TreeItemCollapsibleState.Collapsed);
 
         treeItem.contextValue = 'azureextensionui.azureSubscription';
         treeItem.iconPath = treeUtils.getIconPath('azureSubscription');
