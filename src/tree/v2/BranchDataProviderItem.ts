@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { isAzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { isAzExtTreeItem, Wrapper } from '@microsoft/vscode-azext-utils';
 import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
@@ -18,16 +18,6 @@ export type BranchDataItemOptions = {
     viewProperties?: ViewPropertiesModel;
 };
 
-/**
- * Represents a branch data provider resource model as returned by a context menu command.
- */
-export interface WrappedResourceModel {
-    /**
-     * Unwraps the resource, returning the underlying branch data provider resource model.
-     */
-    unwrap<T extends ResourceModelBase>(): T | undefined;
-}
-
 function appendContextValues(originalValues: string | undefined, optionsValues: string[] | undefined, extraValues: string[] | undefined): string {
     const set = new Set<string>(originalValues?.split(';') ?? []);
 
@@ -37,7 +27,7 @@ function appendContextValues(originalValues: string | undefined, optionsValues: 
     return Array.from(set).join(';');
 }
 
-export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResourceModel {
+export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
@@ -98,7 +88,7 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
         return undefined;
     }
 
-    unwrap<T extends ResourceModelBase>(): T | undefined {
+    unwrap<T>(): T {
         return this.branchItem as T;
     }
 
@@ -114,8 +104,8 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
     }
 }
 
-export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataProviderItem;
+export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItemWrapper;
 
 export function createBranchDataItemFactory(itemCache: BranchDataItemCache): BranchDataItemFactory {
-    return (branchItem, branchDataProvider, options) => new BranchDataProviderItem(branchItem, branchDataProvider, itemCache, options);
+    return (branchItem, branchDataProvider, options) => new BranchDataItemWrapper(branchItem, branchDataProvider, itemCache, options);
 }

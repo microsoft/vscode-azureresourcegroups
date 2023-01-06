@@ -7,7 +7,7 @@ import { WorkspaceResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { WorkspaceResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { BranchDataProviderItem } from '../BranchDataProviderItem';
+import { BranchDataItemWrapper } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
@@ -59,6 +59,6 @@ export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderB
 
         const resourceItem = await branchDataProvider.getResourceItem(resource);
 
-        return new BranchDataProviderItem(resourceItem, branchDataProvider, this.itemCache);
+        return new BranchDataItemWrapper(resourceItem, branchDataProvider, this.itemCache);
     }
 }

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtTreeItem, IActionContext, openUrl } from '@microsoft/vscode-azext-utils';
-import { BranchDataProviderItem } from '../tree/v2/BranchDataProviderItem';
+import { BranchDataItemWrapper } from '../tree/v2/BranchDataProviderItem';
 import { localize } from '../utils/localize';
 
 export async function openInPortal(_context: IActionContext, node?: AzExtTreeItem): Promise<void> {
@@ -15,7 +15,7 @@ export async function openInPortal(_context: IActionContext, node?: AzExtTreeIte
         throw new Error(localize('commands.openInPortal.noSelectedResource', 'A resource must be selected.'));
     }
 
-    if (node instanceof BranchDataProviderItem && node.portalUrl) {
+    if (node instanceof BranchDataItemWrapper && node.portalUrl) {
         // NOTE: VS Code's URI type agressively encodes fragments heavily used in Portal URLs, but which the Portal doesn't understand, so skip encoding here.
         return await openUrl(node.portalUrl.toString(/* skipEncoding: */ true));
     }
