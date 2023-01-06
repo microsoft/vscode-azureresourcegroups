@@ -10,12 +10,9 @@ import { ResourceGroupsItem } from '../tree/v2/ResourceGroupsItem';
 import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
-import { deleteResourceGroup } from './deleteResourceGroup/deleteResourceGroup';
 import { deleteResourceGroupV2 } from './deleteResourceGroup/v2/deleteResourceGroupV2';
-import { focusGroup } from './explorer/focusGroup';
 import { buildGroupByCommand } from './explorer/groupBy';
 import { showGroupOptions } from './explorer/showGroupOptions';
-import { unfocusGroup } from './explorer/unfocusGroup';
 import { getStarted } from './helpAndFeedback/getStarted';
 import { reportIssue } from './helpAndFeedback/reportIssue';
 import { reviewIssues } from './helpAndFeedback/reviewIssues';
@@ -23,7 +20,6 @@ import { installExtension } from './installExtension';
 import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
 import { editTags } from './tags/editTags';
-import { toggleShowAllResources } from './toggleShowAllResources';
 import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
@@ -36,7 +32,6 @@ export function registerCommands(): void {
     registerCommand('azureWorkspace.refresh', (_context, node?: ResourceGroupsItem) => ext.actions.refreshWorkspaceTree(node));
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
-    registerCommand('azureResourceGroups.deleteResourceGroup', deleteResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
     registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.appResourceTree.loadMore(node, context));
     registerCommand('azureResourceGroups.openInPortal', openInPortal);
@@ -61,13 +56,9 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.groupBy.location', buildGroupByCommand('location'));
     registerCommand('azureResourceGroups.groupBy.armTag', buildGroupByCommand('armTag'));
 
-    registerCommand('azureResourceGroups.focusGroup', focusGroup);
-    registerCommand('azureResourceGroups.unfocusGroup', unfocusGroup);
-
     registerCommand('azureResourceGroups.installExtension', installExtension);
 
     registerCommand('azureResourceGroups.clearActivities', clearActivities);
-    registerCommand('azureResourceGroups.toggleShowAllResources', toggleShowAllResources);
     registerCommand('azureResourceGroups.showGroupOptions', showGroupOptions);
     registerCommand('azureResourceGroups.openUrl', async (context: IActionContext, url: string) => {
         context.telemetry.properties.url = url;

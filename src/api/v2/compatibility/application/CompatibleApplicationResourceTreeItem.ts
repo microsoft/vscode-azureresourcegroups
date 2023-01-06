@@ -7,7 +7,6 @@ import { AzExtParentTreeItem, AzExtResourceType, AzExtTreeDataProvider, AzExtTre
 import type { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
 import { AzureResource } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { TreeItemCollapsibleState } from "vscode";
-import { createResolvableProxy } from "../../../../tree/AppResourceTreeItem";
 import { getIconPath } from "../../../../utils/azureUtils";
 
 /**
@@ -105,4 +104,35 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
     }
 }
 
+type Resolvable<T> = T & {
+    resolveResult: ResolvedAppResourceBase | null | undefined;
+}
 
+export function createResolvableProxy<T extends AzExtParentTreeItem>(resolvable: Resolvable<T>): T {
+    const providerHandler: ProxyHandler<Resolvable<T>> = {
+        get: (target: Resolvable<T>, name: string): unknown => {
+            return resolvable?.resolveResult?.[name] ?? target[name];
+        },
+        set: (target: Resolvable<T>, name: string, value: unknown): boolean => {
+            if (resolvable.resolveResult && Object.getOwnPropertyDescriptor(resolvable.resolveResult, name)?.writable) {
+                resolvable.resolveResult[name] = value;
+                return true;
+            }
+            target[name] = value;
+            return true;
+        },
+        /**
+         * Needed to be compatible with any usages of instanceof in utils/azureutils
+         *
+         * If resolved returns AzExtTreeItem or AzExtParentTreeItem depending on if resolveResult has loadMoreChildrenImpl defined
+         * If not resolved, returns AppResourceTreeItem
+         */
+        getPrototypeOf: (target: Resolvable<T>): AzExtParentTreeItem | AzExtTreeItem => {
+            if (resolvable?.resolveResult) {
+                return resolvable.resolveResult.loadMoreChildrenImpl ? AzExtParentTreeItem.prototype : AzExtTreeItem.prototype
+            }
+            return target;
+        }
+    }
+    return new Proxy(resolvable, providerHandler);
+}

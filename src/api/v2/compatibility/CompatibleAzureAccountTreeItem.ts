@@ -3,10 +3,9 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzureAccountTreeItemBase } from "@microsoft/vscode-azext-azureutils";
+import { AzureAccountTreeItemBase, SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizardPromptStep, ISubscriptionActionContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../../extensionVariables";
-import { SubscriptionTreeItem } from "../../../tree/SubscriptionTreeItem";
 
 export class CompatibleAzureAccountTreeItem extends AzureAccountTreeItemBase {
     public constructor(testAccount?: {}) {
@@ -28,7 +27,7 @@ export class CompatibleAzureAccountTreeItem extends AzureAccountTreeItemBase {
         return new CompatibilitySubscriptionPromptStep();
     }
 
-    public createSubscriptionTreeItem(): SubscriptionTreeItem {
+    public createSubscriptionTreeItem(): SubscriptionTreeItemBase {
         throw new Error('createSubscriptionTreeItem should not be called');
     }
 }

@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
-import { ResourceGroupTreeItem } from '../../../tree/ResourceGroupTreeItem';
 import { GroupingItem } from '../../../tree/v2/azure/GroupingItem';
 import { createActivityContext } from '../../../utils/activityUtils';
 import { localize } from '../../../utils/localize';
@@ -26,7 +25,7 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
             //});
         }
     } else {
-        selectedNodes = selectedNodes.filter(n => n instanceof ResourceGroupTreeItem);
+        // selectedNodes = selectedNodes.filter(n => n instanceof ResourceGroupTreeItem);
     }
 
     const deleteConfirmation: string | undefined = settingUtils.getWorkspaceSetting('deleteConfirmation');

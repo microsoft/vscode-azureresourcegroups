@@ -3,15 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeDataProvider, AzExtTreeItem, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
+import { AzExtTreeDataProvider, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { DiagnosticCollection, Disposable, Event, EventEmitter, ExtensionContext, TreeView } from "vscode";
 import { AzureResourcesApiInternal } from "../hostapi.v2.internal";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
-import { AzureAccountTreeItem } from "./tree/AzureAccountTreeItem";
 import { ResourceGroupsItem } from "./tree/v2/ResourceGroupsItem";
-import { ExtensionActivationManager } from "./utils/ExtensionActivationManager";
 
 namespace extEmitters {
     export let onDidChangeFocusedGroup: EventEmitter<void>;
@@ -33,15 +31,14 @@ export namespace extActions {
  */
 export namespace ext {
     export let context: ExtensionContext;
+    // TODO: do we need this? only used by load more command
     export let appResourceTree: AzExtTreeDataProvider;
-    // TODO: rename and change type to `TreeView<unknown>`
-    export let appResourceTreeView: TreeView<AzExtTreeItem>;
+    export let appResourceTreeView: TreeView<unknown>;
+    // TODO: do we need this? only used by load more command
     export let workspaceTree: AzExtTreeDataProvider;
-    // TODO: rename and change type to `TreeView<unknown>`
-    export let workspaceTreeView: TreeView<AzExtTreeItem>;
+    export let workspaceTreeView: TreeView<unknown>;
     export let activityLogTree: AzExtTreeDataProvider;
     export let activityLogTreeItem: ActivityLogTreeItem;
-    export let rootAccountTreeItem: AzureAccountTreeItem;
     export let helpTree: AzExtTreeDataProvider;
     export let outputChannel: IAzExtOutputChannel;
     export let ignoreBundle: boolean | undefined;
@@ -50,8 +47,6 @@ export namespace ext {
     export let tagFS: TagFileSystem;
     export let diagnosticWatcher: Disposable | undefined;
     export let diagnosticCollection: DiagnosticCollection;
-
-    export let activationManager: ExtensionActivationManager;
 
     export const emitters = extEmitters;
     export const events = extEvents;
