@@ -10,6 +10,7 @@ import { ext } from '../../../extensionVariables';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { createTreeView } from '../createTreeView';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
+import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { localize } from './../../../utils/localize';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceResourceTreeDataProvider } from './WorkspaceResourceTreeDataProvider';
@@ -23,17 +24,18 @@ interface RegisterWorkspaceTreeOptions {
 export function registerWorkspaceTree(context: vscode.ExtensionContext, options: RegisterWorkspaceTreeOptions): WorkspaceResourceTreeDataProvider {
     const { workspaceResourceBranchDataProviderManager, workspaceResourceProviderManager, refreshEvent } = options;
 
-    const itemCache = new BranchDataItemCache();
+    const branchItemCache = new BranchDataItemCache();
     const workspaceResourceTreeDataProvider =
-        new WorkspaceResourceTreeDataProvider(workspaceResourceBranchDataProviderManager, refreshEvent, workspaceResourceProviderManager, itemCache);
+        new WorkspaceResourceTreeDataProvider(workspaceResourceBranchDataProviderManager, refreshEvent, workspaceResourceProviderManager, branchItemCache);
     context.subscriptions.push(workspaceResourceTreeDataProvider);
 
     const treeView = createTreeView('azureWorkspace', {
         canSelectMany: true,
         showCollapseAll: true,
-        treeDataProvider: workspaceResourceTreeDataProvider,
         description: localize('local', 'Local'),
-        itemCache,
+        itemCache: branchItemCache,
+        treeDataProvider: wrapTreeForVSCode(workspaceResourceTreeDataProvider, branchItemCache),
+        findItemById: workspaceResourceTreeDataProvider.findItemById.bind(workspaceResourceTreeDataProvider) as typeof workspaceResourceTreeDataProvider.findItemById,
     });
     context.subscriptions.push(treeView);
 
