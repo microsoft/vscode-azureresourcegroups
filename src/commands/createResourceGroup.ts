@@ -14,7 +14,7 @@ import { localize } from '../utils/localize';
 import { createSubscriptionContext } from '../utils/v2/credentialsUtils';
 
 export async function createResourceGroup(context: IActionContext, node?: SubscriptionItem): Promise<void> {
-    let subscription: AzureSubscription | undefined = node?.subscription;
+    let subscription: AzureSubscription | undefined = node?.v2Subscription;
     if (!subscription) {
         subscription = await subscriptionExperience(context, ext.v2.api.resources.azureResourceTreeDataProvider);
     }
