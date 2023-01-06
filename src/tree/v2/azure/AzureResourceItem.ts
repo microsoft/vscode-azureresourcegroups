@@ -8,10 +8,10 @@ import { FileChangeType, TreeItem } from 'vscode';
 import { ResourceTags } from '../../../commands/tags/TagFileSystem';
 import { ext } from '../../../extensionVariables';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { BranchDataItemOptions, BranchDataProviderItem } from '../BranchDataProviderItem';
+import { BranchDataItemOptions, BranchDataItemWrapper } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
-export class AzureResourceItem<T extends AzureResource> extends BranchDataProviderItem {
+export class AzureResourceItem<T extends AzureResource> extends BranchDataItemWrapper {
     constructor(
         public readonly resource: T,
         branchItem: ResourceModelBase,

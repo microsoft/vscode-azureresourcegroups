@@ -21,7 +21,7 @@ export type BranchDataItemOptions = {
 /**
  * Represents a branch data provider resource model as returned by a context menu command.
  */
-export interface WrappedResourceModel {
+export interface BranchDataItem {
     /**
      * Unwraps the resource, returning the underlying branch data provider resource model.
      */
@@ -37,7 +37,7 @@ function appendContextValues(originalValues: string | undefined, optionsValues: 
     return Array.from(set).join(';');
 }
 
-export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResourceModel {
+export class BranchDataItemWrapper implements ResourceGroupsItem, BranchDataItem {
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
@@ -114,8 +114,8 @@ export class BranchDataProviderItem implements ResourceGroupsItem, WrappedResour
     }
 }
 
-export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataProviderItem;
+export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItemWrapper;
 
 export function createBranchDataItemFactory(itemCache: BranchDataItemCache): BranchDataItemFactory {
-    return (branchItem, branchDataProvider, options) => new BranchDataProviderItem(branchItem, branchDataProvider, itemCache, options);
+    return (branchItem, branchDataProvider, options) => new BranchDataItemWrapper(branchItem, branchDataProvider, itemCache, options);
 }
