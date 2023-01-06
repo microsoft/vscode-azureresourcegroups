@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { isAzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { isAzExtTreeItem, Wrapper } from '@microsoft/vscode-azext-utils';
 import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
@@ -18,16 +18,6 @@ export type BranchDataItemOptions = {
     viewProperties?: ViewPropertiesModel;
 };
 
-/**
- * Represents a branch data provider resource model as returned by a context menu command.
- */
-export interface BranchDataItem {
-    /**
-     * Unwraps the resource, returning the underlying branch data provider resource model.
-     */
-    unwrap<T extends ResourceModelBase>(): T | undefined;
-}
-
 function appendContextValues(originalValues: string | undefined, optionsValues: string[] | undefined, extraValues: string[] | undefined): string {
     const set = new Set<string>(originalValues?.split(';') ?? []);
 
@@ -37,7 +27,7 @@ function appendContextValues(originalValues: string | undefined, optionsValues: 
     return Array.from(set).join(';');
 }
 
-export class BranchDataItemWrapper implements ResourceGroupsItem, BranchDataItem {
+export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
@@ -98,7 +88,7 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, BranchDataItem
         return undefined;
     }
 
-    unwrap<T extends ResourceModelBase>(): T | undefined {
+    unwrap<T>(): T {
         return this.branchItem as T;
     }
 
