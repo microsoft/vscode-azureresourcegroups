@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from "@microsoft/vscode-azext-utils";
+import { AzExtResourceType, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as vscode from "vscode";
 import { AzureResourceProviderManager } from "../../../api/v2/ResourceProviderManagers";
@@ -11,6 +11,7 @@ import { azureExtensions } from "../../../azureExtensions";
 import { showHiddenTypesSettingKey } from "../../../constants";
 import { settingUtils } from "../../../utils/settingUtils";
 import { treeUtils } from "../../../utils/treeUtils";
+import { createSubscriptionContext } from "../../../utils/v2/credentialsUtils";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
 import { AzureResourceGroupingManager } from "./AzureResourceGroupingManager";
@@ -25,10 +26,19 @@ export class SubscriptionItem implements ResourceGroupsItem {
         private readonly context: ResourceGroupsTreeContext,
         private readonly resourceGroupingManager: AzureResourceGroupingManager,
         private readonly resourceProviderManager: AzureResourceProviderManager,
-        public readonly subscription: AzureSubscription) {
+        subscription: AzureSubscription) {
+
+        this.subscription = {
+            // for v1.5 compatibility
+            ...createSubscriptionContext(subscription),
+            ...subscription
+        };
+
+        this.id = `/subscriptions/${this.subscription.subscriptionId}`;
     }
 
-    public readonly id: string = `/subscriptions/${this.subscription.subscriptionId}`;
+    public readonly id: string;
+    public readonly subscription: ISubscriptionContext & AzureSubscription;
 
     async getChildren(): Promise<ResourceGroupsItem[]> {
         let resources = await this.resourceProviderManager.getResources(this.subscription);
