@@ -7,6 +7,7 @@ import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionConte
 import { Disposable, Event, TreeItem, TreeView } from "vscode";
 import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
 import { ResourceTreeDataProviderBase } from "../../../tree/v2/ResourceTreeDataProviderBase";
+import { CompatibleAzureAccountTreeItem } from "./CompatibleAzureAccountTreeItem";
 
 /**
  * An intermediate class that exists just to redeclare several events as abstract, so they
@@ -23,7 +24,7 @@ abstract class IntermediateCompatibleAzExtTreeDataProvider extends AzExtTreeData
  */
 export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExtTreeDataProvider {
     public constructor(private readonly tdp: ResourceTreeDataProviderBase) {
-        super({ valuesToMask: [] } as unknown as AzExtParentTreeItem, undefined as unknown as string);
+        super(new CompatibleAzureAccountTreeItem(), undefined as unknown as string);
     }
 
     public override getParent(treeItem: AzExtTreeItem): Promise<AzExtTreeItem | undefined> {
