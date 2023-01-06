@@ -105,13 +105,13 @@
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.refresh",
+                "command": "azureResourceGroups.refreshTree",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
                 "icon": "$(refresh)"
             },
             {
-                "command": "azureResourceGroups.refreshAzureItem",
+                "command": "azureResourceGroups.refresh",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
                 "icon": "$(refresh)"
@@ -177,6 +177,12 @@
             },
             {
                 "command": "azureWorkspace.refresh",
+                "title": "%azureResourceGroups.refresh%",
+                "category": "Azure",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "azureWorkspace.refreshTree",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
                 "icon": "$(refresh)"
@@ -288,12 +294,12 @@
                     "group": "navigation@2"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureResourceGroups.refreshTree",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@3"
                 },
                 {
-                    "command": "azureWorkspace.refresh",
+                    "command": "azureWorkspace.refreshTree",
                     "when": "view == azureWorkspace",
                     "group": "navigation@10"
                 },
@@ -325,7 +331,7 @@
                     "group": "9@1"
                 },
                 {
-                    "command": "azureResourceGroups.refreshAzureItem",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "9@2"
                 },
@@ -345,7 +351,7 @@
                     "group": "9@2"
                 },
                 {
-                    "command": "azureResourceGroups.refreshAzureItem",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem =~ /azureResource/",
                     "group": "9@3"
                 },
@@ -365,7 +371,7 @@
                     "group": "9@1"
                 },
                 {
-                    "command": "azureResourceGroups.refreshAzureItem",
+                    "command": "azureResourceGroups.refresh",
                     "when": "view == azureResourceGroups && viewItem =~ /group/",
                     "group": "inline@1"
                 }
