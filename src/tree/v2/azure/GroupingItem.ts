@@ -41,7 +41,7 @@ export class GroupingItem implements ResourceGroupsItem {
         public readonly resources: AzureResource[],
         public readonly resourceType: AzExtResourceType | undefined,
         public readonly parent?: ResourceGroupsItem,
-        resourceGroup?: AzureResource,
+        private readonly resourceGroup?: AzureResource,
     ) {
         if (resourceGroup) {
             this.tagsModel = new ResourceTags(resourceGroup);
@@ -57,7 +57,7 @@ export class GroupingItem implements ResourceGroupsItem {
         return this.context.subscriptionContext;
     }
 
-    readonly id: string = `/subscriptions/${this.context.subscriptionContext.subscriptionId}/groupings/${this.label}`;
+    readonly id: string = this.resourceGroup ? this.resourceGroup.id : `/subscriptions/${this.context.subscriptionContext.subscriptionId}/groupings/${this.label}`;
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const sortedResources = this.resources.sort((a, b) => a.name.localeCompare(b.name));

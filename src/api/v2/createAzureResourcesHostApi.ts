@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
-import { AzureResource, BranchDataProvider, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzExtResourceType, callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
+import { AzureResource, BranchDataProvider, ResourceModelBase, VSCodeRevealOptions, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { AzureResourceProvider, AzureResourcesHostApiInternal } from '../../../hostapi.v2.internal';
+import { revealResource } from '../../commands/revealResource';
 import { AzureResourceBranchDataProviderManager } from '../../tree/v2/azure/AzureResourceBranchDataProviderManager';
 import { AzureResourceTreeDataProvider } from '../../tree/v2/azure/AzureResourceTreeDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from '../../tree/v2/workspace/WorkspaceResourceBranchDataProviderManager';
@@ -41,6 +42,15 @@ export function createAzureResourcesHostApi(
         registerWorkspaceResourceBranchDataProvider: <T extends ResourceModelBase>(type: string, provider: BranchDataProvider<WorkspaceResource, T>) => {
             workspaceResourceBranchDataProviderManager.addProvider(type, provider);
             return new vscode.Disposable(() => workspaceResourceBranchDataProviderManager.removeProvider(type));
+        },
+
+        revealAzureResource: (id: string, options?: VSCodeRevealOptions) => {
+            return callWithTelemetryAndErrorHandling('internalRevealAzureResource', context => {
+                context.errorHandling.rethrow = true;
+                context.errorHandling.suppressDisplay = true;
+                context.errorHandling.suppressReportIssue = true;
+                return revealResource(context, id, options);
+            });
         },
     }
 }
