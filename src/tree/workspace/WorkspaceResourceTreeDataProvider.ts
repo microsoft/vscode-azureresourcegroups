@@ -5,7 +5,7 @@
 
 import { WorkspaceResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { WorkspaceResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
+import { WorkspaceResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataItemWrapper } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';

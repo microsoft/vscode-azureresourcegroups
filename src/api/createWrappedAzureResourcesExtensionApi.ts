@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandlingSync, IActionContext } from '@microsoft/vscode-azext-utils';
-import { AzureResourcesApiInternal } from '../../../hostapi.v2.internal';
+import { AzureResourcesApiInternal } from '../../hostapi.v2.internal';
 
 export function createWrappedAzureResourcesExtensionApi(api: AzureResourcesApiInternal, extensionId: string): AzureResourcesApiInternal {
 

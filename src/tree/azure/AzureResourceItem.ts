@@ -5,8 +5,8 @@
 
 import { AzureResource, BranchDataProvider, ResourceBase, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { FileChangeType, TreeItem } from 'vscode';
-import { ResourceTags } from '../../../commands/tags/TagFileSystem';
-import { ext } from '../../../extensionVariables';
+import { ResourceTags } from '../../commands/tags/TagFileSystem';
+import { ext } from '../../extensionVariables';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataItemOptions, BranchDataItemWrapper } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';

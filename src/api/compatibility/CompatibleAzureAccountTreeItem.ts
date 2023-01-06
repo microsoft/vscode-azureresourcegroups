@@ -5,7 +5,7 @@
 
 import { AzureAccountTreeItemBase, SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
 import { AzureWizardPromptStep, ISubscriptionActionContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
-import { ext } from "../../../extensionVariables";
+import { ext } from "../../extensionVariables";
 
 export class CompatibleAzureAccountTreeItem extends AzureAccountTreeItemBase {
     public constructor(testAccount?: {}) {

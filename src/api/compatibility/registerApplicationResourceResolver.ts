@@ -6,8 +6,8 @@
 import { AzExtResourceType, callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
-import { ext } from "../extensionVariables";
-import { CompatibleApplicationResourceBranchDataProvider } from "./v2/compatibility/application/CompatibleApplicationResourceBranchDataProvider";
+import { ext } from "../../extensionVariables";
+import { CompatibleApplicationResourceBranchDataProvider } from "./application/CompatibleApplicationResourceBranchDataProvider";
 
 export const applicationResourceResolvers: Partial<Record<AzExtResourceType, AppResourceResolver>> = {};
 

@@ -6,12 +6,12 @@
 import { AzExtResourceType, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as vscode from "vscode";
-import { AzureResourceProviderManager } from "../../../api/v2/ResourceProviderManagers";
-import { azureExtensions } from "../../../azureExtensions";
-import { showHiddenTypesSettingKey } from "../../../constants";
-import { settingUtils } from "../../../utils/settingUtils";
-import { treeUtils } from "../../../utils/treeUtils";
-import { createSubscriptionContext } from "../../../utils/v2/credentialsUtils";
+import { AzureResourceProviderManager } from "../../api/ResourceProviderManagers";
+import { azureExtensions } from "../../azureExtensions";
+import { showHiddenTypesSettingKey } from "../../constants";
+import { settingUtils } from "../../utils/settingUtils";
+import { treeUtils } from "../../utils/treeUtils";
+import { createSubscriptionContext } from "../../utils/v2/credentialsUtils";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
 import { AzureResourceGroupingManager } from "./AzureResourceGroupingManager";

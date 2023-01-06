@@ -6,9 +6,9 @@
 import { callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
 import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
-import { ext } from "../extensionVariables";
-import { CompatibilityWorkspaceResourceProvider } from "./v2/compatibility/workspace/CompatibilityWorkspaceResourceProvider";
-import { CompatibleWorkspaceResourceBranchDataProvider } from "./v2/compatibility/workspace/CompatibleWorkspaceResourceBranchDataProvider";
+import { ext } from "../../extensionVariables";
+import { CompatibilityWorkspaceResourceProvider } from "./workspace/CompatibilityWorkspaceResourceProvider";
+import { CompatibleWorkspaceResourceBranchDataProvider } from "./workspace/CompatibleWorkspaceResourceBranchDataProvider";
 
 export const workspaceResourceProviders: Record<string, WorkspaceResourceProvider> = {};
 

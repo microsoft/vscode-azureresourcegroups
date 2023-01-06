@@ -5,7 +5,7 @@
 
 import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { contributesKey } from '../../constants';
+import { contributesKey } from '../constants';
 
 interface ResourceGroupsContribution {
     readonly azure: {

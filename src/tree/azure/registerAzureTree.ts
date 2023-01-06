@@ -6,13 +6,13 @@
 import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { AzureResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { AzureResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
-import { ext } from '../../../extensionVariables';
+import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
+import { ext } from '../../extensionVariables';
+import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { createTreeView } from '../createTreeView';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
-import { localize } from './../../../utils/localize';
 import { AzureResourceBranchDataProviderManager } from './AzureResourceBranchDataProviderManager';
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { createResourceItemFactory } from './AzureResourceItem';

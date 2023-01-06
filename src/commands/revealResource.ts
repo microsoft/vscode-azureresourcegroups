@@ -7,8 +7,8 @@ import { ParsedAzureResourceId } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeItem, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import { VSCodeRevealOptions } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { ext } from '../extensionVariables';
-import { ResourceGroupsItem } from '../tree/v2/ResourceGroupsItem';
-import { ResourceTreeDataProviderBase } from '../tree/v2/ResourceTreeDataProviderBase';
+import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
+import { ResourceTreeDataProviderBase } from '../tree/ResourceTreeDataProviderBase';
 
 export async function revealResource(context: IActionContext, resourceId: string, options?: VSCodeRevealOptions): Promise<void> {
     setTelemetryPropertiesForId(context, resourceId);

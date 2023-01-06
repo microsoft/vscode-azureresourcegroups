@@ -9,7 +9,7 @@ import { DiagnosticCollection, Disposable, Event, EventEmitter, ExtensionContext
 import { AzureResourcesApiInternal } from "../hostapi.v2.internal";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
-import { ResourceGroupsItem } from "./tree/v2/ResourceGroupsItem";
+import { ResourceGroupsItem } from "./tree/ResourceGroupsItem";
 
 namespace extEmitters {
     export let onDidChangeFocusedGroup: EventEmitter<void>;

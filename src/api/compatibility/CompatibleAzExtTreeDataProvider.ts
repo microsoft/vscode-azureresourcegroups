@@ -6,8 +6,8 @@
 import { SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
 import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, isWrapper, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
 import { Disposable, Event, TreeItem, TreeView } from "vscode";
-import { ResourceGroupsItem } from "../../../tree/v2/ResourceGroupsItem";
-import { ResourceTreeDataProviderBase } from "../../../tree/v2/ResourceTreeDataProviderBase";
+import { ResourceGroupsItem } from "../../tree/ResourceGroupsItem";
+import { ResourceTreeDataProviderBase } from "../../tree/ResourceTreeDataProviderBase";
 import { CompatibleAzureAccountTreeItem } from "./CompatibleAzureAccountTreeItem";
 
 /**
