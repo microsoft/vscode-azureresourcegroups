@@ -16,14 +16,13 @@ export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderB
     constructor(
         private readonly branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
         onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
-        private readonly resourceProviderManager: WorkspaceResourceProviderManager) {
+        private readonly resourceProviderManager: WorkspaceResourceProviderManager,
+        itemCache: BranchDataItemCache) {
         super(
-            new BranchDataItemCache(),
+            itemCache,
             branchDataProviderManager.onDidChangeTreeData,
             resourceProviderManager.onDidChangeResourceChange,
             onRefresh);
-
-        branchDataProviderManager.onChangeBranchDataProviders(() => this.notifyTreeDataChanged());
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {

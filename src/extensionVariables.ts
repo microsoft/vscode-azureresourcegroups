@@ -34,8 +34,10 @@ export namespace extActions {
 export namespace ext {
     export let context: ExtensionContext;
     export let appResourceTree: AzExtTreeDataProvider;
+    // TODO: rename and change type to `TreeView<unknown>`
     export let appResourceTreeView: TreeView<AzExtTreeItem>;
     export let workspaceTree: AzExtTreeDataProvider;
+    // TODO: rename and change type to `TreeView<unknown>`
     export let workspaceTreeView: TreeView<AzExtTreeItem>;
     export let activityLogTree: AzExtTreeDataProvider;
     export let activityLogTreeItem: ActivityLogTreeItem;

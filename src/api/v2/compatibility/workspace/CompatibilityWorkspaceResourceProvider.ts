@@ -10,7 +10,7 @@ import { Event, WorkspaceFolder } from "vscode";
 import { CompatibleWorkspaceResourceBranchDataProvider } from "./CompatibleWorkspaceResourceBranchDataProvider";
 
 export class CompatibilityWorkspaceResourceProvider implements V2WorkspaceResourceProvider {
-    constructor(private readonly resourceType: string, private readonly provider: WorkspaceResourceProvider) { }
+    constructor(private readonly resourceType: string, private readonly provider: WorkspaceResourceProvider, private readonly compatTreeDataProvider: CompatibleWorkspaceResourceBranchDataProvider<AzExtTreeItem & WorkspaceResource>) { }
 
     // No comparable mechanism in v1, leave as undefined
     onDidChangeResource?: Event<WorkspaceResource | undefined> = undefined;
@@ -25,7 +25,7 @@ export class CompatibilityWorkspaceResourceProvider implements V2WorkspaceResour
         const resources = await this.provider.provideResources(
             // pass in stub parent
             {
-                treeDataProvider: new CompatibleWorkspaceResourceBranchDataProvider('azureWorkspace.loadMore'),
+                treeDataProvider: this.compatTreeDataProvider,
                 valuesToMask: [],
                 parent: undefined,
                 fullId: '', // prevent ids from starting with undefined
