@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from "@microsoft/vscode-azext-utils";
+import { AzExtResourceType, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as vscode from "vscode";
 import { AzureResourceProviderManager } from "../../../api/v2/ResourceProviderManagers";
@@ -26,16 +26,22 @@ export class SubscriptionItem implements ResourceGroupsItem {
         private readonly context: ResourceGroupsTreeContext,
         private readonly resourceGroupingManager: AzureResourceGroupingManager,
         private readonly resourceProviderManager: AzureResourceProviderManager,
-        public readonly v2Subscription: AzureSubscription) {
+        subscription: AzureSubscription) {
+
+        this.subscription = {
+            // for v1.5 compatibility
+            ...createSubscriptionContext(subscription),
+            ...subscription
+        };
+
+        this.id = `/subscriptions/${this.subscription.subscriptionId}`;
     }
 
-    public readonly id: string = `/subscriptions/${this.v2Subscription.subscriptionId}`;
-
-    // for v1.5 compatibility
-    public readonly subscription = createSubscriptionContext(this.v2Subscription);
+    public readonly id: string;
+    public readonly subscription: ISubscriptionContext & AzureSubscription;
 
     async getChildren(): Promise<ResourceGroupsItem[]> {
-        let resources = await this.resourceProviderManager.getResources(this.v2Subscription);
+        let resources = await this.resourceProviderManager.getResources(this.subscription);
 
         const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
 
@@ -47,7 +53,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        const treeItem = new vscode.TreeItem(this.v2Subscription.name ?? 'Unnamed', vscode.TreeItemCollapsibleState.Collapsed);
+        const treeItem = new vscode.TreeItem(this.subscription.name ?? 'Unnamed', vscode.TreeItemCollapsibleState.Collapsed);
 
         treeItem.contextValue = 'azureextensionui.azureSubscription';
         treeItem.iconPath = treeUtils.getIconPath('azureSubscription');
