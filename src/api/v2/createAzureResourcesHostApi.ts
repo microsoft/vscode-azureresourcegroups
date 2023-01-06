@@ -45,8 +45,7 @@ export function createAzureResourcesHostApi(
         },
 
         revealAzureResource: (id: string, options?: VSCodeRevealOptions) => {
-            // TODO: don't create new telemetry context here, instead use the context created from the initial wrapped API call
-            return callWithTelemetryAndErrorHandling('internalRevealResource', context => {
+            return callWithTelemetryAndErrorHandling('internalRevealAzureResource', context => {
                 context.errorHandling.rethrow = true;
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.suppressReportIssue = true;
