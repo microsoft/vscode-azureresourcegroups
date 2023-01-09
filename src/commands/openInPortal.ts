@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtTreeItem, IActionContext, openUrl } from '@microsoft/vscode-azext-utils';
-import { BranchDataItemWrapper } from '../tree/v2/BranchDataProviderItem';
+import { BranchDataItemWrapper } from '../tree/BranchDataProviderItem';
 import { localize } from '../utils/localize';
 
 export async function openInPortal(_context: IActionContext, node?: AzExtTreeItem): Promise<void> {

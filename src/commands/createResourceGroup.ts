@@ -8,7 +8,7 @@ import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActi
 import { AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { window } from 'vscode';
 import { ext } from '../extensionVariables';
-import { SubscriptionItem } from '../tree/v2/azure/SubscriptionItem';
+import { SubscriptionItem } from '../tree/azure/SubscriptionItem';
 import { createActivityContext } from '../utils/activityUtils';
 import { localize } from '../utils/localize';
 import { createSubscriptionContext } from '../utils/v2/credentialsUtils';

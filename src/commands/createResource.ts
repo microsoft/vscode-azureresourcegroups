@@ -7,7 +7,7 @@
 import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { Command, commands, extensions } from 'vscode';
 import { contributesKey } from '../constants';
-import { SubscriptionItem } from '../tree/v2/azure/SubscriptionItem';
+import { SubscriptionItem } from '../tree/azure/SubscriptionItem';
 
 interface AzExtCreateResourceCommand extends Command {
     title: string;

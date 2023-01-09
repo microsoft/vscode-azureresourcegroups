@@ -6,7 +6,7 @@
 import { AzExtTreeItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import type { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import type { AzureResource, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
-import { createSubscriptionContext } from '../../../../utils/v2/credentialsUtils';
+import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
 import { CompatibleBranchDataProviderBase } from '../CompatibleBranchDataProviderBase';
 import { CompatibleResolvedApplicationResourceTreeItem } from './CompatibleApplicationResourceTreeItem';
 

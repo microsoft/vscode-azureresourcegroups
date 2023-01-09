@@ -29,7 +29,7 @@ export abstract class CompatibleBranchDataProviderBase<TResource extends Resourc
     }
 
     public override getParent(treeItem: TModel): Promise<TModel | undefined> {
-        return Promise.resolve(treeItem.parent as TModel);
+        return Promise.resolve(treeItem.parent as unknown as TModel);
     }
 
     public override async getChildren(treeItem: TModel & AzExtParentTreeItem): Promise<TModel[]> {

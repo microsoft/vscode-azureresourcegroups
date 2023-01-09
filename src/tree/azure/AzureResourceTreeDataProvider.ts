@@ -7,10 +7,10 @@ import { AzExtServiceClientCredentials, IActionContext, nonNullProp, registerEve
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import { ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { AzureResourceProviderManager } from '../../../api/v2/ResourceProviderManagers';
-import { showHiddenTypesSettingKey } from '../../../constants';
-import { ext } from '../../../extensionVariables';
-import { localize } from '../../../utils/localize';
+import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
+import { showHiddenTypesSettingKey } from '../../constants';
+import { ext } from '../../extensionVariables';
+import { localize } from '../../utils/localize';
 import { AzureAccountExtensionApi } from '../azure-account.api';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';

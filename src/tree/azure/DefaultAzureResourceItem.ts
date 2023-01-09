@@ -5,9 +5,9 @@
 
 import { AzureResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { AzExtWrapper, getAzureExtensions } from '../../../AzExtWrapper';
-import { getIconPath } from '../../../utils/azureUtils';
-import { localize } from "../../../utils/localize";
+import { AzExtWrapper, getAzureExtensions } from '../../AzExtWrapper';
+import { getIconPath } from '../../utils/azureUtils';
+import { localize } from "../../utils/localize";
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 

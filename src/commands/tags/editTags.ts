@@ -6,7 +6,7 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { AzureResource } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { ext } from "../../extensionVariables";
-import { AzureResourceItem } from "../../tree/v2/azure/AzureResourceItem";
+import { AzureResourceItem } from "../../tree/azure/AzureResourceItem";
 
 export async function editTags(_context: IActionContext, item?: AzureResourceItem<AzureResource>): Promise<void> {
     if (!item) {
