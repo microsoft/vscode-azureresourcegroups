@@ -41,7 +41,7 @@ export class GroupingItem implements ResourceGroupsItem {
         public readonly resources: AzureResource[],
         public readonly resourceType: AzExtResourceType | undefined,
         public readonly parent?: ResourceGroupsItem,
-        private readonly resourceGroup?: AzureResource,
+        public readonly resourceGroup?: AzureResource,
     ) {
         if (resourceGroup) {
             this.tagsModel = new ResourceTags(resourceGroup);
