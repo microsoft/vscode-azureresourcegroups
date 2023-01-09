@@ -24,6 +24,7 @@ async function groupBy(context: IActionContext, setting: string): Promise<void> 
 }
 
 async function getQuickPicks(_context: IActionContext): Promise<QuickPickItem[]> {
+    // TODO
     throw new Error('Getting arm tag keys is not implemented yet');
 }
 
