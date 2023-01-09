@@ -25,7 +25,7 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
             //});
         }
     } else {
-        // selectedNodes = selectedNodes.filter(n => n instanceof ResourceGroupTreeItem);
+        selectedNodes = selectedNodes.filter(n => !!n.resourceGroup);
     }
 
     const deleteConfirmation: string | undefined = settingUtils.getWorkspaceSetting('deleteConfirmation');

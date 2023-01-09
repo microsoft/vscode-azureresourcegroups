@@ -31,7 +31,6 @@
     "activationEvents": [
         "onFileSystem:azureResourceGroups",
         "onCommand:azureResourceGroups.createResourceGroup",
-        "onCommand:azureResourceGroups.deleteResourceGroup",
         "onCommand:azureResourceGroups.deleteResourceGroupV2",
         "onCommand:azureResourceGroups.editTags",
         "onCommand:azureResourceGroups.loadMore",
@@ -78,11 +77,6 @@
                 "title": "Create Resource...",
                 "category": "Azure",
                 "icon": "$(add)"
-            },
-            {
-                "command": "azureResourceGroups.deleteResourceGroup",
-                "title": "%azureResourceGroups.deleteResourceGroup%",
-                "category": "Azure"
             },
             {
                 "command": "azureResourceGroups.deleteResourceGroupV2",
@@ -188,27 +182,10 @@
                 "icon": "$(refresh)"
             },
             {
-                "command": "azureResourceGroups.focusGroup",
-                "title": "%azureResourceGroups.focusGroup%",
-                "category": "Azure",
-                "icon": "$(zoom-in)"
-            },
-            {
-                "command": "azureResourceGroups.unfocusGroup",
-                "title": "%azureResourceGroups.unfocusGroup%",
-                "category": "Azure",
-                "icon": "$(zoom-out)"
-            },
-            {
                 "command": "azureResourceGroups.clearActivities",
                 "title": "%azureResourceGroups.clearActivities%",
                 "category": "Azure",
                 "icon": "$(clear-all)"
-            },
-            {
-                "command": "azureResourceGroups.toggleShowAllResources",
-                "title": "%azureResourceGroups.toggleShowAllResources%",
-                "category": "Azure"
             },
             {
                 "command": "azureResourceGroups.showGroupOptions",
@@ -403,10 +380,6 @@
                 },
                 {
                     "command": "azureResourceGroups.installExtension",
-                    "when": "never"
-                },
-                {
-                    "command": "azureResourceGroups.toggleShowAllResources",
                     "when": "never"
                 }
             ],
