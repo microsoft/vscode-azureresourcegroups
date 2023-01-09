@@ -40,7 +40,7 @@ export function createCredential(getSession: (scopes?: string[]) => vscode.Provi
 export function createSubscriptionContext(subscription: AzureSubscription): ISubscriptionContext {
     return {
         subscriptionDisplayName: subscription.name,
-        subscriptionPath: '',
+        subscriptionPath: subscription.subscriptionId,
         userId: '',
         ...subscription,
         credentials: createCredential(subscription.authentication.getSession)
