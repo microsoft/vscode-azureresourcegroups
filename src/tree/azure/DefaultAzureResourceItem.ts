@@ -3,19 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { createContextValue } from '@microsoft/vscode-azext-utils';
 import { AzureResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { AzExtWrapper, getAzureExtensions } from '../../AzExtWrapper';
 import { getIconPath } from '../../utils/azureUtils';
 import { localize } from "../../utils/localize";
+import { createPortalUrl } from '../../utils/v2/createPortalUrl';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
 export class DefaultAzureResourceItem implements ResourceGroupsItem {
     private readonly resourceTypeExtension: AzExtWrapper | undefined;
+    public readonly portalUrl: vscode.Uri;
 
     constructor(private readonly resource: AzureResource) {
         this.resourceTypeExtension = getAzureExtensions().find(ext => ext.matchesApplicationResourceType(resource));
+        this.portalUrl = createPortalUrl(resource.subscription, resource.id);
     }
 
     public readonly id: string = this.resource.id;
@@ -43,7 +47,7 @@ export class DefaultAzureResourceItem implements ResourceGroupsItem {
         const treeItem = new vscode.TreeItem(this.resource.name ?? 'Unnamed Resource', isResourceTypeExtensionInstalled === false ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 
         treeItem.iconPath = getIconPath(this.resource.resourceType);
-        treeItem.contextValue = 'azureResource';
+        treeItem.contextValue = createContextValue(['azureResource', 'hasPortalUrl']);
 
         return treeItem;
     }

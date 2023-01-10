@@ -3,32 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { OpenInPortalOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtResourceType, createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { ITagsModel, ResourceTags } from '../../commands/tags/TagFileSystem';
 import { ext } from '../../extensionVariables';
 import { getIconPath } from '../../utils/azureUtils';
+import { createPortalUrl } from '../../utils/v2/createPortalUrl';
 import { BranchDataItemOptions } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
 import { BranchDataProviderFactory } from './AzureResourceBranchDataProviderManager';
 import { ResourceItemFactory } from './AzureResourceItem';
 
-// TODO: This should be moved to the common library, for use by other extensions.
-function createPortalUrl(subscription: AzureSubscription, id: string, options?: OpenInPortalOptions): vscode.Uri {
-    const queryPrefix: string = (options && options.queryPrefix) ? `?${options.queryPrefix}` : '';
-    const url: string = `${subscription.environment.portalUrl}/${queryPrefix}#@${subscription.tenantId}/resource${id}`;
-
-    return vscode.Uri.parse(url);
-}
-
 export class GroupingItem implements ResourceGroupsItem {
     private description: string | undefined;
 
+    // only defined if this is a resource group
     readonly viewProperties?: ViewPropertiesModel;
     readonly tagsModel?: ITagsModel;
+    readonly portalUrl?: vscode.Uri;
 
     constructor(
         public readonly context: ResourceGroupsTreeContext,
@@ -49,6 +43,7 @@ export class GroupingItem implements ResourceGroupsItem {
                 label: resourceGroup.name,
                 data: resourceGroup.raw
             };
+            this.portalUrl = createPortalUrl(resourceGroup.subscription, resourceGroup.id);
         }
     }
 
@@ -96,7 +91,12 @@ export class GroupingItem implements ResourceGroupsItem {
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = new vscode.TreeItem(this.label, vscode.TreeItemCollapsibleState.Collapsed);
 
-        treeItem.contextValue = createContextValue(this.contextValues ?? []);
+        const contextValuesToAdd: string[] = [];
+        if (this.resourceGroup) {
+            contextValuesToAdd.push('hasPortalUrl');
+        }
+
+        treeItem.contextValue = createContextValue((this.contextValues ?? []).concat(contextValuesToAdd));
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
         treeItem.id = this.id;
