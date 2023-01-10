@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, IActionContext, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
+import { BranchDataItemWrapper } from '../tree/BranchDataProviderItem';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
@@ -28,8 +29,14 @@ export function registerCommands(): void {
     registerCommand('azureWorkspace.refreshTree', () => ext.actions.refreshWorkspaceTree());
 
     // v1.5 client extensions attach these commands to tree item context menus for refreshing their tree items
-    registerCommand('azureResourceGroups.refresh', (_context, node?: ResourceGroupsItem) => ext.actions.refreshAzureTree(node));
-    registerCommand('azureWorkspace.refresh', (_context, node?: ResourceGroupsItem) => ext.actions.refreshWorkspaceTree(node));
+    registerCommand('azureResourceGroups.refresh', async (context, node?: ResourceGroupsItem) => {
+        await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
+        ext.actions.refreshAzureTree(node);
+    });
+    registerCommand('azureWorkspace.refresh', async (context, node?: ResourceGroupsItem) => {
+        await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
+        ext.actions.refreshWorkspaceTree(node);
+    });
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
@@ -66,4 +73,13 @@ export function registerCommands(): void {
     });
 
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
+}
+
+async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
+    if (node instanceof BranchDataItemWrapper) {
+        const item = node.unwrap<AzExtTreeItem | unknown>();
+        if (isAzExtTreeItem(item)) {
+            await item.refresh(context);
+        }
+    }
 }
