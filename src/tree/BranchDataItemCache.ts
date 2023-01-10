@@ -19,14 +19,4 @@ export class BranchDataItemCache {
     getItemForBranchItem(branchItem: unknown): ResourceGroupsItem | undefined {
         return this.branchItemToResourceGroupsItemCache.get(branchItem);
     }
-
-    getItemForId(id: string): unknown {
-        for (const [key, value] of this.branchItemToResourceGroupsItemCache.entries()) {
-            if (value.id === id) {
-                return key;
-            }
-        }
-
-        return undefined;
-    }
 }
