@@ -27,8 +27,10 @@ function createPortalUrl(subscription: AzureSubscription, id: string, options?: 
 export class GroupingItem implements ResourceGroupsItem {
     private description: string | undefined;
 
+    // only defined if this is a resource group
     readonly viewProperties?: ViewPropertiesModel;
     readonly tagsModel?: ITagsModel;
+    readonly portalUrl?: vscode.Uri;
 
     constructor(
         public readonly context: ResourceGroupsTreeContext,
@@ -49,6 +51,7 @@ export class GroupingItem implements ResourceGroupsItem {
                 label: resourceGroup.name,
                 data: resourceGroup.raw
             };
+            this.portalUrl = createPortalUrl(resourceGroup.subscription, resourceGroup.id);
         }
     }
 
@@ -96,7 +99,12 @@ export class GroupingItem implements ResourceGroupsItem {
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = new vscode.TreeItem(this.label, vscode.TreeItemCollapsibleState.Collapsed);
 
-        treeItem.contextValue = createContextValue(this.contextValues ?? []);
+        const contextValuesToAdd: string[] = [];
+        if (this.resourceGroup) {
+            contextValuesToAdd.push('hasPortalUrl');
+        }
+
+        treeItem.contextValue = createContextValue((this.contextValues ?? []).concat(contextValuesToAdd));
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
         treeItem.id = this.id;

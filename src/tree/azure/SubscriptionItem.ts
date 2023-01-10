@@ -11,6 +11,7 @@ import { azureExtensions } from "../../azureExtensions";
 import { showHiddenTypesSettingKey } from "../../constants";
 import { settingUtils } from "../../utils/settingUtils";
 import { treeUtils } from "../../utils/treeUtils";
+import { createPortalUrl } from "../../utils/v2/createPortalUrl";
 import { createSubscriptionContext } from "../../utils/v2/credentialsUtils";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
@@ -35,7 +36,10 @@ export class SubscriptionItem implements ResourceGroupsItem {
         };
 
         this.id = `/subscriptions/${this.subscription.subscriptionId}`;
+        this.portalUrl = createPortalUrl(this.subscription, this.id);
     }
+
+    public readonly portalUrl: vscode.Uri;
 
     public readonly id: string;
     public readonly subscription: ISubscriptionContext & AzureSubscription;
