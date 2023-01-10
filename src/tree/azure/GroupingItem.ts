@@ -3,26 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { OpenInPortalOptions } from '@microsoft/vscode-azext-azureutils';
 import { AzExtResourceType, createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { ITagsModel, ResourceTags } from '../../commands/tags/TagFileSystem';
 import { ext } from '../../extensionVariables';
 import { getIconPath } from '../../utils/azureUtils';
+import { createPortalUrl } from '../../utils/v2/createPortalUrl';
 import { BranchDataItemOptions } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
 import { BranchDataProviderFactory } from './AzureResourceBranchDataProviderManager';
 import { ResourceItemFactory } from './AzureResourceItem';
-
-// TODO: This should be moved to the common library, for use by other extensions.
-function createPortalUrl(subscription: AzureSubscription, id: string, options?: OpenInPortalOptions): vscode.Uri {
-    const queryPrefix: string = (options && options.queryPrefix) ? `?${options.queryPrefix}` : '';
-    const url: string = `${subscription.environment.portalUrl}/${queryPrefix}#@${subscription.tenantId}/resource${id}`;
-
-    return vscode.Uri.parse(url);
-}
 
 export class GroupingItem implements ResourceGroupsItem {
     private description: string | undefined;
