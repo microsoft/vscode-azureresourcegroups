@@ -14,12 +14,12 @@ export interface InternalTreeView extends TreeView<ResourceGroupsItem> {
 
 interface InternalTreeViewOptions extends TreeViewOptions<ResourceGroupsItem> {
     treeDataProvider: TreeDataProvider<ResourceGroupsItem>;
+    findItemById: (id: string) => Promise<ResourceGroupsItem | undefined>;
     itemCache: BranchDataItemCache;
     /**
      * See {@link TreeView.description}
      */
     description?: string;
-    findItemById: (id: string) => Promise<ResourceGroupsItem | undefined>;
 }
 
 /**
