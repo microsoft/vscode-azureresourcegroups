@@ -30,7 +30,8 @@ export function registerAzureTree(context: vscode.ExtensionContext, options: Reg
 
     const itemCache = new BranchDataItemCache();
     const branchDataItemFactory = createResourceItemFactory<AzureResource>(itemCache);
-    const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, (r) => azureResourceBranchDataProviderManager.getProvider(r.resourceType), azureResourceBranchDataProviderManager.onChangeBranchDataProviders);
+    const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, resource => azureResourceBranchDataProviderManager.getProvider(resource.resourceType), azureResourceBranchDataProviderManager.onChangeBranchDataProviders);
+
     const resourceGroupingManager = new AzureResourceGroupingManager(groupingItemFactory);
     context.subscriptions.push(resourceGroupingManager);
 
@@ -44,7 +45,7 @@ export function registerAzureTree(context: vscode.ExtensionContext, options: Reg
         itemCache,
         description: localize('remote', 'Remote'),
         treeDataProvider: wrapTreeForVSCode(azureResourceTreeDataProvider, itemCache),
-        findItemById: azureResourceTreeDataProvider.findItemById.bind(azureResourceTreeDataProvider) as typeof azureResourceTreeDataProvider.findItemById,
+        findItemById: azureResourceTreeDataProvider.findItemById.bind(azureResourceTreeDataProvider) as typeof azureResourceTreeDataProvider.findItemById
     });
     context.subscriptions.push(treeView);
 
