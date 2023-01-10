@@ -3,16 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, IActionContext, openUrl, ResourceGroupsItem } from '@microsoft/vscode-azext-utils';
+import { azureResourceExperience, IActionContext, openUrl, ResourceGroupsItem } from '@microsoft/vscode-azext-utils';
 import { Uri } from 'vscode';
+import { ext } from '../extensionVariables';
 import { localize } from '../utils/localize';
 
-export async function openInPortal(_context: IActionContext, node?: AzExtTreeItem): Promise<void> {
+export async function openInPortal(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
     if (!node) {
-        // TODO: Reenable this once we have a way to pick resources.
-        // node = await pickAppResource<AppResourceTreeItem>(context);
-
-        throw new Error(localize('commands.openInPortal.noSelectedResource', 'A resource must be selected.'));
+        node = await azureResourceExperience({ ...context, dontUnwrap: true }, ext.v2.api.resources.azureResourceTreeDataProvider);
     }
 
     if (hasPortalUrl(node)) {

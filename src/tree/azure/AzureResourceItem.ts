@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureResource, BranchDataProvider, ResourceBase, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
-import { FileChangeType, TreeItem } from 'vscode';
+import { FileChangeType, TreeItem, Uri } from 'vscode';
 import { ResourceTags } from '../../commands/tags/TagFileSystem';
 import { ext } from '../../extensionVariables';
+import { createPortalUrl } from '../../utils/v2/createPortalUrl';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataItemOptions, BranchDataItemWrapper } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
@@ -22,8 +23,10 @@ export class AzureResourceItem<T extends AzureResource> extends BranchDataItemWr
         super(branchItem, branchDataProvider, itemCache, options);
 
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this.tagsModel });
+        this.portalUrl = createPortalUrl(resource.subscription, resource.id);
     }
 
+    override readonly portalUrl: Uri;
     readonly id = this.resource.id;
     readonly tagsModel = new ResourceTags(this.resource);
 
