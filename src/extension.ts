@@ -15,7 +15,7 @@ import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
 import { InternalAzureResourceGroupsExtensionApi } from './api/compatibility/AzureResourceGroupsExtensionApi';
 import { CompatibleAzExtTreeDataProvider } from './api/compatibility/CompatibleAzExtTreeDataProvider';
-import { pickAppResource } from './api/compatibility/pickAppResource';
+import { createCompatibilityPickAppResource } from './api/compatibility/pickAppResource';
 import { registerApplicationResourceResolver } from './api/compatibility/registerApplicationResourceResolver';
 import { registerWorkspaceResourceProvider } from './api/compatibility/registerWorkspaceResourceProvider';
 import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
@@ -30,6 +30,7 @@ import { ext } from './extensionVariables';
 import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
 import { registerAzureTree } from './tree/azure/registerAzureTree';
+import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
@@ -91,10 +92,12 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         type => void extensionManager.activateWorkspaceResourceBranchDataProvider(type));
     const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
 
+    const azureResourcesBranchDataItemCache = new BranchDataItemCache();
     const azureResourceTreeDataProvider = registerAzureTree(context, {
         azureResourceProviderManager,
         azureResourceBranchDataProviderManager,
         refreshEvent: refreshAzureTreeEmitter.event,
+        itemCache: azureResourcesBranchDataItemCache
     });
 
     const workspaceResourceTreeDataProvider = registerWorkspaceTree(context, {
@@ -141,7 +144,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
                     registerApplicationResourceResolver,
                     registerWorkspaceResourceProvider,
                     registerActivity,
-                    pickAppResource,
+                    pickAppResource: createCompatibilityPickAppResource(azureResourcesBranchDataItemCache),
                 }),
             },
             v2ApiFactory,
