@@ -16,7 +16,7 @@ import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
-import { ResourcesTreeItemStateStore } from '../TreeItemState';
+import { TreeItemStateStore } from '../TreeItemState';
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { GroupingItem } from './GroupingItem';
 import { SubscriptionItem } from './SubscriptionItem';
@@ -31,16 +31,16 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
         itemCache: BranchDataItemCache,
-        state: ResourcesTreeItemStateStore,
+        state: TreeItemStateStore,
         onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
         private readonly resourceGroupingManager: AzureResourceGroupingManager,
         private readonly resourceProviderManager: AzureResourceProviderManager) {
         super(
             itemCache,
-            state,
             onDidChangeBranchTreeData,
             resourceProviderManager.onDidChangeResourceChange,
             onRefresh,
+            state,
             () => {
                 this.groupingChangeSubscription.dispose();
                 this.filtersSubscription?.dispose();

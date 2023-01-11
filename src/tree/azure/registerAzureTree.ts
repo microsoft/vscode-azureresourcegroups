@@ -12,7 +12,7 @@ import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { createTreeView } from '../createTreeView';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
-import { ResourcesTreeItemStateStore } from '../TreeItemState';
+import { TreeItemStateStore } from '../TreeItemState';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { AzureResourceBranchDataProviderManager } from './AzureResourceBranchDataProviderManager';
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
@@ -30,7 +30,7 @@ interface RegisterAzureTreeOptions {
 export function registerAzureTree(context: vscode.ExtensionContext, options: RegisterAzureTreeOptions): AzureResourceTreeDataProvider {
     const { azureResourceBranchDataProviderManager, azureResourceProviderManager: resourceProviderManager, refreshEvent, itemCache } = options;
 
-    context.subscriptions.push(ext.azureTreeState = new ResourcesTreeItemStateStore());
+    context.subscriptions.push(ext.azureTreeState = new TreeItemStateStore());
 
     const resourceGroupingManager = createGroupingManager(azureResourceBranchDataProviderManager, itemCache);
     context.subscriptions.push(resourceGroupingManager);

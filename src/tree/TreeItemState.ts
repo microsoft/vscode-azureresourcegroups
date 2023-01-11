@@ -6,29 +6,22 @@
 import * as vscode from 'vscode';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 
-// TODO: move to shared utils
-export abstract class TreeItemStateStoreBase<TState = {}, TItem extends ResourceGroupsItem = ResourceGroupsItem> implements vscode.Disposable {
-    abstract applyStateToTreeItem(state: Partial<TState>, treeItem: vscode.TreeItem): vscode.TreeItem;
+interface TreeItemState {
+    /**
+     * Apply a temporary description to the tree item
+     */
+    temporaryDescription?: string;
+    /**
+     * Set the tree item icon to a spinner
+     */
+    spinner?: boolean;
+}
 
-    private readonly store: Record<string, Partial<TState> | undefined> = {};
+export class TreeItemStateStore implements vscode.Disposable {
+    private readonly store: Record<string, Partial<TreeItemState> | undefined> = {};
     private readonly disposables: vscode.Disposable[] = [];
-
     private readonly onDidUpdateStateEmitter = new vscode.EventEmitter<string>();
     private readonly onDidUpdateStateEvent: vscode.Event<string> = this.onDidUpdateStateEmitter.event;
-
-    dispose(): void {
-        this.disposables.forEach((disposable) => {
-            disposable.dispose();
-        });
-    }
-
-    onDidRequestRefresh(id: string, callback: () => void): void {
-        this.disposables.push(this.onDidUpdateStateEvent((eventId: string) => {
-            if (eventId === id) {
-                callback();
-            }
-        }));
-    }
 
     /**
      * Notify a resource that its children have changed.
@@ -37,7 +30,7 @@ export abstract class TreeItemStateStoreBase<TState = {}, TItem extends Resource
         this.onDidUpdateStateEmitter.fire(id);
     }
 
-    wrapItemInStateHandling(item: TItem, refresh: (item: TItem) => void): TItem {
+    wrapItemInStateHandling(item: ResourceGroupsItem, refresh: (item: ResourceGroupsItem) => void): ResourceGroupsItem {
         const getTreeItem = item.getTreeItem.bind(item) as typeof item.getTreeItem;
         item.getTreeItem = async () => {
             const treeItem = await getTreeItem();
@@ -52,50 +45,24 @@ export abstract class TreeItemStateStoreBase<TState = {}, TItem extends Resource
         return item;
     }
 
-    /**
-     * Apply state (if any) to a tree item.
-     */
-    private applyToTreeItem(treeItem: vscode.TreeItem & { id: string }): vscode.TreeItem {
-        const state = this.getState(treeItem.id);
-        return this.applyStateToTreeItem(state, { ...treeItem });
+    dispose(): void {
+        this.disposables.forEach((disposable) => {
+            disposable.dispose();
+        });
     }
 
-    protected async runWithState<T = void>(id: string, state: Partial<TState>, callback: () => Promise<T>): Promise<T> {
+    async runWithTemporaryDescription<T = void>(id: string, description: string, callback: () => Promise<T>): Promise<T> {
         let result: T;
-        const initialState = { ...this.getState(id) };
-        this.update(id, state);
+        this.update(id, { ...this.getState(id), temporaryDescription: description, spinner: true });
         try {
             result = await callback();
         } finally {
-            this.update(id, initialState);
+            this.update(id, { ...this.getState(id), temporaryDescription: undefined, spinner: false });
         }
         return result;
     }
 
-    private getState(id: string): Partial<TState> {
-        return this.store[id] ?? {};
-    }
-
-    private update(id: string, state: Partial<TState>): void {
-        this.store[id] = { ...this.getState(id), ...state };
-        this.onDidUpdateStateEmitter.fire(id);
-    }
-}
-
-interface TreeItemState {
-    /**
-     * Apply a temporary description to the tree item
-     */
-    temporaryDescription?: string;
-    /**
-     * Set the tree item icon to a spinner
-     */
-    spinner?: boolean;
-}
-
-// TODO: move to shared utils so it can be extended by client extensions to add their own custom state handling
-export class ResourcesTreeItemStateStore<TState extends TreeItemState = TreeItemState, TItem extends ResourceGroupsItem = ResourceGroupsItem> extends TreeItemStateStoreBase<TState, TItem> {
-    applyStateToTreeItem(state: Partial<TState>, treeItem: vscode.TreeItem): vscode.TreeItem {
+    private applyStateToTreeItem(state: Partial<TreeItemState>, treeItem: vscode.TreeItem): vscode.TreeItem {
         treeItem.description = state.temporaryDescription;
 
         if (state.spinner) {
@@ -105,7 +72,25 @@ export class ResourcesTreeItemStateStore<TState extends TreeItemState = TreeItem
         return treeItem;
     }
 
-    async runWithTemporaryDescription<T = void>(id: string, description: string, callback: () => Promise<T>): Promise<T> {
-        return this.runWithState(id, { temporaryDescription: description, spinner: true } as Partial<TState>, callback);
+    private onDidRequestRefresh(id: string, callback: () => void): void {
+        this.disposables.push(this.onDidUpdateStateEvent((eventId: string) => {
+            if (eventId === id) {
+                callback();
+            }
+        }));
+    }
+
+    private applyToTreeItem(treeItem: vscode.TreeItem & { id: string }): vscode.TreeItem {
+        const state = this.getState(treeItem.id);
+        return this.applyStateToTreeItem(state, { ...treeItem });
+    }
+
+    private getState(id: string): Partial<TreeItemState> {
+        return this.store[id] ?? {};
+    }
+
+    private update(id: string, state: Partial<TreeItemState>): void {
+        this.store[id] = { ...this.getState(id), ...state };
+        this.onDidUpdateStateEmitter.fire(id);
     }
 }
