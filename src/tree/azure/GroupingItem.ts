@@ -13,7 +13,6 @@ import { createPortalUrl } from '../../utils/v2/createPortalUrl';
 import { BranchDataItemOptions } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
-import { treeItemState } from '../TreeItemState';
 import { BranchDataProviderFactory } from './AzureResourceBranchDataProviderManager';
 import { ResourceItemFactory } from './AzureResourceItem';
 
@@ -101,8 +100,7 @@ export class GroupingItem implements ResourceGroupsItem {
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
         treeItem.id = this.id;
-
-        return treeItemState.applyToTreeItem({ ...treeItem, id: this.id });
+        return treeItem;
     }
 
     getParent(): vscode.ProviderResult<ResourceGroupsItem> {

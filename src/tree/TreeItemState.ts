@@ -4,26 +4,19 @@
 *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { ResourceGroupsItem } from './ResourceGroupsItem';
 
-interface TreeItemState {
-    /**
-     * Apply a temporary description to the tree item
-     */
-    temporaryDescription?: string;
-    /**
-     * Set the tree item icon to a spinner
-     */
-    spinner?: boolean;
-}
+// TODO: move to shared utils
+export abstract class TreeItemStateStoreBase<TState = {}, TItem extends ResourceGroupsItem = ResourceGroupsItem> implements vscode.Disposable {
+    abstract applyStateToTreeItem(state: Partial<TState>, treeItem: vscode.TreeItem): vscode.TreeItem;
 
-class TreeItemStateStore implements vscode.Disposable {
-    private readonly store: Record<string, TreeItemState | undefined> = {};
+    private readonly store: Record<string, Partial<TState> | undefined> = {};
     private readonly disposables: vscode.Disposable[] = [];
 
     private readonly onDidUpdateStateEmitter = new vscode.EventEmitter<string>();
     private readonly onDidUpdateStateEvent: vscode.Event<string> = this.onDidUpdateStateEmitter.event;
 
-    dispose() {
+    dispose(): void {
         this.disposables.forEach((disposable) => {
             disposable.dispose();
         });
@@ -44,12 +37,65 @@ class TreeItemStateStore implements vscode.Disposable {
         this.onDidUpdateStateEmitter.fire(id);
     }
 
+    wrapItemInStateHandling(item: TItem, refresh: (item: TItem) => void): TItem {
+        const getTreeItem = item.getTreeItem.bind(item) as typeof item.getTreeItem;
+        item.getTreeItem = async () => {
+            const treeItem = await getTreeItem();
+            if (treeItem.id) {
+                return this.applyToTreeItem({ ...treeItem, id: treeItem.id });
+            }
+            return treeItem;
+        }
+
+        this.onDidRequestRefresh(item.id, () => refresh(item));
+
+        return item;
+    }
+
     /**
      * Apply state (if any) to a tree item.
      */
-    applyToTreeItem(treeItem: vscode.TreeItem & { id: string }): vscode.TreeItem {
+    private applyToTreeItem(treeItem: vscode.TreeItem & { id: string }): vscode.TreeItem {
         const state = this.getState(treeItem.id);
+        return this.applyStateToTreeItem(state, { ...treeItem });
+    }
 
+    protected async runWithState<T = void>(id: string, state: Partial<TState>, callback: () => Promise<T>): Promise<T> {
+        let result: T;
+        const initialState = { ...this.getState(id) };
+        this.update(id, state);
+        try {
+            result = await callback();
+        } finally {
+            this.update(id, initialState);
+        }
+        return result;
+    }
+
+    private getState(id: string): Partial<TState> {
+        return this.store[id] ?? {};
+    }
+
+    private update(id: string, state: Partial<TState>): void {
+        this.store[id] = { ...this.getState(id), ...state };
+        this.onDidUpdateStateEmitter.fire(id);
+    }
+}
+
+interface TreeItemState {
+    /**
+     * Apply a temporary description to the tree item
+     */
+    temporaryDescription?: string;
+    /**
+     * Set the tree item icon to a spinner
+     */
+    spinner?: boolean;
+}
+
+// TODO: move to shared utils so it can be extended by client extensions to add their own custom state handling
+export class ResourcesTreeItemStateStore<TState extends TreeItemState = TreeItemState, TItem extends ResourceGroupsItem = ResourceGroupsItem> extends TreeItemStateStoreBase<TState, TItem> {
+    applyStateToTreeItem(state: Partial<TState>, treeItem: vscode.TreeItem): vscode.TreeItem {
         treeItem.description = state.temporaryDescription;
 
         if (state.spinner) {
@@ -60,24 +106,6 @@ class TreeItemStateStore implements vscode.Disposable {
     }
 
     async runWithTemporaryDescription<T = void>(id: string, description: string, callback: () => Promise<T>): Promise<T> {
-        let result: T;
-        this.update(id, { temporaryDescription: description, spinner: true });
-        try {
-            result = await callback();
-        } finally {
-            this.update(id, { temporaryDescription: undefined, spinner: undefined });
-        }
-        return result;
-    }
-
-    private getState(id: string): TreeItemState {
-        return this.store[id] ?? {};
-    }
-
-    private update(id: string, state: Partial<TreeItemState>): void {
-        this.store[id] = { ...this.getState(id), ...state };
-        this.onDidUpdateStateEmitter.fire(id);
+        return this.runWithState(id, { temporaryDescription: description, spinner: true } as Partial<TState>, callback);
     }
 }
-
-export const treeItemState = new TreeItemStateStore();

@@ -6,7 +6,9 @@
 import { ResourceBase, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { BranchDataItemCache } from './BranchDataItemCache';
+import { BranchDataItemWrapper } from './BranchDataProviderItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
+import { TreeItemStateStoreBase } from './TreeItemState';
 
 export abstract class ResourceTreeDataProviderBase extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupsItem> {
     private readonly branchTreeDataChangeSubscription: vscode.Disposable;
@@ -16,6 +18,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     constructor(
         protected readonly itemCache: BranchDataItemCache,
+        private readonly state: TreeItemStateStoreBase<unknown, ResourceGroupsItem>,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
         onDidChangeResource: vscode.Event<ResourceBase | undefined>,
         onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
@@ -72,7 +75,14 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     async getChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
-        return await this.onGetChildren(element);
+        const children = await this.onGetChildren(element);
+        return children?.map(child => {
+            // don't wrap items that belong to branch data providers
+            if (child instanceof BranchDataItemWrapper) {
+                return child;
+            }
+            return this.state.wrapItemInStateHandling(child, (item) => this.notifyTreeDataChanged(item));
+        });
     }
 
     getParent(element: ResourceGroupsItem): vscode.ProviderResult<ResourceGroupsItem> {
