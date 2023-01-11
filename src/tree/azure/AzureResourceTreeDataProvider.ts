@@ -5,13 +5,13 @@
 
 import { AzExtServiceClientCredentials, IActionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
-import { ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzureSubscription, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
-import { AzureAccountExtensionApi } from '../azure-account.api';
+import { AzureAccountExtensionApi, AzureSubscription as AzureAccountSubscription } from '../azure-account.api';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
@@ -78,33 +78,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                         return api.filters.map(
                             subscription => new SubscriptionItem(
                                 {
-                                    subscription:
-                                    {
-                                        authentication: {
-                                            getSession: async scopes => {
-                                                const token = await subscription.session.credentials2.getToken(scopes ?? []);
-
-                                                if (!token) {
-                                                    return undefined;
-                                                }
-
-                                                return {
-                                                    accessToken: token.token,
-                                                    account: {
-                                                        id: subscription.session.userId,
-                                                        label: subscription.session.userId
-                                                    },
-                                                    id: 'microsoft',
-                                                    scopes: scopes ?? []
-                                                };
-                                            }
-                                        },
-                                        name: subscription.subscription.displayName || 'TODO: ever undefined?',
-                                        environment: subscription.session.environment,
-                                        isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud',
-                                        subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
-                                        tenantId: subscription.session.tenantId
-                                    },
+                                    subscription: this.createAzureSubscription(subscription),
                                     subscriptionContext: {
                                         credentials: <AzExtServiceClientCredentials>subscription.session.credentials2,
                                         subscriptionDisplayName: nonNullProp(subscription.subscription, 'displayName'),
@@ -119,32 +93,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                                 },
                                 this.resourceGroupingManager,
                                 this.resourceProviderManager,
-                                {
-                                    authentication: {
-                                        getSession: async scopes => {
-                                            const token = await subscription.session.credentials2.getToken(scopes ?? []);
-
-                                            if (!token) {
-                                                return undefined;
-                                            }
-
-                                            return {
-                                                accessToken: token.token,
-                                                account: {
-                                                    id: subscription.session.userId,
-                                                    label: subscription.session.userId
-                                                },
-                                                id: 'microsoft',
-                                                scopes: scopes ?? []
-                                            };
-                                        }
-                                    },
-                                    name: subscription.subscription.displayName || 'TODO: ever undefined?',
-                                    environment: subscription.session.environment,
-                                    isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud',
-                                    subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
-                                    tenantId: subscription.session.tenantId
-                                }));
+                                this.createAzureSubscription(subscription)));
                     }
                 } else if (api.status === 'LoggedOut') {
                     return [
@@ -214,5 +163,34 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         }
 
         return this.api;
+    }
+
+    private createAzureSubscription(subscription: AzureAccountSubscription): AzureSubscription {
+        return {
+            authentication: {
+                getSession: async scopes => {
+                    const token = await subscription.session.credentials2.getToken(scopes ?? []);
+
+                    if (!token) {
+                        return undefined;
+                    }
+
+                    return {
+                        accessToken: token.token,
+                        account: {
+                            id: subscription.session.userId,
+                            label: subscription.session.userId
+                        },
+                        id: 'microsoft',
+                        scopes: scopes ?? []
+                    };
+                }
+            },
+            name: subscription.subscription.displayName || 'TODO: ever undefined?',
+            environment: subscription.session.environment,
+            isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud',
+            subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
+            tenantId: subscription.session.tenantId
+        };
     }
 }
