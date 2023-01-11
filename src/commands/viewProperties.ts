@@ -3,22 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
-import { AzureResourceModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { azureResourceExperience, IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
+import { ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { randomUUID } from 'crypto';
+import { ext } from '../extensionVariables';
+import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { localize } from '../utils/localize';
 
-export async function viewProperties(_context: IActionContext, node?: AzureResourceModel): Promise<void> {
+export async function viewProperties(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
     if (!node) {
-        // TODO: Reenable this once we have a way to pick resources.
-        // node = await pickAppResource<AppResourceTreeItem>(context);
-
-        throw new Error(localize('commands.viewProperties.noSelectedResource', 'A resource must be selected.'));
+        node = await azureResourceExperience<ResourceGroupsItem>({ ...context, dontUnwrap: true }, ext.v2.api.resources.azureResourceTreeDataProvider);
     }
 
-    if (!node.viewProperties) {
+    if (!hasViewProperties(node)) {
         throw new Error(localize('commands.viewProperties.noProperties', 'The selected resource has no properties to view.'));
     }
 
     await openReadOnlyJson({ fullId: node.id ?? randomUUID(), label: node.viewProperties.label }, node.viewProperties.data);
+}
+
+function hasViewProperties(node: unknown): node is { viewProperties: ViewPropertiesModel } {
+    return !!(node as { viewProperties: ViewPropertiesModel })?.viewProperties;
 }
