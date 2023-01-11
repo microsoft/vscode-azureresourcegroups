@@ -104,6 +104,7 @@ export class GroupingItem implements ResourceGroupsItem {
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
         treeItem.id = this.id;
+
         return treeItem;
     }
 

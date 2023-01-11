@@ -10,7 +10,6 @@ import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataItemWrapper } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
-import { ResourcesTreeItemStateStore } from '../TreeItemState';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 
 export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderBase {
@@ -18,12 +17,9 @@ export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderB
         private readonly branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
         onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
         private readonly resourceProviderManager: WorkspaceResourceProviderManager,
-        branchItemCache: BranchDataItemCache,
-        state: ResourcesTreeItemStateStore,
-    ) {
+        branchItemCache: BranchDataItemCache) {
         super(
             branchItemCache,
-            state,
             branchDataProviderManager.onDidChangeTreeData,
             resourceProviderManager.onDidChangeResourceChange,
             onRefresh);

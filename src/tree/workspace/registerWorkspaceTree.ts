@@ -10,7 +10,6 @@ import { ext } from '../../extensionVariables';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { createTreeView } from '../createTreeView';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
-import { ResourcesTreeItemStateStore } from '../TreeItemState';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { localize } from './../../utils/localize';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
@@ -25,10 +24,9 @@ interface RegisterWorkspaceTreeOptions {
 export function registerWorkspaceTree(context: vscode.ExtensionContext, options: RegisterWorkspaceTreeOptions): WorkspaceResourceTreeDataProvider {
     const { workspaceResourceBranchDataProviderManager, workspaceResourceProviderManager, refreshEvent } = options;
 
-    context.subscriptions.push(ext.workspaceTreeState = new ResourcesTreeItemStateStore());
     const branchItemCache = new BranchDataItemCache();
     const workspaceResourceTreeDataProvider =
-        new WorkspaceResourceTreeDataProvider(workspaceResourceBranchDataProviderManager, refreshEvent, workspaceResourceProviderManager, branchItemCache, ext.workspaceTreeState);
+        new WorkspaceResourceTreeDataProvider(workspaceResourceBranchDataProviderManager, refreshEvent, workspaceResourceProviderManager, branchItemCache);
     context.subscriptions.push(workspaceResourceTreeDataProvider);
 
     const treeView = createTreeView('azureWorkspace', {
