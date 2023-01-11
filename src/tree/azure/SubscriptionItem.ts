@@ -15,7 +15,6 @@ import { createPortalUrl } from "../../utils/v2/createPortalUrl";
 import { createSubscriptionContext } from "../../utils/v2/credentialsUtils";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
-import { treeItemState } from "../TreeItemState";
 import { AzureResourceGroupingManager } from "./AzureResourceGroupingManager";
 
 const supportedResourceTypes: AzExtResourceType[] =
@@ -38,7 +37,6 @@ export class SubscriptionItem implements ResourceGroupsItem {
 
         this.id = `/subscriptions/${this.subscription.subscriptionId}`;
         this.portalUrl = createPortalUrl(this.subscription, this.id);
-        treeItemState.onDidRequestRefresh(this.subscription.subscriptionId, () => this.context.refresh(this));
     }
 
     public readonly portalUrl: vscode.Uri;

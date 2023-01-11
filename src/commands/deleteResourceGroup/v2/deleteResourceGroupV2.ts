@@ -5,12 +5,11 @@
 
 import { ResourceGroup } from '@azure/arm-resources';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizard, IActionContext, IAzureQuickPickItem, nonNullProp, nonNullValue, subscriptionExperience, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, IActionContext, IAzureQuickPickItem, nonNullProp, subscriptionExperience, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { AzureResource, AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { DefaultAzureResourceProvider } from '../../../api/DefaultAzureResourceProvider';
 import { ext } from '../../../extensionVariables';
 import { GroupingItem } from '../../../tree/azure/GroupingItem';
-import { treeItemState } from '../../../tree/TreeItemState';
 import { createActivityContext } from '../../../utils/activityUtils';
 import { createResourceClient } from '../../../utils/azureClients';
 import { localize } from '../../../utils/localize';
@@ -56,7 +55,7 @@ async function pickResourceGroups(context: IActionContext) {
     const client = await createResourceClient([context, createSubscriptionContext(subscription)]);
     const resourceGroups = await uiUtils.listAllIterator(client.resourceGroups.list());
 
-    const picks = await context.ui.showQuickPick<IAzureQuickPickItem<ResourceGroup>>(resourceGroups.map(rg => ({ label: nonNullValue(rg.name), data: rg })), {
+    const picks = await context.ui.showQuickPick<IAzureQuickPickItem<ResourceGroup>>(resourceGroups.map(rg => ({ label: nonNullProp(rg, 'name'), data: rg })), {
         canPickMany: true,
         placeHolder: localize('selectResourceGroupToDelete', 'Select resource group(s) to delete'),
     });
@@ -95,7 +94,7 @@ async function deleteResourceGroups(context: IActionContext, subscription: Azure
             }
         }
 
-        await treeItemState.runWithTemporaryDescription(rg.id, 'Deleting...', async () => {
+        void ext.azureTreeState.runWithTemporaryDescription(rg.id, localize('deleting', 'Deleting...'), async () => {
             const wizard = new AzureWizard<DeleteResourceGroupContext>({
                 subscription: createSubscriptionContext(subscription),
                 resourceGroupToDelete: rg.name, // TODO: Should have a name (separate from label)?
@@ -107,7 +106,7 @@ async function deleteResourceGroups(context: IActionContext, subscription: Azure
             });
 
             await wizard.execute();
-            treeItemState.notifyChildrenChanged(rg.subscription.subscriptionId);
+            ext.azureTreeState.notifyChildrenChanged(`/subscriptions/${rg.subscription.subscriptionId}`);
         });
     }
 }
