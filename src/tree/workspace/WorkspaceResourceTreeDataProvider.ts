@@ -17,8 +17,7 @@ export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderB
         private readonly branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
         onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
         private readonly resourceProviderManager: WorkspaceResourceProviderManager,
-        branchItemCache: BranchDataItemCache,
-    ) {
+        branchItemCache: BranchDataItemCache) {
         super(
             branchItemCache,
             branchDataProviderManager.onDidChangeTreeData,
