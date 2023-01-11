@@ -78,6 +78,33 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                         return api.filters.map(
                             subscription => new SubscriptionItem(
                                 {
+                                    subscription:
+                                    {
+                                        authentication: {
+                                            getSession: async scopes => {
+                                                const token = await subscription.session.credentials2.getToken(scopes ?? []);
+
+                                                if (!token) {
+                                                    return undefined;
+                                                }
+
+                                                return {
+                                                    accessToken: token.token,
+                                                    account: {
+                                                        id: subscription.session.userId,
+                                                        label: subscription.session.userId
+                                                    },
+                                                    id: 'microsoft',
+                                                    scopes: scopes ?? []
+                                                };
+                                            }
+                                        },
+                                        name: subscription.subscription.displayName || 'TODO: ever undefined?',
+                                        environment: subscription.session.environment,
+                                        isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud',
+                                        subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
+                                        tenantId: subscription.session.tenantId
+                                    },
                                     subscriptionContext: {
                                         credentials: <AzExtServiceClientCredentials>subscription.session.credentials2,
                                         subscriptionDisplayName: nonNullProp(subscription.subscription, 'displayName'),
