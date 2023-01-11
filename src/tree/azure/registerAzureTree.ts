@@ -41,7 +41,7 @@ export function registerAzureTree(context: vscode.ExtensionContext, options: Reg
         itemCache,
         description: localize('remote', 'Remote'),
         treeDataProvider: wrapTreeForVSCode(azureResourceTreeDataProvider, itemCache),
-        findItemById: azureResourceTreeDataProvider.findItemById.bind(azureResourceTreeDataProvider) as typeof azureResourceTreeDataProvider.findItemById,
+        findItemById: azureResourceTreeDataProvider.findItemById.bind(azureResourceTreeDataProvider) as typeof azureResourceTreeDataProvider.findItemById
     });
     context.subscriptions.push(treeView);
 
