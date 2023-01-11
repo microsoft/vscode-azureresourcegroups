@@ -27,13 +27,26 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
                 const appResources = allResources.map(resource => this.createAppResource(subscription, resource));
 
                 const allResourceGroups: ResourceGroup[] = await uiUtils.listAllIterator(client.resourceGroups.list());
-                const appResourcesResourceGroups = allResourceGroups.map(resource => createAzureResourceFromResourceGroup(subscription, resource));
+                const appResourcesResourceGroups = allResourceGroups.map(resource => this.fromResourceGroup(subscription, resource));
 
                 return appResources.concat(appResourcesResourceGroups);
             });
     }
 
     onDidChangeResource = this.onDidChangeResourceEmitter.event;
+
+    private fromResourceGroup(subscription: AzureSubscription, resourceGroup: ResourceGroup): AzureResource {
+        return {
+            ...resourceGroup,
+            subscription,
+            id: nonNullProp(resourceGroup, 'id'),
+            name: nonNullProp(resourceGroup, 'name'),
+            azureResourceType: {
+                type: nonNullProp(resourceGroup, 'type').toLowerCase()
+            },
+            raw: resourceGroup,
+        };
+    }
 
     private createAppResource(subscription: AzureSubscription, resource: GenericResource): AzureResource {
         const resourceId = nonNullProp(resource, 'id');
@@ -56,17 +69,4 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
             raw: resource,
         };
     }
-}
-
-export function createAzureResourceFromResourceGroup(subscription: AzureSubscription, resourceGroup: ResourceGroup): AzureResource {
-    return {
-        ...resourceGroup,
-        subscription,
-        id: nonNullProp(resourceGroup, 'id'),
-        name: nonNullProp(resourceGroup, 'name'),
-        azureResourceType: {
-            type: nonNullProp(resourceGroup, 'type').toLowerCase()
-        },
-        raw: resourceGroup,
-    };
 }

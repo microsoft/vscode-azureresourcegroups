@@ -59,9 +59,9 @@ class TreeItemStateStore implements vscode.Disposable {
         return treeItem;
     }
 
-    async runWithTemporaryDescription<T = void>(id: string, options: Pick<TreeItemState, 'spinner' | 'temporaryDescription'>, callback: () => Promise<T>): Promise<T> {
+    async runWithTemporaryDescription<T = void>(id: string, description: string, callback: () => Promise<T>): Promise<T> {
         let result: T;
-        this.update(id, options);
+        this.update(id, { temporaryDescription: description, spinner: true });
         try {
             result = await callback();
         } finally {
