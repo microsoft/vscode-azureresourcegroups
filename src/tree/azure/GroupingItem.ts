@@ -46,7 +46,6 @@ export class GroupingItem implements ResourceGroupsItem {
             };
             this.portalUrl = createPortalUrl(resourceGroup.subscription, resourceGroup.id);
         }
-        treeItemState.onDidRequestRefresh(this.id, () => this.context.refresh(this));
     }
 
     // Needed for context menu commands on the group tree items. E.g. "Create..."
@@ -103,7 +102,7 @@ export class GroupingItem implements ResourceGroupsItem {
         treeItem.iconPath = this.iconPath;
         treeItem.id = this.id;
 
-        return treeItem;
+        return treeItemState.applyToTreeItem({ ...treeItem, id: this.id });
     }
 
     getParent(): vscode.ProviderResult<ResourceGroupsItem> {
