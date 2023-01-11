@@ -9,6 +9,7 @@ import { AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { window } from 'vscode';
 import { ext } from '../extensionVariables';
 import { SubscriptionItem } from '../tree/azure/SubscriptionItem';
+import { treeItemState } from '../tree/TreeItemState';
 import { createActivityContext } from '../utils/activityUtils';
 import { localize } from '../utils/localize';
 import { createSubscriptionContext } from '../utils/v2/credentialsUtils';
@@ -38,5 +39,5 @@ export async function createResourceGroup(context: IActionContext, node?: Subscr
     if (!wizardContext.suppressNotification) {
         void window.showInformationMessage(localize('createdRg', 'Created resource group "{0}".', newResourceGroupName));
     }
-    ext.actions.refreshAzureTree();
+    treeItemState.notifyChildrenChanged(subscription.subscriptionId);
 }

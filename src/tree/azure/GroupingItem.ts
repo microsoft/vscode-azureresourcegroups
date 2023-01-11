@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType, createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { ITagsModel, ResourceTags } from '../../commands/tags/TagFileSystem';
 import { ext } from '../../extensionVariables';
@@ -13,6 +13,7 @@ import { createPortalUrl } from '../../utils/v2/createPortalUrl';
 import { BranchDataItemOptions } from '../BranchDataProviderItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
+import { treeItemState } from '../TreeItemState';
 import { BranchDataProviderFactory } from './AzureResourceBranchDataProviderManager';
 import { ResourceItemFactory } from './AzureResourceItem';
 
@@ -45,12 +46,18 @@ export class GroupingItem implements ResourceGroupsItem {
             };
             this.portalUrl = createPortalUrl(resourceGroup.subscription, resourceGroup.id);
         }
+
+        treeItemState.onDidRequestRefresh(this.id, () => this.context.refresh(this));
+
+        this.subscription = {
+            // for v1.5 compatibility
+            ...this.context.subscriptionContext,
+            ...this.context.subscription,
+        };
     }
 
     // Needed for context menu commands on the group tree items. E.g. "Create..."
-    public get subscription(): ISubscriptionContext {
-        return this.context.subscriptionContext;
-    }
+    public readonly subscription: ISubscriptionContext & AzureSubscription;
 
     readonly id: string = this.resourceGroup ? this.resourceGroup.id : `/subscriptions/${this.context.subscriptionContext.subscriptionId}/groupings/${this.label}`;
 
@@ -100,8 +107,7 @@ export class GroupingItem implements ResourceGroupsItem {
         treeItem.description = this.description;
         treeItem.iconPath = this.iconPath;
         treeItem.id = this.id;
-
-        return treeItem;
+        return treeItemState.applyToTreeItem({ ...treeItem, id: this.id });
     }
 
     getParent(): vscode.ProviderResult<ResourceGroupsItem> {
