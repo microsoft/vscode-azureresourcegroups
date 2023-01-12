@@ -346,11 +346,6 @@
                     "command": "azureResourceGroups.viewProperties",
                     "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
                     "group": "9@1"
-                },
-                {
-                    "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem =~ /group/",
-                    "group": "inline@1"
                 }
             ],
             "commandPalette": [
