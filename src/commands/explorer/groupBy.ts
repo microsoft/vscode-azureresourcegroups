@@ -3,10 +3,15 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { uiUtils } from "@microsoft/vscode-azext-azureutils";
+import { IActionContext, nonNullProp, subscriptionExperience } from "@microsoft/vscode-azext-utils";
+import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { QuickPickItem } from "vscode";
+import { ext } from "../../extensionVariables";
+import { createResourceClient } from "../../utils/azureClients";
 import { localize } from "../../utils/localize";
 import { settingUtils } from "../../utils/settingUtils";
+import { createSubscriptionContext } from "../../utils/v2/credentialsUtils";
 
 export function buildGroupByCommand(setting: string) {
     return (context: IActionContext): Promise<void> => groupBy(context, setting);
@@ -14,8 +19,10 @@ export function buildGroupByCommand(setting: string) {
 
 async function groupBy(context: IActionContext, setting: string): Promise<void> {
     if (setting === 'armTag') {
-        const tag = await context.ui.showQuickPick(getQuickPicks(context), {
-            placeHolder: localize('groupByArmTagKey', 'Select the tag key to group by...')
+        const subscription = await subscriptionExperience(context, ext.v2.api.resources.azureResourceTreeDataProvider);
+        const tag = await context.ui.showQuickPick(getQuickPicks(context, subscription), {
+            placeHolder: localize('groupByArmTagKey', 'Select the tag key to group by...'),
+            loadingPlaceHolder: localize('loadingTags', 'Loading tags...'),
         });
         setting += `-${tag.label}`;
     }
@@ -23,9 +30,12 @@ async function groupBy(context: IActionContext, setting: string): Promise<void> 
     await settingUtils.updateGlobalSetting('groupBy', setting);
 }
 
-async function getQuickPicks(_context: IActionContext): Promise<QuickPickItem[]> {
-    // TODO
-    throw new Error('Getting arm tag keys is not implemented yet');
+async function getQuickPicks(context: IActionContext, subscription: AzureSubscription): Promise<QuickPickItem[]> {
+    const client = await createResourceClient([context, createSubscriptionContext(subscription)]);
+    const tags = await uiUtils.listAllIterator(client.tagsOperations.list());
+    return tags.map(tag => ({
+        label: nonNullProp(tag, 'tagName'),
+    }));
 }
 
 export enum GroupBySettings {
