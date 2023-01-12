@@ -21,26 +21,21 @@ import { DeleteResourceGroupStep } from '../DeleteResourceGroupStep';
 export async function deleteResourceGroupV2(context: IActionContext, primaryNode?: GroupingItem, selectedNodes?: GroupingItem[]): Promise<void> {
 
     // unset nodes that are not resource groups
-    selectedNodes = selectedNodes?.filter(n => !!n.resourceGroup);
+    selectedNodes = selectedNodes?.filter(n => primaryNode instanceof GroupingItem && !!n.resourceGroup);
     if (!(primaryNode instanceof GroupingItem) || !primaryNode?.resourceGroup) {
         primaryNode = undefined;
     }
 
+    const selectedResourceGroupNodes = getSelectedNodes(primaryNode, selectedNodes);
+
     let subscription: AzureSubscription;
     let resourceGroupsToDelete: AzureResource[] = [];
 
-    if (!selectedNodes) {
-        if (primaryNode) {
-            selectedNodes = [primaryNode];
-            subscription = primaryNode.subscription;
-            resourceGroupsToDelete = [nonNullProp(primaryNode, 'resourceGroup')];
-        } else {
-            ({ subscription, resourceGroupsToDelete } = await pickResourceGroups(context));
-        }
+    if (selectedResourceGroupNodes) {
+        subscription = selectedResourceGroupNodes[0].subscription;
+        resourceGroupsToDelete = selectedResourceGroupNodes.map(node => nonNullProp(node, 'resourceGroup'));
     } else {
-        selectedNodes = selectedNodes.filter(n => n instanceof GroupingItem && !!n.resourceGroup);
-        subscription = selectedNodes[0].subscription;
-        resourceGroupsToDelete = selectedNodes.map(node => nonNullProp(node, 'resourceGroup'));
+        ({ subscription, resourceGroupsToDelete } = await pickResourceGroups(context));
     }
 
     await deleteResourceGroups(context, subscription, resourceGroupsToDelete);
@@ -48,6 +43,21 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
 
 function isNameEqual(val: string | undefined, name: string): boolean {
     return !!val && val.toLowerCase() === name.toLowerCase();
+}
+
+// todo: move somewhere for sharing
+function getSelectedNodes<T>(primaryNode?: T, selectedNodes?: T[]): [T, ...T[]] | undefined {
+    if (selectedNodes && selectedNodes.length > 0) {
+        // tell typescript we know this array has at least one element
+        return selectedNodes as [T, ...T[]];
+    }
+
+    if (primaryNode) {
+        return [primaryNode];
+    }
+
+    // no nodes selected
+    return undefined;
 }
 
 async function pickResourceGroups(context: IActionContext) {
