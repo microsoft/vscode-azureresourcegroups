@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizard, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { ext } from '../../../extensionVariables';
 import { GroupingItem } from '../../../tree/azure/GroupingItem';
 import { createActivityContext } from '../../../utils/activityUtils';
 import { localize } from '../../../utils/localize';
@@ -51,30 +52,20 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
             }
         }
 
-        void node
-            .withDescription(
-                'Deleting...',
-                async () => {
-                    const wizard = new AzureWizard<DeleteResourceGroupContext>({
-                        subscription: node.context.subscriptionContext,
-                        resourceGroupToDelete: node.label, // TODO: Should have a name (separate from label)?
-                        activityTitle: localize('deleteResourceGroup', 'Delete resource group "{0}"', node.label),
-                        ...(await createActivityContext()),
-                        ...context,
-                    }, {
-                        executeSteps: [new DeleteResourceGroupStep()]
-                    });
+        void ext.azureTreeState.runWithTemporaryDescription(node.id, localize('deleting', 'Deleting...'), async () => {
+            const wizard = new AzureWizard<DeleteResourceGroupContext>({
+                subscription: node.context.subscriptionContext,
+                resourceGroupToDelete: node.label, // TODO: Should have a name (separate from label)?
+                activityTitle: localize('deleteResourceGroup', 'Delete resource group "{0}"', node.label),
+                ...(await createActivityContext()),
+                ...context,
+            }, {
+                executeSteps: [new DeleteResourceGroupStep()]
+            });
 
-                    await wizard.execute();
-                })
-            .finally(
-                () => {
-                    const parent = node.parent;
-
-                    if (parent) {
-                        node.context.refresh(parent);
-                    }
-                });
+            await wizard.execute();
+            ext.azureTreeState.notifyChildrenChanged(node.subscription.subscriptionId);
+        });
     }
 }
 

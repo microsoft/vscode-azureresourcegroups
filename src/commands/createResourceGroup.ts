@@ -38,5 +38,5 @@ export async function createResourceGroup(context: IActionContext, node?: Subscr
     if (!wizardContext.suppressNotification) {
         void window.showInformationMessage(localize('createdRg', 'Created resource group "{0}".', newResourceGroupName));
     }
-    ext.actions.refreshAzureTree();
+    ext.azureTreeState.notifyChildrenChanged(subscription.subscriptionId);
 }

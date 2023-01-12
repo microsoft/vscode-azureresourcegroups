@@ -10,6 +10,7 @@ import { AzureResourcesApiInternal } from "../hostapi.v2.internal";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { ResourceGroupsItem } from "./tree/ResourceGroupsItem";
+import { TreeItemStateStore } from "./tree/TreeItemState";
 
 namespace extEmitters {
     export let onDidChangeFocusedGroup: EventEmitter<void>;
@@ -50,6 +51,8 @@ export namespace ext {
 
     export const emitters = extEmitters;
     export const events = extEvents;
+
+    export let azureTreeState: TreeItemStateStore;
 
     export namespace v2 {
         export let api: AzureResourcesApiInternal;
