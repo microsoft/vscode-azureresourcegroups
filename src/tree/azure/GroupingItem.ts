@@ -111,18 +111,6 @@ export class GroupingItem implements ResourceGroupsItem {
     getParent(): vscode.ProviderResult<ResourceGroupsItem> {
         return this.parent;
     }
-
-    async withDescription(description: string, callback: () => Promise<void>): Promise<void> {
-        this.description = description;
-        this.context.refresh(this);
-
-        try {
-            await callback();
-        } finally {
-            this.description = undefined;
-            this.context.refresh(this);
-        }
-    }
 }
 
 export type GroupingItemFactory = (context: ResourceGroupsTreeContext, contextValues: string[] | undefined, iconPath: TreeItemIconPath | undefined, label: string, resources: AzureResource[], resourceType: AzExtResourceType | undefined, parent: ResourceGroupsItem, resourceGroup?: AzureResource) => GroupingItem;
