@@ -3,16 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { azureResourceExperience, IActionContext } from "@microsoft/vscode-azext-utils";
 import { AzureResource } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { ext } from "../../extensionVariables";
 import { AzureResourceItem } from "../../tree/azure/AzureResourceItem";
 
-export async function editTags(_context: IActionContext, item?: AzureResourceItem<AzureResource>): Promise<void> {
+export async function editTags(context: IActionContext, item?: AzureResourceItem<AzureResource>): Promise<void> {
     if (!item) {
-        // todo
-        // node = await pickAppResource<AppResourceTreeItem>(context);
-        throw new Error("A resource must be selected.");
+        item = await azureResourceExperience<AzureResourceItem<AzureResource>>({ ...context, dontUnwrap: true }, ext.v2.api.resources.azureResourceTreeDataProvider);
     }
 
     if (!item.tagsModel) {

@@ -97,7 +97,7 @@ async function deleteResourceGroups(context: IActionContext, subscription: Azure
         void ext.azureTreeState.runWithTemporaryDescription(rg.id, localize('deleting', 'Deleting...'), async () => {
             const wizard = new AzureWizard<DeleteResourceGroupContext>({
                 subscription: createSubscriptionContext(subscription),
-                resourceGroupToDelete: rg.name, // TODO: Should have a name (separate from label)?
+                resourceGroupToDelete: rg.name,
                 activityTitle: localize('deleteResourceGroup', 'Delete resource group "{0}"', rg.name),
                 ...(await createActivityContext()),
                 ...context,
