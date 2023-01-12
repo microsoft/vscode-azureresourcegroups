@@ -22,7 +22,7 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
 
     // unset nodes that are not resource groups
     selectedNodes = selectedNodes?.filter(n => !!n.resourceGroup);
-    if (!primaryNode?.resourceGroup) {
+    if (!(primaryNode instanceof GroupingItem) || !primaryNode?.resourceGroup) {
         primaryNode = undefined;
     }
 
@@ -38,7 +38,7 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
             ({ subscription, resourceGroupsToDelete } = await pickResourceGroups(context));
         }
     } else {
-        selectedNodes = selectedNodes.filter(n => !!n.resourceGroup);
+        selectedNodes = selectedNodes.filter(n => n instanceof GroupingItem && !!n.resourceGroup);
         subscription = selectedNodes[0].subscription;
         resourceGroupsToDelete ??= selectedNodes.map(node => nonNullProp(node, 'resourceGroup'));
     }
