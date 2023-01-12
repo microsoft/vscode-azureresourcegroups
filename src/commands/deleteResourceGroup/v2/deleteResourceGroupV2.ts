@@ -40,7 +40,7 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
     } else {
         selectedNodes = selectedNodes.filter(n => n instanceof GroupingItem && !!n.resourceGroup);
         subscription = selectedNodes[0].subscription;
-        resourceGroupsToDelete ??= selectedNodes.map(node => nonNullProp(node, 'resourceGroup'));
+        resourceGroupsToDelete = selectedNodes.map(node => nonNullProp(node, 'resourceGroup'));
     }
 
     await deleteResourceGroups(context, subscription, resourceGroupsToDelete);
