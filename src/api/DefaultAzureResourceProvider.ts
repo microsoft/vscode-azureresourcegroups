@@ -27,7 +27,7 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
                 const appResources = allResources.map(resource => this.createAppResource(subscription, resource));
 
                 const allResourceGroups: ResourceGroup[] = await uiUtils.listAllIterator(client.resourceGroups.list());
-                const appResourcesResourceGroups = allResourceGroups.map(resource => this.fromResourceGroup(subscription, resource));
+                const appResourcesResourceGroups = allResourceGroups.map(resource => DefaultAzureResourceProvider.fromResourceGroup(subscription, resource));
 
                 return appResources.concat(appResourcesResourceGroups);
             });
@@ -35,7 +35,7 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
 
     onDidChangeResource = this.onDidChangeResourceEmitter.event;
 
-    private fromResourceGroup(subscription: AzureSubscription, resourceGroup: ResourceGroup): AzureResource {
+    static fromResourceGroup(subscription: AzureSubscription, resourceGroup: ResourceGroup): AzureResource {
         return {
             ...resourceGroup,
             subscription,
