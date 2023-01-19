@@ -103,7 +103,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
             }
 
             for (const child of children) {
-                if (child.id === id) {
+                if (child.id.toLowerCase() === id.toLowerCase()) {
                     return child;
                 } else if (this.isAncestorOf(child, id)) {
                     element = child;
@@ -116,7 +116,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     protected isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
-        return id.startsWith(element.id + '/');
+        return id.toLowerCase().startsWith(element.id.toLowerCase() + '/');
     }
 
     protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;

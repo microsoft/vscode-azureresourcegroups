@@ -45,14 +45,13 @@ function parsePartialAzureResourceId(id: string): Partial<ParsedAzureResourceId>
 }
 
 function getResourceKindFromId(parsedId: Partial<ParsedAzureResourceId>): 'subscription' | 'resourceGroup' | 'resource' {
-    if (parsedId.subscriptionId) {
-        return 'subscription';
-    }
-    if (parsedId.resourceGroup) {
-        return 'resourceGroup';
-    }
     if (parsedId.resourceName) {
         return 'resource';
+    } else if (parsedId.resourceGroup) {
+        return 'resourceGroup';
+    } else if (parsedId.subscriptionId) {
+        return 'subscription';
     }
+
     throw new Error('Invalid Azure Resource Id');
 }
