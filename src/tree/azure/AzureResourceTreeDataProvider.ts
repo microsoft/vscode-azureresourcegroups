@@ -140,7 +140,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
 
     protected override isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
         if (element instanceof GroupingItem) {
-            return element.resources.some(resource => id.startsWith(resource.id));
+            return element.resources.some(resource => id.toLowerCase().startsWith(resource.id.toLowerCase()));
         }
         return super.isAncestorOf(element, id)
     }
