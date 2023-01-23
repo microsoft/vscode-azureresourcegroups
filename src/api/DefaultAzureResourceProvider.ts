@@ -17,18 +17,27 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
 
     getResources(subscription: AzureSubscription): Promise<AzureResource[] | undefined> {
         return callWithTelemetryAndErrorHandling(
-            'provideResources',
+            'defaultAzureResourceProvider.getResources',
             async (context: IActionContext) => {
                 const subContext = createSubscriptionContext(subscription);
                 const client = await createResourceClient([context, subContext]);
+
                 // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
+                const allResources = await uiUtils.listAllIterator(client.resources.list());
 
-                const allResources: GenericResource[] = await uiUtils.listAllIterator(client.resources.list());
-                const appResources = allResources.map(resource => this.createAppResource(subscription, resource));
+                // dedupe resources to fix https://github.com/microsoft/vscode-azureresourcegroups/issues/526
+                const allResourcesDeduped: GenericResource[] = dedupeAzureResources(allResources);
+                context.telemetry.measurements.resourceCount = allResourcesDeduped.length;
 
+                if (allResourcesDeduped.length !== allResources.length) {
+                    context.telemetry.properties.duplicateResources = 'true';
+                }
+
+                const appResources = allResourcesDeduped.map(resource => this.createAppResource(subscription, resource));
                 const allResourceGroups: ResourceGroup[] = await uiUtils.listAllIterator(client.resourceGroups.list());
-                const appResourcesResourceGroups = allResourceGroups.map(resource => DefaultAzureResourceProvider.fromResourceGroup(subscription, resource));
+                context.telemetry.measurements.resourceGroupCount = allResourceGroups.length;
 
+                const appResourcesResourceGroups = allResourceGroups.map(resource => DefaultAzureResourceProvider.fromResourceGroup(subscription, resource));
                 return appResources.concat(appResourcesResourceGroups);
             });
     }
@@ -69,4 +78,8 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
             raw: resource,
         };
     }
+}
+
+function dedupeAzureResources(array: GenericResource[]): GenericResource[] {
+    return [...new Map(array.map((item) => [item.id, item])).values()];
 }
