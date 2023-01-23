@@ -301,7 +301,7 @@
             ],
             "view/item/context": [
                 {
-                    "command": "azureResourceGroups.selectSubscriptions",
+                    "command": "azureResourceGroups..accounts.selectSubscriptions",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "inline"
                 },
@@ -480,6 +480,13 @@
                         "type": "boolean",
                         "description": "%azureResourceGroups.autoOpenActivityPanel%",
                         "default": true
+                    },
+                    "azureResourceGroups.selectedSubscriptions": {
+                        "type": "array",
+                        "description": "%azureResourceGroups.selectedSubscriptions%",
+                        "items": {
+                            "type": "string"
+                        }
                     }
                 }
             }

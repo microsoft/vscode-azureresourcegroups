@@ -54,8 +54,15 @@ export function createSubscriptionContext(subscription: AzureSubscription): ISub
 }
 
 export class AzureAccountTreeItem extends AzExtParentTreeItem {
+    private readonly subscriptionsSubscription: vscode.Disposable;
+
     public constructor(private readonly subscriptionProvider: AzureSubscriptionProvider) {
         super(undefined);
+
+        this.subscriptionsSubscription = this.subscriptionProvider.onSubscriptionsChanged(
+            () => callWithTelemetryAndErrorHandling(
+                'azureAccountTreeItem.onSubscriptionsChanged',
+                context => this.refresh(context)));
     }
 
     public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
@@ -133,6 +140,6 @@ export class AzureAccountTreeItem extends AzExtParentTreeItem {
     public contextValue: string;
 
     public dispose(): void {
-        // TODO: No-op (for now)
+        this.subscriptionsSubscription.dispose();
     }
 }
