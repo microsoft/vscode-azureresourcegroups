@@ -34,7 +34,14 @@ export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBran
             type,
             {
                 provider,
-                listener: provider.onDidChangeTreeData?.(e => this.onDidChangeTreeDataEmitter.fire(e))
+                listener: provider.onDidChangeTreeData?.((e) => {
+                    if (e) {
+                        this.onDidChangeTreeDataEmitter.fire(e);
+                    } else {
+                        // scope a change event to the specific branch data provider
+                        this.onDidChangeBranchDataProvidersEmitter.fire(type);
+                    }
+                }),
             }
         );
 

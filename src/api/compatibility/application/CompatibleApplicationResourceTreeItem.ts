@@ -69,7 +69,7 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
                 subscription: __subscription,
                 parent: undefined,
                 removeChildFromCache: () => {
-                    //
+                    this.treeDataProvider.refreshUIOnly(undefined);
                 },
             }) as unknown as AzExtParentTreeItem
         );
