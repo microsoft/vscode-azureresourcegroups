@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureSubscription } from "@hostapiv2";
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { ResourceGroupsItem } from "./ResourceGroupsItem";
 
 export interface ResourceGroupsTreeContext {

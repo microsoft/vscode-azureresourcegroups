@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceBase, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { ResourceBase, ResourceModelBase } from '@hostapiv2';
 import * as vscode from 'vscode';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { BranchDataItemWrapper } from './BranchDataProviderItem';

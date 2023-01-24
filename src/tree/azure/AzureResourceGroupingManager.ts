@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType, nonNullValue, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { AzureResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzExtResourceType, AzureResource } from '@hostapiv2';
+import { nonNullValue, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { azureExtensions } from '../../azureExtensions';
 import { GroupBySettings } from '../../commands/explorer/groupBy';

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureResource } from '@hostapiv2';
 import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
-import { AzureResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { ext } from '../../extensionVariables';

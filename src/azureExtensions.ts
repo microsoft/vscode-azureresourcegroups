@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from "@microsoft/vscode-azext-utils";
+import { AzExtResourceType } from "@hostapiv2";
 import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { localize } from "./utils/localize";
 

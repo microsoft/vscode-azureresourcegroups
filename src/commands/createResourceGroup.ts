@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureSubscription } from '@hostapiv2';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, nonNullProp, subscriptionExperience } from '@microsoft/vscode-azext-utils';
-import { AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { window } from 'vscode';
 import { ext } from '../extensionVariables';
 import { SubscriptionItem } from '../tree/azure/SubscriptionItem';

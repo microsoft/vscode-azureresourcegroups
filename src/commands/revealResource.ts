@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { VSCodeRevealOptions } from '@hostapiv2';
 import { ParsedAzureResourceId } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeItem, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
-import { VSCodeRevealOptions } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { ext } from '../extensionVariables';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../tree/ResourceTreeDataProviderBase';

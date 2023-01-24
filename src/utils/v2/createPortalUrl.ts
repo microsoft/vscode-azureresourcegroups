@@ -3,8 +3,8 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { AzureSubscription } from "@hostapiv2";
 import { OpenInPortalOptions } from "@microsoft/vscode-azext-azureutils";
-import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as vscode from 'vscode';
 
 // TODO move to shared package

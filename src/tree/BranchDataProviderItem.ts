@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { isAzExtTreeItem, Wrapper } from '@microsoft/vscode-azext-utils';
-import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel, Wrapper } from '@hostapiv2';
+import { isAzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { BranchDataItemCache } from './BranchDataItemCache';

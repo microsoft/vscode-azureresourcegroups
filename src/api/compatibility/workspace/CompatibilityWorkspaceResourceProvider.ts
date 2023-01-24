@@ -3,9 +3,9 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { WorkspaceResource, WorkspaceResourceProvider as V2WorkspaceResourceProvider } from "@hostapiv2";
 import { AzExtParentTreeItem, AzExtTreeItem } from "@microsoft/vscode-azext-utils";
 import { WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi";
-import { WorkspaceResource, WorkspaceResourceProvider as V2WorkspaceResourceProvider } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { Event } from "vscode";
 import { CompatibleWorkspaceResourceBranchDataProvider } from "./CompatibleWorkspaceResourceBranchDataProvider";
 

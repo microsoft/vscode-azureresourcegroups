@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtResourceType, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ISubscriptionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtResourceType, AzureResource } from "@hostapiv2";
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ISubscriptionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import type { ResolvedAppResourceBase } from "@microsoft/vscode-azext-utils/hostapi";
-import { AzureResource } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { TreeItemCollapsibleState } from "vscode";
 import { getIconPath } from "../../../utils/azureUtils";
 

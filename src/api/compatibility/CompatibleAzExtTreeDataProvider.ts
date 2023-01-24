@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { isWrapper } from "@hostapiv2";
 import { SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
-import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, isWrapper, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
 import { Disposable, Event, TreeItem, TreeView } from "vscode";
 import { ResourceGroupsItem } from "../../tree/ResourceGroupsItem";
 import { ResourceTreeDataProviderBase } from "../../tree/ResourceTreeDataProviderBase";

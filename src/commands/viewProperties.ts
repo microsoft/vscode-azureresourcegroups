@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ViewPropertiesModel } from '@hostapiv2';
 import { azureResourceExperience, IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
-import { ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { randomUUID } from 'crypto';
 import { ext } from '../extensionVariables';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';

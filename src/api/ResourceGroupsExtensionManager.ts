@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
+import { AzExtResourceType } from '@hostapiv2';
 import * as vscode from 'vscode';
 import { contributesKey } from '../constants';
 

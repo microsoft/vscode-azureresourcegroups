@@ -3,8 +3,8 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { BranchDataProvider, ResourceBase, ResourceModelBase } from "@hostapiv2";
 import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IFindTreeItemContext, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
-import { BranchDataProvider, ResourceBase, ResourceModelBase } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as vscode from 'vscode';
 
 export abstract class CompatibleBranchDataProviderBase<TResource extends ResourceBase, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel>, vscode.Disposable {

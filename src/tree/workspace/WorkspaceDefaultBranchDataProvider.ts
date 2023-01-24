@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BranchDataProvider, ResourceModelBase, WorkspaceResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { BranchDataProvider, ResourceModelBase, WorkspaceResource } from '@hostapiv2';
 import * as vscode from 'vscode';
 
 interface WorkspaceResourceModel extends ResourceModelBase {

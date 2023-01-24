@@ -15,16 +15,22 @@
         "noUnusedParameters": true,
         "baseUrl": "./",
         "paths": {
+            "@hostapiv2": [
+                "./api/src/index"
+            ],
             "*": [
                 "node_modules/@types/*",
                 "*"
-            ]
+            ],
         },
         "skipLibCheck": false
     },
     "exclude": [
         "node_modules",
         ".vscode-test",
-        "gulpfile.ts"
+        "gulpfile.ts",
+        "api/dist",
+        "api/out",
+        "api/*.d.ts"
     ]
 }
