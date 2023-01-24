@@ -27,6 +27,7 @@ import { ext } from './extensionVariables';
 import { installableAppResourceResolver } from './resolvers/InstallableAppResourceResolver';
 import { shallowResourceResolver } from './resolvers/ShallowResourceResolver';
 import { wrapperResolver } from './resolvers/WrapperResolver';
+import { VSCodeAzureSubscriptionProvider } from './services/AzureSubscriptionProvider';
 import { AzureAccountTreeItem } from './tree/AzureAccountTreeItem';
 import { GroupTreeItemBase } from './tree/GroupTreeItemBase';
 import { HelpTreeItem } from './tree/HelpTreeItem';
@@ -47,9 +48,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
+        const subscriptionProvider = new VSCodeAzureSubscriptionProvider(context.globalState);
+
+        context.subscriptions.push(subscriptionProvider);
+
         setupEvents(context);
 
-        ext.rootAccountTreeItem = new AzureAccountTreeItem();
+        ext.rootAccountTreeItem = new AzureAccountTreeItem(subscriptionProvider);
         context.subscriptions.push(ext.rootAccountTreeItem);
         ext.appResourceTree = new AzExtTreeDataProvider(ext.rootAccountTreeItem, 'azureResourceGroups.loadMore');
         context.subscriptions.push(ext.appResourceTreeView = vscode.window.createTreeView('azureResourceGroups', { treeDataProvider: ext.appResourceTree, showCollapseAll: true, canSelectMany: true }));
@@ -84,13 +89,11 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
         context.subscriptions.push(ext.activationManager = new ExtensionActivationManager());
 
-        registerCommands();
+        registerCommands(subscriptionProvider);
         registerApplicationResourceProvider(azureResourceProviderId, new AzureResourceProvider());
         registerApplicationResourceResolver('vscode-azureresourcegroups.wrapperResolver', wrapperResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.installableAppResourceResolver', installableAppResourceResolver);
         registerApplicationResourceResolver('vscode-azureresourcegroups.shallowResourceResolver', shallowResourceResolver);
-
-        await vscode.commands.executeCommand('setContext', 'azure-account.signedIn', await ext.rootAccountTreeItem.getIsLoggedIn());
     });
 
     return createApiProvider([

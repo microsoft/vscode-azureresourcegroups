@@ -30,6 +30,9 @@
     "preview": true,
     "activationEvents": [
         "onFileSystem:azureResourceGroups",
+        "onCommand:azureResourceGroups.accounts.logIn",
+        "onCommand:azureResourceGroups.accounts.logOut",
+        "onCommand:azureResourceGroups.accounts.selectSubscriptions",
         "onCommand:azureResourceGroups.createResourceGroup",
         "onCommand:azureResourceGroups.deleteResourceGroup",
         "onCommand:azureResourceGroups.editTags",
@@ -60,6 +63,22 @@
             ]
         },
         "commands": [
+            {
+                "command": "azureResourceGroups.accounts.logIn",
+                "title": "%azureResourceGroups.accounts.logIn%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.accounts.logOut",
+                "title": "%azureResourceGroups.accounts.logOut%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.accounts.selectSubscriptions",
+                "title": "%azureResourceGroups.accounts.selectSubscriptions%",
+                "category": "Azure",
+                "icon": "$(filter)"
+            },
             {
                 "command": "azureResourceGroups.createResourceGroup",
                 "title": "%azureResourceGroups.createResourceGroup%",
@@ -282,7 +301,7 @@
             ],
             "view/item/context": [
                 {
-                    "command": "azureResourceGroups.selectSubscriptions",
+                    "command": "azureResourceGroups..accounts.selectSubscriptions",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "inline"
                 },
@@ -461,6 +480,13 @@
                         "type": "boolean",
                         "description": "%azureResourceGroups.autoOpenActivityPanel%",
                         "default": true
+                    },
+                    "azureResourceGroups.selectedSubscriptions": {
+                        "type": "array",
+                        "description": "%azureResourceGroups.selectedSubscriptions%",
+                        "items": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -566,6 +592,7 @@
     "dependencies": {
         "@azure/arm-resources": "5.0.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.0.0",
+        "@azure/arm-subscriptions": "^5.0.1",
         "@microsoft/vscode-azext-azureutils": "^0.3.4",
         "@microsoft/vscode-azext-utils": "^0.3.14",
         "fs-extra": "^8.1.0",
@@ -574,6 +601,5 @@
         "vscode-nls": "^5.0.1"
     },
     "extensionDependencies": [
-        "ms-vscode.azure-account"
     ]
 }
