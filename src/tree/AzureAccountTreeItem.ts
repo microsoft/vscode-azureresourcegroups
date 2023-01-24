@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { Environment } from '@azure/ms-rest-azure-env';
-import { AzExtParentTreeItem, AzExtServiceClientCredentials, AzExtTreeItem, GenericTreeItem, IActionContext, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtServiceClientCredentials, AzExtTreeItem, callWithTelemetryAndErrorHandling, GenericTreeItem, IActionContext, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzureSubscription, AzureSubscriptionProvider, AzureSubscriptionStatus } from '../services/AzureSubscriptionProvider';
 import { localize } from '../utils/localize';
@@ -29,9 +29,6 @@ export function createCredential(getSession: (scopes?: string[]) => vscode.Provi
             } else {
                 return null;
             }
-        },
-        signRequest: async () => {
-            throw new Error(localize('signRequestError', 'Track 1 credentials are not (currently) supported.'));
         }
     };
 }

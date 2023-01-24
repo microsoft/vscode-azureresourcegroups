@@ -9,14 +9,26 @@ import * as gulp from 'gulp';
 import * as path from 'path';
 
 declare let exports: { [key: string]: unknown };
+const webworker: string = 'webworker';
 
-async function prepareForWebpack(): Promise<void> {
-    const mainJsPath: string = path.join(__dirname, 'main.js');
-    let contents: string = (await fse.readFile(mainJsPath)).toString();
-    contents = contents
-        .replace('out/src/extension', 'dist/extension.bundle')
-        .replace(', true /* ignoreBundle */', '');
-    await fse.writeFile(mainJsPath, contents);
+async function prepareForWebpack(target?: string): Promise<void> {
+    if (target === webworker) {
+        const packageJsonPath: string = path.join(__dirname, 'package.json');
+        let contents: string = (await fse.readFile(packageJsonPath)).toString();
+        // remove the Azure Account dependency since it won't work for web
+        contents = contents.replace(`"extensionDependencies": [
+            "ms-vscode.azure-account"
+        ]`,
+            `"extensionDependencies": []`);
+    } else {
+        const mainJsPath: string = path.join(__dirname, 'main.js');
+        let contents: string = (await fse.readFile(mainJsPath)).toString();
+        contents = contents
+            .replace('out/src/extension', 'dist/extension.bundle')
+            .replace(', true /* ignoreBundle */', '');
+        await fse.writeFile(mainJsPath, contents);
+    }
+
 }
 
 async function listIcons(): Promise<void> {
@@ -48,8 +60,10 @@ async function cleanReadme(): Promise<void> {
     await fse.writeFile(readmePath, data);
 }
 
-exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
-exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
+exports['webpack-dev'] = gulp.series(async () => await prepareForWebpack(webworker), () => gulp_webpack('development'));
+exports['webpack-prod'] = gulp.series(async () => await prepareForWebpack(webworker), () => gulp_webpack('production'));
+exports['webpack-web'] = gulp.series(async () => await prepareForWebpack(webworker), () => gulp_webpack('production', webworker));
+
 exports.preTest = gulp_installAzureAccount;
 exports.listIcons = listIcons;
 exports.cleanReadme = cleanReadme;

@@ -6,10 +6,11 @@
 'use strict';
 
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzExtTreeItem, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerEvent, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, AzExtTreeItem, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, registerEvent, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import type { AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import * as vscode from 'vscode';
+import { AzureResourceProvider } from './AzureResourceProvider';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
 import { InternalAzureResourceGroupsExtensionApi } from './api/AzureResourceGroupsExtensionApi';
@@ -18,10 +19,9 @@ import { registerApplicationResourceProvider } from './api/registerApplicationRe
 import { registerApplicationResourceResolver } from './api/registerApplicationResourceResolver';
 import { registerWorkspaceResourceProvider } from './api/registerWorkspaceResourceProvider';
 import { revealTreeItem } from './api/revealTreeItem';
-import { AzureResourceProvider } from './AzureResourceProvider';
 import { registerCommands } from './commands/registerCommands';
-import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
+import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { azureResourceProviderId } from './constants';
 import { ext } from './extensionVariables';
 import { installableAppResourceResolver } from './resolvers/InstallableAppResourceResolver';
@@ -35,13 +35,13 @@ import { WorkspaceTreeItem } from './tree/WorkspaceTreeItem';
 import { ExtensionActivationManager } from './utils/ExtensionActivationManager';
 import { localize } from './utils/localize';
 
-export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
+export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
     ext.context = context;
     ext.ignoreBundle = ignoreBundle;
     ext.outputChannel = createAzExtOutputChannel('Azure Resource Groups', ext.prefix);
     context.subscriptions.push(ext.outputChannel);
 
-    registerUIExtensionVariables(ext);
+    await registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
 
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
@@ -112,7 +112,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     ]);
 }
 
-export function deactivateInternal(): void {
+export function deactivate(): void {
     ext.diagnosticWatcher?.dispose();
 }
 
