@@ -6,8 +6,12 @@
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
+import { AzureSubscriptionProvider } from '../services/AzureSubscriptionProvider';
 import { BranchDataItemWrapper } from '../tree/BranchDataProviderItem';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
+import { logIn } from './accounts/logIn';
+import { logOut } from './accounts/logOut';
+import { selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
@@ -23,7 +27,7 @@ import { revealResource } from './revealResource';
 import { editTags } from './tags/editTags';
 import { viewProperties } from './viewProperties';
 
-export function registerCommands(): void {
+export function registerCommands(subscriptionProvider: AzureSubscriptionProvider): void {
     // Special-case refresh that ignores the selected/focused node and always refreshes the entire tree. Used by the refresh button in the tree title.
     registerCommand('azureResourceGroups.refreshTree', () => ext.actions.refreshAzureTree());
     registerCommand('azureWorkspace.refreshTree', () => ext.actions.refreshWorkspaceTree());
@@ -37,6 +41,10 @@ export function registerCommands(): void {
         await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
         ext.actions.refreshWorkspaceTree(node);
     });
+
+    registerCommand('azureResourceGroups.accounts.logIn', (context: IActionContext) => logIn(context, subscriptionProvider));
+    registerCommand('azureResourceGroups.accounts.logOut', (context: IActionContext) => logOut(context, subscriptionProvider));
+    registerCommand('azureResourceGroups.accounts.selectSubscriptions', (context: IActionContext) => selectSubscriptions(context, subscriptionProvider));
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);

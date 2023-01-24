@@ -43,7 +43,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     ext.outputChannel = createAzExtOutputChannel('Azure Resource Groups', ext.prefix);
     context.subscriptions.push(ext.outputChannel);
 
-    registerUIExtensionVariables(ext);
+    await registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
@@ -57,6 +57,10 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
+
+        const subscriptionProvider = new VSCodeAzureSubscriptionProvider(context.globalState);
+
+        context.subscriptions.push(subscriptionProvider);
 
         setupEvents(context);
 
@@ -72,7 +76,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.activityLogTree = new AzExtTreeDataProvider(ext.activityLogTreeItem, 'azureActivityLog.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('azureActivityLog', { treeDataProvider: ext.activityLogTree }));
 
-        registerCommands();
+        registerCommands(subscriptionProvider);
     });
 
     const extensionManager = new ResourceGroupsExtensionManager()
