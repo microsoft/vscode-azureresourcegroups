@@ -5,7 +5,6 @@
 
 import { azureResourceExperience, IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
 import { ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
-import { randomUUID } from 'crypto';
 import { ext } from '../extensionVariables';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { localize } from '../utils/localize';
@@ -19,7 +18,7 @@ export async function viewProperties(context: IActionContext, node?: ResourceGro
         throw new Error(localize('commands.viewProperties.noProperties', 'The selected resource has no properties to view.'));
     }
 
-    await openReadOnlyJson({ fullId: node.id ?? randomUUID(), label: node.viewProperties.label }, node.viewProperties.data);
+    await openReadOnlyJson({ fullId: node.id, label: node.viewProperties.label }, node.viewProperties.data);
 }
 
 function hasViewProperties(node: unknown): node is { viewProperties: ViewPropertiesModel } {

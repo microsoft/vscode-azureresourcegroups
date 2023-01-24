@@ -10,7 +10,6 @@ import * as vscode from 'vscode';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
-import { AzureSubscriptionStatus } from '../../services/AzureSubscriptionProvider';
 import { localize } from '../../utils/localize';
 import { createSubscriptionContext } from '../../utils/v2/credentialsUtils';
 import { BranchDataItemCache } from '../BranchDataItemCache';
@@ -73,18 +72,18 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         if (element) {
             return await element.getChildren();
         } else {
-            const api = await ext.subscriptionProvider.getSubscriptions();
+            const api = await this.getAzureAccountExtensionApi();
+            // const api = await ext.subscriptionProvider.getSubscriptions();
 
-            // eslint-disable-next-line no-constant-condition
-            if (/*api*/true) {
-                if (api.status === AzureSubscriptionStatus.LoggedIn) {
-                    if (api.selectedSubscriptions.length === 0) {
+            if (api) {
+                if (api.status === 'LoggedIn') {
+                    if (api.filters.length === 0) {
                         return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), { commandId: 'azure-account.selectSubscriptions' })]
                     } else {
-                        return api.selectedSubscriptions.map(
+                        return api.filters.map(
                             subscription => new SubscriptionItem(
                                 {
-                                    subscription: /*this.createAzureSubscription(subscription) */subscription as unknown as AzureSubscription,
+                                    subscription: this.createAzureSubscription(subscription),
                                     subscriptionContext: createSubscriptionContext(subscription as unknown as AzureSubscription),
                                     refresh: item => this.notifyTreeDataChanged(item),
                                 },
@@ -92,7 +91,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                                 this.resourceProviderManager,
                                 subscription as unknown as AzureSubscription));
                     }
-                } else if (api.status === AzureSubscriptionStatus.LoggedOut) {
+                } else if (api.status === 'LoggedOut') {
                     return [
                         new GenericItem(
                             localize('signInLabel', 'Sign in to Azure...'),
@@ -117,7 +116,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                 } else {
                     return [
                         new GenericItem(
-                            api.status === AzureSubscriptionStatus.Initializing
+                            api.status === 'Initializing'
                                 ? localize('loadingTreeItem', 'Loading...')
                                 : localize('signingIn', 'Waiting for Azure sign-in...'),
                             {

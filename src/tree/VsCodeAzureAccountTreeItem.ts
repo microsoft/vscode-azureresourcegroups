@@ -34,7 +34,7 @@ export function createCredential(getSession: (scopes?: string[]) => vscode.Provi
 /**
  * Creates a subscription context from an application subscription.
  */
-export function createSubscriptionContext(subscription: AzureSubscription): ISubscriptionContext {
+export function createSubscriptionContext(subscription: AzureSubscription): ISubscriptionContext & { name?: string } {
     return {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         environment: {} as Environment,

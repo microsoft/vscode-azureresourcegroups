@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { gulp_installAzureAccount, gulp_webpack } from '@microsoft/vscode-azext-dev';
+import { gulp_webpack } from '@microsoft/vscode-azext-dev';
+import * as fse from 'fs-extra';
 import * as fs from 'fs/promises';
 import * as gulp from 'gulp';
 import * as path from 'path';
@@ -17,6 +18,14 @@ async function prepareForWebpack(): Promise<void> {
         .replace('out/src/extension', 'dist/extension.bundle')
         .replace(', true /* ignoreBundle */', '');
     await fs.writeFile(mainJsPath, contents);
+}
+
+async function configureWebpackForWeb(): Promise<void> {
+    const packageJsonPath: string = path.join(__dirname, 'package.json');
+    let contents = await fse.readJSON(packageJsonPath) as { extensionDependencies: string[] };
+    contents.extensionDependencies = [];
+    await fse.writeJSON(packageJsonPath, contents, { spaces: 2 });
+    console.log('TESTING');
 }
 
 async function listIcons(): Promise<void> {
@@ -48,8 +57,7 @@ async function cleanReadme(): Promise<void> {
     await fs.writeFile(readmePath, data);
 }
 
-exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
-exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
-exports.preTest = gulp_installAzureAccount;
+exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'), configureWebpackForWeb, () => gulp_webpack('development', 'webpack.config.web.js'));
+exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'), configureWebpackForWeb, () => gulp_webpack('production'));
 exports.listIcons = listIcons;
 exports.cleanReadme = cleanReadme;

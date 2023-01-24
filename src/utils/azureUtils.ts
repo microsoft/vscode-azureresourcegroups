@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
-import { AzExtResourceType, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { AppResource, GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
-import * as path from 'path';
+import { AzExtResourceType, TreeItemIconPath, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AppResource, GroupNodeConfiguration, GroupingConfig } from '@microsoft/vscode-azext-utils/hostapi';
 import { ThemeIcon } from 'vscode';
+import { URI, Utils } from 'vscode-uri';
 import { IAzExtMetadata, legacyTypeMap } from '../azureExtensions';
 import { localize } from './localize';
 import { treeUtils } from './treeUtils';
@@ -70,7 +70,9 @@ export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], s
 }
 
 export function getIconPath(azExtResourceType?: AzExtResourceType): TreeItemIconPath {
-    return treeUtils.getIconPath(azExtResourceType ? path.join('azureIcons', azExtResourceType) : 'resource');
+    return treeUtils.getIconPath(azExtResourceType ?
+        Utils.joinPath(URI.parse('azureIcons'), azExtResourceType).fsPath :
+        URI.parse('resource').fsPath);
 }
 
 export function getName(azExtResourceType?: AzExtResourceType): string | undefined {

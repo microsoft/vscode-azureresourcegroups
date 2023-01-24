@@ -5,6 +5,7 @@
 import * as arm from '@azure/arm-subscriptions';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import * as vscode from 'vscode';
+import { AzureLoginStatus } from '../tree/azure-account.api';
 import { settingUtils } from '../utils/settingUtils';
 
 export interface AzureSubscription {
@@ -14,20 +15,10 @@ export interface AzureSubscription {
     getSession(scopes?: string[]): vscode.ProviderResult<vscode.AuthenticationSession>;
 }
 
-export enum AzureSubscriptionStatus {
-    Initializing,
-    LoggedOut,
-    SigningIn,
-    LoggedIn
-}
-
 export type AzureSubscriptionsResult = {
-    readonly status: AzureSubscriptionStatus.Initializing | AzureSubscriptionStatus.LoggedOut | AzureSubscriptionStatus.SigningIn;
-} | {
-    readonly status: AzureSubscriptionStatus.LoggedIn;
-
+    readonly status: AzureLoginStatus;
     readonly allSubscriptions: AzureSubscription[];
-    readonly selectedSubscriptions: AzureSubscription[];
+    readonly filters: AzureSubscription[];
 }
 
 export interface AzureSubscriptionProvider {
@@ -49,14 +40,22 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
 
     async getSubscriptions(): Promise<AzureSubscriptionsResult> {
         if (!this.isLoggedIn()) {
-            return { status: AzureSubscriptionStatus.LoggedOut };
+            return {
+                status: 'LoggedOut',
+                allSubscriptions: [],
+                filters: []
+            };
         }
 
         // Try to get the default session to verify the user is really logged-in...
         const session = await this.getSession();
 
         if (!session) {
-            return { status: AzureSubscriptionStatus.LoggedOut };
+            return {
+                status: 'LoggedOut',
+                allSubscriptions: [],
+                filters: []
+            };
         }
 
         const allSubscriptions: AzureSubscription[] = [];
@@ -77,12 +76,12 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
         }
 
         const selectedSubscriptionIds = settingUtils.getGlobalSetting<string[] | undefined>('selectedSubscriptions');
-        const selectedSubscriptions = allSubscriptions.filter(s => selectedSubscriptionIds === undefined || selectedSubscriptionIds.includes(s.id));
+        const filters = allSubscriptions.filter(s => selectedSubscriptionIds === undefined || selectedSubscriptionIds.includes(s.id));
 
         return {
-            status: session ? AzureSubscriptionStatus.LoggedIn : AzureSubscriptionStatus.LoggedOut,
+            status: session ? 'LoggedIn' : 'LoggedOut',
             allSubscriptions,
-            selectedSubscriptions
+            filters
         };
     }
 
@@ -98,11 +97,11 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
         await this.updateStatus(false);
     }
 
-    get status(): AzureSubscriptionStatus {
+    get status(): AzureLoginStatus {
         if (!this.isLoggedIn()) {
-            return AzureSubscriptionStatus.LoggedOut;
+            return 'LoggedOut'
         } else {
-            return AzureSubscriptionStatus.LoggedIn;
+            return 'LoggedIn'
         }
     }
 
