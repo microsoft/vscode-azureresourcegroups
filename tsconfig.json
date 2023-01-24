@@ -30,7 +30,6 @@
         ".vscode-test",
         "gulpfile.ts",
         "api/dist",
-        "api/out",
-        "api/*.d.ts"
+        "api/out"
     ]
 }
