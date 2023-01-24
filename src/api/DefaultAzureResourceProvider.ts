@@ -82,7 +82,7 @@ async function listResourceGroups(context: IActionContext, subscription: AzureSu
     return allResourceGroups.map(resource => createResourceGroup(subscription, resource));
 }
 
-function createResourceGroup(subscription: AzureSubscription, resourceGroup: ResourceGroup): AzureResource {
+export function createResourceGroup(subscription: AzureSubscription, resourceGroup: ResourceGroup): AzureResource {
     return {
         ...resourceGroup,
         subscription,
