@@ -17,56 +17,80 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
 
     getResources(subscription: AzureSubscription): Promise<AzureResource[] | undefined> {
         return callWithTelemetryAndErrorHandling(
-            'provideResources',
+            'defaultAzureResourceProvider.getResources',
             async (context: IActionContext) => {
-                const subContext = createSubscriptionContext(subscription);
-                const client = await createResourceClient([context, subContext]);
-                // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
-
-                const allResources: GenericResource[] = await uiUtils.listAllIterator(client.resources.list());
-                const appResources = allResources.map(resource => this.createAppResource(subscription, resource));
-
-                const allResourceGroups: ResourceGroup[] = await uiUtils.listAllIterator(client.resourceGroups.list());
-                const appResourcesResourceGroups = allResourceGroups.map(resource => DefaultAzureResourceProvider.fromResourceGroup(subscription, resource));
-
-                return appResources.concat(appResourcesResourceGroups);
+                const azureResources = await listResources(context, subscription);
+                const resourceGroups = await listResourceGroups(context, subscription);
+                return [...azureResources, ...resourceGroups];
             });
     }
 
     onDidChangeResource = this.onDidChangeResourceEmitter.event;
+}
 
-    static fromResourceGroup(subscription: AzureSubscription, resourceGroup: ResourceGroup): AzureResource {
-        return {
-            ...resourceGroup,
-            subscription,
-            id: nonNullProp(resourceGroup, 'id'),
-            name: nonNullProp(resourceGroup, 'name'),
-            azureResourceType: {
-                type: nonNullProp(resourceGroup, 'type').toLowerCase()
-            },
-            raw: resourceGroup,
-        };
+/**
+ * @returns Deduped list of Azure resources in the specified subscription
+ */
+async function listResources(context: IActionContext, subscription: AzureSubscription): Promise<AzureResource[]> {
+    const subContext = createSubscriptionContext(subscription);
+    const client = await createResourceClient([context, subContext]);
+
+    // Load more currently broken https://github.com/Azure/azure-sdk-for-js/issues/20380
+    const allResources = await uiUtils.listAllIterator(client.resources.list());
+
+    // dedupe resources to fix https://github.com/microsoft/vscode-azureresourcegroups/issues/526
+    const allResourcesDeduped: GenericResource[] = [...new Map(allResources.map((item) => [item.id, item])).values()];
+    context.telemetry.measurements.resourceCount = allResourcesDeduped.length;
+
+    if (allResourcesDeduped.length !== allResources.length) {
+        context.telemetry.properties.duplicateResources = 'true';
+        context.telemetry.measurements.rawResourceCount = allResources.length;
     }
 
-    private createAppResource(subscription: AzureSubscription, resource: GenericResource): AzureResource {
-        const resourceId = nonNullProp(resource, 'id');
+    return allResourcesDeduped.map(resource => createAzureResource(subscription, resource));
+}
 
-        return {
-            ...resource,
-            subscription,
-            id: resourceId,
-            name: nonNullProp(resource, 'name'),
-            azureResourceType: {
-                type: nonNullProp(resource, 'type').toLowerCase(),
-                kinds: resource.kind?.split(',')?.map(kind => kind.toLowerCase()),
-            },
-            resourceGroup: getResourceGroupFromId(resourceId),
-            location: resource.location,
-            resourceType: getAzExtResourceType({
-                type: nonNullProp(resource, 'type'),
-                kind: resource.kind
-            }),
-            raw: resource,
-        };
-    }
+function createAzureResource(subscription: AzureSubscription, resource: GenericResource): AzureResource {
+    const resourceId = nonNullProp(resource, 'id');
+
+    return {
+        ...resource,
+        subscription,
+        id: resourceId,
+        name: nonNullProp(resource, 'name'),
+        azureResourceType: {
+            type: nonNullProp(resource, 'type').toLowerCase(),
+            kinds: resource.kind?.split(',')?.map(kind => kind.toLowerCase()),
+        },
+        resourceGroup: getResourceGroupFromId(resourceId),
+        location: resource.location,
+        resourceType: getAzExtResourceType({
+            type: nonNullProp(resource, 'type'),
+            kind: resource.kind
+        }),
+        raw: resource,
+    };
+}
+
+async function listResourceGroups(context: IActionContext, subscription: AzureSubscription): Promise<AzureResource[]> {
+    const subContext = createSubscriptionContext(subscription);
+    const client = await createResourceClient([context, subContext]);
+
+    const allResourceGroups: ResourceGroup[] = await uiUtils.listAllIterator(client.resourceGroups.list());
+    context.telemetry.measurements.resourceGroupCount = allResourceGroups.length;
+
+    return allResourceGroups.map(resource => createResourceGroup(subscription, resource));
+}
+
+export function createResourceGroup(subscription: AzureSubscription, resourceGroup: ResourceGroup): AzureResource {
+    return {
+        ...resourceGroup,
+        subscription,
+        id: nonNullProp(resourceGroup, 'id'),
+        name: nonNullProp(resourceGroup, 'name'),
+        azureResourceType: {
+            type: nonNullProp(resourceGroup, 'type').toLowerCase()
+        },
+        raw: resourceGroup,
+    };
 }
