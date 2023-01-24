@@ -11,6 +11,7 @@
 
 const process = require('process');
 const dev = require("@microsoft/vscode-azext-dev");
+const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 
 let DEBUG_WEBPACK = !/^(false|0)?$/i.test(process.env.DEBUG_WEBPACK || '');
 
@@ -28,6 +29,12 @@ let config = dev.getDefaultWebpackConfig({
         '../build/default/bufferutil': 'commonjs ../build/default/bufferutil',
     }
 });
+
+// Add plugin to handle `compilerOptions.paths` feature in tsconfig.json
+config.resolve = {
+    ...config.resolve,
+    plugins: [...(config.resolve.plugins ?? []), new TsconfigPathsPlugin()],
+}
 
 if (DEBUG_WEBPACK) {
     console.log('Config:', config);
