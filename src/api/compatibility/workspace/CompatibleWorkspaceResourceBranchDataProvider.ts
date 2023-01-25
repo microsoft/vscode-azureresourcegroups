@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { WorkspaceResource } from '@microsoft/vscode-azext-utils/hostapi';
-import type { WorkspaceResource as v2WorkspaceResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import type { WorkspaceResource as v2WorkspaceResource } from '../../public';
 import { CompatibleBranchDataProviderBase } from '../CompatibleBranchDataProviderBase';
 
 export class CompatibleWorkspaceResourceBranchDataProvider<TResource extends WorkspaceResource & v2WorkspaceResource> extends CompatibleBranchDataProviderBase<TResource, TResource> {

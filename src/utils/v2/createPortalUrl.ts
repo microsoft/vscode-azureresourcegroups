@@ -4,8 +4,8 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { OpenInPortalOptions } from "@microsoft/vscode-azext-azureutils";
-import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as vscode from 'vscode';
+import { AzureSubscription } from "../../api/public";
 
 // TODO move to shared package
 export function createPortalUrl(subscription: AzureSubscription, id: string, options?: OpenInPortalOptions): vscode.Uri {

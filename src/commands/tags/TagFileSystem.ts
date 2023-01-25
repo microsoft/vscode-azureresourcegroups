@@ -6,10 +6,10 @@
 import { ResourceManagementClient, Tags } from "@azure/arm-resources";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { AzExtTreeFileSystem, AzExtTreeFileSystemItem, callWithTelemetryAndErrorHandling, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
-import { AzureResource, AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as jsonc from 'jsonc-parser';
 import * as os from "os";
 import { commands, Diagnostic, DiagnosticSeverity, FileStat, FileType, languages, MessageItem, Uri, window } from "vscode";
+import { AzureResource, AzureSubscription } from "../../api/public";
 import { ext } from "../../extensionVariables";
 import { createResourceClient } from "../../utils/azureClients";
 import { localize } from "../../utils/localize";

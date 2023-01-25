@@ -1,0 +1,6 @@
+*.tgz
+tsconfig.json
+out/**/*.js.map
+out/**/*.d.ts
+out/**/*.d.ts.map
+api-extractor.json

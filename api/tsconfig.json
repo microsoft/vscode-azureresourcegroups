@@ -1,0 +1,18 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "outDir": "out",
+        "rootDir": "../src/api/public",
+        "declaration": true,
+        "baseUrl": "../",
+    },
+    "include": [
+        "../src/api/public/**/*"
+    ],
+    "exclude": [
+        "node_modules/**/*",
+        ".vscode-test",
+        "gulpfile.ts",
+        "out"
+    ]
+}

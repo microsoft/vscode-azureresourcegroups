@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType, callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
-import { AzureResource, BranchDataProvider, ResourceModelBase, VSCodeRevealOptions, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { AzureResourceProvider, AzureResourcesHostApiInternal } from '../../hostapi.v2.internal';
 import { revealResource } from '../commands/revealResource';
@@ -12,6 +11,7 @@ import { AzureResourceBranchDataProviderManager } from '../tree/azure/AzureResou
 import { AzureResourceTreeDataProvider } from '../tree/azure/AzureResourceTreeDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from '../tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceResourceTreeDataProvider } from '../tree/workspace/WorkspaceResourceTreeDataProvider';
+import { AzureResource, BranchDataProvider, ResourceModelBase, VSCodeRevealOptions, WorkspaceResource, WorkspaceResourceProvider } from './public';
 import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
 
 export function createAzureResourcesHostApi(

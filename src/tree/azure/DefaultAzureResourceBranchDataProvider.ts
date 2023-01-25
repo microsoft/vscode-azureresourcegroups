@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureResource, AzureResourceModel, BranchDataProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { AzureResource, AzureResourceModel, BranchDataProvider } from '../../api/public';
 import { DefaultAzureResourceItem } from './DefaultAzureResourceItem';
 
 export class DefaultAzureResourceBranchDataProvider implements BranchDataProvider<AzureResource, AzureResourceModel> {

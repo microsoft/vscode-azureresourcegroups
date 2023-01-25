@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { contributesKey } from '../constants';
+import { AzExtResourceType } from './public';
 
 interface ResourceGroupsContribution {
     readonly azure: {

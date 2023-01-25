@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from "@microsoft/vscode-azext-utils";
 import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
+import { AzExtResourceType } from "./api/public/AzExtResourceType";
 import { localize } from "./utils/localize";
 
 export const azureExtensions: IAzExtMetadata[] = [

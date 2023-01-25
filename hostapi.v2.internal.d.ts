@@ -1,5 +1,5 @@
-import { AzureResource, AzureResourcesApi, AzureResourcesHostApi, AzureSubscription, ResourceProvider } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as vscode from 'vscode';
+import { AzureResource, AzureResourcesExtensionApi, AzureSubscription, ResourceProvider, ResourcesApi } from "./src/api/public";
 
 // v2 types that are internal to resource groups (for now)
 
@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 */
 export type AzureResourceProvider = ResourceProvider<AzureSubscription, AzureResource>;
 
-export interface AzureResourcesHostApiInternal extends AzureResourcesHostApi {
+export interface AzureResourcesHostApiInternal extends ResourcesApi {
     /**
      * Registers a provider of Azure resources.
      *
@@ -19,6 +19,6 @@ export interface AzureResourcesHostApiInternal extends AzureResourcesHostApi {
     registerAzureResourceProvider(provider: AzureResourceProvider): vscode.Disposable;
 }
 
-export interface AzureResourcesApiInternal extends AzureResourcesApi {
+export interface AzureResourcesApiInternal extends AzureResourcesExtensionApi {
     resources: AzureResourcesHostApiInternal;
 }

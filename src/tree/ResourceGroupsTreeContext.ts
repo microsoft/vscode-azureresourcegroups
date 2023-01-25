@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
+import { AzureSubscription } from "../api/public";
 import { ResourceGroupsItem } from "./ResourceGroupsItem";
 
 export interface ResourceGroupsTreeContext {

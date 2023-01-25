@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WorkspaceResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { WorkspaceResource } from '../../api/public';
 import { WorkspaceResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataItemWrapper } from '../BranchDataProviderItem';

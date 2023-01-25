@@ -6,8 +6,8 @@
 import { ResourceGroup } from '@azure/arm-resources';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, IActionContext, IAzureQuickPickItem, nonNullProp, subscriptionExperience, UserCancelledError } from '@microsoft/vscode-azext-utils';
-import { AzureResource, AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { createResourceGroup } from '../../../api/DefaultAzureResourceProvider';
+import { AzureResource, AzureSubscription } from '../../../api/public';
 import { ext } from '../../../extensionVariables';
 import { GroupingItem } from '../../../tree/azure/GroupingItem';
 import { createActivityContext } from '../../../utils/activityUtils';

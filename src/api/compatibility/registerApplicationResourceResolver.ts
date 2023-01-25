@@ -3,10 +3,11 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType, callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
 import { ext } from "../../extensionVariables";
+import { AzExtResourceType } from "../public/AzExtResourceType";
 import { CompatibleApplicationResourceBranchDataProvider } from "./application/CompatibleApplicationResourceBranchDataProvider";
 
 export const applicationResourceResolvers: Partial<Record<AzExtResourceType, AppResourceResolver>> = {};
