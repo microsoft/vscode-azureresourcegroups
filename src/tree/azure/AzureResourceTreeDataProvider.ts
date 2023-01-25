@@ -11,12 +11,12 @@ import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
-import { AzureAccountExtensionApi, AzureSubscription as AzureAccountSubscription } from '../azure-account.api';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { TreeItemStateStore } from '../TreeItemState';
+import { AzureAccountExtensionApi, AzureSubscription as AzureAccountSubscription } from '../azure-account.api';
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { GroupingItem } from './GroupingItem';
 import { SubscriptionItem } from './SubscriptionItem';
@@ -72,6 +72,9 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
             return await element.getChildren();
         } else {
             const api = await this.getAzureAccountExtensionApi();
+            console.log(ext.subscriptionProvider);
+            await ext.subscriptionProvider.logIn();
+            console.log(ext.subscriptionProvider);
 
             if (api) {
                 if (api.status === 'LoggedIn') {

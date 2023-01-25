@@ -4,11 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { Environment } from '@azure/ms-rest-azure-env';
-import { AzExtParentTreeItem, AzExtServiceClientCredentials, AzExtTreeItem, callWithTelemetryAndErrorHandling, GenericTreeItem, IActionContext, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, AzExtServiceClientCredentials, callWithTelemetryAndErrorHandling, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { AzureSubscription, AzureSubscriptionProvider, AzureSubscriptionStatus } from '../services/AzureSubscriptionProvider';
-import { localize } from '../utils/localize';
-import { SubscriptionItem } from './azure/SubscriptionItem';
+import { AzureSubscription, AzureSubscriptionProvider } from '../services/AzureSubscriptionProvider';
 
 /**
  * Converts a VS Code authentication session to an Azure Track 1 & 2 compatible compatible credential.
@@ -61,80 +59,6 @@ export class VsCodeAzureAccountTreeItem extends AzExtParentTreeItem {
                 'azureAccountTreeItem.onSubscriptionsChanged',
                 context => this.refresh(context)));
     }
-
-    public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
-        const subscriptionsResult = await this.subscriptionProvider.getSubscriptions();
-
-        if (subscriptionsResult.status === AzureSubscriptionStatus.LoggedIn) {
-            if (subscriptionsResult.selectedSubscriptions.length === 0) {
-                return [
-                    new GenericTreeItem(
-                        this,
-                        {
-                            commandId: 'azure-account.selectSubscriptions',
-                            contextValue: 'azure-account.selectSubscriptions',
-                            label: localize('noSubscriptions', 'Select Subscriptions...')
-                        })
-                ];
-            } else {
-                return subscriptionsResult.selectedSubscriptions.map(
-                    subscription => {
-                        return new SubscriptionItem(
-                            subscription
-                            createSubscriptionContext(subscription));
-                    });
-            }
-        } else if (subscriptionsResult.status === AzureSubscriptionStatus.LoggedOut) {
-            return [
-                new GenericTreeItem(
-                    this,
-                    {
-                        commandId: 'azureResourceGroups.accounts.logIn',
-                        contextValue: 'azureResourceGroups.accounts.logIn',
-                        iconPath: new vscode.ThemeIcon('sign-in'),
-                        label: localize('signInLabel', 'Sign in to Azure...')
-                    }),
-                new GenericTreeItem(
-                    this,
-                    {
-                        commandId: 'azure-account.createAccount',
-                        contextValue: 'azureResourceGroups.accounts.createAccount',
-                        iconPath: new vscode.ThemeIcon('add'),
-                        label: localize('createAccountLabel', 'Create an Azure Account...')
-                    }),
-                new GenericTreeItem(
-                    this,
-                    {
-                        // TODO: How to deal with the args?  commandArgs: ['https://aka.ms/student-account'],
-                        commandId: 'azureResourceGroups.openUrl',
-                        contextValue: 'azureResourceGroups.openUrl',
-                        iconPath: new vscode.ThemeIcon('mortar-board'),
-                        label: localize('createStudentAccount', 'Create an Azure for Students Account...')
-                    }),
-            ];
-        } else {
-            return [
-                new GenericTreeItem(
-                    this,
-                    {
-                        commandId: 'azure-account.login',
-                        contextValue: 'azure-account.login',
-                        iconPath: new vscode.ThemeIcon('loading~spin'),
-                        label: subscriptionsResult.status === AzureSubscriptionStatus.Initializing
-                            ? localize('loadingTreeItem', 'Loading...')
-                            : localize('signingIn', 'Waiting for Azure sign-in...')
-                    })
-            ];
-        }
-    }
-
-    public hasMoreChildrenImpl(): boolean {
-        return false;
-    }
-
-    public label: string;
-
-    public contextValue: string;
 
     public dispose(): void {
         this.subscriptionsSubscription.dispose();

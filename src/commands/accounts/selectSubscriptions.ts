@@ -5,10 +5,11 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
-import { AzureSubscription, AzureSubscriptionProvider, AzureSubscriptionStatus } from "../../services/AzureSubscriptionProvider";
+import { ext } from "../../extensionVariables";
+import { AzureSubscription, AzureSubscriptionStatus } from "../../services/AzureSubscriptionProvider";
 
-export async function selectSubscriptions(_context: IActionContext, subscriptionProvider: AzureSubscriptionProvider): Promise<void> {
-    const results = await subscriptionProvider.getSubscriptions();
+export async function selectSubscriptions(_context: IActionContext): Promise<void> {
+    const results = await ext.subscriptionProvider.getSubscriptions();
 
     if (results.status === AzureSubscriptionStatus.LoggedIn) {
 
@@ -30,7 +31,7 @@ export async function selectSubscriptions(_context: IActionContext, subscription
             });
 
         if (picks) {
-            await subscriptionProvider.selectSubscriptions(
+            await ext.subscriptionProvider.selectSubscriptions(
                 picks.length < results.allSubscriptions.length
                     ? picks.map(pick => pick.subscription.id)
                     : undefined);

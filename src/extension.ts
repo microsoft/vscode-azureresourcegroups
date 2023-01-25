@@ -27,6 +27,7 @@ import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { ext } from './extensionVariables';
+import { VSCodeAzureSubscriptionProvider } from './services/AzureSubscriptionProvider';
 import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
 import { registerAzureTree } from './tree/azure/registerAzureTree';
@@ -58,15 +59,13 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
-        const subscriptionProvider = new VSCodeAzureSubscriptionProvider(context.globalState);
-
-        context.subscriptions.push(subscriptionProvider);
-
         setupEvents(context);
+        ext.subscriptionProvider = new VSCodeAzureSubscriptionProvider(context.globalState);
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
         registerTagDiagnostics();
+
 
         const helpTreeItem: HelpTreeItem = new HelpTreeItem();
         ext.helpTree = new AzExtTreeDataProvider(helpTreeItem, 'ms-azuretools.loadMore');
@@ -76,7 +75,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         ext.activityLogTree = new AzExtTreeDataProvider(ext.activityLogTreeItem, 'azureActivityLog.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('azureActivityLog', { treeDataProvider: ext.activityLogTree }));
 
-        registerCommands(subscriptionProvider);
+        registerCommands();
     });
 
     const extensionManager = new ResourceGroupsExtensionManager()
