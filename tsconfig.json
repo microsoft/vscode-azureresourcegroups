@@ -15,9 +15,6 @@
         "noUnusedParameters": true,
         "baseUrl": "./",
         "paths": {
-            "@hostapiv2": [
-                "./api/src/index"
-            ],
             "*": [
                 "node_modules/@types/*",
                 "*"
@@ -30,6 +27,7 @@
         ".vscode-test",
         "gulpfile.ts",
         "api/dist",
-        "api/out"
+        "api/out",
+        "out"
     ]
 }

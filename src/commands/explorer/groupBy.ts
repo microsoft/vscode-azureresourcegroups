@@ -3,10 +3,10 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscription } from "@hostapiv2";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { IActionContext, nonNullProp, subscriptionExperience } from "@microsoft/vscode-azext-utils";
 import { QuickPickItem } from "vscode";
+import { AzureSubscription } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
 import { createResourceClient } from "../../utils/azureClients";
 import { localize } from "../../utils/localize";

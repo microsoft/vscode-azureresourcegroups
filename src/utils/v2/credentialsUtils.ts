@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscription } from '@hostapiv2';
 import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-dev';
 import * as vscode from 'vscode';
+import { AzureSubscription } from '../../../api/src/index';
 import { localize } from '../../utils/localize';
 
 /**

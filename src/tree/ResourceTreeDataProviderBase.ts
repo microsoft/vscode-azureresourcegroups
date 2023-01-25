@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceBase, ResourceModelBase } from '@hostapiv2';
 import * as vscode from 'vscode';
+import { ResourceBase, ResourceModelBase } from '../../api/src/index';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { BranchDataItemWrapper } from './BranchDataProviderItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';

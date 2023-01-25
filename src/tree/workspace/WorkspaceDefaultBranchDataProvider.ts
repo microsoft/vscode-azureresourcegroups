@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BranchDataProvider, ResourceModelBase, WorkspaceResource } from '@hostapiv2';
 import * as vscode from 'vscode';
+import { BranchDataProvider, ResourceModelBase, WorkspaceResource } from '../../../api/src/index';
 
 interface WorkspaceResourceModel extends ResourceModelBase {
     readonly name: string;

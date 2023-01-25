@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ResourceManagementClient, Tags } from "@azure/arm-resources";
-import { AzureResource, AzureSubscription } from "@hostapiv2";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { AzExtTreeFileSystem, AzExtTreeFileSystemItem, callWithTelemetryAndErrorHandling, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as jsonc from 'jsonc-parser';
 import * as os from "os";
 import { commands, Diagnostic, DiagnosticSeverity, FileStat, FileType, languages, MessageItem, Uri, window } from "vscode";
+import { AzureResource, AzureSubscription } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
 import { createResourceClient } from "../../utils/azureClients";
 import { localize } from "../../utils/localize";

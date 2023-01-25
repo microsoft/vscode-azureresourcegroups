@@ -3,10 +3,10 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from "@hostapiv2";
 import { callWithTelemetryAndErrorHandlingSync } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable } from "vscode";
+import { AzExtResourceType } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
 import { CompatibleApplicationResourceBranchDataProvider } from "./application/CompatibleApplicationResourceBranchDataProvider";
 

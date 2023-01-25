@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType, AzureSubscription } from "@hostapiv2";
 import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
+import { AzExtResourceType, AzureSubscription } from "../../../api/src/index";
 import { AzureResourceProviderManager } from "../../api/ResourceProviderManagers";
 import { azureExtensions } from "../../azureExtensions";
 import { showHiddenTypesSettingKey } from "../../constants";

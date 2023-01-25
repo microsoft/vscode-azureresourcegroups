@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureResource, BranchDataProvider, ResourceBase, ResourceModelBase } from '@hostapiv2';
 import { FileChangeType, TreeItem, Uri } from 'vscode';
+import { AzureResource, BranchDataProvider, ResourceBase, ResourceModelBase } from '../../../api/src/index';
 import { ResourceTags } from '../../commands/tags/TagFileSystem';
 import { ext } from '../../extensionVariables';
 import { createPortalUrl } from '../../utils/v2/createPortalUrl';

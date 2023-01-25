@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from '@hostapiv2';
 import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
 import { nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { AppResource, GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
 import * as path from 'path';
 import { ThemeIcon } from 'vscode';
+import { AzExtResourceType } from '../../api/src/index';
 import { IAzExtMetadata, legacyTypeMap } from '../azureExtensions';
 import { localize } from './localize';
 import { treeUtils } from './treeUtils';

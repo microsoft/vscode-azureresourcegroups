@@ -3,9 +3,9 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { BranchDataProvider, ResourceBase, ResourceModelBase } from "@hostapiv2";
 import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IFindTreeItemContext, ITreeItemPickerContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
+import { BranchDataProvider, ResourceBase, ResourceModelBase } from "../../../api/src/index";
 
 export abstract class CompatibleBranchDataProviderBase<TResource extends ResourceBase, TModel extends AzExtTreeItem & ResourceModelBase> extends AzExtTreeDataProvider implements BranchDataProvider<TResource, TModel>, vscode.Disposable {
     protected readonly overrideOnDidChangeTreeDataEmitter = new vscode.EventEmitter<TModel | undefined>();

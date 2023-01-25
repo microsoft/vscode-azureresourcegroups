@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WorkspaceResource } from '@hostapiv2';
 import * as vscode from 'vscode';
+import { WorkspaceResource } from '../../../api/src/index';
 import { WorkspaceResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataItemWrapper } from '../BranchDataProviderItem';

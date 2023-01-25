@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from '@hostapiv2';
 import * as vscode from 'vscode';
+import { AzExtResourceType } from '../../api/src/index';
 import { contributesKey } from '../constants';
 
 interface ResourceGroupsContribution {

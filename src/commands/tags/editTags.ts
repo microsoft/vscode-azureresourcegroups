@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureResource } from "@hostapiv2";
 import { azureResourceExperience, IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureResource } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
 import { AzureResourceItem } from "../../tree/azure/AzureResourceItem";
 

@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureResource } from '@hostapiv2';
 import { createContextValue } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { AzureResource } from '../../../api/src/index';
 import { AzExtWrapper, getAzureExtensions } from '../../AzExtWrapper';
 import { getIconPath } from '../../utils/azureUtils';
 import { localize } from "../../utils/localize";
