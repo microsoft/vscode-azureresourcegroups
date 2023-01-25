@@ -6,7 +6,6 @@
     "types": "vscode-azureresources-api.d.ts",
     "scripts": {
         "build": "tsc -p ./",
-        "compile": "tsc -p ./ -watch",
         "prepack": "npm run build",
         "api-extractor": "npm run build && api-extractor run"
     },
@@ -14,7 +13,6 @@
     "license": "MIT",
     "devDependencies": {
         "@azure/ms-rest-azure-env": "^2.0.0",
-        "@microsoft/api-extractor": "^7.33.8",
         "@microsoft/vscode-azext-utils": "^0.4.0",
         "@types/node": "^16.0.0",
         "@types/vscode": "^1.64.0"

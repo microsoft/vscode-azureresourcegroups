@@ -166,8 +166,6 @@ export declare interface AzureResourceModel extends ResourceModelBase {
 
 /**
  * The current (v2) Azure Resources extension API.
- *
- * @public
  */
 export declare interface AzureResourcesExtensionApi extends AzureExtensionApi {
     activity: ActivityApi;
