@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { Environment } from '@azure/ms-rest-azure-env';
-import { AzExtParentTreeItem, AzExtServiceClientCredentials, callWithTelemetryAndErrorHandling, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { AzureSubscription, AzureSubscriptionProvider } from '../services/AzureSubscriptionProvider';
+import { AzureSubscription } from '../services/AzureSubscriptionProvider';
 
 /**
  * Converts a VS Code authentication session to an Azure Track 1 & 2 compatible compatible credential.
@@ -27,7 +27,7 @@ export function createCredential(getSession: (scopes?: string[]) => vscode.Provi
             } else {
                 return null;
             }
-        }
+        },
     };
 }
 
@@ -40,27 +40,11 @@ export function createSubscriptionContext(subscription: AzureSubscription): ISub
         environment: {} as Environment,
         isCustomCloud: false,
         subscriptionDisplayName: subscription.displayName,
+        name: subscription.displayName,
         subscriptionId: subscription.id,
         subscriptionPath: '',
         tenantId: '',
         userId: '',
         credentials: createCredential(subscription.getSession)
     };
-}
-
-export class VsCodeAzureAccountTreeItem extends AzExtParentTreeItem {
-    private readonly subscriptionsSubscription: vscode.Disposable;
-
-    public constructor(private readonly subscriptionProvider: AzureSubscriptionProvider) {
-        super(undefined);
-
-        this.subscriptionsSubscription = this.subscriptionProvider.onSubscriptionsChanged(
-            () => callWithTelemetryAndErrorHandling(
-                'azureAccountTreeItem.onSubscriptionsChanged',
-                context => this.refresh(context)));
-    }
-
-    public dispose(): void {
-        this.subscriptionsSubscription.dispose();
-    }
 }

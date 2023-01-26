@@ -312,7 +312,7 @@
             ],
             "view/item/context": [
                 {
-                    "command": "azureResourceGroups..accounts.selectSubscriptions",
+                    "command": "azureResourceGroups.accounts.selectSubscriptions",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "inline"
                 },
@@ -597,6 +597,5 @@
         "semver": "^7.3.7",
         "vscode-nls": "^5.0.1"
     },
-    "extensionDependencies": [
-    ]
+    "extensionDependencies": []
 }

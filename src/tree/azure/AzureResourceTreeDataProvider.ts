@@ -3,14 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtServiceClientCredentials, IActionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
+import { IActionContext, registerEvent } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import { AzureSubscription, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { AzureSubscriptionStatus } from '../../services/AzureSubscriptionProvider';
 import { localize } from '../../utils/localize';
+import { createSubscriptionContext } from '../../utils/v2/credentialsUtils';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
@@ -71,42 +73,31 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         if (element) {
             return await element.getChildren();
         } else {
-            const api = await this.getAzureAccountExtensionApi();
-            console.log(ext.subscriptionProvider);
-            await ext.subscriptionProvider.logIn();
-            console.log(ext.subscriptionProvider);
+            const api = await ext.subscriptionProvider.getSubscriptions();
 
-            if (api) {
-                if (api.status === 'LoggedIn') {
-                    if (api.filters.length === 0) {
+            // eslint-disable-next-line no-constant-condition
+            if (/*api*/true) {
+                if (api.status === AzureSubscriptionStatus.LoggedIn) {
+                    if (api.selectedSubscriptions.length === 0) {
                         return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), { commandId: 'azure-account.selectSubscriptions' })]
                     } else {
-                        return api.filters.map(
+                        return api.selectedSubscriptions.map(
                             subscription => new SubscriptionItem(
                                 {
-                                    subscription: this.createAzureSubscription(subscription),
-                                    subscriptionContext: {
-                                        credentials: <AzExtServiceClientCredentials>subscription.session.credentials2,
-                                        subscriptionDisplayName: nonNullProp(subscription.subscription, 'displayName'),
-                                        subscriptionId: nonNullProp(subscription.subscription, 'subscriptionId'),
-                                        subscriptionPath: nonNullProp(subscription.subscription, 'id'),
-                                        tenantId: subscription.session.tenantId,
-                                        userId: subscription.session.userId,
-                                        environment: subscription.session.environment,
-                                        isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud'
-                                    },
+                                    subscription: /*this.createAzureSubscription(subscription) */subscription as unknown as AzureSubscription,
+                                    subscriptionContext: createSubscriptionContext(subscription as unknown as AzureSubscription),
                                     refresh: item => this.notifyTreeDataChanged(item),
                                 },
                                 this.resourceGroupingManager,
                                 this.resourceProviderManager,
-                                this.createAzureSubscription(subscription)));
+                                subscription as unknown as AzureSubscription));
                     }
-                } else if (api.status === 'LoggedOut') {
+                } else if (api.status === AzureSubscriptionStatus.LoggedOut) {
                     return [
                         new GenericItem(
                             localize('signInLabel', 'Sign in to Azure...'),
                             {
-                                commandId: 'azure-account.login',
+                                commandId: 'azureResourceGroups.accounts.logIn',
                                 iconPath: new vscode.ThemeIcon('sign-in')
                             }),
                         new GenericItem(
@@ -126,11 +117,11 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                 } else {
                     return [
                         new GenericItem(
-                            api.status === 'Initializing'
+                            api.status === AzureSubscriptionStatus.Initializing
                                 ? localize('loadingTreeItem', 'Loading...')
                                 : localize('signingIn', 'Waiting for Azure sign-in...'),
                             {
-                                commandId: 'azure-account.login',
+                                commandId: 'azureResourceGroups.accounts.logIn',
                                 iconPath: new vscode.ThemeIcon('loading~spin')
                             })
                     ];

@@ -98,8 +98,17 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
         await this.updateStatus(false);
     }
 
+    get status(): AzureSubscriptionStatus {
+        if (!this.isLoggedIn()) {
+            return AzureSubscriptionStatus.LoggedOut;
+        } else {
+            return AzureSubscriptionStatus.LoggedIn;
+        }
+    }
+
     async selectSubscriptions(subscriptionIds: string[] | undefined): Promise<void> {
         await this.updateSelectedSubscriptions(subscriptionIds);
+
 
         this._onSubscriptionsChanged.fire();
     }
