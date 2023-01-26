@@ -21,11 +21,7 @@ export interface GetApiOptions {
     readonly extensionId?: string;
 }
 
-/**
- * TODO: move to shared package
- * @internal
- */
-export namespace _apiUtils {
+export namespace apiUtils {
     export interface AzureExtensionApiProvider {
         /**
          * Provides the API for an Azure Extension.

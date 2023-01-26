@@ -5,8 +5,8 @@
 
 import * as vscode from 'vscode';
 import type { AzureResourcesExtensionApi } from '../extensionApi';
-import { GetApiOptions, _apiUtils } from "./apiUtils";
+import { apiUtils, GetApiOptions } from "./apiUtils";
 
 export async function getAzureResourcesExtensionApi(extensionContext: vscode.ExtensionContext, apiVersionRange: '2.0.0', options?: GetApiOptions): Promise<AzureResourcesExtensionApi> {
-    return _apiUtils.getAzureExtensionApi<AzureResourcesExtensionApi>(extensionContext, 'ms-azuretools.vscode-azureresourcegroups', apiVersionRange, options);
+    return apiUtils.getAzureExtensionApi<AzureResourcesExtensionApi>(extensionContext, 'ms-azuretools.vscode-azureresourcegroups', apiVersionRange, options);
 }
