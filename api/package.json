@@ -3,11 +3,11 @@
     "version": "2.0.0",
     "description": "Type declarations and client library for the Azure Resources extension API",
     "main": "out/index.js",
-    "types": "vscode-azureresources-api.d.ts",
+    "types": "dist/vscode-azureresources-api.d.ts",
     "scripts": {
-        "build": "tsc -p ./",
-        "prepack": "npm run build",
-        "api-extractor": "npm run build && api-extractor run"
+        "prepack": "npm run api-extractor",
+        "api-extractor": "npm run build && api-extractor run",
+        "build": "tsc -p ./"
     },
     "author": "Microsoft",
     "license": "MIT",
