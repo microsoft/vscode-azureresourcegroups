@@ -33,6 +33,11 @@ export class CompatibleApplicationResourceBranchDataProvider<TResource extends A
                 return element.id;
             }
         });
+        Object.defineProperty(result, 'id', {
+            get: () => {
+                return element.id;
+            }
+        });
 
         return result;
     }
