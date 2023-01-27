@@ -34,10 +34,6 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
     public mTime: number = Date.now();
     public tags?: { [propertyName: string]: string; } | undefined;
 
-    public get id(): string | undefined {
-        return undefined;
-    }
-
     public get label(): string {
         return nonNullProp(this.data, 'name');
     }
