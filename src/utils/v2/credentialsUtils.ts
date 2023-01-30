@@ -6,7 +6,10 @@
 import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-dev';
 import * as vscode from 'vscode';
 import { AzureSubscription } from '../../../api/src/index';
+<<<<<<< HEAD
 import * as vscodeAccount from '../../tree/azure/VSCodeAuthentication';
+=======
+>>>>>>> 4c48d43 (Create package for consuming extension API (#530))
 import { localize } from '../../utils/localize';
 
 /**

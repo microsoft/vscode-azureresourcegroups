@@ -3,10 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+<<<<<<< HEAD
 import { AzExtServiceClientCredentials, IActionContext, ISubscriptionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { apiUtils } from '../../../api/src/index';
+=======
+import { AzExtServiceClientCredentials, IActionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
+import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
+import * as vscode from 'vscode';
+import { AzureSubscription, ResourceModelBase } from '../../../api/src/index';
+>>>>>>> 4c48d43 (Create package for consuming extension API (#530))
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';

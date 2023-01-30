@@ -4,7 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { azureResourceExperience, IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
+<<<<<<< HEAD
 import { ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
+=======
+import { randomUUID } from 'crypto';
+import { ViewPropertiesModel } from '../../api/src/index';
+>>>>>>> 4c48d43 (Create package for consuming extension API (#530))
 import { ext } from '../extensionVariables';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { localize } from '../utils/localize';

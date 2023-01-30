@@ -3,6 +3,10 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+<<<<<<< HEAD
+=======
+export * from './activity';
+>>>>>>> 4c48d43 (Create package for consuming extension API (#530))
 export * from './AzExtResourceType';
 export * from './extensionApi';
 export * from './resources/azure';
