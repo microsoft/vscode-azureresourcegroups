@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
 import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { commands, Extension, extensions } from "vscode";
+import { AzExtResourceType, AzureResource } from '../api/src/index';
 import { azureExtensions, IAzExtMetadata, IAzExtTutorial } from "./azureExtensions";
 import { contributesKey } from "./constants";
 
@@ -56,6 +57,10 @@ export class AzExtWrapper {
 
     public matchesResourceType(resource: AppResource): boolean {
         return this._resourceTypes.some(rt => rt === resource.azExtResourceType);
+    }
+
+    public matchesApplicationResourceType(resource: AzureResource): boolean {
+        return this._resourceTypes.some(rt => rt === resource.resourceType);
     }
 
     public getCodeExtension(): Extension<AzureExtensionApiProvider> | undefined {

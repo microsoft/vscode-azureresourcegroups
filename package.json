@@ -31,7 +31,7 @@
     "activationEvents": [
         "onFileSystem:azureResourceGroups",
         "onCommand:azureResourceGroups.createResourceGroup",
-        "onCommand:azureResourceGroups.deleteResourceGroup",
+        "onCommand:azureResourceGroups.deleteResourceGroupV2",
         "onCommand:azureResourceGroups.editTags",
         "onCommand:azureResourceGroups.loadMore",
         "onCommand:azureResourceGroups.openInPortal",
@@ -45,6 +45,7 @@
         "onCommand:ms-azuretools.reportIssue",
         "onCommand:ms-azuretools.reviewIssues",
         "onView:azureResourceGroups",
+        "onView:azureResourceGroupsV2",
         "onView:ms-azuretools.helpAndFeedback",
         "onWalkthrough:azure-get-started"
     ],
@@ -78,7 +79,7 @@
                 "icon": "$(add)"
             },
             {
-                "command": "azureResourceGroups.deleteResourceGroup",
+                "command": "azureResourceGroups.deleteResourceGroupV2",
                 "title": "%azureResourceGroups.deleteResourceGroup%",
                 "category": "Azure"
             },
@@ -96,6 +97,12 @@
                 "command": "azureResourceGroups.openInPortal",
                 "title": "%azureResourceGroups.openInPortal%",
                 "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.refreshTree",
+                "title": "%azureResourceGroups.refresh%",
+                "category": "Azure",
+                "icon": "$(refresh)"
             },
             {
                 "command": "azureResourceGroups.refresh",
@@ -169,27 +176,16 @@
                 "icon": "$(refresh)"
             },
             {
-                "command": "azureResourceGroups.focusGroup",
-                "title": "%azureResourceGroups.focusGroup%",
+                "command": "azureWorkspace.refreshTree",
+                "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
-                "icon": "$(zoom-in)"
-            },
-            {
-                "command": "azureResourceGroups.unfocusGroup",
-                "title": "%azureResourceGroups.unfocusGroup%",
-                "category": "Azure",
-                "icon": "$(zoom-out)"
+                "icon": "$(refresh)"
             },
             {
                 "command": "azureResourceGroups.clearActivities",
                 "title": "%azureResourceGroups.clearActivities%",
                 "category": "Azure",
                 "icon": "$(clear-all)"
-            },
-            {
-                "command": "azureResourceGroups.toggleShowAllResources",
-                "title": "%azureResourceGroups.toggleShowAllResources%",
-                "category": "Azure"
             },
             {
                 "command": "azureResourceGroups.showGroupOptions",
@@ -217,12 +213,12 @@
             "azure": [
                 {
                     "id": "azureResourceGroups",
-                    "name": "Resources",
+                    "name": "Resources (V2)",
                     "visibility": "visible"
                 },
                 {
                     "id": "azureWorkspace",
-                    "name": "Workspace",
+                    "name": "Workspace (V2)",
                     "visibility": "visible"
                 },
                 {
@@ -245,6 +241,21 @@
             {
                 "view": "azureActivityLog",
                 "contents": "View all of your recent activities and quickly access resources you've recently created. \n [Create an Azure resource](command:azureResourceGroups.createResource)"
+            },
+            {
+                "view": "azureWorkspace",
+                "contents": "No workspace has been opened.",
+                "when": "azureWorkspace.state == 'noWorkspace'"
+            },
+            {
+                "view": "azureWorkspace",
+                "contents": "No local workspace resources exist.",
+                "when": "azureWorkspace.state == 'noWorkspaceResources'"
+            },
+            {
+                "view": "azureWorkspace",
+                "contents": "No local workspace resource providers exist.",
+                "when": "azureWorkspace.state == 'noWorkspaceResourceProviders'"
             }
         ],
         "menus": {
@@ -260,12 +271,12 @@
                     "group": "navigation@2"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
+                    "command": "azureResourceGroups.refreshTree",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@3"
                 },
                 {
-                    "command": "azureWorkspace.refresh",
+                    "command": "azureWorkspace.refreshTree",
                     "when": "view == azureWorkspace",
                     "group": "navigation@10"
                 },
@@ -302,7 +313,7 @@
                     "group": "9@2"
                 },
                 {
-                    "command": "azureResourceGroups.deleteResourceGroup",
+                    "command": "azureResourceGroups.deleteResourceGroupV2",
                     "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
                     "group": "1@1"
                 },
@@ -313,7 +324,7 @@
                 },
                 {
                     "command": "azureResourceGroups.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
+                    "when": "view == azureResourceGroups && viewItem =~ /hasPortalUrl/",
                     "group": "9@2"
                 },
                 {
@@ -328,23 +339,13 @@
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Type)/",
+                    "when": "view == azureResourceGroups && viewItem =~ /hasProperties/",
                     "group": "9@1"
                 },
                 {
-                    "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem =~ /group/",
-                    "group": "inline@1"
-                },
-                {
-                    "command": "azureResourceGroups.focusGroup",
-                    "when": "view == azureResourceGroups && viewItem =~ /(group).*(unfocused)/",
-                    "group": "inline@2"
-                },
-                {
-                    "command": "azureResourceGroups.unfocusGroup",
-                    "when": "view == azureResourceGroups && viewItem =~ /(focused).*(group)/",
-                    "group": "inline@2"
+                    "command": "azureResourceGroups.viewProperties",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
+                    "group": "9@1"
                 }
             ],
             "commandPalette": [
@@ -374,10 +375,6 @@
                 },
                 {
                     "command": "azureResourceGroups.installExtension",
-                    "when": "never"
-                },
-                {
-                    "command": "azureResourceGroups.toggleShowAllResources",
                     "when": "never"
                 }
             ],
@@ -538,16 +535,18 @@
         "webpack": "npm run build && gulp webpack-dev",
         "webpack-prod": "npm run build && gulp webpack-prod",
         "webpack-profile": "webpack --profile --json --mode production > webpack-stats.json && echo Use http://webpack.github.io/analyse to analyze the stats",
-        "all": "npm i && npm run lint && npm test"
+        "all": "npm i && npm run lint && npm test",
+        "api-extractor": "tsc -p ./api && api-extractor run -c ./api/api-extractor.json"
     },
     "devDependencies": {
+        "@microsoft/api-extractor": "^7.33.8",
         "@microsoft/eslint-config-azuretools": "^0.1.0",
-        "@microsoft/vscode-azext-dev": "^0.1.3",
-        "@types/fs-extra": "^8.0.1",
+        "@microsoft/vscode-azext-dev": "^0.1.5",
         "@types/gulp": "^4.0.6",
         "@types/mocha": "^7.0.2",
         "@types/node": "^14.0.0",
-        "@types/vscode": "1.57.0",
+        "@types/semver": "^7.3.12",
+        "@types/vscode": "1.66.0",
         "@typescript-eslint/eslint-plugin": "^4.28.3",
         "@vscode/test-electron": "^2.1.5",
         "eslint": "^7.25.0",
@@ -557,7 +556,8 @@
         "mocha": "^10.1.0",
         "mocha-junit-reporter": "^1.23.1",
         "mocha-multi-reporters": "^1.1.7",
-        "ts-node": "^7.0.1",
+        "ts-node": "^10.9.1",
+        "tsconfig-paths-webpack-plugin": "^4.0.0",
         "typescript": "^4.3.5",
         "vsce": "^2.11.0",
         "webpack": "^5.28.0",
@@ -567,10 +567,10 @@
         "@azure/arm-resources": "5.0.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.0.0",
         "@microsoft/vscode-azext-azureutils": "^0.3.4",
-        "@microsoft/vscode-azext-utils": "^0.3.14",
-        "fs-extra": "^8.1.0",
+        "@microsoft/vscode-azext-utils": "^0.3.26",
         "jsonc-parser": "^2.2.1",
         "open": "^8.0.4",
+        "semver": "^7.3.7",
         "vscode-nls": "^5.0.1"
     },
     "extensionDependencies": [

@@ -3,15 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { pickAppResource } from "../../api/pickAppResource";
+import { azureResourceExperience, IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureResource } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
-import { AppResourceTreeItem } from "../../tree/AppResourceTreeItem";
+import { AzureResourceItem } from "../../tree/azure/AzureResourceItem";
 
-export async function editTags(context: IActionContext, node?: AppResourceTreeItem): Promise<void> {
-    if (!node) {
-        node = await pickAppResource<AppResourceTreeItem>(context);
+export async function editTags(context: IActionContext, item?: AzureResourceItem<AzureResource>): Promise<void> {
+    if (!item) {
+        item = await azureResourceExperience<AzureResourceItem<AzureResource>>({ ...context, dontUnwrap: true }, ext.v2.api.resources.azureResourceTreeDataProvider);
     }
 
-    await ext.tagFS.showTextDocument(node);
+    if (!item.tagsModel) {
+        throw new Error("Editing tags is not supported for this resource.");
+    }
+
+    await ext.tagFS.showTextDocument(item.tagsModel);
 }

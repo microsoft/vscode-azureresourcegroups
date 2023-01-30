@@ -18,13 +18,16 @@
             "*": [
                 "node_modules/@types/*",
                 "*"
-            ]
+            ],
         },
         "skipLibCheck": false
     },
     "exclude": [
         "node_modules",
         ".vscode-test",
-        "gulpfile.ts"
+        "gulpfile.ts",
+        "api/dist",
+        "api/out",
+        "out"
     ]
 }

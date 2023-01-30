@@ -7,14 +7,14 @@
 import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { Command, commands, extensions } from 'vscode';
 import { contributesKey } from '../constants';
-import { SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
+import { SubscriptionItem } from '../tree/azure/SubscriptionItem';
 
 interface AzExtCreateResourceCommand extends Command {
     title: string;
     detail?: string;
 }
 
-export async function createResource(context: IActionContext, node?: SubscriptionTreeItem): Promise<void> {
+export async function createResource(context: IActionContext, node?: SubscriptionItem): Promise<void> {
     const all = extensions.all;
 
     const extCommands = all.map((azExt) => azExt.packageJSON?.contributes?.[contributesKey]?.commands as unknown).filter((value) => value !== undefined);

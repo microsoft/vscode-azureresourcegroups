@@ -3,15 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ResourceManagementClient } from '@azure/arm-resources';
-import { getResourceGroupFromId, uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzExtResourceType, IActionContext, nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
+import { nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { AppResource, GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
 import * as path from 'path';
 import { ThemeIcon } from 'vscode';
+import { AzExtResourceType } from '../../api/src/index';
 import { IAzExtMetadata, legacyTypeMap } from '../azureExtensions';
-import { ext } from '../extensionVariables';
-import { createResourceClient } from './azureClients';
 import { localize } from './localize';
 import { treeUtils } from './treeUtils';
 
@@ -76,17 +74,8 @@ export function getIconPath(azExtResourceType?: AzExtResourceType): TreeItemIcon
     return treeUtils.getIconPath(azExtResourceType ? path.join('azureIcons', azExtResourceType) : 'resource');
 }
 
-export async function getArmTagKeys(context: IActionContext): Promise<Set<string>> {
-    const armTagKeys: Set<string> = new Set();
-    for (const sub of (await ext.rootAccountTreeItem.getCachedChildren(context))) {
-        const client: ResourceManagementClient = await createResourceClient([context, sub]);
-        const tags = await uiUtils.listAllIterator(client.tagsOperations.list());
-        for (const tag of tags) {
-            tag.tagName ? armTagKeys.add(tag.tagName) : undefined;
-        }
-    }
-
-    return armTagKeys;
+export function getName(azExtResourceType?: AzExtResourceType): string | undefined {
+    return azExtResourceType ? azExtDisplayInfo[azExtResourceType]?.displayName : undefined;
 }
 
 interface AzExtResourceTypeDisplayInfo {

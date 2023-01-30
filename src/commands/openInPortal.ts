@@ -3,15 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { openInPortal as uiOpenInPortal } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeItem, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
-import { pickAppResource } from '../api/pickAppResource';
-import { AppResourceTreeItem } from '../tree/AppResourceTreeItem';
+import { azureResourceExperience, IActionContext, openUrl, ResourceGroupsItem } from '@microsoft/vscode-azext-utils';
+import { Uri } from 'vscode';
+import { ext } from '../extensionVariables';
+import { localize } from '../utils/localize';
 
-export async function openInPortal(context: IActionContext, node?: AzExtTreeItem): Promise<void> {
+export async function openInPortal(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
     if (!node) {
-        node = await pickAppResource<AppResourceTreeItem>(context);
+        node = await azureResourceExperience({ ...context, dontUnwrap: true }, ext.v2.api.resources.azureResourceTreeDataProvider);
     }
 
-    await uiOpenInPortal(node, nonNullProp(node, 'id'));
+    if (hasPortalUrl(node)) {
+        return await openUrl(node.portalUrl.toString(/* skipEncoding: */ true));
+    }
+
+    throw new Error(localize('commands.openInPortal.noPortalLocation', 'The selected resource is not associated with location within the Azure portal.'));
+}
+
+function hasPortalUrl(node: ResourceGroupsItem): node is { portalUrl: Uri } {
+    return !!node && typeof node === 'object' && (node as { portalUrl: unknown }).portalUrl instanceof Uri;
 }
