@@ -3,7 +3,6 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-export * from './activity';
 export * from './AzExtResourceType';
 export * from './extensionApi';
 export * from './resources/azure';
