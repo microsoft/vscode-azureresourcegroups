@@ -5,7 +5,7 @@
 
 import { ParsedAzureResourceId } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeItem, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
-import { VSCodeRevealOptions } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { VSCodeRevealOptions } from '../../api/src/index';
 import { ext } from '../extensionVariables';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../tree/ResourceTreeDataProviderBase';
