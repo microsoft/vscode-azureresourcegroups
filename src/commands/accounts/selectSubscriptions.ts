@@ -6,19 +6,19 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { ext } from "../../extensionVariables";
-import { AzureSubscription, AzureSubscriptionStatus } from "../../services/AzureSubscriptionProvider";
+import { AzureSubscription } from "../../services/AzureSubscriptionProvider";
 
 export async function selectSubscriptions(_context: IActionContext): Promise<void> {
     const results = await ext.subscriptionProvider.getSubscriptions();
 
-    if (results.status === AzureSubscriptionStatus.LoggedIn) {
+    if (results.status === 'LoggedIn') {
 
         const subscriptionQuickPickItems: (vscode.QuickPickItem & { subscription: AzureSubscription })[] =
             results
                 .allSubscriptions
                 .map(subscription => ({
                     label: subscription.displayName,
-                    picked: results.selectedSubscriptions.includes(subscription),
+                    picked: results.filters.includes(subscription),
                     subscription
                 }))
                 .sort((a, b) => a.label.localeCompare(b.label));
