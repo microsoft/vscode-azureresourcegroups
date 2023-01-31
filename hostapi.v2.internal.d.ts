@@ -1,3 +1,4 @@
+import { ActivityApi } from '@microsoft/vscode-azext-utils/activity';
 import * as vscode from 'vscode';
 import { AzureResource, AzureResourcesExtensionApi, AzureSubscription, ResourceProvider, ResourcesApi } from "./api/src/index";
 
@@ -21,4 +22,5 @@ export interface AzureResourcesHostApiInternal extends ResourcesApi {
 
 export interface AzureResourcesApiInternal extends AzureResourcesExtensionApi {
     resources: AzureResourcesHostApiInternal;
+    activity: ActivityApi;
 }
