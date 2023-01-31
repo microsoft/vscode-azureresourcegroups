@@ -13,6 +13,7 @@ test-results.xml
 .eslintrc.js
 resources/*.png
 *.tsbuildinfo
+docs/
 
 out/**/*.d.ts
 out/**/*.d.ts.map

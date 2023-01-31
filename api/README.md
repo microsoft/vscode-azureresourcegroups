@@ -17,7 +17,7 @@ The Azure Resources extension exposes an API which enables any number of client 
 
 ### Resource views
 
-<img align="right" src="docs/media/resource-views.png" width="50%" />
+<img align="right" src="https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/docs/media/resource-views.png?raw=true" width="50%" />
 
 Allows multiple extensions to contribute rich features to unified resource tree views in the Azure view.
 
@@ -40,7 +40,7 @@ Consumers of the API can:
 
 ### Create Resource menu
 
-<img align="right" src="docs/media/create-resource.png" width="60%" />
+<img align="right" src="https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/docs/media/create-resource.png?raw=true" width="60%" />
 
 <br/>
 <br/>
@@ -259,7 +259,8 @@ todo
 
 ## Extension dependencies
 
-<img align="right" src="docs/media/extension-dependency-graphic.png" alt="Extension dependency graphic" width="50%" />
+
+<img align="right" src="https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/docs/media/extension-dependency-graphic.png?raw=true" alt="Extension dependency graphic" width="50%" />
 
 Client extensions must declare the Azure Resources extension as an extension dependency in their extension manifest `package.json` file.
 
