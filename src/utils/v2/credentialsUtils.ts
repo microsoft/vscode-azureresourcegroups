@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-dev';
-import { AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { AzureSubscription } from '../../../api/src/index';
 import { localize } from '../../utils/localize';
 
 /**

@@ -5,8 +5,8 @@
 
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { IActionContext, nonNullProp, subscriptionExperience } from "@microsoft/vscode-azext-utils";
-import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import { QuickPickItem } from "vscode";
+import { AzureSubscription } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
 import { createResourceClient } from "../../utils/azureClients";
 import { localize } from "../../utils/localize";

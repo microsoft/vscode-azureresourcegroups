@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createContextValue } from '@microsoft/vscode-azext-utils';
-import { AzureResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { AzureResource } from '../../../api/src/index';
 import { AzExtWrapper, getAzureExtensions } from '../../AzExtWrapper';
 import { getIconPath } from '../../utils/azureUtils';
 import { localize } from "../../utils/localize";

@@ -5,7 +5,7 @@
 
 import { AzExtTreeItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import type { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
-import type { AzureResource, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import type { AzureResource, ResourceModelBase } from '../../../../api/src/index';
 import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
 import { CompatibleBranchDataProviderBase } from '../CompatibleBranchDataProviderBase';
 import { CompatibleResolvedApplicationResourceTreeItem } from './CompatibleApplicationResourceTreeItem';
@@ -29,6 +29,11 @@ export class CompatibleApplicationResourceBranchDataProvider<TResource extends A
         const resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
         const result = CompatibleResolvedApplicationResourceTreeItem.Create(element, resolved!, subscriptionContext, this, element) as unknown as TModel;
         Object.defineProperty(result, 'fullId', {
+            get: () => {
+                return element.id;
+            }
+        });
+        Object.defineProperty(result, 'id', {
             get: () => {
                 return element.id;
             }

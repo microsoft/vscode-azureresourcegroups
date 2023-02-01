@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { azureResourceExperience, IActionContext } from "@microsoft/vscode-azext-utils";
-import { AzureResource } from "@microsoft/vscode-azext-utils/hostapi.v2";
+import { AzureResource } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
 import { AzureResourceItem } from "../../tree/azure/AzureResourceItem";
 

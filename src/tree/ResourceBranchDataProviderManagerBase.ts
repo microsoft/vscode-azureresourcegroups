@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BranchDataProvider, ResourceBase, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/src/index';
 
 export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBranchDataProvider extends BranchDataProvider<ResourceBase, ResourceModelBase>> extends vscode.Disposable {
     private readonly branchDataProviderMap = new Map<TResourceType, { provider: TBranchDataProvider, listener: vscode.Disposable | undefined }>();
@@ -34,14 +34,7 @@ export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBran
             type,
             {
                 provider,
-                listener: provider.onDidChangeTreeData?.((e) => {
-                    if (e) {
-                        this.onDidChangeTreeDataEmitter.fire(e);
-                    } else {
-                        // scope a change event to the specific branch data provider
-                        this.onDidChangeBranchDataProvidersEmitter.fire(type);
-                    }
-                }),
+                listener: provider.onDidChangeTreeData?.(e => this.onDidChangeTreeDataEmitter.fire(e))
             }
         );
 

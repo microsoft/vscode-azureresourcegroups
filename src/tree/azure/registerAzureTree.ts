@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
-import { AzureResource } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { AzureResource } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
