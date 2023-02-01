@@ -4,12 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { azureResourceExperience, IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
-<<<<<<< HEAD
 import { ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
-=======
-import { randomUUID } from 'crypto';
-import { ViewPropertiesModel } from '../../api/src/index';
->>>>>>> 4a3c983178b7fb67656c6b67c6557720b9e27bc5
 import { ext } from '../extensionVariables';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { localize } from '../utils/localize';

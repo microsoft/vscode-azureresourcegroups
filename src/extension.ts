@@ -7,8 +7,9 @@
 
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import type { AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
-import { apiUtils, GetApiOptions } from 'api/src/utils/apiUtils';
+import { GetApiOptions } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { AzureResourcesApiInternal } from '../hostapi.v2.internal';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
@@ -38,11 +39,7 @@ import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDefaultBranchDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 
-<<<<<<< HEAD
 export async function activate(context: vscode.ExtensionContext, _perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<AzureExtensionApiProvider> {
-=======
-export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
->>>>>>> 4a3c983178b7fb67656c6b67c6557720b9e27bc5
     ext.context = context;
     ext.ignoreBundle = ignoreBundle;
     ext.outputChannel = createAzExtOutputChannel('Azure Resource Groups', ext.prefix);
