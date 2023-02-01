@@ -2,7 +2,7 @@ name: 'API: Publish to npm'
 # Publishes the api package to npm
 
 on:
-  workflow_call:
+  workflow_dispatch:
 
 permissions:
   contents: read
