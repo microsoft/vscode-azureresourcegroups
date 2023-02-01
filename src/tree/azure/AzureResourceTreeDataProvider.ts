@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, registerEvent } from '@microsoft/vscode-azext-utils';
+import { AzExtServiceClientCredentials, IActionContext, ISubscriptionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import { AzureSubscription, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { AzureSubscriptionsResult } from '../../services/AzureSubscriptionProvider';
 import { localize } from '../../utils/localize';
-import { createSubscriptionContext } from '../../utils/v2/credentialsUtils';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
@@ -21,11 +21,12 @@ import { AzureAccountExtensionApi, AzureSubscription as AzureAccountSubscription
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { GroupingItem } from './GroupingItem';
 import { SubscriptionItem } from './SubscriptionItem';
+import { createSubscriptionContext } from './VSCodeAuthentication';
 
 export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase {
     private readonly groupingChangeSubscription: vscode.Disposable;
 
-    private api: AzureAccountExtensionApi | undefined;
+    private api: AzureAccountExtensionApi | AzureSubscriptionsResult | undefined;
     private filtersSubscription: vscode.Disposable | undefined;
     private statusSubscription: vscode.Disposable | undefined;
 
@@ -73,7 +74,6 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
             return await element.getChildren();
         } else {
             const api = await this.getAzureAccountExtensionApi();
-            // const api = await ext.subscriptionProvider.getSubscriptions();
 
             if (api) {
                 if (api.status === 'LoggedIn') {
@@ -84,12 +84,12 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                             subscription => new SubscriptionItem(
                                 {
                                     subscription: this.createAzureSubscription(subscription),
-                                    subscriptionContext: createSubscriptionContext(subscription as unknown as AzureSubscription),
+                                    subscriptionContext: this.createSubscriptionContext(subscription),
                                     refresh: item => this.notifyTreeDataChanged(item),
                                 },
                                 this.resourceGroupingManager,
                                 this.resourceProviderManager,
-                                subscription as unknown as AzureSubscription));
+                                this.createAzureSubscription(subscription)));
                     }
                 } else if (api.status === 'LoggedOut') {
                     return [
@@ -138,7 +138,11 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         return super.isAncestorOf(element, id)
     }
 
-    private async getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi | undefined> {
+    private async getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi | AzureSubscriptionsResult | undefined> {
+        if (vscode.env.uiKind === vscode.UIKind.Web) {
+            return await ext.subscriptionProvider.getSubscriptions();
+        }
+
         if (!this.api) {
             const extension = vscode.extensions.getExtension<AzureExtensionApiProvider>('ms-vscode.azure-account');
 
@@ -162,6 +166,10 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     }
 
     private createAzureSubscription(subscription: AzureAccountSubscription): AzureSubscription {
+        if (vscode.env.uiKind === vscode.UIKind.Web) {
+            return subscription as unknown as AzureSubscription;
+        }
+
         return {
             authentication: {
                 getSession: async scopes => {
@@ -188,5 +196,23 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
             subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
             tenantId: subscription.session.tenantId
         };
+    }
+
+    private createSubscriptionContext(subscription: AzureAccountSubscription): ISubscriptionContext {
+        if (vscode.env.uiKind === vscode.UIKind.Web) {
+            // TODO: This is a hack to get the subscription context to work with the webview
+            return createSubscriptionContext(subscription as unknown as AzureSubscription);
+        }
+
+        return {
+            credentials: <AzExtServiceClientCredentials>subscription.session.credentials2,
+            subscriptionDisplayName: nonNullProp(subscription.subscription, 'displayName'),
+            subscriptionId: nonNullProp(subscription.subscription, 'subscriptionId'),
+            subscriptionPath: nonNullProp(subscription.subscription, 'id'),
+            tenantId: subscription.session.tenantId,
+            userId: subscription.session.userId,
+            environment: subscription.session.environment,
+            isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud'
+        }
     }
 }

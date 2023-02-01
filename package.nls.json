@@ -1,7 +1,7 @@
 {
     "azureResourceGroups.accounts.logIn": "Sign In",
     "azureResourceGroups.accounts.logOut": "Sign Out",
-    "azureResourceGroups.accounts.selectSubscriptions": "Select Subscriptions",
+    "azureResourceGroups.accounts.selectSubscriptions": "Select Subscriptions...",
     "azureResourceGroups.createResourceGroup": "Create Resource Group...",
     "azureResourceGroups.createResourceGroupDetail": "The logical grouping for your resources.",
     "azureResourceGroups.deleteResourceGroup": "Delete Resource Group...",
@@ -12,6 +12,7 @@
     "azureResourceGroups.openInPortal": "Open in Portal",
     "azureResourceGroups.refresh": "Refresh",
     "azureWorkspace.refresh": "Refresh Workspace",
+    "azureResourceGroups.selectedSubscriptions": "Selected Subscriptions",
     "azureResourceGroups.revealResource": "Reveal Resource",
     "azureResourceGroups.viewProperties": "View Properties",
     "azureResourceGroups.deleteConfirmation": "The behavior to use when confirming delete of a resource group.",

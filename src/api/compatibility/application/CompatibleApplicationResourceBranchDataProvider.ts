@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, ISubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import type { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import type { AzureResource, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
@@ -27,7 +27,7 @@ export class CompatibleApplicationResourceBranchDataProvider<TResource extends A
         const subscriptionContext: ISubscriptionContext = createSubscriptionContext(element.subscription);
 
         const resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
-        const result = CompatibleResolvedApplicationResourceTreeItem.Create(element, resolved!, subscriptionContext, this, element) as unknown as TModel;
+        const result = CompatibleResolvedApplicationResourceTreeItem.Create(element, nonNullValue(resolved), subscriptionContext, this, element) as unknown as TModel;
         Object.defineProperty(result, 'fullId', {
             get: () => {
                 return element.id;

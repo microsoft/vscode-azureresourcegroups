@@ -4,9 +4,9 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as vscode from 'vscode';
 import { ext } from "../../extensionVariables";
-import { AzureSubscription } from "../../services/AzureSubscriptionProvider";
 
 export async function selectSubscriptions(_context: IActionContext): Promise<void> {
     const results = await ext.subscriptionProvider.getSubscriptions();
@@ -17,7 +17,7 @@ export async function selectSubscriptions(_context: IActionContext): Promise<voi
             results
                 .allSubscriptions
                 .map(subscription => ({
-                    label: subscription.displayName,
+                    label: subscription.name,
                     picked: results.filters.includes(subscription),
                     subscription
                 }))
@@ -33,7 +33,7 @@ export async function selectSubscriptions(_context: IActionContext): Promise<voi
         if (picks) {
             await ext.subscriptionProvider.selectSubscriptions(
                 picks.length < results.allSubscriptions.length
-                    ? picks.map(pick => pick.subscription.id)
+                    ? picks.map(pick => pick.subscription.subscriptionId)
                     : undefined);
         }
     }

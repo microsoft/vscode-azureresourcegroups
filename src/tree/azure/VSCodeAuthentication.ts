@@ -5,8 +5,9 @@
 
 import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
+import { AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { AzureSubscription } from '../services/AzureSubscriptionProvider';
+import { localize } from '../../utils/localize';
 
 /**
  * Converts a VS Code authentication session to an Azure Track 1 & 2 compatible compatible credential.
@@ -28,23 +29,25 @@ export function createCredential(getSession: (scopes?: string[]) => vscode.Provi
                 return null;
             }
         },
+        signRequest: async () => {
+            throw new Error((localize('signRequestError', 'Track 1 credentials are not (currently) supported.')));
+        }
     };
 }
 
 /**
  * Creates a subscription context from an application subscription.
  */
-export function createSubscriptionContext(subscription: AzureSubscription): ISubscriptionContext & { name?: string } {
+export function createSubscriptionContext(subscription: AzureSubscription): ISubscriptionContext {
     return {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         environment: {} as Environment,
         isCustomCloud: false,
-        subscriptionDisplayName: subscription.displayName,
-        name: subscription.displayName,
-        subscriptionId: subscription.id,
+        subscriptionDisplayName: subscription.name,
+        subscriptionId: subscription.subscriptionId,
         subscriptionPath: '',
         tenantId: '',
         userId: '',
-        credentials: createCredential(subscription.getSession)
+        credentials: createCredential(subscription.authentication.getSession)
     };
 }

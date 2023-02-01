@@ -6,8 +6,7 @@
 import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-dev';
 import { AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { AzureSubscription as vscodeSubscription } from '../../services/AzureSubscriptionProvider';
-import * as vscodeAccount from '../../tree/VsCodeAzureAccountTreeItem';
+import * as vscodeAccount from '../../tree/azure/VSCodeAuthentication';
 import { localize } from '../../utils/localize';
 
 /**
@@ -41,7 +40,7 @@ export function createCredential(getSession: (scopes?: string[]) => vscode.Provi
  */
 export function createSubscriptionContext(subscription: AzureSubscription): ISubscriptionContext {
     if (!subscription.authentication) {
-        return vscodeAccount.createSubscriptionContext(subscription as unknown as vscodeSubscription) as unknown as ISubscriptionContext;
+        return vscodeAccount.createSubscriptionContext(subscription);
     }
 
     return {

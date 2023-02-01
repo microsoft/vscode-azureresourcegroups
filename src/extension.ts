@@ -57,6 +57,7 @@ export async function activate(context: vscode.ExtensionContext, _perfStats: { l
 
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
+        // TODO: Get perfTime working again
         // activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
         setupEvents(context);
