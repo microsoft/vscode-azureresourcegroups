@@ -5,6 +5,7 @@
 
 import { isAzExtTreeItem, Wrapper } from '@microsoft/vscode-azext-utils';
 import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { nanoid } from 'nanoid';
 import * as vscode from 'vscode';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
@@ -38,7 +39,7 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
         if (isAzExtTreeItem(this.branchItem)) {
             this.id = this.branchItem.fullId;
         } else {
-            this.id = this.branchItem.id ?? this?.options?.defaultId ?? "maturims";
+            this.id = this.branchItem.id ?? this?.options?.defaultId ?? nanoid();
         }
     }
 
