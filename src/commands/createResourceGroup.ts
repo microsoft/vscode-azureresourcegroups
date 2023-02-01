@@ -5,8 +5,8 @@
 
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, nonNullProp, subscriptionExperience } from '@microsoft/vscode-azext-utils';
-import { AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import { window } from 'vscode';
+import { AzureSubscription } from '../../api/src/index';
 import { ext } from '../extensionVariables';
 import { SubscriptionItem } from '../tree/azure/SubscriptionItem';
 import { createActivityContext } from '../utils/activityUtils';

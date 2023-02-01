@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtServiceClientCredentials, IActionContext, ISubscriptionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
-import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
 import { AzureSubscription, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { apiUtils } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -144,7 +144,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         }
 
         if (!this.api) {
-            const extension = vscode.extensions.getExtension<AzureExtensionApiProvider>('ms-vscode.azure-account');
+            const extension = vscode.extensions.getExtension<apiUtils.AzureExtensionApiProvider>('ms-vscode.azure-account');
 
             if (extension) {
                 if (!extension.isActive) {

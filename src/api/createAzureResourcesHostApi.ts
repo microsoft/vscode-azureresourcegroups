@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType, callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
-import { AzureResource, BranchDataProvider, ResourceModelBase, VSCodeRevealOptions, WorkspaceResource, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi.v2';
+import { callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { AzExtResourceType, AzureResource, BranchDataProvider, ResourceModelBase, VSCodeRevealOptions, WorkspaceResource, WorkspaceResourceProvider } from '../../api/src/index';
 import { AzureResourceProvider, AzureResourcesHostApiInternal } from '../../hostapi.v2.internal';
 import { revealResource } from '../commands/revealResource';
 import { AzureResourceBranchDataProviderManager } from '../tree/azure/AzureResourceBranchDataProviderManager';
