@@ -3,8 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { BranchDataProvider, ResourceBase, ResourceModelBase } from '../../api/src/index';
+import { wrapFunctionsInTelemetry } from '../utils/wrapFunctionsInTelemetry';
 
 export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBranchDataProvider extends BranchDataProvider<ResourceBase, ResourceModelBase>> extends vscode.Disposable {
     private readonly branchDataProviderMap = new Map<TResourceType, { provider: TBranchDataProvider, listener: vscode.Disposable | undefined }>();
@@ -33,7 +35,7 @@ export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBran
         this.branchDataProviderMap.set(
             type,
             {
-                provider,
+                provider: wrapBranchDataProvider(provider, type),
                 listener: provider.onDidChangeTreeData?.(e => this.onDidChangeTreeDataEmitter.fire(e))
             }
         );
@@ -68,4 +70,25 @@ export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBran
             this.onDidChangeBranchDataProvidersEmitter.fire(type);
         }
     }
+}
+
+function wrapBranchDataProvider<TBranchDataProvider extends BranchDataProvider<ResourceBase, ResourceModelBase>, TResourceType>(branchDataProvider: TBranchDataProvider, type: TResourceType): TBranchDataProvider {
+    return {
+        ...wrapFunctionsInTelemetry(
+            {
+                getChildren: branchDataProvider.getChildren.bind(branchDataProvider) as typeof branchDataProvider.getChildren,
+                getTreeItem: branchDataProvider.getTreeItem.bind(branchDataProvider) as typeof branchDataProvider.getResourceItem,
+                getResourceItem: branchDataProvider.getResourceItem.bind(branchDataProvider) as typeof branchDataProvider.getResourceItem,
+                getParent: branchDataProvider.getParent?.bind(branchDataProvider) as typeof branchDataProvider.getChildren,
+            },
+            {
+                callbackIdPrefix: 'branchDataProvider.',
+                beforeHook: (context: IActionContext) => {
+                    context.telemetry.properties.branchDataProviderType = String(type);
+                }
+            }
+        ),
+        onDidChangeTreeData: branchDataProvider.onDidChangeTreeData?.bind(branchDataProvider) as typeof branchDataProvider.onDidChangeTreeData,
+        resolveTreeItem: branchDataProvider.resolveTreeItem?.bind(branchDataProvider) as typeof branchDataProvider.resolveTreeItem,
+    } as BranchDataProvider<ResourceBase, ResourceModelBase> as TBranchDataProvider;
 }
