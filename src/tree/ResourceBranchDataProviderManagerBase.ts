@@ -78,7 +78,14 @@ function wrapBranchDataProvider<TBranchDataProvider extends BranchDataProvider<R
             {
                 getChildren: branchDataProvider.getChildren.bind(branchDataProvider) as typeof branchDataProvider.getChildren,
                 getTreeItem: branchDataProvider.getTreeItem.bind(branchDataProvider) as typeof branchDataProvider.getResourceItem,
-                getResourceItem: branchDataProvider.getResourceItem.bind(branchDataProvider) as typeof branchDataProvider.getResourceItem,
+                getResourceItem: async (element: ResourceBase) => {
+                    const result = await branchDataProvider.getResourceItem(element);
+                    if (!result) {
+                        throw new NullishGetResourceItemResultError(result);
+                    }
+                    return result;
+                },
+                // getResourceItem: branchDataProvider.getResourceItem.bind(branchDataProvider) as typeof branchDataProvider.getResourceItem,
                 getParent: branchDataProvider.getParent?.bind(branchDataProvider) as typeof branchDataProvider.getChildren,
             },
             {
@@ -91,4 +98,11 @@ function wrapBranchDataProvider<TBranchDataProvider extends BranchDataProvider<R
         onDidChangeTreeData: branchDataProvider.onDidChangeTreeData?.bind(branchDataProvider) as typeof branchDataProvider.onDidChangeTreeData,
         resolveTreeItem: branchDataProvider.resolveTreeItem?.bind(branchDataProvider) as typeof branchDataProvider.resolveTreeItem,
     } as BranchDataProvider<ResourceBase, ResourceModelBase> as TBranchDataProvider;
+}
+
+class NullishGetResourceItemResultError extends Error {
+    constructor(result: never) {
+        super(`Internal error: getResourceItem returned ${String(result)}. Expected a non-nullish value.`);
+        this.name = 'NullishGetResourceItemResultError';
+    }
 }
