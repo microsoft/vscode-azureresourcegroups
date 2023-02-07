@@ -131,15 +131,18 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     ext.v2.api = v2ApiFactory.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
 
+    ext.appResourceTree = new CompatibleAzExtTreeDataProvider(azureResourceTreeDataProvider);
+    ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
+
     return createApiProvider(
         [
             {
                 apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
                 createApi: () => new InternalAzureResourceGroupsExtensionApi({
                     apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
-                    appResourceTree: new CompatibleAzExtTreeDataProvider(azureResourceTreeDataProvider),
+                    appResourceTree: ext.appResourceTree,
                     appResourceTreeView: ext.appResourceTreeView,
-                    workspaceResourceTree: new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider),
+                    workspaceResourceTree: ext.workspaceTree,
                     workspaceResourceTreeView: ext.workspaceTreeView,
                     registerApplicationResourceResolver,
                     registerWorkspaceResourceProvider,
