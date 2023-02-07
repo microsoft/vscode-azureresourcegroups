@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 import * as arm from '@azure/arm-subscriptions';
-import type { Environment } from '@azure/ms-rest-azure-env';
+import { Environment } from '@azure/ms-rest-azure-env';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
@@ -184,7 +184,7 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
                     authentication: {
                         getSession: () => session
                     },
-                    environment: {} as Environment,
+                    environment: Environment.AzureCloud,
                     isCustomCloud: false,
                     name: s.displayName || 'TODO: ever undefined?',
                     tenantId: '',
