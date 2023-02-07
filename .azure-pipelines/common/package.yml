@@ -12,15 +12,70 @@ steps:
     customCommand: run package
 
 - task: CopyFiles@2
-  displayName: 'Copy vsix to staging directory'
+  displayName: 'Copy vsix to vsix staging directory'
   inputs:
     Contents: '**/*.vsix'
-    TargetFolder: '$(build.artifactstagingdirectory)'
+    TargetFolder: '$(build.artifactstagingdirectory)/vsix'
+
+- task: CopyFiles@2
+  displayName: 'Copy web bundle to web staging directory'
+  inputs:
+    Contents: 'dist/web/*.js*'
+    TargetFolder: '$(build.artifactstagingdirectory)/web/dist/'
+
+- task: CopyFiles@2
+  displayName: 'Copy package.json to web staging directory'
+  inputs:
+    Contents: 'package.json'
+    TargetFolder: '$(build.artifactstagingdirectory)/web'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish artifacts: vsix'
   inputs:
-    PathtoPublish: '$(build.artifactstagingdirectory)'
+    PathtoPublish: '$(build.artifactstagingdirectory)/vsix'
     ArtifactName: vsix
   # Only publish vsix from linux build since we use this to release and want to stay consistent
   condition: and(eq(variables['Agent.OS'], 'Linux'), ne(variables['System.PullRequest.IsFork'], 'True'))
+
+- task: AzureFileCopy@4
+  displayName: 'Upload web to blob storage'
+  inputs:
+    SourcePath: '$(build.artifactstagingdirectory)/web'
+    azureSubscription: ms-azuretools-vscode-dot-dev-connection
+    Destination: AzureBlob
+    storage: $(WEB_BUILDS_STG_ACCT)
+    ContainerName: web-builds
+    BlobPrefix: '$(build.buildnumber)'
+  # Only do steps for publishing web bits on Windows as AzureFileCopy is only supported on Windows
+  condition: and(eq(variables['Agent.OS'], 'Windows_NT'), ne(variables['System.PullRequest.IsFork'], 'True'))
+
+- task: AzureCLI@2
+  displayName: 'Generate SAS to web'
+  inputs:
+    azureSubscription: ms-azuretools-vscode-dot-dev-connection
+    scriptType: 'ps'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      $sasToken = az storage container generate-sas `
+        --account-name $(WEB_BUILDS_STG_ACCT) `
+        --name web-builds `
+        --permissions r `
+        --expiry ((Get-Date).AddDays(6.9)).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssK") `
+        --auth-mode login `
+        --as-user `
+        --out tsv
+      $packageJsonUrl = "https://$(WEB_BUILDS_STG_ACCT).blob.core.windows.net/web-builds/" + "$(build.buildnumber)" + "/web/package.json?" + $sasToken
+      echo $packageJsonUrl
+      $packageJsonUrl | Out-File -FilePath '$(build.artifactstagingdirectory)/web-sas.txt'
+  # Only do steps for publishing web bits on Windows as AzureFileCopy is only supported on Windows
+  condition: and(eq(variables['Agent.OS'], 'Windows_NT'), ne(variables['System.PullRequest.IsFork'], 'True'))
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish artifacts: web-sas'
+  inputs:
+    PathtoPublish: '$(build.artifactstagingdirectory)/web-sas.txt'
+    ArtifactName: web-sas
+  # Only do steps for publishing web bits on Windows as AzureFileCopy is only supported on Windows
+  condition: and(eq(variables['Agent.OS'], 'Windows_NT'), ne(variables['System.PullRequest.IsFork'], 'True'))
+
+
