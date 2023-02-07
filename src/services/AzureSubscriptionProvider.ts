@@ -7,9 +7,9 @@ import type { Environment } from '@azure/ms-rest-azure-env';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import * as vscode from 'vscode';
 import { AzureSubscription } from '../../api/src/index';
-import { AzureLoginStatus } from '../tree/azure-account.api';
 import { settingUtils } from '../utils/settingUtils';
 
+type AzureLoginStatus = 'Initializing' | 'LoggingIn' | 'LoggedIn' | 'LoggedOut';
 export type AzureSubscriptionsResult = {
     readonly status: AzureLoginStatus;
     readonly allSubscriptions: AzureSubscription[];
