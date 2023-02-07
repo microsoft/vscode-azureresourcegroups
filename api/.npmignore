@@ -13,7 +13,10 @@ test-results.xml
 .eslintrc.js
 resources/*.png
 *.tsbuildinfo
+<<<<<<< HEAD
 docs/
+=======
+>>>>>>> 4c48d43 (Create package for consuming extension API (#530))
 
 out/**/*.d.ts
 out/**/*.d.ts.map

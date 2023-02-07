@@ -3,29 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtServiceClientCredentials, IActionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
+import { AzExtServiceClientCredentials, IActionContext, ISubscriptionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { apiUtils, AzureSubscription, ResourceModelBase } from '../../../api/src/index';
+import { AzureSubscription, ResourceModelBase, apiUtils } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
+import { AzureSubscriptionsResult } from '../../services/AzureSubscriptionProvider';
 import { localize } from '../../utils/localize';
-import { AzureAccountExtensionApi, AzureSubscription as AzureAccountSubscription } from '../azure-account.api';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { TreeItemStateStore } from '../TreeItemState';
+import { AzureAccountExtensionApi, AzureSubscription as AzureAccountSubscription } from '../azure-account.api';
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { GroupingItem } from './GroupingItem';
 import { SubscriptionItem } from './SubscriptionItem';
+import { createSubscriptionContext } from './VSCodeAuthentication';
 
 export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase {
     private readonly groupingChangeSubscription: vscode.Disposable;
 
-    private api: AzureAccountExtensionApi | undefined;
+    private api: AzureAccountExtensionApi | AzureSubscriptionsResult | undefined;
     private filtersSubscription: vscode.Disposable | undefined;
     private statusSubscription: vscode.Disposable | undefined;
+    private isWeb: boolean;
 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -64,6 +67,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         //       as we're just rearranging known items; we might try caching resource items and only calling getTreeItem() on
         //       branch providers during the tree refresh that results from this (rather than getChildren() again).
         this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => this.notifyTreeDataChanged());
+        this.isWeb = vscode.env.uiKind === vscode.UIKind.Desktop;
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
@@ -81,16 +85,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                             subscription => new SubscriptionItem(
                                 {
                                     subscription: this.createAzureSubscription(subscription),
-                                    subscriptionContext: {
-                                        credentials: <AzExtServiceClientCredentials>subscription.session.credentials2,
-                                        subscriptionDisplayName: nonNullProp(subscription.subscription, 'displayName'),
-                                        subscriptionId: nonNullProp(subscription.subscription, 'subscriptionId'),
-                                        subscriptionPath: nonNullProp(subscription.subscription, 'id'),
-                                        tenantId: subscription.session.tenantId,
-                                        userId: subscription.session.userId,
-                                        environment: subscription.session.environment,
-                                        isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud'
-                                    },
+                                    subscriptionContext: this.createSubscriptionContext(subscription),
                                     refresh: item => this.notifyTreeDataChanged(item),
                                 },
                                 this.resourceGroupingManager,
@@ -102,7 +97,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                         new GenericItem(
                             localize('signInLabel', 'Sign in to Azure...'),
                             {
-                                commandId: 'azure-account.login',
+                                commandId: 'azureResourceGroups.accounts.logIn',
                                 iconPath: new vscode.ThemeIcon('sign-in')
                             }),
                         new GenericItem(
@@ -126,7 +121,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                                 ? localize('loadingTreeItem', 'Loading...')
                                 : localize('signingIn', 'Waiting for Azure sign-in...'),
                             {
-                                commandId: 'azure-account.login',
+                                commandId: 'azureResourceGroups.accounts.logIn',
                                 iconPath: new vscode.ThemeIcon('loading~spin')
                             })
                     ];
@@ -144,7 +139,11 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         return super.isAncestorOf(element, id)
     }
 
-    private async getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi | undefined> {
+    private async getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi | AzureSubscriptionsResult | undefined> {
+        if (this.isWeb) {
+            return await ext.subscriptionProvider.getSubscriptions();
+        }
+
         if (!this.api) {
             const extension = vscode.extensions.getExtension<apiUtils.AzureExtensionApiProvider>('ms-vscode.azure-account');
 
@@ -168,6 +167,10 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     }
 
     private createAzureSubscription(subscription: AzureAccountSubscription): AzureSubscription {
+        if (this.isWeb) {
+            return subscription as unknown as AzureSubscription;
+        }
+
         return {
             authentication: {
                 getSession: async scopes => {
@@ -194,5 +197,23 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
             subscriptionId: subscription.subscription.subscriptionId || 'TODO: ever undefined?',
             tenantId: subscription.session.tenantId
         };
+    }
+
+    private createSubscriptionContext(subscription: AzureAccountSubscription): ISubscriptionContext {
+        if (this.isWeb) {
+            // TODO: This is a hack to get the subscription context to work with the webview
+            return createSubscriptionContext(subscription as unknown as AzureSubscription);
+        }
+
+        return {
+            credentials: <AzExtServiceClientCredentials>subscription.session.credentials2,
+            subscriptionDisplayName: nonNullProp(subscription.subscription, 'displayName'),
+            subscriptionId: nonNullProp(subscription.subscription, 'subscriptionId'),
+            subscriptionPath: nonNullProp(subscription.subscription, 'id'),
+            tenantId: subscription.session.tenantId,
+            userId: subscription.session.userId,
+            environment: subscription.session.environment,
+            isCustomCloud: subscription.session.environment.name === 'AzureCustomCloud'
+        }
     }
 }

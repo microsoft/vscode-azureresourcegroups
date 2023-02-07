@@ -5,19 +5,20 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
-import { AzureSubscription, AzureSubscriptionProvider, AzureSubscriptionStatus } from "../../services/AzureSubscriptionProvider";
+import { AzureSubscription } from '../../../api/src/index';
+import { ext } from "../../extensionVariables";
 
-export async function selectSubscriptions(_context: IActionContext, subscriptionProvider: AzureSubscriptionProvider): Promise<void> {
-    const results = await subscriptionProvider.getSubscriptions();
+export async function selectSubscriptions(_context: IActionContext): Promise<void> {
+    const results = await ext.subscriptionProvider.getSubscriptions();
 
-    if (results.status === AzureSubscriptionStatus.LoggedIn) {
+    if (results.status === 'LoggedIn') {
 
         const subscriptionQuickPickItems: (vscode.QuickPickItem & { subscription: AzureSubscription })[] =
             results
                 .allSubscriptions
                 .map(subscription => ({
-                    label: subscription.displayName,
-                    picked: results.selectedSubscriptions.includes(subscription),
+                    label: subscription.name,
+                    picked: results.filters.includes(subscription),
                     subscription
                 }))
                 .sort((a, b) => a.label.localeCompare(b.label));
@@ -30,9 +31,9 @@ export async function selectSubscriptions(_context: IActionContext, subscription
             });
 
         if (picks) {
-            await subscriptionProvider.selectSubscriptions(
+            await ext.subscriptionProvider.selectSubscriptions(
                 picks.length < results.allSubscriptions.length
-                    ? picks.map(pick => pick.subscription.id)
+                    ? picks.map(pick => pick.subscription.subscriptionId)
                     : undefined);
         }
     }

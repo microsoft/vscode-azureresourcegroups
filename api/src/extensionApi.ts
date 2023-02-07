@@ -3,6 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import type { ActivityApi } from "./activity";
 import type { ResourcesApi } from "./resources/resourcesApi";
 import { AzureExtensionApi } from "./utils/apiUtils";
 
@@ -10,5 +11,6 @@ import { AzureExtensionApi } from "./utils/apiUtils";
  * The current (v2) Azure Resources extension API.
  */
 export interface AzureResourcesExtensionApi extends AzureExtensionApi {
+    activity: ActivityApi;
     resources: ResourcesApi;
 }

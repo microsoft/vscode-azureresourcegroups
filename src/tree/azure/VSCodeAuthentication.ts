@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-dev';
+import type { Environment } from '@azure/ms-rest-azure-env';
+import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzureSubscription } from '../../../api/src/index';
-import * as vscodeAccount from '../../tree/azure/VSCodeAuthentication';
 import { localize } from '../../utils/localize';
 
 /**
@@ -36,18 +36,18 @@ export function createCredential(getSession: (scopes?: string[]) => vscode.Provi
 }
 
 /**
- * Creates a subscription context from an Azure subscription.
+ * Creates a subscription context from an application subscription.
  */
 export function createSubscriptionContext(subscription: AzureSubscription): ISubscriptionContext {
-    if (!subscription.authentication) {
-        return vscodeAccount.createSubscriptionContext(subscription);
-    }
-
     return {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        environment: {} as Environment,
+        isCustomCloud: false,
         subscriptionDisplayName: subscription.name,
-        subscriptionPath: subscription.subscriptionId,
+        subscriptionId: subscription.subscriptionId,
+        subscriptionPath: '',
+        tenantId: '',
         userId: '',
-        ...subscription,
         credentials: createCredential(subscription.authentication.getSession)
     };
 }

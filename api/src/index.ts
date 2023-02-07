@@ -4,6 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 export * from './AzExtResourceType';
+export * from './activity';
 export * from './extensionApi';
 export * from './resources/azure';
 export * from './resources/base';

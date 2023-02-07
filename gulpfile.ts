@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { gulp_installAzureAccount, gulp_webpack } from '@microsoft/vscode-azext-dev';
+import { gulp_webpack } from '@microsoft/vscode-azext-dev';
 import * as fs from 'fs/promises';
 import * as gulp from 'gulp';
 import * as path from 'path';
@@ -50,6 +50,5 @@ async function cleanReadme(): Promise<void> {
 
 exports['webpack-dev'] = gulp.series(prepareForWebpack, () => gulp_webpack('development'));
 exports['webpack-prod'] = gulp.series(prepareForWebpack, () => gulp_webpack('production'));
-exports.preTest = gulp_installAzureAccount;
 exports.listIcons = listIcons;
 exports.cleanReadme = cleanReadme;

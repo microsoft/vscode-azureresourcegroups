@@ -3,31 +3,17 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 import * as arm from '@azure/arm-subscriptions';
+import { Environment } from '@azure/ms-rest-azure-env';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import * as vscode from 'vscode';
+import { AzureSubscription } from '../../api/src/index';
 import { settingUtils } from '../utils/settingUtils';
 
-export interface AzureSubscription {
-    readonly displayName: string;
-    readonly id: string;
-
-    getSession(scopes?: string[]): vscode.ProviderResult<vscode.AuthenticationSession>;
-}
-
-export enum AzureSubscriptionStatus {
-    Initializing,
-    LoggedOut,
-    SigningIn,
-    LoggedIn
-}
-
+type AzureLoginStatus = 'Initializing' | 'LoggingIn' | 'LoggedIn' | 'LoggedOut';
 export type AzureSubscriptionsResult = {
-    readonly status: AzureSubscriptionStatus.Initializing | AzureSubscriptionStatus.LoggedOut | AzureSubscriptionStatus.SigningIn;
-} | {
-    readonly status: AzureSubscriptionStatus.LoggedIn;
-
+    readonly status: AzureLoginStatus;
     readonly allSubscriptions: AzureSubscription[];
-    readonly selectedSubscriptions: AzureSubscription[];
+    readonly filters: AzureSubscription[];
 }
 
 export interface AzureSubscriptionProvider {
@@ -49,14 +35,22 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
 
     async getSubscriptions(): Promise<AzureSubscriptionsResult> {
         if (!this.isLoggedIn()) {
-            return { status: AzureSubscriptionStatus.LoggedOut };
+            return {
+                status: 'LoggedOut',
+                allSubscriptions: [],
+                filters: []
+            };
         }
 
         // Try to get the default session to verify the user is really logged-in...
         const session = await this.getSession();
 
         if (!session) {
-            return { status: AzureSubscriptionStatus.LoggedOut };
+            return {
+                status: 'LoggedOut',
+                allSubscriptions: [],
+                filters: []
+            };
         }
 
         const allSubscriptions: AzureSubscription[] = [];
@@ -77,12 +71,12 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
         }
 
         const selectedSubscriptionIds = settingUtils.getGlobalSetting<string[] | undefined>('selectedSubscriptions');
-        const selectedSubscriptions = allSubscriptions.filter(s => selectedSubscriptionIds === undefined || selectedSubscriptionIds.includes(s.id));
+        const filters = allSubscriptions.filter(s => selectedSubscriptionIds === undefined || selectedSubscriptionIds.includes(s.subscriptionId));
 
         return {
-            status: session ? AzureSubscriptionStatus.LoggedIn : AzureSubscriptionStatus.LoggedOut,
+            status: session ? 'LoggedIn' : 'LoggedOut',
             allSubscriptions,
-            selectedSubscriptions
+            filters
         };
     }
 
@@ -98,8 +92,17 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
         await this.updateStatus(false);
     }
 
+    get status(): AzureLoginStatus {
+        if (!this.isLoggedIn()) {
+            return 'LoggedOut'
+        } else {
+            return 'LoggedIn'
+        }
+    }
+
     async selectSubscriptions(subscriptionIds: string[] | undefined): Promise<void> {
         await this.updateSelectedSubscriptions(subscriptionIds);
+
 
         this._onSubscriptionsChanged.fire();
     }
@@ -175,7 +178,18 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
 
         return {
             client,
-            subscriptions: subscriptions.map(s => ({ displayName: s.displayName ?? 'name', id: s.subscriptionId ?? 'id', getSession: () => session }))
+            subscriptions: subscriptions.map(s => (
+                {
+                    displayName: s.displayName ?? 'name',
+                    authentication: {
+                        getSession: () => session
+                    },
+                    environment: Environment.AzureCloud,
+                    isCustomCloud: false,
+                    name: s.displayName || 'TODO: ever undefined?',
+                    tenantId: '',
+                    subscriptionId: s.subscriptionId ?? 'id',
+                })),
         };
     }
 }

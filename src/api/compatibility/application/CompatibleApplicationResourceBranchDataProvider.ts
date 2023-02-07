@@ -27,6 +27,8 @@ export class CompatibleApplicationResourceBranchDataProvider<TResource extends A
         const subscriptionContext: ISubscriptionContext = createSubscriptionContext(element.subscription);
 
         const resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
+        // the fact that resolved can be null makes this painful to assert with nonNullValue
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const result = CompatibleResolvedApplicationResourceTreeItem.Create(element, resolved!, subscriptionContext, this, element) as unknown as TModel;
         Object.defineProperty(result, 'fullId', {
             get: () => {
