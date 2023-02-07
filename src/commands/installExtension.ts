@@ -29,6 +29,8 @@ export async function installExtension(context: IActionContext, extensionId: str
                 }
             });
 
+            // Listen for extension change events for 1 minute at most.
+            // If VS Code is closed before this timeout, the event for this command isn't sent.
             const timeout = setTimeout(() => {
                 disposable.dispose();
                 resolve();
