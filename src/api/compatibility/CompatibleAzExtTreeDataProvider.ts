@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { SubscriptionTreeItemBase } from "@microsoft/vscode-azext-azureutils";
-import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeDataProvider, AzExtTreeItem, IActionContext, isAzExtParentTreeItem, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
 import { Disposable, Event, TreeItem, TreeView } from "vscode";
 import { isWrapper } from "../../../api/src/index";
 import { ResourceGroupsItem } from "../../tree/ResourceGroupsItem";
@@ -64,8 +64,10 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
     }
 
     public override refresh(_context: IActionContext, treeItem?: AzExtTreeItem | undefined): Promise<void> {
-
-        // Flush the cache at and below the given treeItem
+        if (isAzExtParentTreeItem(treeItem)) {
+            // Flush the cache at and below the given treeItem
+            (treeItem as unknown as { clearCache(): void }).clearCache();
+        }
         // Trigger a refresh at the given treeItem
         this.tdp.notifyTreeDataChanged(treeItem as unknown as ResourceGroupsItem);
 
