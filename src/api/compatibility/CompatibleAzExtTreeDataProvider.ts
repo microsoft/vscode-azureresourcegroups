@@ -76,11 +76,6 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
         this.tdp.notifyTreeDataChanged(treeItem);
     }
 
-    public override loadMore(_treeItem: AzExtTreeItem, _context: IActionContext): Promise<void> {
-        // TODO: unknown how this will be implemented?
-        throw new Error('TODO: Implement this using the new load more approach');
-    }
-
     //#region Things that should not be called
     public override trackTreeItemCollapsibleState(_treeView: TreeView<AzExtTreeItem>): Disposable {
         throw new ShouldNeverBeCalledError('trackTreeItemCollapsibleState method');
