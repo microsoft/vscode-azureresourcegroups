@@ -21,7 +21,7 @@ export async function installExtension(context: IActionContext, extensionId: str
         return new Promise((resolve) => {
             const disposable = extensions.onDidChange(() => {
                 const installed = isInstalled();
-                context.telemetry.properties.installedAfter30s = String(isInstalled());
+                context.telemetry.properties.installedAfter1m = String(isInstalled());
 
                 if (installed) {
                     disposable.dispose();
@@ -31,10 +31,10 @@ export async function installExtension(context: IActionContext, extensionId: str
             });
 
             const timeout = setTimeout(() => {
-                context.telemetry.properties.installedAfter30s = 'false';
+                context.telemetry.properties.installedAfter1m = 'false';
                 disposable.dispose();
                 resolve();
-            }, 1000 * 30 /* 30 seconds */);
+            }, 1000 * 60 * 1 /* 1 minute */);
         });
     }
 }
