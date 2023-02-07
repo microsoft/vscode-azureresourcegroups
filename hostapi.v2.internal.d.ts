@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 import { ActivityApi } from '@microsoft/vscode-azext-utils/activity';
-=======
->>>>>>> 4c48d43 (Create package for consuming extension API (#530))
 import * as vscode from 'vscode';
 import { AzureResource, AzureResourcesExtensionApi, AzureSubscription, ResourceProvider, ResourcesApi } from "./api/src/index";
 

@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { isAzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { nanoid } from 'nanoid';
 import * as vscode from 'vscode';
-import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel } from '../../api/src/index';
+import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel, Wrapper } from '../../api/src/index';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 

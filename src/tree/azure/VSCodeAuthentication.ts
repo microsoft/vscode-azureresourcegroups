@@ -5,8 +5,8 @@
 
 import type { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
-import { AzureSubscription } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
+import { AzureSubscription } from '../../../api/src/index';
 import { localize } from '../../utils/localize';
 
 /**

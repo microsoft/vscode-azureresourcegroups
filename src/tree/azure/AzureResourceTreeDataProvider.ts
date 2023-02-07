@@ -3,17 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-<<<<<<< HEAD
 import { AzExtServiceClientCredentials, IActionContext, ISubscriptionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
-import { AzureSubscription, ResourceModelBase } from '@microsoft/vscode-azext-utils/hostapi.v2';
 import * as vscode from 'vscode';
-import { apiUtils } from '../../../api/src/index';
-=======
-import { AzExtServiceClientCredentials, IActionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
-import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
-import * as vscode from 'vscode';
-import { AzureSubscription, ResourceModelBase } from '../../../api/src/index';
->>>>>>> 4c48d43 (Create package for consuming extension API (#530))
+import { AzureSubscription, ResourceModelBase, apiUtils } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -36,6 +28,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     private api: AzureAccountExtensionApi | AzureSubscriptionsResult | undefined;
     private filtersSubscription: vscode.Disposable | undefined;
     private statusSubscription: vscode.Disposable | undefined;
+    private isWeb: boolean;
 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -74,6 +67,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         //       as we're just rearranging known items; we might try caching resource items and only calling getTreeItem() on
         //       branch providers during the tree refresh that results from this (rather than getChildren() again).
         this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => this.notifyTreeDataChanged());
+        this.isWeb = vscode.env.uiKind === vscode.UIKind.Desktop;
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
@@ -146,7 +140,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     }
 
     private async getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi | AzureSubscriptionsResult | undefined> {
-        if (vscode.env.uiKind === vscode.UIKind.Web) {
+        if (this.isWeb) {
             return await ext.subscriptionProvider.getSubscriptions();
         }
 
@@ -173,7 +167,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     }
 
     private createAzureSubscription(subscription: AzureAccountSubscription): AzureSubscription {
-        if (vscode.env.uiKind === vscode.UIKind.Web) {
+        if (this.isWeb) {
             return subscription as unknown as AzureSubscription;
         }
 
@@ -206,7 +200,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     }
 
     private createSubscriptionContext(subscription: AzureAccountSubscription): ISubscriptionContext {
-        if (vscode.env.uiKind === vscode.UIKind.Web) {
+        if (this.isWeb) {
             // TODO: This is a hack to get the subscription context to work with the webview
             return createSubscriptionContext(subscription as unknown as AzureSubscription);
         }

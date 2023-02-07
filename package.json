@@ -568,11 +568,7 @@
     "devDependencies": {
         "@microsoft/api-extractor": "^7.33.8",
         "@microsoft/eslint-config-azuretools": "^0.1.0",
-<<<<<<< HEAD
         "@microsoft/vscode-azext-dev": "^0.2.0",
-=======
-        "@microsoft/vscode-azext-dev": "^0.1.5",
->>>>>>> 4c48d43 (Create package for consuming extension API (#530))
         "@types/gulp": "^4.0.6",
         "@types/mocha": "^7.0.2",
         "@types/node": "^14.0.0",
@@ -601,6 +597,7 @@
         "@azure/arm-subscriptions": "^5.0.1",
         "@microsoft/vscode-azext-azureutils": "file:../vscode-azuretools/azure/microsoft-vscode-azext-azureutils-0.4.0.tgz",
         "@microsoft/vscode-azext-utils": "file:../vscode-azuretools/utils/microsoft-vscode-azext-utils-0.4.1-alpha.0.tgz",
+        "canvas-webworker": "^0.0.3",
         "jsonc-parser": "^2.2.1",
         "nanoid": "^4.0.0",
         "vscode-nls": "^5.0.1",

@@ -4,18 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
-<<<<<<< HEAD
 import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { AzExtResourceType, AzureResource } from "api/src";
-import { commands, Extension, extensions } from "vscode";
+import { Extension, commands, extensions } from "vscode";
 import { apiUtils } from '../api/src/utils/apiUtils';
-=======
-import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
-import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
-import { commands, Extension, extensions } from "vscode";
-import { AzExtResourceType, AzureResource } from '../api/src/index';
->>>>>>> 4c48d43 (Create package for consuming extension API (#530))
-import { azureExtensions, IAzExtMetadata, IAzExtTutorial } from "./azureExtensions";
+import { IAzExtMetadata, IAzExtTutorial, azureExtensions } from "./azureExtensions";
 import { contributesKey } from "./constants";
 
 let wrappers: AzExtWrapper[] | undefined;

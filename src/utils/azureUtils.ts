@@ -4,18 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
-<<<<<<< HEAD
-import { AzExtResourceType, TreeItemIconPath, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { TreeItemIconPath, nonNullProp } from '@microsoft/vscode-azext-utils';
 import { AppResource, GroupNodeConfiguration, GroupingConfig } from '@microsoft/vscode-azext-utils/hostapi';
 import { ThemeIcon } from 'vscode';
 import { URI, Utils } from 'vscode-uri';
-=======
-import { nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { AppResource, GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
-import * as path from 'path';
-import { ThemeIcon } from 'vscode';
 import { AzExtResourceType } from '../../api/src/index';
->>>>>>> 4c48d43 (Create package for consuming extension API (#530))
 import { IAzExtMetadata, legacyTypeMap } from '../azureExtensions';
 import { localize } from './localize';
 import { treeUtils } from './treeUtils';

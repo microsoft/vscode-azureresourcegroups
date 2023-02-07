@@ -4,8 +4,8 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { AzureSubscription } from "@microsoft/vscode-azext-utils/hostapi.v2";
 import * as vscode from 'vscode';
+import { AzureSubscription } from '../../../api/src/index';
 import { ext } from "../../extensionVariables";
 
 export async function selectSubscriptions(_context: IActionContext): Promise<void> {
