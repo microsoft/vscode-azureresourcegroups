@@ -36,6 +36,7 @@ export function wrapFunctionsInTelemetry<TFunctions extends Record<string, (...a
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.suppressReportIssue = true;
                 options?.beforeHook?.(context);
+                // await to ensure errors are handled in this scope
                 return await func(...args);
             });
         }
