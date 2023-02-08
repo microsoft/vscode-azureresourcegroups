@@ -64,8 +64,8 @@ steps:
         --auth-mode login `
         --as-user `
         --out tsv
-      $packageJsonUrl = "https://$(WEB_BUILDS_STG_ACCT).blob.core.windows.net/web-builds/" + "$(build.buildnumber)" + "/web/package.json?" + $sasToken
-      echo $packageJsonUrl
+      $sasToken -replace ("%", "%25")
+      $packageJsonUrl = "https://$(WEB_BUILDS_STG_ACCT).blob.core.windows.net/web-builds/" + "$(build.buildnumber)" + "/web/?" + $sasToken
       $packageJsonUrl | Out-File -FilePath '$(build.artifactstagingdirectory)/web-sas.txt'
   # Only do steps for publishing web bits on Windows as AzureFileCopy is only supported on Windows
   condition: and(eq(variables['Agent.OS'], 'Windows_NT'), ne(variables['System.PullRequest.IsFork'], 'True'))
