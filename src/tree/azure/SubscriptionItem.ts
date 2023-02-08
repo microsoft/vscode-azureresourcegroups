@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { AzExtResourceType, AzureSubscription } from "../../../api/src/index";
 import { AzureResourceProviderManager } from "../../api/ResourceProviderManagers";
@@ -12,7 +12,6 @@ import { showHiddenTypesSettingKey } from "../../constants";
 import { settingUtils } from "../../utils/settingUtils";
 import { treeUtils } from "../../utils/treeUtils";
 import { createPortalUrl } from "../../utils/v2/createPortalUrl";
-import { createSubscriptionContext } from "../../utils/v2/credentialsUtils";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
 import { AzureResourceGroupingManager } from "./AzureResourceGroupingManager";
@@ -45,15 +44,25 @@ export class SubscriptionItem implements ResourceGroupsItem {
     public readonly subscription: ISubscriptionContext & AzureSubscription;
 
     async getChildren(): Promise<ResourceGroupsItem[]> {
-        let resources = await this.resourceProviderManager.getResources(this.subscription);
+        return await callWithTelemetryAndErrorHandling('subscriptionItem.getChildren', async (context: IActionContext) => {
+            let resources = await this.resourceProviderManager.getResources(this.subscription);
+            context.telemetry.measurements.resourceCount = resources.length;
 
-        const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
+            const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
+            context.telemetry.properties.showHiddenTypes = String(showHiddenTypes);
 
-        if (!showHiddenTypes) {
-            resources = resources.filter(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' || (resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType)));
-        }
+            if (!showHiddenTypes) {
+                resources = resources.filter(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' || (resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType)));
+            }
 
-        return this.resourceGroupingManager.groupResources(this, this.context, resources ?? []).sort((a, b) => a.label.localeCompare(b.label));
+            const groupBySetting = settingUtils.getWorkspaceSetting<string>('groupBy');
+            context.telemetry.properties.groupBySetting = groupBySetting?.startsWith('armTag') ? 'armTag' : groupBySetting;
+
+            const groupingItems = this.resourceGroupingManager.groupResources(this, this.context, resources ?? [], groupBySetting).sort((a, b) => a.label.localeCompare(b.label));
+            context.telemetry.measurements.groupCount = groupingItems.length;
+
+            return groupingItems;
+        }) ?? [];
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {

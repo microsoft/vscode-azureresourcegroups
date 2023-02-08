@@ -3,10 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, parseError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/src/index';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { BranchDataItemWrapper } from './BranchDataProviderItem';
+import { InvalidItem } from './InvalidItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { TreeItemStateStore } from './TreeItemState';
 
@@ -32,31 +34,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
                 this.resourceProviderManagerListener.dispose();
             });
 
-        this.branchTreeDataChangeSubscription = onDidChangeBranchTreeData(
-            (e: void | ResourceModelBase | ResourceModelBase[] | null | undefined) => {
-                const rgItems: ResourceGroupsItem[] = [];
-
-                // eslint-disable-next-line no-extra-boolean-cast
-                if (!!e) {
-                    // e was defined, either a single item or array
-                    // Make an array for consistency
-                    const branchItems: unknown[] = Array.isArray(e) ? e : [e];
-
-                    for (const branchItem of branchItems) {
-                        const rgItem = this.itemCache.getItemForBranchItem(branchItem);
-
-                        if (rgItem) {
-                            rgItems.push(rgItem);
-                        }
-                    }
-                    this.onDidChangeTreeDataEmitter.fire(rgItems)
-                } else {
-                    // e was null/undefined/void
-                    // Translate it to fire on all elements for this branch data provider
-                    // TODO
-                    this.onDidChangeTreeDataEmitter.fire();
-                }
-            });
+        this.branchTreeDataChangeSubscription = onDidChangeBranchTreeData(e => this.notifyTreeDataChanged(e));
 
         this.refreshSubscription = onRefresh((e) => this.onDidChangeTreeDataEmitter.fire(e));
 
@@ -66,12 +44,42 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
 
-    notifyTreeDataChanged(data: void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined): void {
-        this.onDidChangeTreeDataEmitter.fire(data);
+    notifyTreeDataChanged(data: void | ResourceModelBase | ResourceModelBase[] | null | undefined): void {
+        const rgItems: ResourceGroupsItem[] = [];
+
+        // eslint-disable-next-line no-extra-boolean-cast
+        if (!!data) {
+            // e was defined, either a single item or array
+            // Make an array for consistency
+            const branchItems: unknown[] = Array.isArray(data) ? data : [data];
+
+            for (const branchItem of branchItems) {
+                const rgItem = this.itemCache.getItemForBranchItem(branchItem);
+
+                if (rgItem) {
+                    rgItems.push(rgItem);
+                }
+            }
+            this.onDidChangeTreeDataEmitter.fire(rgItems);
+        } else {
+            // e was null/undefined/void
+            // Translate it to fire on all elements for this branch data provider
+            // TODO
+            this.onDidChangeTreeDataEmitter.fire();
+        }
     }
 
     async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
-        return element.getTreeItem();
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            return (await callWithTelemetryAndErrorHandling('getTreeItem', async (context) => {
+                context.errorHandling.rethrow = true;
+                return await element.getTreeItem();
+            }))!;
+        } catch (e) {
+            const invalidItem = new InvalidItem(parseError(e));
+            return invalidItem.getTreeItem();
+        }
     }
 
     async getChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { createContextValue, ISubscriptionContext, parseError, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription, ViewPropertiesModel } from '../../../api/src/index';
 import { ITagsModel, ResourceTags } from '../../commands/tags/TagFileSystem';
@@ -11,6 +11,7 @@ import { ext } from '../../extensionVariables';
 import { getIconPath } from '../../utils/azureUtils';
 import { createPortalUrl } from '../../utils/v2/createPortalUrl';
 import { BranchDataItemOptions } from '../BranchDataProviderItem';
+import { InvalidItem } from '../InvalidItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
 import { BranchDataProviderFactory } from './AzureResourceBranchDataProviderManager';
@@ -70,23 +71,30 @@ export class GroupingItem implements ResourceGroupsItem {
 
         const resourceItems = await Promise.all(sortedResources.map(
             async resource => {
-                const branchDataProvider = this.branchDataProviderFactory(resource);
-                const resourceItem = await branchDataProvider.getResourceItem(resource);
-
-                const options: BranchDataItemOptions = {
-                    contextValues: ['azureResource'],
-                    defaultId: resource.id,
-                    defaults: {
-                        iconPath: getIconPath(resource.resourceType)
-                    },
-                    portalUrl: resourceItem.portalUrl ?? createPortalUrl(resource.subscription, resource.id),
-                    viewProperties: resourceItem.viewProperties ?? {
-                        label: resource.name,
-                        data: resource.raw
+                try {
+                    const branchDataProvider = this.branchDataProviderFactory(resource);
+                    const resourceItem = await branchDataProvider.getResourceItem(resource);
+                    if (!resourceItem) {
+                        throw new Error('Internal error: getResourceItem returned nullish value')
                     }
-                };
 
-                return this.resourceItemFactory(resource, resourceItem, branchDataProvider, this, options);
+                    const options: BranchDataItemOptions = {
+                        contextValues: ['azureResource'],
+                        defaultId: resource.id,
+                        defaults: {
+                            iconPath: getIconPath(resource.resourceType)
+                        },
+                        portalUrl: resourceItem.portalUrl ?? createPortalUrl(resource.subscription, resource.id),
+                        viewProperties: resourceItem.viewProperties ?? {
+                            label: resource.name,
+                            data: resource.raw
+                        }
+                    };
+
+                    return this.resourceItemFactory(resource, resourceItem, branchDataProvider, this, options);
+                } catch (e) {
+                    return new InvalidItem(parseError(e));
+                }
             }));
 
         return resourceItems;

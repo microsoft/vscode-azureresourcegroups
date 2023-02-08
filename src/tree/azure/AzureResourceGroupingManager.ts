@@ -11,7 +11,6 @@ import { GroupBySettings } from '../../commands/explorer/groupBy';
 import { ext } from '../../extensionVariables';
 import { getIconPath, getName } from '../../utils/azureUtils';
 import { localize } from "../../utils/localize";
-import { settingUtils } from '../../utils/settingUtils';
 import { treeUtils } from '../../utils/treeUtils';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
@@ -42,16 +41,14 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
         return this.onDidChangeGroupingEmitter.event;
     }
 
-    groupResources(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[]): GroupingItem[] {
-        const groupBy = settingUtils.getWorkspaceSetting<string>('groupBy');
-
-        if (groupBy?.startsWith('armTag')) {
-            const tag = groupBy.substring('armTag'.length + 1);
+    groupResources(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[], groupBySetting?: string): GroupingItem[] {
+        if (groupBySetting?.startsWith('armTag')) {
+            const tag = groupBySetting.substring('armTag'.length + 1);
 
             return this.groupByArmTag(parent, context, resources, tag);
         }
 
-        switch (groupBy) {
+        switch (groupBySetting) {
             case GroupBySettings.Location:
 
                 return this.groupByLocation(parent, context, resources);
