@@ -4,14 +4,13 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
-import { IActionContext, nonNullProp, subscriptionExperience } from "@microsoft/vscode-azext-utils";
+import { createSubscriptionContext, IActionContext, nonNullProp, subscriptionExperience } from "@microsoft/vscode-azext-utils";
 import { QuickPickItem } from "vscode";
 import { AzureSubscription } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
 import { createResourceClient } from "../../utils/azureClients";
 import { localize } from "../../utils/localize";
 import { settingUtils } from "../../utils/settingUtils";
-import { createSubscriptionContext } from "../../utils/v2/credentialsUtils";
 
 export function buildGroupByCommand(setting: string) {
     return (context: IActionContext): Promise<void> => groupBy(context, setting);

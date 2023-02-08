@@ -5,7 +5,7 @@
 
 import { ResourceGroup } from '@azure/arm-resources';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizard, IActionContext, IAzureQuickPickItem, nonNullProp, subscriptionExperience, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, createSubscriptionContext, IActionContext, IAzureQuickPickItem, nonNullProp, subscriptionExperience, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import { AzureResource, AzureSubscription } from '../../../../api/src/index';
 import { createResourceGroup } from '../../../api/DefaultAzureResourceProvider';
 import { ext } from '../../../extensionVariables';
@@ -14,7 +14,6 @@ import { createActivityContext } from '../../../utils/activityUtils';
 import { createResourceClient } from '../../../utils/azureClients';
 import { localize } from '../../../utils/localize';
 import { settingUtils } from '../../../utils/settingUtils';
-import { createSubscriptionContext } from '../../../utils/v2/credentialsUtils';
 import { DeleteResourceGroupContext } from '../DeleteResourceGroupContext';
 import { DeleteResourceGroupStep } from '../DeleteResourceGroupStep';
 
