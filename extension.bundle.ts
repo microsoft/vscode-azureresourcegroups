@@ -15,10 +15,17 @@
 // The tests should import '../extension.bundle'. At design-time they live in tests/ and so will pick up this file (extension.bundle.ts).
 // At runtime the tests live in dist/tests and will therefore pick up the main webpack bundle at dist/extension.bundle.js.
 export * from '@microsoft/vscode-azext-utils';
+export * from './api/src';
+export * from './api/src/AzExtResourceType';
+export * from './src/api/DefaultAzureResourceProvider';
+export * from './src/AzureService';
 export * from './src/commands/tags/getTagDiagnostics';
 export * from './src/utils/wrapFunctionsInTelemetry';
 // Export activate/deactivate for main.js
 export { activateInternal, deactivateInternal } from './src/extension';
 export * from './src/extensionVariables';
+export * from './src/tree/azure/AzureResourceItem';
+export * from './src/tree/BranchDataProviderItem';
+export * from './src/tree/InvalidItem';
 
 // NOTE: The auto-fix action "source.organizeImports" does weird things with this file, but there doesn't seem to be a way to disable it on a per-file basis so we'll just let it happen

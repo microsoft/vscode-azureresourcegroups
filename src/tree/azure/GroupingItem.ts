@@ -74,6 +74,7 @@ export class GroupingItem implements ResourceGroupsItem {
                 try {
                     const branchDataProvider = this.branchDataProviderFactory(resource);
                     const resourceItem = await branchDataProvider.getResourceItem(resource);
+
                     const options: BranchDataItemOptions = {
                         contextValues: ['azureResource'],
                         defaultId: resource.id,

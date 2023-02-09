@@ -6,12 +6,21 @@
 import { TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
 import * as vscode from 'vscode';
 import { ext, registerOnActionStartHandler } from '../extension.bundle';
+import { MockAzureAccount } from './api/MockAzureAccountApi';
+import { mockAzureResourcesServiceFactory } from './api/mockServiceFactory';
 
 export let longRunningTestsEnabled: boolean;
 
 // Runs before all tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(1 * 60 * 1000);
+
+    await vscode.extensions.getExtension('ms-azuretools.vscode-azureresourcegroups')?.activate();
+    ext.testing.overrideAzureServiceFactory = mockAzureResourcesServiceFactory;
+
+    const mockAzureAccountApi = new MockAzureAccount(vscode);
+    await mockAzureAccountApi.signIn();
+    ext.testing.overrideAzureAccountApiFactory = () => mockAzureAccountApi;
 
     await vscode.commands.executeCommand('azureResourceGroups.refresh'); // activate the extension before tests begin
     ext.outputChannel = new TestOutputChannel();

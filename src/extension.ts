@@ -84,7 +84,6 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     context.subscriptions.push(azureResourceBranchDataProviderManager);
 
     const azureResourceProviderManager = new AzureResourceProviderManager(() => extensionManager.activateApplicationResourceProviders());
-
     azureResourceProviderManager.addResourceProvider(new DefaultAzureResourceProvider());
 
     const workspaceResourceBranchDataProviderManager = new WorkspaceResourceBranchDataProviderManager(

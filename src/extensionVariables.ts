@@ -6,8 +6,10 @@
 import { AzExtTreeDataProvider, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { DiagnosticCollection, Disposable, Event, EventEmitter, ExtensionContext, TreeView } from "vscode";
+import { AzureAccountExtensionApi } from "../azure-account.api";
 import { AzureResourcesApiInternal } from "../hostapi.v2.internal";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
+import { AzureResourcesServiceFactory } from "./AzureService";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { ResourceGroupsItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
@@ -56,6 +58,11 @@ export namespace ext {
 
     export namespace v2 {
         export let api: AzureResourcesApiInternal;
+    }
+
+    export namespace testing {
+        export let overrideAzureServiceFactory: AzureResourcesServiceFactory | undefined;
+        export let overrideAzureAccountApiFactory: (() => AzureAccountExtensionApi) | undefined;
     }
 
     export const actions = extActions;
