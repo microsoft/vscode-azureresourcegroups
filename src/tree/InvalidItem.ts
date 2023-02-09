@@ -4,13 +4,13 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { IParsedError } from "@microsoft/vscode-azext-utils";
-import { randomUUID } from "crypto";
+import { nanoid } from "nanoid";
 import { ProviderResult, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ResourceGroupsItem } from "./ResourceGroupsItem";
 
 export class InvalidItem implements ResourceGroupsItem {
     constructor(public readonly error: IParsedError) { }
-    id = randomUUID();
+    id = nanoid();
 
     getTreeItem(): TreeItem {
         return {

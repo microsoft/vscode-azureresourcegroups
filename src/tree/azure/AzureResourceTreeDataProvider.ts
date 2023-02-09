@@ -67,6 +67,8 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         //       as we're just rearranging known items; we might try caching resource items and only calling getTreeItem() on
         //       branch providers during the tree refresh that results from this (rather than getChildren() again).
         this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => this.notifyTreeDataChanged());
+        // This needs to be changed, but when debugging in a web environment, the UIKind is Desktop. If you sideload it into the browser, you must
+        // change this to UIKind.Web and then webpack it again
         this.isWeb = vscode.env.uiKind === vscode.UIKind.Desktop;
     }
 
