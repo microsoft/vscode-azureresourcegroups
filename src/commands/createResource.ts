@@ -5,26 +5,44 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import { Command, commands, extensions } from 'vscode';
-import { contributesKey } from '../constants';
+import { Command, commands, Extension, extensions } from 'vscode';
 import { SubscriptionItem } from '../tree/azure/SubscriptionItem';
+import { getResourceContributions } from '../utils/getResourceContributions';
 
-interface AzExtCreateResourceCommand extends Command {
-    title: string;
+interface ContributedCreateResourceCommand extends Command {
     detail?: string;
+    extensionId: string;
 }
 
 export async function createResource(context: IActionContext, node?: SubscriptionItem): Promise<void> {
-    const all = extensions.all;
-
-    const extCommands = all.map((azExt) => azExt.packageJSON?.contributes?.[contributesKey]?.commands as unknown).filter((value) => value !== undefined);
-    const createCommands: AzExtCreateResourceCommand[] = [];
-
-    extCommands.forEach((extCommand: AzExtCreateResourceCommand[]) => createCommands.push(...extCommand));
-
-    const pick = await context.ui.showQuickPick(createCommands.sort((a, b) => a.title.localeCompare(b.title)).map((command: AzExtCreateResourceCommand): IAzureQuickPickItem<AzExtCreateResourceCommand> => ({ label: command.title, data: command, detail: command.detail })), { placeHolder: 'Select a resource to create' });
+    const picks = getPicks(getContributedCreateResourceCommands());
+    const pick: IAzureQuickPickItem<ContributedCreateResourceCommand> = await context.ui.showQuickPick(picks, {
+        placeHolder: 'Select a resource to create'
+    });
 
     if (pick) {
+        // Manually activate extension before executing command to prevent VS Code from serializing arguments.
+        // See https://github.com/microsoft/vscode-azureresourcegroups/issues/559 for details.
+        await extensions.getExtension(pick.data.extensionId)?.activate();
         await commands.executeCommand(pick.data.command, node);
     }
+}
+
+function getPicks(createResourceCommands: ContributedCreateResourceCommand[]): IAzureQuickPickItem<ContributedCreateResourceCommand>[] {
+    return createResourceCommands
+        .sort((a, b) => a.title.localeCompare(b.title))
+        .map(command => ({
+            label: command.title,
+            data: command,
+            detail: command.detail,
+        }));
+}
+
+function getContributedCreateResourceCommands(): ContributedCreateResourceCommand[] {
+    const getCommandsForExtension = (extension: Extension<unknown>): ContributedCreateResourceCommand[] | undefined =>
+        getResourceContributions(extension)?.commands?.map(command => ({ extensionId: extension.id, ...command }));
+
+    const createCommands: ContributedCreateResourceCommand[] = [];
+    extensions.all.forEach(extension => createCommands.push(...(getCommandsForExtension(extension) ?? [])));
+    return createCommands;
 }
