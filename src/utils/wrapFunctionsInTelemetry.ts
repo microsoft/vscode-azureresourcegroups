@@ -3,7 +3,26 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, callWithTelemetryAndErrorHandlingSync, IActionContext } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, callWithTelemetryAndErrorHandlingSync, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
+import { ext } from "../extensionVariables";
+
+function stringifyError(e: unknown): string {
+    const error = parseError(e);
+    let str = `${error.message}`;
+    if (error.stack) {
+        str = str.concat(`\n\t\tat ${error.stack.split('\n').join('\n\t\t')}`);
+    }
+    return str;
+}
+
+function handleError(e: unknown, functionName: string): void {
+    ext.outputChannel.appendLog(`Internal error: '${functionName}' threw an exception\n\t${stringifyError(e)}`);
+    if (e instanceof Error) {
+        // shortened message since it might be displayed on the tree
+        e.message = `Internal error: '${functionName}' threw exception ${parseError(e).message}`;
+    }
+    throw e;
+}
 
 interface WrapFunctionsInTelemetryOptions {
     /**
@@ -43,7 +62,11 @@ export function wrapFunctionsInTelemetry<TFunctions extends Record<string, (...a
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.suppressReportIssue = true;
                 options?.beforeHook?.(context);
-                return await func(...args);
+                try {
+                    return await func(...args);
+                } catch (e) {
+                    handleError(e, (options?.callbackIdPrefix ?? '') + functionName);
+                }
             });
         }
     });
@@ -71,10 +94,15 @@ export function wrapFunctionsInTelemetrySync<TFunctions extends Record<string, (
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.suppressReportIssue = true;
                 options?.beforeHook?.(context);
-                return func(...args);
+                try {
+                    return func(...args);
+                } catch (e) {
+                    handleError(e, (options?.callbackIdPrefix ?? '') + functionName);
+                }
             });
         }
     });
 
     return wrappedFunctions as TFunctions;
 }
+
