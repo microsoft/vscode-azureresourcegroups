@@ -3,7 +3,8 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, IActionContext, parseError } from "@microsoft/vscode-azext-utils";
+import { ext } from "../extensionVariables";
 
 interface WrapFunctionsInTelemetryOptions {
     /**
@@ -36,11 +37,29 @@ export function wrapFunctionsInTelemetry<TFunctions extends Record<string, (...a
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.suppressReportIssue = true;
                 options?.beforeHook?.(context);
-                // await to ensure errors are handled in this scope
-                return await func(...args);
+                try {
+                    // await to ensure errors are handled in this scope
+                    return await func(...args);
+                } catch (e) {
+                    ext.outputChannel.appendLog(`Internal error: '${functionName}' threw an exception\n\t${stringifyError(e)}`);
+                    if (e instanceof Error) {
+                        // shortened message since it might be displayed on the tree
+                        e.message = `Internal error: '${functionName}' threw exception ${parseError(e).message}`;
+                    }
+                    throw e;
+                }
             });
         }
     });
 
     return wrappedFunctions as TFunctions;
+}
+
+function stringifyError(e: unknown): string {
+    const error = parseError(e);
+    let str = `${error.message}`;
+    if (error.stack) {
+        str = str.concat(`\n\t\tat ${error.stack.split('\n').join('\n\t\t')}`);
+    }
+    return str;
 }
