@@ -24,9 +24,9 @@ steps:
         TargetFolder: '$(build.artifactstagingdirectory)/web/'
 
     - task: CopyFiles@2
-      displayName: 'Copy package.json to web staging directory'
+      displayName: 'Copy package*.json to web staging directory'
       inputs:
-        Contents: 'package.json'
+        Contents: 'package*.json'
         TargetFolder: '$(build.artifactstagingdirectory)/web'
 
     - task: PublishBuildArtifacts@1
