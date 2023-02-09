@@ -17,6 +17,7 @@
 export * from '@microsoft/vscode-azext-utils';
 export * from './src/commands/tags/getTagDiagnostics';
 export * from './src/utils/wrapFunctionsInTelemetry';
+export * from './api/src/utils/wrapper';
 // Export activate/deactivate for main.js
 export { activateInternal, deactivateInternal } from './src/extension';
 export * from './src/extensionVariables';
