@@ -21,7 +21,7 @@ steps:
       displayName: 'Copy web bundle to web staging directory'
       inputs:
         Contents: 'dist/web/*.js*'
-        TargetFolder: '$(build.artifactstagingdirectory)/web/dist/'
+        TargetFolder: '$(build.artifactstagingdirectory)/web/'
 
     - task: CopyFiles@2
       displayName: 'Copy package.json to web staging directory'
