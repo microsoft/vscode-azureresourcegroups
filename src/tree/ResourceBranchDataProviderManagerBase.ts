@@ -85,7 +85,6 @@ function wrapBranchDataProvider<TBranchDataProvider extends BranchDataProvider<R
                     }
                     return result;
                 },
-                // getResourceItem: branchDataProvider.getResourceItem.bind(branchDataProvider) as typeof branchDataProvider.getResourceItem,
                 getParent: branchDataProvider.getParent?.bind(branchDataProvider) as typeof branchDataProvider.getChildren,
             },
             {
