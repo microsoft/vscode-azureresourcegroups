@@ -13,6 +13,9 @@ const process = require('process');
 const dev = require("@microsoft/vscode-azext-dev");
 const webpack = require('webpack');
 
+const stdLibBrowser = require('node-stdlib-browser');
+const { NodeProtocolUrlPlugin } = require('node-stdlib-browser/helpers/webpack/plugin');
+
 let DEBUG_WEBPACK = !/^(false|0)?$/i.test(process.env.DEBUG_WEBPACK || '');
 
 const config = dev.getDefaultWebpackConfig({
@@ -45,7 +48,15 @@ const webConfig = dev.getDefaultWebpackConfig({
         '../build/default/bufferutil': 'commonjs ../build/default/bufferutil',
     },
     target: 'webworker',
-
+    resolve: {
+        alias: stdLibBrowser
+    },
+    plugins: [
+        new NodeProtocolUrlPlugin(),
+        new webpack.ProvidePlugin({
+            Buffer: [stdLibBrowser.buffer, 'Buffer']
+        })
+    ]
 });
 
 if (DEBUG_WEBPACK) {
