@@ -54,7 +54,8 @@ const webConfig = dev.getDefaultWebpackConfig({
     plugins: [
         new NodeProtocolUrlPlugin(),
         new webpack.ProvidePlugin({
-            Buffer: [stdLibBrowser.buffer, 'Buffer']
+            Buffer: [stdLibBrowser.buffer, 'Buffer'],
+            crypto: require.resolve('crypto-browserify')
         })
     ]
 });
