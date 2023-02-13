@@ -48,9 +48,6 @@ const webConfig = dev.getDefaultWebpackConfig({
         '../build/default/bufferutil': 'commonjs ../build/default/bufferutil',
     },
     target: 'webworker',
-    resolve: {
-        alias: stdLibBrowser
-    },
     plugins: [
         new NodeProtocolUrlPlugin(),
         new webpack.ProvidePlugin({
