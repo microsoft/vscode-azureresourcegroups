@@ -9,8 +9,11 @@ import { wrapFunctionsInTelemetry, wrapFunctionsInTelemetrySync } from '../utils
 
 export function createWrappedAzureResourcesExtensionApi(api: AzureResourcesApiInternal, extensionId: string): AzureResourcesApiInternal {
     const wrapOptions = {
-        callbackIdPrefix: 'v2.',
-        beforeHook: (context: IActionContext) => context.telemetry.properties.callingExtensionId = extensionId,
+        callbackIdPrefix: 'api.',
+        beforeHook: (context: IActionContext) => {
+            context.telemetry.properties.callingExtensionId = extensionId;
+            context.telemetry.properties.apiVersion = api.apiVersion;
+        }
     };
 
     return Object.freeze({
