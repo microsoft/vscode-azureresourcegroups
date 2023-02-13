@@ -22,7 +22,7 @@ export async function installExtension(context: IActionContext, extensionId: str
         return new Promise((resolve) => {
             const disposable = extensions.onDidChange(() => {
                 if (isInstalled()) {
-                    context.telemetry.properties.installedAfter1m = 'true';
+                    context.telemetry.properties.installedAfterOneMinute = 'true';
                     disposable.dispose();
                     clearTimeout(timeout);
                     resolve();
