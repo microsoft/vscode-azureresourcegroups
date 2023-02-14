@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from "@microsoft/vscode-azext-utils";
 import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
+import { AzExtResourceType } from "../api/src/index";
 import { localize } from "./utils/localize";
 
 export const azureExtensions: IAzExtMetadata[] = [
@@ -80,12 +80,21 @@ export const azureExtensions: IAzExtMetadata[] = [
         name: 'vscode-azurecontainerapps',
         label: 'Container Apps',
         resourceTypes: [
-            // AzExtResourceType.ContainerApps,
-            // AzExtResourceType.ContainerAppsEnvironment,
+            AzExtResourceType.ContainerAppsEnvironment,
         ],
         reportIssueCommandId: 'containerApps.reportIssue'
     }
 ];
+
+export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
+    FunctionApp: 'microsoft.web/functionapp',
+    AppServices: 'microsoft.web/sites',
+    StaticWebApps: 'microsoft.web/staticsites',
+    VirtualMachines: 'microsoft.compute/virtualmachines',
+    AzureCosmosDb: 'microsoft.documentdb/databaseaccounts',
+    PostgresqlServersStandard: 'microsoft.dbforpostgresql/servers',
+    PostgresqlServersFlexible: 'microsoft.dbforpostgresql/flexibleservers'
+}
 
 export interface IAzExtMetadata {
     name: string;

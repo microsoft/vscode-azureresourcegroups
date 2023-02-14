@@ -3,30 +3,55 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { parseAzureResourceId } from '@microsoft/vscode-azext-azureutils';
-import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
-import { AppResource } from '@microsoft/vscode-azext-utils/hostapi';
-import { revealTreeItem } from '../api/revealTreeItem';
+import { ParsedAzureResourceId } from '@microsoft/vscode-azext-azureutils';
+import { AzExtTreeItem, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { VSCodeRevealOptions } from '../../api/src/index';
 import { ext } from '../extensionVariables';
-import { AppResourceTreeItem } from '../tree/AppResourceTreeItem';
-import { SubscriptionTreeItem } from '../tree/SubscriptionTreeItem';
+import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
+import { ResourceTreeDataProviderBase } from '../tree/ResourceTreeDataProviderBase';
 
-export async function revealResource(context: IActionContext, resourceId: string): Promise<void>;
-export async function revealResource(context: IActionContext, resource: AppResource): Promise<void>;
-export async function revealResource(context: IActionContext, arg: AppResource | string): Promise<void> {
-    const resourceId = typeof arg === 'string' ? arg : arg.id;
-
-    context.telemetry.properties.resourceType = parseAzureResourceId(resourceId).provider.replace(/\//g, '|');
+export async function revealResource(context: IActionContext, resourceId: string, options?: VSCodeRevealOptions): Promise<void> {
+    setTelemetryPropertiesForId(context, resourceId);
 
     try {
-        const subscriptionNode: SubscriptionTreeItem | undefined = await ext.appResourceTree.findTreeItem(`/subscriptions/${parseAzureResourceId(resourceId).subscriptionId}`, { ...context, loadAll: true });
-        const appResourceNode: AppResourceTreeItem | undefined = await subscriptionNode?.findAppResourceByResourceId(context, resourceId);
-        if (appResourceNode) {
-            // ensure the parent node loaded this AppResourceTreeItem
-            await appResourceNode.parent?.getCachedChildren(context);
-            await revealTreeItem(appResourceNode);
+        const item: ResourceGroupsItem | undefined = await (ext.v2.api.resources.azureResourceTreeDataProvider as ResourceTreeDataProviderBase).findItemById(resourceId);
+        if (item) {
+            await ext.appResourceTreeView.reveal(item as unknown as AzExtTreeItem, options ?? { expand: false, focus: true, select: true });
         }
     } catch (error) {
         context.telemetry.properties.revealError = parseError(error).message;
     }
+}
+
+function setTelemetryPropertiesForId(context: IActionContext, resourceId: string): void {
+    const parsedAzureResourceId = parsePartialAzureResourceId(resourceId);
+    const resourceKind = getResourceKindFromId(parsedAzureResourceId);
+    context.telemetry.properties.resourceKind = resourceKind;
+
+    if (resourceKind === 'resource') {
+        context.telemetry.properties.resourceType = parsedAzureResourceId.provider?.replace(/\//g, '|');
+    }
+}
+
+function parsePartialAzureResourceId(id: string): Partial<ParsedAzureResourceId> & Pick<ParsedAzureResourceId, 'rawId'> {
+    const matches = id.match(/^\/subscriptions\/([^\/]*)(\/resourceGroups\/([^\/]*)(\/providers\/([^\/]*\/[^\/]*)\/([^\/]*))?)?$/i);
+    return {
+        rawId: id,
+        subscriptionId: matches?.[1],
+        resourceGroup: matches?.[3],
+        provider: matches?.[5],
+        resourceName: matches?.[6]
+    }
+}
+
+function getResourceKindFromId(parsedId: Partial<ParsedAzureResourceId>): 'subscription' | 'resourceGroup' | 'resource' {
+    if (parsedId.resourceName) {
+        return 'resource';
+    } else if (parsedId.resourceGroup) {
+        return 'resourceGroup';
+    } else if (parsedId.subscriptionId) {
+        return 'subscription';
+    }
+
+    throw new Error('Invalid Azure Resource Id');
 }
