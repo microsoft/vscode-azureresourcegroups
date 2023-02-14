@@ -64,14 +64,18 @@ async function pickResourceGroups(context: IActionContext) {
     const client = await createResourceClient([context, createSubscriptionContext(subscription)]);
     const resourceGroups = await uiUtils.listAllIterator(client.resourceGroups.list());
 
-    const picks = await context.ui.showQuickPick<IAzureQuickPickItem<ResourceGroup>>(resourceGroups.map(rg => ({ label: nonNullProp(rg, 'name'), data: rg })), {
+    const picks = resourceGroups
+        .map(rg => ({ label: nonNullProp(rg, 'name'), data: rg }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+
+    const pickedResourceGroups = await context.ui.showQuickPick<IAzureQuickPickItem<ResourceGroup>>(picks, {
         canPickMany: true,
         placeHolder: localize('selectResourceGroupToDelete', 'Select resource group(s) to delete'),
     });
 
     return {
         subscription,
-        resourceGroupsToDelete: picks.map(pick => createResourceGroup(subscription, pick.data)),
+        resourceGroupsToDelete: pickedResourceGroups.map(pick => createResourceGroup(subscription, pick.data)),
     };
 }
 
