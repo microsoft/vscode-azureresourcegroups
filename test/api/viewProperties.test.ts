@@ -1,6 +1,7 @@
 import { AzureResourceModel } from "@microsoft/vscode-azureresources-api";
 import { commands, TreeItem } from "vscode";
-import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, BranchDataItemWrapper, ext } from "../../extension.bundle";
+import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, BranchDataItemWrapper, ext, hasViewProperties } from "../../extension.bundle";
+import { createMockSubscriptionWithFunctions } from "./mockServiceFactory";
 import assert = require("assert");
 
 const api = () => {
@@ -13,11 +14,11 @@ type Mutable<T> = {
 
 type TestAzureResourceModel = Mutable<AzureResourceModel> & AzureResource;
 
-const viewPropertiesContextValue = 'hasProperties';
+// BDP that returns a model with a view properties model ONLY for a specific resource
+class ViewPropertiesBranchDataProvider implements AzureResourceBranchDataProvider<TestAzureResourceModel> {
 
-const resourceName = 'my-functionapp-1';
-// BDP that returns a model with a portal url ONLY for the 'my-functionapp-1' resource
-class PortalUrlBranchDataProvider implements AzureResourceBranchDataProvider<TestAzureResourceModel> {
+    constructor(public readonly resourceId: string) { }
+
     getResourceItem(resource: AzureResource): TestAzureResourceModel {
         return resource;
     }
@@ -29,9 +30,11 @@ class PortalUrlBranchDataProvider implements AzureResourceBranchDataProvider<Tes
             name: resource.name + '-child',
         };
 
-        if (resourceName === resource.name) {
+        if (this.resourceId === resource.id) {
             childModel.viewProperties = {
-                data: {},
+                data: {
+                    foo: 'bar',
+                },
                 label: 'properties',
             }
         }
@@ -49,9 +52,9 @@ class PortalUrlBranchDataProvider implements AzureResourceBranchDataProvider<Tes
 }
 
 suite('AzureResourceModel.viewProperties tests', async () => {
-
-    test(`TreeItem.contextValue should include "${viewPropertiesContextValue}" if AzureResourceModel.viewProperties is defined`, async () => {
-        api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, new PortalUrlBranchDataProvider());
+    test(`TreeItem.contextValue should only include "${BranchDataItemWrapper.hasPropertiesContextValue}" if AzureResourceModel.viewProperties is defined`, async () => {
+        const mockResources = createMockSubscriptionWithFunctions();
+        api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, new ViewPropertiesBranchDataProvider(mockResources.functionApp1.id));
         await commands.executeCommand('azureResourceGroups.groupBy.resourceType');
 
         const tdp = api().azureResourceTreeDataProvider;
@@ -71,7 +74,25 @@ suite('AzureResourceModel.viewProperties tests', async () => {
                 }
             }
         }
-        const grandchildrenTreeItemsWithPortalUrl = grandChildTreeItems.filter(treeItem => treeItem.contextValue?.includes(viewPropertiesContextValue));
-        assert.strictEqual(grandchildrenTreeItemsWithPortalUrl.length, 1, `There should be 1 tree item with "${viewPropertiesContextValue}" context value`);
+        const grandchildrenTreeItemsWithPortalUrl = grandChildTreeItems.filter(treeItem => treeItem.contextValue?.includes(BranchDataItemWrapper.hasPropertiesContextValue));
+        assert.strictEqual(grandchildrenTreeItemsWithPortalUrl.length, 1, `There should be 1 tree item with "${BranchDataItemWrapper.hasPropertiesContextValue}" context value`);
+    });
+
+    test(`BrachDataItemWrapper should have viewPropertiesModel`, async () => {
+        const mockResources = createMockSubscriptionWithFunctions();
+        api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, new ViewPropertiesBranchDataProvider(mockResources.functionApp1.id));
+        await commands.executeCommand('azureResourceGroups.groupBy.resourceType');
+
+        const tdp = api().azureResourceTreeDataProvider;
+        const subscriptions = await tdp.getChildren();
+
+        const groups = await tdp.getChildren(subscriptions![0]) as TreeItem[];
+        const functionGroup = groups!.find(g => g.label?.toString().includes('Func'));
+        const children = await tdp.getChildren(functionGroup) as BranchDataItemWrapper[];
+
+        const functionApp1Item = children.find(child => child.id === mockResources.functionApp1.id);
+        assert.ok(functionApp1Item);
+
+        assert.ok(hasViewProperties(functionApp1Item));
     });
 });

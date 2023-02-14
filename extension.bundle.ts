@@ -21,6 +21,10 @@ export * from './src/api/DefaultAzureResourceProvider';
 export * from './src/AzureService';
 export * from './src/commands/tags/getTagDiagnostics';
 export * from './src/utils/wrapFunctionsInTelemetry';
+export * from './src/tree/azure/GroupingItem';
+export * from './src/tree/azure/SubscriptionItem';
+export * from './src/commands/openInPortal';
+export * from './src/commands/viewProperties';
 export * from './api/src/utils/wrapper';
 // Export activate/deactivate for main.js
 export { activateInternal, deactivateInternal } from './src/extension';

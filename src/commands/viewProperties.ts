@@ -22,6 +22,6 @@ export async function viewProperties(context: IActionContext, node?: ResourceGro
     await openReadOnlyJson({ fullId: node.id ?? randomUUID(), label: node.viewProperties.label }, node.viewProperties.data);
 }
 
-function hasViewProperties(node: unknown): node is { viewProperties: ViewPropertiesModel } {
+export function hasViewProperties(node: unknown): node is { viewProperties: ViewPropertiesModel } {
     return !!(node as { viewProperties: ViewPropertiesModel })?.viewProperties;
 }

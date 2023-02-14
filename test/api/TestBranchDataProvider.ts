@@ -1,8 +1,11 @@
 import assert = require("assert");
-import { TreeItem } from "vscode";
+import { Event, EventEmitter, TreeItem } from "vscode";
 import { WorkspaceResource, WorkspaceResourceBranchDataProvider } from "../../extension.bundle";
 
 export class TestBranchDataProvider implements WorkspaceResourceBranchDataProvider<WorkspaceResource> {
+
+    onDidChangeTreeDataEmitter: EventEmitter<WorkspaceResource | WorkspaceResource[] | undefined | null | void> = new EventEmitter<WorkspaceResource | WorkspaceResource[] | undefined | null | void>();
+    onDidChangeTreeData: Event<WorkspaceResource | WorkspaceResource[] | undefined | null | void> = this.onDidChangeTreeDataEmitter.event;
 
     private _getChildrenCalled = false;
     private _getResourceItemCalled = false;

@@ -145,7 +145,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     }
 
     private async getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi | undefined> {
-        if (!this.api) {
+        if (!this.api || ext.testing.overrideAzureAccountApiFactory) {
             const extension = vscode.extensions.getExtension<apiUtils.AzureExtensionApiProvider>('ms-vscode.azure-account');
 
             if (extension) {

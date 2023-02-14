@@ -1,7 +1,8 @@
 import { AzureResourceModel } from "@microsoft/vscode-azureresources-api";
+import * as assert from 'assert';
 import { commands, TreeItem, Uri } from "vscode";
 import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, BranchDataItemWrapper, ext } from "../../extension.bundle";
-import assert = require("assert");
+import { createMockSubscriptionWithFunctions } from "./mockServiceFactory";
 
 const api = () => {
     return ext.v2.api.resources;
@@ -13,9 +14,10 @@ type Mutable<T> = {
 
 type TestAzureResourceModel = Mutable<AzureResourceModel> & AzureResource;
 
-const resourceName = 'my-functionapp-1';
-// BDP that returns a model with a portal url ONLY for the 'my-functionapp-1' resource
+// BDP that returns a model with a portal url ONLY for the resource with the specified id
 class PortalUrlBranchDataProvider implements AzureResourceBranchDataProvider<TestAzureResourceModel> {
+    constructor(public readonly resourceId: string) { }
+
     getResourceItem(resource: AzureResource): TestAzureResourceModel {
         return resource;
     }
@@ -27,7 +29,7 @@ class PortalUrlBranchDataProvider implements AzureResourceBranchDataProvider<Tes
             name: resource.name + '-child',
         };
 
-        if (resourceName === resource.name) {
+        if (this.resourceId === resource.id) {
             childModel.portalUrl = Uri.parse('https://portal.azure.com');
         }
 
@@ -44,9 +46,9 @@ class PortalUrlBranchDataProvider implements AzureResourceBranchDataProvider<Tes
 }
 
 suite('AzureResourceModel.portalUrl tests', async () => {
-
-    test('TreeItem.contextValue should include "hasPortalUrl" if AzureResourceModel.portalUrl is defined', async () => {
-        api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, new PortalUrlBranchDataProvider());
+    test(`TreeItem.contextValue should include "${BranchDataItemWrapper.hasPortalUrlContextValue}" if AzureResourceModel.portalUrl is defined`, async () => {
+        const mockResources = createMockSubscriptionWithFunctions();
+        api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, new PortalUrlBranchDataProvider(mockResources.functionApp1.id));
         await commands.executeCommand('azureResourceGroups.groupBy.resourceType');
 
         const tdp = api().azureResourceTreeDataProvider;
@@ -66,7 +68,7 @@ suite('AzureResourceModel.portalUrl tests', async () => {
                 }
             }
         }
-        const grandchildrenTreeItemsWithPortalUrl = grandChildTreeItems.filter(treeItem => treeItem.contextValue?.includes('hasPortalUrl'));
-        assert.strictEqual(grandchildrenTreeItemsWithPortalUrl.length, 1, 'There should be 1 tree item with "hasPortalUrl" context value');
+        const grandchildrenTreeItemsWithPortalUrl = grandChildTreeItems.filter(treeItem => treeItem.contextValue?.includes(BranchDataItemWrapper.hasPortalUrlContextValue));
+        assert.strictEqual(grandchildrenTreeItemsWithPortalUrl.length, 1, `There should be 1 tree item with "${BranchDataItemWrapper.hasPortalUrlContextValue}" context value`);
     });
 });

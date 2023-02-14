@@ -4,19 +4,62 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ISubscriptionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
-import { randomUUID } from 'crypto';
 import { Event, EventEmitter } from 'vscode';
 import { AzureAccountExtensionApi, AzureLoginStatus, AzureResourceFilter, AzureSession, AzureSubscription, CloudShell } from '../../azure-account.api';
+import { MockResources } from './mockServiceFactory';
 
 export class MockAzureAccount implements AzureAccountExtensionApi {
-    public status: AzureLoginStatus = 'LoggedOut';
+    public status: AzureLoginStatus = 'LoggedIn';
     public onStatusChanged: Event<AzureLoginStatus>;
-    public sessions: AzureSession[] = [];
+    readonly sessions: AzureSession[];
+    public getsessions: AzureSession[] = [];
     public onSessionsChanged: Event<void>;
-    public subscriptions: AzureSubscription[] = [];
     public onSubscriptionsChanged: Event<void>;
-    public filters: AzureResourceFilter[] = [];
     public onFiltersChanged: Event<void>;
+
+    get subscriptions(): AzureSubscription[] {
+        const session: AzureSession = {
+            environment: 'environment',
+            userId: '',
+            tenantId: 'tenantId',
+            credentials2: {
+                getToken: () => {
+                    return undefined;
+                }
+            },
+        } as unknown as AzureSession;
+
+        return this.resources.subscriptions.map((subscription) => ({
+            session,
+            subscription: {
+                displayName: subscription.name,
+                subscriptionId: subscription.subscriptionId,
+                id: subscription.id
+            }
+        }));
+    }
+
+    get filters(): AzureSubscription[] {
+        const session: AzureSession = {
+            environment: 'environment',
+            userId: '',
+            tenantId: 'tenantId',
+            credentials2: {
+                getToken: () => {
+                    return undefined;
+                }
+            },
+        } as unknown as AzureSession;
+
+        return this.resources.subscriptions.map((subscription) => ({
+            session,
+            subscription: {
+                displayName: subscription.name,
+                subscriptionId: subscription.subscriptionId,
+                id: subscription.id
+            }
+        }));
+    }
 
     apiVersion = '1.0.0';
 
@@ -29,7 +72,7 @@ export class MockAzureAccount implements AzureAccountExtensionApi {
     private readonly _onSessionsChangedEmitter: EventEmitter<void>;
     private readonly _onSubscriptionsChangedEmitter: EventEmitter<void>;
 
-    public constructor(vscode: typeof import('vscode')) {
+    public constructor(vscode: typeof import('vscode'), private readonly resources: MockResources) {
         this._onStatusChangedEmitter = new vscode.EventEmitter<AzureLoginStatus>();
         this.onStatusChanged = this._onStatusChangedEmitter.event;
         this._onFiltersChangedEmitter = new vscode.EventEmitter<void>();
@@ -41,38 +84,12 @@ export class MockAzureAccount implements AzureAccountExtensionApi {
     }
 
     public async signIn(): Promise<void> {
-        this.changeStatus('LoggingIn');
-
-        const session: AzureSession = {
-            environment: 'environment',
-            userId: '',
-            tenantId: 'tenantId',
-            credentials2: {
-                getToken: () => {
-                    return undefined;
-                }
-            },
-        } as unknown as AzureSession;
-
-        const subscriptionId = randomUUID();
-        const mockAzureSubscription: AzureSubscription = {
-            session: session,
-            subscription: {
-                displayName: 'mockSubscription',
-                subscriptionId,
-                id: `/subscriptions/${subscriptionId}`
-            }
-        };
-
-        this.subscriptions.push(mockAzureSubscription);
         this.changeStatus('LoggedIn');
-        this.changeFilter(mockAzureSubscription);
     }
 
     public signOut(): void {
         this.changeStatus('LoggedOut');
         this.changeFilter();
-        this.subscriptions = [];
     }
 
     public getSubscriptionContext(): ISubscriptionContext {
@@ -111,7 +128,7 @@ export class MockAzureAccount implements AzureAccountExtensionApi {
         if (newFilter) {
             this.filters.push(newFilter);
         } else {
-            this.filters = [];
+            //
         }
 
         this._onFiltersChangedEmitter.fire();

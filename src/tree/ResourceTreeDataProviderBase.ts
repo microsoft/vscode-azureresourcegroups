@@ -45,6 +45,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
 
     notifyTreeDataChanged(data: void | ResourceModelBase | ResourceModelBase[] | null | undefined): void {
+        console.log('notifyTreeDataChanged', data);
         const rgItems: ResourceGroupsItem[] = [];
 
         // eslint-disable-next-line no-extra-boolean-cast
@@ -60,6 +61,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
                     rgItems.push(rgItem);
                 }
             }
+            console.log('event data', rgItems);
             this.onDidChangeTreeDataEmitter.fire(rgItems);
         } else {
             // e was null/undefined/void

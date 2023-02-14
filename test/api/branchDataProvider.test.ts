@@ -1,7 +1,7 @@
-import { commands, TreeItem } from "vscode";
-import { AzExtResourceType, AzureResource, BranchDataItemWrapper, BranchDataProvider, ext, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from "../../extension.bundle";
+import * as assert from "assert";
+import { Event, TreeDataProvider, TreeItem } from "vscode";
+import { BranchDataItemWrapper, ext, isWrapper, ResourceGroupsItem, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from "../../extension.bundle";
 import { TestBranchDataProvider } from "./TestBranchDataProvider";
-import assert = require("assert");
 
 const getWorkspaceResourceProviderStub: (onCalled?: () => void, resources?: WorkspaceResource[]) => WorkspaceResourceProvider = (onCalled, resources) => {
     return {
@@ -15,6 +15,18 @@ const getWorkspaceResourceProviderStub: (onCalled?: () => void, resources?: Work
 const api = () => {
     return ext.v2.api.resources;
 }
+
+/**
+ * Todo:
+ * - tests for onDidChangeTreeData and refresh
+ * - tests for groupings
+ * - tests for if duplicate resources are returned by the service
+ * - tests for tags
+ * - tests for reveal
+ * - pick experiences tests can easily exist here
+ * - add compat shim tests
+ * - add tests for node ids to match azure resource ids
+ */
 
 suite('Branch data provider tests', async () => {
 
@@ -143,108 +155,78 @@ suite('Branch data provider tests', async () => {
         });
     });
 
-    test('Registered Azure resource branch data provider is used', async () => {
-        let getResourceItemIsCalled = false;
-        const azureResourceBranchDataProvider: BranchDataProvider<AzureResource, ResourceModelBase> = {
-            getResourceItem: (resource: AzureResource): ResourceModelBase => {
-                getResourceItemIsCalled = true;
-                return {
-                    id: resource.id,
-                }
-            },
-            getChildren: (_resource: AzureResource): AzureResource[] => {
-                return [];
-            },
-            getTreeItem: (resource: AzureResource): TreeItem => {
-                return new TreeItem(resource.name);
-            }
-        }
-
-        api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, azureResourceBranchDataProvider);
-        await commands.executeCommand('azureResourceGroups.groupBy.resourceType');
-
-        const tdp = api().azureResourceTreeDataProvider;
-        const subscriptions = await tdp.getChildren();
-
-        const groups = await tdp.getChildren(subscriptions![0]) as TreeItem[];
-        const functionGroup = groups!.find(g => g.label?.toString().includes('Func'));
-        await tdp.getChildren(functionGroup);
-
-        assert.strictEqual(getResourceItemIsCalled, true);
+    test('BranchDataProvider returns wrappers', async () => {
+        const { workspaceResource, tdp } = setupTestBranchDataProvider();
+        const rootChildren = await tdp.getChildren() as any[];
+        const testChild = rootChildren.find(c => c.id === workspaceResource.id);
+        assert.strictEqual(isWrapper(testChild), true);
     });
 
-    test('Tree should be resilliant to errors thrown in BranchDataProvider.getResourceItem', async () => {
-        api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, {
-            getResourceItem: (resource: AzureResource): ResourceModelBase => {
-                if (resource.name === 'my-functionapp-1') {
-                    throw new Error('Cannot find resource');
-                }
-                return resource;
-            },
-            getChildren: (_resource: AzureResource): AzureResource[] => {
-                return [];
-            },
-            getTreeItem: (resource: AzureResource): TreeItem => {
-                return {
-                    label: resource.name,
-                    id: resource.id,
-                    contextValue: 'validItem'
-                }
-            }
-        });
+    test('Firing BranchDataProvider.onDidChangeTreeData event with a branch item should fire a TreeDataProvider.onDidChangeTreeData evente with the corresponding wrapper item.', async () => {
+        const { testChild, branchDataProvider, tdp } = await getGrandchild();
 
-        await commands.executeCommand('azureResourceGroups.groupBy.resourceType');
+        const unwrappedChild = testChild.unwrap<WorkspaceResource>();
+        const waitForOnDidChangeTreeDataToFire = waitForEventToFire(tdp.onDidChangeTreeData!);
+        branchDataProvider.onDidChangeTreeDataEmitter.fire(unwrappedChild);
 
-        const tdp = api().azureResourceTreeDataProvider;
-        const subscriptions = await tdp.getChildren();
-
-        const groups = await tdp.getChildren(subscriptions![0]) as TreeItem[];
-        const functionGroup = groups!.find(g => g.label?.toString().includes('Func'));
-        const children = await tdp.getChildren(functionGroup) as BranchDataItemWrapper[];
-
-        const childTreeItems: TreeItem[] = await Promise.all(children.map(child => tdp.getTreeItem(child)));
-
-        assert.ok(children);
-
-        const invalidTreeItems = childTreeItems.filter(child => child.contextValue?.includes('invalid'));
-        assert.strictEqual(invalidTreeItems.length, 1, `There should be 1 invalid tree item: ${invalidTreeItems.map(i => i.label).join(', ')}`);
+        const eventData = await waitForOnDidChangeTreeDataToFire;
+        assert.strictEqual((eventData as ResourceGroupsItem[])[0], testChild);
     });
 
-    test('Should show a custom error message when BranchDataProvider.getResourceItem returns nullish value', async () => {
-        api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, {
-            getResourceItem: (resource: AzureResource): ResourceModelBase => {
-                if (resource.name === 'my-functionapp-1') {
-                    return undefined as unknown as ResourceModelBase;
-                }
-                return resource;
-            },
-            getChildren: (_resource: AzureResource): AzureResource[] => {
-                return [];
-            },
-            getTreeItem: (resource: AzureResource): TreeItem => {
-                return {
-                    label: resource.name,
-                    id: resource.id,
-                    contextValue: 'validItem'
-                }
-            }
-        });
+    test('Firing BranchDataProvider.onDidChangeTreeData event with a wrapper item should result in TreeDataProvider.onDidChangeTreeData being fired with an empty array.', async () => {
+        const { testChild, branchDataProvider, tdp } = await getGrandchild();
 
-        await commands.executeCommand('azureResourceGroups.groupBy.resourceType');
+        const waitForOnDidChangeTreeDataToFire = waitForEventToFire(tdp.onDidChangeTreeData!);
+        branchDataProvider.onDidChangeTreeDataEmitter.fire(testChild as unknown as WorkspaceResource);
 
-        const tdp = api().azureResourceTreeDataProvider;
-        const subscriptions = await tdp.getChildren();
-
-        const groups = await tdp.getChildren(subscriptions![0]) as TreeItem[];
-        const functionGroup = groups!.find(g => g.label?.toString().includes('Func'));
-        const children = await tdp.getChildren(functionGroup) as BranchDataItemWrapper[];
-
-        const childTreeItems: TreeItem[] = await Promise.all(children.map(child => tdp.getTreeItem(child)));
-
-        assert.ok(children);
-
-        const invalidTreeItems = childTreeItems.filter(child => child.contextValue?.includes('invalid'));
-        assert.strictEqual(invalidTreeItems.length, 1, `There should be 1 invalid tree item: ${invalidTreeItems.map(i => i.label).join(', ')}`);
-        assert.doesNotMatch(invalidTreeItems[0].label!.toString(), /Cannot read properties of undefined/, `Error should not be a "Cannot read properties of undefined error`);
+        const eventData = await waitForOnDidChangeTreeDataToFire;
+        assert.strictEqual((eventData as []).length, 0);
     });
 });
+
+function setupTestBranchDataProvider() {
+    const workspaceResourceType = 'test-4';
+    const workspaceResource: WorkspaceResource = {
+        resourceType: workspaceResourceType,
+        id: 'test-resource-3',
+        name: 'Test Resource 3',
+    };
+    const provider = getWorkspaceResourceProviderStub(undefined, [workspaceResource]);
+    api().registerWorkspaceResourceProvider(provider);
+
+    const branchDataProvider = new TestBranchDataProvider();
+    api().registerWorkspaceResourceBranchDataProvider(workspaceResourceType, branchDataProvider);
+
+    const childResource: WorkspaceResource = {
+        id: 'test-resource-child',
+        name: 'Test Resource 3 Child',
+        resourceType: workspaceResourceType,
+    }
+
+    branchDataProvider.registerChildren(workspaceResource, [childResource]);
+
+    const tdp = api().workspaceResourceTreeDataProvider as TreeDataProvider<unknown>;
+    return { branchDataProvider, tdp, workspaceResource };
+}
+
+async function getGrandchild() {
+    const { branchDataProvider, workspaceResource } = setupTestBranchDataProvider();
+    const tdp = api().workspaceResourceTreeDataProvider as TreeDataProvider<unknown>;
+
+    const rootChildren = await tdp.getChildren() as BranchDataItemWrapper[];
+    const testChild = rootChildren.find(c => c.id === workspaceResource.id);
+    assert.ok(testChild, `No test child found with id: ${workspaceResource.id}. Test children: ${rootChildren.map(item => item.id).join(', ')}`);
+    return { testChild, branchDataProvider, tdp };
+}
+
+async function waitForEventToFire<T>(event: Event<T>): Promise<T> {
+    return new Promise<T>((resolve) => {
+        const disposable = event(data => {
+            if (data === data) {
+                disposable.dispose();
+                resolve(data);
+            } else {
+            }
+        });
+    });
+}
