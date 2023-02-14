@@ -6,7 +6,7 @@
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { Memento } from 'vscode';
 import { ext } from '../../extensionVariables';
-import { ResourceGroupsItem } from '../../tree/v2/ResourceGroupsItem';
+import { ResourceGroupsItem } from '../../tree/ResourceGroupsItem';
 import { settingUtils } from '../../utils/settingUtils';
 
 export async function pinTreeItem(_context: IActionContext, treeItem: ResourceGroupsItem): Promise<void> {
