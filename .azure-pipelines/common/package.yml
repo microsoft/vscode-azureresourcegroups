@@ -21,10 +21,10 @@ steps:
   displayName: 'Copy web bundle to staging directory'
   inputs:
     Contents: |
-      'dist/web/*.js*'
-      'package.json'
-      'package.nls.json'
-      'resources/**'
+      dist/web/*.js*
+      package.json
+      package.nls.json
+      resources/**
     TargetFolder: '$(build.artifactstagingdirectory)/web/'
 
 - task: PublishBuildArtifacts@1
