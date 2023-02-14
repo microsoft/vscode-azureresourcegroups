@@ -24,7 +24,7 @@ steps:
       'dist/web/*.js*'
       'package.json'
       'package.nls.json'
-      `resources/**
+      'resources/**'
     TargetFolder: '$(build.artifactstagingdirectory)/web/'
 
 - task: PublishBuildArtifacts@1
