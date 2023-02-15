@@ -42,7 +42,6 @@ suite('wrapFunctionsInTelemetry', () => {
             // ignore error
         }
 
-        console.log(JSON.stringify(wrapperContext?.telemetry));
         assert.strictEqual(wrapperContext?.telemetry.properties.result, 'Failed', 'Expected result to be "Failed"');
     });
 });
@@ -79,7 +78,6 @@ suite('wrapFunctionsInTelemetrySync', () => {
             // ignore error
         }
 
-        console.log(JSON.stringify(wrapperContext?.telemetry));
         assert.strictEqual(wrapperContext?.telemetry.properties.result, 'Failed', 'Expected result to be "Failed"');
     });
 });
