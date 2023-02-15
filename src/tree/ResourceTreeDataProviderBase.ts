@@ -90,7 +90,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
                 if (child instanceof BranchDataItemWrapper) {
                     return child;
                 }
-                return this.state.wrapItemInStateHandling(child, (item) => this.notifyTreeDataChanged(item));
+                return this.state.wrapItemInStateHandling(child, (item) => this.onDidChangeTreeDataEmitter.fire(item));
             }
             return child;
         });
