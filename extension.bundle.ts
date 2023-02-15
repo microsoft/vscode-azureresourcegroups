@@ -16,6 +16,8 @@
 // At runtime the tests live in dist/tests and will therefore pick up the main webpack bundle at dist/extension.bundle.js.
 export * from '@microsoft/vscode-azext-utils';
 export * from './src/commands/tags/getTagDiagnostics';
+export * from './src/utils/wrapFunctionsInTelemetry';
+export * from './api/src/utils/wrapper';
 // Export activate/deactivate for main.js
 export { activate, deactivate } from './src/extension';
 export * from './src/extensionVariables';

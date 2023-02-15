@@ -28,6 +28,9 @@ function appendContextValues(originalValues: string | undefined, optionsValues: 
 }
 
 export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
+    static readonly hasPropertiesContextValue = 'hasProperties';
+    static readonly hasPortalUrlContextValue = 'hasPortalUrl';
+
     constructor(
         private readonly branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
@@ -95,10 +98,10 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
     protected getExtraContextValues(): string[] {
         const extraValues: string[] = [];
         if (this.portalUrl) {
-            extraValues.push('hasPortalUrl');
+            extraValues.push(BranchDataItemWrapper.hasPortalUrlContextValue);
         }
         if (this.viewProperties) {
-            extraValues.push('hasProperties');
+            extraValues.push(BranchDataItemWrapper.hasPropertiesContextValue);
         }
         return extraValues;
     }

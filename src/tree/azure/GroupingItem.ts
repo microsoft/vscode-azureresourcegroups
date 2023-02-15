@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createContextValue, ISubscriptionContext, parseError, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription, ViewPropertiesModel } from '../../../api/src/index';
 import { ITagsModel, ResourceTags } from '../../commands/tags/TagFileSystem';
@@ -11,7 +11,7 @@ import { ext } from '../../extensionVariables';
 import { getIconPath } from '../../utils/azureUtils';
 import { createPortalUrl } from '../../utils/v2/createPortalUrl';
 import { BranchDataItemOptions } from '../BranchDataProviderItem';
-import { InvalidItem } from '../InvalidItem';
+import { InvalidAzureResourceItem } from '../InvalidAzureResourceItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
 import { BranchDataProviderFactory } from './AzureResourceBranchDataProviderManager';
@@ -74,10 +74,6 @@ export class GroupingItem implements ResourceGroupsItem {
                 try {
                     const branchDataProvider = this.branchDataProviderFactory(resource);
                     const resourceItem = await branchDataProvider.getResourceItem(resource);
-                    if (!resourceItem) {
-                        throw new Error('Internal error: getResourceItem returned nullish value')
-                    }
-
                     const options: BranchDataItemOptions = {
                         contextValues: ['azureResource'],
                         defaultId: resource.id,
@@ -93,7 +89,7 @@ export class GroupingItem implements ResourceGroupsItem {
 
                     return this.resourceItemFactory(resource, resourceItem, branchDataProvider, this, options);
                 } catch (e) {
-                    return new InvalidItem(parseError(e));
+                    return new InvalidAzureResourceItem(resource, e);
                 }
             }));
 
