@@ -23,6 +23,6 @@ export class InvalidItem implements ResourceGroupsItem {
     }
 
     getChildren(): ProviderResult<ResourceGroupsItem[]> {
-        return []; 6
+        return [];
     }
 }
