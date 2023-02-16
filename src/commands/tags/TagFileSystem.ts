@@ -5,10 +5,10 @@
 
 import { ResourceManagementClient, Tags } from "@azure/arm-resources";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
-import { AzExtTreeFileSystem, AzExtTreeFileSystemItem, callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeFileSystem, AzExtTreeFileSystemItem, IActionContext, callWithTelemetryAndErrorHandling, createSubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as jsonc from 'jsonc-parser';
 import * as os from "os";
-import { commands, Diagnostic, DiagnosticSeverity, FileStat, FileType, languages, MessageItem, Uri, window } from "vscode";
+import { Diagnostic, DiagnosticSeverity, FileStat, FileType, MessageItem, Uri, commands, languages, window } from "vscode";
 import { AzureResource, AzureSubscription } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
 import { createResourceClient } from "../../utils/azureClients";
@@ -76,7 +76,10 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
     }
 
     public async writeFileImpl(context: IActionContext, model: ITagsModel, content: Uint8Array, originalUri: Uri): Promise<void> {
-        const text: string = content.toString();
+        // weird issue when in vscode.dev, the content Uint8Array has a giant byteOffset that causes it impossible to decode
+        // so re-form the buffer with 0 byteOffset
+        const buf = Buffer.from(content, 0)
+        const text: string = buf.toString('utf-8');
 
         const diagnostics: Diagnostic[] = languages.getDiagnostics(originalUri).filter(d => d.severity === DiagnosticSeverity.Error);
         if (diagnostics.length > 0) {
