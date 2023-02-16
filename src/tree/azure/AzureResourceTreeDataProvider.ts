@@ -69,7 +69,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => this.notifyTreeDataChanged());
         // This needs to be changed, but when debugging in a web environment, the UIKind is Desktop. If you sideload it into the browser, you must
         // change this to UIKind.Web and then webpack it again
-        this.isWeb = vscode.env.uiKind === vscode.UIKind.Desktop;
+        this.isWeb = vscode.env.uiKind === vscode.UIKind.Web;
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
