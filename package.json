@@ -47,7 +47,7 @@
         "onView:azureResourceGroups",
         "onView:azureResourceGroupsV2",
         "onView:ms-azuretools.helpAndFeedback",
-        "onWalkthrough:azure-get-started"
+        "onWalkthrough:get-started"
     ],
     "main": "./main.js",
     "contributes": {
@@ -464,7 +464,7 @@
         ],
         "walkthroughs": [
             {
-                "id": "azure-get-started",
+                "id": "get-started",
                 "title": "Get Started with Azure in VS Code",
                 "description": "Setup your account and get to know the Azure extension view.",
                 "steps": [
