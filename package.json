@@ -244,11 +244,6 @@
             },
             {
                 "view": "azureWorkspace",
-                "contents": "No workspace has been opened.",
-                "when": "azureWorkspace.state == 'noWorkspace'"
-            },
-            {
-                "view": "azureWorkspace",
                 "contents": "No local workspace resources exist.",
                 "when": "azureWorkspace.state == 'noWorkspaceResources'"
             },
