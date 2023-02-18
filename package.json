@@ -213,12 +213,12 @@
             "azure": [
                 {
                     "id": "azureResourceGroups",
-                    "name": "Resources (V2)",
+                    "name": "Resources",
                     "visibility": "visible"
                 },
                 {
                     "id": "azureWorkspace",
-                    "name": "Workspace (V2)",
+                    "name": "Workspace",
                     "visibility": "visible"
                 },
                 {

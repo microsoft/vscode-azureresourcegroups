@@ -53,19 +53,7 @@ export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderB
 
     private async getWorkspaceItemModel(resource: WorkspaceResource): Promise<ResourceGroupsItem> {
         const branchDataProvider = this.branchDataProviderManager.getProvider(resource.resourceType);
-
         const resourceItem = await branchDataProvider.getResourceItem(resource);
-
-        if (!resourceItem) {
-            throw new UnexpectedNullishReturnValueError('getResourceItem', resourceItem);
-        }
-
         return new BranchDataItemWrapper(resourceItem, branchDataProvider, this.itemCache);
-    }
-}
-
-export class UnexpectedNullishReturnValueError extends Error {
-    constructor(functionName: string, value: never) {
-        super(`Internal error: ${functionName} returned ${String(value)}. Expected a non-nullish value.`);
     }
 }
