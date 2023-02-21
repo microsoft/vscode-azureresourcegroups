@@ -483,12 +483,12 @@
                         }
                     },
                     {
-                        "id": "grouping-and-focus",
-                        "title": "Grouping & focus on your resources",
-                        "description": "Change the way resources are grouped to fit your workflow and focus on the resources that are most important for your current workspace.\n[Show grouping options](command:azureResourceGroups.showGroupOptions)",
+                        "id": "grouping",
+                        "title": "Grouping your resources",
+                        "description": "Change the way resources are grouped to fit your workflow.\n[Show grouping options](command:azureResourceGroups.showGroupOptions)",
                         "media": {
                             "svg": "resources/walkthrough/groupby.svg",
-                            "altText": "Group by and focus resources."
+                            "altText": "Group resources."
                         }
                     },
                     {
