@@ -23,6 +23,7 @@ export * from './api/src/resources/base';
 export * from './api/src/resources/workspace';
 export * from './api/src/utils/getApi';
 export * from './api/src/utils/wrapper';
+export { convertV1TreeItemId } from './src/api/compatibility/CompatibleAzExtTreeDataProvider';
 export * from './src/api/DefaultAzureResourceProvider';
 export * from './src/AzureService';
 export * from './src/commands/openInPortal';

@@ -47,7 +47,9 @@ export class CompatibleAzExtTreeDataProvider extends IntermediateCompatibleAzExt
     }
 
     public override async findTreeItem<T>(fullId: string): Promise<T | undefined> {
-        const result = await this.tdp.findItemById(fullId);
+        // compatibility with default resource to deploy setting, which value might be a v1 tree item id
+        const id = convertV1TreeItemId(fullId);
+        const result = await this.tdp.findItemById(id);
         return isWrapper(result) ? result.unwrap<T>() : result as unknown as T;
     }
 
@@ -99,4 +101,13 @@ class ShouldNeverBeCalledError extends Error {
     constructor(methodName: string) {
         super(`${methodName} should never be called.`);
     }
+}
+
+/**
+ * Convert v1 tree item id to Azure resource id.
+ */
+export function convertV1TreeItemId(id: string): string {
+    // if full id contains two instances of subscriptions/ then remove everything before the second instance
+    const regex = /^(\/subscriptions.*)(?:\/subscriptions)/i;
+    return id.replace(regex, '/subscriptions');
 }
