@@ -1,5 +1,40 @@
 # Change Log
 
+## 0.6.0 - 2023-02-22
+
+### Azure Resources API v2
+
+We've made significant improvements and changes to the Azure Resources API, which is now on version 2.0.0. Find out more about the Azure Resources API v2 [here](https://github.com/microsoft/vscode-azureresourcegroups/tree/main/api#readme).
+
+### Added
+- Azure Resources API v2 by @alexweininger, @bwateratmsft, and @philliphoff in [#535](https://github.com/microsoft/vscode-azureresourcegroups/pull/535)
+- Create package for consuming extension API by @alexweininger in [#530](https://github.com/microsoft/vscode-azureresourcegroups/pull/530)
+- Add Spring Apps icon by @alexweininger in [#484](https://github.com/microsoft/vscode-azureresourcegroups/pull/484)
+
+### Changed
+- Use Azure codicon by @alexweininger in [#476](https://github.com/microsoft/vscode-azureresourcegroups/pull/476)
+- Update minimum required version of VS Code to 1.66 by @alexweininger in [#523](https://github.com/microsoft/vscode-azureresourcegroups/pull/523)
+- Dedupe Azure resources by @alexweininger in [#527](https://github.com/microsoft/vscode-azureresourcegroups/pull/527)
+
+### Removed
+- Focus a group feature.
+
+### Fixed
+- Fix default app to deploy by @alexweininger in [#586](https://github.com/microsoft/vscode-azureresourcegroups/pull/586)
+
+### Dependencies
+- Bump json-schema from 0.2.3 to 0.4.0 by @dependabot in [#384](https://github.com/microsoft/vscode-azureresourcegroups/pull/384)
+- Bump markdown-it and vsce by @dependabot in [#385](https://github.com/microsoft/vscode-azureresourcegroups/pull/385)
+- Remove dependency on fs-extra. by @philliphoff in [#410](https://github.com/microsoft/vscode-azureresourcegroups/pull/410)
+- Bump loader-utils from 1.4.0 to 1.4.1 by @dependabot in [#424](https://github.com/microsoft/vscode-azureresourcegroups/pull/424)
+- Bump ansi-regex by @dependabot in [#428](https://github.com/microsoft/vscode-azureresourcegroups/pull/428)
+- Bump minimatch and mocha by @dependabot in [#429](https://github.com/microsoft/vscode-azureresourcegroups/pull/429)
+- Bump loader-utils from 1.4.1 to 1.4.2 by @dependabot in [#433](https://github.com/microsoft/vscode-azureresourcegroups/pull/433)
+- Bump decode-uri-component from 0.2.0 to 0.2.2 by @dependabot in [#443](https://github.com/microsoft/vscode-azureresourcegroups/pull/443)
+- Bump qs from 6.5.2 to 6.5.3 by @dependabot in [#450](https://github.com/microsoft/vscode-azureresourcegroups/pull/450)
+- Bump json5 from 1.0.1 to 1.0.2 by @dependabot in [#480](https://github.com/microsoft/vscode-azureresourcegroups/pull/480)
+- Use `@vscode/vsce` instead of `vsce` by @alexweininger in [#548](https://github.com/microsoft/vscode-azureresourcegroups/pull/548)
+
 ## 0.5.6 - 2022-09-08
 
 ### Added
