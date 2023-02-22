@@ -28,7 +28,7 @@ class MockSubscription {
 }
 
 class MockResourceGroup implements ResourceGroup {
-    readonly type: string = 'resourceGroup';
+    readonly type: string = 'microsoft.resources/resourcegroups';
     constructor(private readonly subscriptionId: string, public readonly name: string, public readonly location: string) { }
     readonly resources: MockResource[] = [];
     readonly id: string = `${this.subscriptionId}/resourceGroups/${this.name}`;
