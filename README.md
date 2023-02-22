@@ -20,9 +20,9 @@ Use the Resources explorer to create and manage Azure resources. Use the Workspa
 
 ![Azure explorer](resources/readme/explorerGraphic.png)
 
-### Grouping and Focusing
+### Grouping
 
-Change the way resources are grouped to fit your workflow and focus on the resources that are most important for your current workspace.
+Change the way resources are grouped to fit your workflow.
 
 ![Grouping](resources/readme/groupingGraphic.png)
 
