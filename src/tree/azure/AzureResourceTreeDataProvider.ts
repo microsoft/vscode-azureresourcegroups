@@ -153,7 +153,12 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                     await extension.activate();
                 }
 
-                this.api = extension.exports.getApi<AzureAccountExtensionApi>('1');
+                if ('getApi' in extension.exports) {
+                    this.api = extension.exports.getApi<AzureAccountExtensionApi>('1');
+                } else {
+                    // support versions of the Azure Account extension <0.10.0
+                    this.api = extension.exports as unknown as AzureAccountExtensionApi;
+                }
 
                 if (this.api) {
                     await this.api.waitForFilters();
