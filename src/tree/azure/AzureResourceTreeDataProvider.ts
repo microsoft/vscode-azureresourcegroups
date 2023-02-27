@@ -157,7 +157,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                     this.api = extension.exports.getApi<AzureAccountExtensionApi>('1');
                 } else {
                     // support versions of the Azure Account extension <0.10.0
-                    this.api = extension.exports as AzureAccountExtensionApi;
+                    this.api = extension.exports as unknown as AzureAccountExtensionApi;
                 }
 
                 if (this.api) {
