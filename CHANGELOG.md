@@ -1,5 +1,14 @@
 # Change Log
 
+## 0.6.1 - 2023-02-29
+
+### Fixed
+* Support Azure Account extension versions < 0.10.0 [#596](https://github.com/microsoft/vscode-azureresourcegroups/issues/596) fixed by @alexweininger in [#597](https://github.com/microsoft/vscode-azureresourcegroups/pull/597)
+* Infinite prompts when running commands [#598](https://github.com/microsoft/vscode-azureresourcegroups/issues/598) fixed by @alexweininger in [#599](https://github.com/microsoft/vscode-azureresourcegroups/pull/599)
+
+### Engineering
+* Update dependencies with `npm audit fix` by @alexweininger in [#593](https://github.com/microsoft/vscode-azureresourcegroups/pull/593)
+
 ## 0.6.0 - 2023-02-22
 
 ### Azure Resources API v2
