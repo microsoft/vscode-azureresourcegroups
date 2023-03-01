@@ -26,6 +26,7 @@ export async function installExtension(context: IActionContext, extensionId: str
                     disposable.dispose();
                     clearTimeout(timeout);
                     resolve();
+                    void extensions.getExtension(extensionId)?.activate();
                 }
             });
 
