@@ -5,6 +5,7 @@
 import * as arm from '@azure/arm-subscriptions';
 import { Environment } from '@azure/ms-rest-azure-env';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
+import { IActionContext, callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzureSubscription } from '../../api/src/index';
 import { settingUtils } from '../utils/settingUtils';
@@ -23,14 +24,42 @@ export interface AzureSubscriptionProvider {
     logOut(): Promise<void>;
     selectSubscriptions(subscriptionIds: string[] | undefined): Promise<void>;
 
-    onSubscriptionsChanged: vscode.Event<void>;
+    readonly onStatusChanged: vscode.EventEmitter<AzureLoginStatus>;
+    readonly onFiltersChanged: vscode.EventEmitter<void>;
+    readonly onSessionsChanged: vscode.EventEmitter<void>;
+    readonly onSubscriptionsChanged: vscode.EventEmitter<void>;
+
+    onStatusChangedEvent: vscode.Event<AzureLoginStatus>;
+    onFiltersChangedEvent: vscode.Event<void>;
+    onSessionsChangedEvent: vscode.Event<void>;
+    onSubscriptionsChangedEvent: vscode.Event<void>;
+
+    readonly waitForFilters: () => Promise<boolean>;
+    readonly waitForLogin: () => Promise<boolean>;
+    readonly waitForSubscriptions: () => Promise<boolean>;
 }
 
 export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements AzureSubscriptionProvider {
-    private readonly _onSubscriptionsChanged = new vscode.EventEmitter<void>();
+
+    public readonly onStatusChanged: vscode.EventEmitter<AzureLoginStatus> = new vscode.EventEmitter<AzureLoginStatus>();
+    public readonly onFiltersChanged: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+    public readonly onSessionsChanged: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+    public readonly onSubscriptionsChanged: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+
+    public onStatusChangedEvent: vscode.Event<AzureLoginStatus>;
+    public onFiltersChangedEvent: vscode.Event<void>;
+    public onSessionsChangedEvent: vscode.Event<void>;
+    public onSubscriptionsChangedEvent: vscode.Event<void>;
+
+    public subscriptionResultsTask: () => Promise<AzureSubscriptionsResult>;
 
     constructor(private readonly storage: vscode.Memento) {
-        super(() => this._onSubscriptionsChanged.dispose());
+        super(() => this.onSubscriptionsChanged.dispose());
+
+        this.onStatusChangedEvent = this.onStatusChanged.event;
+        this.onFiltersChangedEvent = this.onFiltersChanged.event;
+        this.onSessionsChangedEvent = this.onSessionsChanged.event;
+        this.onSubscriptionsChangedEvent = this.onSubscriptionsChanged.event;
     }
 
     async getSubscriptions(): Promise<AzureSubscriptionsResult> {
@@ -101,13 +130,57 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
     }
 
     async selectSubscriptions(subscriptionIds: string[] | undefined): Promise<void> {
+        this.subscriptionResultsTask = this.getSubscriptions;
         await this.updateSelectedSubscriptions(subscriptionIds);
-
-
-        this._onSubscriptionsChanged.fire();
+        this.onSubscriptionsChanged.fire();
     }
 
-    readonly onSubscriptionsChanged = this._onSubscriptionsChanged.event;
+    public async waitForFilters(): Promise<boolean> {
+        return await callWithTelemetryAndErrorHandling('waitForFilters', async (_context: IActionContext) => {
+            if (!(await this.waitForSubscriptions())) {
+                return false;
+            }
+
+            await this.subscriptionResultsTask();
+            return true;
+        }) || false;
+    }
+
+    public async waitForLogin(): Promise<boolean> {
+        return await callWithTelemetryAndErrorHandling('waitForLogin', (_context: IActionContext) => {
+
+            switch (this.status) {
+                case 'LoggedIn':
+                    return true;
+                case 'LoggedOut':
+                    return false;
+                case 'Initializing':
+                case 'LoggingIn':
+                    return new Promise<boolean>(resolve => {
+                        const subscription: vscode.Disposable = this.onStatusChangedEvent(() => {
+                            subscription.dispose();
+                            resolve(this.waitForLogin());
+                        });
+                    });
+                default:
+                    const status: never = this.status;
+                    throw new Error(`Unexpected status '${status}'`);
+            }
+        }) || false;
+    }
+
+    public async waitForSubscriptions(isLegacyApi?: boolean): Promise<boolean> {
+        return await callWithTelemetryAndErrorHandling('waitForSubscriptions', async (context: IActionContext) => {
+            context.telemetry.properties.isLegacyApi = String(!!isLegacyApi);
+
+            if (!(await this.waitForLogin())) {
+                return false;
+            }
+
+            await this.subscriptionResultsTask();
+            return true;
+        }) || false;
+    }
 
     private isLoggedIn(): boolean {
         return this.storage.get('isLoggedIn', false);
@@ -148,10 +221,12 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
             await this.updateSelectedSubscriptions(undefined);
         }
 
-        this._onSubscriptionsChanged.fire();
+        this.onStatusChanged.fire(this.status);
+        this.onSubscriptionsChanged.fire();
     }
 
     private updateSelectedSubscriptions(subscriptionsIds: string[] | undefined): Promise<void> {
+        this.onFiltersChanged.fire();
         return settingUtils.updateGlobalSetting<string[] | undefined>('selectedSubscriptions', subscriptionsIds);
     }
 
