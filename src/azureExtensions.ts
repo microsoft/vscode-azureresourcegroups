@@ -83,6 +83,15 @@ export const azureExtensions: IAzExtMetadata[] = [
             AzExtResourceType.ContainerAppsEnvironment,
         ],
         reportIssueCommandId: 'containerApps.reportIssue'
+    },
+    {
+        name: 'vscode-azurespringcloud',
+        publisher: 'vscjava',
+        label: 'Spring Apps',
+        resourceTypes: [
+            AzExtResourceType.SpringApps,
+        ],
+        reportIssueCommandId: 'springApps.reportIssue'
     }
 ];
 
@@ -93,7 +102,8 @@ export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
     VirtualMachines: 'microsoft.compute/virtualmachines',
     AzureCosmosDb: 'microsoft.documentdb/databaseaccounts',
     PostgresqlServersStandard: 'microsoft.dbforpostgresql/servers',
-    PostgresqlServersFlexible: 'microsoft.dbforpostgresql/flexibleservers'
+    PostgresqlServersFlexible: 'microsoft.dbforpostgresql/flexibleservers',
+    SpringApps: 'microsoft.appplatform/spring'
 }
 
 export interface IAzExtMetadata {
