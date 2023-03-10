@@ -39,7 +39,6 @@ export function registerWorkspaceTree(context: vscode.ExtensionContext, options:
     });
     context.subscriptions.push(treeView);
 
-    treeView.title = localize('workspace', 'Workspace');
     treeView.description = localize('local', 'Local');
 
     ext.workspaceTreeView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
