@@ -7,11 +7,11 @@ import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { WorkspaceResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { ext } from '../../extensionVariables';
+import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { createTreeView } from '../createTreeView';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
+import { createTreeView } from '../createTreeView';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
-import { localize } from './../../utils/localize';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceResourceTreeDataProvider } from './WorkspaceResourceTreeDataProvider';
 
@@ -39,6 +39,7 @@ export function registerWorkspaceTree(context: vscode.ExtensionContext, options:
     });
     context.subscriptions.push(treeView);
 
+    treeView.title = localize('workspace', 'Workspace');
     treeView.description = localize('local', 'Local');
 
     ext.workspaceTreeView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
