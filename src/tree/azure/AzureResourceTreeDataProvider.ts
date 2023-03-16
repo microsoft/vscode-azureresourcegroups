@@ -5,7 +5,7 @@
 
 import { AzExtServiceClientCredentials, IActionContext, nonNullProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { apiUtils, AzureSubscription, ResourceModelBase } from '../../../api/src/index';
+import { AzureSubscription, ResourceModelBase, apiUtils } from '../../../api/src/index';
 import { AzureAccountExtensionApi, AzureSubscription as AzureAccountSubscription } from '../../../azure-account.api';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { showHiddenTypesSettingKey } from '../../constants';
@@ -153,7 +153,16 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                     await extension.activate();
                 }
 
-                this.api = ext.testing.overrideAzureAccountApiFactory?.() ?? extension.exports.getApi<AzureAccountExtensionApi>('1');
+                if (ext.testing.overrideAzureAccountApiFactory) {
+                    this.api = ext.testing.overrideAzureAccountApiFactory();
+                } else {
+                    if ('getApi' in extension.exports) {
+                        this.api = extension.exports.getApi<AzureAccountExtensionApi>('1');
+                    } else {
+                        // support versions of the Azure Account extension <0.10.0
+                        this.api = extension.exports as unknown as AzureAccountExtensionApi;
+                    }
+                }
 
                 if (this.api) {
                     await this.api.waitForFilters();

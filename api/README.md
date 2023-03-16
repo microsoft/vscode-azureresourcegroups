@@ -15,30 +15,17 @@ The Azure Resources extension exposes an API which enables any number of client 
 
 ## Capabilities
 
-### Resource views
+### Tree views
 
 <img align="right" src="https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/docs/media/resource-views.png?raw=true" width="50%" />
 
-Allows multiple extensions to contribute rich features to unified resource tree views in the Azure view.
+The Azure Resources extension contributes two extendable views. The Resources view, and the Workspace view. In the Resources view, clients can customize resource tree items, and have full control over resource tree item children.
 
-Consumers of the API can:
+For the Workspace view, clients can contribute root level tree items to the view. Clients have full control over these tree items and their children.
 
-- Customize and extend the behavior of Azure resource tree items in the Azure resources tree view
-- Contribute tree items to the Workspace resources tree view
-
-
-
-- Getting your resources to show up in the Azure resources tree
-
-  - Group display name
-  - Adding an icon
-
-- Contribution points
-  - Azure and Workspace resources
-  - Create Resource command
 <br clear="right"/>
 
-### Create Resource menu
+### Create Resource command
 
 <img align="right" src="https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/docs/media/create-resource.png?raw=true" width="60%" />
 
@@ -53,7 +40,7 @@ Client extensions can add items to the Azure Resources "Create Resource..." comm
 
 ### Branch data provider
 
-The VS Code API provides a `TreeDataProvider` interface for controlling tree views. The host extension splits tree views into branches, where each branch is controlled by a branch data provider. Clients can register a `BranchDataProvider` which is then responsible for providing the tree items for a branch in the tree view. `BranchDataProvider` is an extension of [VS Code's `TreeDataProvider`](https://code.visualstudio.com/api/references/vscode-api#TreeDataProvider).
+The VS Code API provides a `TreeDataProvider` interface for controlling tree views. In order to make the Azure trees extensible, the host extension splits tree views into "branches", where each branch is controlled by a branch data provider. Clients can register a `BranchDataProvider` for a resource type. The registered branch data provider is then responsible for providing the tree items for that branch in the tree view. `BranchDataProvider` is an extension of [VS Code's `TreeDataProvider`](https://code.visualstudio.com/api/references/vscode-api#TreeDataProvider).
 
 > Note: clients registering resource providers must declare that they do so in their extension manifest. See [Extension Manifest](#extension-manifest)
 
@@ -83,8 +70,6 @@ export interface BranchDataProvider<TResource extends ResourceBase, TModel exten
 }
 ```
 
-Clients can register branch data providers for each resource view.
-
 ### Resource provider
 
 Clients register resource providers to add resources to a view. Currently the API is limited to registering Workspace resource providers because a default Azure resource provider is built into the Azure Resources extension.
@@ -112,7 +97,6 @@ export interface ResourceProvider<TResourceSource, TResource extends ResourceBas
 }
 ```
 
-
 ## Extension manifest
 
 Client extensions define an `x-azResources` object on inside of `contributes` in the extension manifest `package.json` file.
@@ -120,44 +104,43 @@ Client extensions define an `x-azResources` object on inside of `contributes` in
 This object informs the host extension when to activate the client extension and what contributions the client extension makes to the shared views.
 
 ```ts
-    azure?: {
-        /**
-         * List of Azure resource types this extension registers a BranchDataProvider for.
-         */
-        branches: {
-            /**
-             * The resource type the BranchDataProvider is registered for.
-             */
-            type: AzExtResourceType
-        }[];
-    };
-
+azure?: {
     /**
-     * List of Workspace resource types this extension registers a BranchDataProvider for.
+     * List of Azure resource types this extension registers a BranchDataProvider for.
      */
-    workspace?: {
-        branches: {
-            /**
-             * The resource type the BranchDataProvider is registered for.
-             */
-            type: string;
-        }[];
-
+    branches: {
         /**
-         * Whether this extension registers a WorkspaceResourceProvider.
+         * The resource type the BranchDataProvider is registered for.
          */
-        resources?: boolean;
-    };
-
-    /**
-     * Commands to add to the "Create Resource..." quick pick prompt.
-     */
-    commands?: {
-        command: string;
-        title: string;
-        detail: string;
+        type: AzExtResourceType
     }[];
-}
+};
+
+/**
+ * List of Workspace resource types this extension registers a BranchDataProvider for.
+ */
+workspace?: {
+    branches: {
+        /**
+         * The resource type the BranchDataProvider is registered for.
+         */
+        type: string;
+    }[];
+
+    /**
+     * Whether this extension registers a WorkspaceResourceProvider.
+     */
+    resources?: boolean;
+};
+
+/**
+ * Commands to add to the "Create Resource..." quick pick prompt.
+ */
+commands?: {
+    command: string;
+    title: string;
+    detail: string;
+}[];
 ```
 
 > [View defintion of `AzExtResourceType`](../src/AzExtResourceType.ts)
@@ -248,14 +231,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 ```
 
-## Contribute to the Azure resources view
+<!-- ## Contribute to the Azure resources view
 
 todo
 
 ## Contribute to the Workspace resources view
 
 - register workspace resource provider for `type`
-- register workspace resource branch data provider for `type`
+- register workspace resource branch data provider for `type` -->
 
 ## Extension dependencies
 
@@ -272,26 +255,35 @@ Client extensions must declare the Azure Resources extension as an extension dep
 
 <br clear="right"/>
 
+
+## Example extensions
+
+The following extensions are integrated with the Azure Resources API v2. They are great examples of how to use the API.
+
+- [Azure Dev CLI](https://github.com/Azure/azure-dev/tree/main/ext/vscode)
+- [Azure Container Apps](https://github.com/microsoft/vscode-azurecontainerapps)
+
 ## API Reference
 
-See [vscode-azureresources-api.d.ts](./docs/vscode-azureresources-api.d.ts) for the full API definition.
+See [vscode-azureresources-api.d.ts](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/docs/vscode-azureresources-api.d.ts) for the full API definition.
 
 ## Terms
 
-terms:
 * **Host extension**: Azure Resources extension which exposes the Azure Resources API
+* **Host API**: Azure Resources API exposed by the host extension
 * **Client extension**: Extension which consumes the Azure Resources API
 * **Azure resources view**: Unified view of Azure resources contributed owned by the Azure Resources extension
 * **Workspace resources view**: Unified view of workspace resources contributed by client extensions
-* **Azure resource**: Any resource that can be represented in the Azure resources view
+* **Azure resource**: A resource that can be represented in the Azure resources view.
 * **Workspace resource**: Any resource that is located on the local machine, or in the opened workspace.
-* **Host API**: Azure Resources API exposed by the host extension
 
-## Document todo list
+<!-- ## Document todo list
 
 big todo:
 * Add overall architecture section
 * FAQ
+* Add a section on how to contribute to the Azure resources view
+* Add a section on how to contribute to the Workspace resources view
 
 small todo:
 * Don't forget to add the Azure Resources extension as a dependency in your extension's package.json
@@ -312,3 +304,4 @@ Azure Resources
 - Add display info in src/utils/azureUtils.ts
 - Add extension to src/azureExtensions.ts
 
+ -->
