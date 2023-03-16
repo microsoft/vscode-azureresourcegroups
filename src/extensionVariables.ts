@@ -5,7 +5,7 @@
 
 import { AzExtTreeDataProvider, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
-import { DiagnosticCollection, Disposable, Event, EventEmitter, ExtensionContext, TreeView } from "vscode";
+import { DiagnosticCollection, Disposable, Event, EventEmitter, ExtensionContext, TreeView, UIKind, env } from "vscode";
 import { AzureResourcesApiInternal } from "../hostapi.v2.internal";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
@@ -55,6 +55,10 @@ export namespace ext {
 
     export let azureTreeState: TreeItemStateStore;
     export let subscriptionProvider: VSCodeAzureSubscriptionProvider;
+
+    // This needs to be changed, but when debugging in a web environment, the UIKind is Desktop. If you sideload it into the browser, you must
+    // change this to UIKind.Web and then webpack it again
+    export const isWeb: boolean = env.uiKind === UIKind.Web;
 
     export namespace v2 {
         export let api: AzureResourcesApiInternal;

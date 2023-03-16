@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { Environment } from '@azure/ms-rest-azure-env';
+import { Environment } from '@azure/ms-rest-azure-env';
 import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzureSubscription } from '../../../api/src/index';
@@ -40,8 +40,7 @@ export function createCredential(getSession: (scopes?: string[]) => vscode.Provi
  */
 export function createSubscriptionContext(subscription: AzureSubscription): ISubscriptionContext {
     return {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        environment: {} as Environment,
+        environment: Environment.AzureCloud,
         isCustomCloud: false,
         subscriptionDisplayName: subscription.name,
         subscriptionId: subscription.subscriptionId,

@@ -28,7 +28,6 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     private api: AzureAccountExtensionApi | AzureSubscriptionsResult | undefined;
     private filtersSubscription: vscode.Disposable | undefined;
     private statusSubscription: vscode.Disposable | undefined;
-    private isWeb: boolean;
 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -67,9 +66,6 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
         //       as we're just rearranging known items; we might try caching resource items and only calling getTreeItem() on
         //       branch providers during the tree refresh that results from this (rather than getChildren() again).
         this.groupingChangeSubscription = this.resourceGroupingManager.onDidChangeGrouping(() => this.notifyTreeDataChanged());
-        // This needs to be changed, but when debugging in a web environment, the UIKind is Desktop. If you sideload it into the browser, you must
-        // change this to UIKind.Web and then webpack it again
-        this.isWeb = vscode.env.uiKind === vscode.UIKind.Web;
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
@@ -142,7 +138,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     }
 
     private async getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi | AzureSubscriptionsResult | undefined> {
-        if (this.isWeb) {
+        if (ext.isWeb) {
             this.filtersSubscription = ext.subscriptionProvider.onFiltersChangedEvent(() => this.notifyTreeDataChanged());
             this.statusSubscription = ext.subscriptionProvider.onStatusChangedEvent(() => this.notifyTreeDataChanged());
             return await ext.subscriptionProvider.getSubscriptions();
@@ -176,7 +172,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     }
 
     private createAzureSubscription(subscription: AzureAccountSubscription): AzureSubscription {
-        if (this.isWeb) {
+        if (ext.isWeb) {
             return subscription as unknown as AzureSubscription;
         }
 
@@ -209,7 +205,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     }
 
     private createSubscriptionContext(subscription: AzureAccountSubscription): ISubscriptionContext {
-        if (this.isWeb) {
+        if (ext.isWeb) {
             // TODO: This is a hack to get the subscription context to work with the webview
             return createSubscriptionContext(subscription as unknown as AzureSubscription);
         }
