@@ -95,7 +95,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                         new GenericItem(
                             localize('signInLabel', 'Sign in to Azure...'),
                             {
-                                commandId: 'azureResourceGroups.accounts.logIn',
+                                commandId: 'azureResourceGroups.vscodeAuth.logIn',
                                 iconPath: new vscode.ThemeIcon('sign-in')
                             }),
                         new GenericItem(
@@ -119,7 +119,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                                 ? localize('loadingTreeItem', 'Loading...')
                                 : localize('signingIn', 'Waiting for Azure sign-in...'),
                             {
-                                commandId: 'azureResourceGroups.accounts.logIn',
+                                commandId: 'azureResourceGroups.vscodeAuth.logIn',
                                 iconPath: new vscode.ThemeIcon('loading~spin')
                             })
                     ];

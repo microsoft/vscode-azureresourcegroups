@@ -41,9 +41,9 @@ export function registerCommands(): void {
         ext.actions.refreshWorkspaceTree(node);
     });
 
-    registerCommand('azureResourceGroups.accounts.logIn', (context: IActionContext) => logIn(context));
-    registerCommand('azureResourceGroups.accounts.logOut', (context: IActionContext) => logOut(context));
-    registerCommand('azureResourceGroups.accounts.selectSubscriptions', (context: IActionContext) => selectSubscriptions(context));
+    registerCommand('azureResourceGroups.vscodeAuth.logIn', (context: IActionContext) => logIn(context));
+    registerCommand('azureResourceGroups.vscodeAuth.logOut', (context: IActionContext) => logOut(context));
+    registerCommand('azureResourceGroups.vscodeAuth.selectSubscriptions', (context: IActionContext) => selectSubscriptions(context));
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
