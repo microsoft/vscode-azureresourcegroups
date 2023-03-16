@@ -56,7 +56,7 @@ export namespace ext {
     export let azureTreeState: TreeItemStateStore;
     export let subscriptionProvider: VSCodeAzureSubscriptionProvider;
 
-    // This needs to be changed, but when debugging in a web environment, the UIKind is Desktop. If you sideload it into the browser, you must
+    // When debugging thru VS Code as a web environment, the UIKind is Desktop. However, if you sideload it into the browser, you must
     // change this to UIKind.Web and then webpack it again
     export const isWeb: boolean = env.uiKind === UIKind.Web;
 

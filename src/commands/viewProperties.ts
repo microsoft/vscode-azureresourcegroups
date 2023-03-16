@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { azureResourceExperience, IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
+import { uuid } from 'uuidv4';
 import { ViewPropertiesModel } from '../../api/src/index';
 import { ext } from '../extensionVariables';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
@@ -18,7 +19,7 @@ export async function viewProperties(context: IActionContext, node?: ResourceGro
         throw new Error(localize('commands.viewProperties.noProperties', 'The selected resource has no properties to view.'));
     }
 
-    await openReadOnlyJson({ fullId: node.id, label: node.viewProperties.label }, node.viewProperties.data);
+    await openReadOnlyJson({ fullId: node.id ?? uuid(), label: node.viewProperties.label }, node.viewProperties.data);
 }
 
 function hasViewProperties(node: unknown): node is { viewProperties: ViewPropertiesModel } {
