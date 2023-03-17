@@ -139,8 +139,8 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
 
     private async getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi | AzureSubscriptionsResult | undefined> {
         if (ext.isWeb) {
-            this.filtersSubscription = ext.subscriptionProvider.onFiltersChangedEvent(() => this.notifyTreeDataChanged());
-            this.statusSubscription = ext.subscriptionProvider.onStatusChangedEvent(() => this.notifyTreeDataChanged());
+            this.filtersSubscription = ext.subscriptionProvider.onFiltersChanged(() => this.notifyTreeDataChanged());
+            this.statusSubscription = ext.subscriptionProvider.onStatusChanged(() => this.notifyTreeDataChanged());
             return await ext.subscriptionProvider.getSubscriptions();
         }
 
