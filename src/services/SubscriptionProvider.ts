@@ -10,7 +10,7 @@ import { AzureLoginStatus } from '../tree/azure-account.api';
 export interface AzureSubscriptionProvider {
     logIn(): Promise<void>;
     logOut(): Promise<void>;
-    selectSubscriptions(subscriptionIds: string[] | undefined): Promise<void>;
+    selectSubscriptions(): Promise<void>;
 
     readonly onStatusChanged: vscode.Event<AzureLoginStatus>;
     readonly onFiltersChanged: vscode.Event<void>;

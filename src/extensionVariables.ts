@@ -10,7 +10,6 @@ import { AzureResourcesApiInternal } from "../hostapi.v2.internal";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureSubscriptionProvider } from "./services/SubscriptionProvider";
-import { VSCodeAzureSubscriptionProvider } from "./services/WebAzureSubscriptionProvider";
 import { ResourceGroupsItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
 
@@ -55,7 +54,6 @@ export namespace ext {
     export const events = extEvents;
 
     export let azureTreeState: TreeItemStateStore;
-    export let subscriptionProvider: VSCodeAzureSubscriptionProvider;
 
     export let subscriptionProviderFactory: () => Promise<AzureSubscriptionProvider>;
 

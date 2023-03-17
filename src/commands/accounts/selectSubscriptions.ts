@@ -7,5 +7,6 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
 
 export async function selectSubscriptions(_context: IActionContext): Promise<void> {
-    await ext.subscriptionProvider.selectSubscriptions();
+    const provider = await ext.subscriptionProviderFactory();
+    await provider.selectSubscriptions();
 }

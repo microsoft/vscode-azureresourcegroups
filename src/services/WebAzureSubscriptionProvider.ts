@@ -25,7 +25,7 @@ export function createWebSubscriptionProviderFactory(context: vscode.ExtensionCo
     }
 }
 
-export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements AzureSubscriptionProvider {
+class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements AzureSubscriptionProvider {
     allSubscriptions: AzureSubscription[];
     filters: AzureSubscription[];
 

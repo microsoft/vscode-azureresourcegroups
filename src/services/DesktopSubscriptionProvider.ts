@@ -35,7 +35,7 @@ export function createAzureAccountSubscriptionProviderFactory(): () => Promise<A
     }
 }
 
-export class AzureAccountSubscriptionProvider implements AzureSubscriptionProvider {
+class AzureAccountSubscriptionProvider implements AzureSubscriptionProvider {
     waitForFilters: () => Promise<boolean>;
     waitForLogin: () => Promise<boolean>;
     waitForSubscriptions: () => Promise<boolean>;
