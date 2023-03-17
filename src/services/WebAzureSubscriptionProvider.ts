@@ -2,44 +2,32 @@
 *  Copyright (c) Microsoft Corporation. All rights reserved.
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
+
 import * as arm from '@azure/arm-subscriptions';
 import { Environment } from '@azure/ms-rest-azure-env';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { IActionContext, callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzureSubscription } from '../../api/src/index';
+import { AzureLoginStatus } from '../tree/azure-account.api';
 import { settingUtils } from '../utils/settingUtils';
+import { AzureSubscriptionProvider } from './SubscriptionProvider';
 
-type AzureLoginStatus = 'Initializing' | 'LoggingIn' | 'LoggedIn' | 'LoggedOut';
-export type AzureSubscriptionsResult = {
+type AzureSubscriptionsResult = {
     readonly status: AzureLoginStatus;
     readonly allSubscriptions: AzureSubscription[];
     readonly filters: AzureSubscription[];
 }
 
-export interface AzureSubscriptionProvider {
-    getSubscriptions(): Promise<AzureSubscriptionsResult>;
-
-    logIn(): Promise<void>;
-    logOut(): Promise<void>;
-    selectSubscriptions(subscriptionIds: string[] | undefined): Promise<void>;
-
-    readonly onStatusChanged: vscode.Event<AzureLoginStatus>;
-    readonly onFiltersChanged: vscode.Event<void>;
-    readonly onSessionsChanged: vscode.Event<void>;
-    readonly onSubscriptionsChanged: vscode.Event<void>;
-
-    readonly onStatusChangedEmitter: vscode.EventEmitter<AzureLoginStatus>;
-    readonly onFiltersChangedEmitter: vscode.EventEmitter<void>;
-    readonly onSessionsChangedEmitter: vscode.EventEmitter<void>;
-    readonly onSubscriptionsChangedEmitter: vscode.EventEmitter<void>;
-
-    readonly waitForFilters: () => Promise<boolean>;
-    readonly waitForLogin: () => Promise<boolean>;
-    readonly waitForSubscriptions: () => Promise<boolean>;
+export function createWebSubscriptionProviderFactory(context: vscode.ExtensionContext): () => Promise<AzureSubscriptionProvider> {
+    return async (): Promise<AzureSubscriptionProvider> => {
+        return new VSCodeAzureSubscriptionProvider(context.globalState);
+    }
 }
 
 export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements AzureSubscriptionProvider {
+    allSubscriptions: AzureSubscription[];
+    filters: AzureSubscription[];
 
     public readonly onStatusChangedEmitter: vscode.EventEmitter<AzureLoginStatus> = new vscode.EventEmitter<AzureLoginStatus>();
     public readonly onFiltersChangedEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -129,9 +117,36 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
         }
     }
 
-    async selectSubscriptions(subscriptionIds: string[] | undefined): Promise<void> {
+    async selectSubscriptions(): Promise<void> {
         this.subscriptionResultsTask = this.getSubscriptions;
-        await this.updateSelectedSubscriptions(subscriptionIds);
+
+        if (this.status === 'LoggedIn') {
+
+            const subscriptionQuickPickItems: (vscode.QuickPickItem & { subscription: AzureSubscription })[] =
+                this
+                    .allSubscriptions
+                    .map(subscription => ({
+                        label: subscription.name,
+                        picked: this.filters.includes(subscription),
+                        subscription
+                    }))
+                    .sort((a, b) => a.label.localeCompare(b.label));
+
+            const picks = await vscode.window.showQuickPick(
+                subscriptionQuickPickItems,
+                {
+                    canPickMany: true,
+                    placeHolder: 'Select Subscriptions'
+                });
+
+            if (picks) {
+                await this.updateSelectedSubscriptions(
+                    picks.length < this.allSubscriptions.length
+                        ? picks.map(pick => pick.subscription.subscriptionId)
+                        : undefined);
+            }
+        }
+
         this.onSubscriptionsChangedEmitter.fire();
     }
 
@@ -141,7 +156,9 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
                 return false;
             }
 
-            await this.subscriptionResultsTask();
+            const result = await this.subscriptionResultsTask();
+            this.filters = result.filters;
+            this.allSubscriptions = result.allSubscriptions;
             return true;
         }) || false;
     }
