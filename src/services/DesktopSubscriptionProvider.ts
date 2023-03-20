@@ -50,7 +50,7 @@ class AzureAccountSubscriptionProvider implements AzureSubscriptionProvider {
         this.onFiltersChanged = azureAccountApi.onFiltersChanged;
         this.onSessionsChanged = azureAccountApi.onSessionsChanged;
         this.onSubscriptionsChanged = azureAccountApi.onSubscriptionsChanged;
-        this.waitForFilters = azureAccountApi.waitForFilters.bind(azureAccountApi);
+        this.waitForFilters = azureAccountApi.waitForFilters.bind(azureAccountApi) as typeof azureAccountApi.waitForFilters;
     }
 
     get status(): AzureLoginStatus {
@@ -66,13 +66,13 @@ class AzureAccountSubscriptionProvider implements AzureSubscriptionProvider {
     }
 
     async logIn(): Promise<void> {
-        vscode.commands.executeCommand('azure-account.login');
+        await vscode.commands.executeCommand('azure-account.login');
     }
     async logOut(): Promise<void> {
-        vscode.commands.executeCommand('azure-account.logout');
+        await vscode.commands.executeCommand('azure-account.logout');
     }
     async selectSubscriptions(): Promise<void> {
-        vscode.commands.executeCommand('azure-account.selectSubscriptions');
+        await vscode.commands.executeCommand('azure-account.selectSubscriptions');
     }
 
     private createAzureSubscription(subscription: AzureAccountSubscription): AzureSubscription {
