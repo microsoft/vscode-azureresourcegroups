@@ -76,7 +76,9 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
             if (api) {
                 if (api.status === 'LoggedIn') {
                     if (api.filters.length === 0) {
-                        return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), { commandId: 'azureResourceGroups.vscodeAuth.selectSubscriptions' })]
+                        return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
+                            commandId: ext.isWeb ? 'azureResourceGroups.vscodeAuth.selectSubscriptions' : 'azure-account.selectSubscriptions',
+                        })]
                     } else {
                         return api.filters.map(
                             subscription => new SubscriptionItem(
