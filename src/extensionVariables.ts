@@ -9,7 +9,7 @@ import { DiagnosticCollection, Disposable, Event, EventEmitter, ExtensionContext
 import { AzureResourcesApiInternal } from "../hostapi.v2.internal";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
-import { VSCodeAzureSubscriptionProvider } from "./services/AzureSubscriptionProvider";
+import { AzureSubscriptionProvider } from "./services/SubscriptionProvider";
 import { ResourceGroupsItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
 
@@ -54,7 +54,8 @@ export namespace ext {
     export const events = extEvents;
 
     export let azureTreeState: TreeItemStateStore;
-    export let subscriptionProvider: VSCodeAzureSubscriptionProvider;
+
+    export let subscriptionProviderFactory: () => Promise<AzureSubscriptionProvider>;
 
     // When debugging thru VS Code as a web environment, the UIKind is Desktop. However, if you sideload it into the browser, you must
     // change this to UIKind.Web and then webpack it again

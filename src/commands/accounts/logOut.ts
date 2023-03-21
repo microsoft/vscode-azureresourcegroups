@@ -7,5 +7,6 @@ import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../../extensionVariables';
 
 export async function logOut(_context: IActionContext): Promise<void> {
-    await ext.subscriptionProvider.logOut();
+    const provider = await ext.subscriptionProviderFactory();
+    await provider.logOut();
 }
