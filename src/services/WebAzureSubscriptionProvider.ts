@@ -26,8 +26,8 @@ export function createWebSubscriptionProviderFactory(context: vscode.ExtensionCo
 }
 
 class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements AzureSubscriptionProvider {
-    allSubscriptions: AzureSubscription[];
-    filters: AzureSubscription[];
+    allSubscriptions: AzureSubscription[] = [];
+    filters: AzureSubscription[] = [];
 
     public readonly onStatusChangedEmitter: vscode.EventEmitter<AzureLoginStatus> = new vscode.EventEmitter<AzureLoginStatus>();
     public readonly onFiltersChangedEmitter: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -91,6 +91,9 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
 
         const selectedSubscriptionIds = settingUtils.getGlobalSetting<string[] | undefined>('selectedSubscriptions');
         const filters = allSubscriptions.filter(s => selectedSubscriptionIds === undefined || selectedSubscriptionIds.includes(s.subscriptionId));
+
+        this.filters = filters;
+        this.allSubscriptions = allSubscriptions;
 
         return {
             status: session ? 'LoggedIn' : 'LoggedOut',
@@ -158,9 +161,7 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
                 return false;
             }
 
-            const result = await this.subscriptionResultsTask();
-            this.filters = result.filters;
-            this.allSubscriptions = result.allSubscriptions;
+            await this.subscriptionResultsTask();
             return true;
         }) || false;
     }
