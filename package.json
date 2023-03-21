@@ -602,7 +602,5 @@
         "vscode-nls": "^5.0.1",
         "vscode-uri": "^3.0.7"
     },
-    "extensionDependencies": [
-        "ms-vscode.azure-account"
-    ]
+    "extensionDependencies": []
 }
