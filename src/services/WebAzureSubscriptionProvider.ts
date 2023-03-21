@@ -44,6 +44,8 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
     constructor(private readonly storage: vscode.Memento) {
         super(() => this.onSubscriptionsChangedEmitter.dispose());
 
+        this.subscriptionResultsTask = this.getSubscriptions;
+
         this.onStatusChanged = this.onStatusChangedEmitter.event;
         this.onFiltersChanged = this.onFiltersChangedEmitter.event;
         this.onSessionsChanged = this.onSessionsChangedEmitter.event;
