@@ -28,10 +28,15 @@ async function getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi> 
     }
 }
 
+let azureAccountSubscriptionProvider: AzureSubscriptionProvider | undefined;
+
 export function createAzureAccountSubscriptionProviderFactory(): () => Promise<AzureSubscriptionProvider> {
     return async () => {
-        const api = await getAzureAccountExtensionApi();
-        return new AzureAccountSubscriptionProvider(api);
+        if (!azureAccountSubscriptionProvider) {
+            const api = await getAzureAccountExtensionApi();
+            azureAccountSubscriptionProvider = new AzureAccountSubscriptionProvider(api);
+        }
+        return azureAccountSubscriptionProvider;
     }
 }
 
