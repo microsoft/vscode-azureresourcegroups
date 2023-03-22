@@ -109,6 +109,7 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     PostgresqlServersFlexible: { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Flexible)') },
     PostgresqlServersStandard: { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Standard)') },
     PublicIpAddresses: { displayName: localize('publicIpAddresses', 'Public IP addresses') },
+    SpringApps: { displayName: localize('springApps', 'Spring Apps') },
     SqlDatabases: { displayName: localize('sqlDatabases', 'SQL databases') },
     SqlServers: { displayName: localize('sqlServers', 'SQL servers') },
     StaticWebApps: { displayName: localize('staticWebApp', 'Static Web Apps') },
