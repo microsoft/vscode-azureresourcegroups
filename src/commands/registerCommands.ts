@@ -8,6 +8,7 @@ import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
 import { BranchDataItemWrapper } from '../tree/BranchDataProviderItem';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
+import { GroupingItem } from '../tree/azure/GroupingItem';
 import { logIn } from './accounts/logIn';
 import { logOut } from './accounts/logOut';
 import { selectSubscriptions } from './accounts/selectSubscriptions';
@@ -34,7 +35,14 @@ export function registerCommands(): void {
     // v1.5 client extensions attach these commands to tree item context menus for refreshing their tree items
     registerCommand('azureResourceGroups.refresh', async (context, node?: ResourceGroupsItem) => {
         await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
-        ext.actions.refreshAzureTree(node);
+
+        // override GroupingItem refresh and refresh subscription instead so that the resource list is refetched
+        // see https://github.com/microsoft/vscode-azureresourcegroups/issues/617
+        if (node instanceof GroupingItem) {
+            ext.actions.refreshAzureTree(node.parent);
+        } else {
+            ext.actions.refreshAzureTree(node);
+        }
     });
     registerCommand('azureWorkspace.refresh', async (context, node?: ResourceGroupsItem) => {
         await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
