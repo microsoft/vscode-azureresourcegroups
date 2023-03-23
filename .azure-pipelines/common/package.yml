@@ -27,6 +27,14 @@ steps:
         resources/**
       TargetFolder: "$(build.artifactstagingdirectory)/web/"
 
+  - task: CopyFiles@2
+    displayName: "Copy web package.json to staging directory"
+    inputs:
+      SourceFolder: "dist/web"
+      Contents: |
+        package.json
+      TargetFolder: "$(build.artifactstagingdirectory)/web/"
+
   - task: PublishBuildArtifacts@1
     displayName: "Publish artifacts: vsix"
     inputs:
