@@ -49,7 +49,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.outputChannel = createAzExtOutputChannel('Azure Resource Groups', ext.prefix);
     context.subscriptions.push(ext.outputChannel);
 
-    await registerUIExtensionVariables(ext);
+    registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();

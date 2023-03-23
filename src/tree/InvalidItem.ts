@@ -4,13 +4,13 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { IParsedError } from "@microsoft/vscode-azext-utils";
-import { uuid } from "uuidv4";
+import { v4 as uuidv4 } from "uuid";
 import { ProviderResult, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ResourceGroupsItem } from "./ResourceGroupsItem";
 
 export class InvalidItem implements ResourceGroupsItem {
     constructor(public readonly error: IParsedError) { }
-    id = uuid();
+    id = uuidv4();
 
     getTreeItem(): TreeItem {
         return {

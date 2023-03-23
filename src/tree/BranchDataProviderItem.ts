@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { isAzExtTreeItem } from '@microsoft/vscode-azext-utils';
-import { uuid } from 'uuidv4';
+import { v4 as uuidv4 } from "uuid";
 import * as vscode from 'vscode';
 import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel, Wrapper } from '../../api/src/index';
 import { BranchDataItemCache } from './BranchDataItemCache';
@@ -42,7 +42,7 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
         if (isAzExtTreeItem(this.branchItem)) {
             this.id = this.branchItem.fullId;
         } else {
-            this.id = this.branchItem.id ?? this?.options?.defaultId ?? uuid();
+            this.id = this.branchItem.id ?? this?.options?.defaultId ?? uuidv4();
         }
     }
 
