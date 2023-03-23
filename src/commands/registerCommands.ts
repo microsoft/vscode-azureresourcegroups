@@ -33,6 +33,8 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.refresh', async (context, node?: ResourceGroupsItem) => {
         await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
 
+        // override GroupingItem refresh and refresh subscription instead so that the resource list is refetched
+        // see https://github.com/microsoft/vscode-azureresourcegroups/issues/617
         if (node instanceof GroupingItem) {
             ext.actions.refreshAzureTree(node.parent);
         } else {
