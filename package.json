@@ -556,7 +556,6 @@
         "lint": "eslint --ext .ts .",
         "lint-fix": "eslint --ext .ts . --fix",
         "listIcons": "gulp listIcons",
-        "pretest": "npm run webpack-prod && gulp preTest",
         "test": "node ./out/test/runTest.js",
         "webpack": "npm run build && gulp webpack-dev",
         "webpack-prod": "npm run build && gulp webpack-prod",
