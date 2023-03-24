@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { nonNullValue, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzExtResourceType, AzureResource } from '../../../api/src/index';
 import { azureExtensions } from '../../azureExtensions';
@@ -64,7 +64,7 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
         }
     }
 
-    private groupBy(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[], keySelector: (resource: AzureResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: AzureResource[] }, contextValues?: string[], resourceTypeSelector?: (key: string) => AzExtResourceType | undefined, resourceGroupSelector?: (key: string) => AzureResource): GroupingItem[] {
+    private groupBy(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[], keySelector: (resource: AzureResource) => string, labelSelector: (key: string) => string, iconSelector: (key: string) => TreeItemIconPath | undefined, initialGrouping?: { [key: string]: AzureResource[] }, contextValues?: string[], resourceTypeSelector?: (key: string) => AzExtResourceType | undefined, resourceGroupSelector?: (key: string) => AzureResource | undefined): GroupingItem[] {
         initialGrouping = initialGrouping ?? {};
 
         const map = resources.reduce(
@@ -142,7 +142,7 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
             initialGrouping,
             ['azureResourceGroup'],
             undefined,
-            key => nonNullValue(resourceGroups.find(resource => resource.name.toLowerCase() === key.toLowerCase())));
+            key => resourceGroups.find(resource => resource.name.toLowerCase() === key.toLowerCase()));
 
         return groupedResources;
     }
