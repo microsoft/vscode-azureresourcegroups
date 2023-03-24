@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ServiceLinkerManagementClient } from '@azure/arm-servicelinker';
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep } from '@microsoft/vscode-azext-azureutils';
 import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, createSubscriptionContext, nonNullProp, subscriptionExperience } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
@@ -18,8 +17,6 @@ export async function createResourceGroup(context: IActionContext, node?: Subscr
     if (!subscription) {
         subscription = await subscriptionExperience(context, ext.v2.api.resources.azureResourceTreeDataProvider);
     }
-
-    new ServiceLinkerManagementClient(createSubscriptionContext(subscription).credentials);
 
     const wizardContext: IResourceGroupWizardContext & ExecuteActivityContext = {
         ...context,
