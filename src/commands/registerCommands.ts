@@ -9,6 +9,9 @@ import { ext } from '../extensionVariables';
 import { BranchDataItemWrapper } from '../tree/BranchDataProviderItem';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { GroupingItem } from '../tree/azure/GroupingItem';
+import { logIn } from './accounts/logIn';
+import { logOut } from './accounts/logOut';
+import { selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
@@ -45,6 +48,10 @@ export function registerCommands(): void {
         await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
         ext.actions.refreshWorkspaceTree(node);
     });
+
+    registerCommand('azureResourceGroups.vscodeAuth.logIn', (context: IActionContext) => logIn(context));
+    registerCommand('azureResourceGroups.vscodeAuth.logOut', (context: IActionContext) => logOut(context));
+    registerCommand('azureResourceGroups.vscodeAuth.selectSubscriptions', (context: IActionContext) => selectSubscriptions(context));
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);

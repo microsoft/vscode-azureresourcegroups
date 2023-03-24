@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IResourceGroupWizardContext, LocationListStep, ResourceGroupCreateStep, ResourceGroupNameStep } from '@microsoft/vscode-azext-azureutils';
-import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, createSubscriptionContext, ExecuteActivityContext, IActionContext, nonNullProp, subscriptionExperience } from '@microsoft/vscode-azext-utils';
+import { AzureWizard, AzureWizardExecuteStep, AzureWizardPromptStep, ExecuteActivityContext, IActionContext, createSubscriptionContext, nonNullProp, subscriptionExperience } from '@microsoft/vscode-azext-utils';
 import { window } from 'vscode';
 import { AzureSubscription } from '../../api/src/index';
 import { ext } from '../extensionVariables';

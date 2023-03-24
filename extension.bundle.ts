@@ -20,7 +20,7 @@ export * from './src/utils/wrapFunctionsInTelemetry';
 export * from './api/src/utils/wrapper';
 export { convertV1TreeItemId } from './src/api/compatibility/CompatibleAzExtTreeDataProvider';
 // Export activate/deactivate for main.js
-export { activateInternal, deactivateInternal } from './src/extension';
+export { activate, deactivate } from './src/extension';
 export * from './src/extensionVariables';
 
 // NOTE: The auto-fix action "source.organizeImports" does weird things with this file, but there doesn't seem to be a way to disable it on a per-file basis so we'll just let it happen
