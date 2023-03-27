@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { getResourceGroupFromId } from '@microsoft/vscode-azext-azureutils';
-import { nonNullProp, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
-import { AppResource, GroupingConfig, GroupNodeConfiguration } from '@microsoft/vscode-azext-utils/hostapi';
-import * as path from 'path';
+import { TreeItemIconPath, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { AppResource, GroupNodeConfiguration, GroupingConfig } from '@microsoft/vscode-azext-utils/hostapi';
 import { ThemeIcon } from 'vscode';
+import { URI, Utils } from 'vscode-uri';
 import { AzExtResourceType } from '../../api/src/index';
 import { IAzExtMetadata, legacyTypeMap } from '../azureExtensions';
 import { localize } from './localize';
@@ -71,7 +71,9 @@ export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], s
 }
 
 export function getIconPath(azExtResourceType?: AzExtResourceType): TreeItemIconPath {
-    return treeUtils.getIconPath(azExtResourceType ? path.join('azureIcons', azExtResourceType) : 'resource');
+    return treeUtils.getIconPath(azExtResourceType ?
+        Utils.joinPath(URI.parse('azureIcons'), azExtResourceType).fsPath :
+        URI.parse('resource').fsPath);
 }
 
 export function getName(azExtResourceType?: AzExtResourceType): string | undefined {
@@ -107,6 +109,7 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     PostgresqlServersFlexible: { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Flexible)') },
     PostgresqlServersStandard: { displayName: localize('postgreSqlServers', 'PostgreSQL servers (Standard)') },
     PublicIpAddresses: { displayName: localize('publicIpAddresses', 'Public IP addresses') },
+    SpringApps: { displayName: localize('springApps', 'Spring Apps') },
     SqlDatabases: { displayName: localize('sqlDatabases', 'SQL databases') },
     SqlServers: { displayName: localize('sqlServers', 'SQL servers') },
     StaticWebApps: { displayName: localize('staticWebApp', 'Static Web Apps') },

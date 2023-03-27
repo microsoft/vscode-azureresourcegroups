@@ -30,11 +30,13 @@ export * from './src/commands/openInPortal';
 export * from './src/commands/tags/getTagDiagnostics';
 export * from './src/commands/viewProperties';
 // Export activate/deactivate for main.js
-export { activateInternal, deactivateInternal } from './src/extension';
+export { activate, deactivate } from './src/extension';
 export * from './src/extensionVariables';
+export * from './src/services/SubscriptionProvider';
 export * from './src/tree/azure/AzureResourceItem';
 export * from './src/tree/azure/GroupingItem';
 export * from './src/tree/azure/SubscriptionItem';
+export { createSubscriptionContext as createSubscriptionContext2 } from './src/tree/azure/VSCodeAuthentication';
 export * from './src/tree/BranchDataProviderItem';
 export * from './src/tree/InvalidItem';
 export * from './src/utils/wrapFunctionsInTelemetry';

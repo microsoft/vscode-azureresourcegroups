@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.6.2 - 2023-03-22
+
+### Changed
+* Prepare for [Azure Spring Apps VS Code extension](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-azurespringcloud) integration by @wangmingliang-ms in [#605](https://github.com/microsoft/vscode-azureresourcegroups/pull/605)
+
 ## 0.6.1 - 2023-02-29
 
 ### Fixed

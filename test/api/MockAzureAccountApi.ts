@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ISubscriptionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import { Event, EventEmitter } from 'vscode';
-import { AzureAccountExtensionApi, AzureLoginStatus, AzureResourceFilter, AzureSession, AzureSubscription, CloudShell } from '../../azure-account.api';
+import { AzureLoginStatus, AzureSession, CloudShell } from '../../azure-account.api';
+import { AzureSubscription, AzureSubscriptionProvider, createSubscriptionContext2 } from '../../extension.bundle';
 import { MockResources } from './mockServiceFactory';
 
-export class MockAzureAccount implements AzureAccountExtensionApi {
+export class MockAzureAccount implements AzureSubscriptionProvider {
     public status: AzureLoginStatus = 'LoggedIn';
     public onStatusChanged: Event<AzureLoginStatus>;
     readonly sessions: AzureSession[];
@@ -18,47 +19,35 @@ export class MockAzureAccount implements AzureAccountExtensionApi {
     public onFiltersChanged: Event<void>;
 
     get subscriptions(): AzureSubscription[] {
-        const session: AzureSession = {
-            environment: 'environment',
-            userId: '',
-            tenantId: 'tenantId',
-            credentials2: {
-                getToken: () => {
+        return this.resources.subscriptions.map((subscription) => ({
+            authentication: {
+                getSession: () => {
                     return undefined;
                 }
             },
-        } as unknown as AzureSession;
-
-        return this.resources.subscriptions.map((subscription) => ({
-            session,
-            subscription: {
-                displayName: subscription.name,
-                subscriptionId: subscription.subscriptionId,
-                id: subscription.id
-            }
-        }));
+            environment: undefined,
+            isCustomCloud: false,
+            name: subscription.name,
+            tenantId: 'tenantId',
+            subscriptionId: subscription.subscriptionId,
+        } as unknown as AzureSubscription));
     }
 
     get filters(): AzureSubscription[] {
-        const session: AzureSession = {
-            environment: 'environment',
-            userId: '',
-            tenantId: 'tenantId',
-            credentials2: {
-                getToken: () => {
+        return this.resources.subscriptions.map((subscription) => ({
+            authentication: {
+                getSession: () => {
                     return undefined;
                 }
             },
-        } as unknown as AzureSession;
-
-        return this.resources.subscriptions.map((subscription) => ({
-            session,
-            subscription: {
-                displayName: subscription.name,
-                subscriptionId: subscription.subscriptionId,
-                id: subscription.id
-            }
-        }));
+            environment: {
+                portalUrl: 'portalUrl',
+            },
+            isCustomCloud: false,
+            name: subscription.name,
+            tenantId: 'tenantId',
+            subscriptionId: subscription.subscriptionId,
+        } as unknown as AzureSubscription));
     }
 
     apiVersion = '1.0.0';
@@ -82,6 +71,16 @@ export class MockAzureAccount implements AzureAccountExtensionApi {
         this._onSubscriptionsChangedEmitter = new vscode.EventEmitter<void>();
         this.onSubscriptionsChanged = this._onSubscriptionsChangedEmitter.event;
     }
+    logIn(): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    logOut(): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    selectSubscriptions(): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+    allSubscriptions: AzureSubscription[];
 
     public async signIn(): Promise<void> {
         this.changeStatus('LoggedIn');
@@ -94,17 +93,7 @@ export class MockAzureAccount implements AzureAccountExtensionApi {
 
     public getSubscriptionContext(): ISubscriptionContext {
         this.verifySubscription();
-        const info: AzureSubscription = this.subscriptions[0];
-        return {
-            credentials: info.session.credentials2,
-            subscriptionDisplayName: nonNullProp(info.subscription, 'displayName'),
-            subscriptionId: nonNullProp(info.subscription, 'subscriptionId'),
-            subscriptionPath: nonNullProp(info.subscription, 'id'),
-            tenantId: info.session.tenantId,
-            userId: info.session.userId,
-            environment: info.session.environment,
-            isCustomCloud: false
-        };
+        return createSubscriptionContext2(this.subscriptions[0]);
     }
 
     public async waitForLogin(): Promise<boolean> {
@@ -124,13 +113,7 @@ export class MockAzureAccount implements AzureAccountExtensionApi {
         this._onStatusChangedEmitter.fire(this.status);
     }
 
-    private changeFilter(newFilter?: AzureResourceFilter): void {
-        if (newFilter) {
-            this.filters.push(newFilter);
-        } else {
-            //
-        }
-
+    private changeFilter(): void {
         this._onFiltersChangedEmitter.fire();
     }
 

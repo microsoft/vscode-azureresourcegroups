@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { IActionContext, IAzureQuickPickItem, openUrl } from "@microsoft/vscode-azext-utils";
 import { commands } from "vscode";
 import { AzExtWrapper, getInstalledExtensionPicks } from "../../AzExtWrapper";
 import { localize } from "../../utils/localize";
-import { openUrl } from '../../utils/openUrl';
 
 export async function reportIssue(context: IActionContext): Promise<void> {
     const picks: IAzureQuickPickItem<AzExtWrapper | undefined>[] = getInstalledExtensionPicks();

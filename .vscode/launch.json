@@ -38,6 +38,22 @@
             }
         },
         {
+            "name": "Launch Extension (web)",
+            "type": "extensionHost",
+            "debugWebWorkerHost": true,
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}",
+                "--extensionDevelopmentKind=web"
+            ],
+            "env": {
+                "DEBUGTELEMETRY": "v",
+                "NODE_DEBUG": "",
+                "DEBUG_WEBPACK": "1"
+            }
+        },
+        {
             "name": "Launch All Extensions",
             "type": "extensionHost",
             "request": "launch",
@@ -50,7 +66,8 @@
                 "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurevirtualmachines",
                 "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azureappservice",
                 "--extensionDevelopmentPath=${workspaceFolder}/../vscode-cosmosdb",
-                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurecontainerapps"
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurecontainerapps",
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurespringcloud"
             ],
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"

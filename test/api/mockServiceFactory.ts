@@ -100,7 +100,7 @@ export const createMockSubscriptionWithFunctions = (): BasicMockResources => {
     const mockResources = new BasicMockResources();
     ext.testing.overrideAzureServiceFactory = createTestAzureResourcesServiceFactory(mockResources);
     const mockAzureAccountApi = new MockAzureAccount(vscode, mockResources);
-    ext.testing.overrideAzureAccountApiFactory = () => mockAzureAccountApi;
+    ext.testing.overrideAzureSubscriptionProvider = () => mockAzureAccountApi;
     return mockResources;
 }
 

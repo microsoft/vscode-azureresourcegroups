@@ -11,6 +11,7 @@ import type { AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi'
 import { apiUtils, GetApiOptions } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { AzureResourcesApiInternal } from '../hostapi.v2.internal';
+import { createMockSubscriptionWithFunctions } from '../test/api/mockServiceFactory';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
 import { InternalAzureResourceGroupsExtensionApi } from './api/compatibility/AzureResourceGroupsExtensionApi';
@@ -27,6 +28,8 @@ import { registerCommands } from './commands/registerCommands';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { ext } from './extensionVariables';
+import { createAzureAccountSubscriptionProviderFactory } from './services/DesktopSubscriptionProvider';
+import { createWebSubscriptionProviderFactory } from './services/WebAzureSubscriptionProvider';
 import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
 import { registerAzureTree } from './tree/azure/registerAzureTree';
@@ -37,7 +40,11 @@ import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDefaultBranchDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 
-export async function activateInternal(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
+export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
+    // the entry point for vscode.dev is this activate, not main.js, so we need to instantiate perfStats here
+    // the perf stats don't matter for vscode because there is no main file to load-- we may need to see if we can track the download time
+    perfStats ||= { loadStartTime: Date.now(), loadEndTime: Date.now() };
+
     ext.context = context;
     ext.ignoreBundle = ignoreBundle;
     ext.outputChannel = createAzExtOutputChannel('Azure Resource Groups', ext.prefix);
@@ -45,6 +52,8 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
 
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
+
+    createMockSubscriptionWithFunctions();
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);
@@ -59,10 +68,12 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
         setupEvents(context);
+        ext.subscriptionProviderFactory = ext.isWeb ? createWebSubscriptionProviderFactory(context) : createAzureAccountSubscriptionProviderFactory();
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
         registerTagDiagnostics();
+
 
         const helpTreeItem: HelpTreeItem = new HelpTreeItem();
         ext.helpTree = new AzExtTreeDataProvider(helpTreeItem, 'ms-azuretools.loadMore');
@@ -154,7 +165,7 @@ export async function activateInternal(context: vscode.ExtensionContext, perfSta
     );
 }
 
-export function deactivateInternal(): void {
+export function deactivate(): void {
     ext.diagnosticWatcher?.dispose();
 }
 
