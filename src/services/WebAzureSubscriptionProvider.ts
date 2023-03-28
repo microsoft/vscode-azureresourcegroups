@@ -247,10 +247,6 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
     private async updateStatus(isLoggedIn: boolean): Promise<void> {
         await this.storage.update('isLoggedIn', isLoggedIn);
 
-        if (!isLoggedIn) {
-            await this.updateSelectedSubscriptions(undefined);
-        }
-
         this.onStatusChangedEmitter.fire(this.status);
         this.onSubscriptionsChangedEmitter.fire();
     }

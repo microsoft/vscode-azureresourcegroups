@@ -28,7 +28,8 @@ const config = dev.getDefaultWebpackConfig({
         '../build/Release/bufferutil': 'commonjs ../build/Release/bufferutil',
         '../build/default/bufferutil': 'commonjs ../build/default/bufferutil',
     },
-    target: 'node'
+    target: 'node',
+    suppressCleanDistFolder: true
 });
 
 const webConfig = dev.getDefaultWebpackConfig({
@@ -49,7 +50,8 @@ const webConfig = dev.getDefaultWebpackConfig({
         new webpack.ProvidePlugin({
             Buffer: ['buffer', 'Buffer'],
         }),
-    ]
+    ],
+    suppressCleanDistFolder: true
 });
 
 if (DEBUG_WEBPACK) {
