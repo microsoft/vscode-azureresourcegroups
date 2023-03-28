@@ -51,7 +51,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         if (!!data) {
             // e was defined, either a single item or array
             // Make an array for consistency
-            const branchItems: unknown[] = Array.isArray(data) ? data : [data];
+            const branchItems: ResourceModelBase[] = Array.isArray(data) ? data : [data];
 
             for (const branchItem of branchItems) {
                 const rgItem = this.itemCache.getItemForBranchItem(branchItem);

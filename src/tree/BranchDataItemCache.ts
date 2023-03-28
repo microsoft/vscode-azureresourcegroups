@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ResourceModelBase } from 'api/src/resources/base';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 
 export class BranchDataItemCache {
-    private readonly branchItemToResourceGroupsItemCache: Map<unknown, ResourceGroupsItem> = new Map();
+    private readonly branchItemToResourceGroupsItemCache: Map<ResourceModelBase, ResourceGroupsItem> = new Map();
 
-    addBranchItem(branchItem: unknown, item: ResourceGroupsItem): void {
+    addBranchItem(branchItem: ResourceModelBase, item: ResourceGroupsItem): void {
         this.branchItemToResourceGroupsItemCache.set(branchItem, item);
     }
 
@@ -16,17 +17,19 @@ export class BranchDataItemCache {
         this.branchItemToResourceGroupsItemCache.clear();
     }
 
-    getItemForBranchItem(branchItem: unknown): ResourceGroupsItem | undefined {
+    getItemForBranchItem(branchItem: ResourceModelBase): ResourceGroupsItem | undefined {
         return this.branchItemToResourceGroupsItemCache.get(branchItem);
     }
 
-    getItemForId(id: string): unknown {
+    getItemForId(id?: string): ResourceGroupsItem | undefined {
+        if (!id) {
+            return undefined;
+        }
         for (const [key, value] of this.branchItemToResourceGroupsItemCache.entries()) {
-            if (value.id === id) {
-                return key;
+            if (key.id === id) {
+                return value;
             }
         }
-
         return undefined;
     }
 }

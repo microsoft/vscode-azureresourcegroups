@@ -7,16 +7,15 @@ import { AzExtTreeItem, ContextValueFilter, getAzExtResourceType, ITreeItemPicke
 import { PickAppResourceOptions } from "@microsoft/vscode-azext-utils/hostapi";
 import { AzExtResourceType } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
-import { BranchDataItemCache } from "../../tree/BranchDataItemCache";
 
-export function createCompatibilityPickAppResource(itemCache: BranchDataItemCache) {
+export function createCompatibilityPickAppResource() {
     return async function pickAppResource<T extends AzExtTreeItem>(context: ITreeItemPickerContext, options?: PickAppResourceOptions): Promise<T> {
         const result = await PickTreeItemWithCompatibility.resource<T>(context, ext.v2.api.resources.azureResourceTreeDataProvider, {
             resourceTypes: convertAppResourceFilterToAzExtResourceType(options?.filter),
             childItemFilter: convertExpectedChildContextValueToContextValueFilter(options?.expectedChildContextValue)
         });
 
-        return itemCache.getItemForId(result.fullId) as T | undefined ?? result;
+        return result;
     }
 }
 
