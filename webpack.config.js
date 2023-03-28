@@ -49,7 +49,8 @@ const webConfig = dev.getDefaultWebpackConfig({
         new webpack.ProvidePlugin({
             Buffer: ['buffer', 'Buffer'],
         }),
-    ]
+    ],
+    suppressCleanDistFolder: true
 });
 
 if (DEBUG_WEBPACK) {
