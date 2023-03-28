@@ -32,13 +32,13 @@ export function registerWorkspaceTree(context: vscode.ExtensionContext, options:
     const treeView = createTreeView('azureWorkspace', {
         canSelectMany: true,
         showCollapseAll: true,
-        description: localize('local', 'Local'),
         itemCache: branchItemCache,
         treeDataProvider: wrapTreeForVSCode(workspaceResourceTreeDataProvider, branchItemCache),
         findItemById: workspaceResourceTreeDataProvider.findItemById.bind(workspaceResourceTreeDataProvider) as typeof workspaceResourceTreeDataProvider.findItemById,
     });
     context.subscriptions.push(treeView);
 
+    treeView.title = localize('workspace', 'Workspace');
     treeView.description = localize('local', 'Local');
 
     ext.workspaceTreeView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
