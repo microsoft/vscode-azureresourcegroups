@@ -9,8 +9,8 @@ import { WorkspaceResourceProviderManager } from '../../api/ResourceProviderMana
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { createTreeView } from '../createTreeView';
+import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceResourceTreeDataProvider } from './WorkspaceResourceTreeDataProvider';
@@ -33,13 +33,12 @@ export function registerWorkspaceTree(context: vscode.ExtensionContext, options:
         canSelectMany: true,
         showCollapseAll: true,
         itemCache: branchItemCache,
+        description: localize('local', 'Local'),
+        title: localize('workspace', 'Workspace'),
         treeDataProvider: wrapTreeForVSCode(workspaceResourceTreeDataProvider, branchItemCache),
         findItemById: workspaceResourceTreeDataProvider.findItemById.bind(workspaceResourceTreeDataProvider) as typeof workspaceResourceTreeDataProvider.findItemById,
     });
     context.subscriptions.push(treeView);
-
-    treeView.title = localize('workspace', 'Workspace');
-    treeView.description = localize('local', 'Local');
 
     ext.workspaceTreeView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
 

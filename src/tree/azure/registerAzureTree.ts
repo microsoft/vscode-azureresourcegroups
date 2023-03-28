@@ -10,9 +10,9 @@ import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
+import { createTreeView } from '../createTreeView';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { TreeItemStateStore } from '../TreeItemState';
-import { createTreeView } from '../createTreeView';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { AzureResourceBranchDataProviderManager } from './AzureResourceBranchDataProviderManager';
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
@@ -43,12 +43,11 @@ export function registerAzureTree(context: vscode.ExtensionContext, options: Reg
         showCollapseAll: true,
         itemCache,
         description: localize('remote', 'Remote'),
+        title: localize('resources', 'Resources'),
         treeDataProvider: wrapTreeForVSCode(azureResourceTreeDataProvider, itemCache),
         findItemById: azureResourceTreeDataProvider.findItemById.bind(azureResourceTreeDataProvider) as typeof azureResourceTreeDataProvider.findItemById
     });
     context.subscriptions.push(treeView);
-
-    treeView.title = localize('resources', 'Resources');
     ext.appResourceTreeView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
 
     return azureResourceTreeDataProvider;

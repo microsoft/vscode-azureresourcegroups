@@ -20,6 +20,10 @@ interface InternalTreeViewOptions extends TreeViewOptions<ResourceGroupsItem> {
      * See {@link TreeView.description}
      */
     description?: string;
+    /**
+     * See {@link TreeView.title}
+     */
+    title?: string;
 }
 
 /**
@@ -29,6 +33,7 @@ interface InternalTreeViewOptions extends TreeViewOptions<ResourceGroupsItem> {
  */
 export function createTreeView(viewId: string, options: InternalTreeViewOptions): TreeView<ResourceGroupsItem> {
     const treeView = window.createTreeView(viewId, options);
+    treeView.title = options.title;
     treeView.description = options.description;
 
     modifyReveal(treeView, options.findItemById, options.itemCache);
