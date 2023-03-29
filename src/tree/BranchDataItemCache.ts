@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { DefaultAzureResourceItem } from './azure/DefaultAzureResourceItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 
 export class BranchDataItemCache {
@@ -22,7 +23,7 @@ export class BranchDataItemCache {
 
     getItemForId(id: string): unknown {
         for (const [key, value] of this.branchItemToResourceGroupsItemCache.entries()) {
-            if (value.id === id) {
+            if (!(key instanceof DefaultAzureResourceItem) && value.id === id) {
                 return key;
             }
         }
