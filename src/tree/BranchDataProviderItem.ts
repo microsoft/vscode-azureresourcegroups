@@ -33,7 +33,7 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
     static readonly hasPortalUrlContextValue = 'hasPortalUrl';
 
     constructor(
-        private readonly branchItem: ResourceModelBase,
+        public branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
         private readonly itemCache: BranchDataItemCache,
         private readonly options?: BranchDataItemOptions) {
@@ -116,9 +116,11 @@ export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataPr
 
 export function createBranchDataItemFactory(itemCache: BranchDataItemCache): BranchDataItemFactory {
     return (branchItem, branchDataProvider, options) => {
-        const cachedItem = itemCache.getItemForId(branchItem.id);
+        const cachedItem = itemCache.getItemForId(branchItem.id) as BranchDataItemWrapper | undefined;
         if (cachedItem) {
-            return cachedItem as BranchDataItemWrapper;
+            cachedItem.branchItem = branchItem;
+            itemCache.addBranchItem(branchItem, cachedItem);
+            return cachedItem;
         }
         return new BranchDataItemWrapper(branchItem, branchDataProvider, itemCache, options);
     }
