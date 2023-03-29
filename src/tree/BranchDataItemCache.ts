@@ -8,13 +8,18 @@ import { ResourceGroupsItem } from './ResourceGroupsItem';
 
 export class BranchDataItemCache {
     private readonly branchItemToResourceGroupsItemCache: Map<ResourceModelBase, ResourceGroupsItem> = new Map();
+    private readonly idToBranchItemCache: Map<string, ResourceModelBase> = new Map();
 
     addBranchItem(branchItem: ResourceModelBase, item: ResourceGroupsItem): void {
         this.branchItemToResourceGroupsItemCache.set(branchItem, item);
+        if (branchItem.id) {
+            this.idToBranchItemCache.set(branchItem.id, branchItem);
+        }
     }
 
     clear(): void {
         this.branchItemToResourceGroupsItemCache.clear();
+        this.idToBranchItemCache.clear();
     }
 
     getItemForBranchItem(branchItem: ResourceModelBase): ResourceGroupsItem | undefined {
@@ -25,11 +30,7 @@ export class BranchDataItemCache {
         if (!id) {
             return undefined;
         }
-        for (const [key, value] of this.branchItemToResourceGroupsItemCache.entries()) {
-            if (key.id === id) {
-                return value;
-            }
-        }
-        return undefined;
+        const branchItem = this.idToBranchItemCache.get(id);
+        return branchItem ? this.branchItemToResourceGroupsItemCache.get(branchItem) : undefined;
     }
 }
