@@ -155,7 +155,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                     registerApplicationResourceResolver,
                     registerWorkspaceResourceProvider,
                     registerActivity,
-                    pickAppResource: createCompatibilityPickAppResource(azureResourcesBranchDataItemCache),
+                    pickAppResource: createCompatibilityPickAppResource(),
                 }),
             },
             v2ApiFactory,

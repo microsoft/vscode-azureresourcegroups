@@ -7,6 +7,7 @@ import { isAzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from 'vscode';
 import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel, Wrapper } from '../../api/src/index';
+import { DefaultAzureResourceBranchDataProvider } from './azure/DefaultAzureResourceBranchDataProvider';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 
@@ -32,11 +33,15 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
     static readonly hasPortalUrlContextValue = 'hasPortalUrl';
 
     constructor(
-        private readonly branchItem: ResourceModelBase,
+        public branchItem: ResourceModelBase,
         private readonly branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>,
         private readonly itemCache: BranchDataItemCache,
         private readonly options?: BranchDataItemOptions) {
-        itemCache.addBranchItem(this.branchItem, this);
+
+        // do not add default provider items to the cache
+        if (!(this.branchDataProvider instanceof DefaultAzureResourceBranchDataProvider)) {
+            itemCache.addBranchItem(this.branchItem, this);
+        }
 
         // Use AzExtTreeItem.fullId as id for compatibility.
         if (isAzExtTreeItem(this.branchItem)) {
@@ -110,5 +115,13 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
 export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItemWrapper;
 
 export function createBranchDataItemFactory(itemCache: BranchDataItemCache): BranchDataItemFactory {
-    return (branchItem, branchDataProvider, options) => new BranchDataItemWrapper(branchItem, branchDataProvider, itemCache, options);
+    return (branchItem, branchDataProvider, options) => {
+        const cachedItem = itemCache.getItemForId(branchItem.id) as BranchDataItemWrapper | undefined;
+        if (cachedItem) {
+            cachedItem.branchItem = branchItem;
+            itemCache.addBranchItem(branchItem, cachedItem);
+            return cachedItem;
+        }
+        return new BranchDataItemWrapper(branchItem, branchDataProvider, itemCache, options);
+    }
 }
