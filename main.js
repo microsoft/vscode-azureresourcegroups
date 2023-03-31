@@ -5,8 +5,6 @@
 
 "use strict";
 
-require('source-map-support').install();
-
 // This is the extension entrypoint module, which imports extension.bundle.js, the actual extension code.
 //
 // This is in a separate file so we can properly measure extension.bundle.js load time.
@@ -18,7 +16,7 @@ let perfStats = {
 
 Object.defineProperty(exports, "__esModule", { value: true });
 
-const extension = require('./dist/extension.bundle');
+const extension = require('./out/src/extension');
 
 async function activate(ctx) {
     return await extension.activate(ctx, perfStats, true);
