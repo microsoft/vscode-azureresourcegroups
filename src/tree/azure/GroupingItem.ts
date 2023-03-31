@@ -10,7 +10,7 @@ import { ITagsModel, ResourceTags } from '../../commands/tags/TagFileSystem';
 import { ext } from '../../extensionVariables';
 import { getIconPath } from '../../utils/azureUtils';
 import { createPortalUrl } from '../../utils/v2/createPortalUrl';
-import { BranchDataItemOptions } from '../BranchDataProviderItem';
+import { BranchDataItemOptions } from '../BranchDataItemWrapper';
 import { InvalidAzureResourceItem } from '../InvalidAzureResourceItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
