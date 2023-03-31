@@ -102,7 +102,8 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                         new GenericItem(
                             localize('createAccountLabel', 'Create an Azure Account...'),
                             {
-                                commandId: 'azure-account.createAccount',
+                                commandId: 'azureResourceGroups.openUrl',
+                                commandArgs: ['https://azure.microsoft.com/en-us/free/?utm_source=campaign&utm_campaign=vscode-azure-account&mktingSource=vscode-azure-account'],
                                 iconPath: new vscode.ThemeIcon('add')
                             }),
                         new GenericItem(
