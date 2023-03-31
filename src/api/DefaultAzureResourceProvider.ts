@@ -9,13 +9,10 @@ import { callWithTelemetryAndErrorHandling, getAzExtResourceType, IActionContext
 import * as vscode from 'vscode';
 import { AzureResource, AzureSubscription } from '../../api/src/index';
 import { AzureResourceProvider } from '../../hostapi.v2.internal';
-import { defaultAzureResourcesServiceFactory } from '../AzureService';
-import { ext } from '../extensionVariables';
+import { getAzureResourcesService } from '../services/AzureResourcesService';
 
 export class DefaultAzureResourceProvider implements AzureResourceProvider {
     private readonly onDidChangeResourceEmitter = new vscode.EventEmitter<AzureResource | undefined>();
-
-    private readonly createAzureService = () => ext.testing.overrideAzureServiceFactory?.() ?? defaultAzureResourcesServiceFactory();
 
     getResources(subscription: AzureSubscription): Promise<AzureResource[] | undefined> {
         return callWithTelemetryAndErrorHandling(
@@ -33,7 +30,7 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
      * @returns Deduped list of Azure resources in the specified subscription
      */
     private async listResources(context: IActionContext, subscription: AzureSubscription): Promise<AzureResource[]> {
-        const allResources = await this.createAzureService().listResources(context, subscription);
+        const allResources = await getAzureResourcesService().listResources(context, subscription);
 
         // dedupe resources to fix https://github.com/microsoft/vscode-azureresourcegroups/issues/526
         const allResourcesDeduped: GenericResource[] = [...new Map(allResources.map((item) => [item.id, item])).values()];
@@ -48,7 +45,7 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
     }
 
     private async listResourceGroups(context: IActionContext, subscription: AzureSubscription): Promise<AzureResource[]> {
-        const allResourceGroups: ResourceGroup[] = await this.createAzureService().listResourceGroups(context, subscription);
+        const allResourceGroups: ResourceGroup[] = await getAzureResourcesService().listResourceGroups(context, subscription);
         context.telemetry.measurements.resourceGroupCount = allResourceGroups.length;
         return allResourceGroups.map(resource => createResourceGroup(subscription, resource));
     }
