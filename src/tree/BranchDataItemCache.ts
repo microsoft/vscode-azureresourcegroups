@@ -3,30 +3,34 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ResourceModelBase } from 'api/src/resources/base';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 
 export class BranchDataItemCache {
-    private readonly branchItemToResourceGroupsItemCache: Map<unknown, ResourceGroupsItem> = new Map();
+    private readonly branchItemToResourceGroupsItemCache: Map<ResourceModelBase, ResourceGroupsItem> = new Map();
+    private readonly idToBranchItemCache: Map<string, ResourceModelBase> = new Map();
 
-    addBranchItem(branchItem: unknown, item: ResourceGroupsItem): void {
+    addBranchItem(branchItem: ResourceModelBase, item: ResourceGroupsItem): void {
         this.branchItemToResourceGroupsItemCache.set(branchItem, item);
+        if (branchItem.id) {
+            this.idToBranchItemCache.set(branchItem.id, branchItem);
+        }
     }
 
     clear(): void {
         this.branchItemToResourceGroupsItemCache.clear();
+        this.idToBranchItemCache.clear();
     }
 
-    getItemForBranchItem(branchItem: unknown): ResourceGroupsItem | undefined {
+    getItemForBranchItem(branchItem: ResourceModelBase): ResourceGroupsItem | undefined {
         return this.branchItemToResourceGroupsItemCache.get(branchItem);
     }
 
-    getItemForId(id: string): unknown {
-        for (const [key, value] of this.branchItemToResourceGroupsItemCache.entries()) {
-            if (value.id === id) {
-                return key;
-            }
+    getItemForId(id?: string): ResourceGroupsItem | undefined {
+        if (!id) {
+            return undefined;
         }
-
-        return undefined;
+        const branchItem = this.idToBranchItemCache.get(id);
+        return branchItem ? this.branchItemToResourceGroupsItemCache.get(branchItem) : undefined;
     }
 }

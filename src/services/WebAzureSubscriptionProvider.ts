@@ -10,6 +10,7 @@ import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vs
 import * as vscode from 'vscode';
 import { AzureSubscription } from '../../api/src/index';
 import { AzureLoginStatus } from '../../azure-account.api';
+import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
 import { AzureSubscriptionProvider } from './SubscriptionProvider';
 
@@ -159,6 +160,13 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
                         ? picks.map(pick => pick.subscription.subscriptionId)
                         : undefined);
             }
+        } else {
+            const signIn: vscode.MessageItem = { title: localize('signIn', 'Sign In') };
+            void vscode.window.showInformationMessage(localize('notSignedIn', 'You are not signed in. Sign in to continue.'), signIn).then((input) => {
+                if (input === signIn) {
+                    void this.logIn();
+                }
+            });
         }
 
         this.onSubscriptionsChangedEmitter.fire();
@@ -246,10 +254,6 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
 
     private async updateStatus(isLoggedIn: boolean): Promise<void> {
         await this.storage.update('isLoggedIn', isLoggedIn);
-
-        if (!isLoggedIn) {
-            await this.updateSelectedSubscriptions(undefined);
-        }
 
         this.onStatusChangedEmitter.fire(this.status);
         this.onSubscriptionsChangedEmitter.fire();

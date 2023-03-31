@@ -30,9 +30,9 @@
     "preview": true,
     "activationEvents": [
         "onFileSystem:azureResourceGroups",
-        "onCommand:azureResourceGroups.vscodeAuth.logIn",
-        "onCommand:azureResourceGroups.vscodeAuth.logOut",
-        "onCommand:azureResourceGroups.vscodeAuth.selectSubscriptions",
+        "onCommand:azureResourceGroups.logIn",
+        "onCommand:azureResourceGroups.logOut",
+        "onCommand:azureResourceGroups.selectSubscriptions",
         "onCommand:azureResourceGroups.createResourceGroup",
         "onCommand:azureResourceGroups.deleteResourceGroupV2",
         "onCommand:azureResourceGroups.editTags",
@@ -41,7 +41,6 @@
         "onCommand:azureResourceGroups.refresh",
         "onCommand:azureResourceGroups.reportIssue",
         "onCommand:azureResourceGroups.revealResource",
-        "onCommand:azureResourceGroups.selectSubscriptions",
         "onCommand:azureResourceGroups.viewProperties",
         "onCommand:azureResourceGroups.showGroupOptions",
         "onCommand:ms-azuretools.getStarted",
@@ -66,23 +65,20 @@
         },
         "commands": [
             {
-                "command": "azureResourceGroups.vscodeAuth.logIn",
-                "title": "%azureResourceGroups.vscodeAuth.logIn%",
-                "category": "Azure",
-                "enablement": "isWeb"
+                "command": "azureResourceGroups.logIn",
+                "title": "%azureResourceGroups.logIn%",
+                "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.vscodeAuth.logOut",
-                "title": "%azureResourceGroups.vscodeAuth.logOut%",
-                "category": "Azure",
-                "enablement": "isWeb"
+                "command": "azureResourceGroups.logOut",
+                "title": "%azureResourceGroups.logOut%",
+                "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.vscodeAuth.selectSubscriptions",
-                "title": "%azureResourceGroups.vscodeAuth.selectSubscriptions%",
+                "command": "azureResourceGroups.selectSubscriptions",
+                "title": "%azureResourceGroups.selectSubscriptions%",
                 "category": "Azure",
-                "icon": "$(filter)",
-                "enablement": "isWeb"
+                "icon": "$(filter)"
             },
             {
                 "command": "azureResourceGroups.createResourceGroup",
@@ -132,12 +128,6 @@
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
                 "icon": "$(refresh)"
-            },
-            {
-                "command": "azureResourceGroups.selectSubscriptions",
-                "title": "%azureResourceGroups.selectSubscriptions%",
-                "category": "Azure",
-                "enablement": "!isWeb"
             },
             {
                 "command": "azureResourceGroups.revealResource",
@@ -312,7 +302,7 @@
             ],
             "view/item/context": [
                 {
-                    "command": "azureResourceGroups.vscodeAuth.selectSubscriptions",
+                    "command": "azureResourceGroups.selectSubscriptions",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "inline"
                 },
@@ -369,8 +359,16 @@
             ],
             "commandPalette": [
                 {
+                    "command": "azureResourceGroups.logIn",
+                    "when": "isWeb"
+                },
+                {
+                    "command": "azureResourceGroups.logOut",
+                    "when": "isWeb"
+                },
+                {
                     "command": "azureResourceGroups.selectSubscriptions",
-                    "when": "never"
+                    "when": "isWeb"
                 },
                 {
                     "command": "azureResourceGroups.showGroupOptions",
@@ -567,7 +565,7 @@
     "devDependencies": {
         "@microsoft/api-extractor": "^7.33.8",
         "@microsoft/eslint-config-azuretools": "^0.1.0",
-        "@microsoft/vscode-azext-dev": "file:../vscode-azuretools/dev/microsoft-vscode-azext-dev-0.2.0.tgz",
+        "@microsoft/vscode-azext-dev": "^1.0.2",
         "@types/gulp": "^4.0.6",
         "@types/mocha": "^7.0.2",
         "@types/node": "^14.0.0",
@@ -595,8 +593,8 @@
         "@azure/arm-resources": "5.0.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.0.0",
         "@azure/arm-subscriptions": "^5.1.0",
-        "@microsoft/vscode-azext-azureutils": "^1.0.0",
-        "@microsoft/vscode-azext-utils": "^1.0.0",
+        "@microsoft/vscode-azext-azureutils": "^1.0.1",
+        "@microsoft/vscode-azext-utils": "^1.1.0",
         "buffer": "^6.0.3",
         "jsonc-parser": "^2.2.1",
         "uuid": "^9.0.0",

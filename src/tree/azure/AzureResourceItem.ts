@@ -54,5 +54,13 @@ export class AzureResourceItem<T extends AzureResource> extends BranchDataItemWr
 export type ResourceItemFactory<T extends AzureResource> = (resource: T, branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, parent?: ResourceGroupsItem, options?: BranchDataItemOptions) => AzureResourceItem<T>;
 
 export function createResourceItemFactory<T extends AzureResource>(itemCache: BranchDataItemCache): ResourceItemFactory<T> {
-    return (resource, branchItem, branchDataProvider, parent, options) => new AzureResourceItem(resource, branchItem, branchDataProvider, itemCache, parent, options);
+    return (resource, branchItem, branchDataProvider, parent, options) => {
+        const cachedItem = itemCache.getItemForId(branchItem.id) as AzureResourceItem<T> | undefined;
+        if (cachedItem) {
+            cachedItem.branchItem = branchItem;
+            itemCache.addBranchItem(branchItem, cachedItem);
+            return cachedItem;
+        }
+        return new AzureResourceItem(resource, branchItem, branchDataProvider, itemCache, parent, options);
+    }
 }
