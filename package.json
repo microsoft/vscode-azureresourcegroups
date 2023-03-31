@@ -30,9 +30,9 @@
     "preview": true,
     "activationEvents": [
         "onFileSystem:azureResourceGroups",
-        "onCommand:azureResourceGroups.vscodeAuth.logIn",
-        "onCommand:azureResourceGroups.vscodeAuth.logOut",
-        "onCommand:azureResourceGroups.vscodeAuth.selectSubscriptions",
+        "onCommand:azureResourceGroups.logIn",
+        "onCommand:azureResourceGroups.logOut",
+        "onCommand:azureResourceGroups.selectSubscriptions",
         "onCommand:azureResourceGroups.createResourceGroup",
         "onCommand:azureResourceGroups.deleteResourceGroupV2",
         "onCommand:azureResourceGroups.editTags",
@@ -41,7 +41,6 @@
         "onCommand:azureResourceGroups.refresh",
         "onCommand:azureResourceGroups.reportIssue",
         "onCommand:azureResourceGroups.revealResource",
-        "onCommand:azureResourceGroups.selectSubscriptions",
         "onCommand:azureResourceGroups.viewProperties",
         "onCommand:azureResourceGroups.showGroupOptions",
         "onCommand:ms-azuretools.getStarted",
@@ -66,23 +65,20 @@
         },
         "commands": [
             {
-                "command": "azureResourceGroups.vscodeAuth.logIn",
-                "title": "%azureResourceGroups.vscodeAuth.logIn%",
-                "category": "Azure",
-                "enablement": "isWeb"
+                "command": "azureResourceGroups.logIn",
+                "title": "%azureResourceGroups.logIn%",
+                "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.vscodeAuth.logOut",
-                "title": "%azureResourceGroups.vscodeAuth.logOut%",
-                "category": "Azure",
-                "enablement": "isWeb"
+                "command": "azureResourceGroups.logOut",
+                "title": "%azureResourceGroups.logOut%",
+                "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.vscodeAuth.selectSubscriptions",
-                "title": "%azureResourceGroups.vscodeAuth.selectSubscriptions%",
+                "command": "azureResourceGroups.selectSubscriptions",
+                "title": "%azureResourceGroups.selectSubscriptions%",
                 "category": "Azure",
-                "icon": "$(filter)",
-                "enablement": "isWeb"
+                "icon": "$(filter)"
             },
             {
                 "command": "azureResourceGroups.createResourceGroup",
@@ -132,12 +128,6 @@
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
                 "icon": "$(refresh)"
-            },
-            {
-                "command": "azureResourceGroups.selectSubscriptions",
-                "title": "%azureResourceGroups.selectSubscriptions%",
-                "category": "Azure",
-                "enablement": "!isWeb"
             },
             {
                 "command": "azureResourceGroups.revealResource",
@@ -312,7 +302,7 @@
             ],
             "view/item/context": [
                 {
-                    "command": "azureResourceGroups.vscodeAuth.selectSubscriptions",
+                    "command": "azureResourceGroups.selectSubscriptions",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "inline"
                 },
@@ -368,6 +358,14 @@
                 }
             ],
             "commandPalette": [
+                {
+                    "command": "azureResourceGroups.logIn",
+                    "when": "isWeb"
+                },
+                {
+                    "command": "azureResourceGroups.logOut",
+                    "when": "isWeb"
+                },
                 {
                     "command": "azureResourceGroups.selectSubscriptions",
                     "when": "never"

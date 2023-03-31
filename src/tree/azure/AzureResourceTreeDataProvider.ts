@@ -77,7 +77,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                 if (api.status === 'LoggedIn') {
                     if (api.filters.length === 0) {
                         return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
-                            commandId: ext.isWeb ? 'azureResourceGroups.vscodeAuth.selectSubscriptions' : 'azure-account.selectSubscriptions',
+                            commandId: 'azureResourceGroups.selectSubscriptions'
                         })]
                     } else {
                         return api.filters.map(
@@ -96,7 +96,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                         new GenericItem(
                             localize('signInLabel', 'Sign in to Azure...'),
                             {
-                                commandId: 'azureResourceGroups.vscodeAuth.logIn',
+                                commandId: 'azureResourceGroups.logIn',
                                 iconPath: new vscode.ThemeIcon('sign-in')
                             }),
                         new GenericItem(
@@ -120,7 +120,7 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
                                 ? localize('loadingTreeItem', 'Loading...')
                                 : localize('signingIn', 'Waiting for Azure sign-in...'),
                             {
-                                commandId: 'azureResourceGroups.vscodeAuth.logIn',
+                                commandId: 'azureResourceGroups.logIn',
                                 iconPath: new vscode.ThemeIcon('loading~spin')
                             })
                     ];
