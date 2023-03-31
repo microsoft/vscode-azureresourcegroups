@@ -11,7 +11,6 @@ import type { AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi'
 import { apiUtils, GetApiOptions } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { AzureResourcesApiInternal } from '../hostapi.v2.internal';
-import { createMockSubscriptionWithFunctions } from '../test/api/mockServiceFactory';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
 import { InternalAzureResourceGroupsExtensionApi } from './api/compatibility/AzureResourceGroupsExtensionApi';
@@ -52,8 +51,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
-
-    createMockSubscriptionWithFunctions();
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);
