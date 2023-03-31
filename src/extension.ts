@@ -92,6 +92,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     context.subscriptions.push(azureResourceBranchDataProviderManager);
 
     const azureResourceProviderManager = new AzureResourceProviderManager(() => extensionManager.activateApplicationResourceProviders());
+
     azureResourceProviderManager.addResourceProvider(new DefaultAzureResourceProvider());
 
     const workspaceResourceBranchDataProviderManager = new WorkspaceResourceBranchDataProviderManager(
