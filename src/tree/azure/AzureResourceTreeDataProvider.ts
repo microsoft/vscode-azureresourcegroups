@@ -140,15 +140,19 @@ export class AzureResourceTreeDataProvider extends ResourceTreeDataProviderBase 
     }
 
     private async getAzureAccountExtensionApi(): Promise<AzureSubscriptionProvider | undefined> {
+        // override for testing
+        if (ext.testing.overrideAzureSubscriptionProvider) {
+            return ext.testing.overrideAzureSubscriptionProvider();
+        } else {
+            if (!this.subscriptionProvider) {
+                this.subscriptionProvider = await ext.subscriptionProviderFactory();
+                await this.subscriptionProvider.waitForFilters();
+            }
 
-        if (!this.subscriptionProvider) {
-            this.subscriptionProvider = await ext.subscriptionProviderFactory();
-            await this.subscriptionProvider.waitForFilters();
+            this.filtersSubscription = this.subscriptionProvider.onFiltersChanged(() => this.notifyTreeDataChanged());
+            this.statusSubscription = this.subscriptionProvider.onStatusChanged(() => this.notifyTreeDataChanged());
+
+            return this.subscriptionProvider;
         }
-
-        this.filtersSubscription = this.subscriptionProvider.onFiltersChanged(() => this.notifyTreeDataChanged());
-        this.statusSubscription = this.subscriptionProvider.onStatusChanged(() => this.notifyTreeDataChanged());
-
-        return this.subscriptionProvider;
     }
 }

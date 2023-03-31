@@ -2,6 +2,7 @@ import type { GenericResource, ResourceGroup, ResourceManagementClient } from "@
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { createSubscriptionContext, IActionContext } from "@microsoft/vscode-azext-utils";
 import { AzureSubscription } from "api/src/resources/azure";
+import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
 
 export interface AzureResourcesService {
@@ -26,6 +27,8 @@ export const defaultAzureResourcesServiceFactory = (): AzureResourcesService => 
     }
 }
 
+export type AzureResourcesServiceFactory = () => AzureResourcesService;
+
 export function getAzureResourcesService(): AzureResourcesService {
-    return defaultAzureResourcesServiceFactory();
+    return ext.testing.overrideAzureServiceFactory?.() ?? defaultAzureResourcesServiceFactory();
 }

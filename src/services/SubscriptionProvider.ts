@@ -5,7 +5,7 @@
 
 import { AzureSubscription } from 'api/src/resources/azure';
 import * as vscode from 'vscode';
-import { AzureLoginStatus } from '../tree/azure-account.api';
+import { AzureLoginStatus } from '../../azure-account.api';
 
 export interface AzureSubscriptionProvider {
     logIn(): Promise<void>;
