@@ -37,7 +37,7 @@ export * from './src/tree/azure/AzureResourceItem';
 export * from './src/tree/azure/GroupingItem';
 export * from './src/tree/azure/SubscriptionItem';
 export { createSubscriptionContext as createSubscriptionContext2 } from './src/tree/azure/VSCodeAuthentication';
-export * from './src/tree/BranchDataProviderItem';
+export * from './src/tree/BranchDataItemWrapper';
 export * from './src/tree/InvalidItem';
 export * from './src/utils/wrapFunctionsInTelemetry';
 
