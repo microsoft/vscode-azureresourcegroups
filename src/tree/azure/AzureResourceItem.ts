@@ -9,7 +9,7 @@ import { ResourceTags } from '../../commands/tags/TagFileSystem';
 import { ext } from '../../extensionVariables';
 import { createPortalUrl } from '../../utils/v2/createPortalUrl';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { BranchDataItemOptions, BranchDataItemWrapper } from '../BranchDataProviderItem';
+import { BranchDataItemOptions, BranchDataItemWrapper } from '../BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 
 export class AzureResourceItem<T extends AzureResource> extends BranchDataItemWrapper {
