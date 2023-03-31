@@ -368,7 +368,7 @@
                 },
                 {
                     "command": "azureResourceGroups.selectSubscriptions",
-                    "when": "never"
+                    "when": "isWeb"
                 },
                 {
                     "command": "azureResourceGroups.showGroupOptions",
