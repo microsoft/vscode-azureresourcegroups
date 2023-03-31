@@ -66,6 +66,11 @@
         },
         "commands": [
             {
+                "command": "azureResourceGroups.vscodeAuth.createAccount",
+                "title": "%azureResourceGroups.vscodeAuth.createAccount%",
+                "category": "Azure"
+            },
+            {
                 "command": "azureResourceGroups.vscodeAuth.logIn",
                 "title": "%azureResourceGroups.vscodeAuth.logIn%",
                 "category": "Azure",

@@ -1,4 +1,5 @@
 {
+    "azureResourceGroups.vscodeAuth.createAccount": "Create an Azure Account...",
     "azureResourceGroups.vscodeAuth.logIn": "Sign In",
     "azureResourceGroups.vscodeAuth.logOut": "Sign Out",
     "azureResourceGroups.vscodeAuth.selectSubscriptions": "Select Subscriptions...",

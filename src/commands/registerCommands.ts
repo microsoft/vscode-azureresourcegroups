@@ -6,9 +6,10 @@
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
+import { GroupingItem } from '../tree/azure/GroupingItem';
 import { BranchDataItemWrapper } from '../tree/BranchDataProviderItem';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
-import { GroupingItem } from '../tree/azure/GroupingItem';
+import { createAccount } from './accounts/createAccount';
 import { logIn } from './accounts/logIn';
 import { logOut } from './accounts/logOut';
 import { selectSubscriptions } from './accounts/selectSubscriptions';
@@ -52,6 +53,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.vscodeAuth.logIn', (context: IActionContext) => logIn(context));
     registerCommand('azureResourceGroups.vscodeAuth.logOut', (context: IActionContext) => logOut(context));
     registerCommand('azureResourceGroups.vscodeAuth.selectSubscriptions', (context: IActionContext) => selectSubscriptions(context));
+    registerCommand('azureResourceGroups.vscodeAuth.createAccount', (context: IActionContext) => createAccount(context));
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
