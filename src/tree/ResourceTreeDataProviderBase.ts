@@ -7,7 +7,7 @@ import { callWithTelemetryAndErrorHandling, parseError } from '@microsoft/vscode
 import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/src/index';
 import { BranchDataItemCache } from './BranchDataItemCache';
-import { BranchDataItemWrapper } from './BranchDataProviderItem';
+import { BranchDataItemWrapper } from './BranchDataItemWrapper';
 import { InvalidItem } from './InvalidItem';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 import { TreeItemStateStore } from './TreeItemState';

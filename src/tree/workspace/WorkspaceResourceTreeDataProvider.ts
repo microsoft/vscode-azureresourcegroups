@@ -8,7 +8,7 @@ import { WorkspaceResource } from '../../../api/src/index';
 import { WorkspaceResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { BranchDataItemWrapper } from '../BranchDataProviderItem';
+import { BranchDataItemWrapper } from '../BranchDataItemWrapper';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
