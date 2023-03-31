@@ -34,3 +34,7 @@ steps:
   inputs:
     AllTools: true
   condition: eq(variables['ENABLE_COMPLIANCE'], 'true')
+
+- task: ComponentGovernanceComponentDetection@0
+  displayName: 'Component Detection'
+  condition: ne(variables['Build.SourceBranchName'], 'main')
