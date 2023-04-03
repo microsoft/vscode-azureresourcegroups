@@ -14,7 +14,7 @@ View and manage Azure resources directly from VS Code.
 
 ## Support for [vscode.dev](https://vscode.dev/)
 
-The Azure Resources extension fully supports running on [vscode.dev](https://vscode.dev/) (which includes [github.dev](http://github.dev/)). This means you can use the Azure Resources extension to manage your Azure resources directly from your browser! Note that this does not require the Azure Accounts extension and uses VS Code's built-in authentication provider.
+The Azure Resources extension fully supports running on [vscode.dev](https://vscode.dev/) and [github.dev](http://github.dev/). This means you can use the Azure Resources extension to manage your Azure resources directly from your browser! Note that this does not require the Azure Accounts extension and uses VS Code's built-in authentication provider.
 
 ## Features
 
