@@ -12,6 +12,10 @@ View and manage Azure resources directly from VS Code.
 
 > Sign up today for your free Azure account and receive 12 months of free popular services, $200 free credit and 25+ always free services 👉 [Start Free](https://azure.microsoft.com/free/open-source).
 
+## Support for [vscode.dev](https://vscode.dev/)
+
+The Azure Resources extension full support when running on [vscode.dev](https://vscode.dev/) (which includes [github.dev](http://github.dev/)). This means you can use the Azure Resources extension to manage your Azure resources directly from your browser! Note that this does not require the Azure Accounts extension and uses VS Code's built-in authentication provider.
+
 ## Features
 
 ### Resource and Workspace views
