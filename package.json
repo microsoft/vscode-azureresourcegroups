@@ -360,15 +360,15 @@
             "commandPalette": [
                 {
                     "command": "azureResourceGroups.logIn",
-                    "when": "!isWeb"
+                    "when": "isWeb"
                 },
                 {
                     "command": "azureResourceGroups.logOut",
-                    "when": "!isWeb"
+                    "when": "isWeb"
                 },
                 {
                     "command": "azureResourceGroups.selectSubscriptions",
-                    "when": "!isWeb"
+                    "when": "isWeb"
                 },
                 {
                     "command": "azureResourceGroups.showGroupOptions",
