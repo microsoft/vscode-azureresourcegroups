@@ -113,6 +113,7 @@ export function createResolvableProxy<T extends AzExtParentTreeItem>(resolvable:
         },
         set: (target: Resolvable<T>, name: string, value: unknown): boolean => {
             if (resolvable.resolveResult && Object.getOwnPropertyDescriptor(resolvable.resolveResult, name)?.writable) {
+                // Tell TS we know the property exists and is writable
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                 // @ts-ignore
                 resolvable.resolveResult[name] = value;
