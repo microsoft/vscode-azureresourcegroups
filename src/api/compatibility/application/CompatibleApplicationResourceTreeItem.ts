@@ -28,7 +28,7 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
 
     public readonly resolveResult: ResolvedAppResourceBase;
     public data: AzureResource;
-    public readonly azExtResourceType: AzExtResourceType;
+    public readonly azExtResourceType!: AzExtResourceType;
 
     public readonly cTime: number = Date.now();
     public mTime: number = Date.now();
@@ -107,13 +107,20 @@ type Resolvable<T> = T & {
 export function createResolvableProxy<T extends AzExtParentTreeItem>(resolvable: Resolvable<T>): T {
     const providerHandler: ProxyHandler<Resolvable<T>> = {
         get: (target: Resolvable<T>, name: string): unknown => {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
             return resolvable?.resolveResult?.[name] ?? target[name];
         },
         set: (target: Resolvable<T>, name: string, value: unknown): boolean => {
             if (resolvable.resolveResult && Object.getOwnPropertyDescriptor(resolvable.resolveResult, name)?.writable) {
+                // Tell TS we know the property exists and is writable
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore
                 resolvable.resolveResult[name] = value;
                 return true;
             }
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
             target[name] = value;
             return true;
         },

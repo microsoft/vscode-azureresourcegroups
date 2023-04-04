@@ -116,7 +116,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     const v2ApiFactory: AzureExtensionApiFactory<AzureResourcesApiInternal> = {
         apiVersion: '2.0.0',
-        createApi: (options: GetApiOptions) => {
+        createApi: (options?: GetApiOptions) => {
             return createWrappedAzureResourcesExtensionApi(
                 {
                     apiVersion: '2.0.0',
@@ -132,7 +132,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                         registerActivity
                     },
                 },
-                options.extensionId ?? 'unknown'
+                options?.extensionId ?? 'unknown'
             );
         }
     };

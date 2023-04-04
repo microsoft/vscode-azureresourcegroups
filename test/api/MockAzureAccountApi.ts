@@ -12,7 +12,7 @@ import { MockResources } from './mockServiceFactory';
 export class MockAzureAccount implements AzureSubscriptionProvider {
     public status: AzureLoginStatus = 'LoggedIn';
     public onStatusChanged: Event<AzureLoginStatus>;
-    readonly sessions: AzureSession[];
+    readonly sessions!: AzureSession[];
     public getsessions: AzureSession[] = [];
     public onSessionsChanged: Event<void>;
     public onSubscriptionsChanged: Event<void>;
@@ -80,7 +80,7 @@ export class MockAzureAccount implements AzureSubscriptionProvider {
     selectSubscriptions(): Promise<void> {
         throw new Error('Method not implemented.');
     }
-    allSubscriptions: AzureSubscription[];
+    allSubscriptions!: AzureSubscription[];
 
     public async signIn(): Promise<void> {
         this.changeStatus('LoggedIn');

@@ -130,7 +130,7 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
 
                 return previous;
             },
-            {});
+            {} as { [key: string]: AzureResource[] });
 
         const groupedResources = this.groupBy(
             parent,
@@ -148,7 +148,7 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
     }
 
     private groupByResourceType(parent: ResourceGroupsItem, context: ResourceGroupsTreeContext, resources: AzureResource[]): GroupingItem[] {
-        const initialGrouping = {};
+        const initialGrouping: { [key: string]: AzureResource[] } = {};
 
         // Pre-populate the initial grouping with the supported resource types...
         azureExtensions.forEach(extension => {
