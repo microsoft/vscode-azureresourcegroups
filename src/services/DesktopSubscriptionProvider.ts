@@ -42,8 +42,6 @@ export function createAzureAccountSubscriptionProviderFactory(): () => Promise<A
 
 class AzureAccountSubscriptionProvider implements AzureSubscriptionProvider {
     waitForFilters: () => Promise<boolean>;
-    waitForLogin: () => Promise<boolean>;
-    waitForSubscriptions: () => Promise<boolean>;
 
     public onStatusChanged: vscode.Event<AzureLoginStatus>;
     public onFiltersChanged: vscode.Event<void>;

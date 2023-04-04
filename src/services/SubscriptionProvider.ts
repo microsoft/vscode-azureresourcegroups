@@ -18,8 +18,6 @@ export interface AzureSubscriptionProvider {
     readonly onSubscriptionsChanged: vscode.Event<void>;
 
     readonly waitForFilters: () => Promise<boolean>;
-    readonly waitForLogin: () => Promise<boolean>;
-    readonly waitForSubscriptions: () => Promise<boolean>;
 
     readonly status: AzureLoginStatus;
     readonly allSubscriptions: AzureSubscription[];
