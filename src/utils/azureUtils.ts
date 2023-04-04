@@ -72,8 +72,8 @@ export function createAzureExtensionsGroupConfig(extensions: IAzExtMetadata[], s
 
 export function getIconPath(azExtResourceType?: AzExtResourceType): TreeItemIconPath {
     return treeUtils.getIconPath(azExtResourceType ?
-        Utils.joinPath(URI.parse('azureIcons'), azExtResourceType).fsPath :
-        URI.parse('resource').fsPath);
+        Utils.joinPath(URI.file('azureIcons'), azExtResourceType).path :
+        URI.file('resource').path);
 }
 
 export function getName(azExtResourceType?: AzExtResourceType): string | undefined {
