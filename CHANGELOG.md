@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.7.1 - 2023-04-05
+
+### Fixed
+* Fix missing resource icons on Windows by @nturinski in [#658](https://github.com/microsoft/vscode-azureresourcegroups/pull/658)
+
+### Engineering
+* Enable strict mode and update typings by @alexweininger in [#656](https://github.com/microsoft/vscode-azureresourcegroups/pull/656)
+
 ## 0.7.0 - 2023-04-03
 
 ### Added
