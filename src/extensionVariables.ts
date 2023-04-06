@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeDataProvider, IAzExtOutputChannel } from "@microsoft/vscode-azext-utils";
+import { AzExtTreeDataProvider, IAzExtLogOutputChannel } from "@microsoft/vscode-azext-utils";
 import { AppResourceResolver } from "@microsoft/vscode-azext-utils/hostapi";
 import { DiagnosticCollection, Disposable, env, Event, EventEmitter, ExtensionContext, TreeView, UIKind } from "vscode";
 import { AzureResourcesApiInternal } from "../hostapi.v2.internal";
@@ -43,7 +43,7 @@ export namespace ext {
     export let activityLogTree: AzExtTreeDataProvider;
     export let activityLogTreeItem: ActivityLogTreeItem;
     export let helpTree: AzExtTreeDataProvider;
-    export let outputChannel: IAzExtOutputChannel;
+    export let outputChannel: IAzExtLogOutputChannel;
     export let ignoreBundle: boolean | undefined;
     export const prefix: string = 'azureResourceGroups';
 
