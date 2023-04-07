@@ -7,7 +7,6 @@
 
 import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
-import type { AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import { apiUtils, GetApiOptions } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { AzureResourcesApiInternal } from '../hostapi.v2.internal';
@@ -64,7 +63,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
-        setupEvents(context);
         ext.subscriptionProviderFactory = ext.isWeb ? createWebSubscriptionProviderFactory(context) : createAzureAccountSubscriptionProviderFactory();
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
@@ -165,14 +163,4 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
 export function deactivate(): void {
     ext.diagnosticWatcher?.dispose();
-}
-
-function setupEvents(context: vscode.ExtensionContext): void {
-    // Event emitter for when a group is focused/unfocused
-    context.subscriptions.push(ext.emitters.onDidChangeFocusedGroup = new vscode.EventEmitter());
-    ext.events.onDidChangeFocusedGroup = ext.emitters.onDidChangeFocusedGroup.event;
-
-    // Event emitter for when an AppResourceResolver is registered
-    context.subscriptions.push(ext.emitters.onDidRegisterResolver = new vscode.EventEmitter<AppResourceResolver>());
-    ext.events.onDidRegisterResolver = ext.emitters.onDidRegisterResolver.event;
 }
