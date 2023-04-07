@@ -592,7 +592,7 @@
         "@azure/arm-resources": "5.0.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.0.0",
         "@azure/arm-subscriptions": "^5.1.0",
-        "@microsoft/vscode-azext-azureutils": "file:../vscode-azuretools/azure/microsoft-vscode-azext-azureutils-1.0.1.tgz",
+        "@microsoft/vscode-azext-azureutils": "^1.1.0",
         "@microsoft/vscode-azext-utils": "^1.1.0",
         "buffer": "^6.0.3",
         "jsonc-parser": "^2.2.1",
