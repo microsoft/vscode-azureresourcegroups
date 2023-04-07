@@ -5,8 +5,8 @@
 
 'use strict';
 
-import { registerAzureUtilsExtensionVariables } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
+import { AzExtTreeDataProvider, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { apiUtils, GetApiOptions } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { AzureResourcesApiInternal } from '../hostapi.v2.internal';
@@ -45,8 +45,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     ext.context = context;
     ext.ignoreBundle = ignoreBundle;
-    ext.outputChannel = createAzExtOutputChannel('Azure Resource Groups', ext.prefix);
+    ext.outputChannel = createAzExtLogOutputChannel('Azure Resource Groups');
     context.subscriptions.push(ext.outputChannel);
+    context.subscriptions.push(setupAzureLogger(ext.outputChannel));
 
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
