@@ -19,7 +19,6 @@ export function registerApplicationResourceResolver(type: AzExtResourceType, res
         }
 
         applicationResourceResolvers[type] = resolver;
-        ext.emitters.onDidRegisterResolver.fire(resolver);
 
         const compat = new CompatibleApplicationResourceBranchDataProvider(resolver, 'azureResourceGroups.loadMore' /** TODO: what is the correct value for this? */);
         const disposable = ext.v2.api.resources.registerAzureResourceBranchDataProvider(type, compat);
