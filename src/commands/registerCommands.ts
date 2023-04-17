@@ -6,9 +6,9 @@
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
-import { BranchDataItemWrapper } from '../tree/BranchDataProviderItem';
-import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { GroupingItem } from '../tree/azure/GroupingItem';
+import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
+import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { logIn } from './accounts/logIn';
 import { logOut } from './accounts/logOut';
 import { selectSubscriptions } from './accounts/selectSubscriptions';
@@ -49,16 +49,15 @@ export function registerCommands(): void {
         ext.actions.refreshWorkspaceTree(node);
     });
 
-    registerCommand('azureResourceGroups.vscodeAuth.logIn', (context: IActionContext) => logIn(context));
-    registerCommand('azureResourceGroups.vscodeAuth.logOut', (context: IActionContext) => logOut(context));
-    registerCommand('azureResourceGroups.vscodeAuth.selectSubscriptions', (context: IActionContext) => selectSubscriptions(context));
+    registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context));
+    registerCommand('azureResourceGroups.logOut', (context: IActionContext) => logOut(context));
+    registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext) => selectSubscriptions(context));
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
     registerCommand('azureResourceGroups.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.appResourceTree.loadMore(node, context));
     registerCommand('azureResourceGroups.openInPortal', openInPortal);
     registerCommand('azureResourceGroups.revealResource', revealResource);
-    registerCommand('azureResourceGroups.selectSubscriptions', () => commands.executeCommand('azure-account.selectSubscriptions'));
     registerCommand('azureResourceGroups.viewProperties', viewProperties);
     registerCommand('azureResourceGroups.editTags', editTags);
 

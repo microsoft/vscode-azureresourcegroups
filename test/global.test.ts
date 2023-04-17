@@ -13,6 +13,8 @@ export let longRunningTestsEnabled: boolean;
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(1 * 60 * 1000);
 
+    await vscode.extensions.getExtension('ms-azuretools.vscode-azureresourcegroups')?.activate();
+
     await vscode.commands.executeCommand('azureResourceGroups.refresh'); // activate the extension before tests begin
     ext.outputChannel = new TestOutputChannel();
 

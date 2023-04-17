@@ -29,11 +29,12 @@ async function main(): Promise<void> {
             extensionDevelopmentPath: repoRoot,
             launchArgs: [
                 path.resolve(repoRoot, 'test', 'test.code-workspace'),
-                '--disable-workspace-trust'
+                '--disable-workspace-trust',
+
             ],
             extensionTestsPath: path.resolve(repoRoot, 'dist', 'test', 'index'),
             extensionTestsEnv: {
-                DEBUGTELEMETRY: 'v',
+                DEBUGTELEMETRY: process.env.DEBUGTELEMETRY,
             }
         });
     } catch (err) {

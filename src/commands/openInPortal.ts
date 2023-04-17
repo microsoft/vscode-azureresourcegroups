@@ -20,6 +20,6 @@ export async function openInPortal(context: IActionContext, node?: ResourceGroup
     throw new Error(localize('commands.openInPortal.noPortalLocation', 'The selected resource is not associated with location within the Azure portal.'));
 }
 
-function hasPortalUrl(node: ResourceGroupsItem): node is { portalUrl: Uri } {
+export function hasPortalUrl(node: ResourceGroupsItem): node is { portalUrl: Uri } {
     return !!node && typeof node === 'object' && (node as { portalUrl: unknown }).portalUrl instanceof Uri;
 }

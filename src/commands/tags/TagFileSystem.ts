@@ -5,10 +5,10 @@
 
 import { ResourceManagementClient, Tags } from "@azure/arm-resources";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
-import { AzExtTreeFileSystem, AzExtTreeFileSystemItem, IActionContext, callWithTelemetryAndErrorHandling, createSubscriptionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeFileSystem, AzExtTreeFileSystemItem, callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as jsonc from 'jsonc-parser';
 import * as os from "os";
-import { Diagnostic, DiagnosticSeverity, FileStat, FileType, MessageItem, Uri, commands, languages, window } from "vscode";
+import { commands, Diagnostic, DiagnosticSeverity, FileStat, FileType, languages, MessageItem, Uri, window } from "vscode";
 import { AzureResource, AzureSubscription } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
 import { createResourceClient } from "../../utils/azureClients";
@@ -38,8 +38,8 @@ export class ResourceTags implements ITagsModel {
     readonly displayName: string = this.resource.name;
     readonly displayType: ITagsModel['displayType'];
 
-    cTime: number;
-    mTime: number;
+    cTime!: number;
+    mTime!: number;
 
     async getTags(): Promise<Tags> {
         return await callWithTelemetryAndErrorHandling('getTags', async (context): Promise<Tags | undefined> => {
@@ -108,7 +108,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
             const update: MessageItem = { title: localize('update', 'Update') };
             await context.ui.showWarningMessage(confirmMessage, { modal: true }, update);
 
-            const tags: {} = <{}>jsonc.parse(text);
+            const tags: { [key: string]: string } = <{}>jsonc.parse(text);
 
             // remove example tag
             if (Object.keys(tags).includes(insertKeyHere) && tags[insertKeyHere] === insertValueHere) {

@@ -1,5 +1,37 @@
 # Change Log
 
+## 0.7.1 - 2023-04-05
+
+### Fixed
+* Fix missing resource icons on Windows by @nturinski in [#658](https://github.com/microsoft/vscode-azureresourcegroups/pull/658)
+
+### Engineering
+* Enable strict mode and update typings by @alexweininger in [#656](https://github.com/microsoft/vscode-azureresourcegroups/pull/656)
+
+## 0.7.0 - 2023-04-03
+
+### Added
+* VS Code for the Web support. Manage all of your Azure resources in your browser! @nturinski in https://github.com/microsoft/vscode-azureresourcegroups/pull/611
+
+### Fixed
+* Refresh subscription instead of group by @alexweininger in https://github.com/microsoft/vscode-azureresourcegroups/pull/618
+* Don't throw if resource group isn't found by @alexweininger in https://github.com/microsoft/vscode-azureresourcegroups/pull/622
+* Throw a no resource found error if there are no resource groups by @nturinski in https://github.com/microsoft/vscode-azureresourcegroups/pull/638
+* Fix createClient issue by @alexweininger in https://github.com/microsoft/vscode-azureresourcegroups/pull/642
+
+### Changed
+* Change message of create resource group by @nturinski in https://github.com/microsoft/vscode-azureresourcegroups/pull/637
+
+### Dependencies
+* Update azuretools packages for various fixes by @nturinski in https://github.com/microsoft/vscode-azureresourcegroups/pull/632
+
+### Engineering
+* Make Azure resource provider mockable by @alexweininger in https://github.com/microsoft/vscode-azureresourcegroups/pull/650
+* Add API tests by @alexweininger in https://github.com/microsoft/vscode-azureresourcegroups/pull/563
+
+
+**Full Changelog**: https://github.com/microsoft/vscode-azureresourcegroups/compare/v0.6.2...v0.7.0
+
 ## 0.6.2 - 2023-03-22
 
 ### Changed

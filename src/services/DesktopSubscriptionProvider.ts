@@ -6,7 +6,7 @@
 import { apiUtils } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription } from 'api/src/resources/azure';
 import * as vscode from 'vscode';
-import { AzureAccountExtensionApi, AzureSubscription as AzureAccountSubscription, AzureLoginStatus } from '../tree/azure-account.api';
+import { AzureAccountExtensionApi, AzureLoginStatus, AzureSubscription as AzureAccountSubscription } from '../../azure-account.api';
 import { AzureSubscriptionProvider } from "./SubscriptionProvider";
 
 async function getAzureAccountExtensionApi(): Promise<AzureAccountExtensionApi> {
@@ -42,8 +42,6 @@ export function createAzureAccountSubscriptionProviderFactory(): () => Promise<A
 
 class AzureAccountSubscriptionProvider implements AzureSubscriptionProvider {
     waitForFilters: () => Promise<boolean>;
-    waitForLogin: () => Promise<boolean>;
-    waitForSubscriptions: () => Promise<boolean>;
 
     public onStatusChanged: vscode.Event<AzureLoginStatus>;
     public onFiltersChanged: vscode.Event<void>;

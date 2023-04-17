@@ -6,10 +6,10 @@
 import * as arm from '@azure/arm-subscriptions';
 import { Environment } from '@azure/ms-rest-azure-env';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { IActionContext, callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzureSubscription } from '../../api/src/index';
-import { AzureLoginStatus } from '../tree/azure-account.api';
+import { AzureLoginStatus } from '../../azure-account.api';
 import { localize } from '../utils/localize';
 import { settingUtils } from '../utils/settingUtils';
 import { AzureSubscriptionProvider } from './SubscriptionProvider';

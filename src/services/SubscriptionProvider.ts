@@ -5,7 +5,7 @@
 
 import { AzureSubscription } from 'api/src/resources/azure';
 import * as vscode from 'vscode';
-import { AzureLoginStatus } from '../tree/azure-account.api';
+import { AzureLoginStatus } from '../../azure-account.api';
 
 export interface AzureSubscriptionProvider {
     logIn(): Promise<void>;
@@ -18,8 +18,6 @@ export interface AzureSubscriptionProvider {
     readonly onSubscriptionsChanged: vscode.Event<void>;
 
     readonly waitForFilters: () => Promise<boolean>;
-    readonly waitForLogin: () => Promise<boolean>;
-    readonly waitForSubscriptions: () => Promise<boolean>;
 
     readonly status: AzureLoginStatus;
     readonly allSubscriptions: AzureSubscription[];

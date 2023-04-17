@@ -123,7 +123,7 @@ suite('getTagDiagnostics', () => {
         {
             name: 'tooLongKey',
             text: (() => {
-                const value = {};
+                const value = {} as { [key: string]: unknown };
                 value['a'.repeat(513)] = 'test';
                 return value;
             })(),
@@ -141,7 +141,7 @@ suite('getTagDiagnostics', () => {
         {
             name: 'tooManyProps',
             text: (() => {
-                const value = {};
+                const value = {} as { [key: string]: unknown };
                 let count: number = 0;
                 while (count < 52) {
                     value[String(count)] = 'test';
