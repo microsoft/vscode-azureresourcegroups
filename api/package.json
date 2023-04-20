@@ -1,6 +1,6 @@
 {
     "name": "@microsoft/vscode-azureresources-api",
-    "version": "2.0.4",
+    "version": "2.0.5",
     "description": "Type declarations and client library for the Azure Resources extension API",
     "repository": {
         "type": "git",
@@ -17,8 +17,10 @@
     "author": "Microsoft",
     "license": "MIT",
     "devDependencies": {
-        "@azure/ms-rest-azure-env": "^2.0.0",
         "@types/node": "^16.0.0",
         "@types/vscode": "^1.64.0"
+    },
+    "peerDependencies": {
+        "@azure/ms-rest-azure-env": "^2.0.0"
     }
 }
