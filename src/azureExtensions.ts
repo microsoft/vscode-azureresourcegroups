@@ -102,7 +102,7 @@ export const azureExtensions: IAzExtMetadata[] = [
         ],
         tutorial: {
             label: localize('createLogicApp', 'Create a standard logic app'),
-            url: 'https://go.microsoft.com/fwlink/?linkid=2222287'
+            url: 'https://aka.ms/lalearn'
         },
         reportIssueCommandId: 'azureLogicAppsStandard.reportIssue'
     }
