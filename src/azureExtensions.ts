@@ -92,6 +92,19 @@ export const azureExtensions: IAzExtMetadata[] = [
             AzExtResourceType.SpringApps,
         ],
         reportIssueCommandId: 'springApps.reportIssue'
+    },
+    {
+        name: 'vscode-azurelogicapps',
+        publisher: "ms-azuretools",
+        label: 'Logic Apps',
+        resourceTypes: [
+            AzExtResourceType.LogicApp,
+        ],
+        tutorial: {
+            label: localize('createLogicApp', 'Create a standard logic app'),
+            url: 'https://aka.ms/lalearn'
+        },
+        reportIssueCommandId: 'azureLogicAppsStandard.reportIssue'
     }
 ];
 
