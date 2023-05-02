@@ -491,6 +491,7 @@
                 "id": "azure-get-started",
                 "title": "Get Started with Azure in VS Code",
                 "description": "Setup your account and get to know the Azure extension view.",
+                "when": "false",
                 "steps": [
                     {
                         "id": "sign-in",
