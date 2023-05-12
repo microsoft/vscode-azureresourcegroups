@@ -18,6 +18,8 @@ import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroupV2 } from './deleteResourceGroup/v2/deleteResourceGroupV2';
 import { buildGroupByCommand } from './explorer/groupBy';
 import { showGroupOptions } from './explorer/showGroupOptions';
+import { addToFavorites } from './favorites/addToFavorites';
+import { removeFromFavorites } from './favorites/removeFromFavorites';
 import { getStarted } from './helpAndFeedback/getStarted';
 import { reportIssue } from './helpAndFeedback/reportIssue';
 import { reviewIssues } from './helpAndFeedback/reviewIssues';
@@ -31,6 +33,7 @@ export function registerCommands(): void {
     // Special-case refresh that ignores the selected/focused node and always refreshes the entire tree. Used by the refresh button in the tree title.
     registerCommand('azureResourceGroups.refreshTree', () => ext.actions.refreshAzureTree());
     registerCommand('azureWorkspace.refreshTree', () => ext.actions.refreshWorkspaceTree());
+    registerCommand('azureFavorites.refreshTree', () => ext.actions.refreshAzureFavorites());
 
     // v1.5 client extensions attach these commands to tree item context menus for refreshing their tree items
     registerCommand('azureResourceGroups.refresh', async (context, node?: ResourceGroupsItem) => {
@@ -48,6 +51,9 @@ export function registerCommands(): void {
         await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
         ext.actions.refreshWorkspaceTree(node);
     });
+
+    registerCommand('azureResourceGroups.addToFavorites', addToFavorites);
+    registerCommand('azureResourceGroups.removeFromFavorites', removeFromFavorites);
 
     registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context));
     registerCommand('azureResourceGroups.logOut', (context: IActionContext) => logOut(context));

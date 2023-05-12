@@ -74,7 +74,9 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             return (await callWithTelemetryAndErrorHandling('getTreeItem', async (context) => {
                 context.errorHandling.rethrow = true;
-                return await element.getTreeItem();
+                const ti = await element.getTreeItem();
+                ti.tooltip = new vscode.MarkdownString(`contextValue: \`${ti.contextValue}\`\n\ntreeItem.id: \`${ti.id}\`\n\nelement.id: \`${element.id}\``);
+                return ti;
             }))!;
         } catch (e) {
             const invalidItem = new InvalidItem(parseError(e));

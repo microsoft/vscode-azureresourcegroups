@@ -65,6 +65,24 @@
         },
         "commands": [
             {
+                "command": "azureFavorites.refreshTree",
+                "title": "Refresh",
+                "category": "Azure",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "azureResourceGroups.addToFavorites",
+                "title": "Add to Favorites",
+                "category": "Azure",
+                "icon": "$(star-full)"
+            },
+            {
+                "command": "azureResourceGroups.removeFromFavorites",
+                "title": "Remove from Favorites",
+                "category": "Azure",
+                "icon": "$(close)"
+            },
+            {
                 "command": "azureResourceGroups.logIn",
                 "title": "%azureResourceGroups.logIn%",
                 "category": "Azure"
@@ -226,6 +244,12 @@
         "views": {
             "azure": [
                 {
+                    "id": "azureResourcesView;azureFavorites",
+                    "name": "Focused Resources",
+                    "visibility": "hidden",
+                    "when": "ms-azuretools.vscode-azureresourcegroups.hasFavorite == true"
+                },
+                {
                     "id": "azureResourceGroups",
                     "name": "Resources",
                     "visibility": "visible"
@@ -265,6 +289,10 @@
                 "view": "azureWorkspace",
                 "contents": "No local workspace resource providers exist.",
                 "when": "azureWorkspace.state == 'noWorkspaceResourceProviders'"
+            },
+            {
+                "view": "azureResourcesView;azureFavorites",
+                "contents": "Select a resource to focus from the Resources view."
             }
         ],
         "menus": {
@@ -278,6 +306,11 @@
                     "submenu": "azureResourceGroups.groupBy",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@2"
+                },
+                {
+                    "command": "azureFavorites.refreshTree",
+                    "when": "view == azureResourcesView;azureFavorites",
+                    "group": "navigation@3"
                 },
                 {
                     "command": "azureResourceGroups.refreshTree",
@@ -302,6 +335,16 @@
             ],
             "view/item/context": [
                 {
+                    "command": "azureResourceGroups.addToFavorites",
+                    "when": "view == azureResourceGroups && viewItem =~ /groupingItem/",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureResourceGroups.removeFromFavorites",
+                    "when": "view == azureResourcesView;azureFavorites && viewItem =~ /groupingItem/",
+                    "group": "inline"
+                },
+                {
                     "command": "azureResourceGroups.selectSubscriptions",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
                     "group": "inline"
@@ -323,37 +366,37 @@
                 },
                 {
                     "command": "azureResourceGroups.deleteResourceGroupV2",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
+                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /azureResourceGroup/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureResourceGroups.editTags",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
+                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /azureResourceGroup/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureResourceGroups.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem =~ /hasPortalUrl/",
+                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /hasPortalUrl/",
                     "group": "9@2"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource/",
+                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /azureResource/",
                     "group": "9@3"
                 },
                 {
                     "command": "azureResourceGroups.editTags",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Group)(?!Type)/",
+                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /azureResource(?!Group)(?!Type)/",
                     "group": "8@1"
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem =~ /hasProperties/",
+                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /hasProperties/",
                     "group": "9@1"
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
+                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /azureResourceGroup/",
                     "group": "9@1"
                 }
             ],
@@ -380,6 +423,10 @@
                 },
                 {
                     "command": "azureWorkspace.refresh",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFavorites.refreshTree",
                     "when": "never"
                 },
                 {
@@ -594,7 +641,7 @@
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.0.0",
         "@azure/arm-subscriptions": "^5.1.0",
         "@microsoft/vscode-azext-azureutils": "^1.1.1",
-        "@microsoft/vscode-azext-utils": "^1.1.0",
+        "@microsoft/vscode-azext-utils": "^1.2.2",
         "buffer": "^6.0.3",
         "jsonc-parser": "^2.2.1",
         "uuid": "^9.0.0",

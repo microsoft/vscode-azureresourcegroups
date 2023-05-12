@@ -31,6 +31,7 @@ import { createWebSubscriptionProviderFactory } from './services/WebAzureSubscri
 import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
 import { registerAzureTree } from './tree/azure/registerAzureTree';
+import { registerMyResourcesTree } from './tree/azure/registerCustomAzureTree';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
@@ -54,11 +55,14 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);
+    const refreshMyResourcesTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+    context.subscriptions.push(refreshMyResourcesTreeEmitter);
     const refreshWorkspaceTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
     context.subscriptions.push(refreshWorkspaceTreeEmitter);
 
     ext.actions.refreshWorkspaceTree = (data) => refreshWorkspaceTreeEmitter.fire(data);
     ext.actions.refreshAzureTree = (data) => refreshAzureTreeEmitter.fire(data);
+    ext.actions.refreshAzureFavorites = (data) => refreshMyResourcesTreeEmitter.fire(data);
 
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
@@ -104,6 +108,13 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         azureResourceProviderManager,
         azureResourceBranchDataProviderManager,
         refreshEvent: refreshAzureTreeEmitter.event,
+        itemCache: azureResourcesBranchDataItemCache
+    });
+
+    registerMyResourcesTree(context, {
+        azureResourceProviderManager,
+        azureResourceBranchDataProviderManager,
+        refreshEvent: refreshMyResourcesTreeEmitter.event,
         itemCache: azureResourcesBranchDataItemCache
     });
 
