@@ -347,7 +347,7 @@
             "view/item/context": [
                 {
                     "command": "azureResourceGroups.focusGroup",
-                    "when": "view == azureResourceGroups && viewItem =~ /groupingItem/",
+                    "when": "view == azureResourceGroups && viewItem =~ /canFocus/",
                     "group": "inline"
                 },
                 {

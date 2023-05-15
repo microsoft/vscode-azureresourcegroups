@@ -102,7 +102,7 @@ export class GroupingItem implements ResourceGroupsItem {
             async (subscription) => {
                 const items: ResourceGroupsItem[] = [];
 
-                if (!this.options?.hideSeparators || groupMap.size > 1) {
+                if (!this.options?.hideSeparators && groupMap.size > 1) {
                     items.push(new GenericItem('', { description: subscription.name }));
                 }
 
@@ -141,6 +141,10 @@ export class GroupingItem implements ResourceGroupsItem {
         const contextValuesToAdd: string[] = ['groupingItem'];
         if (this.resourceGroup) {
             contextValuesToAdd.push('hasPortalUrl');
+        }
+
+        if (this.resourceGroup || this.resourceType || this.location) {
+            contextValuesToAdd.push('canFocus');
         }
 
         treeItem.contextValue = createContextValue((this.contextValues ?? []).concat(contextValuesToAdd));
