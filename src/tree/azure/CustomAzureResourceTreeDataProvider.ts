@@ -48,6 +48,12 @@ export class CustomAzureResourceTreeDataProvider extends ResourceTreeDataProvide
             });
     }
 
+    clearResourcesCache(): void {
+        this.resources = [];
+    }
+
+    private resources: AzureResource[] = [];
+
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
         if (element) {
             return await element.getChildren();
@@ -60,13 +66,12 @@ export class CustomAzureResourceTreeDataProvider extends ResourceTreeDataProvide
             if (azureSubscriptionProvider.status === 'LoggedIn' && azureSubscriptionProvider.filters.length > 0) {
                 const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
 
-                let resources: AzureResource[] = [];
-                if (resources.length === 0) {
+                if (this.resources.length === 0) {
                     for await (const subscription of azureSubscriptionProvider.filters) {
-                        resources.push(...await this.resourceProviderManager.getResources(subscription));
+                        this.resources.push(...await this.resourceProviderManager.getResources(subscription));
                     }
                     if (!showHiddenTypes) {
-                        resources = resources.filter(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' || (resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType)));
+                        this.resources = this.resources.filter(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' || (resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType)));
                     }
                 }
 
@@ -74,15 +79,15 @@ export class CustomAzureResourceTreeDataProvider extends ResourceTreeDataProvide
                 if (focusedGroup) {
                     switch (focusedGroup.kind) {
                         case 'resourceGroup':
-                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, resources, 'resourceGroup')
+                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, this.resources, 'resourceGroup')
                                 .find((value) => value.resourceGroup?.id.toLowerCase() === focusedGroup.id.toLowerCase());
                             break;
                         case 'resourceType':
-                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, resources, 'resourceType')
+                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, this.resources, 'resourceType')
                                 .find((value) => value.resourceType === focusedGroup.type);
                             break;
                         case 'location':
-                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, resources, 'location')
+                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, this.resources, 'location')
                                 .find((value) => value.location === focusedGroup.location);
                             break;
                     }

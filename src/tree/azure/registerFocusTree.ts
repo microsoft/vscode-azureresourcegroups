@@ -35,7 +35,7 @@ export function registerFocusTree(context: vscode.ExtensionContext, options: Reg
     const resourceGroupingManager = createGroupingManager(azureResourceBranchDataProviderManager, itemCache);
     context.subscriptions.push(resourceGroupingManager);
 
-    const azureResourceTreeDataProvider =
+    const focusViewTreeDataProvider =
         new CustomAzureResourceTreeDataProvider(
             azureResourceBranchDataProviderManager.onDidChangeTreeData,
             itemCache,
@@ -45,20 +45,20 @@ export function registerFocusTree(context: vscode.ExtensionContext, options: Reg
             resourceProviderManager,
         );
 
-    context.subscriptions.push(azureResourceTreeDataProvider);
+    context.subscriptions.push(focusViewTreeDataProvider);
 
     const treeView = createTreeView('azureFocusView', {
         canSelectMany: false,
         showCollapseAll: false,
         itemCache,
         title: localize('focusedResources', 'Focused Resources'),
-        treeDataProvider: wrapTreeForVSCode(azureResourceTreeDataProvider, itemCache),
-        findItemById: azureResourceTreeDataProvider.findItemById.bind(azureResourceTreeDataProvider) as typeof azureResourceTreeDataProvider.findItemById,
+        treeDataProvider: wrapTreeForVSCode(focusViewTreeDataProvider, itemCache),
+        findItemById: focusViewTreeDataProvider.findItemById.bind(focusViewTreeDataProvider) as typeof focusViewTreeDataProvider.findItemById,
     });
     context.subscriptions.push(treeView);
     ext.focusView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
 
-    return azureResourceTreeDataProvider;
+    return focusViewTreeDataProvider;
 }
 
 function createGroupingManager(azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager, itemCache: BranchDataItemCache): AzureResourceGroupingManager {
