@@ -48,39 +48,41 @@ export class CustomAzureResourceTreeDataProvider extends ResourceTreeDataProvide
             });
     }
 
-    private resources: AzureResource[] = [];
-
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
         if (element) {
             return await element.getChildren();
         } else {
+            const focusedGroup = ext.focusedGroup;
+            if (!focusedGroup) {
+                return [];
+            }
             const azureSubscriptionProvider = await this.getAzureAccountExtensionApi();
             if (azureSubscriptionProvider.status === 'LoggedIn' && azureSubscriptionProvider.filters.length > 0) {
                 const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
 
-                if (this.resources.length === 0) {
+                let resources: AzureResource[] = [];
+                if (resources.length === 0) {
                     for await (const subscription of azureSubscriptionProvider.filters) {
-                        this.resources.push(...await this.resourceProviderManager.getResources(subscription));
+                        resources.push(...await this.resourceProviderManager.getResources(subscription));
                     }
                     if (!showHiddenTypes) {
-                        this.resources = this.resources.filter(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' || (resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType)));
+                        resources = resources.filter(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' || (resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType)));
                     }
                 }
 
                 let focusedGroupItem: GroupingItem | undefined = undefined;
-                const focusedGroup = ext.focusedGroup;
                 if (focusedGroup) {
                     switch (focusedGroup.kind) {
                         case 'resourceGroup':
-                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, this.resources, 'resourceGroup')
+                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, resources, 'resourceGroup')
                                 .find((value) => value.resourceGroup?.id.toLowerCase() === focusedGroup.id.toLowerCase());
                             break;
                         case 'resourceType':
-                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, this.resources, 'resourceType')
+                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, resources, 'resourceType')
                                 .find((value) => value.resourceType === focusedGroup.type);
                             break;
                         case 'location':
-                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, this.resources, 'location')
+                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, resources, 'location')
                                 .find((value) => value.location === focusedGroup.location);
                             break;
                     }
