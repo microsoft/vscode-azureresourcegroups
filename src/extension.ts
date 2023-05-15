@@ -31,7 +31,7 @@ import { createWebSubscriptionProviderFactory } from './services/WebAzureSubscri
 import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
 import { registerAzureTree } from './tree/azure/registerAzureTree';
-import { registerMyResourcesTree } from './tree/azure/registerCustomAzureTree';
+import { registerFocusTree } from './tree/azure/registerCustomAzureTree';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
@@ -62,7 +62,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     ext.actions.refreshWorkspaceTree = (data) => refreshWorkspaceTreeEmitter.fire(data);
     ext.actions.refreshAzureTree = (data) => refreshAzureTreeEmitter.fire(data);
-    ext.actions.refreshAzureFavorites = (data) => refreshMyResourcesTreeEmitter.fire(data);
+    ext.actions.refreshFocusTree = (data) => refreshMyResourcesTreeEmitter.fire(data);
 
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
@@ -111,7 +111,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         itemCache: azureResourcesBranchDataItemCache
     });
 
-    registerMyResourcesTree(context, {
+    registerFocusTree(context, {
         azureResourceProviderManager,
         azureResourceBranchDataProviderManager,
         refreshEvent: refreshMyResourcesTreeEmitter.event,

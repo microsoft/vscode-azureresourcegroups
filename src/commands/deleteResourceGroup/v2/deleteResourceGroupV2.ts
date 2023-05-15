@@ -31,7 +31,8 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
     let resourceGroupsToDelete: AzureResource[] = [];
 
     if (selectedResourceGroupNodes) {
-        subscription = selectedResourceGroupNodes[0].subscription;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        subscription = selectedResourceGroupNodes[0].subscription!;
         resourceGroupsToDelete = selectedResourceGroupNodes.map(node => nonNullProp(node, 'resourceGroup'));
     } else {
         ({ subscription, resourceGroupsToDelete } = await pickResourceGroups(context));

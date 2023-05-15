@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { ext } from "../../extensionVariables";
 import { GroupingItem } from "../../tree/azure/GroupingItem";
 
-export async function addToFavorites(_context: IActionContext, item: GroupingItem): Promise<void> {
+export async function focusGroup(_context: IActionContext, item: GroupingItem): Promise<void> {
     if (item.resourceGroup) {
         ext.focusedGroup = {
             kind: 'resourceGroup',
@@ -26,7 +26,7 @@ export async function addToFavorites(_context: IActionContext, item: GroupingIte
         }
     }
 
-    await vscode.commands.executeCommand('setContext', 'ms-azuretools.vscode-azureresourcegroups.hasFavorite', true);
-    ext.actions.refreshAzureFavorites();
-    await ext.favoritesView.reveal(undefined);
+    await vscode.commands.executeCommand('setContext', 'ms-azuretools.vscode-azureresourcegroups.hasFocusedGroup', true);
+    ext.actions.refreshFocusTree();
+    await ext.focusView.reveal(undefined);
 }

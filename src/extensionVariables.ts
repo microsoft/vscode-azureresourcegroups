@@ -17,7 +17,7 @@ import { TreeItemStateStore } from "./tree/TreeItemState";
 export namespace extActions {
     export let refreshWorkspaceTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
     export let refreshAzureTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
-    export let refreshAzureFavorites: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
+    export let refreshFocusTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
 }
 
 /**
@@ -59,23 +59,11 @@ export namespace ext {
         export let overrideAzureSubscriptionProvider: (() => AzureSubscriptionProvider) | undefined;
     }
 
-    export const favoriteResources: FavoriteResourcesModel = {
-        resourceGroups: new Set(),
-        resourceTypes: new Set(),
-        locations: new Set(),
-    };
-
     export let focusedGroup: GroupingKind | undefined;
 
-    export let favoritesView: TreeView<unknown>;
+    export let focusView: TreeView<unknown>;
 
     export const actions = extActions;
-}
-
-interface FavoriteResourcesModel {
-    resourceGroups: Set<string>;
-    resourceTypes: Set<string>;
-    locations: Set<string>;
 }
 
 type ResourceTypeGrouping = {

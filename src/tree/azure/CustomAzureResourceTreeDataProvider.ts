@@ -67,26 +67,26 @@ export class CustomAzureResourceTreeDataProvider extends ResourceTreeDataProvide
                     }
                 }
 
-                let favoritedGroup: GroupingItem | undefined = undefined;
+                let focusedGroupItem: GroupingItem | undefined = undefined;
                 const focusedGroup = ext.focusedGroup;
                 if (focusedGroup) {
                     switch (focusedGroup.kind) {
                         case 'resourceGroup':
-                            favoritedGroup = this.resourceGroupingManager.groupResources(undefined, undefined, this.resources, 'resourceGroup')
+                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, this.resources, 'resourceGroup')
                                 .find((value) => value.resourceGroup?.id.toLowerCase() === focusedGroup.id.toLowerCase());
                             break;
                         case 'resourceType':
-                            favoritedGroup = this.resourceGroupingManager.groupResources(undefined, undefined, this.resources, 'resourceType')
+                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, this.resources, 'resourceType')
                                 .find((value) => value.resourceType === focusedGroup.type);
                             break;
                         case 'location':
-                            favoritedGroup = this.resourceGroupingManager.groupResources(undefined, undefined, this.resources, 'location')
+                            focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, this.resources, 'location')
                                 .find((value) => value.location === focusedGroup.location);
                             break;
                     }
                 }
 
-                return favoritedGroup ? [favoritedGroup] : [];
+                return focusedGroupItem ? [focusedGroupItem] : [];
             } else {
                 return [];
             }

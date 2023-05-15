@@ -27,7 +27,7 @@ interface RegisterAzureTreeOptions {
     itemCache: BranchDataItemCache,
 }
 
-export function registerMyResourcesTree(context: vscode.ExtensionContext, options: RegisterAzureTreeOptions): CustomAzureResourceTreeDataProvider {
+export function registerFocusTree(context: vscode.ExtensionContext, options: RegisterAzureTreeOptions): CustomAzureResourceTreeDataProvider {
     const { azureResourceBranchDataProviderManager, azureResourceProviderManager: resourceProviderManager, refreshEvent, itemCache } = options;
 
     context.subscriptions.push(ext.azureTreeState = new TreeItemStateStore());
@@ -47,16 +47,16 @@ export function registerMyResourcesTree(context: vscode.ExtensionContext, option
 
     context.subscriptions.push(azureResourceTreeDataProvider);
 
-    const treeView = createTreeView('azureResourcesView;azureFavorites', {
-        canSelectMany: true,
-        showCollapseAll: true,
+    const treeView = createTreeView('azureFocusView', {
+        canSelectMany: false,
+        showCollapseAll: false,
         itemCache,
-        title: localize('favoriteResources', 'Focused Resources'),
+        title: localize('focusedResources', 'Focused Resources'),
         treeDataProvider: wrapTreeForVSCode(azureResourceTreeDataProvider, itemCache),
         findItemById: azureResourceTreeDataProvider.findItemById.bind(azureResourceTreeDataProvider) as typeof azureResourceTreeDataProvider.findItemById,
     });
     context.subscriptions.push(treeView);
-    ext.favoritesView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
+    ext.focusView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
 
     return azureResourceTreeDataProvider;
 }

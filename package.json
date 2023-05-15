@@ -65,20 +65,26 @@
         },
         "commands": [
             {
-                "command": "azureFavorites.refreshTree",
+                "command": "azureFocusView.refreshTree",
                 "title": "Refresh",
                 "category": "Azure",
                 "icon": "$(refresh)"
             },
             {
-                "command": "azureResourceGroups.addToFavorites",
-                "title": "Add to Favorites",
+                "command": "azureFocusView.refresh",
+                "title": "Refresh",
                 "category": "Azure",
-                "icon": "$(star-full)"
+                "icon": "$(refresh)"
             },
             {
-                "command": "azureResourceGroups.removeFromFavorites",
-                "title": "Remove from Favorites",
+                "command": "azureResourceGroups.focusGroup",
+                "title": "Focus this group",
+                "category": "Azure",
+                "icon": "$(zoom-in)"
+            },
+            {
+                "command": "azureResourceGroups.unfocusGroup",
+                "title": "Unfocus Group",
                 "category": "Azure",
                 "icon": "$(close)"
             },
@@ -244,10 +250,10 @@
         "views": {
             "azure": [
                 {
-                    "id": "azureResourcesView;azureFavorites",
+                    "id": "azureFocusView",
                     "name": "Focused Resources",
                     "visibility": "hidden",
-                    "when": "ms-azuretools.vscode-azureresourcegroups.hasFavorite == true"
+                    "when": "ms-azuretools.vscode-azureresourcegroups.hasFocusedGroup == true"
                 },
                 {
                     "id": "azureResourceGroups",
@@ -291,7 +297,7 @@
                 "when": "azureWorkspace.state == 'noWorkspaceResourceProviders'"
             },
             {
-                "view": "azureResourcesView;azureFavorites",
+                "view": "azureFocusView",
                 "contents": "Select a resource to focus from the Resources view."
             }
         ],
@@ -303,13 +309,18 @@
                     "group": "navigation@1"
                 },
                 {
+                    "command": "azureResourceGroups.unfocusGroup",
+                    "when": "view == azureFocusView",
+                    "group": "navigation@4"
+                },
+                {
                     "submenu": "azureResourceGroups.groupBy",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@2"
                 },
                 {
-                    "command": "azureFavorites.refreshTree",
-                    "when": "view == azureResourcesView;azureFavorites",
+                    "command": "azureFocusView.refreshTree",
+                    "when": "view == azureFocusView",
                     "group": "navigation@3"
                 },
                 {
@@ -335,13 +346,8 @@
             ],
             "view/item/context": [
                 {
-                    "command": "azureResourceGroups.addToFavorites",
+                    "command": "azureResourceGroups.focusGroup",
                     "when": "view == azureResourceGroups && viewItem =~ /groupingItem/",
-                    "group": "inline"
-                },
-                {
-                    "command": "azureResourceGroups.removeFromFavorites",
-                    "when": "view == azureResourcesView;azureFavorites && viewItem =~ /groupingItem/",
                     "group": "inline"
                 },
                 {
@@ -366,37 +372,42 @@
                 },
                 {
                     "command": "azureResourceGroups.deleteResourceGroupV2",
-                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /azureResourceGroup/",
+                    "when": "view =~ /azureResourceGroups/ && viewItem =~ /azureResourceGroup/",
                     "group": "1@1"
                 },
                 {
                     "command": "azureResourceGroups.editTags",
-                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /azureResourceGroup/",
+                    "when": "view =~ /azureResourceGroups|azureFocusView/ && viewItem =~ /azureResourceGroup/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureResourceGroups.openInPortal",
-                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /hasPortalUrl/",
+                    "when": "view =~ /azureResourceGroups|azureFocusView/ && viewItem =~ /hasPortalUrl/",
                     "group": "9@2"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /azureResource/",
+                    "when": "view =~ /azureResourceGroups/ && viewItem =~ /azureResource/",
+                    "group": "9@3"
+                },
+                {
+                    "command": "azureFocusView.refresh",
+                    "when": "view =~ /azureFocusView/ && viewItem =~ /azureResource/",
                     "group": "9@3"
                 },
                 {
                     "command": "azureResourceGroups.editTags",
-                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /azureResource(?!Group)(?!Type)/",
+                    "when": "view =~ /azureResourceGroups|azureFocusView/ && viewItem =~ /azureResource(?!Group)(?!Type)/",
                     "group": "8@1"
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
-                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /hasProperties/",
+                    "when": "view =~ /azureResourceGroups|azureFocusView/ && viewItem =~ /hasProperties/",
                     "group": "9@1"
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
-                    "when": "view =~ /azureResourceGroups|azureResourcesView;azureFavorites/ && viewItem =~ /azureResourceGroup/",
+                    "when": "view =~ /azureResourceGroups|azureFocusView/ && viewItem =~ /azureResourceGroup/",
                     "group": "9@1"
                 }
             ],
@@ -426,7 +437,7 @@
                     "when": "never"
                 },
                 {
-                    "command": "azureFavorites.refreshTree",
+                    "command": "azureFocusView.refreshTree",
                     "when": "never"
                 },
                 {

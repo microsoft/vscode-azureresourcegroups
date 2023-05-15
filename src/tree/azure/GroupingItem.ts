@@ -94,7 +94,7 @@ export class GroupingItem implements ResourceGroupsItem {
             const azExtResourceTypes = sortedResources.map(r => r.resourceType);
             if (azExtResourceTypes.includes(type)) {
                 ext.actions.refreshAzureTree(this);
-                ext.actions.refreshAzureFavorites(this);
+                ext.actions.refreshFocusTree(this);
             }
         });
 
