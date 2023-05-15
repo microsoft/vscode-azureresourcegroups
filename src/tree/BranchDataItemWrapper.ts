@@ -115,13 +115,9 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
 export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItemWrapper;
 
 export function createBranchDataItemFactory(itemCache: BranchDataItemCache): BranchDataItemFactory {
-    return (branchItem, branchDataProvider, options) => {
-        const cachedItem = itemCache.getItemForId(branchItem.id) as BranchDataItemWrapper | undefined;
-        if (cachedItem) {
-            cachedItem.branchItem = branchItem;
-            itemCache.addBranchItem(branchItem, cachedItem);
-            return cachedItem;
-        }
-        return new BranchDataItemWrapper(branchItem, branchDataProvider, itemCache, options);
-    }
+    return (branchItem, branchDataProvider, options) =>
+        itemCache.createOrGetItem(
+            branchItem,
+            () => new BranchDataItemWrapper(branchItem, branchDataProvider, itemCache, options),
+        )
 }
