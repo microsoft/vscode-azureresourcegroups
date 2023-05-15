@@ -5,10 +5,11 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
+import { hasFocusedGroupContextKey } from "../../constants";
 import { ext } from "../../extensionVariables";
 
 export async function unfocusGroup(_context: IActionContext): Promise<void> {
     ext.focusedGroup = undefined;
     ext.actions.refreshFocusTree();
-    await vscode.commands.executeCommand('setContext', 'ms-azuretools.vscode-azureresourcegroups.hasFocusedGroup', false);
+    await vscode.commands.executeCommand('setContext', hasFocusedGroupContextKey, false);
 }

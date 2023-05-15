@@ -5,6 +5,7 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
+import { hasFocusedGroupContextKey } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { GroupingItem } from "../../tree/azure/GroupingItem";
 
@@ -26,7 +27,7 @@ export async function focusGroup(_context: IActionContext, item: GroupingItem): 
         }
     }
 
-    await vscode.commands.executeCommand('setContext', 'ms-azuretools.vscode-azureresourcegroups.hasFocusedGroup', true);
+    await vscode.commands.executeCommand('setContext', hasFocusedGroupContextKey, true);
     ext.actions.refreshFocusTree();
     await ext.focusView.reveal(undefined);
 }
