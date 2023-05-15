@@ -12,7 +12,6 @@ import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { createTreeView } from '../createTreeView';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
-import { TreeItemStateStore } from '../TreeItemState';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { AzureResourceBranchDataProviderManager } from './AzureResourceBranchDataProviderManager';
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
@@ -29,8 +28,6 @@ interface RegisterAzureTreeOptions {
 
 export function registerFocusTree(context: vscode.ExtensionContext, options: RegisterAzureTreeOptions): CustomAzureResourceTreeDataProvider {
     const { azureResourceBranchDataProviderManager, azureResourceProviderManager: resourceProviderManager, refreshEvent, itemCache } = options;
-
-    context.subscriptions.push(ext.azureTreeState = new TreeItemStateStore());
 
     const resourceGroupingManager = createGroupingManager(azureResourceBranchDataProviderManager, itemCache);
     context.subscriptions.push(resourceGroupingManager);
