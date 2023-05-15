@@ -102,8 +102,7 @@ export class GroupingItem implements ResourceGroupsItem {
             async (subscription) => {
                 const items: ResourceGroupsItem[] = [];
 
-                const alwaysShowSeparator = false;
-                if (!this.options?.hideSeparators && alwaysShowSeparator || groupMap.size > 1) {
+                if (!this.options?.hideSeparators || groupMap.size > 1) {
                     items.push(new GenericItem('', { description: subscription.name }));
                 }
 
