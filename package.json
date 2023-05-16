@@ -78,7 +78,7 @@
             },
             {
                 "command": "azureResourceGroups.focusGroup",
-                "title": "Focus this group",
+                "title": "Focus This Group",
                 "category": "Azure",
                 "icon": "$(zoom-in)"
             },
