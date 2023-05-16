@@ -9,7 +9,7 @@ import { hasFocusedGroupContextKey } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { GroupingItem } from "../../tree/azure/GroupingItem";
 
-export async function focusGroup(_context: IActionContext, item: GroupingItem): Promise<void> {
+export async function focusGroup(context: IActionContext, item: GroupingItem): Promise<void> {
     if (item.resourceGroup) {
         ext.focusedGroup = {
             kind: 'resourceGroup',
@@ -24,6 +24,13 @@ export async function focusGroup(_context: IActionContext, item: GroupingItem): 
         ext.focusedGroup = {
             kind: 'location',
             location: item.location,
+        }
+    }
+
+    if (ext.focusedGroup) {
+        context.telemetry.properties.groupKind = ext.focusedGroup?.kind;
+        if (ext.focusedGroup.kind === 'resourceType') {
+            context.telemetry.properties.resourceType = ext.focusedGroup.type;
         }
     }
 
