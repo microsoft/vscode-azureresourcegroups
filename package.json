@@ -368,7 +368,7 @@
                 },
                 {
                     "command": "azureResourceGroups.deleteResourceGroupV2",
-                    "when": "view =~ /azureResourceGroups/ && viewItem =~ /azureResourceGroup/",
+                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
                     "group": "1@1"
                 },
                 {
