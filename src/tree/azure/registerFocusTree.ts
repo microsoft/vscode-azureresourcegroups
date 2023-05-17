@@ -16,7 +16,7 @@ import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { AzureResourceBranchDataProviderManager } from './AzureResourceBranchDataProviderManager';
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { createResourceItemFactory } from './AzureResourceItem';
-import { CustomAzureResourceTreeDataProvider } from './CustomAzureResourceTreeDataProvider';
+import { FocusViewTreeDataProvider } from './FocusViewTreeDataProvider';
 import { createGroupingItemFactory } from './GroupingItem';
 
 interface RegisterAzureTreeOptions {
@@ -26,14 +26,14 @@ interface RegisterAzureTreeOptions {
     itemCache: BranchDataItemCache,
 }
 
-export function registerFocusTree(context: vscode.ExtensionContext, options: RegisterAzureTreeOptions): CustomAzureResourceTreeDataProvider {
+export function registerFocusTree(context: vscode.ExtensionContext, options: RegisterAzureTreeOptions): FocusViewTreeDataProvider {
     const { azureResourceBranchDataProviderManager, azureResourceProviderManager: resourceProviderManager, refreshEvent, itemCache } = options;
 
     const resourceGroupingManager = createGroupingManager(azureResourceBranchDataProviderManager, itemCache);
     context.subscriptions.push(resourceGroupingManager);
 
     const focusViewTreeDataProvider =
-        new CustomAzureResourceTreeDataProvider(
+        new FocusViewTreeDataProvider(
             azureResourceBranchDataProviderManager.onDidChangeTreeData,
             itemCache,
             ext.azureTreeState,

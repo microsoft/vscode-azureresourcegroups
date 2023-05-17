@@ -11,7 +11,7 @@ import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
 import { AzureSubscriptionProvider } from "./services/SubscriptionProvider";
-import { CustomAzureResourceTreeDataProvider } from "./tree/azure/CustomAzureResourceTreeDataProvider";
+import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
 import { ResourceGroupsItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
 
@@ -62,7 +62,7 @@ export namespace ext {
 
     export let focusedGroup: GroupingKind | undefined;
     export let focusView: TreeView<unknown>;
-    export let focusViewTreeDataProvider: CustomAzureResourceTreeDataProvider;
+    export let focusViewTreeDataProvider: FocusViewTreeDataProvider;
 
     export const actions = extActions;
 }

@@ -23,7 +23,7 @@ const supportedResourceTypes: AzExtResourceType[] =
         .map(e => e.resourceTypes)
         .reduce((a, b) => a.concat(...b), []);
 
-export class CustomAzureResourceTreeDataProvider extends AzureResourceTreeDataProviderBase {
+export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase {
 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
