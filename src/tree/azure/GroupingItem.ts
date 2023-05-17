@@ -62,6 +62,7 @@ export class GroupingItem implements ResourceGroupsItem {
             if (this.context?.subscription) {
                 this.id = `/subscriptions/${this.context?.subscriptionContext.subscriptionId}/groupings/${this.label}`;
             } else {
+                // favorites groups don't always have a subscription
                 this.id = `/groupings/${this.label}`;
             }
         }
