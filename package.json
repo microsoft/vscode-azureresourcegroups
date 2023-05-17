@@ -78,13 +78,13 @@
             },
             {
                 "command": "azureResourceGroups.focusGroup",
-                "title": "Focus This Group",
+                "title": "%azureResourceGroups.focusGroup%",
                 "category": "Azure",
                 "icon": "$(zoom-in)"
             },
             {
                 "command": "azureResourceGroups.unfocusGroup",
-                "title": "Unfocus Group",
+                "title": "%azureResourceGroups.unfocusGroup%",
                 "category": "Azure",
                 "icon": "$(close)"
             },
