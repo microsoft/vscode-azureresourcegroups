@@ -5,13 +5,13 @@
 
 import { contextValueExperience, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
-import { hasFocusedGroupContextKey } from "../../constants";
+import { canFocusContextValue, hasFocusedGroupContextKey } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { GroupingItem } from "../../tree/azure/GroupingItem";
 
 export async function focusGroup(context: IActionContext, item?: GroupingItem): Promise<void> {
     item ??= await contextValueExperience<GroupingItem>(context, ext.v2.api.resources.azureResourceTreeDataProvider, {
-        include: 'canFocus',
+        include: canFocusContextValue,
     });
 
     if (item.resourceGroup) {
