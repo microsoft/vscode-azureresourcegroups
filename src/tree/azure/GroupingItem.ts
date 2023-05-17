@@ -84,11 +84,11 @@ export class GroupingItem implements ResourceGroupsItem {
             return a.name.localeCompare(b.name);
         });
 
-        const groupMap = new Map<AzureSubscription, AzureResource[]>();
+        const subscriptionGroupingMap = new Map<AzureSubscription, AzureResource[]>();
 
         sortedResources.forEach(resource => {
             const sub = resource.subscription;
-            groupMap.set(sub, [...groupMap.get(sub) ?? []].concat(resource));
+            subscriptionGroupingMap.set(sub, [...subscriptionGroupingMap.get(sub) ?? []].concat(resource));
         });
 
         this.onDidChangeBranchDataProviders((type: AzExtResourceType) => {
@@ -99,15 +99,15 @@ export class GroupingItem implements ResourceGroupsItem {
             }
         });
 
-        const resourceItems = await Promise.all(Array.from(groupMap.keys()).map(
+        const resourceItems = await Promise.all(Array.from(subscriptionGroupingMap.keys()).map(
             async (subscription) => {
                 const items: ResourceGroupsItem[] = [];
 
-                if (!this.options?.hideSeparators && groupMap.size > 1) {
+                if (!this.options?.hideSeparators && subscriptionGroupingMap.size > 1) {
                     items.push(new GenericItem('', { description: subscription.name }));
                 }
 
-                for await (const resource of groupMap.get(subscription) ?? []) {
+                for await (const resource of subscriptionGroupingMap.get(subscription) ?? []) {
                     try {
                         const branchDataProvider = this.branchDataProviderFactory(resource);
                         const resourceItem = await branchDataProvider.getResourceItem(resource);
