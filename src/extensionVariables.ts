@@ -4,18 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtTreeDataProvider, IAzExtLogOutputChannel } from "@microsoft/vscode-azext-utils";
+import { AzExtResourceType } from "api/docs/vscode-azureresources-api";
 import { DiagnosticCollection, Disposable, env, ExtensionContext, TreeView, UIKind } from "vscode";
 import { AzureResourcesApiInternal } from "../hostapi.v2.internal";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
 import { AzureSubscriptionProvider } from "./services/SubscriptionProvider";
+import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
 import { ResourceGroupsItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
 
 export namespace extActions {
     export let refreshWorkspaceTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
     export let refreshAzureTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
+    export let refreshFocusTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
 }
 
 /**
@@ -57,5 +60,26 @@ export namespace ext {
         export let overrideAzureSubscriptionProvider: (() => AzureSubscriptionProvider) | undefined;
     }
 
+    export let focusedGroup: GroupingKind | undefined;
+    export let focusView: TreeView<unknown>;
+    export let focusViewTreeDataProvider: FocusViewTreeDataProvider;
+
     export const actions = extActions;
 }
+
+type ResourceTypeGrouping = {
+    kind: 'resourceType';
+    type: AzExtResourceType;
+}
+
+type ResourceGroupGrouping = {
+    kind: 'resourceGroup';
+    id: string;
+}
+
+type LocationGrouping = {
+    kind: 'location';
+    location: string;
+}
+
+export type GroupingKind = ResourceTypeGrouping | ResourceGroupGrouping | LocationGrouping;

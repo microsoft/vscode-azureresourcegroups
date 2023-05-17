@@ -12,12 +12,11 @@ import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { createTreeView } from '../createTreeView';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
-import { TreeItemStateStore } from '../TreeItemState';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { AzureResourceBranchDataProviderManager } from './AzureResourceBranchDataProviderManager';
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { createResourceItemFactory } from './AzureResourceItem';
-import { AzureResourceTreeDataProvider } from './AzureResourceTreeDataProvider';
+import { FocusViewTreeDataProvider } from './FocusViewTreeDataProvider';
 import { createGroupingItemFactory } from './GroupingItem';
 
 interface RegisterAzureTreeOptions {
@@ -27,37 +26,43 @@ interface RegisterAzureTreeOptions {
     itemCache: BranchDataItemCache,
 }
 
-export function registerAzureTree(context: vscode.ExtensionContext, options: RegisterAzureTreeOptions): AzureResourceTreeDataProvider {
+export function registerFocusTree(context: vscode.ExtensionContext, options: RegisterAzureTreeOptions): FocusViewTreeDataProvider {
     const { azureResourceBranchDataProviderManager, azureResourceProviderManager: resourceProviderManager, refreshEvent, itemCache } = options;
-
-    context.subscriptions.push(ext.azureTreeState = new TreeItemStateStore());
 
     const resourceGroupingManager = createGroupingManager(azureResourceBranchDataProviderManager, itemCache);
     context.subscriptions.push(resourceGroupingManager);
-    const azureResourceTreeDataProvider =
-        new AzureResourceTreeDataProvider(azureResourceBranchDataProviderManager.onDidChangeTreeData, itemCache, ext.azureTreeState, refreshEvent, resourceGroupingManager, resourceProviderManager);
-    context.subscriptions.push(azureResourceTreeDataProvider);
 
-    const treeView = createTreeView('azureResourceGroups', {
-        canSelectMany: true,
-        showCollapseAll: true,
+    const focusViewTreeDataProvider =
+        new FocusViewTreeDataProvider(
+            azureResourceBranchDataProviderManager.onDidChangeTreeData,
+            itemCache,
+            ext.azureTreeState,
+            refreshEvent,
+            resourceGroupingManager,
+            resourceProviderManager,
+        );
+
+    context.subscriptions.push(focusViewTreeDataProvider);
+
+    const treeView = createTreeView('azureFocusView', {
+        canSelectMany: false,
+        showCollapseAll: false,
         itemCache,
-        description: localize('remote', 'Remote'),
-        title: localize('resources', 'Resources'),
-        treeDataProvider: wrapTreeForVSCode(azureResourceTreeDataProvider, itemCache),
-        findItemById: azureResourceTreeDataProvider.findItemById.bind(azureResourceTreeDataProvider) as typeof azureResourceTreeDataProvider.findItemById,
+        title: localize('focusedResources', 'Focused Resources'),
+        treeDataProvider: wrapTreeForVSCode(focusViewTreeDataProvider, itemCache),
+        findItemById: focusViewTreeDataProvider.findItemById.bind(focusViewTreeDataProvider) as typeof focusViewTreeDataProvider.findItemById,
     });
     context.subscriptions.push(treeView);
-    ext.appResourceTreeView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
+    ext.focusView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
 
-    return azureResourceTreeDataProvider;
+    return focusViewTreeDataProvider;
 }
 
 function createGroupingManager(azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager, itemCache: BranchDataItemCache): AzureResourceGroupingManager {
     const branchDataItemFactory = createResourceItemFactory<AzureResource>(itemCache);
     const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, (r) => azureResourceBranchDataProviderManager.getProvider(r.resourceType), azureResourceBranchDataProviderManager.onChangeBranchDataProviders, {
-        expandByDefault: false,
-        hideSeparators: true,
+        expandByDefault: true,
+        hideSeparators: false,
     });
     return new AzureResourceGroupingManager(groupingItemFactory);
 }

@@ -13,6 +13,7 @@ export interface GenericItemOptions {
     readonly commandId?: string;
     readonly contextValue?: string;
     readonly iconPath?: TreeItemIconPath;
+    readonly description?: string;
 }
 
 export class GenericItem implements ResourceGroupsItem {
@@ -36,6 +37,7 @@ export class GenericItem implements ResourceGroupsItem {
             };
         }
 
+        treeItem.description = this.options?.description;
         treeItem.contextValue = this.options?.contextValue;
         treeItem.iconPath = this.options?.iconPath;
 

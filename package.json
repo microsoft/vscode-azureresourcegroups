@@ -65,6 +65,30 @@
         },
         "commands": [
             {
+                "command": "azureFocusView.refreshTree",
+                "title": "Refresh",
+                "category": "Azure",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "azureFocusView.refresh",
+                "title": "Refresh",
+                "category": "Azure",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "azureResourceGroups.focusGroup",
+                "title": "Focus This Group",
+                "category": "Azure",
+                "icon": "$(zoom-in)"
+            },
+            {
+                "command": "azureResourceGroups.unfocusGroup",
+                "title": "Unfocus Group",
+                "category": "Azure",
+                "icon": "$(close)"
+            },
+            {
                 "command": "azureResourceGroups.logIn",
                 "title": "%azureResourceGroups.logIn%",
                 "category": "Azure"
@@ -226,6 +250,12 @@
         "views": {
             "azure": [
                 {
+                    "id": "azureFocusView",
+                    "name": "Focused Resources",
+                    "visibility": "hidden",
+                    "when": "ms-azuretools.vscode-azureresourcegroups.hasFocusedGroup == true"
+                },
+                {
                     "id": "azureResourceGroups",
                     "name": "Resources",
                     "visibility": "visible"
@@ -275,9 +305,19 @@
                     "group": "navigation@1"
                 },
                 {
+                    "command": "azureResourceGroups.unfocusGroup",
+                    "when": "view == azureFocusView",
+                    "group": "navigation@4"
+                },
+                {
                     "submenu": "azureResourceGroups.groupBy",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@2"
+                },
+                {
+                    "command": "azureFocusView.refreshTree",
+                    "when": "view == azureFocusView",
+                    "group": "navigation@3"
                 },
                 {
                     "command": "azureResourceGroups.refreshTree",
@@ -301,6 +341,11 @@
                 }
             ],
             "view/item/context": [
+                {
+                    "command": "azureResourceGroups.focusGroup",
+                    "when": "view == azureResourceGroups && viewItem =~ /canFocus/",
+                    "group": "inline"
+                },
                 {
                     "command": "azureResourceGroups.selectSubscriptions",
                     "when": "view == azureResourceGroups && viewItem == azureextensionui.azureSubscription",
@@ -328,32 +373,37 @@
                 },
                 {
                     "command": "azureResourceGroups.editTags",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
+                    "when": "view =~ /azureResourceGroups|azureFocusView/ && viewItem =~ /azureResourceGroup/",
                     "group": "2@1"
                 },
                 {
                     "command": "azureResourceGroups.openInPortal",
-                    "when": "view == azureResourceGroups && viewItem =~ /hasPortalUrl/",
+                    "when": "view =~ /azureResourceGroups|azureFocusView/ && viewItem =~ /hasPortalUrl/",
                     "group": "9@2"
                 },
                 {
                     "command": "azureResourceGroups.refresh",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource/",
+                    "when": "view =~ /azureResourceGroups/ && viewItem =~ /azureResource/",
+                    "group": "9@3"
+                },
+                {
+                    "command": "azureFocusView.refresh",
+                    "when": "view =~ /azureFocusView/ && viewItem =~ /azureResource/",
                     "group": "9@3"
                 },
                 {
                     "command": "azureResourceGroups.editTags",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResource(?!Group)(?!Type)/",
+                    "when": "view =~ /azureResourceGroups|azureFocusView/ && viewItem =~ /azureResource(?!Group)(?!Type)/",
                     "group": "8@1"
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem =~ /hasProperties/",
+                    "when": "view =~ /azureResourceGroups|azureFocusView/ && viewItem =~ /hasProperties/",
                     "group": "9@1"
                 },
                 {
                     "command": "azureResourceGroups.viewProperties",
-                    "when": "view == azureResourceGroups && viewItem =~ /azureResourceGroup/",
+                    "when": "view =~ /azureResourceGroups|azureFocusView/ && viewItem =~ /azureResourceGroup/",
                     "group": "9@1"
                 }
             ],
@@ -380,6 +430,10 @@
                 },
                 {
                     "command": "azureWorkspace.refresh",
+                    "when": "never"
+                },
+                {
+                    "command": "azureFocusView.refreshTree",
                     "when": "never"
                 },
                 {
@@ -594,7 +648,7 @@
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.0.0",
         "@azure/arm-subscriptions": "^5.1.0",
         "@microsoft/vscode-azext-azureutils": "^1.1.1",
-        "@microsoft/vscode-azext-utils": "^1.1.0",
+        "@microsoft/vscode-azext-utils": "^1.2.2",
         "buffer": "^6.0.3",
         "jsonc-parser": "^2.2.1",
         "uuid": "^9.0.0",
