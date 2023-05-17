@@ -3,13 +3,17 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { contextValueExperience, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { hasFocusedGroupContextKey } from "../../constants";
 import { ext } from "../../extensionVariables";
 import { GroupingItem } from "../../tree/azure/GroupingItem";
 
-export async function focusGroup(context: IActionContext, item: GroupingItem): Promise<void> {
+export async function focusGroup(context: IActionContext, item?: GroupingItem): Promise<void> {
+    item ??= await contextValueExperience<GroupingItem>(context, ext.v2.api.resources.azureResourceTreeDataProvider, {
+        include: 'canFocus',
+    });
+
     if (item.resourceGroup) {
         ext.focusedGroup = {
             kind: 'resourceGroup',
