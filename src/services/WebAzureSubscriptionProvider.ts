@@ -6,7 +6,7 @@
 import * as arm from '@azure/arm-subscriptions';
 import { Environment } from '@azure/ms-rest-azure-env';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
-import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, IActionContext, nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzureSubscription } from '../../api/src/index';
 import { AzureLoginStatus } from '../../azure-account.api';
@@ -94,6 +94,12 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
 
         this.allSubscriptions = allSubscriptions;
 
+        // migrate setting values that are just a subscription id to `${tenantId}/${subscriptionId}`
+        const selectedSubscriptionIds = settingUtils.getGlobalSetting<string[] | undefined>('selectedSubscriptions');
+        if (selectedSubscriptionIds?.some(id => !id.includes('/'))) {
+            await this.updateSelectedSubscriptions(this.filters);
+        }
+
         return {
             status: session ? 'LoggedIn' : 'LoggedOut',
             allSubscriptions,
@@ -103,9 +109,11 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
 
     get filters(): AzureSubscription[] {
         const selectedSubscriptionIds = settingUtils.getGlobalSetting<string[] | undefined>('selectedSubscriptions');
-        return this.allSubscriptions
-            .filter(s => selectedSubscriptionIds === undefined || selectedSubscriptionIds.includes(s.subscriptionId))
+        // values may be just subscription ids, or they may be in the (correct) form `${tenantId}/${subscriptionId}`
+        const subscriptions = this.allSubscriptions
+            .filter(s => selectedSubscriptionIds === undefined || selectedSubscriptionIds.includes(s.subscriptionId) || selectedSubscriptionIds.includes(`${s.tenantId}/${s.subscriptionId}`))
             .sort((a, b) => a.name.localeCompare(b.name));
+        return subscriptions;
     }
 
     async logIn(): Promise<void> {
@@ -155,10 +163,7 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
                 });
 
             if (picks) {
-                await this.updateSelectedSubscriptions(
-                    picks.length < this.allSubscriptions.length
-                        ? picks.map(pick => pick.subscription.subscriptionId)
-                        : undefined);
+                await this.updateSelectedSubscriptions(picks.length < this.allSubscriptions.length ? picks.map(p => p.subscription) : undefined);
             }
         } else {
             const signIn: vscode.MessageItem = { title: localize('signIn', 'Sign In') };
@@ -259,9 +264,9 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
         this.onSubscriptionsChangedEmitter.fire();
     }
 
-    private updateSelectedSubscriptions(subscriptionsIds: string[] | undefined): Promise<void> {
+    private updateSelectedSubscriptions(subscriptions?: Pick<AzureSubscription, 'subscriptionId' | 'tenantId'>[]): Promise<void> {
         this.onFiltersChangedEmitter.fire();
-        return settingUtils.updateGlobalSetting<string[] | undefined>('selectedSubscriptions', subscriptionsIds);
+        return settingUtils.updateGlobalSetting<string[] | undefined>('selectedSubscriptions', subscriptions?.map(s => `${s.tenantId}/${s.subscriptionId}`));
     }
 
     private async getSubscriptionsFromTenant(tenantId?: string): Promise<{ client: arm.SubscriptionClient, subscriptions: AzureSubscription[] }> {
@@ -269,6 +274,9 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
 
         const client: arm.SubscriptionClient = new arm.SubscriptionClient(
             {
+                // returns a token to be used by the subscription client
+                // the token is associated with a session
+                // the session is associated with a specific tenant, or if tenantId is undefined, the default tenant
                 getToken: async scopes => {
                     session = await this.getSession({ scopes, tenantId });
 
@@ -283,22 +291,29 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
                 },
             });
 
+        // if a specific tenant is associated with the token returned by getToken, then the returned values will have the `tenantId` property set
+        // if the token is associated with the default tenant, the values `tenantId` property is an empty string
         const subscriptions = await uiUtils.listAllIterator(client.subscriptions.list());
 
         return {
             client,
-            subscriptions: subscriptions.map(s => (
-                {
-                    displayName: s.displayName ?? 'name',
-                    authentication: {
-                        getSession: () => session
-                    },
-                    environment: Environment.AzureCloud,
-                    isCustomCloud: false,
-                    name: s.displayName || 'TODO: ever undefined?',
-                    tenantId: '',
-                    subscriptionId: s.subscriptionId ?? 'id',
-                })),
+            subscriptions: subscriptions.map(s => ({
+                displayName: s.displayName ?? 'name',
+                authentication: {
+                    getSession: () => session
+                },
+                environment: Environment.AzureCloud,
+                isCustomCloud: false,
+                name: s.displayName || 'TODO: ever undefined?',
+                // `s.tenantId` will be an empty string if the subscription is associated with the default tenant
+                // in that case, grab the default tenant id from the session
+                tenantId: s.tenantId || this.getTenantIdFromSession(nonNullValue(session)),
+                subscriptionId: s.subscriptionId ?? 'id',
+            })),
         };
+    }
+
+    private getTenantIdFromSession(session: vscode.AuthenticationSession): string {
+        return session.id.split('/')[0];
     }
 }
