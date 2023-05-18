@@ -7,6 +7,7 @@ import { createContextValue, ISubscriptionContext, TreeItemIconPath } from '@mic
 import * as vscode from 'vscode';
 import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription, ViewPropertiesModel } from '../../../api/src/index';
 import { ITagsModel, ResourceTags } from '../../commands/tags/TagFileSystem';
+import { canFocusContextValue } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { getIconPath } from '../../utils/azureUtils';
 import { createPortalUrl } from '../../utils/v2/createPortalUrl';
@@ -145,7 +146,7 @@ export class GroupingItem implements ResourceGroupsItem {
         }
 
         if (this.resourceGroup || this.resourceType || this.location) {
-            contextValuesToAdd.push('canFocus');
+            contextValuesToAdd.push(canFocusContextValue);
         }
 
         treeItem.contextValue = createContextValue((this.contextValues ?? []).concat(contextValuesToAdd));
