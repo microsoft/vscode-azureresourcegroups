@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.7.5 - 2023-05-18
+
+### Fixed
+* Do not depend on the Azure Account extension on VS Code for web.
+
 ## 0.7.4 - 2023-05-18
 
 ### Added
