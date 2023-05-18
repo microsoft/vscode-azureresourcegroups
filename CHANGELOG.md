@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.7.4 - 2023-05-18
+
+### Added
+* Focus feature v2 by @alexweininger in https://github.com/microsoft/vscode-azureresourcegroups/pull/679
+
+### Fixed
+* Fix compatibility issue in `BranchDataItemCache` by @alexweininger in https://github.com/microsoft/vscode-azureresourcegroups/pull/678
+
 ## 0.7.3 - 2023-05-16
 
 ### Added
