@@ -1,5 +1,31 @@
 # Change Log
 
+## 0.7.5 - 2023-05-18
+
+### Fixed
+* Do not depend on the Azure Account extension on VS Code for web.
+
+## 0.7.4 - 2023-05-18
+
+### Added
+* Focus feature v2 by @alexweininger in https://github.com/microsoft/vscode-azureresourcegroups/pull/679
+
+### Fixed
+* Fix compatibility issue in `BranchDataItemCache` by @alexweininger in https://github.com/microsoft/vscode-azureresourcegroups/pull/678
+
+## 0.7.3 - 2023-05-16
+
+### Added
+* Support for Logic Apps by @ccastrotrejo in https://github.com/microsoft/vscode-azureresourcegroups/pull/670
+
+### Fixed
+* Fail to deploy the project by clicking "Deploy" button from the notification by @alexweininger in https://github.com/microsoft/vscode-azureresourcegroups/pull/664
+
+### Removed
+* Disable resource group walkthrough by @esweet431 in https://github.com/microsoft/vscode-azureresourcegroups/pull/672
+
+## 0.7.2 - SKIPPED
+
 ## 0.7.1 - 2023-04-05
 
 ### Fixed

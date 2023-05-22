@@ -9,3 +9,4 @@ export const contributesKey = 'x-azResources';
 export const ungroupedId = 'group/ungrouped'
 export const showHiddenTypesSettingKey = 'showHiddenTypes';
 export const hasFocusedGroupContextKey = 'ms-azuretools.vscode-azureresourcegroups.hasFocusedGroup';
+export const canFocusContextValue = 'canFocus';
