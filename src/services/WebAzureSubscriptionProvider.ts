@@ -94,10 +94,10 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
 
         this.allSubscriptions = allSubscriptions;
 
-        // migrate setting values that are just a subscription id to `${tenantId}/${subscriptionId}`
+        // clear setting value if there's a value that doesn't include the tenant id
         const selectedSubscriptionIds = settingUtils.getGlobalSetting<string[] | undefined>('selectedSubscriptions');
         if (selectedSubscriptionIds?.some(id => !id.includes('/'))) {
-            await this.updateSelectedSubscriptions(this.filters);
+            await settingUtils.updateGlobalSetting('selectedSubscriptions', []);
         }
 
         return {
@@ -109,9 +109,8 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
 
     get filters(): AzureSubscription[] {
         const selectedSubscriptionIds = settingUtils.getGlobalSetting<string[] | undefined>('selectedSubscriptions');
-        // values may be just subscription ids, or they may be in the (correct) form `${tenantId}/${subscriptionId}`
         const subscriptions = this.allSubscriptions
-            .filter(s => selectedSubscriptionIds === undefined || selectedSubscriptionIds.includes(s.subscriptionId) || selectedSubscriptionIds.includes(`${s.tenantId}/${s.subscriptionId}`))
+            .filter(s => selectedSubscriptionIds === undefined || selectedSubscriptionIds.includes(`${s.tenantId}/${s.subscriptionId}`))
             .sort((a, b) => a.name.localeCompare(b.name));
         return subscriptions;
     }
