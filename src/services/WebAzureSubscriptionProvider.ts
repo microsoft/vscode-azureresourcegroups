@@ -111,7 +111,11 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
     get filters(): AzureSubscription[] {
         const selectedSubscriptionIds = settingUtils.getGlobalSetting<string[] | undefined>('selectedSubscriptions');
         const subscriptions = this.allSubscriptions
-            .filter(s => selectedSubscriptionIds === undefined || selectedSubscriptionIds.includes(`${s.tenantId}/${s.subscriptionId}`))
+            .filter(s =>
+                selectedSubscriptionIds === undefined ||
+                selectedSubscriptionIds.length === 0 ||
+                selectedSubscriptionIds.includes(`${s.tenantId}/${s.subscriptionId}`)
+            )
             .sort((a, b) => a.name.localeCompare(b.name));
         return subscriptions;
     }
