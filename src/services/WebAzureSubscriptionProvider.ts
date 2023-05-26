@@ -95,6 +95,7 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
         this.allSubscriptions = allSubscriptions;
 
         // clear setting value if there's a value that doesn't include the tenant id
+        // see https://github.com/microsoft/vscode-azureresourcegroups/pull/684
         const selectedSubscriptionIds = settingUtils.getGlobalSetting<string[] | undefined>('selectedSubscriptions');
         if (selectedSubscriptionIds?.some(id => !id.includes('/'))) {
             await settingUtils.updateGlobalSetting('selectedSubscriptions', []);
