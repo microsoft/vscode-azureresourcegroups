@@ -24,7 +24,7 @@ let webSubscriptionProvider: AzureSubscriptionProvider | undefined;
 
 export function createWebSubscriptionProviderFactory(context: vscode.ExtensionContext): () => Promise<AzureSubscriptionProvider> {
     return async (): Promise<AzureSubscriptionProvider> => {
-        webSubscriptionProvider ??= new VSCodeAzureSubscriptionProvider(context.globalState);
+        webSubscriptionProvider ??= await VSCodeAzureSubscriptionProvider.Create(context.globalState);
         return webSubscriptionProvider;
     }
 }
@@ -44,7 +44,17 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
 
     public subscriptionResultsTask: () => Promise<AzureSubscriptionsResult>;
 
-    constructor(private readonly storage: vscode.Memento) {
+    static async Create(storage: vscode.Memento): Promise<VSCodeAzureSubscriptionProvider> {
+        // clear setting value if there's a value that doesn't include the tenant id
+        // see https://github.com/microsoft/vscode-azureresourcegroups/pull/684
+        const selectedSubscriptionIds = settingUtils.getGlobalSetting<string[] | undefined>('selectedSubscriptions');
+        if (selectedSubscriptionIds?.some(id => !id.includes('/'))) {
+            await settingUtils.updateGlobalSetting('selectedSubscriptions', []);
+        }
+        return new VSCodeAzureSubscriptionProvider(storage);
+    }
+
+    private constructor(private readonly storage: vscode.Memento) {
         super(() => this.onSubscriptionsChangedEmitter.dispose());
 
         this.subscriptionResultsTask = this.getSubscriptions;
@@ -93,13 +103,6 @@ class VSCodeAzureSubscriptionProvider extends vscode.Disposable implements Azure
         }
 
         this.allSubscriptions = allSubscriptions;
-
-        // clear setting value if there's a value that doesn't include the tenant id
-        // see https://github.com/microsoft/vscode-azureresourcegroups/pull/684
-        const selectedSubscriptionIds = settingUtils.getGlobalSetting<string[] | undefined>('selectedSubscriptions');
-        if (selectedSubscriptionIds?.some(id => !id.includes('/'))) {
-            await settingUtils.updateGlobalSetting('selectedSubscriptions', []);
-        }
 
         return {
             status: session ? 'LoggedIn' : 'LoggedOut',
