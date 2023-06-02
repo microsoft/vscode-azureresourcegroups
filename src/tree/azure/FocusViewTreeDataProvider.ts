@@ -51,7 +51,7 @@ export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase
                 return [];
             }
 
-            const provider = await ext.subscriptionProviderFactory();
+            const provider = await this.getAzureSubscriptionProvider();
             let subscriptions: AzureSubscription[] | undefined;
             if (await provider.isSignedIn() && (subscriptions = await provider.getSubscriptions(true)).length > 0) {
                 const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
