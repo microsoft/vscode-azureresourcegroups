@@ -6,11 +6,10 @@
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
-import { GroupingItem } from '../tree/azure/GroupingItem';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
+import { GroupingItem } from '../tree/azure/GroupingItem';
 import { logIn } from './accounts/logIn';
-import { logOut } from './accounts/logOut';
 import { selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
@@ -61,7 +60,6 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.unfocusGroup', unfocusGroup);
 
     registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context));
-    registerCommand('azureResourceGroups.logOut', (context: IActionContext) => logOut(context));
     registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext) => selectSubscriptions(context));
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);

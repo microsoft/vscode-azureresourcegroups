@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureSubscription } from '@microsoft/vscode-azext-azureauth';
 import { AzureResource } from 'api/docs/vscode-azureresources-api';
 import * as vscode from 'vscode';
 import { AzExtResourceType, ResourceModelBase } from '../../../api/src/index';
@@ -49,12 +50,14 @@ export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase
             if (!focusedGroup) {
                 return [];
             }
-            const azureSubscriptionProvider = await this.getAzureAccountExtensionApi();
-            if (azureSubscriptionProvider.status === 'LoggedIn' && azureSubscriptionProvider.filters.length > 0) {
+
+            const provider = await ext.subscriptionProviderFactory();
+            let subscriptions: AzureSubscription[] | undefined;
+            if (await provider.isSignedIn() && (subscriptions = await provider.getSubscriptions(true)).length > 0) {
                 const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
 
                 let resources: AzureResource[] = [];
-                for await (const subscription of azureSubscriptionProvider.filters) {
+                for await (const subscription of subscriptions) {
                     resources.push(...await this.resourceProviderManager.getResources(subscription));
                 }
                 if (!showHiddenTypes) {

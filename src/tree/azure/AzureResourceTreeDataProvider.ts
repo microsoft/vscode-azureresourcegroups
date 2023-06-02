@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureSubscription } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
@@ -64,16 +65,18 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         if (element) {
             return await element.getChildren();
         } else {
-            const api = await this.getAzureAccountExtensionApi();
+            const subscriptionProvider = await ext.subscriptionProviderFactory();
 
-            if (api) {
-                if (api.status === 'LoggedIn') {
-                    if (api.filters.length === 0) {
+            if (subscriptionProvider) {
+                if (await subscriptionProvider.isSignedIn()) {
+                    let subscriptions: AzureSubscription[];
+
+                    if ((subscriptions = await subscriptionProvider.getSubscriptions(true)).length === 0) {
                         return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
                             commandId: 'azureResourceGroups.selectSubscriptions'
                         })]
                     } else {
-                        return api.filters.map(
+                        return subscriptions.map(
                             subscription => new SubscriptionItem(
                                 {
                                     subscription: subscription,
@@ -84,7 +87,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                 this.resourceProviderManager,
                                 subscription));
                     }
-                } else if (api.status === 'LoggedOut') {
+                } else {
                     return [
                         new GenericItem(
                             localize('signInLabel', 'Sign in to Azure...'),
@@ -106,17 +109,6 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                 commandArgs: ['https://aka.ms/student-account'],
                                 iconPath: new vscode.ThemeIcon('mortar-board')
                             }),
-                    ];
-                } else {
-                    return [
-                        new GenericItem(
-                            api.status === 'Initializing'
-                                ? localize('loadingTreeItem', 'Loading...')
-                                : localize('signingIn', 'Waiting for Azure sign-in...'),
-                            {
-                                commandId: 'azureResourceGroups.logIn',
-                                iconPath: new vscode.ThemeIcon('loading~spin')
-                            })
                     ];
                 }
             }

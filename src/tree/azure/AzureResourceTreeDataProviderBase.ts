@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { ext } from '../../extensionVariables';
-import { AzureSubscriptionProvider } from '../../services/SubscriptionProvider';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
@@ -17,7 +17,6 @@ import { GroupingItem } from './GroupingItem';
 
 export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeDataProviderBase {
     private subscriptionProvider: AzureSubscriptionProvider | undefined;
-    private filtersSubscription: vscode.Disposable | undefined;
     private statusSubscription: vscode.Disposable | undefined;
 
     constructor(
@@ -35,7 +34,6 @@ export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeData
             onRefresh,
             state,
             () => {
-                this.filtersSubscription?.dispose();
                 this.statusSubscription?.dispose();
                 callOnDispose?.();
             });
@@ -57,11 +55,14 @@ export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeData
         } else {
             if (!this.subscriptionProvider) {
                 this.subscriptionProvider = await ext.subscriptionProviderFactory();
-                await this.subscriptionProvider.waitForFilters();
+                await this.subscriptionProvider.getSubscriptions(true);
             }
 
-            this.filtersSubscription = this.subscriptionProvider.onFiltersChanged(() => this.notifyTreeDataChanged());
-            this.statusSubscription = this.subscriptionProvider.onStatusChanged(() => this.notifyTreeDataChanged());
+            this.statusSubscription = vscode.authentication.onDidChangeSessions((evt: vscode.AuthenticationSessionsChangeEvent) => {
+                if (evt.provider.id === 'microsoft' || evt.provider.id === 'microsoft-sovereign-cloud') {
+                    this.notifyTreeDataChanged();
+                }
+            });
 
             return this.subscriptionProvider;
         }
