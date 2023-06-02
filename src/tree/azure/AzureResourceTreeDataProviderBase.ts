@@ -59,7 +59,14 @@ export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeData
 
             this.statusSubscription = vscode.authentication.onDidChangeSessions((evt: vscode.AuthenticationSessionsChangeEvent) => {
                 if (evt.provider.id === 'microsoft' || evt.provider.id === 'microsoft-sovereign-cloud') {
-                    this.notifyTreeDataChanged();
+                    if (Date.now() > nextSessionChangeMessageMinimumTime) {
+                        nextSessionChangeMessageMinimumTime = Date.now() + sessionChangeMessageInterval;
+                        // This event gets HEAVILY spammed and needs to be debounced
+                        // Suppress additional messages for 1 second after the first one
+                        this.notifyTreeDataChanged();
+                    } else {
+                        console.log("Too soon, ignoring this event");
+                    }
                 }
             });
 
@@ -67,3 +74,6 @@ export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeData
         }
     }
 }
+
+let nextSessionChangeMessageMinimumTime = 0;
+const sessionChangeMessageInterval = 1 * 1000; // 1 second
