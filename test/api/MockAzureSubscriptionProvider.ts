@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { AzureSubscription, AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
-import { CloudShell } from '../../azure-account.api';
 import { MockResources } from './mockServiceFactory';
 
 export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider {
@@ -28,14 +27,8 @@ export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider 
         } as unknown as AzureSubscription));
     }
 
-    createCloudShell(_os: 'Linux' | 'Windows'): CloudShell {
-        throw new Error('not implemented');
-    }
-
-    allSubscriptions!: AzureSubscription[];
-
-    isSignedIn(): Promise<boolean> {
-        return Promise.resolve(true);
+    public async isSignedIn(): Promise<boolean> {
+        return true;
     }
 
     public async signIn(): Promise<boolean> {
