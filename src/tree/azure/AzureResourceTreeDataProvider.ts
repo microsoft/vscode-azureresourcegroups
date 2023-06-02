@@ -65,7 +65,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         if (element) {
             return await element.getChildren();
         } else {
-            const subscriptionProvider = await ext.subscriptionProviderFactory();
+            const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
             if (subscriptionProvider) {
                 if (await subscriptionProvider.isSignedIn()) {

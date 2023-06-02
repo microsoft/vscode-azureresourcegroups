@@ -18,7 +18,9 @@ export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider 
                     return undefined;
                 }
             },
-            environment: undefined,
+            environment: {
+                portalUrl: 'portalUrl',
+            },
             isCustomCloud: false,
             name: subscription.name,
             tenantId: 'tenantId',

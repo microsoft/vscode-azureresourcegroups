@@ -48,14 +48,13 @@ export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeData
         return super.isAncestorOf(element, id)
     }
 
-    protected async getAzureAccountExtensionApi(): Promise<AzureSubscriptionProvider> {
+    protected async getAzureSubscriptionProvider(): Promise<AzureSubscriptionProvider> {
         // override for testing
         if (ext.testing.overrideAzureSubscriptionProvider) {
             return ext.testing.overrideAzureSubscriptionProvider();
         } else {
             if (!this.subscriptionProvider) {
                 this.subscriptionProvider = await ext.subscriptionProviderFactory();
-                await this.subscriptionProvider.getSubscriptions(true);
             }
 
             this.statusSubscription = vscode.authentication.onDidChangeSessions((evt: vscode.AuthenticationSessionsChangeEvent) => {
