@@ -2,6 +2,10 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+* Extend `ViewPropertiesModel` to allow async loading of properties
+
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [2.0.4] - 2023-02-22

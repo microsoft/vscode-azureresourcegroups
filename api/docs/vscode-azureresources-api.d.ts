@@ -364,11 +364,21 @@ export declare interface ResourcesApi {
 
 export declare function unwrapArgs<T>(args?: unknown[]): [node?: T, nodes?: T[], ...args: unknown[]];
 
-export declare interface ViewPropertiesModel {
+export declare type ViewPropertiesModel = {
     /**
      * File name displayed in VS Code.
      */
     label: string;
+} & (ViewPropertiesModelAsync | ViewPropertiesModelSync);
+
+export declare interface ViewPropertiesModelAsync {
+    /**
+     * Async function to get the raw data associated with the resource to populate the properties file.
+     */
+    getData: () => Promise<{}>;
+}
+
+export declare interface ViewPropertiesModelSync {
     /**
      * Raw data associated with the resource to populate the properties file.
      */
