@@ -5,52 +5,29 @@ variables:
     ENABLE_LONG_RUNNING_TESTS: true
     ENABLE_COMPLIANCE: true
 
-jobs:
-- job: Windows
-  pool:
-    vmImage: windows-latest
-  steps:
-  - template: common/build.yml
-  - template: common/package.yml
-  - template: common/lint.yml
-  - template: compliance/compliance.yml # Only works on Windows
-  - template: common/test.yml
-
-- job: Linux
-  pool:
-    vmImage: ubuntu-latest
-  steps:
-  - template: common/build.yml
-  - template: common/package.yml
-  - template: common/sbom.yml # Only generate on linux
-  - template: common/lint.yml
-  - template: common/test.yml
-  variables:
-    Codeql.Enabled: $[in(variables['Build.Reason'], 'Schedule')] # Enable CodeQL only on scheduled builds because it is slow
-
-- job: macOS
-  pool:
-    vmImage: macOS-latest
-  steps:
-  - template: common/build.yml
-  - template: common/package.yml
-  - template: common/lint.yml
-  - template: common/test.yml
-
+# Trigger the build whenever `main` or `rel/*` is updated
 trigger:
-  branches:
-    include:
-    - '*'
+  - main
+  - rel/*
 
-pr:
-  branches:
-    include:
-    - '*'
-
+# Scheduled nightly build
 schedules:
-- cron: "30 9 * * *"
-  displayName: Nightly at 2:30 PT
-  always: true # Run even when there are no code changes
-  branches:
-    include:
-    - main
+  - cron: "30 9 * * *"
+    displayName: Nightly at 2:30 PT
+    always: true # Run even when there are no code changes
+    branches:
+      include:
+        - main
+
+# Grab the base templates from https://github.com/microsoft/vscode-azuretools/tree/main/azure-pipelines
+resources:
+  repositories:
+    - repository: templates
+      type: github
+      name: microsoft/vscode-azuretools
+      ref: main
+      endpoint: GitHub
+
+# Use those templates
+extends:
+  template: azure-pipelines/jobs.yml@templates

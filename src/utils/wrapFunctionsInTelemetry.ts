@@ -15,7 +15,7 @@ function stringifyError(e: unknown): string {
     return str;
 }
 
-function handleError(e: unknown, functionName: string): void {
+function handleError(e: unknown, functionName: string): never {
     ext.outputChannel.appendLog(`Internal error: '${functionName}' threw an exception\n\t${stringifyError(e)}`);
     if (e instanceof Error) {
         // shortened message since it might be displayed on the tree
