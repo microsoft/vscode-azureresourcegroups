@@ -67,12 +67,12 @@ export namespace ext {
     export const actions = extActions;
 }
 
-type ResourceTypeGrouping = {
+export type ResourceTypeGrouping = {
     kind: 'resourceType';
     type: AzExtResourceType;
 }
 
-type ResourceGroupGrouping = {
+export type ResourceGroupGrouping = {
     kind: 'resourceGroup';
     id: string;
 }

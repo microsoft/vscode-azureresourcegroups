@@ -13,7 +13,7 @@ import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { TreeItemStateStore } from '../TreeItemState';
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
-import { GroupingItem } from './GroupingItem';
+import { GroupingItem } from './grouping/GroupingItem';
 
 export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeDataProviderBase {
     private subscriptionProvider: AzureSubscriptionProvider | undefined;

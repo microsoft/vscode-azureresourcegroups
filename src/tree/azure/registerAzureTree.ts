@@ -18,7 +18,7 @@ import { AzureResourceBranchDataProviderManager } from './AzureResourceBranchDat
 import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { createResourceItemFactory } from './AzureResourceItem';
 import { AzureResourceTreeDataProvider } from './AzureResourceTreeDataProvider';
-import { createGroupingItemFactory } from './GroupingItem';
+import { GroupingItemFactory } from './grouping/GroupingItemFactory';
 
 interface RegisterAzureTreeOptions {
     azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
@@ -55,9 +55,14 @@ export function registerAzureTree(context: vscode.ExtensionContext, options: Reg
 
 function createGroupingManager(azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager, itemCache: BranchDataItemCache): AzureResourceGroupingManager {
     const branchDataItemFactory = createResourceItemFactory<AzureResource>(itemCache);
-    const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, (r) => azureResourceBranchDataProviderManager.getProvider(r.resourceType), azureResourceBranchDataProviderManager.onChangeBranchDataProviders, {
-        expandByDefault: false,
-        hideSeparators: true,
+    const groupingItemFactory = new GroupingItemFactory({
+        resourceItemFactory: branchDataItemFactory,
+        branchDataProviderFactory: (r) => azureResourceBranchDataProviderManager.getProvider(r.resourceType),
+        onDidChangeBranchDataProviders: azureResourceBranchDataProviderManager.onChangeBranchDataProviders,
+        defaultDisplayOptions: {
+            expandByDefault: false,
+            hideSeparators: true,
+        }
     });
     return new AzureResourceGroupingManager(groupingItemFactory);
 }
