@@ -10,7 +10,7 @@ import { ext } from "../../extensionVariables";
 import { localize } from "../../utils/localize";
 import { settingUtils } from "../../utils/settingUtils";
 
-export async function selectSubscriptions(_context: IActionContext): Promise<void> {
+export async function selectSubscriptions(context: IActionContext): Promise<void> {
     const provider = await ext.subscriptionProviderFactory();
     if (await provider.isSignedIn()) {
 
@@ -28,11 +28,11 @@ export async function selectSubscriptions(_context: IActionContext): Promise<voi
                 .sort((a, b) => a.label.localeCompare(b.label));
         }
 
-        const picks = await vscode.window.showQuickPick(
+        const picks = await context.ui.showQuickPick(
             subscriptionQuickPickItems(),
             {
                 canPickMany: true,
-                placeHolder: 'Select Subscriptions'
+                placeHolder: localize('selectSubscriptions', 'Select Subscriptions')
             });
 
         if (picks) {
