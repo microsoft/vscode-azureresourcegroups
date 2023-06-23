@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-dev';
+import { AzExtServiceClientCredentials, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzureSubscription } from '../../../api/src/index';
 import * as vscodeAccount from '../../tree/azure/VSCodeAuthentication';
 
 /**
- * Converts a VS Code authentication session to an Azure Track 1 & 2 compatible compatible credential.
+ * Converts a VS Code authentication session to an Azure Track 2 compatible compatible credential.
  */
 export function createCredential(getSession: (scopes?: string[]) => vscode.ProviderResult<vscode.AuthenticationSession>): AzExtServiceClientCredentials {
     return {
