@@ -6,9 +6,9 @@
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
-import { GroupingItem } from '../tree/azure/GroupingItem';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
+import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { logIn } from './accounts/logIn';
 import { logOut } from './accounts/logOut';
 import { selectSubscriptions } from './accounts/selectSubscriptions';

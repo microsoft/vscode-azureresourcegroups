@@ -5,21 +5,14 @@
 
 import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
-import { AzExtResourceType, AzureSubscription } from "../../../api/src/index";
+import { AzureSubscription } from "../../../api/src/index";
 import { AzureResourceProviderManager } from "../../api/ResourceProviderManagers";
-import { azureExtensions } from "../../azureExtensions";
-import { showHiddenTypesSettingKey } from "../../constants";
 import { settingUtils } from "../../utils/settingUtils";
 import { treeUtils } from "../../utils/treeUtils";
 import { createPortalUrl } from "../../utils/v2/createPortalUrl";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
 import { AzureResourceGroupingManager } from "./AzureResourceGroupingManager";
-
-const supportedResourceTypes: AzExtResourceType[] =
-    azureExtensions
-        .map(e => e.resourceTypes)
-        .reduce((a, b) => a.concat(...b), []);
 
 export class SubscriptionItem implements ResourceGroupsItem {
     constructor(
@@ -45,15 +38,8 @@ export class SubscriptionItem implements ResourceGroupsItem {
 
     async getChildren(): Promise<ResourceGroupsItem[]> {
         return await callWithTelemetryAndErrorHandling('subscriptionItem.getChildren', async (context: IActionContext) => {
-            let resources = await this.resourceProviderManager.getResources(this.subscription);
+            const resources = await this.resourceProviderManager.getResources(this.subscription);
             context.telemetry.measurements.resourceCount = resources.length;
-
-            const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
-            context.telemetry.properties.showHiddenTypes = String(showHiddenTypes);
-
-            if (!showHiddenTypes) {
-                resources = resources.filter(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' || (resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType)));
-            }
 
             const groupBySetting = settingUtils.getWorkspaceSetting<string>('groupBy');
             context.telemetry.properties.groupBySetting = groupBySetting?.startsWith('armTag') ? 'armTag' : groupBySetting;

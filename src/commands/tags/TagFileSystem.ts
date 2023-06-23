@@ -18,7 +18,7 @@ const insertKeyHere: string = localize('insertTagName', '<Insert tag name>');
 const insertValueHere: string = localize('insertTagValue', '<Insert tag value>');
 
 export interface ITagsModel extends AzExtTreeFileSystemItem {
-    getTags(): Promise<Tags>;
+    getTags(): Promise<Tags['tags']>;
     subscription: AzureSubscription;
     displayName: string;
     displayType: 'resource group' | 'resource';
@@ -41,8 +41,8 @@ export class ResourceTags implements ITagsModel {
     cTime!: number;
     mTime!: number;
 
-    async getTags(): Promise<Tags> {
-        return await callWithTelemetryAndErrorHandling('getTags', async (context): Promise<Tags | undefined> => {
+    async getTags(): Promise<Tags['tags']> {
+        return await callWithTelemetryAndErrorHandling('getTags', async (context): Promise<Tags['tags'] | undefined> => {
             const subscriptionContext = createSubscriptionContext(this.resource.subscription);
             const client = await createResourceClient([context, subscriptionContext]);
 
@@ -142,7 +142,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
         return `// ${comment}${os.EOL}${JSON.stringify(tags, undefined, 4)}`;
     }
 
-    private async getTagsFromNode(node: ITagsModel): Promise<Tags | undefined> {
+    private async getTagsFromNode(node: ITagsModel): Promise<Tags['tags'] | undefined> {
         return await node.getTags();
     }
 
