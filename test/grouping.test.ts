@@ -1,5 +1,5 @@
 import { commands } from "vscode";
-import { AzExtResourceType, ext, GroupingItem, isResourceGroupGroupingItem, isResourceTypeGroupingItem, LocationGroupingItem, ResourceGroupGroupingItem, ResourceTypeGroupingItem } from "../extension.bundle";
+import { AzExtResourceType, ext, GroupingItem, isLocationGroupingItem, isResourceGroupGroupingItem, isResourceTypeGroupingItem, LocationGroupingItem, ResourceGroupGroupingItem, ResourceTypeGroupingItem } from "../extension.bundle";
 import { createMockSubscriptionWithFunctions } from "./api/mockServiceFactory";
 import assert = require("assert");
 
@@ -45,7 +45,7 @@ suite('Azure resource grouping tests', async () => {
         const subscriptions = await tdp.getChildren();
 
         const groups = await tdp.getChildren(subscriptions![0]) as GroupingItem[];
-        assert.ok(isResourceGroupGroupingItem(groups[0]));
+        assert.ok(isLocationGroupingItem(groups[0]));
         const locationGroup = groups.find(group => (group as LocationGroupingItem).location === mocks.sub1.rg1.location);
         assert.ok(locationGroup);
     });
