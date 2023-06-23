@@ -74,11 +74,6 @@
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.logOut",
-                "title": "%azureResourceGroups.logOut%",
-                "category": "Azure"
-            },
-            {
                 "command": "azureResourceGroups.selectSubscriptions",
                 "title": "%azureResourceGroups.selectSubscriptions%",
                 "category": "Azure",
@@ -390,14 +385,6 @@
             "commandPalette": [
                 {
                     "command": "azureResourceGroups.logIn",
-                    "when": "isWeb"
-                },
-                {
-                    "command": "azureResourceGroups.logOut",
-                    "when": "isWeb"
-                },
-                {
-                    "command": "azureResourceGroups.selectSubscriptions",
                     "when": "isWeb"
                 },
                 {
