@@ -38,6 +38,8 @@ export async function selectSubscriptions(context: IActionContext): Promise<void
         if (picks) {
             await setSelectedTenantAndSubscriptionIds(picks.map(s => `${s.subscription.tenantId}/${s.subscription.subscriptionId}`));
         }
+
+        ext.actions.refreshAzureTree();
     } else {
         const signIn: vscode.MessageItem = { title: localize('signIn', 'Sign In') };
         void vscode.window.showInformationMessage(localize('notSignedIn', 'You are not signed in. Sign in to continue.'), signIn).then((input) => {
