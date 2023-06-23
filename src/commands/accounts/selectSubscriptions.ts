@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { IActionContext, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import { AzureSubscription } from "api/src/resources/azure";
 import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
@@ -14,16 +14,16 @@ export async function selectSubscriptions(context: IActionContext): Promise<void
     const provider = await ext.subscriptionProviderFactory();
     if (await provider.isSignedIn()) {
 
-        const subscriptionQuickPickItems: () => Promise<(vscode.QuickPickItem & { subscription: AzureSubscription })[]> = async () => {
+        const selectedSubscriptionIds = await getSelectedSubscriptionIds();
+        const subscriptionQuickPickItems: () => Promise<IAzureQuickPickItem<AzureSubscription>[]> = async () => {
 
             const allSubscriptions = await provider.getSubscriptions(false);
-            const selectedSubscriptionIds = await getSelectedSubscriptionIds();
 
             return allSubscriptions
                 .map(subscription => ({
                     label: subscription.name,
-                    picked: selectedSubscriptionIds.includes(subscription.subscriptionId),
-                    subscription
+                    description: subscription.subscriptionId,
+                    data: subscription
                 }))
                 .sort((a, b) => a.label.localeCompare(b.label));
         }
@@ -31,12 +31,15 @@ export async function selectSubscriptions(context: IActionContext): Promise<void
         const picks = await context.ui.showQuickPick(
             subscriptionQuickPickItems(),
             {
+                isPickSelected: (pick) => {
+                    return selectedSubscriptionIds.includes((pick as IAzureQuickPickItem<AzureSubscription>).data.subscriptionId);
+                },
                 canPickMany: true,
                 placeHolder: localize('selectSubscriptions', 'Select Subscriptions')
             });
 
         if (picks) {
-            await setSelectedTenantAndSubscriptionIds(picks.map(s => `${s.subscription.tenantId}/${s.subscription.subscriptionId}`));
+            await setSelectedTenantAndSubscriptionIds(picks.map(s => `${s.data.tenantId}/${s.data.subscriptionId}`));
         }
 
         ext.actions.refreshAzureTree();
