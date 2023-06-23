@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { AzureSubscription, AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
+import { Disposable, Event } from 'vscode';
 import { MockResources } from './mockServiceFactory';
 
 export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider {
@@ -38,4 +39,7 @@ export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider 
     public async signOut(): Promise<void> {
         throw new Error('Method not implemented.');
     }
+
+    public onDidSignIn: Event<void> = () => { return new Disposable(() => { }) };
+    public onDidSignOut: Event<void> = () => { return new Disposable(() => { }) };
 }
