@@ -14,10 +14,10 @@ import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { TreeItemStateStore } from '../TreeItemState';
-import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { AzureResourceTreeDataProviderBase } from './AzureResourceTreeDataProviderBase';
 import { SubscriptionItem } from './SubscriptionItem';
 import { createSubscriptionContext } from './VSCodeAuthentication';
+import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingManager';
 
 export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProviderBase {
     private readonly groupingChangeSubscription: vscode.Disposable;

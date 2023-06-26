@@ -12,7 +12,7 @@ import { treeUtils } from "../../utils/treeUtils";
 import { createPortalUrl } from "../../utils/v2/createPortalUrl";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
-import { AzureResourceGroupingManager } from "./AzureResourceGroupingManager";
+import { AzureResourceGroupingManager } from "./grouping/AzureResourceGroupingManager";
 
 export class SubscriptionItem implements ResourceGroupsItem {
     constructor(

@@ -10,14 +10,14 @@ import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { createTreeView } from '../createTreeView';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { TreeItemStateStore } from '../TreeItemState';
+import { createTreeView } from '../createTreeView';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { AzureResourceBranchDataProviderManager } from './AzureResourceBranchDataProviderManager';
-import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { createResourceItemFactory } from './AzureResourceItem';
 import { AzureResourceTreeDataProvider } from './AzureResourceTreeDataProvider';
+import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingManager';
 import { GroupingItemFactory } from './grouping/GroupingItemFactory';
 
 interface RegisterAzureTreeOptions {

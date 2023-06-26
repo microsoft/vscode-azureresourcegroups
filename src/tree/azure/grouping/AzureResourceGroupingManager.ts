@@ -5,19 +5,19 @@
 
 import { nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { AzExtResourceType, AzureResource } from '../../../api/src/index';
-import { azureExtensions } from '../../azureExtensions';
-import { GroupBySettings } from '../../commands/explorer/groupBy';
-import { showHiddenTypesSettingKey } from '../../constants';
-import { ext } from '../../extensionVariables';
-import { getIconPath, getName } from '../../utils/azureUtils';
-import { localize } from "../../utils/localize";
-import { settingUtils } from '../../utils/settingUtils';
-import { treeUtils } from '../../utils/treeUtils';
-import { ResourceGroupsItem } from '../ResourceGroupsItem';
-import { ResourceGroupsTreeContext } from '../ResourceGroupsTreeContext';
-import { GroupingItem } from './grouping/GroupingItem';
-import { GroupingItemFactory } from './grouping/GroupingItemFactory';
+import { AzExtResourceType, AzureResource } from '../../../../api/src/index';
+import { azureExtensions } from '../../../azureExtensions';
+import { GroupBySettings } from '../../../commands/explorer/groupBy';
+import { showHiddenTypesSettingKey } from '../../../constants';
+import { ext } from '../../../extensionVariables';
+import { getIconPath, getName } from '../../../utils/azureUtils';
+import { localize } from "../../../utils/localize";
+import { settingUtils } from '../../../utils/settingUtils';
+import { treeUtils } from '../../../utils/treeUtils';
+import { ResourceGroupsItem } from '../../ResourceGroupsItem';
+import { ResourceGroupsTreeContext } from '../../ResourceGroupsTreeContext';
+import { GroupingItem } from './GroupingItem';
+import { GroupingItemFactory } from './GroupingItemFactory';
 
 const unknownLabel = localize('unknown', 'Unknown');
 
