@@ -8,7 +8,7 @@ import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
-import { GroupingItem } from '../tree/azure/GroupingItem';
+import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { logIn } from './accounts/logIn';
 import { selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';

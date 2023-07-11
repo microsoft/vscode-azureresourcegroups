@@ -9,7 +9,7 @@ import { AzureWizard, createSubscriptionContext, IActionContext, IAzureQuickPick
 import { AzureResource, AzureSubscription } from '../../../../api/src/index';
 import { createResourceGroup } from '../../../api/DefaultAzureResourceProvider';
 import { ext } from '../../../extensionVariables';
-import { GroupingItem } from '../../../tree/azure/GroupingItem';
+import { isResourceGroupGroupingItem, ResourceGroupGroupingItem } from '../../../tree/azure/grouping/ResourceGroupGroupingItem';
 import { createActivityContext } from '../../../utils/activityUtils';
 import { createResourceClient } from '../../../utils/azureClients';
 import { localize } from '../../../utils/localize';
@@ -17,11 +17,11 @@ import { settingUtils } from '../../../utils/settingUtils';
 import { DeleteResourceGroupContext } from '../DeleteResourceGroupContext';
 import { DeleteResourceGroupStep } from '../DeleteResourceGroupStep';
 
-export async function deleteResourceGroupV2(context: IActionContext, primaryNode?: GroupingItem, selectedNodes?: GroupingItem[]): Promise<void> {
+export async function deleteResourceGroupV2(context: IActionContext, primaryNode?: ResourceGroupGroupingItem, selectedNodes?: ResourceGroupGroupingItem[]): Promise<void> {
 
     // unset nodes that are not resource groups
-    selectedNodes = selectedNodes?.filter(n => primaryNode instanceof GroupingItem && !!n.resourceGroup);
-    if (!(primaryNode instanceof GroupingItem) || !primaryNode?.resourceGroup) {
+    selectedNodes = selectedNodes?.filter(n => isResourceGroupGroupingItem(primaryNode) && isResourceGroupGroupingItem(n));
+    if (!isResourceGroupGroupingItem(primaryNode)) {
         primaryNode = undefined;
     }
 
@@ -31,9 +31,8 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
     let resourceGroupsToDelete: AzureResource[] = [];
 
     if (selectedResourceGroupNodes) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        subscription = selectedResourceGroupNodes[0].subscription!;
-        resourceGroupsToDelete = selectedResourceGroupNodes.map(node => nonNullProp(node, 'resourceGroup'));
+        subscription = selectedResourceGroupNodes[0].subscription;
+        resourceGroupsToDelete = selectedResourceGroupNodes.map(node => node.resourceGroup);
     } else {
         ({ subscription, resourceGroupsToDelete } = await pickResourceGroups(context));
     }

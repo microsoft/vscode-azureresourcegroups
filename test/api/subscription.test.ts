@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { hasPortalUrl } from '../../extension.bundle';
+import { validateSubscription } from '../utils/validateSubscription';
 import { api } from "./api";
 import { AzureResourceTreeDataProvider } from "./azureResourceBranchDataProvider.test";
 import { createMockSubscriptionWithFunctions } from "./mockServiceFactory";
@@ -44,11 +45,7 @@ suite('SubscriptionItem tests', async () => {
     test('SubscriptionItem.subscription satisfies ISubscriptionContext for v1.5 compatibility', async () => {
         const { subscriptionItems } = await mockResourcesAndGetSubscriptionItems();
         subscriptionItems.forEach((subscriptionItem) => {
-            const subscriptonContext = subscriptionItem.subscription;
-            assert.ok(subscriptonContext.credentials);
-            assert.ok(subscriptonContext.subscriptionDisplayName);
-            assert.ok(subscriptonContext.userId !== undefined);
-            assert.ok(subscriptonContext.subscriptionPath);
+            validateSubscription(subscriptionItem.subscription);
         });
     });
-})
+});

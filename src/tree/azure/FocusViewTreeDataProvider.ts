@@ -15,9 +15,12 @@ import { settingUtils } from '../../utils/settingUtils';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { TreeItemStateStore } from '../TreeItemState';
-import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { AzureResourceTreeDataProviderBase } from './AzureResourceTreeDataProviderBase';
-import { GroupingItem } from './GroupingItem';
+import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingManager';
+import { GroupingItem } from './grouping/GroupingItem';
+import { LocationGroupingItem } from './grouping/LocationGroupingItem';
+import { ResourceGroupGroupingItem } from './grouping/ResourceGroupGroupingItem';
+import { ResourceTypeGroupingItem } from './grouping/ResourceTypeGroupingItem';
 
 const supportedResourceTypes: AzExtResourceType[] =
     azureExtensions
@@ -69,15 +72,15 @@ export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase
                     switch (focusedGroup.kind) {
                         case 'resourceGroup':
                             focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, resources, 'resourceGroup')
-                                .find((value) => value.resourceGroup?.id.toLowerCase() === focusedGroup.id.toLowerCase());
+                                .find((value) => (value as ResourceGroupGroupingItem).resourceGroup.id.toLowerCase() === focusedGroup.id.toLowerCase());
                             break;
                         case 'resourceType':
                             focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, resources, 'resourceType')
-                                .find((value) => value.resourceType === focusedGroup.type);
+                                .find((value) => (value as ResourceTypeGroupingItem).resourceType === focusedGroup.type);
                             break;
                         case 'location':
                             focusedGroupItem = this.resourceGroupingManager.groupResources(undefined, undefined, resources, 'location')
-                                .find((value) => value.location === focusedGroup.location);
+                                .find((value) => (value as LocationGroupingItem).location === focusedGroup.location);
                             break;
                     }
                 }

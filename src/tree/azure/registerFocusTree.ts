@@ -10,14 +10,14 @@ import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { createTreeView } from '../createTreeView';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
+import { createTreeView } from '../createTreeView';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { AzureResourceBranchDataProviderManager } from './AzureResourceBranchDataProviderManager';
-import { AzureResourceGroupingManager } from './AzureResourceGroupingManager';
 import { createResourceItemFactory } from './AzureResourceItem';
 import { FocusViewTreeDataProvider } from './FocusViewTreeDataProvider';
-import { createGroupingItemFactory } from './GroupingItem';
+import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingManager';
+import { GroupingItemFactory } from './grouping/GroupingItemFactory';
 
 interface RegisterAzureTreeOptions {
     azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
@@ -60,9 +60,14 @@ export function registerFocusTree(context: vscode.ExtensionContext, options: Reg
 
 function createGroupingManager(azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager, itemCache: BranchDataItemCache): AzureResourceGroupingManager {
     const branchDataItemFactory = createResourceItemFactory<AzureResource>(itemCache);
-    const groupingItemFactory = createGroupingItemFactory(branchDataItemFactory, (r) => azureResourceBranchDataProviderManager.getProvider(r.resourceType), azureResourceBranchDataProviderManager.onChangeBranchDataProviders, {
-        expandByDefault: true,
-        hideSeparators: false,
+    const groupingItemFactory = new GroupingItemFactory({
+        resourceItemFactory: branchDataItemFactory,
+        branchDataProviderFactory: (r) => azureResourceBranchDataProviderManager.getProvider(r.resourceType),
+        onDidChangeBranchDataProviders: azureResourceBranchDataProviderManager.onChangeBranchDataProviders,
+        defaultDisplayOptions: {
+            expandByDefault: true,
+            hideSeparators: false,
+        }
     });
     return new AzureResourceGroupingManager(groupingItemFactory);
 }

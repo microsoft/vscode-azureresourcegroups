@@ -240,6 +240,60 @@ todo
 - register workspace resource provider for `type`
 - register workspace resource branch data provider for `type` -->
 
+## Contributing to the Workspace resources view
+
+### `view/title` commands
+
+Client extensions are encouraged to make commands accessible via the workspace `view/title` menu. Commands should be grouped by extension into submenus. Submenu icons and titles should be the same as the client extension's icon and title. This is to prevent the `view/title` menu from becoming too cluttered.
+
+![Group workspace view/title commands into submenus](docs/media/workspace-submenus.png)
+
+Here's an example of how the Azure Functions extension contributes commands to the workspace `view/title` menu. See [the Azure Functions package.json](https://github.com/microsoft/vscode-azurefunctions/blob/main/package.json) for reference.
+
+```jsonc
+"submenus": [
+    // define the submenu
+    {
+        "id": "azureFunctions.submenus.workspaceActions",
+        "icon": "resources/azure-functions.png",
+        "label": "Azure Functions"
+    }
+],
+"menus": {
+    // add commands to the submenu
+    "azureFunctions.submenus.workspaceActions": [
+        {
+            "command": "azureFunctions.createFunction",
+            "group": "1_projects@1"
+        },
+        {
+            "command": "azureFunctions.createNewProject",
+            "group": "1_projects@2"
+        },
+        {
+            "command": "azureFunctions.deploy",
+            "group": "2_deploy@1"
+        },
+        {
+            "command": "azureFunctions.createFunctionApp",
+            "group": "3_create@1"
+        },
+        {
+            "command": "azureFunctions.createFunctionAppAdvanced",
+            "group": "3_create@2"
+        }
+    ],
+    // add the submenu to the workspace view/title menu
+    "view/title": [
+        {
+            "submenu": "azureFunctions.submenus.workspaceActions",
+            "when": "view == azureWorkspace",
+            "group": "navigation@1"
+        }
+    ],
+}
+```
+
 ## Extension dependencies
 
 
