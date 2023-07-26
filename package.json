@@ -385,10 +385,6 @@
             ],
             "commandPalette": [
                 {
-                    "command": "azureResourceGroups.logIn",
-                    "when": "isWeb"
-                },
-                {
                     "command": "azureResourceGroups.showGroupOptions",
                     "when": "never"
                 },
