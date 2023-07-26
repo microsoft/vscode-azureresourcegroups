@@ -8,6 +8,7 @@ import { IActionContext, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
+import { isLoggingIn } from '../../commands/accounts/logIn';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
@@ -68,7 +69,15 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
             if (subscriptionProvider) {
-                if (await subscriptionProvider.isSignedIn()) {
+                if (isLoggingIn()) {
+                    return [new GenericItem(
+                        localize('signingIn', 'Waiting for Azure sign-in...'),
+                        {
+                            commandId: 'azureResourceGroups.logIn',
+                            iconPath: new vscode.ThemeIcon('loading~spin')
+                        }
+                    )];
+                } else if (await subscriptionProvider.isSignedIn()) {
                     let subscriptions: AzureSubscription[];
 
                     if ((subscriptions = await subscriptionProvider.getSubscriptions(true)).length === 0) {

@@ -32,7 +32,7 @@ export async function selectSubscriptions(context: IActionContext): Promise<void
             subscriptionQuickPickItems(),
             {
                 isPickSelected: (pick) => {
-                    return selectedSubscriptionIds.includes((pick as IAzureQuickPickItem<AzureSubscription>).data.subscriptionId);
+                    return selectedSubscriptionIds.length === 0 || selectedSubscriptionIds.includes((pick as IAzureQuickPickItem<AzureSubscription>).data.subscriptionId);
                 },
                 canPickMany: true,
                 placeHolder: localize('selectSubscriptions', 'Select Subscriptions')

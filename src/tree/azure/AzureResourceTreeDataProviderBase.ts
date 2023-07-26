@@ -64,8 +64,6 @@ export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeData
                         // This event gets HEAVILY spammed and needs to be debounced
                         // Suppress additional messages for 1 second after the first one
                         this.notifyTreeDataChanged();
-                    } else {
-                        console.log("Too soon, ignoring this event");
                     }
                 }
             });
