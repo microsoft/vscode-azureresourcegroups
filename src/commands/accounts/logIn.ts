@@ -6,8 +6,20 @@
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import { ext } from '../../extensionVariables';
 
+let _isLoggingIn: boolean = false;
+
 export async function logIn(_context: IActionContext): Promise<void> {
-    const provider = await ext.subscriptionProviderFactory();
-    await provider.signIn();
-    ext.actions.refreshAzureTree();
+    try {
+        const provider = await ext.subscriptionProviderFactory();
+        _isLoggingIn = true;
+        ext.actions.refreshAzureTree();
+        await provider.signIn();
+        ext.actions.refreshAzureTree();
+    } finally {
+        _isLoggingIn = false;
+    }
+}
+
+export function isLoggingIn(): boolean {
+    return _isLoggingIn;
 }
