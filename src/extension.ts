@@ -6,12 +6,15 @@
 'use strict';
 
 import { registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, IActionContext, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
-import { apiUtils, GetApiOptions } from 'api/src/utils/apiUtils';
+import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { AzureResourcesApiInternal } from '../hostapi.v2.internal';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
+import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
+import { ResourceGroupsExtensionManager } from './api/ResourceGroupsExtensionManager';
+import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
 import { InternalAzureResourceGroupsExtensionApi } from './api/compatibility/AzureResourceGroupsExtensionApi';
 import { CompatibleAzExtTreeDataProvider } from './api/compatibility/CompatibleAzExtTreeDataProvider';
 import { createCompatibilityPickAppResource } from './api/compatibility/pickAppResource';
@@ -19,25 +22,21 @@ import { registerApplicationResourceResolver } from './api/compatibility/registe
 import { registerWorkspaceResourceProvider } from './api/compatibility/registerWorkspaceResourceProvider';
 import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
-import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
-import { ResourceGroupsExtensionManager } from './api/ResourceGroupsExtensionManager';
-import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
 import { registerCommands } from './commands/registerCommands';
-import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
+import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { ext } from './extensionVariables';
-import { createAzureAccountSubscriptionProviderFactory } from './services/DesktopSubscriptionProvider';
-import { createWebSubscriptionProviderFactory } from './services/WebAzureSubscriptionProvider';
+import { createVSCodeAzureSubscriptionProviderFactory } from './services/VSCodeAzureSubscriptionProvider';
+import { BranchDataItemCache } from './tree/BranchDataItemCache';
+import { HelpTreeItem } from './tree/HelpTreeItem';
+import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
 import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
 import { registerAzureTree } from './tree/azure/registerAzureTree';
 import { registerFocusTree } from './tree/azure/registerFocusTree';
-import { BranchDataItemCache } from './tree/BranchDataItemCache';
-import { HelpTreeItem } from './tree/HelpTreeItem';
-import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
-import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDefaultBranchDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
+import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
     // the entry point for vscode.dev is this activate, not main.js, so we need to instantiate perfStats here
@@ -68,7 +67,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
-        ext.subscriptionProviderFactory = ext.isWeb ? createWebSubscriptionProviderFactory(context) : createAzureAccountSubscriptionProviderFactory();
+        ext.subscriptionProviderFactory = createVSCodeAzureSubscriptionProviderFactory();
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));

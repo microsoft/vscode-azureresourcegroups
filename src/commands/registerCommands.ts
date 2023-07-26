@@ -10,7 +10,6 @@ import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { logIn } from './accounts/logIn';
-import { logOut } from './accounts/logOut';
 import { selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
@@ -61,7 +60,6 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.unfocusGroup', unfocusGroup);
 
     registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context));
-    registerCommand('azureResourceGroups.logOut', (context: IActionContext) => logOut(context));
     registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext) => selectSubscriptions(context));
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);

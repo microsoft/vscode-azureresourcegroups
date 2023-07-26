@@ -8,5 +8,6 @@ import { ext } from '../../extensionVariables';
 
 export async function logIn(_context: IActionContext): Promise<void> {
     const provider = await ext.subscriptionProviderFactory();
-    await provider.logIn();
+    await provider.signIn();
+    ext.actions.refreshAzureTree();
 }

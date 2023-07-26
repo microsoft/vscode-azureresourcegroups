@@ -5,9 +5,8 @@
 
 import { GenericResource, ResourceGroup } from "@azure/arm-resources";
 import { randomUUID } from "crypto";
-import * as vscode from 'vscode';
 import { AzureResourcesServiceFactory, AzureSubscription, ext } from "../../extension.bundle";
-import { MockAzureAccount } from "./MockAzureAccountApi";
+import { MockAzureSubscriptionProvider } from "./MockAzureSubscriptionProvider";
 
 export class MockResources {
     get subscriptions(): MockSubscription[] {
@@ -99,8 +98,8 @@ class BasicMockResources extends MockResources {
 export const createMockSubscriptionWithFunctions = (): BasicMockResources => {
     const mockResources = new BasicMockResources();
     ext.testing.overrideAzureServiceFactory = createTestAzureResourcesServiceFactory(mockResources);
-    const mockAzureAccountApi = new MockAzureAccount(vscode, mockResources);
-    ext.testing.overrideAzureSubscriptionProvider = () => mockAzureAccountApi;
+    const mockAzureSubscriptionProvider = new MockAzureSubscriptionProvider(mockResources);
+    ext.testing.overrideAzureSubscriptionProvider = () => mockAzureSubscriptionProvider;
     return mockResources;
 }
 

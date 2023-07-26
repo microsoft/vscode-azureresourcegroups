@@ -3,17 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
 import { AzExtTreeDataProvider, IAzExtLogOutputChannel } from "@microsoft/vscode-azext-utils";
 import { AzExtResourceType } from "api/docs/vscode-azureresources-api";
-import { DiagnosticCollection, Disposable, env, ExtensionContext, TreeView, UIKind } from "vscode";
+import { DiagnosticCollection, Disposable, ExtensionContext, TreeView, UIKind, env } from "vscode";
 import { AzureResourcesApiInternal } from "../hostapi.v2.internal";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
-import { AzureSubscriptionProvider } from "./services/SubscriptionProvider";
-import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
 import { ResourceGroupsItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
+import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
 
 export namespace extActions {
     export let refreshWorkspaceTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;

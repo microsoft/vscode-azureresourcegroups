@@ -32,7 +32,6 @@ export * from './src/services/AzureResourcesService';
 // Export activate/deactivate for main.js
 export { activate, deactivate } from './src/extension';
 export * from './src/extensionVariables';
-export * from './src/services/SubscriptionProvider';
 export * from './src/tree/BranchDataItemWrapper';
 export * from './src/tree/InvalidItem';
 export { ResourceGroupsItem } from './src/tree/ResourceGroupsItem';

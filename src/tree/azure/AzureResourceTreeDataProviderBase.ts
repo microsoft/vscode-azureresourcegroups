@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { ext } from '../../extensionVariables';
-import { AzureSubscriptionProvider } from '../../services/SubscriptionProvider';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
@@ -17,7 +17,6 @@ import { GroupingItem } from './grouping/GroupingItem';
 
 export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeDataProviderBase {
     private subscriptionProvider: AzureSubscriptionProvider | undefined;
-    private filtersSubscription: vscode.Disposable | undefined;
     private statusSubscription: vscode.Disposable | undefined;
 
     constructor(
@@ -35,7 +34,6 @@ export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeData
             onRefresh,
             state,
             () => {
-                this.filtersSubscription?.dispose();
                 this.statusSubscription?.dispose();
                 callOnDispose?.();
             });
@@ -50,20 +48,32 @@ export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeData
         return super.isAncestorOf(element, id)
     }
 
-    protected async getAzureAccountExtensionApi(): Promise<AzureSubscriptionProvider> {
+    protected async getAzureSubscriptionProvider(): Promise<AzureSubscriptionProvider> {
         // override for testing
         if (ext.testing.overrideAzureSubscriptionProvider) {
             return ext.testing.overrideAzureSubscriptionProvider();
         } else {
             if (!this.subscriptionProvider) {
                 this.subscriptionProvider = await ext.subscriptionProviderFactory();
-                await this.subscriptionProvider.waitForFilters();
             }
 
-            this.filtersSubscription = this.subscriptionProvider.onFiltersChanged(() => this.notifyTreeDataChanged());
-            this.statusSubscription = this.subscriptionProvider.onStatusChanged(() => this.notifyTreeDataChanged());
+            this.statusSubscription = vscode.authentication.onDidChangeSessions((evt: vscode.AuthenticationSessionsChangeEvent) => {
+                if (evt.provider.id === 'microsoft' || evt.provider.id === 'microsoft-sovereign-cloud') {
+                    if (Date.now() > nextSessionChangeMessageMinimumTime) {
+                        nextSessionChangeMessageMinimumTime = Date.now() + sessionChangeMessageInterval;
+                        // This event gets HEAVILY spammed and needs to be debounced
+                        // Suppress additional messages for 1 second after the first one
+                        this.notifyTreeDataChanged();
+                    } else {
+                        console.log("Too soon, ignoring this event");
+                    }
+                }
+            });
 
             return this.subscriptionProvider;
         }
     }
 }
+
+let nextSessionChangeMessageMinimumTime = 0;
+const sessionChangeMessageInterval = 1 * 1000; // 1 second
