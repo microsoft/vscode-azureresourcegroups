@@ -5,12 +5,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
-import { Command, commands, Extension, extensions } from 'vscode';
+import { Command, Extension, commands, extensions } from 'vscode';
+import { AzExtResourceType } from '../../api/src/AzExtResourceType';
 import { SubscriptionItem } from '../tree/azure/SubscriptionItem';
+import { getIconPath } from '../utils/azureUtils';
 import { getResourceContributions } from '../utils/getResourceContributions';
 
 interface ContributedCreateResourceCommand extends Command {
     detail?: string;
+    type?: AzExtResourceType;
     extensionId: string;
 }
 
@@ -35,6 +38,7 @@ function getPicks(createResourceCommands: ContributedCreateResourceCommand[]): I
             label: command.title,
             data: command,
             detail: command.detail,
+            iconPath: command.type && Object.values(AzExtResourceType).includes(command.type) ? getIconPath(command.type) : undefined,
         }));
 }
 

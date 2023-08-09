@@ -8,7 +8,7 @@ import { URI, Utils } from 'vscode-uri';
 import { ext } from '../extensionVariables';
 
 export namespace treeUtils {
-    export function getIconPath(iconName: string): TreeItemIconPath {
+    export function getIconPath(iconName: string): URI {
         return Utils.joinPath(getResourcesPath(), `${iconName}.svg`);
     }
 
