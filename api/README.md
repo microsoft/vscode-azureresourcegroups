@@ -140,6 +140,7 @@ commands?: {
     command: string;
     title: string;
     detail: string;
+    type?: string; // Optional: resource type associated with the command. Used to show an icon next to the command.
 }[];
 ```
 
