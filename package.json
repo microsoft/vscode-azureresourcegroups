@@ -40,7 +40,8 @@
                 {
                     "command": "azureResourceGroups.createResourceGroup",
                     "title": "%azureResourceGroups.createResourceGroup%",
-                    "detail": "%azureResourceGroups.createResourceGroupDetail%"
+                    "detail": "%azureResourceGroups.createResourceGroupDetail%",
+                    "type": "ResourceGroup"
                 }
             ]
         },
