@@ -1,6 +1,6 @@
 import { ActivityApi } from '@microsoft/vscode-azext-utils/activity';
 import * as vscode from 'vscode';
-import { AzureResource, AzureResourcesExtensionApi, AzureSubscription, ResourceProvider, ResourcesApi } from "./api/src/index";
+import { AzureResource, AzureResourcesExtensionApi, AzureSubscription, ResourceProvider, ResourcesApi } from "../api/src/index";
 
 // v2 types that are internal to resource groups (for now)
 

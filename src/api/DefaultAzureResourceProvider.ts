@@ -5,10 +5,10 @@
 
 import { GenericResource, ResourceGroup } from '@azure/arm-resources';
 import { getResourceGroupFromId } from "@microsoft/vscode-azext-azureutils";
-import { callWithTelemetryAndErrorHandling, getAzExtResourceType, IActionContext, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { IActionContext, callWithTelemetryAndErrorHandling, getAzExtResourceType, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzureResource, AzureSubscription } from '../../api/src/index';
-import { AzureResourceProvider } from '../../hostapi.v2.internal';
+import { AzureResourceProvider } from '../hostapi.v2.internal';
 import { getAzureResourcesService } from '../services/AzureResourcesService';
 
 export class DefaultAzureResourceProvider implements AzureResourceProvider {

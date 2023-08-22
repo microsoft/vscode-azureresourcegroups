@@ -9,7 +9,6 @@ import { registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microso
 import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
-import { AzureResourcesApiInternal } from '../hostapi.v2.internal';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
@@ -26,6 +25,7 @@ import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { ext } from './extensionVariables';
+import { AzureResourcesApiInternal } from './hostapi.v2.internal';
 import { createVSCodeAzureSubscriptionProviderFactory } from './services/VSCodeAzureSubscriptionProvider';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';

@@ -1,4 +1,3 @@
-import { ext } from "../../extension.bundle";
-import { AzureResourcesHostApiInternal } from "../../hostapi.v2.internal";
+import { AzureResourcesHostApiInternal, ext } from "../../extension.bundle";
 
 export const api = (): AzureResourcesHostApiInternal => ext.v2.api.resources;

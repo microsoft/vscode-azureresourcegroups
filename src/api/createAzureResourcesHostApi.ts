@@ -6,8 +6,8 @@
 import { callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzExtResourceType, AzureResource, BranchDataProvider, ResourceModelBase, VSCodeRevealOptions, WorkspaceResource, WorkspaceResourceProvider } from '../../api/src/index';
-import { AzureResourceProvider, AzureResourcesHostApiInternal } from '../../hostapi.v2.internal';
 import { revealResource } from '../commands/revealResource';
+import { AzureResourceProvider, AzureResourcesHostApiInternal } from '../hostapi.v2.internal';
 import { AzureResourceBranchDataProviderManager } from '../tree/azure/AzureResourceBranchDataProviderManager';
 import { AzureResourceTreeDataProvider } from '../tree/azure/AzureResourceTreeDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from '../tree/workspace/WorkspaceResourceBranchDataProviderManager';
