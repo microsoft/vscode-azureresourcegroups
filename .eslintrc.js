@@ -1,3 +1,6 @@
 module.exports = {
-    "extends": "@microsoft/eslint-config-azuretools"
+    "extends": "@microsoft/eslint-config-azuretools",
+    "rules": {
+        "no-restricted-imports": ["error", { "patterns": ["*api/docs*"] }],
+    }
 };

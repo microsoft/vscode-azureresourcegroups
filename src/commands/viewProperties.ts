@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { azureResourceExperience, IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
-import { ViewPropertiesModelAsync } from 'api/docs/vscode-azureresources-api';
 import { v4 as uuidv4 } from "uuid";
-import { ViewPropertiesModel } from '../../api/src/index';
+import { ViewPropertiesModel, ViewPropertiesModelAsync } from '../../api/src/index';
 import { ext } from '../extensionVariables';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { localize } from '../utils/localize';

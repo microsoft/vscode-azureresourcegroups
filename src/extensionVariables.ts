@@ -5,7 +5,7 @@
 
 import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
 import { AzExtTreeDataProvider, IAzExtLogOutputChannel } from "@microsoft/vscode-azext-utils";
-import { AzExtResourceType } from "api/docs/vscode-azureresources-api";
+import { AzExtResourceType } from "api/src/AzExtResourceType";
 import { DiagnosticCollection, Disposable, ExtensionContext, TreeView, UIKind, env } from "vscode";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
