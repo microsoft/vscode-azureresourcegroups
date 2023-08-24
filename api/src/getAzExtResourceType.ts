@@ -63,6 +63,7 @@ const azureTypeToAzExtResourceTypeMap: Record<string, AzExtResourceType | undefi
     'microsoft.eventgrid/topics': AzExtResourceType.EventGridTopics,
     'microsoft.eventhub/namespaces': AzExtResourceType.EventHubNamespaces,
     'microsoft.extendedlocation/customlocations': AzExtResourceType.CustomLocations,
+    'microsoft.hybridcompute/machines': AzExtResourceType.ArcEnabledServers,
     'microsoft.insights/components': AzExtResourceType.ApplicationInsights,
     'microsoft.keyvault/vaults': AzExtResourceType.KeyVaults,
     'microsoft.kubernetes/connectedclusters': AzExtResourceType.KubernetesConnectedClusters,

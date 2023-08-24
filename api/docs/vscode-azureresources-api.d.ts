@@ -38,6 +38,7 @@ export declare namespace apiUtils {
  */
 export declare enum AzExtResourceType {
     AppServices = "AppServices",
+    ArcEnabledServers = "ArcEnabledServers",
     AzureCosmosDb = "AzureCosmosDb",
     ContainerApps = "ContainerApps",
     ContainerAppsEnvironment = "ContainerAppsEnvironment",
@@ -269,7 +270,7 @@ export declare interface GetApiOptions {
 /**
  * Gets a normalized type for an Azure resource, accounting for the fact that some
  * Azure resources share values for type and/or kind
- * @param resource The resource to check the {@link AzExtResourceType} for
+ * @param resource - The resource to check the {@link AzExtResourceType} for
  * @returns The normalized Azure resource type
  */
 export declare function getAzExtResourceType(resource: {

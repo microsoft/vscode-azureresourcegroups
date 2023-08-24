@@ -144,11 +144,11 @@ commands?: {
 }[];
 ```
 
-> [View defintion of `AzExtResourceType`](../src/AzExtResourceType.ts)
+> [View definition of `AzExtResourceType`](../src/AzExtResourceType.ts)
 
 The contribution object from the Azure Functions extension is shown below as an example.
 
-This extension declares that it registers a BranchDataProvider for the `FunctionApp` resource type in the Azure resources view, and a BranchDataProvider for the `func` resource type in the Workspace resources view. It also registers a WorkspaceResourceProvider. Finally, it contributes a command to the "Create Resource..." quick pick prompt for creating a Funciton App.
+This extension declares that it registers a BranchDataProvider for the `FunctionApp` resource type in the Azure resources view, and a BranchDataProvider for the `func` resource type in the Workspace resources view. It also registers a WorkspaceResourceProvider. Finally, it contributes a command to the "Create Resource..." quick pick prompt for creating a Function App.
 
 
 ```jsonc
