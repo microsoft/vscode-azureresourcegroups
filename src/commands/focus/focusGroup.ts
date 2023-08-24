@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { contextValueExperience, IActionContext } from "@microsoft/vscode-azext-utils";
-import { AzExtResourceType } from "api/docs/vscode-azureresources-api";
+import { AzExtResourceType } from "api/src/AzExtResourceType";
 import * as vscode from 'vscode';
 import { canFocusContextValue, hasFocusedGroupContextKey } from "../../constants";
 import { ext } from "../../extensionVariables";

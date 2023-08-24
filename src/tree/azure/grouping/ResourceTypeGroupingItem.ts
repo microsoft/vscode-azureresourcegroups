@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtResourceType } from "api/docs/vscode-azureresources-api";
+import { AzExtResourceType } from "api/src/AzExtResourceType";
 import { canFocusContextValue } from "../../../constants";
 import { GroupingItem, GroupingItemOptions } from "./GroupingItem";
 import { GroupingItemFactoryOptions } from "./GroupingItemFactory";

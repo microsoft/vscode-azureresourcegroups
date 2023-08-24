@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscription } from '@microsoft/vscode-azext-azureauth';
-import { AzureResource } from 'api/docs/vscode-azureresources-api';
 import * as vscode from 'vscode';
-import { AzExtResourceType, ResourceModelBase } from '../../../api/src/index';
+import { AzExtResourceType, AzureResource, ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { azureExtensions } from '../../azureExtensions';
 import { showHiddenTypesSettingKey } from '../../constants';
