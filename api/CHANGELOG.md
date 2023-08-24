@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## [2.2.0] - 2023-08-24
+
+* Add `getAzExtResourceType` function
+
 ## [2.1.0] - 2023-06-13
 
 * Extend `ViewPropertiesModel` to allow async loading of properties
