@@ -266,6 +266,17 @@ export declare interface GetApiOptions {
     readonly extensionId?: string;
 }
 
+/**
+ * Gets a normalized type for an Azure resource, accounting for the fact that some
+ * Azure resources share values for type and/or kind
+ * @param resource The resource to check the {@link AzExtResourceType} for
+ * @returns The normalized Azure resource type
+ */
+export declare function getAzExtResourceType(resource: {
+    type: string;
+    kind?: string;
+}): AzExtResourceType | undefined;
+
 export declare function getAzureResourcesExtensionApi(extensionContext: vscode.ExtensionContext, apiVersionRange: '2.0.0', options?: GetApiOptions): Promise<AzureResourcesExtensionApi>;
 
 export declare function isWrapper(maybeWrapper: unknown): maybeWrapper is Wrapper;
