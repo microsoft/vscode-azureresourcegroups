@@ -9,6 +9,7 @@
  */
 export enum AzExtResourceType {
     AppServices = 'AppServices',
+    ArcEnabledServers = 'ArcEnabledServers',
     AzureCosmosDb = 'AzureCosmosDb',
     ContainerApps = 'ContainerApps',
     ContainerAppsEnvironment = 'ContainerAppsEnvironment',
