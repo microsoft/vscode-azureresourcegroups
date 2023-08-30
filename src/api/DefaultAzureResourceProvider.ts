@@ -5,9 +5,9 @@
 
 import { GenericResource, ResourceGroup } from '@azure/arm-resources';
 import { getResourceGroupFromId } from "@microsoft/vscode-azext-azureutils";
-import { IActionContext, callWithTelemetryAndErrorHandling, getAzExtResourceType, nonNullProp } from '@microsoft/vscode-azext-utils';
+import { IActionContext, callWithTelemetryAndErrorHandling, nonNullProp } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { AzureResource, AzureSubscription } from '../../api/src/index';
+import { AzureResource, AzureSubscription, getAzExtResourceType } from '../../api/src/index';
 import { AzureResourceProvider } from '../hostapi.v2.internal';
 import { getAzureResourcesService } from '../services/AzureResourcesService';
 
