@@ -47,7 +47,7 @@ export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderB
 
             // NOTE: Returning zero children indicates to VS Code that is should display a "welcome view".
             //       The one chosen for display depends on the context set above.
-            return children;
+            return children.sort((a, b) => a.id.localeCompare(b.id));
         }
     }
 
