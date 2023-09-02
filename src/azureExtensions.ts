@@ -33,6 +33,14 @@ export const azureExtensions: IAzExtMetadata[] = [
         reportIssueCommandId: 'appService.ReportIssue'
     },
     {
+        name: 'vscode-azurearcenabledmachines',
+        label: 'Azure Arc-enabled machines',
+        resourceTypes: [
+            AzExtResourceType.ArcEnabledMachines
+        ],
+        reportIssueCommandId: 'azureArcEnabledMachines.ReportIssue'
+    },
+    {
         name: 'vscode-azurestaticwebapps',
         label: 'Static Web Apps',
         resourceTypes: [
