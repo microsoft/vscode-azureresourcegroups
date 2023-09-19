@@ -1,6 +1,7 @@
 variables:
   WEB_BUILDS_STG_ACCT: vscodedotdev
   WEB_BUILDS_CONTAINER: web-builds
+  WEB_BUILDS_ENABLED: true
   ${{ if eq(variables['Build.Reason'], 'Schedule') }}:
     ENABLE_LONG_RUNNING_TESTS: true
     ENABLE_COMPLIANCE: true
@@ -27,7 +28,7 @@ resources:
     - repository: templates
       type: github
       name: microsoft/vscode-azuretools
-      ref: main
+      ref: nat/azure-pipelines-web-build
       endpoint: GitHub
 
 # Use those templates
