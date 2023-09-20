@@ -28,7 +28,7 @@ resources:
     - repository: templates
       type: github
       name: microsoft/vscode-azuretools
-      ref: nat/azure-pipelines-web-build
+      ref: main
       endpoint: GitHub
 
 # Use those templates
