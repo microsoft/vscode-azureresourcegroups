@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { TenantIdDescription } from '@azure/arm-subscriptions';
 import type { AzureSubscription, AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import { Disposable, Event } from 'vscode';
 import { MockResources } from './mockServiceFactory';
@@ -38,6 +39,12 @@ export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider 
 
     public async signOut(): Promise<void> {
         throw new Error('Method not implemented.');
+    }
+
+    public async getTenants(): Promise<TenantIdDescription[]> {
+        return [{
+            tenantId: 'tenantId',
+        }];
     }
 
     public onDidSignIn: Event<void> = () => { return new Disposable(() => { }) };
