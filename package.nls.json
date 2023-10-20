@@ -1,5 +1,6 @@
 {
     "azureResourceGroups.logIn": "Sign In",
+    "azureResourceGroups.signInToTenant": "Sign in to Directory...",
     "azureResourceGroups.selectSubscriptions": "Select Subscriptions...",
     "azureResourceGroups.createResourceGroup": "Create Resource Group...",
     "azureResourceGroups.createResourceGroupDetail": "The logical grouping for your resources.",

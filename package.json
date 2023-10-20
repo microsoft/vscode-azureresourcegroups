@@ -47,6 +47,11 @@
         },
         "commands": [
             {
+                "command": "azureResourceGroups.signInToTenant",
+                "title": "%azureResourceGroups.signInToTenant%",
+                "category": "Azure"
+            },
+            {
                 "command": "azureFocusView.refreshTree",
                 "title": "Refresh",
                 "category": "Azure",
