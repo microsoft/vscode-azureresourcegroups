@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscription } from '@microsoft/vscode-azext-azureauth';
+import { AzureSubscription, getUnauthenticatedTenants } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
@@ -79,11 +79,21 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                     )];
                 } else if (await subscriptionProvider.isSignedIn()) {
                     let subscriptions: AzureSubscription[];
-
                     if ((subscriptions = await subscriptionProvider.getSubscriptions(true)).length === 0) {
-                        return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
-                            commandId: 'azureResourceGroups.selectSubscriptions'
-                        })]
+                        if (
+                            // If there are no subscriptions at all (ignoring filters) AND if unauthenicated tenants exist
+                            (await subscriptionProvider.getSubscriptions(false)).length === 0 &&
+                            (await getUnauthenticatedTenants(subscriptionProvider)).length > 0
+                        ) {
+                            // Subscriptions might exist in an unauthenticated tenant
+                            return [new GenericItem(localize('signInToDirectory', 'Sign in to Directory...'), {
+                                commandId: 'azureResourceGroups.signInToTenant'
+                            })];
+                        } else {
+                            return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
+                                commandId: 'azureResourceGroups.selectSubscriptions'
+                            })]
+                        }
                     } else {
                         return subscriptions.map(
                             subscription => new SubscriptionItem(
