@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { ext } from '../extensionVariables';
@@ -61,6 +62,7 @@ export function registerCommands(): void {
 
     registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context));
     registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext) => selectSubscriptions(context));
+    registerCommand('azureResourceGroups.signInToTenant', async () => signInToTenant(await ext.subscriptionProviderFactory()));
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
