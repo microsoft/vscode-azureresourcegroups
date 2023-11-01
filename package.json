@@ -575,7 +575,7 @@
         "build": "tsc && gulp webpack-prod",
         "cleanReadme": "gulp cleanReadme",
         "compile": "tsc -watch",
-        "package": "vsce package --githubBranch main",
+        "package": "vsce package",
         "lint": "eslint --ext .ts .",
         "lint-fix": "eslint --ext .ts . --fix",
         "listIcons": "gulp listIcons",
