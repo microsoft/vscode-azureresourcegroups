@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscription, getUnauthenticatedTenants } from '@microsoft/vscode-azext-azureauth';
-import { IActionContext, registerEvent } from '@microsoft/vscode-azext-utils';
+import { IActionContext, callWithTelemetryAndErrorHandling, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
@@ -78,6 +78,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                         }
                     )];
                 } else if (await subscriptionProvider.isSignedIn()) {
+                    this.sendSubscriptionTelemetryIfNeeded();
                     let subscriptions: AzureSubscription[];
                     if ((subscriptions = await subscriptionProvider.getSubscriptions(true)).length === 0) {
                         if (
@@ -134,5 +135,35 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         }
 
         return undefined;
+    }
+
+    private hasSentSubscriptionTelemetry = false;
+    private sendSubscriptionTelemetryIfNeeded(): void {
+        if (this.hasSentSubscriptionTelemetry) {
+            return;
+        }
+        this.hasSentSubscriptionTelemetry = true;
+
+        // This event is relied upon by the DevDiv Analytics and Growth Team
+        void callWithTelemetryAndErrorHandling('updateSubscriptionsAndTenants', async (context: IActionContext) => {
+            context.telemetry.properties.isActivationEvent = 'true';
+            context.errorHandling.suppressDisplay = true;
+
+            const subscriptionProvider = await this.getAzureSubscriptionProvider();
+            const subscriptions = await subscriptionProvider.getSubscriptions(false);
+
+            const tenantSet = new Set<string>();
+            const subscriptionSet = new Set<string>();
+            subscriptions.forEach(sub => {
+                tenantSet.add(sub.tenantId);
+                subscriptionSet.add(sub.subscriptionId);
+            });
+
+            // Number of tenants and subscriptions really belong in Measurements but for backwards compatibility
+            // they will be put into Properties instead.
+            context.telemetry.properties.numtenants = tenantSet.size.toString();
+            context.telemetry.properties.numsubscriptions = subscriptionSet.size.toString();
+            context.telemetry.properties.subscriptions = JSON.stringify(Array.from(subscriptionSet));
+        });
     }
 }
