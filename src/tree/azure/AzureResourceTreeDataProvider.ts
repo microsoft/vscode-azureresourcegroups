@@ -78,7 +78,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                         }
                     )];
                 } else if (await subscriptionProvider.isSignedIn()) {
-                    void this.sendSubscriptionTelemetryIfNeeded();
+                    this.sendSubscriptionTelemetryIfNeeded();
                     let subscriptions: AzureSubscription[];
                     if ((subscriptions = await subscriptionProvider.getSubscriptions(true)).length === 0) {
                         if (
@@ -138,7 +138,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
     }
 
     private hasSentSubscriptionTelemetry = false;
-    private async sendSubscriptionTelemetryIfNeeded(): Promise<void> {
+    private sendSubscriptionTelemetryIfNeeded(): void {
         if (this.hasSentSubscriptionTelemetry) {
             return;
         }
