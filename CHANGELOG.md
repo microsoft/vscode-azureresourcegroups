@@ -13,23 +13,24 @@ The Azure Resources extension now uses the [built-in VS Code Microsoft authentic
 ##### How to Sign In
 
 Sign in by selecting the "Sign in to Azure..." item in the Azure Resources view.
-![Sign In using view](resources/changelog/sign-in.png)
+
+<img width="379" alt="Sign in" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/cd86687c-9a9f-4d0b-b8dc-7eef071d657a">
 
 You can also sign in using the new "Azure: Sign In" command contributed by the Azure Resources extension. Note: make sure you don't mistake it for the old Azure Account "Azure: Sign In" command.
 
-![Sign in using command palette](resources/changelog/sign-in-palette.png)
+<img width="471" alt="Sign in using command palette" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/4e9dbd3b-86aa-4d83-80f0-055286e9f460">
 
 ##### How to Sign Out
 
 Sign out in the Accounts menu located in the bottom left of your VS Code window.
 
-![How to Sign Out using the Accounts menu](resources/changelog/sign-out.png)
+<img width="568" alt="Sign out with Accounts menu" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/627e62aa-5216-431b-b061-e23732417aab">
 
 ##### Filter Subscriptions
 
 You can filter the displayed subscriptions just as before, by selecting the Filter icon on any subscription.
 
-![Filter subscriptions using the Select Subscriptions... button](resources/changelog/filter-subs.png)
+<img width="546" alt="Filter subscriptions" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/d57712cf-276f-41c1-8264-3974543d1ae6">
 
 The filtered subscriptions are stored in the new `azureResourceGroups.selectedSubscriptions` setting.
 
@@ -43,11 +44,11 @@ The Azure Account extension will be deprecated in the future. Azure Account is u
 
 Until the Azure Account extension is removed as a dependency on all the Azure extensions, it will still be installed. However, it's no longer used by the extensions so signing in using the old commands will not work with the Azure Resources extension. For example, the "Azure: Sign in with Device Code", "Azure: Sign In", and "Azure: Sign Out" commands are all Azure Account specific commands, and are no longer integrated with Azure Resources.
 
-![Azure Account command palette commands](resources/changelog/old-commands.png)
+<img width="603" alt="Azure Account commands" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/7b795a82-689d-43ab-a925-e19ceef30a29">
 
 Also, the Azure Account status bar may appear if another extension still uses Azure Account for authentication. Just know that this status bar item is no longer connected to Azure Resources, and won't reflect the authentication state of our extensions.
 
-![Azure Account status bar](resources/changelog/old-status-bar.png)
+<img width="374" alt="Azure Account status bar item" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/7512e376-686d-423d-94c3-557d889d4507">
 
 ### Engineering
 * [[#718]](https://github.com/microsoft/vscode-azureresourcegroups/pull/718) Migrate to Track 2 SDK
