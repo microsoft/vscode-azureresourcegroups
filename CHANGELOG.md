@@ -1,5 +1,62 @@
 # Change Log
 
+## 0.8.0 - 2023-11-16
+
+### Move to built-in VS Code authentication
+
+The Azure Resources extension now uses the [built-in VS Code Microsoft authentication provider](https://github.com/microsoft/vscode/tree/main/extensions/microsoft-authentication) to authenticate with Azure, and no longer depends on the [Azure Account extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.azure-account). This move increases the reliability of Azure authentication, especially when using a proxy.
+
+### What's new?
+
+##### How to Sign In
+
+Sign in by selecting the "Sign in to Azure..." item in the Azure Resources view.
+
+> Note: Sessions won't be migrated from Azure Account to the new built-in authentication. This means you will have to sign in once Azure Resources updates to v0.8.0.
+
+<img width="379" alt="Sign in" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/cd86687c-9a9f-4d0b-b8dc-7eef071d657a">
+
+You can also sign in using the new "Azure: Sign In" command contributed by the Azure Resources extension. Note: make sure you don't mistake it for the old Azure Account "Azure: Sign In" command.
+
+<img width="471" alt="Sign in using command palette" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/4e9dbd3b-86aa-4d83-80f0-055286e9f460">
+
+##### How to Sign Out
+
+Sign out in the Accounts menu located in the bottom left of your VS Code window.
+
+<img width="568" alt="Sign out with Accounts menu" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/9a83119a-bf4b-45dd-9ddd-02ba3bf61746">
+
+##### Filter Subscriptions
+
+You can filter the displayed subscriptions just as before, by selecting the Filter icon on any subscription. Previously filtered subscriptions will not be migrated automatically.
+
+<img width="546" alt="Filter subscriptions" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/d57712cf-276f-41c1-8264-3974543d1ae6">
+
+The filtered subscriptions are stored in the new `azureResourceGroups.selectedSubscriptions` setting.
+
+##### Sign In to a Specific Directory/Tenant
+
+Use the new "Sign in to Directory" command to sign in to directories that cannot be automatically authenticated to on initial sign in. This is useful for directories/tenants that require MFA. Executing this command will show a menu with a list of unauthenticated directories. If the list is empty, then sessions exist for each directory already.
+
+#### Azure Account extension
+
+The Azure Account extension will be deprecated in the future. Azure Account is used by many partner extensions still, so this will be a slow process. Our team will develop a deprecation plan and a reasonable date.
+
+Until the Azure Account extension is removed as a dependency on all the Azure extensions, it will still be installed. However, it's no longer used by the extensions so signing in using the old commands will not work with the Azure Resources extension. For example, the "Azure: Sign in with Device Code", "Azure: Sign In", and "Azure: Sign Out" commands are all Azure Account specific commands, and are no longer integrated with Azure Resources.
+
+<img width="603" alt="Azure Account commands" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/7b795a82-689d-43ab-a925-e19ceef30a29">
+
+Also, the Azure Account status bar may appear if another extension still uses Azure Account for authentication. Just know that this status bar item is no longer connected to Azure Resources, and won't reflect the authentication state of our extensions.
+
+<img width="374" alt="Azure Account status bar item" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/b2633aec-d66a-4f52-879d-66be6ca9066a">
+
+### Engineering
+* [[#718]](https://github.com/microsoft/vscode-azureresourcegroups/pull/718) Migrate to Track 2 SDK
+* [[#721]](https://github.com/microsoft/vscode-azureresourcegroups/pull/721) Refactor Azure grouping
+* [[#707]](https://github.com/microsoft/vscode-azureresourcegroups/pull/707) Use the new shared authentication provider package
+* [[#742]](https://github.com/microsoft/vscode-azureresourcegroups/pull/742) Add `ArcEnabledServers` resource to `AzExtResourceType` enum
+* [[#735]](https://github.com/microsoft/vscode-azureresourcegroups/pull/735) Support icons next to create commands in quick pick
+
 ## 0.7.5 - 2023-05-18
 
 ### Fixed
