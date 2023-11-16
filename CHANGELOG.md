@@ -24,7 +24,7 @@ You can also sign in using the new "Azure: Sign In" command contributed by the A
 
 Sign out in the Accounts menu located in the bottom left of your VS Code window.
 
-<img width="568" alt="Sign out with Accounts menu" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/627e62aa-5216-431b-b061-e23732417aab">
+<img width="568" alt="Sign out with Accounts menu" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/9a83119a-bf4b-45dd-9ddd-02ba3bf61746">
 
 ##### Filter Subscriptions
 
@@ -48,7 +48,7 @@ Until the Azure Account extension is removed as a dependency on all the Azure ex
 
 Also, the Azure Account status bar may appear if another extension still uses Azure Account for authentication. Just know that this status bar item is no longer connected to Azure Resources, and won't reflect the authentication state of our extensions.
 
-<img width="374" alt="Azure Account status bar item" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/7512e376-686d-423d-94c3-557d889d4507">
+<img width="374" alt="Azure Account status bar item" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/b2633aec-d66a-4f52-879d-66be6ca9066a">
 
 ### Engineering
 * [[#718]](https://github.com/microsoft/vscode-azureresourcegroups/pull/718) Migrate to Track 2 SDK
