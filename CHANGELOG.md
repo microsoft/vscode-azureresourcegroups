@@ -6,13 +6,13 @@
 
 The Azure Resources extension now uses the [built-in VS Code Microsoft authentication provider](https://github.com/microsoft/vscode/tree/main/extensions/microsoft-authentication) to authenticate with Azure, and no longer depends on the [Azure Account extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.azure-account). This move increases the reliability of Azure authentication, especially when using a proxy.
 
-#### What's new?
-
-> Note: sessions won't be migrated from Azure Account to the new built-in authentication. This means you will have to sign in once Azure Resources updates to v0.8.0.
+### What's new?
 
 ##### How to Sign In
 
 Sign in by selecting the "Sign in to Azure..." item in the Azure Resources view.
+
+> Note: Sessions won't be migrated from Azure Account to the new built-in authentication. This means you will have to sign in once Azure Resources updates to v0.8.0.
 
 <img width="379" alt="Sign in" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/cd86687c-9a9f-4d0b-b8dc-7eef071d657a">
 
@@ -28,7 +28,7 @@ Sign out in the Accounts menu located in the bottom left of your VS Code window.
 
 ##### Filter Subscriptions
 
-You can filter the displayed subscriptions just as before, by selecting the Filter icon on any subscription.
+You can filter the displayed subscriptions just as before, by selecting the Filter icon on any subscription. Previously filtered subscriptions will not be migrated automatically.
 
 <img width="546" alt="Filter subscriptions" src="https://github.com/microsoft/vscode-azureresourcegroups/assets/12476526/d57712cf-276f-41c1-8264-3974543d1ae6">
 
