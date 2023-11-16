@@ -1,5 +1,61 @@
 # Change Log
 
+## 0.8.0 - 2023-11-16
+
+### Move to built-in VS Code authentication
+
+The Azure Resources extension now uses the [built-in VS Code Microsoft authentication provider](https://github.com/microsoft/vscode/tree/main/extensions/microsoft-authentication) to authenticate with Azure, and no longer depends on the [Azure Account extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.azure-account). This move increases the reliability of Azure authentication, especially when using a proxy.
+
+#### What's new?
+
+> Note: sessions won't be migrated from Azure Account to the new built-in authentication. This means you will have to sign in once Azure Resources updates to v0.8.0.
+
+##### How to Sign In
+
+Sign in by selecting the "Sign in to Azure..." item in the Azure Resources view.
+![Sign In using view](resources/changelog/sign-in.png)
+
+You can also sign in using the new "Azure: Sign In" command contributed by the Azure Resources extension. Note: make sure you don't mistake it for the old Azure Account "Azure: Sign In" command.
+
+![Sign in using command palette](resources/changelog/sign-in-palette.png)
+
+##### How to Sign Out
+
+Sign out in the Accounts menu located in the bottom left of your VS Code window.
+
+![How to Sign Out using the Accounts menu](resources/changelog/sign-out.png)
+
+##### Filter Subscriptions
+
+You can filter the displayed subscriptions just as before, by selecting the Filter icon on any subscription.
+
+![Filter subscriptions using the Select Subscriptions... button](resources/changelog/filter-subs.png)
+
+The filtered subscriptions are stored in the new `azureResourceGroups.selectedSubscriptions` setting.
+
+##### Sign In to a Specific Directory/Tenant
+
+Use the new "Sign in to Directory" command to sign in to directories that cannot be automatically authenticated to on initial sign in. This is useful for directories/tenants that require MFA. Executing this command will show a menu with a list of unauthenticated directories. If the list is empty, then sessions exist for each directory already.
+
+#### Azure Account extension
+
+The Azure Account extension will be deprecated in the future. Azure Account is used by many partner extensions still, so this will be a slow process. Our team will develop a deprecation plan and a reasonable date.
+
+Until the Azure Account extension is removed as a dependency on all the Azure extensions, it will still be installed. However, it's no longer used by the extensions so signing in using the old commands will not work with the Azure Resources extension. For example, the "Azure: Sign in with Device Code", "Azure: Sign In", and "Azure: Sign Out" commands are all Azure Account specific commands, and are no longer integrated with Azure Resources.
+
+![Azure Account command palette commands](resources/changelog/old-commands.png)
+
+Also, the Azure Account status bar may appear if another extension still uses Azure Account for authentication. Just know that this status bar item is no longer connected to Azure Resources, and won't reflect the authentication state of our extensions.
+
+![Azure Account status bar](resources/changelog/old-status-bar.png)
+
+### Engineering
+* [[#718]](https://github.com/microsoft/vscode-azureresourcegroups/pull/718) Migrate to Track 2 SDK
+* [[#721]](https://github.com/microsoft/vscode-azureresourcegroups/pull/721) Refactor Azure grouping
+* [[#707]](https://github.com/microsoft/vscode-azureresourcegroups/pull/707) Use the new shared authentication provider package
+* [[#742]](https://github.com/microsoft/vscode-azureresourcegroups/pull/742) Add `ArcEnabledServers` resource to `AzExtResourceType` enum
+* [[#735]](https://github.com/microsoft/vscode-azureresourcegroups/pull/735) Support icons next to create commands in quick pick
+
 ## 0.7.5 - 2023-05-18
 
 ### Fixed
