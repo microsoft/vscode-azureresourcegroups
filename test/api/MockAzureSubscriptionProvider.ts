@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TenantIdDescription } from '@azure/arm-subscriptions';
+import type { TenantIdDescription } from '@azure/arm-resources-subscriptions';
 import type { AzureSubscription, AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import { Disposable, Event } from 'vscode';
 import { MockResources } from './mockServiceFactory';
