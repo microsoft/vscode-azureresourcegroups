@@ -587,7 +587,6 @@
         "api-extractor": "tsc -p ./api && api-extractor run -c ./api/api-extractor.json"
     },
     "devDependencies": {
-        "@azure/arm-resources-subscriptions": "^2.1.0",
         "@microsoft/api-extractor": "^7.33.8",
         "@microsoft/eslint-config-azuretools": "^0.2.1",
         "@microsoft/vscode-azext-dev": "^2.0.0",
@@ -616,7 +615,8 @@
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
-        "@microsoft/vscode-azext-azureauth": "file:../vscode-azuretools/auth/microsoft-vscode-azext-azureauth-2.0.0.tgz",
+        "@azure/arm-subscriptions": "^5.1.0",
+        "@microsoft/vscode-azext-azureauth": "^1.4.0",
         "@microsoft/vscode-azext-azureutils": "^2.0.0",
         "@microsoft/vscode-azext-utils": "^2.0.0",
         "buffer": "^6.0.3",
