@@ -88,6 +88,7 @@ const azureTypeToAzExtResourceTypeMap: Record<string, AzExtResourceType | undefi
     'microsoft.servicefabric/clusters': AzExtResourceType.ServiceFabricClusters,
     'microsoft.servicefabricmesh/applications': AzExtResourceType.ServiceFabricMeshApplications,
     'microsoft.signalrservice/signalr': AzExtResourceType.SignalRService,
+    'microsoft.signalrservice/webpubsub': AzExtResourceType.WebPubSub,
     'microsoft.appplatform/spring': AzExtResourceType.SpringApps,
     'microsoft.sql/servers': AzExtResourceType.SqlServers,
     'microsoft.sql/servers/databases': AzExtResourceType.SqlDatabases,

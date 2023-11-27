@@ -68,7 +68,8 @@
                 "--extensionDevelopmentPath=${workspaceFolder}/../vscode-cosmosdb",
                 "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurecontainerapps",
                 "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurespringcloud",
-                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurelogicapps"
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurelogicapps",
+                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurewebpubsub",
             ],
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js"
