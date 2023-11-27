@@ -46,6 +46,10 @@ The filtered subscriptions are stored in the new `azureResourceGroups.selectedSu
 
 Use the new "Sign in to Directory" command to sign in to directories that cannot be automatically authenticated to on initial sign in. This is useful for directories/tenants that require MFA. Executing this command will show a menu with a list of unauthenticated directories. If the list is empty, then sessions exist for each directory already.
 
+#### Using Sovereign Clouds
+
+To connect to a sovereign cloud, set the `microsoft-sovereign-cloud.environment` setting.
+
 ## Support for [vscode.dev](https://vscode.dev/)
 
 The Azure Resources extension fully supports running on [vscode.dev](https://vscode.dev/) and [github.dev](http://github.dev/). This means you can use the Azure Resources extension to manage your Azure resources directly from your browser! Note that this does not require the Azure Accounts extension and uses VS Code's built-in authentication provider.
