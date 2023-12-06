@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
-import { AzExtTreeDataProvider, IAzExtLogOutputChannel } from "@microsoft/vscode-azext-utils";
+import { AzExtTreeDataProvider, IAzExtLogOutputChannel, IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
 import { AzExtResourceType } from "api/src/AzExtResourceType";
 import { DiagnosticCollection, Disposable, ExtensionContext, TreeView, UIKind, env } from "vscode";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
@@ -65,6 +65,8 @@ export namespace ext {
     export let focusViewTreeDataProvider: FocusViewTreeDataProvider;
 
     export const actions = extActions;
+
+    export let experimentationService: IExperimentationServiceAdapter | undefined;
 }
 
 export type ResourceTypeGrouping = {
