@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.8.1 - 2023-11-28
+
+### Fixed
+* Fix support for sovereign clouds
+
+Note: Make sure to set `microsoft-sovereign-cloud.environment` to the correct environment when using a sovereign cloud.
+
 ## 0.8.0 - 2023-11-16
 
 ### Move to built-in VS Code authentication
