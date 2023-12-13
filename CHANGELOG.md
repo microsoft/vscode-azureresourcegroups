@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.8.2 - 2023-11-28
+
+### Fixed
+* Fix zip deploy on sovereign clouds (Azure Functions and Azure App Service)
+
 ## 0.8.1 - 2023-11-28
 
 ### Fixed
