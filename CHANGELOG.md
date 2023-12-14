@@ -1,11 +1,17 @@
 # Change Log
 
-## 0.8.2 - 2023-11-28
+## 0.8.3 - 2023-12-14
+
+### Fixed
+* Fix zip deploy failing with a "Number of entries expected in End Of Central Directory" error
+* Fix soverign cloud support
+
+## 0.8.2 - 2023-12-13
 
 ### Fixed
 * Fix zip deploy on sovereign clouds (Azure Functions and Azure App Service)
 
-## 0.8.1 - 2023-11-28
+## 0.8.1 - 2023-12-13
 
 ### Fixed
 * Fix support for sovereign clouds
