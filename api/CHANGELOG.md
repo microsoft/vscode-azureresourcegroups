@@ -6,9 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
-## [2.2.0] - 2023-08-24
+## [2.2.0] - 2024-01-30
 
 * Add `getAzExtResourceType` function
+* Add "Arc-enabled Machines" resource type
 
 ## [2.1.0] - 2023-06-13
 

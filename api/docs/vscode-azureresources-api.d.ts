@@ -38,7 +38,7 @@ export declare namespace apiUtils {
  */
 export declare enum AzExtResourceType {
     AppServices = "AppServices",
-    ArcEnabledServers = "ArcEnabledServers",
+    ArcEnabledMachines = "ArcEnabledMachines",
     AzureCosmosDb = "AzureCosmosDb",
     ContainerApps = "ContainerApps",
     ContainerAppsEnvironment = "ContainerAppsEnvironment",
