@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## [2.2.1] - 2024-01-30
+
+* Rename "Arc-enabled Servers" to "Azure Arc-enabled Machines"
+
 ## [2.2.0] - 2023-08-24
 
 * Add `getAzExtResourceType` function
