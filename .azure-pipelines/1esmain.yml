@@ -2,7 +2,6 @@
 trigger:
   - main
   - rel/*
-  - '*'
 
 # Disable PR trigger
 pr: none
