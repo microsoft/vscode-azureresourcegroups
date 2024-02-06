@@ -520,8 +520,7 @@
                     {
                         "id": "sign-in",
                         "title": "Sign into your Azure account",
-                        "description": "Sign in or create an Azure Account to see all of the resources within your Azure subscription.\n[Sign In](command:azure-account.login)\n",
-                        "when": "!azure-account.signedIn",
+                        "description": "Sign in or create an Azure Account to see all of the resources within your Azure subscription.\n[Sign In](command:azureResourceGroups.logIn)\n",
                         "media": {
                             "svg": "resources/walkthrough/signin.svg",
                             "altText": "Sign into your Azure Account."
