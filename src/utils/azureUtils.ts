@@ -89,6 +89,7 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     AppServiceKubernetesEnvironment: { displayName: localize('containerService', 'App Service Kubernetes Environment') },
     AppServicePlans: { displayName: localize('serverFarms', 'App Service plans') },
     AppServices: { displayName: localize('webApp', 'App Services') },
+    ArcEnabledMachines: { displayName: localize('arcEnabledMachines', 'Azure Arc-enabled machines') },
     AvailabilitySets: { displayName: localize('availabilitySets', 'Availability sets') },
     AzureCosmosDb: { displayName: localize('documentDB', 'Azure Cosmos DB') },
     BatchAccounts: { displayName: localize('batchAccounts', 'Batch accounts') },
