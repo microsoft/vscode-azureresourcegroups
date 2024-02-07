@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.8.4 - 2024-02-07
+
+### Added
+* [[747]](https://github.com/microsoft/vscode-azureresourcegroups/pull/747) Add Azure Arc-enabled machines to the resources view. See the new [Azure Arc-enabled machines extension](https://github.com/microsoft/vscode-azurearcenabledmachines) for more details.
+
+### Fixed
+* [[811]](https://github.com/microsoft/vscode-azureresourcegroups/pull/811) Update walkthrough sign in command to use the new built-in authentication provider
+
 ## 0.8.3 - 2023-12-14
 
 ### Fixed
