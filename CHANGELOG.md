@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Fixed
+* [[820]](https://github.com/microsoft/vscode-azureresourcegroups/pull/820) Fix bug that prevents resource groups from loading when there's a ghost resource
+
 ## 0.8.4 - 2024-02-07
 
 ### Added
