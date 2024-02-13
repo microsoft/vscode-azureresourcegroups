@@ -46,7 +46,15 @@ function groupBy({ allResources, keySelector, initialGrouping, groupingItemFacto
         },
         initialGrouping);
 
-    return Object.entries(map).map(([key, resources]) => groupingItemFactory(key, resources));
+    const groupingItems: GroupingItem[] = [];
+    Object.entries(map).forEach(([key, resources]) => {
+        try {
+            groupingItems.push(groupingItemFactory(key, resources));
+        } catch (e) {
+            ext.outputChannel.error(`Error creating grouping item for key: "${key}"`, e);
+        }
+    });
+    return groupingItems;
 }
 
 export class AzureResourceGroupingManager extends vscode.Disposable {
