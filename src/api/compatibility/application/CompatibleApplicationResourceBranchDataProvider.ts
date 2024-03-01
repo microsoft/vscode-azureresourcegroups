@@ -5,7 +5,6 @@
 
 import { AzExtTreeItem, createSubscriptionContext, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import type { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
-import { ext } from 'src/extensionVariables';
 import { l10n } from 'vscode';
 import type { AzureResource, ResourceModelBase } from '../../../../api/src/index';
 import { CompatibleBranchDataProviderBase } from '../CompatibleBranchDataProviderBase';
@@ -30,7 +29,6 @@ export class CompatibleApplicationResourceBranchDataProvider<TResource extends A
         const resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
         if (!resolved) {
             const noResolveError = l10n.t('Could not resolve resource "{0}"', element.id);
-            ext.outputChannel.appendLog(noResolveError);
             throw new Error(noResolveError);
         }
         const result = CompatibleResolvedApplicationResourceTreeItem.Create(element, resolved, subscriptionContext, this, element) as unknown as TModel;
