@@ -571,7 +571,7 @@
     },
     "scripts": {
         "vscode:prepublish": "npm run cleanReadme",
-        "build": "tsc && gulp webpack-prod",
+        "build": "tsc",
         "cleanReadme": "gulp cleanReadme",
         "compile": "tsc -watch",
         "package": "vsce package --githubBranch main",
