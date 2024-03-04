@@ -570,7 +570,7 @@
         ]
     },
     "scripts": {
-        "vscode:prepublish": "npm run cleanReadme",
+        "vscode:prepublish": "npm run webpack-prod",
         "build": "tsc",
         "cleanReadme": "gulp cleanReadme",
         "compile": "tsc -watch",
