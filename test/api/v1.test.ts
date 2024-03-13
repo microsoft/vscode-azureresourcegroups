@@ -7,7 +7,7 @@ suite('v1 API tests', async () => {
 
         assert.ok(apiProvider, 'API provider is undefined');
 
-        const v1Api = apiProvider.getApi('0.0.1', {
+        const v1Api = apiProvider.getApi('0.0.2', {
             extensionId: 'ms-azuretools.vscode-azureresourcegroups-tests',
         });
 

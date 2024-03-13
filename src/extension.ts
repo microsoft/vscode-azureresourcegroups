@@ -7,6 +7,7 @@
 
 import { registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
@@ -152,6 +153,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.appResourceTree = new CompatibleAzExtTreeDataProvider(azureResourceTreeDataProvider);
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
 
+    const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
+        async (filter: boolean) => { return await (await azureResourceTreeDataProvider.getAzureSubscriptionProvider()).getSubscriptions(filter) };
+
     return createApiProvider(
         [
             {
@@ -166,6 +170,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                     registerWorkspaceResourceProvider,
                     registerActivity,
                     pickAppResource: createCompatibilityPickAppResource(),
+                    getSubscriptions,
                 }),
             },
             v2ApiFactory,

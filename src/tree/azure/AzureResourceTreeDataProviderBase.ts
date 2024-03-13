@@ -48,7 +48,7 @@ export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeData
         return super.isAncestorOf(element, id)
     }
 
-    protected async getAzureSubscriptionProvider(): Promise<AzureSubscriptionProvider> {
+    public async getAzureSubscriptionProvider(): Promise<AzureSubscriptionProvider> {
         // override for testing
         if (ext.testing.overrideAzureSubscriptionProvider) {
             return ext.testing.overrideAzureSubscriptionProvider();
