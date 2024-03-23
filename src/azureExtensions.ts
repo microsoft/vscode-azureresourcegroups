@@ -113,7 +113,15 @@ export const azureExtensions: IAzExtMetadata[] = [
             url: 'https://aka.ms/lalearn'
         },
         reportIssueCommandId: 'azureLogicAppsStandard.reportIssue'
-    }
+    },
+    {
+        name: 'vscode-azurewebpubsub',
+        label: 'Web PubSub',
+        resourceTypes: [
+            AzExtResourceType.WebPubSub
+        ],
+        reportIssueCommandId: 'azureWebPubSub.reportIssue'
+    },
 ];
 
 export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
@@ -124,7 +132,8 @@ export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
     AzureCosmosDb: 'microsoft.documentdb/databaseaccounts',
     PostgresqlServersStandard: 'microsoft.dbforpostgresql/servers',
     PostgresqlServersFlexible: 'microsoft.dbforpostgresql/flexibleservers',
-    SpringApps: 'microsoft.appplatform/spring'
+    SpringApps: 'microsoft.appplatform/spring',
+    WebPubSub: 'microsoft.signalrservice/webpubsub'
 }
 
 export interface IAzExtMetadata {
