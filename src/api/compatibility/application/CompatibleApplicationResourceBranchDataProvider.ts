@@ -5,7 +5,9 @@
 
 import { AzExtTreeItem, createSubscriptionContext, ISubscriptionContext } from '@microsoft/vscode-azext-utils';
 import type { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
+import { l10n } from 'vscode';
 import type { AzureResource, ResourceModelBase } from '../../../../api/src/index';
+import { ext } from '../../../extensionVariables';
 import { CompatibleBranchDataProviderBase } from '../CompatibleBranchDataProviderBase';
 import { CompatibleResolvedApplicationResourceTreeItem } from './CompatibleApplicationResourceTreeItem';
 
@@ -26,9 +28,12 @@ export class CompatibleApplicationResourceBranchDataProvider<TResource extends A
         const subscriptionContext: ISubscriptionContext = createSubscriptionContext(element.subscription);
 
         const resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
-        // the fact that resolved can be null makes this painful to assert with nonNullValue
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        const result = CompatibleResolvedApplicationResourceTreeItem.Create(element, resolved!, subscriptionContext, this, element) as unknown as TModel;
+        if (!resolved) {
+            const noResolveError = l10n.t('Could not resolve resource "{0}"', element.id);
+            ext.outputChannel.appendLog(noResolveError);
+            throw new Error(noResolveError);
+        }
+        const result = CompatibleResolvedApplicationResourceTreeItem.Create(element, resolved, subscriptionContext, this, element) as unknown as TModel;
         Object.defineProperty(result, 'fullId', {
             get: () => {
                 return element.id;
