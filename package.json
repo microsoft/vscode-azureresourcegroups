@@ -396,6 +396,10 @@
             ],
             "commandPalette": [
                 {
+                    "command": "azureResourceGroups.maintainCloudShellConnection",
+                    "when": "never"
+                },
+                {
                     "command": "azureResourceGroups.showGroupOptions",
                     "when": "never"
                 },
