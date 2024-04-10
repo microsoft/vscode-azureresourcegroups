@@ -618,7 +618,7 @@
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
         "@microsoft/vscode-azext-azureauth": "^2.3.0",
         "@microsoft/vscode-azext-azureutils": "^2.0.0",
-        "@microsoft/vscode-azext-utils": "^2.0.0",
+        "@microsoft/vscode-azext-utils": "^2.4.0",
         "buffer": "^6.0.3",
         "jsonc-parser": "^2.2.1",
         "uuid": "^9.0.0",

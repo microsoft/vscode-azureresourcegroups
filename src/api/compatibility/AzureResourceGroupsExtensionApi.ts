@@ -5,10 +5,11 @@
 
 import { AzExtTreeDataProvider, AzExtTreeItem, ITreeItemPickerContext } from '@microsoft/vscode-azext-utils';
 import { Activity, AppResourceResolver, AzureHostExtensionApi, AzureResourceGroupsExtensionApi, LocalResourceProvider, PickAppResourceOptions, WorkspaceResourceProvider } from '@microsoft/vscode-azext-utils/hostapi';
+import { AzureSubscription } from 'api/src';
 import { Disposable, TreeView } from 'vscode';
 
 export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensionApi, AzureResourceGroupsExtensionApi {
-    public static apiVersion = '0.0.1';
+    public static apiVersion = '0.0.2';
 
     #appResourceTree: AzExtTreeDataProvider;
     #appResourceTreeView: TreeView<unknown>;
@@ -19,6 +20,7 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
     #registerWorkspaceResourceProvider: (id: string, resolver: WorkspaceResourceProvider) => Disposable;
     #registerActivity: (activity: Activity) => Promise<void>;
     #pickAppResource: <T extends AzExtTreeItem>(context: ITreeItemPickerContext, options?: PickAppResourceOptions) => Promise<T>;
+    #getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]>;
 
     // This `Omit` is here because the interface expects those keys to be defined, but in this object they will not be
     // They are replaced with functions defined on this class that merely wrap the newly-named keys
@@ -33,6 +35,11 @@ export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensi
         this.#registerWorkspaceResourceProvider = options.registerWorkspaceResourceProvider;
         this.#registerActivity = options.registerActivity;
         this.#pickAppResource = options.pickAppResource;
+        this.#getSubscriptions = options.getSubscriptions;
+    }
+
+    public get getSubscriptions(): (filter: boolean) => Promise<AzureSubscription[]> {
+        return this.#getSubscriptions;
     }
 
     public get appResourceTree(): AzExtTreeDataProvider {
