@@ -13,6 +13,7 @@ import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { logIn } from './accounts/logIn';
 import { selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
+import { maintainCloudShellConnection } from './cloudShell';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroupV2 } from './deleteResourceGroup/v2/deleteResourceGroupV2';
@@ -30,6 +31,8 @@ import { editTags } from './tags/editTags';
 import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
+    registerCommand('azureResourceGroups.maintainCloudShellConnection', maintainCloudShellConnection);
+
     // Special-case refresh that ignores the selected/focused node and always refreshes the entire tree. Used by the refresh button in the tree title.
     registerCommand('azureResourceGroups.refreshTree', () => ext.actions.refreshAzureTree());
     registerCommand('azureWorkspace.refreshTree', () => ext.actions.refreshWorkspaceTree());
