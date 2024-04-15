@@ -9,7 +9,7 @@ import { AzureSubscription } from 'api/src';
 import { Disposable, TreeView } from 'vscode';
 
 export class InternalAzureResourceGroupsExtensionApi implements AzureHostExtensionApi, AzureResourceGroupsExtensionApi {
-    public static apiVersion = '0.0.2';
+    public static apiVersion = '0.0.1';
 
     #appResourceTree: AzExtTreeDataProvider;
     #appResourceTreeView: TreeView<unknown>;
