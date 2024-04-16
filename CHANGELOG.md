@@ -2,8 +2,16 @@
 
 ## Unreleased
 
+## 0.8.5 - 2024-04-18
+
 ### Fixed
 * [[820]](https://github.com/microsoft/vscode-azureresourcegroups/pull/820) Fix bug that prevents resource groups from loading when there's a ghost resource
+* [[825]](https://github.com/microsoft/vscode-azureresourcegroups/pull/825) Throw a better error for any item that resolves as undefined
+
+### Engineering
+
+* [[829]](https://github.com/microsoft/vscode-azureresourcegroups/pull/829) Add `listSubscriptions` method to v1 Resource Groups API to support [4402](https://github.com/microsoft/vscode-azurefunctions/pull/4042)
+* [[836]](https://github.com/microsoft/vscode-azureresourcegroups/pull/836) Add maintainCloudShellConnection command
 
 ## 0.8.4 - 2024-02-07
 
