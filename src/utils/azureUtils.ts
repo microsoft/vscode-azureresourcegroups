@@ -118,4 +118,5 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     VirtualMachines: { displayName: localize('virtualMachines', 'Virtual machines') },
     VirtualMachineScaleSets: { displayName: localize('virtualMachineScaleSets', 'Virtual machine scale sets') },
     VirtualNetworks: { displayName: localize('virtualNetworks', 'Virtual networks') },
+    WebPubSub: { displayName: localize('webPubSub', 'Web PubSub') }
 }

@@ -72,4 +72,5 @@ export enum AzExtResourceType {
     VirtualMachineScaleSets = 'VirtualMachineScaleSets',
     VirtualNetworks = 'VirtualNetworks',
     WebHostingEnvironments = 'WebHostingEnvironments',
+    WebPubSub = 'WebPubSub',
 }
