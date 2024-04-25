@@ -3,6 +3,8 @@
 ## Unreleased
 
 ## 0.8.6 - 2024-04-25
+
+### Added
 * [[777]](https://github.com/microsoft/vscode-azureresourcegroups/pull/777) Add Azure Web Pub Sub service to the resources view.
 
 ## 0.8.5 - 2024-04-17
