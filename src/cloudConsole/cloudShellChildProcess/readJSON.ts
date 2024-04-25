@@ -1,3 +1,10 @@
+/*---------------------------------------------------------------------------------------------
+*  Copyright (c) Microsoft Corporation. All rights reserved.
+*  Licensed under the MIT License. See License.txt in the project root for license information.
+*--------------------------------------------------------------------------------------------*/
+
+// file is imported by cloudConsoleLauncher.ts, which is run as a child process from the extension host and communicates via IPC
+// do not add any VS Code related dependencies to this file, as it is not run in the extension host
 import * as http from 'http';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,17 +23,3 @@ export async function readJSON<T>(req: http.IncomingMessage): Promise<any> {
     });
 }
 
-export async function sendData(socketPath: string, data: string): Promise<http.IncomingMessage> {
-    return new Promise<http.IncomingMessage>((resolve, reject) => {
-        const opts: http.RequestOptions = {
-            socketPath,
-            path: '/',
-            method: 'POST'
-        };
-
-        const req = http.request(opts, res => resolve(res));
-        req.on('error', (err: Error) => reject(err));
-        req.write(data);
-        req.end();
-    });
-}

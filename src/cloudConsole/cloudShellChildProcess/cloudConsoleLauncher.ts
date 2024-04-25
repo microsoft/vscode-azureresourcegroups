@@ -9,9 +9,24 @@ import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import * as request from 'request-promise';
 import * as WS from 'ws';
-import { readJSON, sendData } from './ipcUtils';
+import { readJSON } from './readJSON';
 
-export function delay<T = void>(ms: number, result?: T | PromiseLike<T>): Promise<T | PromiseLike<T> | undefined> {
+async function sendData(socketPath: string, data: string): Promise<http.IncomingMessage> {
+    return new Promise<http.IncomingMessage>((resolve, reject) => {
+        const opts: http.RequestOptions = {
+            socketPath,
+            path: '/',
+            method: 'POST'
+        };
+
+        const req = http.request(opts, res => resolve(res));
+        req.on('error', (err: Error) => reject(err));
+        req.write(data);
+        req.end();
+    });
+}
+
+function delay<T = void>(ms: number, result?: T | PromiseLike<T>): Promise<T | PromiseLike<T> | undefined> {
     return new Promise(resolve => setTimeout(() => resolve(result), ms));
 }
 

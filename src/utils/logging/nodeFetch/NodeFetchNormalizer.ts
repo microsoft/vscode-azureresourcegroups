@@ -3,10 +3,9 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import type { Headers, Request, Response } from "node-fetch";
 import type { HttpNormalizer, NormalizedHttpRequest, NormalizedHttpResponse } from "../HttpLogger";
 
-type NodeFetchResponseInfo = {response: Response, request: Request, bodyAsText: string };
+type NodeFetchResponseInfo = { response: Response, request: Request, bodyAsText: string };
 
 export class NodeFetchNormalizer implements HttpNormalizer<Request, NodeFetchResponseInfo> {
     normalizeRequest(request: Request): NormalizedHttpRequest {
@@ -28,8 +27,8 @@ export class NodeFetchNormalizer implements HttpNormalizer<Request, NodeFetchRes
 
     private convertNodeFetchHeaders(headers: Headers): Record<string, string> {
         const headersRecord: Record<string, string> = {};
-        Object.entries(headers.raw()).forEach(([key, value]) => {
-            headersRecord[key] = value.join(', ');
+        headers.forEach((value, key) => {
+            headersRecord[key] = value;
         });
         return headersRecord;
     }

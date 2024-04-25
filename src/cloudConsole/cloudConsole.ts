@@ -3,27 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { TenantIdDescription } from '@azure/arm-resources-subscriptions';
 import { AzureSubscriptionProvider, getConfiguredAzureEnv } from '@microsoft/vscode-azext-azureauth';
-import { IActionContext, IParsedError, callWithTelemetryAndErrorHandlingSync, parseError } from '@microsoft/vscode-azext-utils';
+import { IActionContext, IAzureQuickPickItem, IParsedError, callWithTelemetryAndErrorHandlingSync, parseError } from '@microsoft/vscode-azext-utils';
 import * as cp from 'child_process';
 import * as FormData from 'form-data';
 import { ReadStream } from 'fs';
-import * as http from 'http';
 import { ClientRequest } from 'http';
 import { Socket } from 'net';
 import * as path from 'path';
-import * as request from 'request-promise';
 import * as semver from 'semver';
 import { UrlWithStringQuery, parse } from 'url';
-import { CancellationToken, EventEmitter, MessageItem, Terminal, TerminalOptions, TerminalProfile, ThemeIcon, Uri, authentication, commands, env, window, workspace } from 'vscode';
+import { CancellationToken, EventEmitter, MessageItem, Terminal, TerminalOptions, TerminalProfile, ThemeIcon, UIKind, Uri, authentication, commands, env, version, window, workspace } from 'vscode';
 import { ext } from '../extensionVariables';
 import { localize } from '../utils/localize';
+import { fetchWithLogging } from '../utils/logging/nodeFetch/nodeFetch';
 import { CloudShell, CloudShellInternal, CloudShellStatus, UploadOptions } from './CloudShellInternal';
 import { Deferred, delay, logAttemptingToReachUrlMessage } from './cloudConsoleUtils';
+import { readJSON } from './cloudShellChildProcess/readJSON';
 import { Queue, Server, createServer } from './ipc';
-import { readJSON } from './ipcUtils';
-import { HttpLogger } from './logging/HttpLogger';
-import { RequestNormalizer } from './logging/request/RequestNormalizer';
 
 function ensureEndingSlash(value: string): string {
     return value.endsWith('/') ? value : `${value}/`;
@@ -287,12 +285,14 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
                 shellArgs.shift();
             }
 
+            const isDarwin = process.platform === 'darwin';
             // Only add flag if in Electron process https://github.com/microsoft/vscode-azure-account/pull/684
-            // if (!isWindows && !!process.versions['electron'] && env.uiKind === UIKind.Desktop && semver.gte(version, '1.62.1')) {
-            //     // https://github.com/microsoft/vscode/issues/136987
-            //     // This fix can't be applied to all versions of VS Code. An error is thrown in versions less than the one specified
-            //     shellArgs.push('--ms-enable-electron-run-as-node');
-            // }
+            // and not on Windows or macOS
+            if (!isWindows && !isDarwin && !!process.versions['electron'] && env.uiKind === UIKind.Desktop && semver.gte(version, '1.62.1')) {
+                // https://github.com/microsoft/vscode/issues/136987
+                // This fix can't be applied to all versions of VS Code. An error is thrown in versions less than the one specified
+                shellArgs.push('--ms-enable-electron-run-as-node');
+            }
 
             const terminalOptions: TerminalOptions = {
                 name: localize('azureCloudShell', 'Azure Cloud Shell ({0})', os.shellName),
@@ -338,21 +338,51 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
             liveServerQueue = serverQueue;
 
             // TODO: handle not signed in case
-            // if (await authProvider.isSignedIn()) {
-            //     if (loginStatus === 'LoggingIn') {
-            //         serverQueue.push({ type: 'log', args: [localize('azure-account.loggingIn', "Signing in...")] });
-            //     }
-            //     if (!(await api.waitForLogin())) {
-            //         serverQueue.push({ type: 'log', args: [localize('azure-account.loginNeeded', "Sign in needed.")] });
-            //         context.telemetry.properties.outcome = 'requiresLogin';
-            //         await commands.executeCommand('azure-account.askForLogin');
-            //         if (!(await api.waitForLogin())) {
-            //             serverQueue.push({ type: 'exit' });
-            //             updateStatus('Disconnected');
-            //             return;
-            //         }
-            //     }
-            // }
+            if (!await _authProvider.isSignedIn()) {
+                serverQueue.push({ type: 'log', args: [localize('azure-account.loggingIn', "Signing in...")] });
+                try {
+                    if (await _authProvider.signIn()) {
+                        serverQueue.push({ type: 'log', args: [localize('azure-account.loggingIn', "Signed in successful.")] });
+                    }
+                } catch (e) {
+                    serverQueue.push({ type: 'log', args: [localize('azure-account.loggingIn', parseError(e).message)] });
+                    await delay(1000);
+                    // serverQueue.push({ type: 'exit' });
+                    updateStatus('Disconnected');
+                    return;
+                }
+            }
+
+            const tenants = await _authProvider.getTenants();
+            serverQueue.push({ type: 'log', args: [localize('azure-account.loggingIn', `Found ${tenants.length} tenants.`)] });
+            let selectedTenant: TenantIdDescription | undefined = undefined;
+            // handle multi tenant scenario, user must pick a tenant
+            if (tenants.length > 1) {
+                const picks = tenants.map(tenant => {
+                    const defaultDomainName: string | undefined = tenant.defaultDomain;
+                    return <IAzureQuickPickItem<TenantIdDescription>>{
+                        label: tenant.displayName,
+                        description: defaultDomainName,
+                        data: tenant,
+                    };
+                }).sort((a, b) => a.label.localeCompare(b.label));
+
+                const pick = await window.showQuickPick<IAzureQuickPickItem<TenantIdDescription>>(picks, {
+                    placeHolder: localize('azure-account.selectDirectoryPlaceholder', "Select directory"),
+                    ignoreFocusOut: true // The terminal opens concurrently and can steal focus (https://github.com/microsoft/vscode-azure-account/issues/77).
+                });
+
+                if (!pick) {
+                    context.telemetry.properties.outcome = 'noTenantPicked';
+                    serverQueue.push({ type: 'exit' });
+                    updateStatus('Disconnected');
+                    return;
+                }
+
+                selectedTenant = pick.data;
+            } else {
+                selectedTenant = tenants[0];
+            }
 
             const session = await authentication.getSession('microsoft', ['https://management.core.windows.net//.default'], {
                 createIfNone: false,
@@ -477,38 +507,11 @@ async function deploymentConflict(context: IActionContext, os: OS) {
     return reset;
 }
 
-// interface TenantDetails {
-//     objectId: string;
-//     displayName: string;
-//     domains: string;
-//     defaultDomain: string;
-// }
-
-// async function fetchTenantDetails(accessToken: string): Promise<{ session: AzureSession, tenantDetails: TenantDetails }> {
-
-//     const response: Response = await fetchWithLogging('https://management.azure.com/tenants?api-version=2022-12-01', {
-//         headers: {
-//             Authorization: `Bearer ${accessToken}`,
-//             "x-ms-client-request-id": uuid(),
-//             "Content-Type": 'application/json; charset=utf-8'
-//         }
-//     });
-
-//     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-//     const json = await response.json();
-//     return {
-//         session,
-//         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-//         tenantDetails: json.value[0]
-//     };
-// }
-
 export interface ExecResult {
     error: Error | null;
     stdout: string;
     stderr: string;
 }
-
 
 async function exec(command: string): Promise<ExecResult> {
     return new Promise<ExecResult>((resolve, reject) => {
@@ -517,7 +520,6 @@ async function exec(command: string): Promise<ExecResult> {
         });
     });
 }
-
 
 const consoleApiVersion = '2023-02-01-preview';
 
@@ -554,68 +556,41 @@ export interface Size {
     rows: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function requestWithLogging(requestOptions: request.Options): Promise<any> {
-    try {
-        const requestLogger = new HttpLogger(ext.outputChannel, 'CloudConsoleLauncher', new RequestNormalizer());
-        requestLogger.logRequest(requestOptions);
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const response: http.IncomingMessage & { body: unknown } = await request(requestOptions);
-        requestLogger.logResponse({ response, request: requestOptions });
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return response;
-    } catch (e) {
-        const error = parseError(e);
-        ext.outputChannel.error({ ...error, name: 'Request Error: CloudConsoleLauncher' });
-    }
-}
-
 export async function getUserSettings(accessToken: string): Promise<UserSettings | undefined> {
-    // TODO: ensure ending slash on armEndpoint
-    const targetUri = `${getConfiguredAzureEnv().resourceManagerEndpointUrl}/providers/Microsoft.Portal/userSettings/cloudconsole?api-version=${consoleApiVersion}`;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const response = await requestWithLogging({
-        uri: targetUri,
+    const targetUri = `${getArmEndpoint()}/providers/Microsoft.Portal/userSettings/cloudconsole?api-version=${consoleApiVersion}`;
+    const response = await fetch(targetUri, {
         method: 'GET',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`
         },
-        simple: false,
-        resolveWithFullResponse: true,
-        json: true,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    if (response.statusCode < 200 || response.statusCode > 299) {
-        // if (response.body && response.body.error && response.body.error.message) {
-        // 	console.log(`${response.body.error.message} (${response.statusCode})`);
-        // } else {
-        // 	console.log(response.statusCode, response.headers, response.body);
-        // }
+    if (response.status < 200 || response.status > 299) {
         return;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-    return response.body && response.body.properties;
+    return (await response.json()).properties;
 }
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 export async function provisionConsole(accessToken: string, userSettings: UserSettings, osType: string): Promise<string> {
     let response = await createTerminal(accessToken, userSettings, osType, true);
     for (let i = 0; i < 10; i++, response = await createTerminal(accessToken, userSettings, osType, false)) {
-        if (response.statusCode < 200 || response.statusCode > 299) {
-            if (response.statusCode === 409 && response.body && response.body.error && response.body.error.code === Errors.DeploymentOsTypeConflict) {
+        if (response.status < 200 || response.status > 299) {
+            const body = await response.json();
+            if (response.status === 409 && response.body && body.error && body.error.code === Errors.DeploymentOsTypeConflict) {
                 throw new Error(Errors.DeploymentOsTypeConflict);
-            } else if (response.body && response.body.error && response.body.error.message) {
-                throw new Error(`${response.body.error.message} (${response.statusCode})`);
+            } else if (body && body.error && body.error.message) {
+                throw new Error(`${body.error.message} (${response.status})`);
             } else {
-                throw new Error(`${response.statusCode} ${response.headers} ${response.body}`);
+                throw new Error(`${response.status} ${response.headers} ${body}`);
             }
         }
 
-        const consoleResource = response.body;
+        const consoleResource = await response.json();
         if (consoleResource.properties.provisioningState === 'Succeeded') {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             return consoleResource.properties.uri;
@@ -623,13 +598,12 @@ export async function provisionConsole(accessToken: string, userSettings: UserSe
             break;
         }
     }
-    throw new Error(`Sorry, your Cloud Shell failed to provision. Please retry later. Request correlation id: ${response.headers['x-ms-routing-request-id']}`);
+    throw new Error(`Sorry, your Cloud Shell failed to provision. Please retry later. Request correlation id: ${response.headers.get('x-ms-routing-request-id')}`);
 }
 /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
-async function createTerminal(accessToken: string, userSettings: UserSettings, osType: string, initial: boolean) {
-    return requestWithLogging({
-        uri: getConsoleUri(getArmEndpoint()),
+async function createTerminal(accessToken: string, userSettings: UserSettings, osType: string, initial: boolean): Promise<Response> {
+    return fetchWithLogging(getConsoleUri(getArmEndpoint()), {
         method: initial ? 'PUT' : 'GET',
         headers: {
             'Accept': 'application/json',
@@ -637,42 +611,35 @@ async function createTerminal(accessToken: string, userSettings: UserSettings, o
             'Authorization': `Bearer ${accessToken}`,
             'x-ms-console-preferred-location': userSettings.preferredLocation
         },
-        simple: false,
-        resolveWithFullResponse: true,
-        json: true,
-        body: initial ? {
+        body: JSON.stringify(initial ? {
             properties: {
                 osType
             }
-        } : undefined
+        } : {}),
     });
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export async function resetConsole(accessToken: string, armEndpoint: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const response = await requestWithLogging({
-        uri: getConsoleUri(armEndpoint),
+    const response = await fetchWithLogging(getConsoleUri(armEndpoint), {
         method: 'DELETE',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`
         },
-        simple: false,
-        resolveWithFullResponse: true,
-        json: true
     });
 
+    /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+    const body = await response.json();
     /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-    if (response.statusCode < 200 || response.statusCode > 299) {
-        if (response.body && response.body.error && response.body.error.message) {
-            throw new Error(`${response.body.error.message} (${response.statusCode})`);
+    if (response.status < 200 || response.status > 299) {
+        if (body && body.error && body.error.message) {
+            throw new Error(`${body.error.message} (${response.status})`);
         } else {
-            throw new Error(`${response.statusCode} ${response.headers} ${response.body}`);
+            throw new Error(`${response.status} ${response.headers} ${body}`);
         }
     }
-    /* eslint-enable @typescript-eslint/no-unsafe-member-access */
 }
 
 export async function connectTerminal(accessToken: string, consoleUri: string, shellType: string, initialSize: Size, progress: (i: number) => void): Promise<ConsoleUris> {
@@ -681,12 +648,13 @@ export async function connectTerminal(accessToken: string, consoleUri: string, s
         /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
         const response = await initializeTerminal(accessToken, consoleUri, shellType, initialSize);
 
-        if (response.statusCode < 200 || response.statusCode > 299) {
-            if (response.statusCode !== 503 && response.statusCode !== 504 && response.body && response.body.error) {
-                if (response.body && response.body.error && response.body.error.message) {
-                    throw new Error(`${response.body.error.message} (${response.statusCode})`);
+        const body = await response.json();
+        if (response.status < 200 || response.status > 299) {
+            if (response.status !== 503 && response.status !== 504 && body && body.error) {
+                if (body && body.error && body.error.message) {
+                    throw new Error(`${body.error.message} (${response.status})`);
                 } else {
-                    throw new Error(`${response.statusCode} ${response.headers} ${response.body}`);
+                    throw new Error(`${response.status} ${response.headers} ${await response.text()}`);
                 }
             }
             await delay(1000 * (i + 1));
@@ -694,24 +662,20 @@ export async function connectTerminal(accessToken: string, consoleUri: string, s
             continue;
         }
 
-        const { id, socketUri } = response.body;
-        const terminalUri = `${consoleUri}/terminals/${id}`;
         return {
             consoleUri,
-            terminalUri,
-            socketUri
+            terminalUri: `${consoleUri}/terminals/${body.id}`,
+            socketUri: body.socketUri
         };
-        /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
     }
 
     throw new Error('Failed to connect to the terminal.');
 }
 
-async function initializeTerminal(accessToken: string, consoleUri: string, shellType: string, initialSize: Size) {
+async function initializeTerminal(accessToken: string, consoleUri: string, shellType: string, initialSize: Size): Promise<Response> {
     const consoleUrl = new URL(consoleUri);
-    return requestWithLogging({
-        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-        uri: consoleUri + '/terminals?cols=' + initialSize.cols + '&rows=' + initialSize.rows + '&shell=' + shellType,
+    // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
+    const response = fetchWithLogging(consoleUri + '/terminals?cols=' + initialSize.cols + '&rows=' + initialSize.rows + '&shell=' + shellType, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -719,11 +683,8 @@ async function initializeTerminal(accessToken: string, consoleUri: string, shell
             'Authorization': `Bearer ${accessToken}`,
             'Referer': consoleUrl.protocol + "//" + consoleUrl.hostname + '/$hc' + consoleUrl.pathname + '/terminals',
         },
-        simple: false,
-        resolveWithFullResponse: true,
-        json: true,
-        body: {
-            tokens: []
-        }
+        body: JSON.stringify({}),
     });
+
+    return response;
 }
