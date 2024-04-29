@@ -24,7 +24,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     });
 
     longRunningTestsEnabled = true; //!/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '');
-    vscode.commands.executeCommand('azureResourceGroups.logIn');
+    await vscode.commands.executeCommand('azureResourceGroups.logIn');
     const provider = await ext.subscriptionProviderFactory();
     console.log('NATURINS', provider.isSignedIn());
     console.log('NATURINS:', await provider.getSubscriptions(false));
