@@ -30,5 +30,4 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     console.log('NATURINS:', await provider.getSubscriptions(false));
     await provider.signOut();
     console.log('NATURINS', provider.isSignedIn());
-
 });

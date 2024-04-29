@@ -8,7 +8,7 @@ import { type ServiceClient } from '@azure/core-client';
 import { createHttpHeaders, createPipelineRequest, type PipelineRequest, type PipelineResponse } from '@azure/core-rest-pipeline';
 import { AzureAuthentication, AzureSubscriptionProvider, getConfiguredAzureEnv, type AzureSubscription } from '@microsoft/vscode-azext-azureauth';
 import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
-import { TestActionContext, createTestActionContext } from '@microsoft/vscode-azext-dev';
+import { callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import { Disposable, Event } from 'vscode';
 
 let testAzureSubscriptionProvider: TestAzureSubscriptionProvider | undefined;
@@ -235,29 +235,30 @@ async function getTokenCredential(serviceConnectionId: string, domain: string, c
  * API reference: https://learn.microsoft.com/en-us/rest/api/azure/devops/distributedtask/oidctoken/create
  */
 async function requestOidcToken(oidcRequestUrl: string, systemAccessToken: string): Promise<string> {
-    const dummyContext: TestActionContext = await createTestActionContext();
-    const client: ServiceClient = await createGenericClient(dummyContext, undefined);
-    const request: PipelineRequest = createPipelineRequest({
-        url: oidcRequestUrl,
-        method: "POST",
-        headers: createHttpHeaders({
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${systemAccessToken}`
-        })
-    });
+    return await callWithTelemetryAndErrorHandling('azureResourceGroups.requestOidcToken', async (context) => {
+        const client: ServiceClient = await createGenericClient(context, undefined);
+        const request: PipelineRequest = createPipelineRequest({
+            url: oidcRequestUrl,
+            method: "POST",
+            headers: createHttpHeaders({
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${systemAccessToken}`
+            })
+        });
 
-    const response: PipelineResponse = await client.sendRequest(request);
-    const body: string = response.bodyAsText?.toString() || "";
+        const response: PipelineResponse = await client.sendRequest(request);
+        const body: string = response.bodyAsText?.toString() || "";
 
 
-    if (response.status !== 200) {
-        throw new Error(`Failed to get OIDC token:\n
+        if (response.status !== 200) {
+            throw new Error(`Failed to get OIDC token:\n
             Response status: ${response.status}\n
             Response body: ${body}\n
             Response headers: ${JSON.stringify(response.headers.toJSON())}
         `);
-    } else {
-        console.log(`Successfully got OIDC token with status ${response.status}`);
-    }
-    return (JSON.parse(body) as { oidcToken: string }).oidcToken;
+        } else {
+            console.log(`Successfully got OIDC token with status ${response.status}`);
+        }
+        return (JSON.parse(body) as { oidcToken: string }).oidcToken;
+    }) || '';
 }
