@@ -11,6 +11,7 @@ let _isLoggingIn: boolean = false;
 export async function logIn(_context: IActionContext): Promise<void> {
     try {
         const provider = await ext.subscriptionProviderFactory();
+        console.log('TEST: LOGGING IN');
         _isLoggingIn = true;
         ext.actions.refreshAzureTree(); // Refresh to cause the "logging in" spinner to show
         await provider.signIn();
