@@ -33,7 +33,6 @@
         "onWalkthrough:azure-get-started"
     ],
     "main": "./main.js",
-    "browser": "./dist/web/extension.bundle.js",
     "contributes": {
         "x-azResources": {
             "commands": [
