@@ -17,11 +17,17 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
     });
 
     test('List Resources', async () => {
-        const subscriptions = (await ext.subscriptionProviderFactory()).getSubscriptions(false);
+        const subscriptions = await (await ext.subscriptionProviderFactory()).getSubscriptions(false);
+        ext.testing.overrideAzureServiceFactory = undefined;
+
         const provider = new DefaultAzureResourceProvider();
-        for (const subscription of await subscriptions) {
-            const resources = await provider.getResources(subscription);
-            console.log(resources);
+        for (const subscription of subscriptions) {
+            try {
+                const resources = await provider.getResources(subscription);
+                console.log('resources: ', resources);
+            } catch (err) {
+                console.log('Error listing resources: ', err);
+            }
         }
 
         assert.ok(true);

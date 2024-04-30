@@ -28,6 +28,6 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     const provider = await ext.subscriptionProviderFactory();
     console.log('NATURINS', provider.isSignedIn());
     console.log('NATURINS:', await provider.getSubscriptions(false));
-    await provider.signOut();
-    console.log('NATURINS', provider.isSignedIn());
+    // await provider.signOut();
+    // console.log('NATURINS', provider.isSignedIn());
 });

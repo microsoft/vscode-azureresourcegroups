@@ -70,7 +70,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
         // if this for a nightly test, we want to use the test subscription provider
-        const longRunningTestsEnabled: boolean = true;//!/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '')
+        const longRunningTestsEnabled: boolean = false;//!/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '')
         ext.subscriptionProviderFactory = longRunningTestsEnabled ? createTestAzureSubscriptionProviderFactory() : createVSCodeAzureSubscriptionProviderFactory();
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
