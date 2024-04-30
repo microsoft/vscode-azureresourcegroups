@@ -80,7 +80,7 @@ export class TestAzureSubscriptionProvider implements AzureSubscriptionProvider 
          */
         const CLIENT_ID = "9fb13fa5-3dde-4970-bba5-c58b89e1fadc";
         console.log('NIGHTLY: starting nightly tests');
-        const tokenCredential: TokenCredential & {} = await getTokenCredential(SERVICE_CONNECTION_ID, DOMAIN, CLIENT_ID);
+        const tokenCredential: TokenCredential = await getTokenCredential(SERVICE_CONNECTION_ID, DOMAIN, CLIENT_ID);
         console.log('NIGHTLY: successfully acquired TokenCredential');
         console.log(`NIGHTLY: TokeCredential: ${JSON.stringify(tokenCredential)}`);
 
@@ -93,6 +93,7 @@ export class TestAzureSubscriptionProvider implements AzureSubscriptionProvider 
     }
 
     public async getTenants(): Promise<TenantIdDescription[]> {
+        console.debug('***tenantId***: ', this._tokenCredential?.tenantId)
         return [{
             tenantId: this._tokenCredential?.tenantId,
         }];
@@ -108,10 +109,12 @@ export class TestAzureSubscriptionProvider implements AzureSubscriptionProvider 
     private async getSubscriptionsForTenant(tenantId: string): Promise<AzureSubscription[]> {
         const { client, credential, authentication } = await this.getSubscriptionClient(tenantId);
         const environment = getConfiguredAzureEnv();
+        console.debug('***environment***: ', environment);
 
         const subscriptions: AzureSubscription[] = [];
 
         for await (const subscription of client.subscriptions.list()) {
+            console.debug('***subscription***: ', subscription);
             subscriptions.push({
                 authentication: authentication,
                 environment: environment,
