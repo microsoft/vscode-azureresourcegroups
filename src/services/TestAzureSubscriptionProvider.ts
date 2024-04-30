@@ -70,7 +70,7 @@ export class TestAzureSubscriptionProvider implements AzureSubscriptionProvider 
         *   which can be found on the `resourceId` field of the URL at the address bar
         *   when viewing the service connection in the Azure DevOps portal
          */
-        const SERVICE_CONNECTION_ID = "816925d8-6f4a-4b37-8c74-1c16efe33e27";
+        const SERVICE_CONNECTION_ID = "5c78f1d7-3284-4dfd-95f8-856331324e29";
         /**
          * The `Tenant ID` field of the service connection properties
          */
@@ -78,7 +78,7 @@ export class TestAzureSubscriptionProvider implements AzureSubscriptionProvider 
         /**
          * The `Service Principal Id` field of the service connection properties
          */
-        const CLIENT_ID = "a581a512-0b3b-43b0-bb17-39e24d998b0a";
+        const CLIENT_ID = "9fb13fa5-3dde-4970-bba5-c58b89e1fadc";
         console.log('NIGHTLY: starting nightly tests');
         const tokenCredential: TokenCredential & {} = await getTokenCredential(SERVICE_CONNECTION_ID, DOMAIN, CLIENT_ID);
         console.log('NIGHTLY: successfully acquired TokenCredential');
