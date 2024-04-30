@@ -384,7 +384,7 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
                 selectedTenant = tenants[0];
             }
 
-            const session = await authentication.getSession('microsoft', ['https://management.core.windows.net//.default'], {
+            const session = await authentication.getSession('microsoft', ['https://management.core.windows.net//.default', `VSCODE_TENANT:${selectedTenant.tenantId}`], {
                 createIfNone: false,
             });
             const result = session && await findUserSettings(session.accessToken);
