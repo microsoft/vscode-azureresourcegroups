@@ -9,7 +9,7 @@ import { AzExtResourceType } from "api/src/AzExtResourceType";
 import { DiagnosticCollection, Disposable, ExtensionContext, TreeView, UIKind, env } from "vscode";
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
-import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
+import { AzureResourceProvider, AzureResourcesApiInternal } from "./hostapi.v2.internal";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
 import { ResourceGroupsItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
@@ -46,6 +46,7 @@ export namespace ext {
     export let azureTreeState: TreeItemStateStore;
 
     export let subscriptionProviderFactory: () => Promise<AzureSubscriptionProvider>;
+    export let azureResourceProvider: AzureResourceProvider
 
     // When debugging thru VS Code as a web environment, the UIKind is Desktop. However, if you sideload it into the browser, you must
     // change this to UIKind.Web and then webpack it again

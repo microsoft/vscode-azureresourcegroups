@@ -44,4 +44,5 @@ export * from './src/tree/azure/grouping/LocationGroupingItem';
 export * from './src/tree/azure/grouping/ResourceGroupGroupingItem';
 export * from './src/tree/azure/grouping/ResourceTypeGroupingItem';
 export * from './src/utils/wrapFunctionsInTelemetry';
+export { createAzureClient, createGenericClient } from '@microsoft/vscode-azext-azureutils';
 // NOTE: The auto-fix action "source.organizeImports" does weird things with this file, but there doesn't seem to be a way to disable it on a per-file basis so we'll just let it happen
