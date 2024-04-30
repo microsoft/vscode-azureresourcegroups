@@ -97,7 +97,8 @@ export declare enum AzExtResourceType {
     SqlServers = "SqlServers",
     VirtualMachineScaleSets = "VirtualMachineScaleSets",
     VirtualNetworks = "VirtualNetworks",
-    WebHostingEnvironments = "WebHostingEnvironments"
+    WebHostingEnvironments = "WebHostingEnvironments",
+    WebPubSub = "WebPubSub"
 }
 
 /**
