@@ -20,7 +20,7 @@ const config = dev.getDefaultWebpackConfig({
     projectRoot: __dirname,
     verbosity: DEBUG_WEBPACK ? 'debug' : 'normal',
     entries: {
-        cloudConsoleLauncher: './src/cloudConsole/cloudConsoleLauncher.ts',
+        cloudConsoleLauncher: './src/cloudConsole/cloudShellChildProcess/cloudConsoleLauncher.ts',
     },
     externals:
     {
@@ -39,13 +39,6 @@ const config = dev.getDefaultWebpackConfig({
     },
     target: 'node',
     suppressCleanDistFolder: true,
-    // plugins: [
-    //     new CopyWebpackPlugin({
-    //         patterns: [
-    //             { from: './out/src/utils/getCoreNodeModule.js', to: 'node_modules' }
-    //         ]
-    //     })
-    // ]
 });
 
 if (DEBUG_WEBPACK) {
