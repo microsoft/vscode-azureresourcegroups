@@ -354,10 +354,11 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
             }
 
             const tenants = await _authProvider.getTenants();
-            serverQueue.push({ type: 'log', args: [localize('azure-account.loggingIn', `Found ${tenants.length} tenants.`)] });
+            serverQueue.push({ type: 'log', args: [localize('azure-account.foundTenants', `Found ${tenants.length} tenant${tenants.length > 1 ? 's' : ''}.`)] });
             let selectedTenant: TenantIdDescription | undefined = undefined;
             // handle multi tenant scenario, user must pick a tenant
             if (tenants.length > 1) {
+                serverQueue.push({ type: 'log', args: [localize('azure-account.selectingTenant', `Selecting tenant...`)] });
                 const picks = tenants.map(tenant => {
                     const defaultDomainName: string | undefined = tenant.defaultDomain;
                     return <IAzureQuickPickItem<TenantIdDescription>>{
@@ -368,7 +369,7 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
                 }).sort((a, b) => a.label.localeCompare(b.label));
 
                 const pick = await window.showQuickPick<IAzureQuickPickItem<TenantIdDescription>>(picks, {
-                    placeHolder: localize('azure-account.selectDirectoryPlaceholder', "Select directory"),
+                    placeHolder: localize('azure-account.selectDirectoryPlaceholder', "Select tenant"),
                     ignoreFocusOut: true // The terminal opens concurrently and can steal focus (https://github.com/microsoft/vscode-azure-account/issues/77).
                 });
 
