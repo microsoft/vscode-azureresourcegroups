@@ -31,7 +31,8 @@
     "activationEvents": [
         "onFileSystem:azureResourceGroups",
         "onWalkthrough:azure-get-started",
-        "onTerminalProfile:azureResources.cloudShellBash"
+        "onTerminalProfile:azureResourceGroups.cloudShellBash",
+        "onTerminalProfile:azureResourceGroups.cloudShellPowerShell"
     ],
     "main": "./main.js",
     "browser": "./dist/web/extension.bundle.js",
@@ -39,13 +40,13 @@
         "terminal": {
             "profiles": [
                 {
-                    "title": "Azure Cloud Shell (bash)",
-                    "id": "azureResources.cloudShellBash",
+                    "id": "azureResourceGroups.cloudShellBash",
+                    "title": "%azureResourceGroups.cloudShellBash%",
                     "icon": "$(azure)"
                 },
                 {
-                    "title": "Azure Cloud Shell (pwsh)",
-                    "id": "azureResources.cloudShellPowerShell",
+                    "id": "azureResourceGroups.cloudShellPowerShell",
+                    "title": "%azureResourceGroups.cloudShellPowerShell%",
                     "icon": "$(azure)"
                 }
             ]

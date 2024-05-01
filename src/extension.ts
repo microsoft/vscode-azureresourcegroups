@@ -85,12 +85,12 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         ext.activityLogTree = new AzExtTreeDataProvider(ext.activityLogTreeItem, 'azureActivityLog.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('azureActivityLog', { treeDataProvider: ext.activityLogTree }));
 
-        context.subscriptions.push(vscode.window.registerTerminalProfileProvider('azureResources.cloudShellBash', {
+        context.subscriptions.push(vscode.window.registerTerminalProfileProvider('azureResourceGroups.cloudShellBash', {
             provideTerminalProfile: async (token: vscode.CancellationToken) => {
                 return createCloudConsole(await ext.subscriptionProviderFactory(), 'Linux', token).terminalProfile;
             }
         }));
-        context.subscriptions.push(vscode.window.registerTerminalProfileProvider('azureResources.cloudShellPowerShell', {
+        context.subscriptions.push(vscode.window.registerTerminalProfileProvider('azureResourceGroups.cloudShellPowerShell', {
             provideTerminalProfile: async (token: vscode.CancellationToken) => {
                 return createCloudConsole(await ext.subscriptionProviderFactory(), 'Windows', token).terminalProfile;
             }
