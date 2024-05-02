@@ -5,7 +5,7 @@
 
 import { TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
 import * as vscode from 'vscode';
-import { ext, registerOnActionStartHandler } from '../extension.bundle';
+import { DefaultAzureResourceProvider, ext, registerOnActionStartHandler } from '../extension.bundle';
 
 export let longRunningTestsEnabled: boolean;
 
@@ -27,7 +27,20 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     await vscode.commands.executeCommand('azureResourceGroups.logIn');
     const provider = await ext.subscriptionProviderFactory();
     console.log('NATURINS', provider.isSignedIn());
-    console.log('NATURINS:', await provider.getSubscriptions(false));
+    const subscriptions = await provider.getSubscriptions(false);
+    console.log('NATURINS:', subscriptions);
+
+    const rProvider = new DefaultAzureResourceProvider();
+    for (const subscription of subscriptions) {
+        try {
+            const resources = await rProvider.getResources(subscription);
+            console.log('resources: ', resources);
+        } catch (err) {
+            console.log('Error listing resources: ', err);
+        }
+    }
+
+
     // await provider.signOut();
     // console.log('NATURINS', provider.isSignedIn());
 });

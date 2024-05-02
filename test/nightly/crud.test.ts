@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DefaultAzureResourceProvider, ext } from '../../extension.bundle';
+import { ext } from '../../extension.bundle';
 import { longRunningTestsEnabled } from "../global.test";
 import assert = require("assert");
 
@@ -20,7 +20,7 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         const subscriptions = await (await ext.subscriptionProviderFactory()).getSubscriptions(false);
         ext.testing.overrideAzureServiceFactory = undefined;
 
-        const provider = new DefaultAzureResourceProvider();
+        const provider = await ext.subscriptionProviderFactory();
         for (const subscription of subscriptions) {
             try {
                 const resources = await provider.getResources(subscription);

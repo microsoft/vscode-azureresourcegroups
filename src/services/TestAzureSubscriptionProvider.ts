@@ -86,7 +86,7 @@ export class TestAzureSubscriptionProvider implements AzureSubscriptionProvider 
 
         this._tokenCredential = tokenCredential;
         const token = await this._tokenCredential.getToken(['.default']);
-        console.log(token);
+        console.log('TOKEN', JSON.stringify(token));
         return !!this._tokenCredential;
     }
 
