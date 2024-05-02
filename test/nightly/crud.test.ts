@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ext } from '../../extension.bundle';
+import { AzExtParentTreeItem, ext } from '../../extension.bundle';
 import { longRunningTestsEnabled } from "../global.test";
 import assert = require("assert");
 
@@ -17,19 +17,15 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
     });
 
     test('List Resources', async () => {
-        const subscriptions = await (await ext.subscriptionProviderFactory()).getSubscriptions(false);
-        ext.testing.overrideAzureServiceFactory = undefined;
-
-        const provider = await ext.subscriptionProviderFactory();
-        for (const subscription of subscriptions) {
-            try {
-                const resources = await provider.getResources(subscription);
-                console.log('resources: ', resources);
-            } catch (err) {
-                console.log('Error listing resources: ', err);
+        console.log(await ext.appResourceTree.getChildren());
+        const subscriptionTreeItems = await ext.appResourceTree.getChildren();
+        assert.ok(subscriptionTreeItems.length > 0);
+        for (const subscription of subscriptionTreeItems) {
+            const resources = await ext.appResourceTree.getChildren(subscription as AzExtParentTreeItem);
+            for (const resource of resources) {
+                console.log(resource.id);
             }
         }
-
         assert.ok(true);
     });
 });
