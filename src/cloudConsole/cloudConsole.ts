@@ -14,7 +14,7 @@ import { Socket } from 'net';
 import * as path from 'path';
 import * as semver from 'semver';
 import { UrlWithStringQuery, parse } from 'url';
-import { CancellationToken, EventEmitter, MessageItem, Terminal, TerminalOptions, TerminalProfile, ThemeIcon, Uri, authentication, commands, env, window, workspace } from 'vscode';
+import { CancellationToken, EventEmitter, MessageItem, Terminal, TerminalOptions, TerminalProfile, ThemeIcon, UIKind, Uri, authentication, commands, env, version, window, workspace } from 'vscode';
 import { ext } from '../extensionVariables';
 import { localize } from '../utils/localize';
 import { fetchWithLogging } from '../utils/logging/nodeFetch/nodeFetch';
@@ -296,6 +296,14 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 // Work around https://github.com/electron/electron/issues/4218 https://github.com/nodejs/node/issues/11656
                 shellPath = 'node.exe';
                 shellArgs.shift();
+            }
+
+            // // Only add flag if in Electron process https://github.com/microsoft/vscode-azure-account/pull/684
+            // // and not on Windows or macOS
+            if (!isWindows && !!process.versions['electron'] && env.uiKind === UIKind.Desktop && semver.gte(version, '1.62.1')) {
+                // https://github.com/microsoft/vscode/issues/136987
+                // This fix can't be applied to all versions of VS Code. An error is thrown in versions less than the one specified
+                shellArgs.push('--ms-enable-electron-run-as-node');
             }
 
             const terminalOptions: TerminalOptions = {
