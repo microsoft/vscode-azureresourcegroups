@@ -35,7 +35,6 @@
         "onTerminalProfile:azureResourceGroups.cloudShellPowerShell"
     ],
     "main": "./main.js",
-    "browser": "./dist/web/extension.bundle.js",
     "contributes": {
         "terminal": {
             "profiles": [

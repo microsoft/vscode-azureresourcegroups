@@ -14,7 +14,7 @@ import { Socket } from 'net';
 import * as path from 'path';
 import * as semver from 'semver';
 import { UrlWithStringQuery, parse } from 'url';
-import { CancellationToken, EventEmitter, MessageItem, Terminal, TerminalOptions, TerminalProfile, ThemeIcon, UIKind, Uri, authentication, commands, env, version, window, workspace } from 'vscode';
+import { CancellationToken, EventEmitter, MessageItem, Terminal, TerminalOptions, TerminalProfile, ThemeIcon, Uri, authentication, commands, env, window, workspace } from 'vscode';
 import { ext } from '../extensionVariables';
 import { localize } from '../utils/localize';
 import { fetchWithLogging } from '../utils/logging/nodeFetch/nodeFetch';
@@ -298,14 +298,14 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 shellArgs.shift();
             }
 
-            const isDarwin = process.platform === 'darwin';
-            // Only add flag if in Electron process https://github.com/microsoft/vscode-azure-account/pull/684
-            // and not on Windows or macOS
-            if (!isWindows && !isDarwin && !!process.versions['electron'] && env.uiKind === UIKind.Desktop && semver.gte(version, '1.62.1')) {
-                // https://github.com/microsoft/vscode/issues/136987
-                // This fix can't be applied to all versions of VS Code. An error is thrown in versions less than the one specified
-                shellArgs.push('--ms-enable-electron-run-as-node');
-            }
+            // const isDarwin = process.platform === 'darwin';
+            // // Only add flag if in Electron process https://github.com/microsoft/vscode-azure-account/pull/684
+            // // and not on Windows or macOS
+            // if (!isWindows && !isDarwin && !!process.versions['electron'] && env.uiKind === UIKind.Desktop && semver.gte(version, '1.62.1')) {
+            //     // https://github.com/microsoft/vscode/issues/136987
+            //     // This fix can't be applied to all versions of VS Code. An error is thrown in versions less than the one specified
+            //     shellArgs.push('--ms-enable-electron-run-as-node');
+            // }
 
             const terminalOptions: TerminalOptions = {
                 name: localize('azureCloudShell', 'Azure Cloud Shell ({0})', os.shellName),
