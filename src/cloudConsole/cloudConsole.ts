@@ -298,15 +298,6 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 shellArgs.shift();
             }
 
-            // const isDarwin = process.platform === 'darwin';
-            // // Only add flag if in Electron process https://github.com/microsoft/vscode-azure-account/pull/684
-            // // and not on Windows or macOS
-            // if (!isWindows && !isDarwin && !!process.versions['electron'] && env.uiKind === UIKind.Desktop && semver.gte(version, '1.62.1')) {
-            //     // https://github.com/microsoft/vscode/issues/136987
-            //     // This fix can't be applied to all versions of VS Code. An error is thrown in versions less than the one specified
-            //     shellArgs.push('--ms-enable-electron-run-as-node');
-            // }
-
             const terminalOptions: TerminalOptions = {
                 name: localize('azureCloudShell', 'Azure Cloud Shell ({0})', os.shellName),
                 iconPath: new ThemeIcon('azure'),
