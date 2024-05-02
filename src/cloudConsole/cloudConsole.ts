@@ -312,6 +312,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 shellPath,
                 shellArgs,
                 env: {
+                    // Child process uses this ipc handle to communicate with the extension host
                     CLOUD_CONSOLE_IPC: server.ipcHandlePath,
                 },
                 isTransient: true
