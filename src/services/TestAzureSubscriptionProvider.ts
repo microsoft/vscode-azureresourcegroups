@@ -85,6 +85,8 @@ export class TestAzureSubscriptionProvider implements AzureSubscriptionProvider 
         console.log(`NIGHTLY: TokeCredential: ${JSON.stringify(tokenCredential)}`);
 
         this._tokenCredential = tokenCredential;
+        const token = await this._tokenCredential.getToken([]);
+        console.log(token);
         return !!this._tokenCredential;
     }
 
@@ -107,6 +109,7 @@ export class TestAzureSubscriptionProvider implements AzureSubscriptionProvider 
      * @returns The list of subscriptions for the tenant.
      */
     private async getSubscriptionsForTenant(tenantId: string): Promise<AzureSubscription[]> {
+        console.log('***tenantId***: ', tenantId);
         const { client, credential, authentication } = await this.getSubscriptionClient(tenantId);
         const environment = getConfiguredAzureEnv();
         console.debug('***environment***: ', environment);
