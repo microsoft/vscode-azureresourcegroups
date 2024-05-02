@@ -44,14 +44,12 @@ type OSes = { Linux: OS, Windows: OS };
 export const OSes: OSes = {
     Linux: {
         id: 'linux',
-        shellName: localize('azure-account.bash', "Bash"),
-        // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+        shellName: localize('bash', "Bash"),
         get otherOS(): OS { return OSes.Windows; },
     },
     Windows: {
         id: 'windows',
-        shellName: localize('azure-account.powershell', "PowerShell"),
-        // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+        shellName: localize('powershell', "PowerShell"),
         get otherOS(): OS { return OSes.Linux; },
     }
 };
@@ -81,7 +79,7 @@ async function waitForConnection(this: CloudShell): Promise<boolean> {
 function getUploadFile(tokens: Promise<AccessTokens>, uris: Promise<ConsoleUris>): (this: CloudShell, filename: string, stream: ReadStream, options?: UploadOptions) => Promise<void> {
     return async function (this: CloudShell, filename: string, stream: ReadStream, options: UploadOptions = {}) {
         if (options.progress) {
-            options.progress.report({ message: localize('azure-account.connectingForUpload', "Connecting to upload '{0}'...", filename) });
+            options.progress.report({ message: localize('connectingForUpload', "Connecting to upload '{0}'...", filename) });
         }
 
         const accessTokens: AccessTokens = await tokens;
@@ -135,7 +133,7 @@ function getUploadFile(tokens: Promise<AccessTokens>, uris: Promise<ConsoleUris>
                 req.on('socket', (socket: Socket) => {
                     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                     options.progress!.report({
-                        message: localize('azure-account.uploading', "Uploading '{0}'...", filename),
+                        message: localize('uploading', "Uploading '{0}'...", filename),
                         increment: 0
                     });
 
@@ -148,7 +146,7 @@ function getUploadFile(tokens: Promise<AccessTokens>, uris: Promise<ConsoleUris>
                             if (increment) {
                                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                                 options.progress!.report({
-                                    message: localize('azure-account.uploading', "Uploading '{0}'...", filename),
+                                    message: localize('uploading', "Uploading '{0}'...", filename),
                                     increment
                                 });
                             }
@@ -162,9 +160,10 @@ function getUploadFile(tokens: Promise<AccessTokens>, uris: Promise<ConsoleUris>
 }
 
 export const shells: CloudShellInternal[] = [];
-export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osName: OSName, terminalProfileToken?: CancellationToken): CloudShellInternal {
+export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvider, osName: OSName, terminalProfileToken?: CancellationToken): CloudShellInternal {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return (callWithTelemetryAndErrorHandlingSync('azure-account.createCloudConsole', (context: IActionContext) => {
+    return (callWithTelemetryAndErrorHandlingSync('azureResourceGroups.createCloudConsole', (context: IActionContext) => {
+
         const os: OS = OSes[osName];
         context.telemetry.properties.cloudShellType = os.shellName;
 
@@ -240,8 +239,7 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
             // eslint-disable-next-line @typescript-eslint/no-misused-promises
             const server: Server = await createServer('vscode-cloud-console', async (req, res) => {
                 let dequeue: boolean = false;
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                for (const message of await readJSON<any>(req)) {
+                for (const message of await readJSON(req)) {
                     /* eslint-disable @typescript-eslint/no-unsafe-member-access */
                     if (message.type === 'poll') {
                         dequeue = true;
@@ -252,7 +250,6 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
                     } else if (message.type === 'status') {
                         updateStatus(message.status as CloudShellStatus);
                     }
-                    /* eslint-enable @typescript-eslint/no-unsafe-member-access */
                 }
 
                 let response = [];
@@ -266,6 +263,22 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
                 res.write(JSON.stringify(response));
                 res.end();
             });
+
+            if (!await subscriptionProvider.isSignedIn()) {
+                serverQueue.push({ type: 'log', args: [localize('loggingIn', "Signing in...")] });
+                try {
+                    if (await subscriptionProvider.signIn()) {
+                        serverQueue.push({ type: 'log', args: [localize('loggingIn', "Signed in successful.")] });
+                    }
+                } catch (e) {
+                    serverQueue.push({ type: 'log', args: [localize('loggingIn', parseError(e).message)] });
+                    // We used to delay for a second then exit here, but then the user can't read or copy the error message
+                    // await delay(1000);
+                    // serverQueue.push({ type: 'exit' });
+                    updateStatus('Disconnected');
+                    return;
+                }
+            }
 
             // open terminal
             let shellPath: string = path.join(ext.context.asAbsolutePath('bin'), `node.${isWindows ? 'bat' : 'sh'}`);
@@ -337,28 +350,12 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
 
             liveServerQueue = serverQueue;
 
-            // TODO: handle not signed in case
-            if (!await _authProvider.isSignedIn()) {
-                serverQueue.push({ type: 'log', args: [localize('azure-account.loggingIn', "Signing in...")] });
-                try {
-                    if (await _authProvider.signIn()) {
-                        serverQueue.push({ type: 'log', args: [localize('azure-account.loggingIn', "Signed in successful.")] });
-                    }
-                } catch (e) {
-                    serverQueue.push({ type: 'log', args: [localize('azure-account.loggingIn', parseError(e).message)] });
-                    await delay(1000);
-                    // serverQueue.push({ type: 'exit' });
-                    updateStatus('Disconnected');
-                    return;
-                }
-            }
-
-            const tenants = await _authProvider.getTenants();
-            serverQueue.push({ type: 'log', args: [localize('azure-account.foundTenants', `Found ${tenants.length} tenant${tenants.length > 1 ? 's' : ''}.`)] });
+            const tenants = await subscriptionProvider.getTenants();
+            serverQueue.push({ type: 'log', args: [localize('foundTenants', `Found ${tenants.length} tenant${tenants.length > 1 ? 's' : ''}.`)] });
             let selectedTenant: TenantIdDescription | undefined = undefined;
             // handle multi tenant scenario, user must pick a tenant
             if (tenants.length > 1) {
-                serverQueue.push({ type: 'log', args: [localize('azure-account.selectingTenant', `Selecting tenant...`)] });
+                serverQueue.push({ type: 'log', args: [localize('selectingTenant', `Selecting tenant...`)] });
                 const picks = tenants.map(tenant => {
                     const defaultDomainName: string | undefined = tenant.defaultDomain;
                     return <IAzureQuickPickItem<TenantIdDescription>>{
@@ -369,7 +366,7 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
                 }).sort((a, b) => a.label.localeCompare(b.label));
 
                 const pick = await window.showQuickPick<IAzureQuickPickItem<TenantIdDescription>>(picks, {
-                    placeHolder: localize('azure-account.selectDirectoryPlaceholder', "Select tenant"),
+                    placeHolder: localize('selectDirectoryPlaceholder', "Select tenant"),
                     ignoreFocusOut: true // The terminal opens concurrently and can steal focus (https://github.com/microsoft/vscode-azure-account/issues/77).
                 });
 
@@ -390,7 +387,7 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
             });
             const result = session && await findUserSettings(session.accessToken);
             if (!result) {
-                serverQueue.push({ type: 'log', args: [localize('azure-account.setupNeeded', "Setup needed.")] });
+                serverQueue.push({ type: 'log', args: [localize('setupNeeded', "Setup needed.")] });
                 await requiresSetUp(context);
                 serverQueue.push({ type: 'exit' });
                 updateStatus('Disconnected');
@@ -404,7 +401,7 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
                 context.telemetry.properties.outcome = 'provisioned';
             }
             try {
-                serverQueue.push({ type: 'log', args: [localize('azure-account.requestingCloudConsole', "Requesting a Cloud Shell...")] });
+                serverQueue.push({ type: 'log', args: [localize('requestingCloudConsole', "Requesting a Cloud Shell...")] });
                 await provisionTask();
             } catch (err) {
                 if (parseError(err).message === Errors.DeploymentOsTypeConflict) {
@@ -423,7 +420,7 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
             }
 
             // Connect to terminal
-            const connecting: string = localize('azure-account.connectingTerminal', "Connecting terminal...");
+            const connecting: string = localize('connectingTerminal', "Connecting terminal...");
             serverQueue.push({ type: 'log', args: [connecting] });
             const progressTask: (i: number) => void = (i: number) => {
                 serverQueue.push({ type: 'log', args: [`\x1b[A${connecting}${'.'.repeat(i)}`] });
@@ -448,7 +445,7 @@ export function createCloudConsole(_authProvider: AzureSubscriptionProvider, osN
             context.telemetry.properties.outcome = 'error';
             context.telemetry.properties.message = parsedError.message;
             if (liveServerQueue) {
-                liveServerQueue.push({ type: 'log', args: [localize('azure-account.error', "Error: {0}", parsedError.message)] });
+                liveServerQueue.push({ type: 'log', args: [localize('error', "Error: {0}", parsedError.message)] });
             }
         });
         return state;
@@ -467,8 +464,8 @@ async function findUserSettings(accessToken: string): Promise<UserSettings | und
 
 async function requiresSetUp(context: IActionContext) {
     context.telemetry.properties.outcome = 'requiresSetUp';
-    const open: MessageItem = { title: localize('azure-account.open', "Open") };
-    const message: string = localize('azure-account.setUpInWeb', "First launch of Cloud Shell in a directory requires setup in the web application (https://shell.azure.com).");
+    const open: MessageItem = { title: localize('open', "Open") };
+    const message: string = localize('setUpInWeb', "First launch of Cloud Shell in a directory requires setup in the web application (https://shell.azure.com).");
     const response: MessageItem | undefined = await window.showInformationMessage(message, open);
     if (response === open) {
         context.telemetry.properties.outcome = 'requiresSetUpOpen';
@@ -480,8 +477,8 @@ async function requiresSetUp(context: IActionContext) {
 
 async function requiresNode(context: IActionContext) {
     context.telemetry.properties.outcome = 'requiresNode';
-    const open: MessageItem = { title: localize('azure-account.open', "Open") };
-    const message: string = localize('azure-account.requiresNode', "Opening a Cloud Shell currently requires Node.js 6 or later to be installed (https://nodejs.org).");
+    const open: MessageItem = { title: localize('open', "Open") };
+    const message: string = localize('requiresNode', "Opening a Cloud Shell currently requires Node.js 6 or later to be installed (https://nodejs.org).");
     const response: MessageItem | undefined = await window.showInformationMessage(message, open);
     if (response === open) {
         context.telemetry.properties.outcome = 'requiresNodeOpen';
@@ -493,15 +490,15 @@ async function requiresNode(context: IActionContext) {
 
 async function requiresWorkspaceTrust(context: IActionContext) {
     context.telemetry.properties.outcome = 'requiresWorkspaceTrust';
-    const ok: MessageItem = { title: localize('azure-account.ok', "OK") };
-    const message: string = localize('azure-account.cloudShellRequiresTrustedWorkspace', 'Opening a Cloud Shell only works in a trusted workspace.');
+    const ok: MessageItem = { title: localize('ok', "OK") };
+    const message: string = localize('cloudShellRequiresTrustedWorkspace', 'Opening a Cloud Shell only works in a trusted workspace.');
     return await window.showInformationMessage(message, ok) === ok;
 }
 
 async function deploymentConflict(context: IActionContext, os: OS) {
     context.telemetry.properties.outcome = 'deploymentConflict';
-    const ok: MessageItem = { title: localize('azure-account.ok', "OK") };
-    const message: string = localize('azure-account.deploymentConflict', "Starting a {0} session will terminate all active {1} sessions. Any running processes in active {1} sessions will be terminated.", os.shellName, os.otherOS.shellName);
+    const ok: MessageItem = { title: localize('ok', "OK") };
+    const message: string = localize('deploymentConflict', "Starting a {0} session will terminate all active {1} sessions. Any running processes in active {1} sessions will be terminated.", os.shellName, os.otherOS.shellName);
     const response: MessageItem | undefined = await window.showWarningMessage(message, ok);
     const reset: boolean = response === ok;
     context.telemetry.properties.outcome = reset ? 'deploymentConflictReset' : 'deploymentConflictCancel';

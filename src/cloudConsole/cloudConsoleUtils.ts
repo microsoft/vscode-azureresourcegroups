@@ -17,5 +17,5 @@ export function logErrorMessage(error: unknown): void {
 }
 
 export function logAttemptingToReachUrlMessage(url: string): void {
-    ext.outputChannel.appendLog(localize('azure-account.attemptingToReachUrl', 'Attempting to reach URL "{0}"...', url));
+    ext.outputChannel.appendLog(localize('attemptingToReachUrl', 'Attempting to reach URL "{0}"...', url));
 }

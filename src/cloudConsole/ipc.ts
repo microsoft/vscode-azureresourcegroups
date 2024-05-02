@@ -12,14 +12,30 @@ import * as path from 'path';
 import { ext } from '../extensionVariables';
 
 export async function createServer(ipcHandlePrefix: string, onRequest: http.RequestListener): Promise<Server> {
+
+    async function randomBytes(size: number) {
+        return new Promise<Buffer>((resolve, reject) => {
+            crypto.randomBytes(size, (err, buf) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(buf);
+                }
+            });
+        });
+    }
+
+    // create a nonce out of 20 random bytes
     const buffer = await randomBytes(20);
     const nonce = buffer.toString('hex');
+
     const ipcHandlePath = getIPCHandlePath(`${ipcHandlePrefix}-${nonce}`);
     const server = new Server(ipcHandlePath, onRequest);
     server.listen();
     return server;
 }
 
+// Http server listens to a named pipe or a Unix socket unlike a typical http server
 export class Server {
 
     public server: http.Server;
@@ -42,26 +58,21 @@ export class Server {
     }
 }
 
-async function randomBytes(size: number) {
-    return new Promise<Buffer>((resolve, reject) => {
-        crypto.randomBytes(size, (err, buf) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(buf);
-            }
-        });
-    });
-}
-
+/**
+ * Returns the path for the IPC handle based on the given ID.
+ * On Windows, it returns a named pipe path. On Unix-like systems, it returns a socket path.
+ * If the XDG_RUNTIME_DIR environment variable is set, it uses that directory for the socket path.
+ * Otherwise, it uses the temporary directory.
+ */
 function getIPCHandlePath(id: string): string {
     if (process.platform === 'win32') {
         return `\\\\.\\pipe\\${id}-sock`;
     }
 
+    // XDG_RUNTIME_DIR is a Unix specific directory where user-specific non-essential
+    // runtime files and other file objects (such as sockets, named pipes, etc.) should be stored
     if (process.env['XDG_RUNTIME_DIR']) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        return path.join(process.env['XDG_RUNTIME_DIR']!, `${id}.sock`);
+        return path.join(process.env['XDG_RUNTIME_DIR'], `${id}.sock`);
     }
 
     return path.join(os.tmpdir(), `${id}.sock`);

@@ -11,8 +11,6 @@
 
 const process = require('process');
 const dev = require("@microsoft/vscode-azext-dev");
-const webpack = require('webpack');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 let DEBUG_WEBPACK = !/^(false|0)?$/i.test(process.env.DEBUG_WEBPACK || '');
 
@@ -20,6 +18,7 @@ const config = dev.getDefaultWebpackConfig({
     projectRoot: __dirname,
     verbosity: DEBUG_WEBPACK ? 'debug' : 'normal',
     entries: {
+        // required for cloud shell feature
         cloudConsoleLauncher: './src/cloudConsole/cloudShellChildProcess/cloudConsoleLauncher.ts',
     },
     externals:
@@ -32,7 +31,7 @@ const config = dev.getDefaultWebpackConfig({
         '../build/Release/bufferutil': 'commonjs ../build/Release/bufferutil',
         '../build/default/bufferutil': 'commonjs ../build/default/bufferutil',
 
-        // for cloud shell
+        // required for cloud shell feature
         bufferutil: 'commonjs bufferutil',
         'utf-8-validate': 'commonjs utf-8-validate',
         './platform/openbsd': 'commonjs copy-paste-openbsd',

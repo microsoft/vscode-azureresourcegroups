@@ -3,28 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// this file is run as a child process from the extension host and communicates via IPC
+// This file is run as a child process from the extension host and communicates via IPC to the extension host.
+// It connects to Azure Cloud Shell via websocket and writes and reads data from the websocket in order to
+// interact with the remote shell. Calls to `console` show up in the VS Code terminal.
+//
+// Note: Do not add any VS Code related dependencies to this file, as it is not run in the extension host.
 import * as http from 'http';
 import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import * as request from 'request-promise';
 import * as WS from 'ws';
 import { readJSON } from './readJSON';
-
-async function sendData(socketPath: string, data: string): Promise<http.IncomingMessage> {
-    return new Promise<http.IncomingMessage>((resolve, reject) => {
-        const opts: http.RequestOptions = {
-            socketPath,
-            path: '/',
-            method: 'POST'
-        };
-
-        const req = http.request(opts, res => resolve(res));
-        req.on('error', (err: Error) => reject(err));
-        req.write(data);
-        req.end();
-    });
-}
 
 function delay<T = void>(ms: number, result?: T | PromiseLike<T>): Promise<T | PromiseLike<T> | undefined> {
     return new Promise(resolve => setTimeout(() => resolve(result), ms));
@@ -48,9 +37,7 @@ export interface Size {
 }
 
 function getWindowSize(): Size {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const stdout: any = process.stdout;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    const stdout = process.stdout;
     const windowSize: [number, number] = stdout.isTTY ? stdout.getWindowSize() : [80, 30];
     return {
         cols: windowSize[0],
@@ -106,6 +93,23 @@ async function resize(accessToken: string, terminalUri: string) {
     console.log('Failed to resize terminal.');
 }
 
+// child process sends data to the extension host via POST requests to the IPC server running in the extension host
+async function sendData(socketPath: string, data: string): Promise<http.IncomingMessage> {
+    return new Promise<http.IncomingMessage>((resolve, reject) => {
+        const opts: http.RequestOptions = {
+            socketPath,
+            path: '/',
+            method: 'POST'
+        };
+
+        const req = http.request(opts, res => resolve(res));
+        req.on('error', (err: Error) => reject(err));
+        req.write(data);
+        req.end();
+    });
+}
+
+// Connects to Azure Cloud Shell via websocket. Writes and reads data from the websocket in order to interact with the remote shell.
 function connectSocket(ipcHandle: string, url: string) {
 
     const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || undefined;
@@ -129,6 +133,7 @@ function connectSocket(ipcHandle: string, url: string) {
             });
     });
 
+    // When we get data from cloud shell, write it to stdout. In this case stdout is the VS Code terminal.
     ws.on('message', function (data) {
         process.stdout.write(String(data));
     });
@@ -170,12 +175,11 @@ function connectSocket(ipcHandle: string, url: string) {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function main() {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    process.stdin.setRawMode!(true);
+    process.stdin.setRawMode(true);
     process.stdin.resume();
 
+    // process.env.CLOUD_CONSOLE_IPC is defined when the extension host creates the terminal
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const ipcHandle = process.env.CLOUD_CONSOLE_IPC!;
     (async () => {
@@ -183,8 +187,7 @@ export function main() {
         let res: http.IncomingMessage;
         // eslint-disable-next-line no-cond-assign
         while (res = await sendData(ipcHandle, JSON.stringify([{ type: 'poll' }]))) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            for (const message of await readJSON<any>(res)) {
+            for (const message of await readJSON(res)) {
                 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
                 if (message.type === 'log') {
                     console.log(...(message.args) as []);
@@ -207,7 +210,6 @@ export function main() {
                 } else if (message.type === 'exit') {
                     process.exit(message.code as number);
                 }
-                /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
             }
         }
     })()
