@@ -631,6 +631,7 @@
         "@microsoft/vscode-azext-utils": "^2.4.0",
         "buffer": "^6.0.3",
         "jsonc-parser": "^2.2.1",
+        "node-fetch": "^3.3.2",
         "uuid": "^9.0.0",
         "vscode-nls": "^5.0.1",
         "vscode-uri": "^3.0.7"
