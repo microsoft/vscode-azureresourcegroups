@@ -146,7 +146,6 @@ export class TestAzureSubscriptionProvider implements AzureSubscriptionProvider 
             throw new Error('Not signed in');
         }
 
-
         return {
             client: new armSubs.SubscriptionClient(this._tokenCredential,),
             credential: this._tokenCredential,
@@ -242,6 +241,14 @@ async function getTokenCredential(serviceConnectionId: string, domain: string, c
  */
 async function requestOidcToken(oidcRequestUrl: string, systemAccessToken: string): Promise<string> {
     return await callWithTelemetryAndErrorHandling('azureResourceGroups.requestOidcToken', async (context) => {
+        const response2 = await fetch(oidcRequestUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${systemAccessToken}`
+            }
+        });
+
         const client: ServiceClient = await createGenericClient(context, undefined);
         const request: PipelineRequest = createPipelineRequest({
             url: oidcRequestUrl,
@@ -255,7 +262,7 @@ async function requestOidcToken(oidcRequestUrl: string, systemAccessToken: strin
         const response: PipelineResponse = await client.sendRequest(request);
         const body: string = response.bodyAsText?.toString() || "";
 
-
+        console.log('fetch response ', JSON.stringify(response2));
         if (response.status !== 200) {
             throw new Error(`Failed to get OIDC token:\n
             Response status: ${response.status}\n
