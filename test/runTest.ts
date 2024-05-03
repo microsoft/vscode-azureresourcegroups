@@ -16,7 +16,6 @@ async function main(): Promise<void> {
             cli,
             [
                 ...args,
-                '--install-extension', 'ms-vscode.azure-account',
             ],
             {
                 encoding: 'utf-8',
