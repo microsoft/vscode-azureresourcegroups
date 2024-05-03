@@ -262,7 +262,7 @@ async function requestOidcToken(oidcRequestUrl: string, systemAccessToken: strin
         const response: PipelineResponse = await client.sendRequest(request);
         const body: string = response.bodyAsText?.toString() || "";
 
-        console.log('fetch response ', JSON.stringify(response2));
+        console.log('fetch response ', response2);
         if (response.status !== 200) {
             throw new Error(`Failed to get OIDC token:\n
             Response status: ${response.status}\n
