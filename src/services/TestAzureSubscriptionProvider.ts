@@ -231,10 +231,10 @@ async function getTokenCredential(serviceConnectionId: string, domain: string, c
         const oidcRequestUrl = `${teamFoundationCollectionUri}${teamProjectId}/_apis/distributedtask/hubs/build/plans/${planId}/jobs/${jobId}/oidctoken?api-version=7.1-preview.1&serviceConnectionId=${serviceConnectionId}`;
 
         const { ClientAssertionCredential } = await import("@azure/identity");
-        const token = await requestOidcToken(oidcRequestUrl, systemAccessToken);
-        return new ClientAssertionCredential(domain, clientId, async () => token);
+        return new ClientAssertionCredential(domain, clientId, async () => await requestOidcToken(oidcRequestUrl, systemAccessToken))
     }
 }
+
 
 /**
  * API reference: https://learn.microsoft.com/en-us/rest/api/azure/devops/distributedtask/oidctoken/create
