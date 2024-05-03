@@ -241,13 +241,19 @@ async function getTokenCredential(serviceConnectionId: string, domain: string, c
  */
 async function requestOidcToken(oidcRequestUrl: string, systemAccessToken: string): Promise<string> {
     return await callWithTelemetryAndErrorHandling('azureResourceGroups.requestOidcToken', async (context) => {
+        console.log('FETCH OBJECT', JSON.stringify(fetch));
         const response2 = await fetch(oidcRequestUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${systemAccessToken}`
+                "Authorization": `Bearer ${systemAccessToken}`,
+                "Accept": "application/json"
             }
         });
+
+        console.log('fetch response ', response2);
+        console.log('fetch response ', response2.blob);
+        console.log('fetch response ', response2.body);
 
         const client: ServiceClient = await createGenericClient(context, undefined);
         const request: PipelineRequest = createPipelineRequest({
@@ -261,8 +267,6 @@ async function requestOidcToken(oidcRequestUrl: string, systemAccessToken: strin
 
         const response: PipelineResponse = await client.sendRequest(request);
         const body: string = response.bodyAsText?.toString() || "";
-
-        console.log('fetch response ', response2);
         if (response.status !== 200) {
             throw new Error(`Failed to get OIDC token:\n
             Response status: ${response.status}\n
