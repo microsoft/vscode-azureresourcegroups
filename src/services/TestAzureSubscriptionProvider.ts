@@ -7,7 +7,6 @@ import type { SubscriptionClient, TenantIdDescription } from '@azure/arm-resourc
 import { ServiceClient } from '@azure/core-client';
 import { createHttpHeaders, createPipelineRequest, type PipelineRequest } from '@azure/core-rest-pipeline';
 import { AzureAuthentication, AzureSubscriptionProvider, getConfiguredAzureEnv, type AzureSubscription } from '@microsoft/vscode-azext-azureauth';
-import { callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import { Disposable, Event } from 'vscode';
 
 let testAzureSubscriptionProvider: TestAzureSubscriptionProvider | undefined;
@@ -239,28 +238,26 @@ async function getTokenCredential(serviceConnectionId: string, domain: string, c
  * API reference: https://learn.microsoft.com/en-us/rest/api/azure/devops/distributedtask/oidctoken/create
  */
 async function requestOidcToken(oidcRequestUrl: string, systemAccessToken: string): Promise<string> {
-    return await callWithTelemetryAndErrorHandling('azureResourceGroups.requestOidcToken', async (context) => {
-        console.log('FETCH OBJECT', JSON.stringify(fetch));
-        const genericClient = new ServiceClient();
-        const request2: PipelineRequest = createPipelineRequest({
-            url: oidcRequestUrl,
-            method: "POST",
-            headers: createHttpHeaders({
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${systemAccessToken}`
-            })
-        });
-        const response2 = await genericClient.sendRequest(request2);
-        const body: string = response2.bodyAsText?.toString() || "";
-        if (response2.status !== 200) {
-            throw new Error(`Failed to get OIDC token:\n
+    console.log('FETCH OBJECT', JSON.stringify(fetch));
+    const genericClient = new ServiceClient();
+    const request2: PipelineRequest = createPipelineRequest({
+        url: oidcRequestUrl,
+        method: "POST",
+        headers: createHttpHeaders({
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${systemAccessToken}`
+        })
+    });
+    const response2 = await genericClient.sendRequest(request2);
+    const body: string = response2.bodyAsText?.toString() || "";
+    if (response2.status !== 200) {
+        throw new Error(`Failed to get OIDC token:\n
             Response status: ${response2.status}\n
             Response body: ${body}\n
             Response headers: ${JSON.stringify(response2.headers.toJSON())}
         `);
-        } else {
-            console.log(`Successfully got OIDC token with status ${response2.status}`);
-        }
-        return (JSON.parse(body) as { oidcToken: string }).oidcToken;
-    }) || '';
+    } else {
+        console.log(`Successfully got OIDC token with status ${response2.status}`);
+    }
+    return (JSON.parse(body) as { oidcToken: string }).oidcToken;
 }
