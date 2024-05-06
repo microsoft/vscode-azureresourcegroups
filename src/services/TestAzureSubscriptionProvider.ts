@@ -5,9 +5,8 @@
 
 import type { SubscriptionClient, TenantIdDescription } from '@azure/arm-resources-subscriptions';
 import { ServiceClient } from '@azure/core-client';
-import { createHttpHeaders, createPipelineRequest, type PipelineRequest, type PipelineResponse } from '@azure/core-rest-pipeline';
+import { createHttpHeaders, createPipelineRequest, type PipelineRequest } from '@azure/core-rest-pipeline';
 import { AzureAuthentication, AzureSubscriptionProvider, getConfiguredAzureEnv, type AzureSubscription } from '@microsoft/vscode-azext-azureauth';
-import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
 import { callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import { Disposable, Event } from 'vscode';
 
@@ -252,28 +251,15 @@ async function requestOidcToken(oidcRequestUrl: string, systemAccessToken: strin
             })
         });
         const response2 = await genericClient.sendRequest(request2);
-        console.log('ServiceClient ', response2);
-
-        const client: ServiceClient = await createGenericClient(context, undefined);
-        const request: PipelineRequest = createPipelineRequest({
-            url: oidcRequestUrl,
-            method: "POST",
-            headers: createHttpHeaders({
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${systemAccessToken}`
-            })
-        });
-
-        const response: PipelineResponse = await client.sendRequest(request);
-        const body: string = response.bodyAsText?.toString() || "";
-        if (response.status !== 200) {
+        const body: string = response2.bodyAsText?.toString() || "";
+        if (response2.status !== 200) {
             throw new Error(`Failed to get OIDC token:\n
-            Response status: ${response.status}\n
+            Response status: ${response2.status}\n
             Response body: ${body}\n
-            Response headers: ${JSON.stringify(response.headers.toJSON())}
+            Response headers: ${JSON.stringify(response2.headers.toJSON())}
         `);
         } else {
-            console.log(`Successfully got OIDC token with status ${response.status}`);
+            console.log(`Successfully got OIDC token with status ${response2.status}`);
         }
         return (JSON.parse(body) as { oidcToken: string }).oidcToken;
     }) || '';
