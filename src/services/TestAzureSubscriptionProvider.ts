@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { SubscriptionClient, TenantIdDescription } from '@azure/arm-resources-subscriptions';
-import { type ServiceClient } from '@azure/core-client';
+import { ServiceClient } from '@azure/core-client';
 import { createHttpHeaders, createPipelineRequest, type PipelineRequest, type PipelineResponse } from '@azure/core-rest-pipeline';
 import { AzureAuthentication, AzureSubscriptionProvider, getConfiguredAzureEnv, type AzureSubscription } from '@microsoft/vscode-azext-azureauth';
 import { createGenericClient } from '@microsoft/vscode-azext-azureutils';
@@ -242,18 +242,17 @@ async function getTokenCredential(serviceConnectionId: string, domain: string, c
 async function requestOidcToken(oidcRequestUrl: string, systemAccessToken: string): Promise<string> {
     return await callWithTelemetryAndErrorHandling('azureResourceGroups.requestOidcToken', async (context) => {
         console.log('FETCH OBJECT', JSON.stringify(fetch));
-        const response2 = await fetch(oidcRequestUrl, {
+        const genericClient = new ServiceClient();
+        const request2: PipelineRequest = createPipelineRequest({
+            url: oidcRequestUrl,
             method: "POST",
-            headers: {
+            headers: createHttpHeaders({
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${systemAccessToken}`,
-                "Accept": "application/json"
-            }
+                "Authorization": `Bearer ${systemAccessToken}`
+            })
         });
-
-        console.log('fetch response ', response2);
-        console.log('fetch response ', response2.blob);
-        console.log('fetch response ', response2.body);
+        const response2 = await genericClient.sendRequest(request2);
+        console.log('ServiceClient ', response2);
 
         const client: ServiceClient = await createGenericClient(context, undefined);
         const request: PipelineRequest = createPipelineRequest({
