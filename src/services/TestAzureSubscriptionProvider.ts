@@ -138,19 +138,29 @@ export class TestAzureSubscriptionProvider implements AzureSubscriptionProvider 
      *
      * @returns A client, the credential used by the client, and the authentication function
      */
-    private async getSubscriptionClient(_tenantId?: string, _scopes?: string[]): Promise<{ client: SubscriptionClient, credential: TokenCredential, authentication: AzureAuthentication }> {
+    private async getSubscriptionClient(_tenantId?: string, scopes?: string[]): Promise<{ client: SubscriptionClient, credential: TokenCredential, authentication: AzureAuthentication }> {
         const armSubs = await import('@azure/arm-resources-subscriptions');
         if (!this._tokenCredential) {
             throw new Error('Not signed in');
         }
-
+        const accessToken = (await this._tokenCredential?.getToken("https://management.azure.com/.default"))?.token || '';
+        console.log('***accessToken***: ', accessToken);
         return {
             client: new armSubs.SubscriptionClient(this._tokenCredential,),
             credential: this._tokenCredential,
             authentication: {
-                getSession: () => {
-                    // SHOULD BE OKAY TO BE UNDEFINED?
-                    return undefined;
+                getSession: (_scopes: string[] | undefined) => {
+                    return {
+                        accessToken,
+                        id: this._tokenCredential?.tenantId || '',
+                        account: {
+                            id: this._tokenCredential?.tenantId || '',
+                            label: this._tokenCredential?.tenantId || '',
+                        },
+                        tenantId: this._tokenCredential?.tenantId || '',
+                        scopes: scopes || [],
+                    };
+
                 }
             }
         };
