@@ -3,15 +3,23 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { VSCodeAzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
+import { AzureDevOpsSubscriptionProvider, VSCodeAzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import { getSelectedTenantAndSubscriptionIds } from '../commands/accounts/selectSubscriptions';
 
 let vscodeAzureSubscriptionProvider: VSCodeAzureSubscriptionProvider | undefined;
+let azureDevOpsSubscriptionProvider: AzureDevOpsSubscriptionProvider | undefined;
 
 export function createVSCodeAzureSubscriptionProviderFactory(): () => Promise<VSCodeAzureSubscriptionProvider> {
     return async (): Promise<VSCodeAzureSubscriptionProvider> => {
         vscodeAzureSubscriptionProvider ??= await createVSCodeAzureSubscriptionProvider();
         return vscodeAzureSubscriptionProvider;
+    }
+}
+
+export function createAzureDevOpsSubscriptionProviderFactory(): () => Promise<AzureDevOpsSubscriptionProvider> {
+    return async (): Promise<AzureDevOpsSubscriptionProvider> => {
+        azureDevOpsSubscriptionProvider ??= new AzureDevOpsSubscriptionProvider();
+        return azureDevOpsSubscriptionProvider;
     }
 }
 
