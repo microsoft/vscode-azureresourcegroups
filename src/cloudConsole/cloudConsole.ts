@@ -287,7 +287,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 cloudConsoleLauncherPath = cloudConsoleLauncherPath.replace(/\\/g, '\\\\');
             }
             const shellArgs: string[] = [
-                process.argv0,
+                process.execPath,
                 '-e',
                 `require('${cloudConsoleLauncherPath}').main()`,
             ];
