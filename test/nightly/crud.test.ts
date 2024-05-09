@@ -6,8 +6,7 @@
 import { Location } from '@azure/arm-resources-subscriptions';
 import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
 import { createTestActionContext, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtParentTreeItem, createResourceClient, createResourceGroup, deleteResourceGroupV2, ext, IActionContext, randomUtils, SubscriptionItem } from '../../extension.bundle';
-import { settingUtils } from '../../src/utils/settingUtils';
+import { AzExtParentTreeItem, createResourceClient, createResourceGroup, deleteResourceGroupV2, ext, IActionContext, randomUtils, settingUtils, SubscriptionItem } from '../../extension.bundle';
 import { longRunningTestsEnabled } from "../global.test";
 import assert = require("assert");
 
