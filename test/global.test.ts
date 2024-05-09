@@ -9,7 +9,6 @@ import { ext, registerOnActionStartHandler, settingUtils } from '../extension.bu
 
 export let longRunningTestsEnabled: boolean;
 export const userSettings: { key: string, value: unknown }[] = [];
-export const testWorkspace: vscode.Uri = vscode.workspace.workspaceFolders![0].uri;
 // Runs before all tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(1 * 60 * 1000);
@@ -23,12 +22,13 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
         // Use `TestUserInput` by default so we get an error if an unexpected call to `context.ui` occurs, rather than timing out
         context.ui = new TestUserInput(vscode);
     });
-    const groupBySetting = settingUtils.getWorkspaceSetting('groupBy', testWorkspace.fsPath)
+    const groupBySetting = settingUtils.getWorkspaceSetting('groupBy')
     userSettings.push({ key: 'groupBy', value: groupBySetting });
 
-    const deleteConfirmationSetting = settingUtils.getWorkspaceSetting('deleteConfirmation', testWorkspace.fsPath);
+    const deleteConfirmationSetting = settingUtils.getWorkspaceSetting('deleteConfirmation');
     userSettings.push({ key: 'deleteConfirmation', value: deleteConfirmationSetting });
 
+    // TODO: Set to true for testing purposes
     longRunningTestsEnabled = true; //!/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '');
 });
 
