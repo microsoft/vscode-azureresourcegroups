@@ -5,7 +5,7 @@
 
 import { type Location } from '@azure/arm-resources-subscriptions';
 import { createTestActionContext, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtParentTreeItem, createResourceClient, createResourceGroup2, deleteResourceGroupV2, ext, IActionContext, LocationListStep, randomUtils, settingUtils, SubscriptionItem } from '../../extension.bundle';
+import { AzExtParentTreeItem, createResourceClient, createResourceGroup, deleteResourceGroupV2, ext, IActionContext, LocationListStep, randomUtils, settingUtils, SubscriptionItem } from '../../extension.bundle';
 import { longRunningTestsEnabled } from "../global.test";
 import assert = require("assert");
 
@@ -39,7 +39,7 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         await runWithTestActionContext('createResourceGroup', async context => {
             const testInputs: (string | RegExp)[] = [rgName, locations[0].displayName!];
             await context.ui.runWithInputs(testInputs, async () => {
-                await createResourceGroup2(context, testSubscription);
+                await createResourceGroup(context, testSubscription);
             });
 
             assert.ok(await resourceGroupExists(context, rgName));
@@ -51,7 +51,7 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
             await runWithTestActionContext('createResourceGroup', async context => {
                 const testInputs: (string | RegExp)[] = [`${rgName}-${l.name}`, l.displayName!];
                 await context.ui.runWithInputs(testInputs, async () => {
-                    await createResourceGroup2(context, testSubscription);
+                    await createResourceGroup(context, testSubscription);
                 });
 
                 assert.ok(await resourceGroupExists(context, `${rgName}-${l.name}`));
