@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Location } from '@azure/arm-resources-subscriptions';
-import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
+import { type Location } from '@azure/arm-resources-subscriptions';
 import { createTestActionContext, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtParentTreeItem, createResourceClient, createResourceGroup, deleteResourceGroupV2, ext, IActionContext, randomUtils, settingUtils, SubscriptionItem } from '../../extension.bundle';
+import { AzExtParentTreeItem, createResourceClient, createResourceGroup, deleteResourceGroupV2, ext, IActionContext, LocationListStep, randomUtils, settingUtils, SubscriptionItem } from '../../extension.bundle';
 import { longRunningTestsEnabled } from "../global.test";
 import assert = require("assert");
 
@@ -30,9 +29,9 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
             const testContext = await createTestActionContext();
             testSubscription = subscriptionTreeItems[0] as SubscriptionItem;
             const context = { ...testContext, ...testSubscription.subscription };
-
             locations = await LocationListStep.getLocations(context);
         }
+
         rgName = randomUtils.getRandomHexString(12);
     });
 
