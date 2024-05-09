@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as vscode from 'vscode';
 import { longRunningTestsEnabled } from '../global.test';
 
 export const resourceGroupsToDelete: string[] = [];
@@ -11,15 +12,13 @@ export const resourceGroupsToDelete: string[] = [];
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
     if (longRunningTestsEnabled) {
         this.timeout(2 * 60 * 1000);
-
-        // sign-in code stuff here?
+        await vscode.commands.executeCommand('azureResourceGroups.logIn');
     }
 });
 
 suiteTeardown(async function (this: Mocha.Context): Promise<void> {
     if (longRunningTestsEnabled) {
         this.timeout(10 * 60 * 1000);
-
         await deleteResourceGroups();
     }
 });

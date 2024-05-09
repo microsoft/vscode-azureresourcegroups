@@ -486,7 +486,8 @@
                             "%azureResourceGroups.deleteConfirmation.EnterName%",
                             "%azureResourceGroups.deleteConfirmation.ClickButton%"
                         ],
-                        "default": "EnterName"
+                        "default": "EnterName",
+                        "scope": "machine"
                     },
                     "azureResourceGroups.showHiddenTypes": {
                         "type": "boolean",
@@ -496,7 +497,8 @@
                     "azureResourceGroups.groupBy": {
                         "type": "string",
                         "description": "%azureResourceGroups.groupBy%",
-                        "default": "resourceType"
+                        "default": "resourceType",
+                        "scope": "machine"
                     },
                     "azureResourceGroups.suppressActivityNotifications": {
                         "type": "boolean",

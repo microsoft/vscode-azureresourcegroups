@@ -3,5 +3,9 @@
         {
             "path": "../testWorkspace"
         }
-    ]
+    ],
+    "settings": {
+        "azureResourceGroups.deleteConfirmation": "EnterName",
+        "azureResourceGroups.groupBy": "resourceGroup"
+    }
 }
