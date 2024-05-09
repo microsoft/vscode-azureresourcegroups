@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import { Event, TreeDataProvider, TreeItem } from "vscode";
-import { BranchDataItemWrapper, ext, isWrapper, ResourceGroupsItem, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from "../../extension.bundle";
+import { BranchDataItemWrapper, ext, isWrapper, ResourceGroupsItem2, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from "../../extension.bundle";
 import { TestBranchDataProvider } from "./TestBranchDataProvider";
 
 const getWorkspaceResourceProviderStub: (onCalled?: () => void, resources?: WorkspaceResource[]) => WorkspaceResourceProvider = (onCalled, resources) => {
@@ -170,7 +170,7 @@ suite('Branch data provider tests', async () => {
         branchDataProvider.onDidChangeTreeDataEmitter.fire(unwrappedChild);
 
         const eventData = await waitForOnDidChangeTreeDataToFire;
-        assert.strictEqual((eventData as ResourceGroupsItem[])[0], testChild);
+        assert.strictEqual((eventData as ResourceGroupsItem2[])[0], testChild);
     });
 
     test('Firing BranchDataProvider.onDidChangeTreeData event with a wrapper item should result in TreeDataProvider.onDidChangeTreeData being fired with an empty array.', async () => {
