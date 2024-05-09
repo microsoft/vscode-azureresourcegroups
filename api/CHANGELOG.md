@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## [2.2.1] - 2024-04-25
+
+* Add "Web PubSub" resource type
+
 ## [2.2.0] - 2024-01-30
 
 * Add `getAzExtResourceType` function
