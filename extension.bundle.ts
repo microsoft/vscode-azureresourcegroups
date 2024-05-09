@@ -25,6 +25,7 @@ export * from './api/src/resources/workspace';
 export * from './api/src/utils/getApi';
 export * from './api/src/utils/wrapper';
 export { convertV1TreeItemId } from './src/api/compatibility/CompatibleAzExtTreeDataProvider';
+export { hasPortalUrl } from './src/commands/openInPortal';
 export * from './src/commands/tags/getTagDiagnostics';
 export * from './src/commands/viewProperties';
 export * from './src/services/AzureResourcesService';
