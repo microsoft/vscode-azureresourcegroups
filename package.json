@@ -62,6 +62,11 @@
         },
         "commands": [
             {
+                "command": "azureResourceGroups.uploadFileCloudConsole",
+                "title": "%azureResourceGroups.uploadToCloudShell%",
+                "category": "Azure"
+            },
+            {
                 "command": "azureResourceGroups.maintainCloudShellConnection",
                 "title": "Maintain Cloud Shell connection",
                 "category": "Azure"
@@ -300,6 +305,20 @@
             }
         ],
         "menus": {
+            "explorer/context": [
+                {
+                    "command": "azureResourceGroups.uploadFileCloudConsole",
+                    "when": "resourceScheme == file && !explorerResourceIsFolder && isWorkspaceTrusted && azureResourcesOpenCloudConsoleCount && azureResourcesOpenCloudConsoleCount != 0",
+                    "group": "999_cloudConsole"
+                }
+            ],
+            "editor/title/context": [
+                {
+                    "command": "azureResourceGroups.uploadFileCloudConsole",
+                    "when": "resourceScheme == file && isWorkspaceTrusted && azureResourcesOpenCloudConsoleCount && azureResourcesOpenCloudConsoleCount != 0",
+                    "group": "999_cloudConsole"
+                }
+            ],
             "view/title": [
                 {
                     "command": "azureResourceGroups.createResource",
@@ -410,6 +429,10 @@
                 }
             ],
             "commandPalette": [
+                {
+                    "command": "azureResourceGroups.uploadFileCloudConsole",
+                    "when": "isWorkspaceTrusted"
+                },
                 {
                     "command": "azureResourceGroups.maintainCloudShellConnection",
                     "when": "never"

@@ -1,6 +1,6 @@
 import { parseError } from "@microsoft/vscode-azext-utils";
-import { localize } from "vscode-nls";
 import { ext } from "../extensionVariables";
+import { localize } from "../utils/localize";
 
 export function delay<T = void>(ms: number, result?: T | PromiseLike<T>): Promise<T | PromiseLike<T> | undefined> {
     return new Promise(resolve => setTimeout(() => resolve(result), ms));

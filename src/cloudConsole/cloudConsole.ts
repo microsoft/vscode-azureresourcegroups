@@ -205,7 +205,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 deferredTokens.reject(status);
                 deferredUris.reject(status);
                 shells.splice(shells.indexOf(state), 1);
-                void commands.executeCommand('setContext', 'openCloudConsoleCount', `${shells.length}`);
+                void commands.executeCommand('setContext', 'azureResourcesOpenCloudConsoleCount', `${shells.length}`);
             }
         }
 
@@ -216,7 +216,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 return requiresWorkspaceTrust(context);
             }
 
-            void commands.executeCommand('setContext', 'openCloudConsoleCount', `${shells.length}`);
+            void commands.executeCommand('setContext', 'azureResourcesOpenCloudConsoleCount', `${shells.length}`);
 
             const isWindows: boolean = process.platform === 'win32';
             if (isWindows) {
@@ -410,6 +410,9 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                     throw err;
                 }
             }
+
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            deferredTokens!.resolve({ resource: session.accessToken });
 
             // Connect to terminal
             const connecting: string = localize('connectingTerminal', "Connecting terminal...");

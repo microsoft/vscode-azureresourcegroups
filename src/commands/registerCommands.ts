@@ -6,6 +6,7 @@
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
+import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
@@ -31,6 +32,8 @@ import { editTags } from './tags/editTags';
 import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
+    registerCommand('azureResourceGroups.uploadFileCloudConsole', uploadFileToCloudShell);
+
     registerCommand('azureResourceGroups.maintainCloudShellConnection', maintainCloudShellConnection);
 
     // Special-case refresh that ignores the selected/focused node and always refreshes the entire tree. Used by the refresh button in the tree title.
