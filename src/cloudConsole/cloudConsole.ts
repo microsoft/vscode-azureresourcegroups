@@ -362,7 +362,8 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 serverQueue.push({ type: 'log', args: [localize('foundTenants', `Found ${tenantsWithSubs.length} authenticated tenant${tenants.length > 1 ? 's' : ''}. Please use the "Sign in to directory..." command to sign in to additional tenants.`)] });
 
                 if (tenantsWithSubs.length <= 1) {
-                    selectedTenant = tenantsWithSubs[0];
+                    // If they have only one tenant with subscriptions, use it. If there's no tenant with subscriptions, use the first tenant.
+                    selectedTenant = tenantsWithSubs[0] ?? tenants[0];
                 } else {
                     // Multipe tenants with subscriptions, user must pick a tenant
                     serverQueue.push({ type: 'log', args: [localize('selectingTenant', `Selecting tenant...`)] });
