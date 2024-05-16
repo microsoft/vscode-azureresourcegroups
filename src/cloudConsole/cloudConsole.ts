@@ -5,7 +5,7 @@
 
 import { TenantIdDescription } from '@azure/arm-resources-subscriptions';
 import { AzureSubscriptionProvider, getConfiguredAzureEnv } from '@microsoft/vscode-azext-azureauth';
-import { IActionContext, IAzureQuickPickItem, IParsedError, callWithTelemetryAndErrorHandlingSync, parseError } from '@microsoft/vscode-azext-utils';
+import { IActionContext, IAzureQuickPickItem, IParsedError, callWithTelemetryAndErrorHandlingSync, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
 import * as cp from 'child_process';
 import * as FormData from 'form-data';
 import { ReadStream } from 'fs';
@@ -205,7 +205,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 deferredTokens.reject(status);
                 deferredUris.reject(status);
                 shells.splice(shells.indexOf(state), 1);
-                void commands.executeCommand('setContext', 'openCloudConsoleCount', `${shells.length}`);
+                void commands.executeCommand('setContext', 'azureResourcesOpenCloudConsoleCount', `${shells.length}`);
             }
         }
 
@@ -216,7 +216,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 return requiresWorkspaceTrust(context);
             }
 
-            void commands.executeCommand('setContext', 'openCloudConsoleCount', `${shells.length}`);
+            void commands.executeCommand('setContext', 'azureResourcesOpenCloudConsoleCount', `${shells.length}`);
 
             const isWindows: boolean = process.platform === 'win32';
             if (isWindows) {
@@ -343,36 +343,54 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
             liveServerQueue = serverQueue;
 
             const tenants = await subscriptionProvider.getTenants();
-            serverQueue.push({ type: 'log', args: [localize('foundTenants', `Found ${tenants.length} tenant${tenants.length > 1 ? 's' : ''}.`)] });
             let selectedTenant: TenantIdDescription | undefined = undefined;
-            // handle multi tenant scenario, user must pick a tenant
-            if (tenants.length > 1) {
-                serverQueue.push({ type: 'log', args: [localize('selectingTenant', `Selecting tenant...`)] });
-                const picks = tenants.map(tenant => {
-                    const defaultDomainName: string | undefined = tenant.defaultDomain;
-                    return <IAzureQuickPickItem<TenantIdDescription>>{
-                        label: tenant.displayName,
-                        description: defaultDomainName,
-                        data: tenant,
-                    };
-                }).sort((a, b) => a.label.localeCompare(b.label));
 
-                const pick = await window.showQuickPick<IAzureQuickPickItem<TenantIdDescription>>(picks, {
-                    placeHolder: localize('selectDirectoryPlaceholder', "Select tenant"),
-                    ignoreFocusOut: true // The terminal opens concurrently and can steal focus (https://github.com/microsoft/vscode-azure-account/issues/77).
-                });
-
-                if (!pick) {
-                    context.telemetry.properties.outcome = 'noTenantPicked';
-                    serverQueue.push({ type: 'exit' });
-                    updateStatus('Disconnected');
-                    return;
-                }
-
-                selectedTenant = pick.data;
-            } else {
+            if (tenants.length <= 1) {
+                serverQueue.push({ type: 'log', args: [localize('foundOneTenant', `Found 1 tenant.`)] });
+                // if they have only one tenant, use it
                 selectedTenant = tenants[0];
+            } else {
+                // If the user has multiple tenants, then we check which tenants have subscriptions.
+                // This also checks if this tenant is authenticated.
+                // If a tenant is not authenticated, users will have to use the "Sign in to Directory..." command before launching cloud shell.
+                const tenantsIdsWithSubs = new Set<string>();
+                const subscriptions = await subscriptionProvider.getSubscriptions(false);
+                subscriptions.forEach((sub) => {
+                    tenantsIdsWithSubs.add(sub.tenantId);
+                });
+                const tenantsWithSubs = tenants.filter(tenant => tenantsIdsWithSubs.has(nonNullProp(tenant, 'tenantId')));
+                serverQueue.push({ type: 'log', args: [localize('foundTenants', `Found ${tenantsWithSubs.length} authenticated tenant${tenants.length > 1 ? 's' : ''}. Please use the "Sign in to directory..." command to sign in to additional tenants.`)] });
+
+                if (tenantsWithSubs.length <= 1) {
+                    // If they have only one tenant with subscriptions, use it. If there's no tenant with subscriptions, use the first tenant.
+                    selectedTenant = tenantsWithSubs[0] ?? tenants[0];
+                } else {
+                    // Multipe tenants with subscriptions, user must pick a tenant
+                    serverQueue.push({ type: 'log', args: [localize('selectingTenant', `Selecting tenant...`)] });
+                    const picks = tenantsWithSubs.map(tenant => {
+                        const defaultDomainName: string | undefined = tenant.defaultDomain;
+                        return <IAzureQuickPickItem<TenantIdDescription>>{
+                            label: tenant.displayName,
+                            description: defaultDomainName,
+                            data: tenant,
+                        };
+                    }).sort((a, b) => a.label.localeCompare(b.label));
+
+                    const pick = await window.showQuickPick<IAzureQuickPickItem<TenantIdDescription>>(picks, {
+                        placeHolder: localize('selectDirectoryPlaceholder', "Select tenant"),
+                        ignoreFocusOut: true // The terminal opens concurrently and can steal focus (https://github.com/microsoft/vscode-azure-account/issues/77).
+                    });
+
+                    if (!pick) {
+                        context.telemetry.properties.outcome = 'noTenantPicked';
+                        serverQueue.push({ type: 'exit' });
+                        updateStatus('Disconnected');
+                        return;
+                    }
+                    selectedTenant = pick.data;
+                }
             }
+            serverQueue.push({ type: 'log', args: [localize('usingTenant', `Using "${selectedTenant.displayName}" tenant.`)] });
 
             const session = await authentication.getSession('microsoft', ['https://management.core.windows.net//.default', `VSCODE_TENANT:${selectedTenant.tenantId}`], {
                 createIfNone: false,
@@ -410,6 +428,9 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                     throw err;
                 }
             }
+
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            deferredTokens!.resolve({ resource: session.accessToken });
 
             // Connect to terminal
             const connecting: string = localize('connectingTerminal', "Connecting terminal...");
