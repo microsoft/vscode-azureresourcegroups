@@ -628,6 +628,7 @@
         "lint-fix": "eslint --ext .ts . --fix",
         "listIcons": "gulp listIcons",
         "test": "node ./out/test/runTest.js",
+        "pretest": "webpack",
         "webpack": "tsc && gulp webpack-dev",
         "webpack-prod": "npm run build && gulp webpack-prod",
         "webpack-profile": "webpack --profile --json --mode production > webpack-stats.json && echo Use http://webpack.github.io/analyse to analyze the stats",
