@@ -77,27 +77,33 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         // TODO: Use the other environment variable to determine to use this. Currently set to true for testing reasons
         const longRunningTestsEnabled: boolean = true;//!/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '')
         if (longRunningTestsEnabled) {
-            console.log("TEST: Accessing env vars");
-            const serviceConnectionId: string | undefined = process.env.AzCodeServiceConnectionID;
-            console.log("TEST: Successfully accessed");
-            const domain: string | undefined = process.env.AzCodeServiceConnectionDomain;
-            const clientId: string | undefined = process.env.AzCodeServiceConnectionClientID;
+            try {
+                console.log("TEST: Accessing env vars");
+                const serviceConnectionId: string | undefined = process.env.AzCodeServiceConnectionID;
+                console.log("TEST: Successfully accessed");
+                const domain: string | undefined = process.env.AzCodeServiceConnectionDomain;
+                const clientId: string | undefined = process.env.AzCodeServiceConnectionClientID;
 
-            if (!serviceConnectionId || !domain || !clientId) {
-                throw new Error(`Using Azure DevOps federated credentials, but federated service connection is not configured\n
-                process.env.AzCodeServiceConnectionID: ${serviceConnectionId ? "✅" : "❌"}\n
-                process.env.AzCodeServiceConnectionDomain: ${domain ? "✅" : "❌"}\n
-                process.env.AzCodeServiceConnectionClientID: ${clientId ? "✅" : "❌"}\n
-            `);
+                if (!serviceConnectionId || !domain || !clientId) {
+                    throw new Error(`Using Azure DevOps federated credentials, but federated service connection is not configured\n
+                        process.env.AzCodeServiceConnectionID: ${serviceConnectionId ? "✅" : "❌"}\n
+                        process.env.AzCodeServiceConnectionDomain: ${domain ? "✅" : "❌"}\n
+                        process.env.AzCodeServiceConnectionClientID: ${clientId ? "✅" : "❌"}\n
+                    `);
+                }
+
+                const initializer: AzureDevOpsSubscriptionProviderInitializer = {
+                    serviceConnectionId,
+                    domain,
+                    clientId,
+                }
+                ext.subscriptionProviderFactory = createAzureDevOpsSubscriptionProviderFactory(initializer);
+                console.log("TEST: Success getting factory");
+            } catch (error) {
+                console.log(`TEST: Error getting factory: ${JSON.stringify(error)}`);
+                throw error;
             }
 
-            const initializer: AzureDevOpsSubscriptionProviderInitializer = {
-                serviceConnectionId,
-                domain,
-                clientId,
-            }
-            ext.subscriptionProviderFactory = createAzureDevOpsSubscriptionProviderFactory(initializer);
-            console.log("TEST: Success getting factory");
         } else {
             ext.subscriptionProviderFactory = createVSCodeAzureSubscriptionProviderFactory();
         }
