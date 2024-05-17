@@ -97,13 +97,13 @@ class BasicMockResources extends MockResources {
 
 export const createMockSubscriptionWithFunctions = (): BasicMockResources => {
     const mockResources = new BasicMockResources();
-    ext.testing.overrideAzureServiceFactory = createTestAzureResourcesServiceFactory(mockResources);
+    ext.testing.overrideAzureServiceFactory = createMockAzureResourcesServiceFactory(mockResources);
     const mockAzureSubscriptionProvider = new MockAzureSubscriptionProvider(mockResources);
     ext.testing.overrideAzureSubscriptionProvider = () => mockAzureSubscriptionProvider;
     return mockResources;
 }
 
-export function createTestAzureResourcesServiceFactory(mockResources: MockResources): AzureResourcesServiceFactory {
+export function createMockAzureResourcesServiceFactory(mockResources: MockResources): AzureResourcesServiceFactory {
     return () => {
         return {
             async listResources(_context, subscription: AzureSubscription): Promise<GenericResource[]> {

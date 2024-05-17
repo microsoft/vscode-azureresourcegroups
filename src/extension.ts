@@ -28,7 +28,7 @@ import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { ext } from './extensionVariables';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
-import { createVSCodeAzureSubscriptionProviderFactory } from './services/VSCodeAzureSubscriptionProvider';
+import { createAzureDevOpsSubscriptionProviderFactory, createVSCodeAzureSubscriptionProviderFactory } from './services/VSCodeAzureSubscriptionProvider';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
@@ -69,7 +69,10 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
-        ext.subscriptionProviderFactory = createVSCodeAzureSubscriptionProviderFactory();
+        // if this for a nightly test, we want to use the test subscription provider
+        // TODO: Use the other environment variable to determine to use this. Currently set to true for testing reasons
+        const longRunningTestsEnabled: boolean = true;//!/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '')
+        ext.subscriptionProviderFactory = longRunningTestsEnabled ? createAzureDevOpsSubscriptionProviderFactory() : createVSCodeAzureSubscriptionProviderFactory();
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
