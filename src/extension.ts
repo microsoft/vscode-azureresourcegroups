@@ -79,10 +79,10 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         if (longRunningTestsEnabled) {
             try {
                 console.log("TEST: Accessing env vars");
-                const serviceConnectionId: string | undefined = process.env.AzCodeServiceConnectionID;
+                const serviceConnectionId: string | undefined = process.env['AzCode_ServiceConnectionID'];
                 console.log("TEST: Successfully accessed");
-                const domain: string | undefined = process.env.AzCodeServiceConnectionDomain;
-                const clientId: string | undefined = process.env.AzCodeServiceConnectionClientID;
+                const domain: string | undefined = process.env['AzCode_ServiceConnectionDomain'];
+                const clientId: string | undefined = process.env['AzCode_ServiceConnectionClientID'];
 
                 if (!serviceConnectionId || !domain || !clientId) {
                     throw new Error(`Using Azure DevOps federated credentials, but federated service connection is not configured\n
