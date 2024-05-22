@@ -253,6 +253,11 @@
                     "visibility": "visible"
                 },
                 {
+                    "id": "azureTenant",
+                    "name": "Tenant",
+                    "visibility": "collapsed"
+                },
+                {
                     "id": "ms-azuretools.helpAndFeedback",
                     "name": "%ms-azuretools.helpAndFeedback%",
                     "visibility": "collapsed"
@@ -512,6 +517,13 @@
                     "azureResourceGroups.selectedSubscriptions": {
                         "type": "array",
                         "description": "%azureResourceGroups.selectedSubscriptions%",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "azureResourceGroups.unselectedTenants": {
+                        "type": "array",
+                        "description": "%azureResourceGroups.unselectedTenants%",
                         "items": {
                             "type": "string"
                         }

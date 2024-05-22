@@ -56,4 +56,22 @@ export class ResourceGroupsExtensionManager {
             await extensionAndContributions.extension.activate();
         }
     }
+
+    async activateTenantResourceBranchDataProvider(type: string): Promise<void> {
+        const extensionAndContributions =
+            getInactiveExtensions()
+                .map(extension => ({ extension, contributions: getResourceContributions(extension)?.tenant?.branches?.map(resources => resources.type) ?? [] }))
+                .find(extensionAndContributions => extensionAndContributions.contributions.find(contribution => contribution === type) !== undefined);
+        if (extensionAndContributions) {
+            await extensionAndContributions.extension.activate();
+        }
+    }
+
+    async activateTenantResourceProviders(): Promise<void> {
+        const inactiveResourceContributors =
+            getInactiveExtensions()
+                .filter(extension => getResourceContributions(extension)?.tenant?.resources);
+
+        await Promise.all(inactiveResourceContributors.map(extension => extension.activate()));
+    }
 }
