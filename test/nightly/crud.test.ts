@@ -5,7 +5,7 @@
 
 import { type Location } from '@azure/arm-resources-subscriptions';
 import { createTestActionContext, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtParentTreeItem, createResourceClient, createResourceGroup, deleteResourceGroupV2, ext, IActionContext, LocationListStep, randomUtils, settingUtils, SubscriptionItem } from '../../extension.bundle';
+import { AzExtParentTreeItem, IActionContext, LocationListStep, SubscriptionItem, createResourceClient, createResourceGroup, deleteResourceGroupV2, ext, randomUtils, settingUtils } from '../../extension.bundle';
 import { longRunningTestsEnabled } from "../global.test";
 import assert = require("assert");
 
@@ -94,11 +94,6 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
             await context.ui.runWithInputs([rgName, rgName], async () => {
                 await deleteResourceGroupV2(context);
             });
-
-            // ext.azureResourceProvider.onDidChangeResource!(async e => {
-            //     console.log(e);
-            //     assert.ok(!(await resourceGroupExists(context, rgName)));
-            // })
         });
 
     });
