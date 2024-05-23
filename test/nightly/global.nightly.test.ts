@@ -10,7 +10,6 @@ export const resourceGroupsToDelete: string[] = [];
 
 // Runs before all nightly tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
-    // TODO: Use other environment variables to determine if the tests should be run
     if (longRunningTestsEnabled) {
         this.timeout(2 * 60 * 1000);
         await vscode.commands.executeCommand('azureResourceGroups.logIn');

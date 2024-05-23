@@ -28,8 +28,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     const deleteConfirmationSetting = settingUtils.getWorkspaceSetting('deleteConfirmation');
     userSettings.push({ key: 'deleteConfirmation', value: deleteConfirmationSetting });
 
-    // TODO: Set to true for testing purposes
-    longRunningTestsEnabled = true; //!/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '');
+    longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '');
 });
 
 suiteTeardown(async function (this: Mocha.Context): Promise<void> {
