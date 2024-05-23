@@ -5,7 +5,6 @@
 
 'use strict';
 
-import { AzureDevOpsSubscriptionProviderInitializer, createAzureDevOpsSubscriptionProviderFactory } from '@microsoft/vscode-azext-azureauth';
 import { registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription } from 'api/src';
@@ -29,7 +28,7 @@ import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { ext } from './extensionVariables';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
-import { createVSCodeAzureSubscriptionProviderFactory } from './services/VSCodeAzureSubscriptionProvider';
+import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
@@ -72,30 +71,10 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
         // if this for a nightly test, we want to use the test subscription provider
         const useAzureFederatedCredentials: boolean = !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '')
-        if (useAzureFederatedCredentials) {
-            // when running tests, ensure we throw the errors and they aren't silently swallowed
-            activateContext.errorHandling.rethrow = true;
-            const serviceConnectionId: string | undefined = process.env['AzCode_ServiceConnectionID'];
-            const domain: string | undefined = process.env['AzCode_ServiceConnectionDomain'];
-            const clientId: string | undefined = process.env['AzCode_ServiceConnectionClientID'];
+        ext.subscriptionProviderFactory = getSubscriptionProviderFactory(useAzureFederatedCredentials);
 
-            if (!serviceConnectionId || !domain || !clientId) {
-                throw new Error(`Using Azure DevOps federated credentials, but federated service connection is not configured\n
-                        process.env.AzCodeServiceConnectionID: ${serviceConnectionId ? "✅" : "❌"}\n
-                        process.env.AzCodeServiceConnectionDomain: ${domain ? "✅" : "❌"}\n
-                        process.env.AzCodeServiceConnectionClientID: ${clientId ? "✅" : "❌"}\n
-                    `);
-            }
-
-            const initializer: AzureDevOpsSubscriptionProviderInitializer = {
-                serviceConnectionId,
-                domain,
-                clientId,
-            }
-            ext.subscriptionProviderFactory = createAzureDevOpsSubscriptionProviderFactory(initializer);
-        } else {
-            ext.subscriptionProviderFactory = createVSCodeAzureSubscriptionProviderFactory();
-        }
+        // when running tests, ensure we throw the errors and they aren't silently swallowed
+        activateContext.errorHandling.rethrow = useAzureFederatedCredentials;
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
