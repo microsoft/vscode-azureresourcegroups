@@ -77,6 +77,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         // TODO: Use the other environment variable to determine to use this. Currently set to true for testing reasons
         const longRunningTestsEnabled: boolean = true;//!/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '')
         if (longRunningTestsEnabled) {
+            // when running tests, ensure we throw the errors and they aren't silently swallowed
+            activateContext.errorHandling.rethrow = true;
             try {
                 console.log("TEST: Accessing env vars");
                 const serviceConnectionId: string | undefined = process.env['AzCode_ServiceConnectionID'];
