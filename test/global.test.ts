@@ -13,9 +13,7 @@ export const userSettings: { key: string, value: unknown }[] = [];
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(1 * 60 * 1000);
 
-    console.log("TEST: Trying to activate extension..");
     await vscode.extensions.getExtension('ms-azuretools.vscode-azureresourcegroups')?.activate();
-    console.log("TEST: Extension activated.");
 
     await vscode.commands.executeCommand('azureResourceGroups.refresh'); // activate the extension before tests begin
     ext.outputChannel = new TestOutputChannel();

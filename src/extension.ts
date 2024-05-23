@@ -44,7 +44,6 @@ import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
     // the entry point for vscode.dev is this activate, not main.js, so we need to instantiate perfStats here
     // the perf stats don't matter for vscode because there is no main file to load-- we may need to see if we can track the download time
-    console.log("TEST: Starting activation");
     perfStats ||= { loadStartTime: Date.now(), loadEndTime: Date.now() };
 
     ext.context = context;
@@ -67,45 +66,33 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.actions.refreshAzureTree = (data) => refreshAzureTreeEmitter.fire(data);
     ext.actions.refreshFocusTree = (data) => refreshFocusTreeEmitter.fire(data);
 
-    console.log("TEST: Registering telemetry");
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
-        console.log("TEST: Registering subscription provider");
         // if this for a nightly test, we want to use the test subscription provider
-        // TODO: Use the other environment variable to determine to use this. Currently set to true for testing reasons
-        const longRunningTestsEnabled: boolean = true;//!/^(false|0)?$/i.test(process.env.ENABLE_LONG_RUNNING_TESTS || '')
-        if (longRunningTestsEnabled) {
+        const useAzureFederatedCredentials: boolean = !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '')
+        if (useAzureFederatedCredentials) {
             // when running tests, ensure we throw the errors and they aren't silently swallowed
             activateContext.errorHandling.rethrow = true;
-            try {
-                console.log("TEST: Accessing env vars");
-                const serviceConnectionId: string | undefined = process.env['AzCode_ServiceConnectionID'];
-                console.log("TEST: Successfully accessed");
-                const domain: string | undefined = process.env['AzCode_ServiceConnectionDomain'];
-                const clientId: string | undefined = process.env['AzCode_ServiceConnectionClientID'];
+            const serviceConnectionId: string | undefined = process.env['AzCode_ServiceConnectionID'];
+            const domain: string | undefined = process.env['AzCode_ServiceConnectionDomain'];
+            const clientId: string | undefined = process.env['AzCode_ServiceConnectionClientID'];
 
-                if (!serviceConnectionId || !domain || !clientId) {
-                    throw new Error(`Using Azure DevOps federated credentials, but federated service connection is not configured\n
+            if (!serviceConnectionId || !domain || !clientId) {
+                throw new Error(`Using Azure DevOps federated credentials, but federated service connection is not configured\n
                         process.env.AzCodeServiceConnectionID: ${serviceConnectionId ? "✅" : "❌"}\n
                         process.env.AzCodeServiceConnectionDomain: ${domain ? "✅" : "❌"}\n
                         process.env.AzCodeServiceConnectionClientID: ${clientId ? "✅" : "❌"}\n
                     `);
-                }
-
-                const initializer: AzureDevOpsSubscriptionProviderInitializer = {
-                    serviceConnectionId,
-                    domain,
-                    clientId,
-                }
-                ext.subscriptionProviderFactory = createAzureDevOpsSubscriptionProviderFactory(initializer);
-                console.log("TEST: Success getting factory");
-            } catch (error) {
-                console.log(`TEST: Error getting factory: ${JSON.stringify(error)}`);
-                throw error;
             }
 
+            const initializer: AzureDevOpsSubscriptionProviderInitializer = {
+                serviceConnectionId,
+                domain,
+                clientId,
+            }
+            ext.subscriptionProviderFactory = createAzureDevOpsSubscriptionProviderFactory(initializer);
         } else {
             ext.subscriptionProviderFactory = createVSCodeAzureSubscriptionProviderFactory();
         }
@@ -135,9 +122,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
             }
         }));
 
-        console.log("TEST: registering commands");
         registerCommands();
-        console.log("TEST: Commands registered");
     });
 
     const extensionManager = new ResourceGroupsExtensionManager()

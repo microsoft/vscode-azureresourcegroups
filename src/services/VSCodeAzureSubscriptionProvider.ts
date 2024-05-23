@@ -7,7 +7,6 @@ import { VSCodeAzureSubscriptionProvider } from '@microsoft/vscode-azext-azureau
 import { getSelectedTenantAndSubscriptionIds } from '../commands/accounts/selectSubscriptions';
 
 let vscodeAzureSubscriptionProvider: VSCodeAzureSubscriptionProvider | undefined;
-// let azureDevOpsSubscriptionProvider: AzureDevOpsSubscriptionProvider | undefined;
 
 export function createVSCodeAzureSubscriptionProviderFactory(): () => Promise<VSCodeAzureSubscriptionProvider> {
     return async (): Promise<VSCodeAzureSubscriptionProvider> => {
@@ -15,13 +14,6 @@ export function createVSCodeAzureSubscriptionProviderFactory(): () => Promise<VS
         return vscodeAzureSubscriptionProvider;
     }
 }
-
-// export function createAzureDevOpsSubscriptionProviderFactory(): () => Promise<AzureDevOpsSubscriptionProvider> {
-//     return async (): Promise<AzureDevOpsSubscriptionProvider> => {
-//         azureDevOpsSubscriptionProvider ??= new AzureDevOpsSubscriptionProvider();
-//         return azureDevOpsSubscriptionProvider;
-//     }
-// }
 
 async function createVSCodeAzureSubscriptionProvider(): Promise<VSCodeAzureSubscriptionProvider> {
     // This will update the selected subscription IDs to ensure the filters are in the form of `${tenantId}/${subscriptionId}`
