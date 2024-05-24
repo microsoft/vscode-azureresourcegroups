@@ -9,12 +9,14 @@ import { createVSCodeAzureSubscriptionProviderFactory } from "./VSCodeAzureSubsc
  * Otherwise, a `VSCodeSubscriptionProviderFactory` is returned.
  *
  */
-export function getSubscriptionProviderFactory(activateContext: IActionContext): () => Promise<AzureSubscriptionProvider> {
+export function getSubscriptionProviderFactory(activateContext?: IActionContext): () => Promise<AzureSubscriptionProvider> {
     // if this for a nightly test, we want to use the test subscription provider
     const useAzureFederatedCredentials: boolean = !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '')
     if (useAzureFederatedCredentials) {
         // when running tests, ensure we throw the errors and they aren't silently swallowed
-        activateContext.errorHandling.rethrow = useAzureFederatedCredentials;
+        if (activateContext) {
+            activateContext.errorHandling.rethrow = useAzureFederatedCredentials;
+        }
 
         const serviceConnectionId: string | undefined = process.env['AzCode_ServiceConnectionID'];
         const domain: string | undefined = process.env['AzCode_ServiceConnectionDomain'];
