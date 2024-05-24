@@ -28,7 +28,7 @@ import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { ext } from './extensionVariables';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
-import { createVSCodeAzureSubscriptionProviderFactory } from './services/VSCodeAzureSubscriptionProvider';
+import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
@@ -69,7 +69,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
-        ext.subscriptionProviderFactory = createVSCodeAzureSubscriptionProviderFactory();
+
+        ext.subscriptionProviderFactory = getSubscriptionProviderFactory(activateContext);
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
