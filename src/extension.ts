@@ -69,12 +69,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
-        // if this for a nightly test, we want to use the test subscription provider
-        const useAzureFederatedCredentials: boolean = !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '')
-        ext.subscriptionProviderFactory = getSubscriptionProviderFactory(useAzureFederatedCredentials);
 
-        // when running tests, ensure we throw the errors and they aren't silently swallowed
-        activateContext.errorHandling.rethrow = useAzureFederatedCredentials;
+        ext.subscriptionProviderFactory = getSubscriptionProviderFactory(activateContext);
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
