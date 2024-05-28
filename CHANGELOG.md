@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.9.1 - 2024-05-28
+
+### Added
+
+* [[864]](https://github.com/microsoft/vscode-azureresourcegroups/pull/864) Enable long running tests through Azure federated credentials.
+Learn how to configure the credentials [here](https://github.com/microsoft/vscode-azuretools/blob/main/auth/AzureFederatedCredentialsGuide.md).
+
 ## 0.9.0 - 2024-05-14
 
 In [preparation of the Azure Account extension being deprecated at the end of the year](https://github.com/microsoft/vscode-azure-account/issues/964), we've moved the Azure Cloud Shell feature to the Azure Resources extension. Apart from moving codebases, the feature is the same from a users perspective. Authentication for the Cloud Shell feature is now handled by the VS Code built-in Microsoft authentication provider, which means you may have to login upon first use of the migrated feature.
