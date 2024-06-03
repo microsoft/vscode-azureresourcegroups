@@ -19,6 +19,7 @@ export namespace extActions {
     export let refreshWorkspaceTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
     export let refreshAzureTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
     export let refreshFocusTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
+    export let refreshTenantTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
 }
 
 /**

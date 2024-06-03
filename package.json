@@ -216,6 +216,24 @@
                 "command": "azureResourceGroups.showGroupOptions",
                 "title": "%azureResourceGroups.showGroupOptions%",
                 "category": "Azure"
+            },
+            {
+                "command": "azureTenant.refresh",
+                "title": "%azureResourceGroups.refresh%",
+                "category": "Azure",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "azureTenant.refreshTree",
+                "title": "%azureResourceGroups.refresh%",
+                "category": "Azure",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "azureTenant.signInToTenant",
+                "title": "%azureTenant.signInToTenant%",
+                "category": "Azure",
+                "icon": "$(sign-in)"
             }
         ],
         "viewsContainers": {
@@ -254,7 +272,7 @@
                 },
                 {
                     "id": "azureTenant",
-                    "name": "Tenant",
+                    "name": "Tenants",
                     "visibility": "collapsed"
                 },
                 {
@@ -319,6 +337,11 @@
                 {
                     "command": "azureWorkspace.refreshTree",
                     "when": "view == azureWorkspace",
+                    "group": "navigation@10"
+                },
+                {
+                    "command": "azureTenant.refreshTree",
+                    "when": "view == azureTenant",
                     "group": "navigation@10"
                 },
                 {
@@ -397,6 +420,16 @@
                     "command": "azureResourceGroups.viewProperties",
                     "when": "view =~ /azureResourceGroups|azureFocusView/ && viewItem =~ /azureResourceGroup/",
                     "group": "9@1"
+                },
+                {
+                    "command": "azureTenant.signInToTenant",
+                    "when": "view == azureTenant && viewItem =~ /tenantNameNotSignedIn/",
+                    "group": "inline@1"
+                },
+                {
+                    "command": "azureTenant.signInToTenant",
+                    "when": "view == azureTenant && viewItem =~ /tenantNameNotSignedIn/",
+                    "group": "1@1"
                 }
             ],
             "commandPalette": [
@@ -414,6 +447,10 @@
                 },
                 {
                     "command": "azureWorkspace.refresh",
+                    "when": "never"
+                },
+                {
+                    "command": "azureTenant.refresh",
                     "when": "never"
                 },
                 {
@@ -517,13 +554,6 @@
                     "azureResourceGroups.selectedSubscriptions": {
                         "type": "array",
                         "description": "%azureResourceGroups.selectedSubscriptions%",
-                        "items": {
-                            "type": "string"
-                        }
-                    },
-                    "azureResourceGroups.unselectedTenants": {
-                        "type": "array",
-                        "description": "%azureResourceGroups.unselectedTenants%",
                         "items": {
                             "type": "string"
                         }

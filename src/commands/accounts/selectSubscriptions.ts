@@ -85,11 +85,14 @@ async function setSelectedTenantAndSubscriptionIds(tenantAndSubscriptionIds: str
     await settingUtils.updateGlobalSetting('selectedSubscriptions', tenantAndSubscriptionIds);
 }
 
-function getTenantFilteredSubscriptions(allSubscriptions: AzureSubscription[]): AzureSubscription[] | undefined {
-    const tenants = settingUtils.getGlobalSetting<string[] | undefined>('unselectedTenants');
-    if (tenants) {
+export function getTenantFilteredSubscriptions(allSubscriptions: AzureSubscription[]): AzureSubscription[] | undefined {
+    const tenants = ext.context.globalState.get<string[]>('unselectedTenants');
+    if (tenants && tenants.length > 0) {
         allSubscriptions = allSubscriptions.filter(subscription => !tenants.includes(subscription.tenantId));
-        return allSubscriptions;
+        if (allSubscriptions.length > 0) {
+            return allSubscriptions;
+        }
     }
+
     return undefined;
 }

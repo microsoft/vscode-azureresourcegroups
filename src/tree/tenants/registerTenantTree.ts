@@ -8,13 +8,13 @@ import * as vscode from 'vscode';
 import { TenantResourceProviderManager } from "../../api/ResourceProviderManagers";
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
-import { settingUtils } from '../../utils/settingUtils';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { createTreeView } from '../createTreeView';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { TenantResourceBranchDataProviderManager } from "./TenantResourceBranchDataProviderManager";
 import { TenantResourceTreeDataProvider } from './TenantResourceTreeDataProvider';
+import { TenantTreeItem } from './TenantTreeItem';
 
 interface RegisterTenantTreeOptions {
     tenantResourceBranchDataProviderManager: TenantResourceBranchDataProviderManager,
@@ -35,7 +35,7 @@ export function registerTenantTree(context: vscode.ExtensionContext, options: Re
         canSelectMany: true,
         showCollapseAll: true,
         itemCache: branchItemCache,
-        title: localize('tenant', 'Tenant'),
+        title: localize('tenants', 'Tenants'),
         treeDataProvider: wrapTreeForVSCode(tenantResourceTreeDataProvider, branchItemCache),
         findItemById: tenantResourceTreeDataProvider.findItemById.bind(tenantResourceTreeDataProvider) as typeof tenantResourceTreeDataProvider.findItemById,
     });
@@ -43,23 +43,33 @@ export function registerTenantTree(context: vscode.ExtensionContext, options: Re
 
     ext.tenantTreeView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
 
-    registerEvent('onDidChangeCheckboxState', treeView.onDidChangeCheckboxState, async (context: IActionContext, args: vscode.TreeCheckboxChangeEvent<ResourceGroupsItem>) => {
+    registerEvent('onDidChangeCheckboxState', treeView.onDidChangeCheckboxState, async (context: IActionContext, args: vscode.TreeCheckboxChangeEvent<TenantTreeItem>) => {
         await updateTenantsSetting(context, args);
+        ext.actions.refreshAzureTree();
     });
 
     return tenantResourceTreeDataProvider;
 }
 
-async function updateTenantsSetting(_context: IActionContext, tenants: vscode.TreeCheckboxChangeEvent<ResourceGroupsItem>) {
-    //get current list first and then just delete from that list/add to it instead of returning a whole new list
-    const unselectedTenants = settingUtils.getGlobalSetting<string[]>('unselectedTenants') || [];
+async function updateTenantsSetting(_context: IActionContext, tenants: vscode.TreeCheckboxChangeEvent<TenantTreeItem>) {
+    const unselectedTenants = ext.context.globalState.get<string[]>('unselectedTenants') || [];
     for (const item of tenants.items) {
         if (item[1] === vscode.TreeItemCheckboxState.Unchecked) {
             unselectedTenants.push(item[0].id);
-        }
-        if (item[1] === vscode.TreeItemCheckboxState.Checked) {
+        } else if (item[1] === vscode.TreeItemCheckboxState.Checked) {
+            const treeItem = await item[0].getTreeItem();
+            if (treeItem?.contextValue === 'tenantNameNotSignedIn') {
+                const signInButton: vscode.MessageItem = { title: localize('signIn', 'Sign in') };
+                const buttons: vscode.MessageItem[] = [signInButton];
+                const result = await vscode.window.showWarningMessage(
+                    localize('signIntoTenant', 'This tenant is not signed in. Please sign in to access resources.'), { modal: true }, ...buttons);
+                if (result === signInButton) {
+                    await vscode.commands.executeCommand('azureTenant.signInToTenant', treeItem);
+                }
+            }
             unselectedTenants.splice(unselectedTenants.indexOf(item[0].id), 1);
         }
     }
-    await settingUtils.updateGlobalSetting('unselectedTenants', unselectedTenants);
+
+    await ext.context.globalState.update('unselectedTenants', unselectedTenants);
 }

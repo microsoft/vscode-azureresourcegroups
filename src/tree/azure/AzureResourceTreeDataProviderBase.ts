@@ -16,8 +16,8 @@ import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingMa
 import { GroupingItem } from './grouping/GroupingItem';
 
 export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeDataProviderBase {
-    private subscriptionProvider: AzureSubscriptionProvider | undefined;
-    private statusSubscription: vscode.Disposable | undefined;
+    public subscriptionProvider: AzureSubscriptionProvider | undefined;
+    public statusSubscription: vscode.Disposable | undefined;
 
     constructor(
         itemCache: BranchDataItemCache,

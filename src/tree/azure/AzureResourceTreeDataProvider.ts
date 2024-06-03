@@ -8,13 +8,14 @@ import { IActionContext, callWithTelemetryAndErrorHandling, registerEvent } from
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
-import { isLoggingIn } from '../../commands/accounts/logIn';
+import { getTenantFilteredSubscriptions } from '../../commands/accounts/selectSubscriptions';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
+import { signInBase } from '../SignInBase';
 import { TreeItemStateStore } from '../TreeItemState';
 import { AzureResourceTreeDataProviderBase } from './AzureResourceTreeDataProviderBase';
 import { SubscriptionItem } from './SubscriptionItem';
@@ -67,34 +68,39 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
             return await element.getChildren();
         } else {
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
+            const children: ResourceGroupsItem[] = await signInBase(subscriptionProvider, this);
 
-            if (subscriptionProvider) {
-                if (isLoggingIn()) {
-                    return [new GenericItem(
-                        localize('signingIn', 'Waiting for Azure sign-in...'),
-                        {
-                            commandId: 'azureResourceGroups.logIn',
-                            iconPath: new vscode.ThemeIcon('loading~spin')
-                        }
-                    )];
-                } else if (await subscriptionProvider.isSignedIn()) {
-                    this.sendSubscriptionTelemetryIfNeeded();
-                    let subscriptions: AzureSubscription[];
-                    if ((subscriptions = await subscriptionProvider.getSubscriptions(true)).length === 0) {
-                        if (
-                            // If there are no subscriptions at all (ignoring filters) AND if unauthenicated tenants exist
-                            (await subscriptionProvider.getSubscriptions(false)).length === 0 &&
-                            (await getUnauthenticatedTenants(subscriptionProvider)).length > 0
-                        ) {
-                            // Subscriptions might exist in an unauthenticated tenant
-                            return [new GenericItem(localize('signInToDirectory', 'Sign in to Directory...'), {
-                                commandId: 'azureResourceGroups.signInToTenant'
-                            })];
-                        } else {
-                            return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
-                                commandId: 'azureResourceGroups.selectSubscriptions'
-                            })]
-                        }
+            if (children.length === 0) {
+                this.sendSubscriptionTelemetryIfNeeded();
+                let subscriptions: AzureSubscription[];
+                if ((subscriptions = await subscriptionProvider.getSubscriptions(true)).length === 0) {
+                    if (
+                        // If there are no subscriptions at all (ignoring filters) AND if unauthenicated tenants exist
+                        (await subscriptionProvider.getSubscriptions(false)).length === 0 &&
+                        (await getUnauthenticatedTenants(subscriptionProvider)).length > 0
+                    ) {
+                        // Subscriptions might exist in an unauthenticated tenant
+                        return [new GenericItem(localize('signInToDirectory', 'Sign in to Directory...'), {
+                            commandId: 'azureResourceGroups.signInToTenant'
+                        })];
+                    } else {
+                        return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
+                            commandId: 'azureResourceGroups.selectSubscriptions'
+                        })]
+                    }
+                } else {
+                    const tenantFiltedSubcriptions = getTenantFilteredSubscriptions(subscriptions);
+                    if (tenantFiltedSubcriptions) {
+                        return tenantFiltedSubcriptions.map(
+                            subscription => new SubscriptionItem(
+                                {
+                                    subscription: subscription,
+                                    subscriptionContext: createSubscriptionContext(subscription),
+                                    refresh: item => this.notifyTreeDataChanged(item),
+                                },
+                                this.resourceGroupingManager,
+                                this.resourceProviderManager,
+                                subscription));
                     } else {
                         return subscriptions.map(
                             subscription => new SubscriptionItem(
@@ -107,34 +113,10 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                 this.resourceProviderManager,
                                 subscription));
                     }
-                } else {
-                    return [
-                        new GenericItem(
-                            localize('signInLabel', 'Sign in to Azure...'),
-                            {
-                                commandId: 'azureResourceGroups.logIn',
-                                iconPath: new vscode.ThemeIcon('sign-in')
-                            }),
-                        new GenericItem(
-                            localize('createAccountLabel', 'Create an Azure Account...'),
-                            {
-                                commandId: 'azureResourceGroups.openUrl',
-                                commandArgs: ['https://aka.ms/VSCodeCreateAzureAccount'],
-                                iconPath: new vscode.ThemeIcon('add')
-                            }),
-                        new GenericItem(
-                            localize('createStudentAccount', 'Create an Azure for Students Account...'),
-                            {
-                                commandId: 'azureResourceGroups.openUrl',
-                                commandArgs: ['https://aka.ms/student-account'],
-                                iconPath: new vscode.ThemeIcon('mortar-board')
-                            }),
-                    ];
                 }
             }
+            return children;
         }
-
-        return undefined;
     }
 
     private hasSentSubscriptionTelemetry = false;

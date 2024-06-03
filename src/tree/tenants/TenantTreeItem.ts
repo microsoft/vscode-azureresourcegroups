@@ -12,10 +12,10 @@ export interface TenantItemOptions extends GenericItemOptions {
 }
 
 export class TenantTreeItem implements ResourceGroupsItem {
-    constructor(public readonly label: string, public fullId: string, private readonly options?: TenantItemOptions) {
+    constructor(public readonly label: string, public tenantId: string, private readonly options?: TenantItemOptions) {
     }
 
-    readonly id: string = this.fullId;
+    readonly id: string = this.tenantId;
 
     getChildren(): vscode.ProviderResult<ResourceGroupsItem[]> {
         return this.options?.children;

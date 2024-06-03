@@ -10,6 +10,7 @@ import { ext } from '../extensionVariables';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
+import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { logIn } from './accounts/logIn';
 import { selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
@@ -37,6 +38,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.refreshTree', () => ext.actions.refreshAzureTree());
     registerCommand('azureWorkspace.refreshTree', () => ext.actions.refreshWorkspaceTree());
     registerCommand('azureFocusView.refreshTree', () => ext.actions.refreshFocusTree());
+    registerCommand('azureTenant.refreshTree', () => ext.actions.refreshTenantTree());
 
     // v1.5 client extensions attach these commands to tree item context menus for refreshing their tree items
     registerCommand('azureResourceGroups.refresh', async (context, node?: ResourceGroupsItem) => {
@@ -58,6 +60,15 @@ export function registerCommands(): void {
     registerCommand('azureFocusView.refresh', async (context, node?: ResourceGroupsItem) => {
         await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
         ext.actions.refreshFocusTree(node);
+    });
+
+    registerCommand('azureTenant.refresh', async (context, node?: ResourceGroupsItem) => {
+        await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
+        ext.actions.refreshTenantTree(node);
+    });
+
+    registerCommand('azureTenant.signInToTenant', async (_context, node: TenantTreeItem) => {
+        await (await ext.subscriptionProviderFactory()).signIn(node.tenantId);
     });
 
     registerCommand('azureResourceGroups.focusGroup', focusGroup);

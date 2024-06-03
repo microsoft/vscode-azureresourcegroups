@@ -12,6 +12,8 @@
     "azureResourceGroups.openInPortal": "Open in Portal",
     "azureResourceGroups.refresh": "Refresh",
     "azureWorkspace.refresh": "Refresh Workspace",
+    "azureTenant.refresh": "Refresh Tenants",
+    "azureTenant.signInToTenant": "Sign in to Tenant",
     "azureResourceGroups.selectedSubscriptions": "Selected Subscriptions",
     "azureResourceGroups.revealResource": "Reveal Resource",
     "azureResourceGroups.viewProperties": "View Properties",

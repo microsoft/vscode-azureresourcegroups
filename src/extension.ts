@@ -68,6 +68,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.actions.refreshWorkspaceTree = (data) => refreshWorkspaceTreeEmitter.fire(data);
     ext.actions.refreshAzureTree = (data) => refreshAzureTreeEmitter.fire(data);
     ext.actions.refreshFocusTree = (data) => refreshFocusTreeEmitter.fire(data);
+    ext.actions.refreshTenantTree = (data) => refreshTenantTreeEmitter.fire(data);
 
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
