@@ -11,9 +11,10 @@ import { localize } from "../utils/localize";
 import { GenericItem } from "./GenericItem";
 import { ResourceGroupsItem } from "./ResourceGroupsItem";
 import { AzureResourceTreeDataProvider } from "./azure/AzureResourceTreeDataProvider";
+import { AzureResourceTreeDataProviderBase } from "./azure/AzureResourceTreeDataProviderBase";
 import { TenantResourceTreeDataProvider } from "./tenants/TenantResourceTreeDataProvider";
 
-export async function signInBase(subscriptionProvider: AzureSubscriptionProvider, tdp?: AzureResourceTreeDataProvider): Promise<ResourceGroupsItem[]> {
+export async function OnGetChildrenBase(subscriptionProvider: AzureSubscriptionProvider, tdp?: AzureResourceTreeDataProvider): Promise<ResourceGroupsItem[]> {
     const children: ResourceGroupsItem[] = [];
 
     if (subscriptionProvider) {
@@ -54,7 +55,7 @@ export async function signInBase(subscriptionProvider: AzureSubscriptionProvider
     return children;
 }
 
-export async function getAzureSubscriptionProvider(tdp: AzureResourceTreeDataProvider | TenantResourceTreeDataProvider): Promise<AzureSubscriptionProvider> {
+export async function getAzureSubscriptionProvider(tdp: AzureResourceTreeDataProviderBase | TenantResourceTreeDataProvider): Promise<AzureSubscriptionProvider> {
     // override for testing
     if (ext.testing.overrideAzureSubscriptionProvider) {
         return ext.testing.overrideAzureSubscriptionProvider();

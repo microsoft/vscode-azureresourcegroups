@@ -11,9 +11,9 @@ import { TenantResourceProviderManager } from '../../api/ResourceProviderManager
 import { ext } from '../../extensionVariables';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
+import { OnGetChildrenBase, getAzureSubscriptionProvider } from '../OnGetChildrenBase';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from "../ResourceTreeDataProviderBase";
-import { getAzureSubscriptionProvider, signInBase } from '../SignInBase';
 import { TreeItemStateStore } from '../TreeItemState';
 import { TenantResourceBranchDataProviderManager } from "./TenantResourceBranchDataProviderManager";
 import { TenantTreeItem } from './TenantTreeItem';
@@ -46,7 +46,7 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
             return await element.getChildren();
         } else {
             const subscriptionProvider = await getAzureSubscriptionProvider(this);
-            const children: ResourceGroupsItem[] = await signInBase(subscriptionProvider);
+            const children: ResourceGroupsItem[] = await OnGetChildrenBase(subscriptionProvider);
 
             if (children.length === 0) {
                 const session = await vscode.authentication.getSession('microsoft', ['https://management.azure.com/.default']); // Will not work for sovereign clouds

@@ -29,7 +29,7 @@ export function registerTenantTree(context: vscode.ExtensionContext, options: Re
     const branchItemCache = new BranchDataItemCache();
     const tenantResourceTreeDataProvider =
         new TenantResourceTreeDataProvider(tenantResourceBranchDataProviderManager, refreshEvent, tenantResourceProviderManager, ext.azureTreeState, branchItemCache);
-    context.subscriptions.push(tenantResourceTreeDataProvider); //not sure about this
+    context.subscriptions.push(tenantResourceTreeDataProvider);
 
     const treeView = createTreeView('azureTenant', {
         canSelectMany: true,

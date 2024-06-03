@@ -30,6 +30,7 @@ import { AzureResourcesApiInternal } from './hostapi.v2.internal';
 import { createVSCodeAzureSubscriptionProviderFactory } from './services/VSCodeAzureSubscriptionProvider';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
+import { getAzureSubscriptionProvider } from './tree/OnGetChildrenBase';
 import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
 import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
@@ -172,7 +173,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.tenantTree = new CompatibleAzExtTreeDataProvider(tenantResourceTreeDataProvider);
 
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
-        async (filter: boolean) => { return await (await azureResourceTreeDataProvider.getAzureSubscriptionProvider()).getSubscriptions(filter) };
+        async (filter: boolean) => { return await (await getAzureSubscriptionProvider(azureResourceTreeDataProvider)).getSubscriptions(filter) };
 
     return createApiProvider(
         [
