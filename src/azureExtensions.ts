@@ -79,6 +79,7 @@ export const azureExtensions: IAzExtMetadata[] = [
         label: 'Databases',
         resourceTypes: [
             AzExtResourceType.AzureCosmosDb,
+            AzExtResourceType.MongoVCore,
             AzExtResourceType.PostgresqlServersStandard,
             AzExtResourceType.PostgresqlServersFlexible,
         ],
@@ -130,6 +131,7 @@ export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
     StaticWebApps: 'microsoft.web/staticsites',
     VirtualMachines: 'microsoft.compute/virtualmachines',
     AzureCosmosDb: 'microsoft.documentdb/databaseaccounts',
+    MongoVCore: 'microsoft.documentdb/mongoclusters',
     PostgresqlServersStandard: 'microsoft.dbforpostgresql/servers',
     PostgresqlServersFlexible: 'microsoft.dbforpostgresql/flexibleservers',
     SpringApps: 'microsoft.appplatform/spring',
