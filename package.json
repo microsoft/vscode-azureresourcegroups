@@ -500,7 +500,7 @@
         "keybindings": [
             {
                 "command": "workbench.view.extension.azure",
-                "key": "ctrl+shift+a",
+                "win": "ctrl+shift+a",
                 "mac": "cmd+shift+a",
                 "linux": "shift+alt+a"
             }
