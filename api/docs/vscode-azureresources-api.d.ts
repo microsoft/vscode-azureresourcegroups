@@ -74,6 +74,7 @@ export declare enum AzExtResourceType {
     LogicApp = "LogicApp",
     LogicWorkflows = "LogicWorkflows",
     ManagedIdentityUserAssignedIdentities = "ManagedIdentityUserAssignedIdentities",
+    MongoVCore = 'MongoVCore',
     MysqlServers = "MysqlServers",
     NetworkApplicationGateways = "NetworkApplicationGateways",
     NetworkApplicationSecurityGroups = "NetworkApplicationSecurityGroups",
@@ -455,4 +456,5 @@ export declare interface Wrapper {
     unwrap<T>(): T;
 }
 
-export { }
+export { };
+
