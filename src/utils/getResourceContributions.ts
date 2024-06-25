@@ -15,6 +15,10 @@ interface ResourceGroupsContribution {
         readonly branches?: { type: string }[];
         readonly resources?: boolean;
     }
+    readonly tenant: {
+        readonly branches?: { type: string }[];
+        readonly resources?: boolean;
+    }
     readonly commands?: (vscode.Command & { detail?: string })[];
 }
 

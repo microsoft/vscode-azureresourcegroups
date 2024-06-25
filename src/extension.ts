@@ -14,7 +14,7 @@ import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/ResourceGroupsExtensionManager';
-import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
+import { AzureResourceProviderManager, TenantResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
 import { InternalAzureResourceGroupsExtensionApi } from './api/compatibility/AzureResourceGroupsExtensionApi';
 import { CompatibleAzExtTreeDataProvider } from './api/compatibility/CompatibleAzExtTreeDataProvider';
 import { createCompatibilityPickAppResource } from './api/compatibility/pickAppResource';
@@ -31,11 +31,15 @@ import { AzureResourcesApiInternal } from './hostapi.v2.internal';
 import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
+import { getAzureSubscriptionProvider } from './tree/OnGetChildrenBase';
 import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
 import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
 import { registerAzureTree } from './tree/azure/registerAzureTree';
 import { registerFocusTree } from './tree/azure/registerFocusTree';
+import { TenantDefaultBranchDataProvider } from './tree/tenants/TenantDefaultBranchDataProvider';
+import { TenantResourceBranchDataProviderManager } from './tree/tenants/TenantResourceBranchDataProviderManager';
+import { registerTenantTree } from './tree/tenants/registerTenantTree';
 import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDefaultBranchDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
@@ -60,10 +64,13 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     context.subscriptions.push(refreshFocusTreeEmitter);
     const refreshWorkspaceTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
     context.subscriptions.push(refreshWorkspaceTreeEmitter);
+    const refreshTenantTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+    context.subscriptions.push(refreshTenantTreeEmitter);
 
     ext.actions.refreshWorkspaceTree = (data) => refreshWorkspaceTreeEmitter.fire(data);
     ext.actions.refreshAzureTree = (data) => refreshAzureTreeEmitter.fire(data);
     ext.actions.refreshFocusTree = (data) => refreshFocusTreeEmitter.fire(data);
+    ext.actions.refreshTenantTree = (data) => refreshTenantTreeEmitter.fire(data);
 
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
@@ -117,6 +124,11 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         type => void extensionManager.activateWorkspaceResourceBranchDataProvider(type));
     const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
 
+    const tenantResourceBranchDataProviderManager = new TenantResourceBranchDataProviderManager(
+        new TenantDefaultBranchDataProvider(),
+        type => void extensionManager.activateTenantResourceBranchDataProvider(type));
+    const tenantResourceProviderManager = new TenantResourceProviderManager(() => extensionManager.activateTenantResourceProviders());
+
     const azureResourcesBranchDataItemCache = new BranchDataItemCache();
     const azureResourceTreeDataProvider = registerAzureTree(context, {
         azureResourceProviderManager,
@@ -138,6 +150,12 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         refreshEvent: refreshWorkspaceTreeEmitter.event,
     });
 
+    const tenantResourceTreeDataProvider = registerTenantTree(context, {
+        tenantResourceProviderManager,
+        tenantResourceBranchDataProviderManager,
+        refreshEvent: refreshTenantTreeEmitter.event
+    })
+
     const v2ApiFactory: AzureExtensionApiFactory<AzureResourcesApiInternal> = {
         apiVersion: '2.0.0',
         createApi: (options?: GetApiOptions) => {
@@ -150,7 +168,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                         azureResourceTreeDataProvider,
                         workspaceResourceProviderManager,
                         workspaceResourceBranchDataProviderManager,
-                        workspaceResourceTreeDataProvider,
+                        workspaceResourceTreeDataProvider
                     ),
                     activity: {
                         registerActivity
@@ -165,9 +183,10 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     ext.appResourceTree = new CompatibleAzExtTreeDataProvider(azureResourceTreeDataProvider);
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
+    ext.tenantTree = new CompatibleAzExtTreeDataProvider(tenantResourceTreeDataProvider);
 
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
-        async (filter: boolean) => { return await (await azureResourceTreeDataProvider.getAzureSubscriptionProvider()).getSubscriptions(filter) };
+        async (filter: boolean) => { return await (await getAzureSubscriptionProvider(azureResourceTreeDataProvider)).getSubscriptions(filter) };
 
     return createApiProvider(
         [

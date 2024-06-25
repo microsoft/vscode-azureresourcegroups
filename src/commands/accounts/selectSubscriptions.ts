@@ -19,6 +19,17 @@ export async function selectSubscriptions(context: IActionContext): Promise<void
 
             const allSubscriptions = await provider.getSubscriptions(false);
 
+            const tenantFiltedSubcriptions = getTenantFilteredSubscriptions(allSubscriptions);
+            if (tenantFiltedSubcriptions) {
+                return tenantFiltedSubcriptions
+                    .map(subscription => ({
+                        label: subscription.name,
+                        description: subscription.subscriptionId,
+                        data: subscription
+                    }))
+                    .sort((a, b) => a.label.localeCompare(b.label));
+            }
+
             return allSubscriptions
                 .map(subscription => ({
                     label: subscription.name,
@@ -72,4 +83,16 @@ export async function getSelectedTenantAndSubscriptionIds(): Promise<string[]> {
 
 async function setSelectedTenantAndSubscriptionIds(tenantAndSubscriptionIds: string[]): Promise<void> {
     await settingUtils.updateGlobalSetting('selectedSubscriptions', tenantAndSubscriptionIds);
+}
+
+export function getTenantFilteredSubscriptions(allSubscriptions: AzureSubscription[]): AzureSubscription[] | undefined {
+    const tenants = ext.context.globalState.get<string[]>('unselectedTenants');
+    if (tenants && tenants.length > 0) {
+        allSubscriptions = allSubscriptions.filter(subscription => !tenants.includes(subscription.tenantId));
+        if (allSubscriptions.length > 0) {
+            return allSubscriptions;
+        }
+    }
+
+    return undefined;
 }
