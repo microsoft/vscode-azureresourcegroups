@@ -5,6 +5,7 @@
 
 import { createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { localize } from 'vscode-nls';
 import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription } from '../../../../api/src/index';
 import { ext } from '../../../extensionVariables';
 import { getIconPath } from '../../../utils/azureUtils';
@@ -123,7 +124,7 @@ export class GroupingItem implements ResourceGroupsItem {
 
                         items.push(this.resourceItemFactory(resource, resourceItem, branchDataProvider, this, options));
                     } catch (e) {
-                        ext.outputChannel.appendLog(`Error resolving resource item for ${resource.id}: ${e}`);
+                        ext.outputChannel.appendLog(localize('errorResolving', `Error resolving resource item for ${0}: ${1}`, resource.id, e));
                         items.push(new InvalidAzureResourceItem(resource, e));
                     }
                 }));
