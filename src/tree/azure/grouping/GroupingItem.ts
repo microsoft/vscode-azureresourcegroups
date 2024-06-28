@@ -104,7 +104,7 @@ export class GroupingItem implements ResourceGroupsItem {
                     items.push(new GenericItem('', { description: subscription.name }));
                 }
 
-                for await (const resource of subscriptionGroupingMap.get(subscription) ?? []) {
+                await Promise.allSettled((subscriptionGroupingMap.get(subscription) ?? []).map(async (resource): Promise<void> => {
                     try {
                         const branchDataProvider = this.branchDataProviderFactory(resource);
                         const resourceItem = await branchDataProvider.getResourceItem(resource);
@@ -125,7 +125,8 @@ export class GroupingItem implements ResourceGroupsItem {
                     } catch (e) {
                         items.push(new InvalidAzureResourceItem(resource, e));
                     }
-                }
+                }));
+
                 return items;
             }));
 
