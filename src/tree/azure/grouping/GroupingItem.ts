@@ -123,6 +123,7 @@ export class GroupingItem implements ResourceGroupsItem {
 
                         items.push(this.resourceItemFactory(resource, resourceItem, branchDataProvider, this, options));
                     } catch (e) {
+                        ext.outputChannel.appendLog(`Error resolving resource item for ${resource.id}: ${e}`);
                         items.push(new InvalidAzureResourceItem(resource, e));
                     }
                 }));
