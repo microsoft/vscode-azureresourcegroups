@@ -109,10 +109,6 @@ export class GroupingItem implements ResourceGroupsItem {
                     try {
                         const branchDataProvider = this.branchDataProviderFactory(resource);
                         const resourceItem = await branchDataProvider.getResourceItem(resource);
-                        if (!resourceItem) {
-                            throw new Error();
-                        }
-
                         const options: BranchDataItemOptions = {
                             contextValues: ['azureResource'],
                             defaultId: resource.id,
@@ -128,9 +124,10 @@ export class GroupingItem implements ResourceGroupsItem {
 
                         items.push(this.resourceItemFactory(resource, resourceItem, branchDataProvider, this, options));
                     } catch (e) {
-                        ext.outputChannel.appendLog(localize('errorResolving', `Error resolving resource item for ${0}: ${1}`, resource.id, e));
+                        const parsedError = parseError(e);
+                        ext.outputChannel.appendLog(localize('errorResolving', 'Error resolving resource item for {0}: {1}', resource.id, parsedError.message));
                         items.push(new InvalidAzureResourceItem(resource, e));
-                        throw parseError(e);
+                        throw parsedError;
                     }
                 }));
 
