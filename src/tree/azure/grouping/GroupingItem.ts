@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createContextValue, ISubscriptionContext, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
+import { createContextValue, ISubscriptionContext, parseError, TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { localize } from 'vscode-nls';
 import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, AzureResourceModel, AzureSubscription } from '../../../../api/src/index';
 import { ext } from '../../../extensionVariables';
 import { getIconPath } from '../../../utils/azureUtils';
+import { localize } from '../../../utils/localize';
 import { createPortalUrl } from '../../../utils/v2/createPortalUrl';
 import { BranchDataItemOptions } from '../../BranchDataItemWrapper';
 import { GenericItem } from '../../GenericItem';
@@ -109,6 +109,10 @@ export class GroupingItem implements ResourceGroupsItem {
                     try {
                         const branchDataProvider = this.branchDataProviderFactory(resource);
                         const resourceItem = await branchDataProvider.getResourceItem(resource);
+                        if (!resourceItem) {
+                            throw new Error();
+                        }
+
                         const options: BranchDataItemOptions = {
                             contextValues: ['azureResource'],
                             defaultId: resource.id,
@@ -126,10 +130,11 @@ export class GroupingItem implements ResourceGroupsItem {
                     } catch (e) {
                         ext.outputChannel.appendLog(localize('errorResolving', `Error resolving resource item for ${0}: ${1}`, resource.id, e));
                         items.push(new InvalidAzureResourceItem(resource, e));
+                        throw parseError(e);
                     }
                 }));
 
-                return items;
+                return items.sort((a, b) => (a.id.split('/').pop() ?? '').localeCompare((b.id.split('/').pop() ?? '')));
             }));
 
         // flatten resourceItems
