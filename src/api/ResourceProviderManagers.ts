@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { AzureResource, AzureSubscription, ResourceBase, ResourceProvider, WorkspaceResource, WorkspaceResourceProvider } from '../../api/src/index';
+import { AzureResource, AzureSubscription, ResourceBase, ResourceProvider, TenantResource, TenantResourceProvider, WorkspaceResource, WorkspaceResourceProvider } from '../../api/src/index';
 import { AzureResourceProvider } from '../hostapi.v2.internal';
 
 export function isArray<T>(maybeArray: T[] | null | undefined): maybeArray is T[] {
@@ -86,4 +86,7 @@ export class AzureResourceProviderManager extends ResourceProviderManager<AzureS
 }
 
 export class WorkspaceResourceProviderManager extends ResourceProviderManager<void, WorkspaceResource, WorkspaceResourceProvider> {
+}
+
+export class TenantResourceProviderManager extends ResourceProviderManager<void, TenantResource, TenantResourceProvider> {
 }
