@@ -676,5 +676,8 @@
         "uuid": "^9.0.0",
         "vscode-nls": "^5.0.1",
         "vscode-uri": "^3.0.7"
-    }
+    },
+    "enabledApiProposals": [
+        "authGetSessions"
+    ]
 }
