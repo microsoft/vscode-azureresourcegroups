@@ -63,7 +63,9 @@ export class TreeItemStateStore implements vscode.Disposable {
     }
 
     private applyStateToTreeItem(state: Partial<TreeItemState>, treeItem: vscode.TreeItem): vscode.TreeItem {
-        treeItem.description = state.temporaryDescription;
+        if (state.temporaryDescription) {
+            treeItem.description = state.temporaryDescription;
+        }
 
         if (state.spinner) {
             treeItem.iconPath = new vscode.ThemeIcon('loading~spin');
