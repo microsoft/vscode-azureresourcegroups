@@ -14,11 +14,11 @@ import type { BranchDataProvider, ResourceBase, ResourceModelBase } from './base
 export interface AzureAuthentication {
     /**
      * Gets a VS Code authentication session for an Azure subscription.
-     * Always uses the default scope, `https://management.azure.com/.default/.default.`
+     * Always uses the default scope, `https://management.azure.com/.default/` and respects `microsoft-sovereign-cloud.environment` setting.
      *
      * @returns A VS Code authentication session or undefined, if none could be obtained.
      */
-    getSession(scopes?: string[]): vscode.ProviderResult<vscode.AuthenticationSession>;
+    getSession(): vscode.ProviderResult<vscode.AuthenticationSession>;
     /**
      * Gets a VS Code authentication session for an Azure subscription.
      *
