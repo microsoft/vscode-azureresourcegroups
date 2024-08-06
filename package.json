@@ -272,7 +272,7 @@
                 },
                 {
                     "id": "azureTenant",
-                    "name": "Tenants",
+                    "name": "Accounts & Tenants",
                     "visibility": "collapsed"
                 },
                 {

@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscription, getUnauthenticatedTenants } from '@microsoft/vscode-azext-azureauth';
-import { IActionContext, callWithTelemetryAndErrorHandling, registerEvent } from '@microsoft/vscode-azext-utils';
+import { getUnauthenticatedTenants } from '@microsoft/vscode-azext-azureauth';
+import { IActionContext, callWithTelemetryAndErrorHandling, nonNullValueAndProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
+import { AzureSubscription } from '../../commands/accounts/AzureSubscription';
 import { getTenantFilteredSubscriptions } from '../../commands/accounts/selectSubscriptions';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
@@ -89,29 +90,65 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                         })]
                     }
                 } else {
+                    //find duplicate subscriptions and change the name to include the account name
+                    const lookup = subscriptions.reduce((accumulator, sub) => {
+                        accumulator[sub.subscriptionId] = ++accumulator[sub.subscriptionId] || 0;
+                        return accumulator;
+                    }, {} as Record<string, number>);
+
+                    const duplicates = subscriptions.filter(sub => lookup[sub.subscriptionId]);
+
                     const tenantFiltedSubcriptions = getTenantFilteredSubscriptions(subscriptions);
                     if (tenantFiltedSubcriptions) {
                         return tenantFiltedSubcriptions.map(
-                            subscription => new SubscriptionItem(
-                                {
-                                    subscription: subscription,
-                                    subscriptionContext: createSubscriptionContext(subscription),
-                                    refresh: item => this.notifyTreeDataChanged(item),
-                                },
-                                this.resourceGroupingManager,
-                                this.resourceProviderManager,
-                                subscription));
+                            subscription => {
+                                if (duplicates.includes(subscription)) {
+                                    return new SubscriptionItem(
+                                        {
+                                            subscription: subscription,
+                                            subscriptionContext: createSubscriptionContext(subscription),
+                                            refresh: item => this.notifyTreeDataChanged(item),
+                                        },
+                                        this.resourceGroupingManager,
+                                        this.resourceProviderManager,
+                                        subscription,
+                                        `(${nonNullValueAndProp(subscription.account, 'label')})`);
+                                }
+                                return new SubscriptionItem(
+                                    {
+                                        subscription: subscription,
+                                        subscriptionContext: createSubscriptionContext(subscription),
+                                        refresh: item => this.notifyTreeDataChanged(item),
+                                    },
+                                    this.resourceGroupingManager,
+                                    this.resourceProviderManager,
+                                    subscription)
+                            });
                     } else {
                         return subscriptions.map(
-                            subscription => new SubscriptionItem(
-                                {
-                                    subscription: subscription,
-                                    subscriptionContext: createSubscriptionContext(subscription),
-                                    refresh: item => this.notifyTreeDataChanged(item),
-                                },
-                                this.resourceGroupingManager,
-                                this.resourceProviderManager,
-                                subscription));
+                            subscription => {
+                                if (duplicates.includes(subscription)) {
+                                    return new SubscriptionItem(
+                                        {
+                                            subscription: subscription,
+                                            subscriptionContext: createSubscriptionContext(subscription),
+                                            refresh: item => this.notifyTreeDataChanged(item),
+                                        },
+                                        this.resourceGroupingManager,
+                                        this.resourceProviderManager,
+                                        subscription,
+                                        `(${nonNullValueAndProp(subscription.account, 'label')})`);
+                                }
+                                return new SubscriptionItem(
+                                    {
+                                        subscription: subscription,
+                                        subscriptionContext: createSubscriptionContext(subscription),
+                                        refresh: item => this.notifyTreeDataChanged(item),
+                                    },
+                                    this.resourceGroupingManager,
+                                    this.resourceProviderManager,
+                                    subscription)
+                            });
                     }
                 }
             }

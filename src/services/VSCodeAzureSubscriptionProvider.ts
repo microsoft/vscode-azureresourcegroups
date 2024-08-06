@@ -3,8 +3,8 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { VSCodeAzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import { getSelectedTenantAndSubscriptionIds } from '../commands/accounts/selectSubscriptions';
+import { VSCodeAzureSubscriptionProvider } from '../commands/accounts/VSCodeAzureSubscriptionProvider'; //changes to auth package
 
 let vscodeAzureSubscriptionProvider: VSCodeAzureSubscriptionProvider | undefined;
 

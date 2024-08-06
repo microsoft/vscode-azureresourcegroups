@@ -50,14 +50,14 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
             const children: ResourceGroupsItem[] = await OnGetChildrenBase(subscriptionProvider);
 
             if (children.length === 0) {
-                const accounts = await vscode.authentication.getAccounts('microsoft');
+                const accounts = await vscode.authentication.getAccounts(getConfiguredAuthProviderId());
                 for (const account of accounts) {
-                    const session = await vscode.authentication.getSession('microsoft', ['https://management.azure.com/.default'], { account: account });
+                    const session = await vscode.authentication.getSession(getConfiguredAuthProviderId(), getScopes(undefined), { account: account });
                     const tenants = await this.getTenants(session);
                     const tenantItems: ResourceGroupsItem[] = [];
                     for await (const tenant of tenants) {
                         const isSignedIn = await subscriptionProvider.isSignedIn(nonNullProp(tenant, 'tenantId'));
-                        tenantItems.push(new TenantTreeItem(nonNullProp(tenant, 'displayName'), nonNullProp(tenant, 'tenantId'), {
+                        tenantItems.push(new TenantTreeItem(nonNullProp(tenant, 'displayName'), nonNullProp(tenant, 'tenantId'), nonNullProp(account, 'id'), {
                             contextValue: isSignedIn ? 'tenantName' : 'tenantNameNotSignedIn',
                             checkboxState: (!(isSignedIn) || this.checkUnselectedTenants(nonNullProp(tenant, 'tenantId'))) ?
                                 vscode.TreeItemCheckboxState.Unchecked : vscode.TreeItemCheckboxState.Checked, // Make sure tenants which are not signed in are unchecked
@@ -68,11 +68,12 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                     children.push(new GenericItem(nonNullValueAndProp(session?.account, 'label'), {
                         children: tenantItems,
                         iconPath: new vscode.ThemeIcon('account'),
-                        contextValue: 'accountName'
+                        contextValue: 'accountName',
+                        collapsibleState: vscode.TreeItemCollapsibleState.Expanded
                     }));
                 }
-                return children;
             }
+            return children;
         }
     }
 

@@ -35,7 +35,7 @@ export function registerTenantTree(context: vscode.ExtensionContext, options: Re
         canSelectMany: true,
         showCollapseAll: true,
         itemCache: branchItemCache,
-        title: localize('tenants', 'Tenants'),
+        title: localize('accountsAndTenants', 'Accounts & Tenants'),
         treeDataProvider: wrapTreeForVSCode(tenantResourceTreeDataProvider, branchItemCache),
         findItemById: tenantResourceTreeDataProvider.findItemById.bind(tenantResourceTreeDataProvider) as typeof tenantResourceTreeDataProvider.findItemById,
     });
@@ -53,9 +53,10 @@ export function registerTenantTree(context: vscode.ExtensionContext, options: Re
 
 async function updateTenantsSetting(_context: IActionContext, tenants: vscode.TreeCheckboxChangeEvent<TenantTreeItem>) {
     const unselectedTenants = ext.context.globalState.get<string[]>('unselectedTenants') || [];
+
     for (const item of tenants.items) {
         if (item[1] === vscode.TreeItemCheckboxState.Unchecked) {
-            unselectedTenants.push(item[0].id);
+            unselectedTenants.push(`${item[0].id}/${item[0].accountId}`);
         } else if (item[1] === vscode.TreeItemCheckboxState.Checked) {
             const treeItem = await item[0].getTreeItem();
             if (treeItem?.contextValue === 'tenantNameNotSignedIn') {

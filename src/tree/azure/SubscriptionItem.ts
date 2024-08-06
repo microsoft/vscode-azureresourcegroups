@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, ISubscriptionContext, nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
-import { AzureSubscription } from "../../../api/src/index";
 import { AzureResourceProviderManager } from "../../api/ResourceProviderManagers";
+import { AzureSubscription } from "../../commands/accounts/AzureSubscription";
 import { settingUtils } from "../../utils/settingUtils";
 import { treeUtils } from "../../utils/treeUtils";
 import { createPortalUrl } from "../../utils/v2/createPortalUrl";
@@ -19,7 +19,8 @@ export class SubscriptionItem implements ResourceGroupsItem {
         private readonly context: ResourceGroupsTreeContext,
         private readonly resourceGroupingManager: AzureResourceGroupingManager,
         private readonly resourceProviderManager: AzureResourceProviderManager,
-        subscription: AzureSubscription) {
+        subscription: AzureSubscription,
+        description?: string) {
 
         this.subscription = {
             // for v1.5 compatibility
@@ -27,13 +28,16 @@ export class SubscriptionItem implements ResourceGroupsItem {
             ...subscription
         };
 
-        this.id = `/subscriptions/${this.subscription.subscriptionId}`;
+        this.id = `/subscriptions/${subscription.subscriptionId}/${subscription.tenantId}/${nonNullValueAndProp(subscription.account, 'id')}`;
+        this.description = description ? description : '';
+
         this.portalUrl = createPortalUrl(this.subscription, this.id);
     }
 
     public readonly portalUrl: vscode.Uri;
 
     public readonly id: string;
+    private description?: string;
     public readonly subscription: ISubscriptionContext & AzureSubscription;
 
     async getChildren(): Promise<ResourceGroupsItem[]> {
@@ -56,6 +60,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
 
         treeItem.contextValue = 'azureextensionui.azureSubscription';
         treeItem.iconPath = treeUtils.getIconPath('azureSubscription');
+        treeItem.description = this.description;
         treeItem.id = this.id;
 
         return treeItem;

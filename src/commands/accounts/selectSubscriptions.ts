@@ -4,11 +4,11 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
-import { AzureSubscription } from "api/src/resources/azure";
 import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../utils/localize";
 import { settingUtils } from "../../utils/settingUtils";
+import { AzureSubscription } from "./AzureSubscription";
 
 export async function selectSubscriptions(context: IActionContext): Promise<void> {
     const provider = await ext.subscriptionProviderFactory();
@@ -88,7 +88,7 @@ async function setSelectedTenantAndSubscriptionIds(tenantAndSubscriptionIds: str
 export function getTenantFilteredSubscriptions(allSubscriptions: AzureSubscription[]): AzureSubscription[] | undefined {
     const tenants = ext.context.globalState.get<string[]>('unselectedTenants');
     if (tenants && tenants.length > 0) {
-        allSubscriptions = allSubscriptions.filter(subscription => !tenants.includes(subscription.tenantId));
+        allSubscriptions = allSubscriptions.filter(subscription => !tenants.includes(`${subscription.tenantId}/${subscription.account?.id}`));
         if (allSubscriptions.length > 0) {
             return allSubscriptions;
         }
