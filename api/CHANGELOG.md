@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## [2.3.0] - 2024-08-06
+
 ## [2.2.1] - 2024-04-25
 
 * Add "Web PubSub" resource type
