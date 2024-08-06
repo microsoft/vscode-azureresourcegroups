@@ -20,6 +20,7 @@ export function createSubscriptionContext(subscription: AzureSubscription): ISub
         subscriptionPath: '',
         tenantId: '',
         userId: '',
-        credentials: createCredential(subscription.authentication.getSession)
+        credentials: createCredential(subscription.authentication.getSession),
+        getSessionForScopes: subscription.authentication.getSessionForScopes
     };
 }
