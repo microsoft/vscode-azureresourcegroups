@@ -672,7 +672,7 @@
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
         "@azure/ms-rest-js": "^2.7.0",
         "@microsoft/vscode-azext-azureauth": "^2.5.0",
-        "@microsoft/vscode-azext-azureutils": "^2..0",
+        "@microsoft/vscode-azext-azureutils": "^2.0.0",
         "@microsoft/vscode-azext-utils": "^2.4.0",
         "buffer": "^6.0.3",
         "jsonc-parser": "^2.2.1",
