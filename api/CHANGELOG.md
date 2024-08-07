@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## [2.3.1] - 2024-08-06
+
+* Change `getSessionForScopes` to `getSessionWithScopes`
+
 ## [2.3.0] - 2024-08-06
 
 * Add `getSessionForScopes` to `AzureAuthentication`
