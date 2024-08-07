@@ -673,7 +673,7 @@
         "@azure/ms-rest-js": "^2.7.0",
         "@microsoft/vscode-azext-azureauth": "^2.5.0",
         "@microsoft/vscode-azext-azureutils": "^2.0.0",
-        "@microsoft/vscode-azext-utils": "^2.4.0",
+        "@microsoft/vscode-azext-utils": "^2.5.3",
         "buffer": "^6.0.3",
         "jsonc-parser": "^2.2.1",
         "node-fetch": "^3.3.2",
