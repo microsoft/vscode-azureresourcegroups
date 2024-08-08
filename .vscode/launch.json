@@ -8,7 +8,6 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": [
-                "--profile=vCoreDevelopment", // uses a local profile with a limited number of installed extensions
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
             "outFiles": [
