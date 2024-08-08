@@ -42,7 +42,7 @@ const azureTypeToAzExtResourceTypeMap: Record<string, AzExtResourceType | undefi
     'microsoft.dbforpostgresql/flexibleservers': AzExtResourceType.PostgresqlServersFlexible,
     'microsoft.dbforpostgresql/servers': AzExtResourceType.PostgresqlServersStandard,
     'microsoft.documentdb/databaseaccounts': AzExtResourceType.AzureCosmosDb,
-    'microsoft.documentdb/mongoclusters': AzExtResourceType.MongoVCore,
+    'microsoft.documentdb/mongoclusters': AzExtResourceType.MongoClusters,
     'microsoft.storage/storageaccounts': AzExtResourceType.StorageAccounts,
     'microsoft.web/staticsites': AzExtResourceType.StaticWebApps,
     // The below are not supported by the Azure extensions but have icons in the Resources extension

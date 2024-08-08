@@ -74,7 +74,7 @@ export declare enum AzExtResourceType {
     LogicApp = "LogicApp",
     LogicWorkflows = "LogicWorkflows",
     ManagedIdentityUserAssignedIdentities = "ManagedIdentityUserAssignedIdentities",
-    MongoVCore = 'MongoVCore',
+    MongoClusters = 'MongoClusters',
     MysqlServers = "MysqlServers",
     NetworkApplicationGateways = "NetworkApplicationGateways",
     NetworkApplicationSecurityGroups = "NetworkApplicationSecurityGroups",
