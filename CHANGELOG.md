@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.9.2 - 2024-08-08
+
+### Added
+* [[891]](https://github.com/microsoft/vscode-azureresourcegroups/pull/891) Add `createCredentialsForScopes` to `ISubscriptionContext` for creating tokens with a specified set of scopes
+
+### Fixed
+* [[890]](https://github.com/microsoft/vscode-azureresourcegroups/pull/890) Fix tree item descriptions that used temporary descriptions
+* [[883]](https://github.com/microsoft/vscode-azureresourcegroups/pull/883) Resolve resources with a `promise.allSettle` instead of async for loop to improve performance
+* [[876]](https://github.com/microsoft/vscode-azureresourcegroups/pull/876) Fixed Azure view keybind for Windows OS
+
 ## 0.9.1 - 2024-05-28
 
 ### Added
