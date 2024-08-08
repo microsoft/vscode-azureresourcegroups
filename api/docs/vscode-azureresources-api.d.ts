@@ -108,12 +108,19 @@ export declare enum AzExtResourceType {
 export declare interface AzureAuthentication {
     /**
      * Gets a VS Code authentication session for an Azure subscription.
+     * Always uses the default scope, `https://management.azure.com/.default/` and respects `microsoft-sovereign-cloud.environment` setting.
+     *
+     * @returns A VS Code authentication session or undefined, if none could be obtained.
+     */
+    getSession(): vscode.ProviderResult<vscode.AuthenticationSession>;
+    /**
+     * Gets a VS Code authentication session for an Azure subscription.
      *
      * @param scopes - The scopes for which the authentication is needed.
      *
      * @returns A VS Code authentication session or undefined, if none could be obtained.
      */
-    getSession(scopes?: string[]): vscode.ProviderResult<vscode.AuthenticationSession>;
+    getSessionWithScopes(scopes: string[]): vscode.ProviderResult<vscode.AuthenticationSession>;
 }
 
 export declare interface AzureExtensionApi {

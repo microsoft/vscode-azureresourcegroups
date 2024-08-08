@@ -20,6 +20,9 @@ export function createSubscriptionContext(subscription: AzureSubscription): ISub
         subscriptionPath: '',
         tenantId: '',
         userId: '',
-        credentials: createCredential(subscription.authentication.getSession)
+        credentials: createCredential(subscription.authentication.getSession),
+        createCredentialsForScopes: async (scopes: string[]) => {
+            return createCredential(subscription.authentication.getSessionWithScopes.bind(subscription.authentication, scopes));
+        }
     };
 }

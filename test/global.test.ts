@@ -7,8 +7,12 @@ import { TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
 import * as vscode from 'vscode';
 import { ext, registerOnActionStartHandler, settingUtils } from '../extension.bundle';
 
-export let longRunningTestsEnabled: boolean;
+const longRunningLocalTestsEnabled: boolean = !/^(false|0)?$/i.test(process.env.AzCode_EnableLongRunningTestsLocal || '');
+const longRunningRemoteTestsEnabled: boolean = !/^(false|0)?$/i.test(process.env.AzCode_UseAzureFederatedCredentials || '');
+
+export const longRunningTestsEnabled: boolean = longRunningLocalTestsEnabled || longRunningRemoteTestsEnabled;
 export const userSettings: { key: string, value: unknown }[] = [];
+
 // Runs before all tests
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(1 * 60 * 1000);
@@ -27,8 +31,6 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 
     const deleteConfirmationSetting = settingUtils.getWorkspaceSetting('deleteConfirmation');
     userSettings.push({ key: 'deleteConfirmation', value: deleteConfirmationSetting });
-
-    longRunningTestsEnabled = !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '');
 });
 
 suiteTeardown(async function (this: Mocha.Context): Promise<void> {
