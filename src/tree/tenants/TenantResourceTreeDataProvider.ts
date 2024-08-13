@@ -5,8 +5,9 @@
 
 import { SubscriptionClient, TenantIdDescription } from '@azure/arm-resources-subscriptions';
 import type { TokenCredential } from '@azure/core-auth'; // Keep this as `import type` to avoid actually loading the package (at all, this one is dev-only)
-import { AzureAuthentication, AzureSubscriptionProvider, getConfiguredAuthProviderId, getConfiguredAzureEnv, NotSignedInError } from '@microsoft/vscode-azext-azureauth';
+import { AzureSubscriptionProvider, getConfiguredAuthProviderId, getConfiguredAzureEnv, NotSignedInError } from '@microsoft/vscode-azext-azureauth';
 import { nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
+import { ResourceModelBase } from 'api/src';
 import * as vscode from 'vscode';
 import { TenantResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { ext } from '../../extensionVariables';
@@ -22,9 +23,12 @@ import { TenantTreeItem } from './TenantTreeItem';
 export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase {
     public subscriptionProvider: AzureSubscriptionProvider | undefined;
     public statusSubscription: vscode.Disposable | undefined;
+    public nextSessionChangeMessageMinimumTime = 0;
+    public sessionChangeMessageInterval = 1 * 1000; // 1 second
 
     constructor(
         protected readonly branchDataProviderManager: TenantResourceBranchDataProviderManager,
+        onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
         onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
         protected readonly resourceProviderManager: TenantResourceProviderManager,
         state: TreeItemStateStore,
@@ -32,7 +36,7 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
         callOnDispose?: () => void) {
         super(
             branchItemCache,
-            branchDataProviderManager.onDidChangeTreeData,
+            onDidChangeBranchTreeData,
             resourceProviderManager.onDidChangeResourceChange,
             onRefresh,
             state,

@@ -137,10 +137,12 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         refreshEvent: refreshWorkspaceTreeEmitter.event,
     });
 
+    const tenantResourcesBranchDataItemCache = new BranchDataItemCache();
     const tenantResourceTreeDataProvider = registerTenantTree(context, {
         tenantResourceProviderManager,
         tenantResourceBranchDataProviderManager,
-        refreshEvent: refreshTenantTreeEmitter.event
+        refreshEvent: refreshTenantTreeEmitter.event,
+        itemCache: tenantResourcesBranchDataItemCache
     })
 
     const v2ApiFactory: AzureExtensionApiFactory<AzureResourcesApiInternal> = {

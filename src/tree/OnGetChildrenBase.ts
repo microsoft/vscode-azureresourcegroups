@@ -66,8 +66,8 @@ export async function getAzureSubscriptionProvider(tdp: AzureResourceTreeDataPro
 
         tdp.statusSubscription = vscode.authentication.onDidChangeSessions((evt: vscode.AuthenticationSessionsChangeEvent) => {
             if (evt.provider.id === 'microsoft' || evt.provider.id === 'microsoft-sovereign-cloud') {
-                if (Date.now() > nextSessionChangeMessageMinimumTime) {
-                    nextSessionChangeMessageMinimumTime = Date.now() + sessionChangeMessageInterval;
+                if (Date.now() > tdp.nextSessionChangeMessageMinimumTime) {
+                    tdp.nextSessionChangeMessageMinimumTime = Date.now() + tdp.sessionChangeMessageInterval;
                     // This event gets HEAVILY spammed and needs to be debounced
                     // Suppress additional messages for 1 second after the first one
                     tdp.notifyTreeDataChanged();
@@ -78,7 +78,3 @@ export async function getAzureSubscriptionProvider(tdp: AzureResourceTreeDataPro
         return tdp.subscriptionProvider;
     }
 }
-
-let nextSessionChangeMessageMinimumTime = 0;
-const sessionChangeMessageInterval = 1 * 1000; // 1 second
-

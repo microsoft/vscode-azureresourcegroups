@@ -10,6 +10,7 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
+import { TreeItemStateStore } from '../TreeItemState';
 import { createTreeView } from '../createTreeView';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { TenantResourceBranchDataProviderManager } from "./TenantResourceBranchDataProviderManager";
@@ -20,23 +21,24 @@ interface RegisterTenantTreeOptions {
     tenantResourceBranchDataProviderManager: TenantResourceBranchDataProviderManager,
     tenantResourceProviderManager: TenantResourceProviderManager,
     refreshEvent: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
+    itemCache: BranchDataItemCache
 }
 
 export function registerTenantTree(context: vscode.ExtensionContext, options: RegisterTenantTreeOptions): TenantResourceTreeDataProvider {
-    const { tenantResourceBranchDataProviderManager, tenantResourceProviderManager, refreshEvent } = options;
+    const { tenantResourceBranchDataProviderManager, tenantResourceProviderManager, refreshEvent, itemCache } = options;
 
+    context.subscriptions.push(ext.azureTreeState = new TreeItemStateStore());
 
-    const branchItemCache = new BranchDataItemCache();
     const tenantResourceTreeDataProvider =
-        new TenantResourceTreeDataProvider(tenantResourceBranchDataProviderManager, refreshEvent, tenantResourceProviderManager, ext.azureTreeState, branchItemCache);
+        new TenantResourceTreeDataProvider(tenantResourceBranchDataProviderManager, tenantResourceBranchDataProviderManager.onDidChangeTreeData, refreshEvent, tenantResourceProviderManager, ext.azureTreeState, itemCache);
     context.subscriptions.push(tenantResourceTreeDataProvider);
 
     const treeView = createTreeView('azureTenant', {
         canSelectMany: true,
         showCollapseAll: true,
-        itemCache: branchItemCache,
+        itemCache,
         title: localize('accountsAndTenants', 'Accounts & Tenants'),
-        treeDataProvider: wrapTreeForVSCode(tenantResourceTreeDataProvider, branchItemCache),
+        treeDataProvider: wrapTreeForVSCode(tenantResourceTreeDataProvider, itemCache),
         findItemById: tenantResourceTreeDataProvider.findItemById.bind(tenantResourceTreeDataProvider) as typeof tenantResourceTreeDataProvider.findItemById,
     });
     context.subscriptions.push(treeView);
@@ -60,13 +62,7 @@ async function updateTenantsSetting(_context: IActionContext, tenants: vscode.Tr
         } else if (item[1] === vscode.TreeItemCheckboxState.Checked) {
             const treeItem = await item[0].getTreeItem();
             if (treeItem?.contextValue === 'tenantNameNotSignedIn') {
-                const signInButton: vscode.MessageItem = { title: localize('signIn', 'Sign in') };
-                const buttons: vscode.MessageItem[] = [signInButton];
-                const result = await vscode.window.showWarningMessage(
-                    localize('signIntoTenant', 'This tenant is not signed in. Please sign in to access resources.'), { modal: true }, ...buttons);
-                if (result === signInButton) {
-                    await vscode.commands.executeCommand('azureTenant.signInToTenant', treeItem);
-                }
+                await vscode.commands.executeCommand('azureTenant.signInToTenant', item[0]);
             }
             unselectedTenants.splice(unselectedTenants.indexOf(item[0].id), 1);
         }

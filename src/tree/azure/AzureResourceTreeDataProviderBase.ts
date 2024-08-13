@@ -17,6 +17,8 @@ import { GroupingItem } from './grouping/GroupingItem';
 export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeDataProviderBase {
     public subscriptionProvider: AzureSubscriptionProvider | undefined;
     public statusSubscription: vscode.Disposable | undefined;
+    public nextSessionChangeMessageMinimumTime = 0;
+    public sessionChangeMessageInterval = 1 * 1000; // 1 second
 
     constructor(
         itemCache: BranchDataItemCache,

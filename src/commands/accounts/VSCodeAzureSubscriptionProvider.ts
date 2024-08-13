@@ -212,7 +212,7 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
      * @returns The list of subscriptions for the tenant.
      */
     private async getSubscriptionsForTenant(tenantId: string, account: vscode.AuthenticationSessionAccountInformation): Promise<AzureSubscription[]> {
-        const { client, credential, authentication } = await this.getSubscriptionClient(tenantId);
+        const { client, credential, authentication } = await this.getSubscriptionClient(tenantId, undefined, undefined, account);
         const environment = getConfiguredAzureEnv();
 
         const subscriptions: AzureSubscription[] = [];
@@ -242,10 +242,14 @@ export class VSCodeAzureSubscriptionProvider extends vscode.Disposable implement
      *
      * @returns A client, the credential used by the client, and the authentication function
      */
-    private async getSubscriptionClient(tenantId?: string, scopes?: string[], session?: vscode.AuthenticationSession): Promise<{ client: SubscriptionClient, credential: TokenCredential, authentication: AzureAuthentication }> {
+    private async getSubscriptionClient(tenantId?: string, scopes?: string[], session?: vscode.AuthenticationSession, account?: vscode.AuthenticationSessionAccountInformation): Promise<{ client: SubscriptionClient, credential: TokenCredential, authentication: AzureAuthentication }> {
         const armSubs = await import('@azure/arm-resources-subscriptions');
         if (!session) {
-            session = await getSessionFromVSCode(scopes, tenantId, { createIfNone: false, silent: true });
+            if (account) {
+                session = await getSessionFromVSCode(scopes, tenantId, { createIfNone: false, silent: true, account: account }); //pass in account
+            } else {
+                session = await getSessionFromVSCode(scopes, tenantId, { createIfNone: false, silent: true });
+            }
         }
 
         if (!session) {

@@ -69,6 +69,7 @@ export function registerCommands(): void {
 
     registerCommand('azureTenant.signInToTenant', async (_context, node: TenantTreeItem) => {
         await (await ext.subscriptionProviderFactory()).signIn(node.tenantId);
+        ext.actions.refreshTenantTree(node);
     });
 
     registerCommand('azureResourceGroups.focusGroup', focusGroup);
