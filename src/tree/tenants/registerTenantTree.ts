@@ -63,6 +63,7 @@ async function updateTenantsSetting(_context: IActionContext, tenants: vscode.Tr
             const treeItem = await item[0].getTreeItem();
             if (treeItem?.contextValue === 'tenantNameNotSignedIn') {
                 await vscode.commands.executeCommand('azureTenant.signInToTenant', item[0]);
+                ext.actions.refreshTenantTree();
             }
             unselectedTenants.splice(unselectedTenants.indexOf(item[0].id), 1);
         }
