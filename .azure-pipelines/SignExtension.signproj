@@ -20,10 +20,10 @@
   </ItemGroup>
 
   <Target Name="CopySignatureFile" BeforeTargets="SignFiles">
-    <Copy SourceFiles="$(ProjectDir)\extension.manifest" DestinationFiles="$(OutDir)\extension.signature.p7s" />
+    <Copy SourceFiles="$(ProjectDir)\..\extension.manifest" DestinationFiles="$(OutDir)\extension.signature.p7s" />
   </Target>
 
   <Target Name="CopyBackSignatureFile" AfterTargets="SignFiles">
-    <Copy SourceFiles="$(OutDir)\extension.signature.p7s" DestinationFiles="$(ProjectDir)\extension.signature.p7s" />
+    <Copy SourceFiles="$(OutDir)\extension.signature.p7s" DestinationFiles="$(ProjectDir)\..\extension.signature.p7s" />
   </Target>
 </Project>
