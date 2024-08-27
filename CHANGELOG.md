@@ -2,10 +2,13 @@
 
 ## Unreleased
 
-## 0.9.3 - 2024-08-20
-
+## 0.9.4 - 2024-08-27
 ### Added
 * [[894]](https://github.com/microsoft/vscode-azureresourcegroups/pull/894) Add staged support for MongoClusters
+
+## 0.9.3 - 2024-08-20
+
+Skipped
 
 ## 0.9.2 - 2024-08-08
 
