@@ -1,6 +1,6 @@
 {
     "name": "@microsoft/vscode-azureresources-api",
-    "version": "2.2.1",
+    "version": "2.3.2",
     "description": "Type declarations and client library for the Azure Resources extension API",
     "repository": {
         "type": "git",

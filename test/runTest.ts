@@ -3,27 +3,15 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath, runTests } from '@vscode/test-electron';
-import * as cp from 'child_process';
+import { downloadAndUnzipVSCode, runTests } from '@vscode/test-electron';
 import * as path from 'path';
 
 async function main(): Promise<void> {
     try {
         const vscodeExecutablePath = await downloadAndUnzipVSCode();
-        const [cli, ...args] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
-
-        cp.spawnSync(
-            cli,
-            [
-                ...args,
-                '--install-extension', 'ms-vscode.azure-account',
-            ],
-            {
-                encoding: 'utf-8',
-                stdio: 'inherit'
-            });
 
         const repoRoot: string = path.resolve(__dirname, '..', '..');
+
         await runTests({
             vscodeExecutablePath,
             extensionDevelopmentPath: repoRoot,

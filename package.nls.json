@@ -1,4 +1,7 @@
 {
+    "azureResourceGroups.cloudShellBash": "Azure Cloud Shell (Bash)",
+    "azureResourceGroups.cloudShellPowerShell": "Azure Cloud Shell (PowerShell)",
+    "azureResourceGroups.uploadToCloudShell": "Upload to Cloud Shell",
     "azureResourceGroups.logIn": "Sign In",
     "azureResourceGroups.signInToTenant": "Sign in to Directory...",
     "azureResourceGroups.selectSubscriptions": "Select Subscriptions...",

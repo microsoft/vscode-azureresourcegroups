@@ -22,12 +22,13 @@ import { registerApplicationResourceResolver } from './api/compatibility/registe
 import { registerWorkspaceResourceProvider } from './api/compatibility/registerWorkspaceResourceProvider';
 import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
+import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { ext } from './extensionVariables';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
-import { createVSCodeAzureSubscriptionProviderFactory } from './services/VSCodeAzureSubscriptionProvider';
+import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { getAzureSubscriptionProvider } from './tree/OnGetChildrenBase';
@@ -75,7 +76,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
-        ext.subscriptionProviderFactory = createVSCodeAzureSubscriptionProviderFactory();
+
+        ext.subscriptionProviderFactory = getSubscriptionProviderFactory(activateContext);
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
@@ -90,6 +92,17 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         context.subscriptions.push(ext.activityLogTreeItem = new ActivityLogTreeItem());
         ext.activityLogTree = new AzExtTreeDataProvider(ext.activityLogTreeItem, 'azureActivityLog.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('azureActivityLog', { treeDataProvider: ext.activityLogTree }));
+
+        context.subscriptions.push(vscode.window.registerTerminalProfileProvider('azureResourceGroups.cloudShellBash', {
+            provideTerminalProfile: async (token: vscode.CancellationToken) => {
+                return createCloudConsole(await ext.subscriptionProviderFactory(), 'Linux', token).terminalProfile;
+            }
+        }));
+        context.subscriptions.push(vscode.window.registerTerminalProfileProvider('azureResourceGroups.cloudShellPowerShell', {
+            provideTerminalProfile: async (token: vscode.CancellationToken) => {
+                return createCloudConsole(await ext.subscriptionProviderFactory(), 'Windows', token).terminalProfile;
+            }
+        }));
 
         registerCommands();
     });

@@ -80,6 +80,26 @@ Create an Azure resource from your installed extensions directly in VS Code.
 
 ![Create Resource](resources/readme/createResourceGraphic.png)
 
+### Azure Cloud Shell
+
+Azure Cloud Shell instances can be started via the terminal view in VS Code. To begin, click the
+dropdown arrow in the terminal view and select from either `Azure Cloud Shell (Bash)` or
+`Azure Cloud Shell (PowerShell)`.
+
+![VS Code terminal view with context menu](resources/readme/terminalViewWithMenu.png)
+
+If this is your first time using the Cloud Shell, the following notification will appear prompting
+you to set it up.
+
+!["Must setup cloud shell" notification](resources/readme/mustSetupCloudShell.png)
+
+The Cloud Shell will load in the terminal view once you've finished configuring it.
+
+![The Azure Cloud Shell in the terminal window](resources/readme/cloudShell.png)
+
+You may also upload files to Cloud Shell using the `Azure: Upload to Cloud Shell` command.
+
+
 ## Azure Extensions
 
 Install these extensions to enable additional resource-specific features.

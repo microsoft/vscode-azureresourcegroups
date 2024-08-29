@@ -14,6 +14,7 @@ export enum AzExtResourceType {
     ContainerApps = 'ContainerApps',
     ContainerAppsEnvironment = 'ContainerAppsEnvironment',
     FunctionApp = 'FunctionApp',
+    MongoClusters = 'MongoClusters',
     PostgresqlServersFlexible = 'PostgresqlServersFlexible',
     PostgresqlServersStandard = 'PostgresqlServersStandard',
     StaticWebApps = 'StaticWebApps',

@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## [2.3.2] - 2024-08-19
+
+* Add "MongoClusters" resource type
+
+## [2.3.1] - 2024-08-06
+
+* Change `getSessionForScopes` to `getSessionWithScopes`
+
+## [2.3.0] - 2024-08-06
+
+* Add `getSessionForScopes` to `AzureAuthentication`
+
 ## [2.2.1] - 2024-04-25
 
 * Add "Web PubSub" resource type

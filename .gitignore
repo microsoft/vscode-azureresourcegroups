@@ -59,7 +59,7 @@ typings/
 
 # Output
 out
-bin
+# bin
 obj
 *.vsix
 .vscode-test
