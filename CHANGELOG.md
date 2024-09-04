@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.9.5 - 2024-09-xx
+### Engineering
+* [[913]](https://github.com/microsoft/vscode-azureresourcegroups/pull/913) Upgrade packages for additional telemetry updates
+
 ## 0.9.4 - 2024-08-28
 ### Added
 * [[894]](https://github.com/microsoft/vscode-azureresourcegroups/pull/894) Add staged support for MongoClusters
