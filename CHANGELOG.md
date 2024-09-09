@@ -4,9 +4,10 @@
 
 ## 0.9.5 - 2024-09-11
 ### Fixed
-* [[915]](https://github.com/microsoft/vscode-azureresourcegroups/pull/915) Remove bad implementation of `createSubscriptionContext`
+* [[905]](https://github.com/microsoft/vscode-azureresourcegroups/issues/905) [[917]](https://github.com/microsoft/vscode-azureresourcegroups/issues/917) [[915]](https://github.com/microsoft/vscode-azureresourcegroups/pull/915) Fixes a `subscription could not be found` issue that sometimes appears when loading resources
 
 ### Engineering
+* [[919]](https://github.com/microsoft/vscode-azureresourcegroups/pull/919) Update release pipeline to support signing
 * [[913]](https://github.com/microsoft/vscode-azureresourcegroups/pull/913) Upgrade packages for additional telemetry updates
 
 ## 0.9.4 - 2024-08-28
