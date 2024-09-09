@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-## 0.9.5 - 2024-09-xx
+## 0.9.5 - 2024-09-11
+### Fixed
+* [[915]](https://github.com/microsoft/vscode-azureresourcegroups/pull/915) Remove bad implementation of `createSubscriptionContext`
+
 ### Engineering
 * [[913]](https://github.com/microsoft/vscode-azureresourcegroups/pull/913) Upgrade packages for additional telemetry updates
 
