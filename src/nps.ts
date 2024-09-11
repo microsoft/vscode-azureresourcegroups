@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
-import { env, ExtensionContext, extensions, Uri, window } from 'vscode';
+import { env, ExtensionContext, Uri, window } from 'vscode';
 import * as nls from 'vscode-nls';
+import { ext } from './extensionVariables';
 
 const localize = nls.loadMessageBundle();
 
@@ -18,7 +19,7 @@ const SKIP_VERSION_KEY = 'nps/skipVersion';
 const IS_CANDIDATE_KEY = 'nps/isCandidate';
 
 export function survey({ globalState }: ExtensionContext): void {
-    void callWithTelemetryAndErrorHandling('azure-account.nps.survey', async (context: IActionContext) => {
+    void callWithTelemetryAndErrorHandling('azureResourceGroups.nps.survey', async (context: IActionContext) => {
         if (env.language !== 'en' && !env.language.startsWith('en-')) {
             return;
         }
@@ -43,20 +44,19 @@ export function survey({ globalState }: ExtensionContext): void {
             return;
         }
 
-        const isCandidate = globalState.get(IS_CANDIDATE_KEY, false)
+        const isCandidate = true || globalState.get(IS_CANDIDATE_KEY, false)
             || Math.random() < PROBABILITY;
 
         await globalState.update(IS_CANDIDATE_KEY, isCandidate);
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-non-null-assertion
-        const extensionVersion = extensions.getExtension('ms-vscode.azure-account')!.packageJSON.version || 'unknown';
+        const extensionVersion = (ext.context.extension.packageJSON as { version: string }).version;
         if (!isCandidate) {
             await globalState.update(SKIP_VERSION_KEY, extensionVersion);
             return;
         }
 
         const take = {
-            title: localize('azure-account.takeSurvey', "Take Survey"),
+            title: localize('azureResourceGroups.takeSurvey', "Take Survey"),
             run: async () => {
                 context.telemetry.properties.takeShortSurvey = 'true';
                 void env.openExternal(Uri.parse(`${NPS_SURVEY_URL}?o=${encodeURIComponent(process.platform)}&v=${encodeURIComponent(extensionVersion)}&m=${encodeURIComponent(env.machineId)}`));
@@ -65,14 +65,14 @@ export function survey({ globalState }: ExtensionContext): void {
             }
         };
         const remind = {
-            title: localize('azure-account.remindLater', "Remind Me Later"),
+            title: localize('azureResourceGroups.remindLater', "Remind Me Later"),
             run: async () => {
                 context.telemetry.properties.remindMeLater = 'true';
                 await globalState.update(SESSION_COUNT_KEY, sessionCount - 3);
             }
         };
         const never = {
-            title: localize('azure-account.neverAgain', "Don't Show Again"),
+            title: localize('azureResourceGroups.neverAgain', "Don't Show Again"),
             isSecondary: true,
             run: async () => {
                 context.telemetry.properties.dontShowAgain = 'true';
@@ -82,7 +82,7 @@ export function survey({ globalState }: ExtensionContext): void {
         };
 
         context.telemetry.properties.userAsked = 'true';
-        const button = await window.showInformationMessage(localize('azure-account.surveyQuestion', "Do you mind taking a quick feedback survey about the Azure Extensions for VS Code?"), take, remind, never);
+        const button = await window.showInformationMessage(localize('azureResourceGroups.surveyQuestion', "Do you mind taking a quick feedback survey about the Azure Extensions for VS Code?"), take, remind, never);
         await (button || remind).run();
     });
 }
