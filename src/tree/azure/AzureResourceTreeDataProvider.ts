@@ -4,7 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscription, getUnauthenticatedTenants } from '@microsoft/vscode-azext-azureauth';
+<<<<<<< HEAD
 import { IActionContext, callWithTelemetryAndErrorHandling, nonNullValueAndProp, registerEvent } from '@microsoft/vscode-azext-utils';
+=======
+import { IActionContext, callWithTelemetryAndErrorHandling, createSubscriptionContext, registerEvent } from '@microsoft/vscode-azext-utils';
+>>>>>>> d63c6911954cfe91a479c5bd12a945fa52c0b31a
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
@@ -19,7 +23,6 @@ import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { TreeItemStateStore } from '../TreeItemState';
 import { AzureResourceTreeDataProviderBase } from './AzureResourceTreeDataProviderBase';
 import { SubscriptionItem } from './SubscriptionItem';
-import { createSubscriptionContext } from './VSCodeAuthentication';
 import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingManager';
 
 export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProviderBase {
