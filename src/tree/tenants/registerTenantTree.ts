@@ -10,7 +10,6 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
-import { TreeItemStateStore } from '../TreeItemState';
 import { createTreeView } from '../createTreeView';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { TenantResourceBranchDataProviderManager } from "./TenantResourceBranchDataProviderManager";
@@ -27,10 +26,8 @@ interface RegisterTenantTreeOptions {
 export function registerTenantTree(context: vscode.ExtensionContext, options: RegisterTenantTreeOptions): TenantResourceTreeDataProvider {
     const { tenantResourceBranchDataProviderManager, tenantResourceProviderManager, refreshEvent, itemCache } = options;
 
-    context.subscriptions.push(ext.azureTreeState = new TreeItemStateStore());
-
     const tenantResourceTreeDataProvider =
-        new TenantResourceTreeDataProvider(tenantResourceBranchDataProviderManager, tenantResourceBranchDataProviderManager.onDidChangeTreeData, refreshEvent, tenantResourceProviderManager, ext.azureTreeState, itemCache);
+        new TenantResourceTreeDataProvider(tenantResourceBranchDataProviderManager, tenantResourceBranchDataProviderManager.onDidChangeTreeData, refreshEvent, tenantResourceProviderManager, itemCache);
     context.subscriptions.push(tenantResourceTreeDataProvider);
 
     const treeView = createTreeView('azureTenant', {

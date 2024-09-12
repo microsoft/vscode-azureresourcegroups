@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { AzureResource, AzureSubscription, ResourceBase, ResourceProvider, TenantResource, TenantResourceProvider, WorkspaceResource, WorkspaceResourceProvider } from '../../api/src/index';
+import { AzureResource, AzureSubscription, ResourceBase, ResourceProvider, WorkspaceResource, WorkspaceResourceProvider } from '../../api/src/index';
 import { AzureResourceProvider } from '../hostapi.v2.internal';
+import { TenantResource, TenantResourceProvider } from '../tree/tenants/tenant';
 
 export function isArray<T>(maybeArray: T[] | null | undefined): maybeArray is T[] {
     return Array.isArray(maybeArray);

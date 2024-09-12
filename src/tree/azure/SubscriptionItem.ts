@@ -5,8 +5,8 @@
 
 import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, ISubscriptionContext, nonNullValueAndProp } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
+import { AzureSubscription } from "../../../api/src/index";
 import { AzureResourceProviderManager } from "../../api/ResourceProviderManagers";
-import { AzureSubscription } from "../../commands/accounts/AzureSubscription";
 import { settingUtils } from "../../utils/settingUtils";
 import { treeUtils } from "../../utils/treeUtils";
 import { createPortalUrl } from "../../utils/v2/createPortalUrl";

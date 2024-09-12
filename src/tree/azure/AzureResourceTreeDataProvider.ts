@@ -3,13 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getUnauthenticatedTenants } from '@microsoft/vscode-azext-azureauth';
+import { AzureSubscription, getUnauthenticatedTenants } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, callWithTelemetryAndErrorHandling, nonNullValueAndProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
-import { AzureSubscription } from '../../commands/accounts/AzureSubscription';
-import { getTenantFilteredSubscriptions } from '../../commands/accounts/selectSubscriptions';
+import { getDuplicateSubscriptions, getTenantFilteredSubscriptions } from '../../commands/accounts/selectSubscriptions';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
@@ -91,12 +90,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                     }
                 } else {
                     //find duplicate subscriptions and change the name to include the account name
-                    const lookup = subscriptions.reduce((accumulator, sub) => {
-                        accumulator[sub.subscriptionId] = ++accumulator[sub.subscriptionId] || 0;
-                        return accumulator;
-                    }, {} as Record<string, number>);
-
-                    const duplicates = subscriptions.filter(sub => lookup[sub.subscriptionId]);
+                    const duplicates = getDuplicateSubscriptions(subscriptions);
 
                     const tenantFiltedSubcriptions = getTenantFilteredSubscriptions(subscriptions);
                     if (tenantFiltedSubcriptions) {

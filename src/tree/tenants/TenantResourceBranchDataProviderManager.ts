@@ -3,14 +3,14 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { BranchDataProvider, ResourceModelBase, TenantResource } from '../../../api/src/index';
+import { BranchDataProvider, ResourceModelBase } from '../../../api/src/index';
 import { ResourceBranchDataProviderManagerBase } from "../ResourceBranchDataProviderManagerBase";
+import { TenantResource } from './tenant';
 
 export class TenantResourceBranchDataProviderManager extends ResourceBranchDataProviderManagerBase<string, BranchDataProvider<TenantResource, ResourceModelBase>> {
     constructor(
-        defaultProvider: BranchDataProvider<TenantResource, ResourceModelBase>,
-        extensionActivator: (type: string) => void
+        defaultProvider: BranchDataProvider<TenantResource, ResourceModelBase>
     ) {
-        super(defaultProvider, extensionActivator);
+        super(defaultProvider, () => { return 'tenant' });
     }
 }

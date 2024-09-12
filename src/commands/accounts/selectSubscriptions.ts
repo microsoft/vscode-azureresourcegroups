@@ -3,12 +3,12 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { AzureSubscription } from "@microsoft/vscode-azext-azureauth";
 import { IActionContext, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../utils/localize";
 import { settingUtils } from "../../utils/settingUtils";
-import { AzureSubscription } from "./AzureSubscription";
 
 export async function selectSubscriptions(context: IActionContext): Promise<void> {
     const provider = await ext.subscriptionProviderFactory();
@@ -16,14 +16,16 @@ export async function selectSubscriptions(context: IActionContext): Promise<void
 
         const selectedSubscriptionIds = await getSelectedSubscriptionIds();
         const subscriptionQuickPickItems: () => Promise<IAzureQuickPickItem<AzureSubscription>[]> = async () => {
-
+            // If there are no tenants selected by default all subscriptions will be shown.
             const allSubscriptions = await provider.getSubscriptions(false);
 
-            const tenantFiltedSubcriptions = getTenantFilteredSubscriptions(allSubscriptions);
-            if (tenantFiltedSubcriptions) {
-                return tenantFiltedSubcriptions
+            const duplicates = getDuplicateSubscriptions(allSubscriptions);
+
+            const tenantFilteredSubcriptions = getTenantFilteredSubscriptions(allSubscriptions);
+            if (tenantFilteredSubcriptions) {
+                return tenantFilteredSubcriptions
                     .map(subscription => ({
-                        label: subscription.name,
+                        label: duplicates.includes(subscription) ? subscription.name + ` (${subscription.account?.label})` : subscription.name,
                         description: subscription.subscriptionId,
                         data: subscription
                     }))
@@ -32,7 +34,7 @@ export async function selectSubscriptions(context: IActionContext): Promise<void
 
             return allSubscriptions
                 .map(subscription => ({
-                    label: subscription.name,
+                    label: duplicates.includes(subscription) ? subscription.name + ` (${subscription.account?.label})` : subscription.name,
                     description: subscription.subscriptionId,
                     data: subscription
                 }))
@@ -85,6 +87,7 @@ async function setSelectedTenantAndSubscriptionIds(tenantAndSubscriptionIds: str
     await settingUtils.updateGlobalSetting('selectedSubscriptions', tenantAndSubscriptionIds);
 }
 
+// This function is also used to filter subscription tree items in AzureResourceTreeDataProvider
 export function getTenantFilteredSubscriptions(allSubscriptions: AzureSubscription[]): AzureSubscription[] | undefined {
     const tenants = ext.context.globalState.get<string[]>('unselectedTenants');
     if (tenants && tenants.length > 0) {
@@ -95,4 +98,13 @@ export function getTenantFilteredSubscriptions(allSubscriptions: AzureSubscripti
     }
 
     return undefined;
+}
+
+export function getDuplicateSubscriptions(subscriptions: AzureSubscription[]): AzureSubscription[] {
+    const lookup = subscriptions.reduce((accumulator, sub) => {
+        accumulator[sub.subscriptionId] = ++accumulator[sub.subscriptionId] || 0;
+        return accumulator;
+    }, {} as Record<string, number>);
+
+    return subscriptions.filter(sub => lookup[sub.subscriptionId]);
 }

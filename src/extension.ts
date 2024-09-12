@@ -125,9 +125,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
 
     const tenantResourceBranchDataProviderManager = new TenantResourceBranchDataProviderManager(
-        new TenantDefaultBranchDataProvider(),
-        type => void extensionManager.activateTenantResourceBranchDataProvider(type));
-    const tenantResourceProviderManager = new TenantResourceProviderManager(() => extensionManager.activateTenantResourceProviders());
+        new TenantDefaultBranchDataProvider());
+    const tenantResourceProviderManager = new TenantResourceProviderManager(async () => { return undefined });
 
     const azureResourcesBranchDataItemCache = new BranchDataItemCache();
     const azureResourceTreeDataProvider = registerAzureTree(context, {

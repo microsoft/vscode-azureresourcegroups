@@ -3,7 +3,8 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 import * as vscode from 'vscode';
-import { BranchDataProvider, ResourceModelBase, TenantResource } from '../../../api/src/index';
+import { BranchDataProvider, ResourceModelBase } from '../../../api/src/index';
+import { TenantResource } from './tenant';
 
 interface TenantResourceModel extends ResourceModelBase {
     readonly name: string;
