@@ -29,6 +29,7 @@ import { reviewIssues } from './helpAndFeedback/reviewIssues';
 import { installExtension } from './installExtension';
 import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
+import { configureSovereignCloud } from './sovereignCloud/configureSovereignCloud';
 import { editTags } from './tags/editTags';
 import { viewProperties } from './viewProperties';
 
@@ -116,6 +117,8 @@ export function registerCommands(): void {
     });
 
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
+
+    registerCommand('azureTenant.configureSovereignCloud', configureSovereignCloud);
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {

@@ -17,6 +17,7 @@
     "azureWorkspace.refresh": "Refresh Workspace",
     "azureTenant.refresh": "Refresh Accounts & Tenants",
     "azureTenant.signInToTenant": "Sign in to Tenant",
+    "azureTenant.configureSovereignCloud": "Configure Sovereign Cloud",
     "azureResourceGroups.selectedSubscriptions": "Selected Subscriptions",
     "azureResourceGroups.revealResource": "Reveal Resource",
     "azureResourceGroups.viewProperties": "View Properties",
