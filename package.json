@@ -254,6 +254,12 @@
                 "title": "%azureTenant.signInToTenant%",
                 "category": "Azure",
                 "icon": "$(sign-in)"
+            },
+            {
+                "command": "azureTenant.configureSovereignCloud",
+                "title": "%azureTenant.configureSovereignCloud%",
+                "category": "Azure",
+                "icon": "$(gear)"
             }
         ],
         "viewsContainers": {
@@ -386,6 +392,11 @@
                 {
                     "submenu": "azureWorkspaceCreate",
                     "when": "view == azureWorkspace",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "azureTenant.configureSovereignCloud",
+                    "when": "view == azureTenant",
                     "group": "navigation@1"
                 }
             ],
