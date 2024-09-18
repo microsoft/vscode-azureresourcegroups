@@ -9,7 +9,7 @@ import { ConfigureSovereignCloudContext } from "./ConfigureSovereignCloudContext
 export class SovereignCloudListStep extends AzureWizardPromptStep<ConfigureSovereignCloudContext> {
     public async prompt(context: ConfigureSovereignCloudContext): Promise<void> {
         const picks: IAzureQuickPickItem<string>[] = [
-            { label: 'Azure', data: '' },
+            { label: 'Azure (Default)', data: '' },
             { label: 'Azure China', data: 'ChinaCloud' },
             { label: 'Azure US Government', data: 'USGovernment' },
             { label: 'A custom Microsoft Sovereign Cloud', data: 'custom' }
