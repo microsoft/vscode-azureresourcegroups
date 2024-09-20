@@ -280,33 +280,28 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 }
             }
 
+            const env: TerminalOptions['env'] = {
+                // Child process uses this ipc handle to communicate with the extension host
+                CLOUD_CONSOLE_IPC: server.ipcHandlePath
+            };
+
+            if (!isWindows) {
+                // Needed to fork a child process as a node.js process from within the application
+                env['ELECTRON_RUN_AS_NODE'] = '1';
+                env['ELECTRON_NO_ASAR'] = '1';
+            }
+
             // open terminal
-            let shellPath: string = path.join(ext.context.asAbsolutePath('bin'), `node.${isWindows ? 'bat' : 'sh'}`);
             let cloudConsoleLauncherPath: string = path.join(ext.context.asAbsolutePath('dist'), 'cloudConsoleLauncher');
             if (isWindows) {
                 cloudConsoleLauncherPath = cloudConsoleLauncherPath.replace(/\\/g, '\\\\');
             }
-            const shellArgs: string[] = [
-                process.execPath,
-                '-e',
-                `require('${cloudConsoleLauncherPath}').main()`,
-            ];
-
-            if (isWindows) {
-                // Work around https://github.com/electron/electron/issues/4218 https://github.com/nodejs/node/issues/11656
-                shellPath = 'node.exe';
-                shellArgs.shift();
-            }
-
             const terminalOptions: TerminalOptions = {
                 name: localize('azureCloudShell', 'Azure Cloud Shell ({0})', os.shellName),
                 iconPath: new ThemeIcon('azure'),
-                shellPath,
-                shellArgs,
-                env: {
-                    // Child process uses this ipc handle to communicate with the extension host
-                    CLOUD_CONSOLE_IPC: server.ipcHandlePath,
-                },
+                shellPath: isWindows ? 'node.exe' : process.execPath,
+                shellArgs: ['-e', `require('${cloudConsoleLauncherPath}').main()`],
+                env,
                 isTransient: true
             };
 
