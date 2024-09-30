@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## 0.9.6 - 2024-09-30
+### Fixed
+* [[927]](https://github.com/microsoft/vscode-azureresourcegroups/pull/927) Fix Cloud Shell in sovereign clouds
+* [[931]](https://github.com/microsoft/vscode-azureresourcegroups/pull/931) Fix Cloud Shell launch error on macOS caused by external bash shell script
+
+### Engineering
+* [[918]](https://github.com/microsoft/vscode-azureresourcegroups/pull/918) Improvements to error masking handling
+
+## 0.9.5 - 2024-09-11
+### Fixed
+* [[905]](https://github.com/microsoft/vscode-azureresourcegroups/issues/905) [[917]](https://github.com/microsoft/vscode-azureresourcegroups/issues/917) [[915]](https://github.com/microsoft/vscode-azureresourcegroups/pull/915) Fixes a `subscription could not be found` issue that sometimes appears when loading resources
+
+### Engineering
+* [[919]](https://github.com/microsoft/vscode-azureresourcegroups/pull/919) Update release pipeline to support signing
+* [[913]](https://github.com/microsoft/vscode-azureresourcegroups/pull/913) Upgrade packages for additional telemetry updates
+
+## 0.9.4 - 2024-08-28
+### Added
+* [[894]](https://github.com/microsoft/vscode-azureresourcegroups/pull/894) Add staged support for MongoClusters
+
+## 0.9.3 - 2024-08-20
+
+Skipped due to failed marketplace release
+
 ## 0.9.2 - 2024-08-08
 
 ### Added

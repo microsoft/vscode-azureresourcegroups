@@ -14,7 +14,7 @@ import { Socket } from 'net';
 import * as path from 'path';
 import * as semver from 'semver';
 import { UrlWithStringQuery, parse } from 'url';
-import { CancellationToken, EventEmitter, MessageItem, Terminal, TerminalOptions, TerminalProfile, ThemeIcon, Uri, authentication, commands, env, window, workspace } from 'vscode';
+import { CancellationToken, EventEmitter, MessageItem, Terminal, TerminalOptions, TerminalProfile, ThemeIcon, Uri, commands, env, window, workspace } from 'vscode';
 import { ext } from '../extensionVariables';
 import { localize } from '../utils/localize';
 import { fetchWithLogging } from '../utils/logging/nodeFetch/nodeFetch';
@@ -280,33 +280,28 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 }
             }
 
+            const env: TerminalOptions['env'] = {
+                // Child process uses this ipc handle to communicate with the extension host
+                CLOUD_CONSOLE_IPC: server.ipcHandlePath
+            };
+
+            if (!isWindows) {
+                // Needed to fork a child process as a node.js process from within the application
+                env['ELECTRON_RUN_AS_NODE'] = '1';
+                env['ELECTRON_NO_ASAR'] = '1';
+            }
+
             // open terminal
-            let shellPath: string = path.join(ext.context.asAbsolutePath('bin'), `node.${isWindows ? 'bat' : 'sh'}`);
             let cloudConsoleLauncherPath: string = path.join(ext.context.asAbsolutePath('dist'), 'cloudConsoleLauncher');
             if (isWindows) {
                 cloudConsoleLauncherPath = cloudConsoleLauncherPath.replace(/\\/g, '\\\\');
             }
-            const shellArgs: string[] = [
-                process.execPath,
-                '-e',
-                `require('${cloudConsoleLauncherPath}').main()`,
-            ];
-
-            if (isWindows) {
-                // Work around https://github.com/electron/electron/issues/4218 https://github.com/nodejs/node/issues/11656
-                shellPath = 'node.exe';
-                shellArgs.shift();
-            }
-
             const terminalOptions: TerminalOptions = {
                 name: localize('azureCloudShell', 'Azure Cloud Shell ({0})', os.shellName),
                 iconPath: new ThemeIcon('azure'),
-                shellPath,
-                shellArgs,
-                env: {
-                    // Child process uses this ipc handle to communicate with the extension host
-                    CLOUD_CONSOLE_IPC: server.ipcHandlePath,
-                },
+                shellPath: isWindows ? 'node.exe' : process.execPath,
+                shellArgs: ['-e', `require('${cloudConsoleLauncherPath}').main()`],
+                env,
                 isTransient: true
             };
 
@@ -345,6 +340,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
             const tenants = await subscriptionProvider.getTenants();
             let selectedTenant: TenantIdDescription | undefined = undefined;
 
+            const subscriptions = await subscriptionProvider.getSubscriptions(false);
             if (tenants.length <= 1) {
                 serverQueue.push({ type: 'log', args: [localize('foundOneTenant', `Found 1 tenant.`)] });
                 // if they have only one tenant, use it
@@ -354,7 +350,6 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 // This also checks if this tenant is authenticated.
                 // If a tenant is not authenticated, users will have to use the "Sign in to Directory..." command before launching cloud shell.
                 const tenantsIdsWithSubs = new Set<string>();
-                const subscriptions = await subscriptionProvider.getSubscriptions(false);
                 subscriptions.forEach((sub) => {
                     tenantsIdsWithSubs.add(sub.tenantId);
                 });
@@ -392,10 +387,24 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
             }
             serverQueue.push({ type: 'log', args: [localize('usingTenant', `Using "${selectedTenant.displayName}" tenant.`)] });
 
-            const session = await authentication.getSession('microsoft', ['https://management.core.windows.net//.default', `VSCODE_TENANT:${selectedTenant.tenantId}`], {
-                createIfNone: false,
-            });
-            const result = session && await findUserSettings(session.accessToken);
+            // get all subscriptions for the selected tenant
+            const subscriptionsInSelectedTenant = subscriptions.filter(sub => sub.tenantId === selectedTenant?.tenantId);
+            if (subscriptionsInSelectedTenant.length === 0) {
+                // cloud shell requires at least one subscription to work
+                serverQueue.push({ type: 'log', args: [localize('noSubscriptions', `Error: No subscriptions found for the selected account and tenant.`)] });
+                updateStatus('Disconnected');
+                return;
+            }
+
+            // get session from the first subscription for the selected tenant
+            const session = await subscriptionsInSelectedTenant[0].authentication.getSession();
+            if (!session) {
+                serverQueue.push({ type: 'log', args: [localize('failedToGetSession', `Failed to get session.`)] });
+                updateStatus('Disconnected');
+                return;
+            }
+
+            const result = await findUserSettings(session.accessToken);
             if (!result) {
                 serverQueue.push({ type: 'log', args: [localize('setupNeeded', "Setup needed.")] });
                 await requiresSetUp(context);
