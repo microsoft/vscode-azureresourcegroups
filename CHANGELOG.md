@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.9.6 - 2024-09-30
+### Fixed
+* [[927]](https://github.com/microsoft/vscode-azureresourcegroups/pull/927) Fix Cloud Shell in sovereign clouds
+* [[931]](https://github.com/microsoft/vscode-azureresourcegroups/pull/931) Fix Cloud Shell launch error on macOS caused by external bash shell script
+
+### Engineering
+* [[918]](https://github.com/microsoft/vscode-azureresourcegroups/pull/918) Improvements to error masking handling
+
 ## 0.9.5 - 2024-09-11
 ### Fixed
 * [[905]](https://github.com/microsoft/vscode-azureresourcegroups/issues/905) [[917]](https://github.com/microsoft/vscode-azureresourcegroups/issues/917) [[915]](https://github.com/microsoft/vscode-azureresourcegroups/pull/915) Fixes a `subscription could not be found` issue that sometimes appears when loading resources
