@@ -10,6 +10,7 @@ import { DiagnosticCollection, Disposable, ExtensionContext, TreeView } from "vs
 import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
+import { ManagedIdentityBranchDataProvider } from "./managedIdentity/ManagedIdentityBranchDataProvider";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
 import { ResourceGroupsItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
@@ -46,6 +47,8 @@ export namespace ext {
     export let azureTreeState: TreeItemStateStore;
 
     export let subscriptionProviderFactory: () => Promise<AzureSubscriptionProvider>;
+    export let managedIdentityBranchDataProvider: ManagedIdentityBranchDataProvider;
+    export const subscriptionDisplayNameMap: { [id: string]: string } = {};
 
     export namespace v2 {
         export let api: AzureResourcesApiInternal;

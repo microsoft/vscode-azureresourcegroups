@@ -122,6 +122,13 @@ export const azureExtensions: IAzExtMetadata[] = [
         ],
         reportIssueCommandId: 'azureWebPubSub.reportIssue'
     },
+    {
+        name: 'vscode-azureresourcegroups',
+        label: 'Managed Identity',
+        resourceTypes: [
+            AzExtResourceType.ManagedIdentityUserAssignedIdentities
+        ]
+    },
 ];
 
 export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {

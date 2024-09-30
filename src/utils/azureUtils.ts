@@ -101,6 +101,7 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     Images: { displayName: localize('images', 'Images') },
     LoadBalancers: { displayName: localize('loadBalancers', 'Load balancers') },
     LogicApp: { displayName: localize('logicApp', 'Logic App') },
+    ManagedIdentityUserAssignedIdentities: { displayName: localize('managedIdentity', 'Managed Identity (Read-Only)') },
     MysqlServers: { displayName: localize('mysqlServers', 'MySql servers') },
     NetworkInterfaces: { displayName: localize('networkInterfaces', 'Network interfaces') },
     NetworkSecurityGroups: { displayName: localize('networkSecurityGroups', 'Network security groups') },
