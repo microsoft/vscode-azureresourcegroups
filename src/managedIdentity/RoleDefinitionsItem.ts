@@ -4,22 +4,63 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { RoleDefinition } from "@azure/arm-authorization";
+import { parseAzureResourceGroupId, parseAzureResourceId, ParsedAzureResourceGroupId, ParsedAzureResourceId } from "@microsoft/vscode-azext-azureutils";
 import { TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { TreeItem, TreeItemCollapsibleState } from "vscode";
+import { AzExtResourceType } from "../../api/src/AzExtResourceType";
+import { getAzExtResourceType } from "../../api/src/getAzExtResourceType";
+import { ext } from "../extensionVariables";
 import { GenericItem } from "../tree/GenericItem";
 import { ResourceGroupsItem } from "../tree/ResourceGroupsItem";
+import { getIconPath } from "../utils/azureUtils";
 
 export class RoleDefinitionsItem implements ResourceGroupsItem {
     public id: string;
     public label: string;
     public iconPath: TreeItemIconPath;
+    public description: string | undefined;
     public roleDefintions: RoleDefinition[] = [];
 
-    constructor(label: string, id: string, iconPath: TreeItemIconPath, roleDefintion: RoleDefinition, readonly description?: string) {
-        this.label = label;
-        this.id = id;
-        this.iconPath = iconPath;
-        this.roleDefintions.push(roleDefintion);
+    constructor(options: { label: string, id: string, iconPath: TreeItemIconPath, description: string | undefined, roleDefinition: RoleDefinition }) {
+        this.label = options.label;
+        this.id = options.id;
+        this.iconPath = options.iconPath;
+        this.roleDefintions.push(options.roleDefinition);
+        this.description = options.description;
+    }
+
+    public static async createRoleDefinitionsItem(scope: string, roleDefinition: RoleDefinition, msiId: string | undefined, fromOtherSub?: boolean): Promise<RoleDefinitionsItem> {
+        let parsedAzureResourceId: ParsedAzureResourceId | undefined;
+        let parsedAzureResourceGroupId: ParsedAzureResourceGroupId | undefined;
+        let label: string;
+        let iconPath: TreeItemIconPath;
+        let description: string | undefined;
+
+        try {
+            parsedAzureResourceId = parseAzureResourceId(scope);
+            label = parsedAzureResourceId.resourceName;
+            iconPath = getIconPath(getAzExtResourceType({ type: parsedAzureResourceId.provider }));
+        }
+        catch (error) {
+            // if this fails, then it was a resource group ID
+            parsedAzureResourceGroupId = parseAzureResourceGroupId(scope);
+            label = parsedAzureResourceGroupId.resourceGroup;
+            iconPath = getIconPath(AzExtResourceType.ResourceGroup);
+        }
+
+        if (fromOtherSub) {
+            // retrieve subscriptions to use display name
+            const subscriptions = await (await ext.subscriptionProviderFactory()).getSubscriptions(false);
+            description = subscriptions.find(s => s.subscriptionId === (parsedAzureResourceGroupId?.subscriptionId ?? parsedAzureResourceId?.subscriptionId))?.name;
+        }
+
+        return new RoleDefinitionsItem({
+            id: `${msiId}${scope}`,
+            label,
+            iconPath,
+            description,
+            roleDefinition
+        });
     }
 
     getTreeItem(): TreeItem {

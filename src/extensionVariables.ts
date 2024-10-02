@@ -48,7 +48,6 @@ export namespace ext {
 
     export let subscriptionProviderFactory: () => Promise<AzureSubscriptionProvider>;
     export let managedIdentityBranchDataProvider: ManagedIdentityBranchDataProvider;
-    export const subscriptionDisplayNameMap: { [id: string]: string } = {};
 
     export namespace v2 {
         export let api: AzureResourcesApiInternal;

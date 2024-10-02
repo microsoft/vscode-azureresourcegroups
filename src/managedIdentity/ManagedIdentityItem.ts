@@ -5,7 +5,6 @@
 
 import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { Identity, ManagedServiceIdentityClient } from "@azure/arm-msi";
-import { GenericResource } from "@azure/arm-resources";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, createContextValue, createSubscriptionContext, nonNullProp, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { ResourceBase, type AzureResource, type AzureSubscription, type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
@@ -19,11 +18,8 @@ import { RoleAssignmentsItem } from "./RoleAssignmentsItem";
 export class ManagedIdentityItem implements ResourceBase {
     static readonly contextValue: string = 'managedIdentityItem';
     static readonly contextValueRegExp: RegExp = new RegExp(ManagedIdentityItem.contextValue);
-
     name: string;
     id: string;
-
-    resources: GenericResource[] = [];
 
     constructor(public readonly subscription: AzureSubscription,
         public readonly resource: AzureResource) {
@@ -48,12 +44,12 @@ export class ManagedIdentityItem implements ResourceBase {
             const msiClient = new ManagedServiceIdentityClient(subContext.credentials, subContext.subscriptionId);
             const msi: Identity = await msiClient.userAssignedIdentities.get(nonNullProp(this.resource, 'resourceGroup'), this.resource.name);
 
-            this.resources = await getAzureResourcesService().listResources(context, this.subscription);
+            const resources = await getAzureResourcesService().listResources(context, this.subscription);
 
-            const assignedResources = new RoleAssignmentsItem('Assigned to', this.subscription, msi);
-            const targetResources = new RoleAssignmentsItem('Gives access to', this.subscription, msi);
+            const assignedRoleAssignment = new RoleAssignmentsItem('Assigned to', this.subscription, msi);
+            const accessRoleAssignment = new RoleAssignmentsItem('Grants access to', this.subscription, msi);
 
-            const theseResourcesNode = this.resources.filter((r) => {
+            const assignedResources = resources.filter((r) => {
                 const userAssignedIdentities = r.identity?.userAssignedIdentities;
                 if (!userAssignedIdentities) {
                     return false;
@@ -73,21 +69,24 @@ export class ManagedIdentityItem implements ResourceBase {
             const roleAssignment = await uiUtils.listAllIterator(authClient.roleAssignments.listForSubscription());
             const filteredBySub = roleAssignment.filter((ra) => ra.principalId === msi.principalId);
 
-            const hasAccessToNodes = await targetResources.getRoleDefinitionsItems(filteredBySub);
-            assignedResources.addChildren(theseResourcesNode);
-            targetResources.addChildren(hasAccessToNodes);
-            targetResources.addChild(new GenericItem('Show resources from other subscriptions...',
+            const targetResources = await accessRoleAssignment.getRoleDefinitionsItems(filteredBySub);
+            assignedRoleAssignment.addChildren(assignedResources);
+            accessRoleAssignment.addChildren(targetResources);
+            accessRoleAssignment.addChild(new GenericItem('Show resources from other subscriptions...',
                 {
                     iconPath: new ThemeIcon('sync'),
                     commandId: 'azureResources.loadAllSubscriptionRoleAssignments',
-                    commandArgs: [targetResources]
+                    commandArgs: [accessRoleAssignment]
                 }))
 
-            const children = [assignedResources, targetResources];
-            if ((await assignedResources.getChildren()).length === 0) {
-                children.splice(0, 1);
+            const children = [];
+
+            if ((await assignedRoleAssignment.getChildren()).length > 0) {
+                // if there weren't any assigned resources, don't show that section
+                children.push(assignedRoleAssignment);
             }
 
+            children.push(accessRoleAssignment);
             return children;
         });
 

@@ -48,7 +48,7 @@ export declare enum AzExtResourceType {
     StaticWebApps = "StaticWebApps",
     StorageAccounts = "StorageAccounts",
     VirtualMachines = "VirtualMachines",
-    ResourceGroup = "ResourceGroups",
+    ResourceGroup = "ResourceGroup",
     ApiManagementService = "ApiManagementService",
     ApplicationInsights = "ApplicationInsights",
     AppServiceKubernetesEnvironment = "AppServiceKubernetesEnvironment",
