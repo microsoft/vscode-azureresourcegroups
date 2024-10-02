@@ -14,6 +14,7 @@ export interface GenericItemOptions {
     readonly contextValue?: string;
     readonly iconPath?: TreeItemIconPath;
     readonly description?: string;
+    readonly collapsibleState?: vscode.TreeItemCollapsibleState;
 }
 
 export class GenericItem implements ResourceGroupsItem {
@@ -27,7 +28,7 @@ export class GenericItem implements ResourceGroupsItem {
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        const treeItem = new vscode.TreeItem(this.label, this.options?.children ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+        const treeItem = new vscode.TreeItem(this.label, this.options?.collapsibleState ?? (this.options?.children ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None));
 
         if (this.options?.commandId) {
             treeItem.command = {
