@@ -29,8 +29,7 @@ export class BranchDataItemCache {
         return this.branchItemToResourceGroupsItemCache.get(branchItem);
     }
 
-    getItemForBranchItemById(branchItem: ResourceModelBase): ResourceGroupsItem | undefined {
-        const id = this.getIdForBranchItem(branchItem);
+    getItemForBranchItemById(id: string | undefined): ResourceGroupsItem | undefined {
         if (!id) {
             return undefined;
         }
@@ -39,7 +38,7 @@ export class BranchDataItemCache {
     }
 
     createOrGetItem<T extends BranchDataItemWrapper>(branchItem: ResourceModelBase, createItem: () => T): T {
-        const cachedItem = this.getItemForBranchItemById(branchItem) as T | undefined;
+        const cachedItem = this.getItemForBranchItemById(this.getIdForBranchItem(branchItem)) as T | undefined;
         if (cachedItem) {
             cachedItem.branchItem = branchItem;
             this.addBranchItem(branchItem, cachedItem);

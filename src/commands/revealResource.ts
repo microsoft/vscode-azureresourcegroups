@@ -9,6 +9,7 @@ import { VSCodeRevealOptions } from '../../api/src/index';
 import { ext } from '../extensionVariables';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../tree/ResourceTreeDataProviderBase';
+import { localize } from '../utils/localize';
 
 export async function revealResource(context: IActionContext, resourceId: string, options?: VSCodeRevealOptions): Promise<void> {
     setTelemetryPropertiesForId(context, resourceId);
@@ -17,6 +18,8 @@ export async function revealResource(context: IActionContext, resourceId: string
         const item: ResourceGroupsItem | undefined = await (ext.v2.api.resources.azureResourceTreeDataProvider as ResourceTreeDataProviderBase).findItemById(resourceId);
         if (item) {
             await ext.appResourceTreeView.reveal(item as unknown as AzExtTreeItem, options ?? { expand: false, focus: true, select: true });
+        } else {
+            void context.ui.showWarningMessage(localize('resourceNotFound', 'Resource with id "${0}" not found.', resourceId));
         }
     } catch (error) {
         context.telemetry.properties.revealError = maskUserInfo(parseError(error).message, []);
