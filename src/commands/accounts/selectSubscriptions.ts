@@ -16,7 +16,7 @@ interface SelectSubscriptionOptions {
      */
     tenantId?: string;
     /**
-     * TODO: implement filtering at the account level as well as the tenant level
+     * TODO: implement filtering at the account level
      */
     account?: vscode.AuthenticationSessionAccountInformation;
 }
