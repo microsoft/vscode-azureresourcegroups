@@ -10,7 +10,7 @@ import { ext } from "../../extensionVariables";
 import { localize } from "../../utils/localize";
 import { settingUtils } from "../../utils/settingUtils";
 
-interface SelectSubscriptionOptions {
+export interface SelectSubscriptionOptions {
     /**
      * If provided, only subscriptions in this tenant will be shown in the picker. Only subscriptions shown in the picker will be removed or added to the selected subscriptions setting.
      */
