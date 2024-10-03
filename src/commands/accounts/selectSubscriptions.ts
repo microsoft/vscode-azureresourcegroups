@@ -12,7 +12,7 @@ import { settingUtils } from "../../utils/settingUtils";
 
 interface SelectSubscriptionOptions {
     /**
-     * If provided, only subscriptions in this tenant will be shown in the picker. Only subscriptions shown in the picker will be rempved or added to the selected subscriptions setting.
+     * If provided, only subscriptions in this tenant will be shown in the picker. Only subscriptions shown in the picker will be removed or added to the selected subscriptions setting.
      */
     tenantId?: string;
     /**
