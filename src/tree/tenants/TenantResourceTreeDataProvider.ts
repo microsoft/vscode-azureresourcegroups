@@ -55,7 +55,7 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                     const tenants = await subscriptionProvider.getTenants(account);
                     const tenantItems: ResourceGroupsItem[] = [];
                     for await (const tenant of tenants) {
-                        const isSignedIn = await subscriptionProvider.isSignedIn(nonNullProp(tenant, 'tenantId'));
+                        const isSignedIn = await subscriptionProvider.isSignedIn(nonNullProp(tenant, 'tenantId'), account);
                         tenantItems.push(new TenantTreeItem(nonNullProp(tenant, 'displayName'), nonNullProp(tenant, 'tenantId'), nonNullProp(account, 'id'), {
                             contextValue: isSignedIn ? 'tenantName' : 'tenantNameNotSignedIn',
                             checkboxState: (!(isSignedIn) || this.checkUnselectedTenants(nonNullProp(tenant, 'tenantId'))) ?
