@@ -8,6 +8,7 @@ import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerComman
 import { commands } from 'vscode';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
+import { loadAllSubscriptionRoleAssignments } from '../managedIdentity/loadAllSubscriptionRoleAssignments';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
@@ -104,6 +105,7 @@ export function registerCommands(): void {
     });
 
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
+    registerCommand('azureResources.loadAllSubscriptionRoleAssignments', loadAllSubscriptionRoleAssignments);
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {

@@ -668,6 +668,8 @@
         "webpack-cli": "^4.6.0"
     },
     "dependencies": {
+        "@azure/arm-authorization": "^9.0.0",
+        "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
         "@azure/ms-rest-js": "^2.7.0",
