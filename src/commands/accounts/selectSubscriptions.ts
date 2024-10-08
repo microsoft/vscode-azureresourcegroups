@@ -10,16 +10,33 @@ import { ext } from "../../extensionVariables";
 import { localize } from "../../utils/localize";
 import { settingUtils } from "../../utils/settingUtils";
 
-export async function selectSubscriptions(context: IActionContext): Promise<void> {
+export interface SelectSubscriptionOptions {
+    /**
+     * If provided, only subscriptions in this tenant will be shown in the picker. Only subscriptions shown in the picker will be removed or added to the selected subscriptions setting.
+     */
+    tenantId?: string;
+    /**
+     * TODO: implement filtering at the account level
+     */
+    account?: vscode.AuthenticationSessionAccountInformation;
+}
+
+export async function selectSubscriptions(context: IActionContext, options?: SelectSubscriptionOptions): Promise<void> {
     const provider = await ext.subscriptionProviderFactory();
     if (await provider.isSignedIn()) {
 
-        const selectedSubscriptionIds = await getSelectedSubscriptionIds();
+        const selectedSubscriptionsWithFullId = await getSelectedTenantAndSubscriptionIds();
+        const selectedSubscriptionIds = selectedSubscriptionsWithFullId.map(id => id.split('/')[1]);
+
+        let subscriptionsShownInPicker: string[] = [];
+
         const subscriptionQuickPickItems: () => Promise<IAzureQuickPickItem<AzureSubscription>[]> = async () => {
 
             const allSubscriptions = await provider.getSubscriptions(false);
+            const subscriptionsFilteredByTenant = options?.tenantId ? allSubscriptions.filter(subscription => subscription.tenantId === options.tenantId) : allSubscriptions;
 
-            return allSubscriptions
+            subscriptionsShownInPicker = subscriptionsFilteredByTenant.map(sub => `${sub.tenantId}/${sub.subscriptionId}`);
+            return subscriptionsFilteredByTenant
                 .map(subscription => ({
                     label: subscription.name,
                     description: subscription.subscriptionId,
@@ -39,7 +56,17 @@ export async function selectSubscriptions(context: IActionContext): Promise<void
             });
 
         if (picks) {
-            await setSelectedTenantAndSubscriptionIds(picks.map(s => `${s.data.tenantId}/${s.data.subscriptionId}`));
+            // get previously selected subscriptions
+            const previouslySelectedSubscriptionsSettingValue = new Set(selectedSubscriptionsWithFullId);
+
+            // remove any that were shown in the picker
+            subscriptionsShownInPicker.forEach(pick => previouslySelectedSubscriptionsSettingValue.delete(pick));
+
+            // add any that were selected in the picker
+            picks.forEach(pick => previouslySelectedSubscriptionsSettingValue.add(`${pick.data.tenantId}/${pick.data.subscriptionId}`));
+
+            // update the setting
+            await setSelectedTenantAndSubscriptionIds(Array.from(previouslySelectedSubscriptionsSettingValue));
         }
 
         ext.actions.refreshAzureTree();
@@ -51,11 +78,6 @@ export async function selectSubscriptions(context: IActionContext): Promise<void
             }
         });
     }
-}
-
-async function getSelectedSubscriptionIds(): Promise<string[]> {
-    const selectedTenantAndSubscriptionIds = await getSelectedTenantAndSubscriptionIds();
-    return selectedTenantAndSubscriptionIds.map(id => id.split('/')[1]);
 }
 
 export async function getSelectedTenantAndSubscriptionIds(): Promise<string[]> {
