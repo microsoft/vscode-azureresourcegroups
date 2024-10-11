@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.9.7 - 2024-10-09
+### Fixed
+* [[934]](https://github.com/microsoft/vscode-azureresourcegroups/pull/934) Add feature to scope select subscriptions prompt by tenant
+
 ## 0.9.6 - 2024-09-30
 ### Fixed
 * [[927]](https://github.com/microsoft/vscode-azureresourcegroups/pull/927) Fix Cloud Shell in sovereign clouds
