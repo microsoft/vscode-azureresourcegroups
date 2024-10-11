@@ -561,6 +561,31 @@
         ],
         "walkthroughs": [
             {
+                "id": "vscodeDevWalkthrough",
+                "when": "isWeb",
+                "title": "Deploy your application with VS Code for the Web - Azure",
+                "description": "Your project contains an azure.yaml file, you can provision and deploy your app in a single step with the azd CLI.",
+                "steps": [
+                    {
+                        "id": "deploy",
+                        "title": "Get Your app up and running on azure",
+                        "description": "Your app has been initialized for you already (``azd init``).\n\nProvision and deploy your app to Azure (``azd up``) by right clicking your azure.yaml file and selecting up from the context menu (pictured) or by clicking the button below.\n[One-click provision + deploy](command:azure-dev.commands.cli.up)\nTip: You can also run the ``azd up`` command in the [Command Palette](command:workbench.action.quickOpen?%5B%22%3E%20Azure%20Developer%20CLI%20%28azd%29%3A%20up%22%5D) or your terminal to provision and deploy your app.",
+                        "media": {
+                            "svg": "resources/vscode-dev-walkthrough/azdUp.svg",
+                            "altText": "Right click azure.yaml to deploy"
+                        }
+                    },
+                    {
+                        "id": "environment",
+                        "title": "Get to know your environment",
+                        "description": "The environment includes:\nAzure Developer CLI - Run, debug, and deploy Azure applications directly within the browser. [Learn more](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/overview)\nGitHub Copilot - Access GitHub Copilot and manage your projects through the AI Assistant.\n[Open GitHub Copilot](command:workbench.panel.chat.view.copilot.focus)\nTip: You can use GitHub Copilot for Azure (``@azure``) to view and manage your Azure resources from within GitHub Copilot.\nVS Code Azure Extensions - The environment is fully equipped with Azure VS Code extensions. These extensions make Azure development easier to create, run and deploy your applications.\n[View Azure Extensions](command:workbench.view.extension.azure)",
+                        "media": {
+                            "markdown": "resources/walkthrough/empty.md"
+                        }
+                    }
+                ]
+            },
+            {
                 "id": "azure-get-started",
                 "title": "Get Started with Azure in VS Code",
                 "description": "Setup your account and get to know the Azure extension view.",
