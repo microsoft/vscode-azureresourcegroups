@@ -50,10 +50,10 @@ export function ghcp4a({ globalState }: ExtensionContext): void {
             }
         };
 
+        context.telemetry.properties.userAsked = 'true';
+
         const message: string = localize('ghcpToastMessage', 'Get help with Azure questions and tasks in Copilot Chat by installing the GitHub Copilot for Azure extension.');
         const button = await window.showInformationMessage(message, install, learnMore, never);
-
-        context.telemetry.properties.userAsked = 'true';
         await button?.run();
     });
 }
