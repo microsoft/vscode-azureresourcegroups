@@ -29,8 +29,8 @@ export function ghcp4a({ globalState }: ExtensionContext): void {
             title: localize('install', 'Install'),
             run: async () => {
                 context.telemetry.properties.install = 'true';
-                await commands.executeCommand('workbench.extensions.installExtension', ghcp4aExtensionId);
                 await commands.executeCommand('extension.open', ghcp4aExtensionId);
+                await commands.executeCommand('workbench.extensions.installExtension', ghcp4aExtensionId);
             },
         };
 
