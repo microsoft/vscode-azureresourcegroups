@@ -16,7 +16,7 @@ const dontShowKey = 'ghcp/dontShow';
 /**
  * Conditionally show an install toast for the GitHub Copilot for Azure extension
  */
-export function ghcp4a({ globalState }: ExtensionContext): void {
+export function gitHubCopilotForAzure({ globalState }: ExtensionContext): void {
     void callWithTelemetryAndErrorHandling('ghcp4aInstallToast', async (context: IActionContext) => {
         const areCopilotExtensionsInstalled: boolean = isExtensionInstalled(ghcpExtensionId) && isExtensionInstalled(ghcpChatExtensionId);
         if (!areCopilotExtensionsInstalled || isExtensionInstalled(ghcp4aExtensionId)) {
