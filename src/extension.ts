@@ -27,7 +27,7 @@ import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { ext } from './extensionVariables';
-import { gitHubCopilotForAzure } from './gitHubCopilotForAzure';
+import { gitHubCopilotForAzureToast } from './gitHubCopilotForAzure';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
 import { survey } from './nps';
 import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
@@ -100,7 +100,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         }));
 
         registerCommands();
-        gitHubCopilotForAzure(context);
+        gitHubCopilotForAzureToast(context);
         survey(context);
     });
 
