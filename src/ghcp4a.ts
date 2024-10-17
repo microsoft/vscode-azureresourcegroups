@@ -10,10 +10,10 @@ import { localize } from "./utils/localize";
 const ghcpExtensionId = 'github.copilot';
 const ghcpChatExtensionId = 'github.copilot-chat';
 const ghcp4aExtensionId = ''; // Todo: Populate this after the extension is published?
-const ghcp4aInstallPageUrl = 'https://aka.ms/GetGitHubCopilotForAzure';
+const ghcp4aInstallPage = 'https://aka.ms/GetGitHubCopilotForAzure';
 const dontShowKey = 'ghcp/dontShow';
 
-export function ghcp4aInstallToast({ globalState }: ExtensionContext): void {
+export function ghcp4a({ globalState }: ExtensionContext): void {
     void callWithTelemetryAndErrorHandling('ghcp4aInstallToast', async (context: IActionContext) => {
         const areCopilotExtensionsInstalled: boolean = isExtensionInstalled(ghcpExtensionId) && isExtensionInstalled(ghcpChatExtensionId);
         if (!areCopilotExtensionsInstalled || isExtensionInstalled(ghcp4aExtensionId)) {
@@ -38,7 +38,7 @@ export function ghcp4aInstallToast({ globalState }: ExtensionContext): void {
             title: localize('learnMore', 'Learn More'),
             run: async () => {
                 context.telemetry.properties.learnMore = 'true';
-                await openUrl(ghcp4aInstallPageUrl);
+                await openUrl(ghcp4aInstallPage);
             },
         };
 
