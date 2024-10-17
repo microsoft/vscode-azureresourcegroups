@@ -5,7 +5,6 @@
 
 import { callWithTelemetryAndErrorHandling, IActionContext, openUrl } from "@microsoft/vscode-azext-utils";
 import { commands, Extension, ExtensionContext, extensions, window } from "vscode";
-import { installExtension } from "./commands/installExtension";
 import { localize } from "./utils/localize";
 
 const ghcpExtensionId = 'github.copilot';
@@ -30,24 +29,16 @@ export function ghcp4aInstallToast({ globalState }: ExtensionContext): void {
             title: localize('install', 'Install'),
             run: async () => {
                 context.telemetry.properties.install = 'true';
-                await installExtension(context, ghcp4aExtensionId);
+                await commands.executeCommand('workbench.extensions.installExtension', ghcp4aExtensionId);
                 await commands.executeCommand('extension.open', ghcp4aExtensionId);
             },
         };
 
         const learnMore = {
-            title: localize('learnMore', 'learnMore'),
+            title: localize('learnMore', 'Learn More'),
             run: async () => {
                 context.telemetry.properties.learnMore = 'true';
                 await openUrl(ghcp4aInstallPageUrl);
-            },
-        };
-
-        const remind = {
-            title: localize('remindLater', "Remind Me Later"),
-            run: async () => {
-                context.telemetry.properties.remindMeLater = 'true';
-                // Do nothing. Should open again on next extension activation.
             },
         };
 
@@ -60,7 +51,7 @@ export function ghcp4aInstallToast({ globalState }: ExtensionContext): void {
         };
 
         const message: string = localize('ghcpToastMessage', 'Get help with Azure questions and tasks in Copilot Chat by installing the GitHub Copilot for Azure extension.');
-        const button = await window.showInformationMessage(message, install, learnMore, remind, never);
+        const button = await window.showInformationMessage(message, install, learnMore, never);
 
         context.telemetry.properties.userAsked = 'true';
         await button?.run();
