@@ -9,9 +9,9 @@ import { localize } from "./utils/localize";
 
 const ghcpExtensionId = 'github.copilot';
 const ghcpChatExtensionId = 'github.copilot-chat';
-const ghcp4aExtensionId = ''; // Todo: Populate this after the extension is published?
+const ghcp4aExtensionId = ''; // Todo
 const ghcp4aLearnPage = 'https://aka.ms/GetGitHubCopilotForAzure';
-const dontShowKey = 'ghcp/dontShow';
+const dontShowKey = 'ghcp4a/dontShow';
 
 /**
  * Conditionally show an install toast for the GitHub Copilot for Azure extension
