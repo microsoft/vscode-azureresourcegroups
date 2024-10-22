@@ -50,7 +50,7 @@ export function gitHubCopilotForAzureToast({ globalState }: ExtensionContext): v
             run: async () => {
                 context.telemetry.properties.dontShowAgain = 'true';
                 await globalState.update(dontShowKey, true);
-            }
+            },
         };
 
         context.telemetry.properties.userAsked = 'true';
