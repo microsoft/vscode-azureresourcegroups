@@ -18,6 +18,8 @@ const dontShowKey = 'ghcp4a/dontShow';
  */
 export function gitHubCopilotForAzureToast({ globalState }: ExtensionContext): void {
     void callWithTelemetryAndErrorHandling('ghcp4aToast', async (context: IActionContext) => {
+        context.telemetry.properties.isActivationEvent = 'true';
+
         const arePrecursorExtensionsInstalled: boolean = isExtensionInstalled(ghcpExtensionId) && isExtensionInstalled(ghcpChatExtensionId);
         if (!arePrecursorExtensionsInstalled || isExtensionInstalled(ghcp4aExtensionId)) {
             return;
@@ -31,7 +33,7 @@ export function gitHubCopilotForAzureToast({ globalState }: ExtensionContext): v
         const install = {
             title: localize('install', 'Install'),
             run: async () => {
-                context.telemetry.properties.install = 'true';
+                context.telemetry.properties.toastChoice = 'install';
                 await commands.executeCommand('extension.open', ghcp4aExtensionId);
                 await commands.executeCommand('workbench.extensions.installExtension', ghcp4aExtensionId);
             },
@@ -40,7 +42,7 @@ export function gitHubCopilotForAzureToast({ globalState }: ExtensionContext): v
         const learnMore = {
             title: localize('learnMore', 'Learn More'),
             run: async () => {
-                context.telemetry.properties.learnMore = 'true';
+                context.telemetry.properties.toastChoice = 'learnMore';
                 await openUrl(ghcp4aLearnPage);
             },
         };
@@ -48,7 +50,7 @@ export function gitHubCopilotForAzureToast({ globalState }: ExtensionContext): v
         const never = {
             title: localize('dontShowAgain', "Don't Show Again"),
             run: async () => {
-                context.telemetry.properties.dontShowAgain = 'true';
+                context.telemetry.properties.toastChoice = 'dontShowAgain';
                 await globalState.update(dontShowKey, true);
             },
         };
