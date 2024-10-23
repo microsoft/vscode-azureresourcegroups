@@ -9,7 +9,7 @@ import { localize } from "./utils/localize";
 
 const ghcpExtensionId = 'github.copilot';
 const ghcpChatExtensionId = 'github.copilot-chat';
-const ghcp4aExtensionId = ''; // Todo
+const ghcp4aExtensionId = 'ms-azuretools.vscode-azure-github-copilot';
 const ghcp4aLearnPage = 'https://aka.ms/GetGitHubCopilotForAzure';
 const dontShowKey = 'ghcp4a/dontShow';
 
