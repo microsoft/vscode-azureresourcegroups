@@ -3,7 +3,7 @@
 ## Unreleased
 ## 0.9.8 - 2024-10-xx
 ### Added
-* [[942]](https://github.com/microsoft/vscode-azureresourcegroups/pull/942) Add an install toast for the GitHub Copilot for Azure extension
+* [[942]](https://github.com/microsoft/vscode-azureresourcegroups/pull/942) Add an install toast for the new GitHub Copilot for Azure extension
 
 ## 0.9.7 - 2024-10-09
 ### Fixed
