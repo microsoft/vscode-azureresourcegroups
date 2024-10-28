@@ -9,19 +9,19 @@ import { localize } from "./utils/localize";
 
 const ghcpExtensionId = 'github.copilot';
 const ghcpChatExtensionId = 'github.copilot-chat';
-const ghcp4aExtensionId = 'ms-azuretools.vscode-azure-github-copilot';
-const ghcp4aLearnPage = 'https://aka.ms/GetGitHubCopilotForAzure';
-const dontShowKey = 'ghcp4a/dontShow';
+const ghcpfaExtensionId = 'ms-azuretools.vscode-azure-github-copilot';
+const ghcpfaLearnPage = 'https://aka.ms/GetGitHubCopilotForAzure';
+const dontShowKey = 'ghcpfa/dontShow';
 
 /**
  * Conditionally show an install toast for the GitHub Copilot for Azure extension
  */
 export function gitHubCopilotForAzureToast({ globalState }: ExtensionContext): void {
-    void callWithTelemetryAndErrorHandling('ghcp4aToast', async (context: IActionContext) => {
+    void callWithTelemetryAndErrorHandling('ghcpfaToast', async (context: IActionContext) => {
         context.telemetry.properties.isActivationEvent = 'true';
 
         const arePrecursorExtensionsInstalled: boolean = isExtensionInstalled(ghcpExtensionId) && isExtensionInstalled(ghcpChatExtensionId);
-        if (!arePrecursorExtensionsInstalled || isExtensionInstalled(ghcp4aExtensionId)) {
+        if (!arePrecursorExtensionsInstalled || isExtensionInstalled(ghcpfaExtensionId)) {
             return;
         }
 
@@ -34,8 +34,8 @@ export function gitHubCopilotForAzureToast({ globalState }: ExtensionContext): v
             title: localize('install', 'Install'),
             run: async () => {
                 context.telemetry.properties.toastChoice = 'install';
-                await commands.executeCommand('extension.open', ghcp4aExtensionId);
-                await commands.executeCommand('workbench.extensions.installExtension', ghcp4aExtensionId);
+                await commands.executeCommand('extension.open', ghcpfaExtensionId);
+                await commands.executeCommand('workbench.extensions.installExtension', ghcpfaExtensionId);
             },
         };
 
@@ -43,7 +43,7 @@ export function gitHubCopilotForAzureToast({ globalState }: ExtensionContext): v
             title: localize('learnMore', 'Learn More'),
             run: async () => {
                 context.telemetry.properties.toastChoice = 'learnMore';
-                await openUrl(ghcp4aLearnPage);
+                await openUrl(ghcpfaLearnPage);
             },
         };
 
