@@ -562,6 +562,7 @@
         "walkthroughs": [
             {
                 "id": "vscodeDevWalkthrough",
+                "when": "isWeb",
                 "title": "Deploy your application with VS Code for the Web - Azure",
                 "description": "Your project contains an azure.yaml file, you can provision and deploy your app in a single step with the azd CLI.",
                 "steps": [
