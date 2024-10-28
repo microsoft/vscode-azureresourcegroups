@@ -1,9 +1,13 @@
 # Change Log
 
 ## Unreleased
-## 0.9.8 - 2024-10-xx
+## 0.9.8 - 2024-10-29
 ### Added
+* [[944]](https://github.com/microsoft/vscode-azureresourcegroups/pull/944) Add VS Code for the web - Azure walkthrough
 * [[942]](https://github.com/microsoft/vscode-azureresourcegroups/pull/942) Add an install toast for the new GitHub Copilot for Azure extension
+
+### Engineering
+* [[945]](https://github.com/microsoft/vscode-azureresourcegroups/pull/945) Add cloud shell telemetry
 
 ## 0.9.7 - 2024-10-09
 ### Fixed
