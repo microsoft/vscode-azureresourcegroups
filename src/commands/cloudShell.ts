@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, parseError } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, IActionContext, parseError } from '@microsoft/vscode-azext-utils';
 import { exec } from 'child_process';
 import * as vscode from 'vscode';
 import { ext } from '../extensionVariables';
@@ -21,9 +21,18 @@ function delay(ms: number) {
 interface MaintainCloudShellConnectionOptions {
     consoleUri: string;
     terminalId: string;
+    templateUrl?: string;
 }
 
 export async function maintainCloudShellConnection(_context: IActionContext, options: MaintainCloudShellConnectionOptions) {
+
+    try {
+        await recordTelemetry({ templateUrl: options.templateUrl });
+    } catch (e) {
+        // Don't crash if telemetry fails
+        ext.outputChannel.error(parseError(e).message);
+    }
+
     while (true) {
         try {
             await refreshDevTunnelAccessToken();
@@ -121,4 +130,12 @@ async function cloudShellSize(consoleUri: string, terminalId: string): Promise<v
         ext.outputChannel.error(sizeResponse.statusText);
         ext.outputChannel.error(await sizeResponse.text());
     }
+}
+
+async function recordTelemetry(options: { templateUrl?: string }) {
+    await callWithTelemetryAndErrorHandling('vscode-dev-azure.cloudShellConnection', async (context) => {
+        if (options.templateUrl) {
+            context.telemetry.properties.templateUrl = options.templateUrl;
+        }
+    });
 }
