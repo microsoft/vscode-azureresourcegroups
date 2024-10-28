@@ -30,6 +30,7 @@ export async function maintainCloudShellConnection(_context: IActionContext, opt
         await recordTelemetry({ templateUrl: options.templateUrl });
     } catch (e) {
         // Don't crash if telemetry fails
+        ext.outputChannel.error(parseError(e).message);
     }
 
     while (true) {
