@@ -135,7 +135,18 @@ async function cloudShellSize(consoleUri: string, terminalId: string): Promise<v
 async function recordTelemetry(options: { templateUrl?: string }) {
     await callWithTelemetryAndErrorHandling('vscode-dev-azure.cloudShellConnection', async (context) => {
         if (options.templateUrl) {
-            context.telemetry.properties.templateUrl = options.templateUrl;
+            const repository = extractRepoFromGitHubUrl(options.templateUrl);
+            context.telemetry.properties.repository = repository;
         }
     });
+}
+
+function extractRepoFromGitHubUrl(url: string): string {
+    const regex = /https:\/\/github\.com\/([^\/]+\/[^\/]+)/;
+    const match = url.match(regex);
+    if (match) {
+        return match[1];
+    } else {
+        return '';
+    }
 }
