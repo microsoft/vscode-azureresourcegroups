@@ -562,9 +562,8 @@
         "walkthroughs": [
             {
                 "id": "vscodeDevWalkthrough",
-                "when": "isWeb",
                 "title": "Deploy your application with VS Code for the Web - Azure",
-                "description": "Your project contains an azure.yaml file, you can provision and deploy your app in a single step with the azd CLI.",
+                "description": "**Note:** your work will not be saved unless you commit your code to GitHub. Follow the 'Saving your work' step for more information.",
                 "steps": [
                     {
                         "id": "deploy",
@@ -588,6 +587,15 @@
                         "id": "azureExtensions",
                         "title": "Leverage Azure extensions",
                         "description": "The environment is fully equipped with Azure VS Code extensions. These extensions make Azure development easier to create, run and deploy your applications.\n[View Azure Extensions](command:workbench.view.extension.azure)",
+                        "media": {
+                            "svg": "resources/vscode-dev-walkthrough/azureExtensions.svg",
+                            "altText": "Chat with Copilot"
+                        }
+                    },
+                    {
+                        "id": "github",
+                        "title": "Saving your work",
+                        "description": "In order to pick up where you left off, commit your code to GitHub. Through GitHub, you can share your project easily and collaborate with others.\n[Publish to GitHub](command:workbench.view.scm)",
                         "media": {
                             "svg": "resources/vscode-dev-walkthrough/azureExtensions.svg",
                             "altText": "Chat with Copilot"
