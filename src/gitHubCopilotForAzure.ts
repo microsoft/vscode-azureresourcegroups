@@ -23,7 +23,7 @@ export function gitHubCopilotForAzureToast({ globalState }: ExtensionContext): v
 
         // Allow extra time for all startup tasks to complete, which could include extension installations.
         // We want to ensure the most current data before deciding to show the toast
-        await delay(5000);
+        await delay(3000);
 
         const arePrecursorExtensionsInstalled: boolean = isExtensionInstalled(ghcpExtensionId) && isExtensionInstalled(ghcpChatExtensionId);
         if (!arePrecursorExtensionsInstalled || isExtensionInstalled(ghcpfaExtensionId)) {
