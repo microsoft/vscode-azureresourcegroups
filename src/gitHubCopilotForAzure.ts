@@ -21,7 +21,7 @@ export function gitHubCopilotForAzureToast({ globalState }: ExtensionContext): v
     void callWithTelemetryAndErrorHandling('ghcpfaToast', async (context: IActionContext) => {
         context.telemetry.properties.isActivationEvent = 'true';
 
-        // Allow extra time for all startup tasks to complete, which may include startup installations.
+        // Allow extra time for all startup tasks to complete, which could include extension installations.
         // We want to ensure the most current data before deciding to show the toast
         await delay(5000);
 
