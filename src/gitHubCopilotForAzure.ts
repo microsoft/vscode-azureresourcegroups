@@ -5,7 +5,7 @@
 
 import { callWithTelemetryAndErrorHandling, IActionContext, openUrl } from "@microsoft/vscode-azext-utils";
 import { commands, Extension, ExtensionContext, extensions, window } from "vscode";
-import { delay } from "./cloudConsole/cloudConsoleUtils";
+import { delay } from "./utils/delay";
 import { localize } from "./utils/localize";
 
 const ghcpExtensionId = 'github.copilot';
