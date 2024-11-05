@@ -562,13 +562,14 @@
         "walkthroughs": [
             {
                 "id": "vscodeDevWalkthrough",
+                "when": "isWeb",
                 "title": "Deploy your application with VS Code for the Web - Azure",
                 "description": "**Note:** your work will not be saved unless you commit your code to GitHub. Follow the 'Saving your work' step for more information.",
                 "steps": [
                     {
                         "id": "deploy",
                         "title": "Deploy your template",
-                        "description": "This environment includes the [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/overview), you can use it to run, bug, and deploy Azure applications. Your app has been initialized for you already (``azd init``).\nProvision and deploy your app to Azure (``azd up``) by right clicking your azure.yaml file and selecting up from the context menu (pictured) or by clicking the button below.\n[One-click provision + deploy](command:azure-dev.commands.cli.up)\nTip: You can also run the ``azd up`` command in the [Command Palette](command:workbench.action.quickOpen?%5B%22%3E%20Azure%20Developer%20CLI%20%28azd%29%3A%20up%22%5D) or your terminal to provision and deploy your app.",
+                        "description": "This environment includes the [Azure Developer CLI](https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/overview), you can use it to run, debug, and deploy Azure applications. Your app has been initialized for you already (``azd init``).\nProvision and deploy your app to Azure (``azd up``) by right clicking your azure.yaml file and selecting up from the context menu (pictured) or by clicking the button below.\n[One-click provision + deploy](command:azure-dev.commands.cli.up)\nTip: You can also run the ``azd up`` command in the [Command Palette](command:workbench.action.quickOpen?%5B%22%3E%20Azure%20Developer%20CLI%20%28azd%29%3A%20up%22%5D) or your terminal to provision and deploy your app.",
                         "media": {
                             "svg": "resources/vscode-dev-walkthrough/azdUp.svg",
                             "altText": "Right click azure.yaml to deploy"
@@ -577,7 +578,7 @@
                     {
                         "id": "chatWithCopilot",
                         "title": "Chat with Copilot",
-                        "description": "Ask Copilot general programming questions with chat. Copilot can also fix problems, scaffold tests, or refactor your code. Type ``/`` while in Copilot to view all available chat commands. Use  ``cmd  + i``  to open inline chat.\n[Chat with GitHub Copilot](command:workbench.panel.chat.view.copilot.focus)\nTip: You can use [GitHub Copilot for Azure](https://aka.ms/GetGitHubCopilotForAzure) (``@azure``) to view and manage your Azure resources from within GitHub Copilot.",
+                        "description": "Ask Copilot general programming questions with chat. Copilot can also fix problems, scaffold tests, or refactor your code. Type ``/`` while in Copilot to view all available chat commands.\n[Chat with GitHub Copilot](command:workbench.panel.chat.view.copilot.focus)\nTip: You can use [GitHub Copilot for Azure](https://aka.ms/GetGitHubCopilotForAzure) (``@azure``) to view and manage your Azure resources from within GitHub Copilot.",
                         "media": {
                             "svg": "resources/vscode-dev-walkthrough/chatWithCopilot.svg",
                             "altText": "Chat with Copilot"
@@ -597,7 +598,7 @@
                         "title": "Saving your work",
                         "description": "In order to pick up where you left off, commit your code to GitHub. Through GitHub, you can share your project easily and collaborate with others.\n[Publish to GitHub](command:workbench.view.scm)",
                         "media": {
-                            "svg": "resources/vscode-dev-walkthrough/azureExtensions.svg",
+                            "svg": "resources/vscode-dev-walkthrough/publishToGitHub.svg",
                             "altText": "Chat with Copilot"
                         }
                     }
