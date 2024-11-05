@@ -5,6 +5,7 @@
 
 import { callWithTelemetryAndErrorHandling, IActionContext, openUrl } from "@microsoft/vscode-azext-utils";
 import { commands, Extension, ExtensionContext, extensions, window } from "vscode";
+import { delay } from "./cloudConsole/cloudConsoleUtils";
 import { localize } from "./utils/localize";
 
 const ghcpExtensionId = 'github.copilot';
@@ -19,6 +20,10 @@ const dontShowKey = 'ghcpfa/dontShow';
 export function gitHubCopilotForAzureToast({ globalState }: ExtensionContext): void {
     void callWithTelemetryAndErrorHandling('ghcpfaToast', async (context: IActionContext) => {
         context.telemetry.properties.isActivationEvent = 'true';
+
+        // Allow extra time for all startup tasks to complete, which may include startup installations.
+        // We want to ensure the most current data before deciding to show the toast
+        await delay(5000);
 
         const arePrecursorExtensionsInstalled: boolean = isExtensionInstalled(ghcpExtensionId) && isExtensionInstalled(ghcpChatExtensionId);
         if (!arePrecursorExtensionsInstalled || isExtensionInstalled(ghcpfaExtensionId)) {
