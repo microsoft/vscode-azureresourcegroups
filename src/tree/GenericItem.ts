@@ -15,6 +15,20 @@ export interface GenericItemOptions {
     readonly iconPath?: TreeItemIconPath;
     readonly description?: string;
     readonly collapsibleState?: vscode.TreeItemCollapsibleState;
+    readonly checkboxState?: vscode.TreeItemCheckboxState | {
+        /**
+         * The {@link TreeItemCheckboxState} of the tree item
+         */
+        readonly state: vscode.TreeItemCheckboxState;
+        /**
+         * A tooltip for the checkbox
+         */
+        readonly tooltip?: string;
+        /**
+         * Accessibility information used when screen readers interact with this checkbox
+         */
+        readonly accessibilityInformation?: vscode.AccessibilityInformation;
+    };
 }
 
 export class GenericItem implements ResourceGroupsItem {
@@ -41,6 +55,7 @@ export class GenericItem implements ResourceGroupsItem {
         treeItem.description = this.options?.description;
         treeItem.contextValue = this.options?.contextValue;
         treeItem.iconPath = this.options?.iconPath;
+        treeItem.checkboxState = this.options?.checkboxState;
 
         return treeItem;
     }

@@ -51,20 +51,25 @@ export function registerTenantTree(context: vscode.ExtensionContext, options: Re
 }
 
 async function updateTenantsSetting(_context: IActionContext, tenants: vscode.TreeCheckboxChangeEvent<TenantTreeItem>) {
-    const unselectedTenants = ext.context.globalState.get<string[]>('unselectedTenants') || [];
+    const state = ext.context.globalState.get<string[]>('unselectedTenants');
+    const unselectedTenants = new Set(state ?? []);
 
-    for (const item of tenants.items) {
-        if (item[1] === vscode.TreeItemCheckboxState.Unchecked) {
-            unselectedTenants.push(`${item[0].id}/${item[0].accountId}`);
-        } else if (item[1] === vscode.TreeItemCheckboxState.Checked) {
-            const treeItem = await item[0].getTreeItem();
+    for (const [tenantTreeItem, state] of tenants.items) {
+        if (state === vscode.TreeItemCheckboxState.Unchecked) {
+            unselectedTenants.add(getKeyForTenant(tenantTreeItem));
+        } else if (state === vscode.TreeItemCheckboxState.Checked) {
+            const treeItem = await tenantTreeItem.getTreeItem();
             if (treeItem?.contextValue === 'tenantNameNotSignedIn') {
-                await vscode.commands.executeCommand('azureTenant.signInToTenant', item[0]);
+                await vscode.commands.executeCommand('azureTenant.signInToTenant', tenantTreeItem,);
                 ext.actions.refreshTenantTree();
             }
-            unselectedTenants.splice(unselectedTenants.indexOf(item[0].id), 1);
+            unselectedTenants.delete(getKeyForTenant(tenantTreeItem));
         }
     }
 
-    await ext.context.globalState.update('unselectedTenants', unselectedTenants);
+    await ext.context.globalState.update('unselectedTenants', Array.from(unselectedTenants));
+}
+
+export function getKeyForTenant(tenant: { id: string, accountId: string }): string {
+    return `${tenant.id}/${tenant.accountId}`;
 }

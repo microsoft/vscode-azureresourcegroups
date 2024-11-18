@@ -56,7 +56,7 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                     const tenantItems: ResourceGroupsItem[] = [];
                     for await (const tenant of tenants) {
                         const isSignedIn = await subscriptionProvider.isSignedIn(nonNullProp(tenant, 'tenantId'), account);
-                        tenantItems.push(new TenantTreeItem(nonNullProp(tenant, 'displayName'), nonNullProp(tenant, 'tenantId'), nonNullProp(account, 'id'), {
+                        tenantItems.push(new TenantTreeItem(nonNullProp(tenant, 'displayName'), nonNullProp(tenant, 'tenantId'), account, {
                             contextValue: isSignedIn ? 'tenantName' : 'tenantNameNotSignedIn',
                             checkboxState: (!(isSignedIn) || this.checkUnselectedTenants(nonNullProp(tenant, 'tenantId'))) ?
                                 vscode.TreeItemCheckboxState.Unchecked : vscode.TreeItemCheckboxState.Checked, // Make sure tenants which are not signed in are unchecked
@@ -68,7 +68,8 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                         children: tenantItems,
                         iconPath: new vscode.ThemeIcon('account'),
                         contextValue: 'accountName',
-                        collapsibleState: vscode.TreeItemCollapsibleState.Expanded
+                        collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+                        checkboxState: vscode.TreeItemCheckboxState.Checked,
                     }));
                 }
             }
