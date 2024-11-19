@@ -1,5 +1,6 @@
 {
     "tsaVersion": "TsaV2",
+    "codeBaseName": "vscode-azureresourcegroups",
     "tsaStamp": "DevDiv",
     "notificationAliases": [
         "AzCode@microsoft.com"
@@ -11,7 +12,7 @@
     ],
     "instanceUrl": "https://devdiv.visualstudio.com",
     "projectName": "DevDiv",
-    "areaPath": "DevDiv\\VS Azure Tools\\AzCode Extensions",
+    "areaPath": "DevDiv\\VS Azure Tools\\AzCode",
     "iterationPath": "DevDiv",
     "allTools": true
 }
