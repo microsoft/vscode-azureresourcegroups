@@ -1,0 +1,17 @@
+{
+    "tsaVersion": "TsaV2",
+    "tsaStamp": "DevDiv",
+    "notificationAliases": [
+        "AzCode@microsoft.com"
+    ],
+    "codebaseAdmins": [
+        "REDMOND\\aweininger",
+        "REDMOND\\jinglou",
+        "REDMOND\\naturins"
+    ],
+    "instanceUrl": "https://devdiv.visualstudio.com",
+    "projectName": "DevDiv",
+    "areaPath": "DevDiv\\VS Azure Tools\\AzCode Extensions",
+    "iterationPath": "DevDiv",
+    "allTools": true
+}
