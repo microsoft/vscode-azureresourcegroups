@@ -13,7 +13,7 @@
     ],
     "instanceUrl": "https://devdiv.visualstudio.com",
     "projectName": "DevDiv",
-    "areaPath": "DevDiv\\VS Azure Tools\\AzCode Exttensions",
+    "areaPath": "DevDiv\\VS Azure Tools\\AzCode Extensions",
     "iterationPath": "DevDiv",
     "allTools": true
 }
