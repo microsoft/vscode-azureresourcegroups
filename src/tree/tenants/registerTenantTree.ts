@@ -60,7 +60,7 @@ async function updateTenantsSetting(_context: IActionContext, tenants: vscode.Tr
         } else if (state === vscode.TreeItemCheckboxState.Checked) {
             const treeItem = await tenantTreeItem.getTreeItem();
             if (treeItem?.contextValue === 'tenantNameNotSignedIn') {
-                await vscode.commands.executeCommand('azureTenant.signInToTenant', tenantTreeItem,);
+                await vscode.commands.executeCommand('azureTenant.signInToTenant', tenantTreeItem, tenantTreeItem.account);
                 ext.actions.refreshTenantTree();
             }
             unselectedTenants.delete(getKeyForTenant(tenantTreeItem));

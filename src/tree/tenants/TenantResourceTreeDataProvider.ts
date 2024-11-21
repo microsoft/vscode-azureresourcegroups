@@ -69,7 +69,6 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                         iconPath: new vscode.ThemeIcon('account'),
                         contextValue: 'accountName',
                         collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-                        checkboxState: vscode.TreeItemCheckboxState.Checked,
                     }));
                 }
             }
