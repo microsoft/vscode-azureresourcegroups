@@ -302,6 +302,11 @@
                 "view": "azureWorkspace",
                 "contents": "No local workspace resource providers exist.",
                 "when": "azureWorkspace.state == 'noWorkspaceResourceProviders'"
+            },
+            {
+                "view": "azureResourceGroups",
+                "contents": "Please sign in to a specific tenant (directory) to continue. \n [Sign in to Tenant (Directory)...](command:azureResourceGroups.signInToTenant)",
+                "when": "azureResourceGroups.needsTenantAuth == true"
             }
         ],
         "menus": {
