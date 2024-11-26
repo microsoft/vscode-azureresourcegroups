@@ -101,7 +101,10 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     async findItemById(id: string): Promise<ResourceGroupsItem | undefined> {
-        let element: ResourceGroupsItem | undefined = undefined;
+        let element: ResourceGroupsItem | undefined = this.itemCache.getItemForBranchItemById(id);
+        if (element) {
+            return element;
+        }
 
         outerLoop: while (true) {
             const children: ResourceGroupsItem[] | null | undefined = await this.getChildren(element);
