@@ -51,25 +51,64 @@ export function registerTenantTree(context: vscode.ExtensionContext, options: Re
 }
 
 async function updateTenantsSetting(_context: IActionContext, tenants: vscode.TreeCheckboxChangeEvent<TenantTreeItem>) {
-    const state = ext.context.globalState.get<string[]>('unselectedTenants');
-    const unselectedTenants = new Set(state ?? []);
+    const unselectedTenants = getUnselectedTenants();
+    const unselectedTenantsSet = new Set(unselectedTenants);
 
     for (const [tenantTreeItem, state] of tenants.items) {
         if (state === vscode.TreeItemCheckboxState.Unchecked) {
-            unselectedTenants.add(getKeyForTenant(tenantTreeItem));
+            unselectedTenantsSet.add(getKeyForTenant(tenantTreeItem.tenantId, tenantTreeItem.account.id));
         } else if (state === vscode.TreeItemCheckboxState.Checked) {
             const treeItem = await tenantTreeItem.getTreeItem();
             if (treeItem?.contextValue === 'tenantNameNotSignedIn') {
                 await vscode.commands.executeCommand('azureTenant.signInToTenant', tenantTreeItem, tenantTreeItem.account);
                 ext.actions.refreshTenantTree();
             }
-            unselectedTenants.delete(getKeyForTenant(tenantTreeItem));
+            unselectedTenantsSet.delete(getKeyForTenant(tenantTreeItem.tenantId, tenantTreeItem.account.id));
         }
     }
 
-    await ext.context.globalState.update('unselectedTenants', Array.from(unselectedTenants));
+    await setUnselectedTenants(Array.from(unselectedTenantsSet));
 }
 
-export function getKeyForTenant(tenant: { id: string, accountId: string }): string {
-    return `${tenant.id}/${tenant.accountId}`;
+function removeDuplicates(arr: string[]): string[] {
+    return Array.from(new Set(arr));
+}
+
+export async function setUnselectedTenants(tenantIds: string[]): Promise<void> {
+    printTenants(tenantIds);
+    await ext.context.globalState.update('unselectedTenants', removeDuplicates(tenantIds));
+}
+
+export function getUnselectedTenants(): string[] {
+    const value = ext.context.globalState.get<string[]>('unselectedTenants');
+
+    if (!value || !Array.isArray(value)) {
+        return [];
+    }
+
+    // remove any duplicates
+    return removeDuplicates(value);
+}
+
+export function isTenantFilteredOut(tenantId: string, accountId: string): boolean {
+    const settings = ext.context.globalState.get<string[]>('unselectedTenants');
+    if (settings) {
+        if (settings.includes(getKeyForTenant(tenantId, accountId))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+export function getKeyForTenant(tenantId: string, accountId: string): string {
+    return `${tenantId}/${accountId}`;
+}
+
+function printTenants(unselectedTenants: string[]): void {
+    let str = '';
+    str += 'Unselected tenants:\n';
+    for (const tenant of unselectedTenants) {
+        str += `- ${tenant}\n`;
+    }
+    ext.outputChannel.appendLine(str);
 }
