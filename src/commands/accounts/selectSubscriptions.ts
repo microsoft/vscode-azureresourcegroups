@@ -7,6 +7,7 @@ import { AzureSubscription } from "@microsoft/vscode-azext-azureauth";
 import { IActionContext, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
+import { isTenantFilteredOut } from "../../tree/tenants/registerTenantTree";
 import { localize } from "../../utils/localize";
 import { settingUtils } from "../../utils/settingUtils";
 
@@ -89,15 +90,8 @@ async function setSelectedTenantAndSubscriptionIds(tenantAndSubscriptionIds: str
 
 // This function is also used to filter subscription tree items in AzureResourceTreeDataProvider
 export function getTenantFilteredSubscriptions(allSubscriptions: AzureSubscription[]): AzureSubscription[] | undefined {
-    const tenants = ext.context.globalState.get<string[]>('unselectedTenants');
-    if (tenants && tenants.length > 0) {
-        allSubscriptions = allSubscriptions.filter(subscription => !tenants.includes(`${subscription.tenantId}/${subscription.account?.id}`));
-        if (allSubscriptions.length > 0) {
-            return allSubscriptions;
-        }
-    }
-
-    return undefined;
+    const filteredSubscriptions = allSubscriptions.filter(subscription => !isTenantFilteredOut(subscription.tenantId, subscription.account.id));
+    return filteredSubscriptions.length > 0 ? filteredSubscriptions : allSubscriptions;
 }
 
 export function getDuplicateSubscriptions(subscriptions: AzureSubscription[]): AzureSubscription[] {

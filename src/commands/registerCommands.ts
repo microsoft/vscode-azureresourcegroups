@@ -5,7 +5,7 @@
 
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
-import { commands } from 'vscode';
+import { AuthenticationSessionAccountInformation, commands } from 'vscode';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
@@ -70,8 +70,8 @@ export function registerCommands(): void {
         ext.actions.refreshTenantTree(node);
     });
 
-    registerCommand('azureTenant.signInToTenant', async (_context, node: TenantTreeItem) => {
-        await (await ext.subscriptionProviderFactory()).signIn(node.tenantId);
+    registerCommand('azureTenant.signInToTenant', async (_context, node: TenantTreeItem, account?: AuthenticationSessionAccountInformation) => {
+        await (await ext.subscriptionProviderFactory()).signIn(node.tenantId, account);
         ext.actions.refreshTenantTree(node);
     });
 
