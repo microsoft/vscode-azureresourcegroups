@@ -67,6 +67,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
             return await element.getChildren();
         } else {
             const subscriptionProvider = await getAzureSubscriptionProvider(this);
+            // When a user is signed in 'OnGetChildrenBase' will return the no children
             const children: ResourceGroupsItem[] = await OnGetChildrenBase(subscriptionProvider, this);
 
             if (children.length === 0) {

@@ -238,20 +238,20 @@
                 "category": "Azure"
             },
             {
-                "command": "azureTenant.refresh",
+                "command": "azureTenantsView.refresh",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
                 "icon": "$(refresh)"
             },
             {
-                "command": "azureTenant.refreshTree",
+                "command": "azureTenantsView.refreshTree",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
                 "icon": "$(refresh)"
             },
             {
-                "command": "azureTenant.signInToTenant",
-                "title": "%azureTenant.signInToTenant%",
+                "command": "azureTenantsView.signInToTenant",
+                "title": "%azureTenantsView.signInToTenant%",
                 "category": "Azure",
                 "icon": "$(sign-in)"
             }
@@ -291,7 +291,7 @@
                     "visibility": "visible"
                 },
                 {
-                    "id": "azureTenant",
+                    "id": "azureTenantsView",
                     "name": "Accounts & Tenants",
                     "visibility": "collapsed"
                 },
@@ -379,8 +379,8 @@
                     "group": "navigation@10"
                 },
                 {
-                    "command": "azureTenant.refreshTree",
-                    "when": "view == azureTenant",
+                    "command": "azureTenantsView.refreshTree",
+                    "when": "view == azureTenantsView",
                     "group": "navigation@10"
                 },
                 {
@@ -461,13 +461,13 @@
                     "group": "9@1"
                 },
                 {
-                    "command": "azureTenant.signInToTenant",
-                    "when": "view == azureTenant && viewItem =~ /tenantNameNotSignedIn/",
+                    "command": "azureTenantsView.signInToTenant",
+                    "when": "view == azureTenantsView && viewItem =~ /tenantNameNotSignedIn/",
                     "group": "inline@1"
                 },
                 {
-                    "command": "azureTenant.signInToTenant",
-                    "when": "view == azureTenant && viewItem =~ /tenantNameNotSignedIn/",
+                    "command": "azureTenantsView.signInToTenant",
+                    "when": "view == azureTenantsView && viewItem =~ /tenantNameNotSignedIn/",
                     "group": "1@1"
                 }
             ],
@@ -493,7 +493,7 @@
                     "when": "never"
                 },
                 {
-                    "command": "azureTenant.refresh",
+                    "command": "azureTenantsView.refresh",
                     "when": "never"
                 },
                 {

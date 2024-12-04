@@ -154,7 +154,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     });
 
     const tenantResourcesBranchDataItemCache = new BranchDataItemCache();
-    const tenantResourceTreeDataProvider = registerTenantTree(context, {
+    registerTenantTree(context, {
         tenantResourceProviderManager,
         tenantResourceBranchDataProviderManager,
         refreshEvent: refreshTenantTreeEmitter.event,
@@ -173,7 +173,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                         azureResourceTreeDataProvider,
                         workspaceResourceProviderManager,
                         workspaceResourceBranchDataProviderManager,
-                        workspaceResourceTreeDataProvider
+                        workspaceResourceTreeDataProvider,
                     ),
                     activity: {
                         registerActivity
@@ -188,7 +188,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     ext.appResourceTree = new CompatibleAzExtTreeDataProvider(azureResourceTreeDataProvider);
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
-    ext.tenantTree = new CompatibleAzExtTreeDataProvider(tenantResourceTreeDataProvider);
 
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
         async (filter: boolean) => { return await (await getAzureSubscriptionProvider(azureResourceTreeDataProvider)).getSubscriptions(filter) };

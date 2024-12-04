@@ -30,7 +30,7 @@ export function registerTenantTree(context: vscode.ExtensionContext, options: Re
         new TenantResourceTreeDataProvider(tenantResourceBranchDataProviderManager, tenantResourceBranchDataProviderManager.onDidChangeTreeData, refreshEvent, tenantResourceProviderManager, itemCache);
     context.subscriptions.push(tenantResourceTreeDataProvider);
 
-    const treeView = createTreeView('azureTenant', {
+    const treeView = createTreeView('azureTenantsView', {
         canSelectMany: true,
         showCollapseAll: true,
         itemCache,
@@ -60,7 +60,7 @@ async function updateTenantsSetting(_context: IActionContext, tenants: vscode.Tr
         } else if (state === vscode.TreeItemCheckboxState.Checked) {
             const treeItem = await tenantTreeItem.getTreeItem();
             if (treeItem?.contextValue === 'tenantNameNotSignedIn') {
-                await vscode.commands.executeCommand('azureTenant.signInToTenant', tenantTreeItem, tenantTreeItem.account);
+                await vscode.commands.executeCommand('azureTenantsView.signInToTenant', tenantTreeItem, tenantTreeItem.account);
                 ext.actions.refreshTenantTree();
             }
             unselectedTenantsSet.delete(getKeyForTenant(tenantTreeItem.tenantId, tenantTreeItem.account.id));
