@@ -556,6 +556,12 @@
             {
                 "title": "Azure",
                 "properties": {
+                    "azureResourceGroups.unselectedTenants": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
                     "azureResourceGroups.enableOutputTimestamps": {
                         "type": "boolean",
                         "description": "%azureResourceGroups.enableOutputTimestamps%",

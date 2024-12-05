@@ -3,6 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { getUnselectedTenants } from '@microsoft/vscode-azext-azureauth';
 import { AzExtTreeItem, IActionContext, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { TenantResourceProviderManager } from "../../api/ResourceProviderManagers";
@@ -70,28 +71,20 @@ async function updateTenantsSetting(_context: IActionContext, tenants: vscode.Tr
     await setUnselectedTenants(Array.from(unselectedTenantsSet));
 }
 
+const unselectedTenants = 'unselectedTenants';
+
 function removeDuplicates(arr: string[]): string[] {
     return Array.from(new Set(arr));
 }
 
 export async function setUnselectedTenants(tenantIds: string[]): Promise<void> {
     printTenants(tenantIds);
-    await ext.context.globalState.update('unselectedTenants', removeDuplicates(tenantIds));
-}
-
-export function getUnselectedTenants(): string[] {
-    const value = ext.context.globalState.get<string[]>('unselectedTenants');
-
-    if (!value || !Array.isArray(value)) {
-        return [];
-    }
-
-    // remove any duplicates
-    return removeDuplicates(value);
+    await vscode.workspace.getConfiguration('azureResourceGroups')
+        .update(unselectedTenants, removeDuplicates(tenantIds), vscode.ConfigurationTarget.Global);
 }
 
 export function isTenantFilteredOut(tenantId: string, accountId: string): boolean {
-    const settings = ext.context.globalState.get<string[]>('unselectedTenants');
+    const settings = getUnselectedTenants();
     if (settings) {
         if (settings.includes(getKeyForTenant(tenantId, accountId))) {
             return true;
