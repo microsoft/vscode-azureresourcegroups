@@ -25,6 +25,10 @@ export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider 
             isCustomCloud: false,
             name: subscription.name,
             tenantId: 'tenantId',
+            account: {
+                id: 'accountId',
+                label: 'accountLabel',
+            },
             subscriptionId: subscription.subscriptionId,
         } as unknown as AzureSubscription));
     }
