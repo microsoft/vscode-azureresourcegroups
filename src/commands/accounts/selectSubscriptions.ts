@@ -38,11 +38,17 @@ export async function selectSubscriptions(context: IActionContext, options?: Sel
         const subscriptionQuickPickItems: () => Promise<IAzureQuickPickItem<AzureSubscription>[]> = async () => {
             // If there are no tenants selected by default all subscriptions will be shown.
             let subscriptions = await provider.getSubscriptions(false);
-            if (options?.account) {
-                subscriptions = subscriptions.filter(subscription => subscription.account.id === options.account?.id);
-            }
-            if (options?.tenantId) {
-                subscriptions = subscriptions.filter(subscription => subscription.tenantId === options.tenantId);
+
+            if (options?.account || options?.tenantId) {
+
+                if (options?.account) {
+                    subscriptions = subscriptions.filter(subscription => subscription.account.id === options.account?.id);
+                }
+                if (options?.tenantId) {
+                    subscriptions = subscriptions.filter(subscription => subscription.tenantId === options.tenantId);
+                }
+            } else {
+                subscriptions = getTenantFilteredSubscriptions(subscriptions);
             }
             const duplicates = getDuplicateSubscriptions(subscriptions);
 
@@ -110,7 +116,7 @@ async function setSelectedTenantAndSubscriptionIds(tenantAndSubscriptionIds: str
 }
 
 // This function is also used to filter subscription tree items in AzureResourceTreeDataProvider
-export function getTenantFilteredSubscriptions(allSubscriptions: AzureSubscription[]): AzureSubscription[] | undefined {
+export function getTenantFilteredSubscriptions(allSubscriptions: AzureSubscription[]): AzureSubscription[] {
     const filteredSubscriptions = allSubscriptions.filter(subscription => !isTenantFilteredOut(subscription.tenantId, subscription.account.id));
     return filteredSubscriptions.length > 0 ? filteredSubscriptions : allSubscriptions;
 }
