@@ -43,7 +43,7 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
-        return await callWithTelemetryAndErrorHandling('tenantResourceTreeDataProvider.onGetChildren', async (context: IActionContext) => {
+        return await callWithTelemetryAndErrorHandling('azureTenantsView.getChildren', async (context: IActionContext) => {
             if (element) {
                 return await element.getChildren();
             } else {
