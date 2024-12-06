@@ -35,7 +35,7 @@ export function createGroupConfigFromResource(resource: AppResource, subscriptio
             contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType, legacyTypeMap[resource.azExtResourceType] ?? ''] : [])]
         },
         location: {
-            id: `${subscriptionId}/location/${resource.location}` ?? 'unknown',
+            id: `${subscriptionId}/location/${resource.location}`,
             label: resource.location ?? unknown,
             icon: new ThemeIcon('globe'),
             contextValuesToAdd: ['azureLocationGroup']

@@ -5,12 +5,13 @@
 
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
-import { commands } from 'vscode';
+import { AuthenticationSessionAccountInformation, commands } from 'vscode';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
+import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
@@ -40,6 +41,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.refreshTree', () => ext.actions.refreshAzureTree());
     registerCommand('azureWorkspace.refreshTree', () => ext.actions.refreshWorkspaceTree());
     registerCommand('azureFocusView.refreshTree', () => ext.actions.refreshFocusTree());
+    registerCommand('azureTenantsView.refreshTree', () => ext.actions.refreshTenantTree());
 
     // v1.5 client extensions attach these commands to tree item context menus for refreshing their tree items
     registerCommand('azureResourceGroups.refresh', async (context, node?: ResourceGroupsItem) => {
@@ -61,6 +63,16 @@ export function registerCommands(): void {
     registerCommand('azureFocusView.refresh', async (context, node?: ResourceGroupsItem) => {
         await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
         ext.actions.refreshFocusTree(node);
+    });
+
+    registerCommand('azureTenantsView.refresh', async (context, node?: ResourceGroupsItem) => {
+        await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
+        ext.actions.refreshTenantTree(node);
+    });
+
+    registerCommand('azureTenantsView.signInToTenant', async (_context, node: TenantTreeItem, account?: AuthenticationSessionAccountInformation) => {
+        await (await ext.subscriptionProviderFactory()).signIn(node.tenantId, account);
+        ext.actions.refreshTenantTree(node);
     });
 
     registerCommand('azureResourceGroups.focusGroup', focusGroup);

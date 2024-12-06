@@ -62,6 +62,11 @@ export interface AzureSubscription {
      * The tenant to which this subscription belongs or undefined, if not associated with a specific tenant.
      */
     readonly tenantId: string;
+
+    /**
+     * The account associated with this subscription. This is optional as we only need the account if there are duplicate subscriptions.
+     */
+    readonly account?: vscode.AuthenticationSessionAccountInformation;
 }
 
 /**

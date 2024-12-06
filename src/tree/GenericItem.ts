@@ -14,6 +14,21 @@ export interface GenericItemOptions {
     readonly contextValue?: string;
     readonly iconPath?: TreeItemIconPath;
     readonly description?: string;
+    readonly collapsibleState?: vscode.TreeItemCollapsibleState;
+    readonly checkboxState?: vscode.TreeItemCheckboxState | {
+        /**
+         * The {@link TreeItemCheckboxState} of the tree item
+         */
+        readonly state: vscode.TreeItemCheckboxState;
+        /**
+         * A tooltip for the checkbox
+         */
+        readonly tooltip?: string;
+        /**
+         * Accessibility information used when screen readers interact with this checkbox
+         */
+        readonly accessibilityInformation?: vscode.AccessibilityInformation;
+    };
 }
 
 export class GenericItem implements ResourceGroupsItem {
@@ -27,7 +42,7 @@ export class GenericItem implements ResourceGroupsItem {
     }
 
     getTreeItem(): vscode.TreeItem | Thenable<vscode.TreeItem> {
-        const treeItem = new vscode.TreeItem(this.label, this.options?.children ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+        const treeItem = new vscode.TreeItem(this.label, this.options?.collapsibleState ?? (this.options?.children ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None));
 
         if (this.options?.commandId) {
             treeItem.command = {
@@ -40,6 +55,7 @@ export class GenericItem implements ResourceGroupsItem {
         treeItem.description = this.options?.description;
         treeItem.contextValue = this.options?.contextValue;
         treeItem.iconPath = this.options?.iconPath;
+        treeItem.checkboxState = this.options?.checkboxState;
 
         return treeItem;
     }
