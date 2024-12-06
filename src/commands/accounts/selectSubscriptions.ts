@@ -13,11 +13,15 @@ import { settingUtils } from "../../utils/settingUtils";
 
 export interface SelectSubscriptionOptions {
     /**
-     * If provided, only subscriptions in this tenant will be shown in the picker. Only subscriptions shown in the picker will be removed or added to the selected subscriptions setting.
+     * If provided, only subscriptions in this tenant will be shown in the picker.
+     *
+     * Only subscriptions shown in the picker will be removed or added to the selected subscriptions setting.
      */
     tenantId?: string;
     /**
-     * TODO: implement filtering at the account level
+     * If provided, only subscriptions from this account will be shown in the picker.
+     *
+     * Only subscriptions shown in the picker will be removed or added to the selected subscriptions setting.
      */
     account?: vscode.AuthenticationSessionAccountInformation;
 }
@@ -33,16 +37,22 @@ export async function selectSubscriptions(context: IActionContext, options?: Sel
 
         const subscriptionQuickPickItems: () => Promise<IAzureQuickPickItem<AzureSubscription>[]> = async () => {
             // If there are no tenants selected by default all subscriptions will be shown.
-            const allSubscriptions = await provider.getSubscriptions(false);
-            const subscriptionsFilteredByTenant = options?.tenantId ? allSubscriptions.filter(subscription => subscription.tenantId === options.tenantId) : allSubscriptions;
-            const duplicates = getDuplicateSubscriptions(allSubscriptions);
+            let subscriptions = await provider.getSubscriptions(false);
+            if (options?.account) {
+                subscriptions = subscriptions.filter(subscription => subscription.account.id === options.account?.id);
+            }
+            if (options?.tenantId) {
+                subscriptions = subscriptions.filter(subscription => subscription.tenantId === options.tenantId);
+            }
+            const duplicates = getDuplicateSubscriptions(subscriptions);
 
-            subscriptionsShownInPicker = subscriptionsFilteredByTenant.map(sub => `${sub.tenantId}/${sub.subscriptionId}`);
-            return subscriptionsFilteredByTenant
-                .map(subscription => ({
+            subscriptionsShownInPicker = subscriptions.map(sub => `${sub.tenantId}/${sub.subscriptionId}`);
+            return subscriptions
+                .map(subscription => (<IAzureQuickPickItem<AzureSubscription>>{
                     label: duplicates.includes(subscription) ? subscription.name + ` (${subscription.account?.label})` : subscription.name,
                     description: subscription.subscriptionId,
-                    data: subscription
+                    data: subscription,
+                    group: subscription.account.label
                 }))
                 .sort((a, b) => a.label.localeCompare(b.label));
         }
@@ -54,6 +64,7 @@ export async function selectSubscriptions(context: IActionContext, options?: Sel
                     return selectedSubscriptionIds.length === 0 || selectedSubscriptionIds.includes((pick as IAzureQuickPickItem<AzureSubscription>).data.subscriptionId);
                 },
                 canPickMany: true,
+                enableGrouping: true,
                 placeHolder: localize('selectSubscriptions', 'Select Subscriptions')
             });
 
