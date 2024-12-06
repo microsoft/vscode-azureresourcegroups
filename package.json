@@ -106,6 +106,12 @@
                 "category": "Azure"
             },
             {
+                "command": "azureResourceGroups.logInButton",
+                "title": "%azureResourceGroups.logInButton%",
+                "category": "Azure",
+                "icon": "$(sign-in)"
+            },
+            {
                 "command": "azureResourceGroups.selectSubscriptions",
                 "title": "%azureResourceGroups.selectSubscriptions%",
                 "category": "Azure",
@@ -392,6 +398,11 @@
                     "submenu": "azureWorkspaceCreate",
                     "when": "view == azureWorkspace",
                     "group": "navigation@1"
+                },
+                {
+                    "command": "azureResourceGroups.logInButton",
+                    "when": "view == azureTenantsView",
+                    "group": "navigation@1"
                 }
             ],
             "view/item/context": [
@@ -510,6 +521,10 @@
                 },
                 {
                     "command": "azureResourceGroups.installExtension",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.logInButton",
                     "when": "never"
                 }
             ],

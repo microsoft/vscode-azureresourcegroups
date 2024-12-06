@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscriptionProvider, getConfiguredAuthProviderId } from '@microsoft/vscode-azext-azureauth';
-import { nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, IActionContext, nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { ResourceModelBase } from 'api/src';
 import * as vscode from 'vscode';
 import { TenantResourceProviderManager } from '../../api/ResourceProviderManagers';
@@ -43,36 +43,39 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
-        if (element) {
-            return await element.getChildren();
-        } else {
-            const subscriptionProvider = await getAzureSubscriptionProvider(this);
-            const children: ResourceGroupsItem[] = await OnGetChildrenBase(subscriptionProvider);
+        return await callWithTelemetryAndErrorHandling('tenantResourceTreeDataProvider.onGetChildren', async (context: IActionContext) => {
+            if (element) {
+                return await element.getChildren();
+            } else {
+                const subscriptionProvider = await getAzureSubscriptionProvider(this);
+                const children: ResourceGroupsItem[] = await OnGetChildrenBase(subscriptionProvider);
 
-            if (children.length === 0) {
-                const accounts = await vscode.authentication.getAccounts(getConfiguredAuthProviderId());
-                for (const account of accounts) {
-                    const tenants = await subscriptionProvider.getTenants(account);
-                    const tenantItems: ResourceGroupsItem[] = [];
-                    for await (const tenant of tenants) {
-                        const isSignedIn = await subscriptionProvider.isSignedIn(nonNullProp(tenant, 'tenantId'), account);
-                        tenantItems.push(new TenantTreeItem(tenant, account, {
-                            contextValue: isSignedIn ? 'tenantName' : 'tenantNameNotSignedIn',
-                            checkboxState: (!isSignedIn || isTenantFilteredOut(nonNullProp(tenant, 'tenantId'), account.id)) ?
-                                vscode.TreeItemCheckboxState.Unchecked : vscode.TreeItemCheckboxState.Checked,
-                            description: tenant.tenantId
+                if (children.length === 0) {
+                    const accounts = await vscode.authentication.getAccounts(getConfiguredAuthProviderId());
+                    context.telemetry.properties.accountCount = accounts.length.toString();
+                    for (const account of accounts) {
+                        const tenants = await subscriptionProvider.getTenants(account);
+                        const tenantItems: ResourceGroupsItem[] = [];
+                        for await (const tenant of tenants) {
+                            const isSignedIn = await subscriptionProvider.isSignedIn(nonNullProp(tenant, 'tenantId'), account);
+                            tenantItems.push(new TenantTreeItem(tenant, account, {
+                                contextValue: isSignedIn ? 'tenantName' : 'tenantNameNotSignedIn',
+                                checkboxState: (!isSignedIn || isTenantFilteredOut(nonNullProp(tenant, 'tenantId'), account.id)) ?
+                                    vscode.TreeItemCheckboxState.Unchecked : vscode.TreeItemCheckboxState.Checked,
+                                description: tenant.tenantId
+                            }));
+                        }
+
+                        children.push(new GenericItem(nonNullValueAndProp(account, 'label'), {
+                            children: tenantItems,
+                            iconPath: new vscode.ThemeIcon('account'),
+                            contextValue: 'accountName',
+                            collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
                         }));
                     }
-
-                    children.push(new GenericItem(nonNullValueAndProp(account, 'label'), {
-                        children: tenantItems,
-                        iconPath: new vscode.ThemeIcon('account'),
-                        contextValue: 'accountName',
-                        collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-                    }));
                 }
+                return children;
             }
-            return children;
-        }
+        });
     }
 }
