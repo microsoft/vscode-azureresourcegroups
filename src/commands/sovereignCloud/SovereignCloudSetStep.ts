@@ -4,6 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AzureWizardExecuteStep } from "@microsoft/vscode-azext-utils";
+import * as vscode from 'vscode';
 import { settingUtils } from "../../utils/settingUtils";
 import { ConfigureSovereignCloudContext } from "./ConfigureSovereignCloudContext";
 
@@ -11,7 +12,11 @@ export class SovereignCloudSetStep extends AzureWizardExecuteStep<ConfigureSover
     public priority: number = 10;
 
     public async execute(context: ConfigureSovereignCloudContext): Promise<void> {
-        await settingUtils.updateGlobalSetting('environment', context.sovereignCloud, 'microsoft-sovereign-cloud');
+        if (context.sovereignCloud === 'custom') {
+            await vscode.commands.executeCommand('workbench.action.openSettings', 'microsoft-sovereign-cloud');
+        } else {
+            await settingUtils.updateGlobalSetting('environment', context.sovereignCloud, 'microsoft-sovereign-cloud');
+        }
     }
 
     public shouldExecute(): boolean {
