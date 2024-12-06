@@ -3,7 +3,7 @@
     "azureResourceGroups.cloudShellPowerShell": "Azure Cloud Shell (PowerShell)",
     "azureResourceGroups.uploadToCloudShell": "Upload to Cloud Shell",
     "azureResourceGroups.logIn": "Sign In",
-    "azureTenantsView.logInButton": "Sign In",
+    "azureTenantsView.addAccount": "Add account",
     "azureResourceGroups.signInToTenant": "Sign in to Tenant (Directory)...",
     "azureResourceGroups.selectSubscriptions": "Select Subscriptions...",
     "azureResourceGroups.createResourceGroup": "Create Resource Group...",

@@ -106,8 +106,8 @@
                 "category": "Azure"
             },
             {
-                "command": "azureTenantsView.logInButton",
-                "title": "%azureTenantsView.logInButton%",
+                "command": "azureTenantsView.addAccount",
+                "title": "%azureTenantsView.addAccount%",
                 "category": "Azure",
                 "icon": "$(add)"
             },
@@ -400,7 +400,7 @@
                     "group": "navigation@1"
                 },
                 {
-                    "command": "azureTenantsView.logInButton",
+                    "command": "azureTenantsView.addAccount",
                     "when": "view == azureTenantsView",
                     "group": "navigation@1"
                 }
@@ -524,7 +524,7 @@
                     "when": "never"
                 },
                 {
-                    "command": "azureTenantsView.logInButton",
+                    "command": "azureTenantsView.addAccount",
                     "when": "never"
                 }
             ],
