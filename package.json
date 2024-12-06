@@ -401,8 +401,8 @@
                 },
                 {
                     "command": "azureTenantsView.configureSovereignCloud",
-                    "when": "view == azureTenant",
-                    "group": "navigation@1"
+                    "when": "view == azureTenantsView",
+                    "group": "navigation@2"
                 }
             ],
             "view/item/context": [
