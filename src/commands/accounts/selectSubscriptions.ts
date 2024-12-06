@@ -51,7 +51,8 @@ export async function selectSubscriptions(context: IActionContext, options?: Sel
                 .map(subscription => (<IAzureQuickPickItem<AzureSubscription>>{
                     label: duplicates.includes(subscription) ? subscription.name + ` (${subscription.account?.label})` : subscription.name,
                     description: subscription.subscriptionId,
-                    data: subscription
+                    data: subscription,
+                    group: subscription.account.label
                 }))
                 .sort((a, b) => a.label.localeCompare(b.label));
         }
@@ -63,6 +64,7 @@ export async function selectSubscriptions(context: IActionContext, options?: Sel
                     return selectedSubscriptionIds.length === 0 || selectedSubscriptionIds.includes((pick as IAzureQuickPickItem<AzureSubscription>).data.subscriptionId);
                 },
                 canPickMany: true,
+                enableGrouping: true,
                 placeHolder: localize('selectSubscriptions', 'Select Subscriptions')
             });
 
