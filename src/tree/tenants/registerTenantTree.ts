@@ -50,16 +50,16 @@ export function registerTenantTree(context: vscode.ExtensionContext, options: Re
     return tenantResourceTreeDataProvider;
 }
 
-async function updateTenantsSetting(_context: IActionContext, tenants: vscode.TreeCheckboxChangeEvent<TenantTreeItem>) {
+async function updateTenantsSetting(context: IActionContext, tenants: vscode.TreeCheckboxChangeEvent<TenantTreeItem>) {
     const unselectedTenants = getUnselectedTenants();
     const unselectedTenantsSet = new Set(unselectedTenants);
 
     for (const [tenantTreeItem, state] of tenants.items) {
         if (state === vscode.TreeItemCheckboxState.Unchecked) {
-            _context.telemetry.properties.uncheckedTenant = 'true';
+            context.telemetry.properties.uncheckedTenant = 'true';
             unselectedTenantsSet.add(getKeyForTenant(tenantTreeItem.tenantId, tenantTreeItem.account.id));
         } else if (state === vscode.TreeItemCheckboxState.Checked) {
-            _context.telemetry.properties.checkedTenant = 'true';
+            context.telemetry.properties.checkedTenant = 'true';
             const treeItem = await tenantTreeItem.getTreeItem();
             if (treeItem?.contextValue === 'tenantNameNotSignedIn') {
                 await vscode.commands.executeCommand('azureTenantsView.signInToTenant', tenantTreeItem);

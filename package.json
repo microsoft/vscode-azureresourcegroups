@@ -400,7 +400,7 @@
                     "group": "navigation@1"
                 },
                 {
-                    "command": "azureResourceGroups.logInButton",
+                    "command": "azureTenantsView.logInButton",
                     "when": "view == azureTenantsView",
                     "group": "navigation@1"
                 }
