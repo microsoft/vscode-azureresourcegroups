@@ -173,7 +173,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                         azureResourceTreeDataProvider,
                         workspaceResourceProviderManager,
                         workspaceResourceBranchDataProviderManager,
-                        workspaceResourceTreeDataProvider
+                        workspaceResourceTreeDataProvider,
                     ),
                     activity: {
                         registerActivity
