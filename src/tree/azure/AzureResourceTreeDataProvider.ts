@@ -67,21 +67,22 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
             return await element.getChildren();
         } else {
             const subscriptionProvider = await getAzureSubscriptionProvider(this);
+            // When a user is signed in 'OnGetChildrenBase' will return no children
             const children: ResourceGroupsItem[] = await OnGetChildrenBase(subscriptionProvider, this);
 
             if (children.length === 0) {
                 this.sendSubscriptionTelemetryIfNeeded();
                 let subscriptions: AzureSubscription[];
+                await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
                 if ((subscriptions = await subscriptionProvider.getSubscriptions(true)).length === 0) {
                     if (
                         // If there are no subscriptions at all (ignoring filters) AND if unauthenicated tenants exist
                         (await subscriptionProvider.getSubscriptions(false)).length === 0 &&
                         (await getUnauthenticatedTenants(subscriptionProvider)).length > 0
                     ) {
-                        // Subscriptions might exist in an unauthenticated tenant
-                        return [new GenericItem(localize('signInToDirectory', 'Sign in to Directory...'), {
-                            commandId: 'azureResourceGroups.signInToTenant'
-                        })];
+                        // Subscriptions might exist in an unauthenticated tenant. Show welcome view.
+                        await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', true);
+                        return [];
                     } else {
                         return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
                             commandId: 'azureResourceGroups.selectSubscriptions'

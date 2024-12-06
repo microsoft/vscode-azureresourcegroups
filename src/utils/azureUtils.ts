@@ -35,7 +35,7 @@ export function createGroupConfigFromResource(resource: AppResource, subscriptio
             contextValuesToAdd: ['azureResourceTypeGroup', ...(resource.azExtResourceType ? [resource.azExtResourceType, legacyTypeMap[resource.azExtResourceType] ?? ''] : [])]
         },
         location: {
-            id: `${subscriptionId}/location/${resource.location}` ?? 'unknown',
+            id: `${subscriptionId}/location/${resource.location}`,
             label: resource.location ?? unknown,
             icon: new ThemeIcon('globe'),
             contextValuesToAdd: ['azureLocationGroup']
@@ -101,7 +101,7 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     Images: { displayName: localize('images', 'Images') },
     LoadBalancers: { displayName: localize('loadBalancers', 'Load balancers') },
     LogicApp: { displayName: localize('logicApp', 'Logic App') },
-    MongoClusters: { displayName: localize('mongoclusters', 'Azure Cosmos DB for MongoDB vCore') },
+    MongoClusters: { displayName: localize('mongoclusters', 'Azure Cosmos DB for MongoDB (vCore)') },
     MysqlServers: { displayName: localize('mysqlServers', 'MySql servers') },
     NetworkInterfaces: { displayName: localize('networkInterfaces', 'Network interfaces') },
     NetworkSecurityGroups: { displayName: localize('networkSecurityGroups', 'Network security groups') },

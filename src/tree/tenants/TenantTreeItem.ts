@@ -3,6 +3,8 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { TenantIdDescription } from '@azure/arm-resources-subscriptions';
+import { nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { GenericItemOptions } from "../GenericItem";
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
@@ -12,11 +14,16 @@ export interface TenantItemOptions extends GenericItemOptions {
 }
 
 export class TenantTreeItem implements ResourceGroupsItem {
-    constructor(public readonly label: string, public tenantId: string, public account: string, private readonly options?: TenantItemOptions) {
+    public label: string;
+    public tenantId: string;
+    constructor(public readonly tenant: TenantIdDescription, public readonly account: vscode.AuthenticationSessionAccountInformation, private readonly options?: TenantItemOptions) {
+        this.label = nonNullValue(this.tenant.displayName);
+        this.tenantId = nonNullValue(this.tenant.tenantId);
     }
 
-    readonly id: string = this.tenantId;
-    readonly accountId: string = this.account
+    readonly id: string = nonNullValue(this.tenant.tenantId);
+    readonly accountId = this.account.id;
+
 
     getChildren(): vscode.ProviderResult<ResourceGroupsItem[]> {
         return this.options?.children;

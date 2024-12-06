@@ -30,7 +30,7 @@ export function registerTenantTree(context: vscode.ExtensionContext, options: Re
         new TenantResourceTreeDataProvider(tenantResourceBranchDataProviderManager, tenantResourceBranchDataProviderManager.onDidChangeTreeData, refreshEvent, tenantResourceProviderManager, itemCache);
     context.subscriptions.push(tenantResourceTreeDataProvider);
 
-    const treeView = createTreeView('azureTenant', {
+    const treeView = createTreeView('azureTenantsView', {
         canSelectMany: true,
         showCollapseAll: true,
         itemCache,
@@ -51,20 +51,64 @@ export function registerTenantTree(context: vscode.ExtensionContext, options: Re
 }
 
 async function updateTenantsSetting(_context: IActionContext, tenants: vscode.TreeCheckboxChangeEvent<TenantTreeItem>) {
-    const unselectedTenants = ext.context.globalState.get<string[]>('unselectedTenants') || [];
+    const unselectedTenants = getUnselectedTenants();
+    const unselectedTenantsSet = new Set(unselectedTenants);
 
-    for (const item of tenants.items) {
-        if (item[1] === vscode.TreeItemCheckboxState.Unchecked) {
-            unselectedTenants.push(`${item[0].id}/${item[0].accountId}`);
-        } else if (item[1] === vscode.TreeItemCheckboxState.Checked) {
-            const treeItem = await item[0].getTreeItem();
+    for (const [tenantTreeItem, state] of tenants.items) {
+        if (state === vscode.TreeItemCheckboxState.Unchecked) {
+            unselectedTenantsSet.add(getKeyForTenant(tenantTreeItem.tenantId, tenantTreeItem.account.id));
+        } else if (state === vscode.TreeItemCheckboxState.Checked) {
+            const treeItem = await tenantTreeItem.getTreeItem();
             if (treeItem?.contextValue === 'tenantNameNotSignedIn') {
-                await vscode.commands.executeCommand('azureTenant.signInToTenant', item[0]);
+                await vscode.commands.executeCommand('azureTenantsView.signInToTenant', tenantTreeItem);
                 ext.actions.refreshTenantTree();
             }
-            unselectedTenants.splice(unselectedTenants.indexOf(item[0].id), 1);
+            unselectedTenantsSet.delete(getKeyForTenant(tenantTreeItem.tenantId, tenantTreeItem.account.id));
         }
     }
 
-    await ext.context.globalState.update('unselectedTenants', unselectedTenants);
+    await setUnselectedTenants(Array.from(unselectedTenantsSet));
+}
+
+function removeDuplicates(arr: string[]): string[] {
+    return Array.from(new Set(arr));
+}
+
+export async function setUnselectedTenants(tenantIds: string[]): Promise<void> {
+    printTenants(tenantIds);
+    await ext.context.globalState.update('unselectedTenants', removeDuplicates(tenantIds));
+}
+
+export function getUnselectedTenants(): string[] {
+    const value = ext.context.globalState.get<string[]>('unselectedTenants');
+
+    if (!value || !Array.isArray(value)) {
+        return [];
+    }
+
+    // remove any duplicates
+    return removeDuplicates(value);
+}
+
+export function isTenantFilteredOut(tenantId: string, accountId: string): boolean {
+    const settings = ext.context.globalState.get<string[]>('unselectedTenants');
+    if (settings) {
+        if (settings.includes(getKeyForTenant(tenantId, accountId))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+export function getKeyForTenant(tenantId: string, accountId: string): string {
+    return `${tenantId}/${accountId}`;
+}
+
+function printTenants(unselectedTenants: string[]): void {
+    let str = '';
+    str += 'Unselected tenants:\n';
+    for (const tenant of unselectedTenants) {
+        str += `- ${tenant}\n`;
+    }
+    ext.outputChannel.appendLine(str);
 }

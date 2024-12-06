@@ -28,10 +28,10 @@ export class SubscriptionItem implements ResourceGroupsItem {
             ...subscription
         };
 
-        this.id = `/subscriptions/${subscription.subscriptionId}/${subscription.tenantId}/${nonNullValueAndProp(subscription.account, 'id')}`;
+        this.id = `/accounts/${nonNullValueAndProp(subscription.account, 'id')}/tenants/${subscription.tenantId}/subscriptions/${subscription.subscriptionId}`;
         this.description = description ? description : '';
 
-        this.portalUrl = createPortalUrl(this.subscription, this.id);
+        this.portalUrl = createPortalUrl(this.subscription, `/subscriptions/${this.subscription.subscriptionId}`);
     }
 
     public readonly portalUrl: vscode.Uri;

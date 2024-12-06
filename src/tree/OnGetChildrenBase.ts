@@ -19,36 +19,40 @@ export async function OnGetChildrenBase(subscriptionProvider: AzureSubscriptionP
 
     if (subscriptionProvider) {
         if (isLoggingIn()) {
-            return [new GenericItem(
-                localize('signingIn', 'Waiting for Azure sign-in...'),
-                {
-                    commandId: 'azureResourceGroups.logIn',
-                    iconPath: new vscode.ThemeIcon('loading~spin')
-                }
-            )];
+            return [
+                new GenericItem(
+                    localize('signingIn', 'Waiting for Azure sign-in...'),
+                    {
+                        commandId: 'azureResourceGroups.logIn',
+                        iconPath: new vscode.ThemeIcon('loading~spin')
+                    }
+                )];
         } else if (!(await subscriptionProvider.isSignedIn())) {
-            children.push(new GenericItem(
-                localize('signInLabel', 'Sign in to Azure...'),
-                {
-                    commandId: 'azureResourceGroups.logIn',
-                    iconPath: new vscode.ThemeIcon('sign-in')
-                }
-            ));
+            children.push(
+                new GenericItem(
+                    localize('signInLabel', 'Sign in to Azure...'),
+                    {
+                        commandId: 'azureResourceGroups.logIn',
+                        iconPath: new vscode.ThemeIcon('sign-in')
+                    }
+                ));
             if (tdp) {
-                children.push(new GenericItem(
-                    localize('createAccountLabel', 'Create an Azure Account...'),
-                    {
-                        commandId: 'azureResourceGroups.openUrl',
-                        commandArgs: ['https://aka.ms/VSCodeCreateAzureAccount'],
-                        iconPath: new vscode.ThemeIcon('add')
-                    }));
-                children.push(new GenericItem(
-                    localize('createStudentAccount', 'Create an Azure for Students Account...'),
-                    {
-                        commandId: 'azureResourceGroups.openUrl',
-                        commandArgs: ['https://aka.ms/student-account'],
-                        iconPath: new vscode.ThemeIcon('mortar-board')
-                    }));
+                children.push(
+                    new GenericItem(
+                        localize('createAccountLabel', 'Create an Azure Account...'),
+                        {
+                            commandId: 'azureResourceGroups.openUrl',
+                            commandArgs: ['https://aka.ms/VSCodeCreateAzureAccount'],
+                            iconPath: new vscode.ThemeIcon('add')
+                        }));
+                children.push(
+                    new GenericItem(
+                        localize('createStudentAccount', 'Create an Azure for Students Account...'),
+                        {
+                            commandId: 'azureResourceGroups.openUrl',
+                            commandArgs: ['https://aka.ms/student-account'],
+                            iconPath: new vscode.ThemeIcon('mortar-board')
+                        }));
             }
         }
     }
