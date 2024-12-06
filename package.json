@@ -106,6 +106,12 @@
                 "category": "Azure"
             },
             {
+                "command": "azureTenantsView.addAccount",
+                "title": "%azureTenantsView.addAccount%",
+                "category": "Azure",
+                "icon": "$(add)"
+            },
+            {
                 "command": "azureResourceGroups.selectSubscriptions",
                 "title": "%azureResourceGroups.selectSubscriptions%",
                 "category": "Azure",
@@ -254,6 +260,12 @@
                 "title": "%azureTenantsView.signInToTenant%",
                 "category": "Azure",
                 "icon": "$(sign-in)"
+            },
+            {
+                "command": "azureTenantsView.configureSovereignCloud",
+                "title": "%azureTenantsView.configureSovereignCloud%",
+                "category": "Azure",
+                "icon": "$(gear)"
             }
         ],
         "viewsContainers": {
@@ -392,6 +404,16 @@
                     "submenu": "azureWorkspaceCreate",
                     "when": "view == azureWorkspace",
                     "group": "navigation@1"
+                },
+                {
+                    "command": "azureTenantsView.configureSovereignCloud",
+                    "when": "view == azureTenantsView",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "azureTenantsView.addAccount",
+                    "when": "view == azureTenantsView",
+                    "group": "navigation@1"
                 }
             ],
             "view/item/context": [
@@ -510,6 +532,10 @@
                 },
                 {
                     "command": "azureResourceGroups.installExtension",
+                    "when": "never"
+                },
+                {
+                    "command": "azureTenantsView.addAccount",
                     "when": "never"
                 }
             ],
@@ -764,7 +790,7 @@
         "@azure/ms-rest-js": "^2.7.0",
         "@microsoft/vscode-azext-azureauth": "^3.1.0",
         "@microsoft/vscode-azext-azureutils": "^3.1.1",
-        "@microsoft/vscode-azext-utils": "^2.5.11",
+        "@microsoft/vscode-azext-utils": "^2.5.12",
         "buffer": "^6.0.3",
         "form-data": "^4.0.1",
         "jsonc-parser": "^2.2.1",

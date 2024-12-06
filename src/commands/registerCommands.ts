@@ -29,6 +29,7 @@ import { reviewIssues } from './helpAndFeedback/reviewIssues';
 import { installExtension } from './installExtension';
 import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
+import { configureSovereignCloud } from './sovereignCloud/configureSovereignCloud';
 import { editTags } from './tags/editTags';
 import { viewProperties } from './viewProperties';
 
@@ -79,6 +80,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.unfocusGroup', unfocusGroup);
 
     registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context));
+    registerCommand('azureTenantsView.addAccount', (context: IActionContext) => logIn(context));
     registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext, options: SelectSubscriptionOptions) => selectSubscriptions(context, options));
     registerCommand('azureResourceGroups.signInToTenant', async () => signInToTenant(await ext.subscriptionProviderFactory()));
 
@@ -116,6 +118,8 @@ export function registerCommands(): void {
     });
 
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
+
+    registerCommand('azureTenantsView.configureSovereignCloud', configureSovereignCloud);
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
