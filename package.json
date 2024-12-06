@@ -106,6 +106,12 @@
                 "category": "Azure"
             },
             {
+                "command": "azureTenantsView.addAccount",
+                "title": "%azureTenantsView.addAccount%",
+                "category": "Azure",
+                "icon": "$(add)"
+            },
+            {
                 "command": "azureResourceGroups.selectSubscriptions",
                 "title": "%azureResourceGroups.selectSubscriptions%",
                 "category": "Azure",
@@ -392,6 +398,11 @@
                     "submenu": "azureWorkspaceCreate",
                     "when": "view == azureWorkspace",
                     "group": "navigation@1"
+                },
+                {
+                    "command": "azureTenantsView.addAccount",
+                    "when": "view == azureTenantsView",
+                    "group": "navigation@1"
                 }
             ],
             "view/item/context": [
@@ -510,6 +521,10 @@
                 },
                 {
                     "command": "azureResourceGroups.installExtension",
+                    "when": "never"
+                },
+                {
+                    "command": "azureTenantsView.addAccount",
                     "when": "never"
                 }
             ],
