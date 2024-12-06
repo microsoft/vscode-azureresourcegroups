@@ -79,7 +79,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.unfocusGroup', unfocusGroup);
 
     registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context));
-    registerCommand('azureResourceGroups.logInButton', (context: IActionContext) => logIn(context));
+    registerCommand('azureTenantsView.logInButton', (context: IActionContext) => logIn(context));
     registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext, options: SelectSubscriptionOptions) => selectSubscriptions(context, options));
     registerCommand('azureResourceGroups.signInToTenant', async () => signInToTenant(await ext.subscriptionProviderFactory()));
 

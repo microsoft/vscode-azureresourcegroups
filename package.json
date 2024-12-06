@@ -106,10 +106,10 @@
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.logInButton",
-                "title": "%azureResourceGroups.logInButton%",
+                "command": "azureTenantsView.logInButton",
+                "title": "%azureTenantsView.logInButton%",
                 "category": "Azure",
-                "icon": "$(sign-in)"
+                "icon": "$(add)"
             },
             {
                 "command": "azureResourceGroups.selectSubscriptions",
@@ -524,7 +524,7 @@
                     "when": "never"
                 },
                 {
-                    "command": "azureResourceGroups.logInButton",
+                    "command": "azureTenantsView.logInButton",
                     "when": "never"
                 }
             ],
