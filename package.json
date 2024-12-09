@@ -340,7 +340,7 @@
             },
             {
                 "view": "azureResourceGroups",
-                "contents": "Please sign in to a specific tenant (directory) to continue. \n [Sign in to Tenant (Directory)...](command:azureResourceGroups.signInToTenant)",
+                "contents": "Please sign in to a specific tenant (directory) to continue. \n [Sign in to Tenant (Directory)...](command:azureResourceGroups.signInToTenant)\n[View Accounts & Tenants](command:azureTenantsView.focus)",
                 "when": "azureResourceGroups.needsTenantAuth == true"
             }
         ],
