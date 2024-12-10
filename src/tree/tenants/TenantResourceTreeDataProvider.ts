@@ -4,13 +4,13 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscriptionProvider, getConfiguredAuthProviderId } from '@microsoft/vscode-azext-azureauth';
-import { callWithTelemetryAndErrorHandling, IActionContext, nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
+import { IActionContext, callWithTelemetryAndErrorHandling, nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { ResourceModelBase } from 'api/src';
 import * as vscode from 'vscode';
 import { TenantResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
-import { getAzureSubscriptionProvider, OnGetChildrenBase } from '../OnGetChildrenBase';
+import { OnGetChildrenBase, getAzureSubscriptionProvider } from '../OnGetChildrenBase';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from "../ResourceTreeDataProviderBase";
 import { TenantResourceBranchDataProviderManager } from "./TenantResourceBranchDataProviderManager";
@@ -51,10 +51,12 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                 const children: ResourceGroupsItem[] = await OnGetChildrenBase(subscriptionProvider);
 
                 if (children.length === 0) {
-                    const accounts = await vscode.authentication.getAccounts(getConfiguredAuthProviderId());
+                    const accounts = Array.from((await vscode.authentication.getAccounts(getConfiguredAuthProviderId()))).sort((a, b) => a.label.localeCompare(b.label));
                     context.telemetry.properties.accountCount = accounts.length.toString();
                     for (const account of accounts) {
-                        const tenants = await subscriptionProvider.getTenants(account);
+                        const tenants = (await subscriptionProvider.getTenants(account))
+                            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                            .sort((a, b) => a.displayName!.localeCompare(b.displayName!));
                         const tenantItems: ResourceGroupsItem[] = [];
                         for await (const tenant of tenants) {
                             const isSignedIn = await subscriptionProvider.isSignedIn(nonNullProp(tenant, 'tenantId'), account);
