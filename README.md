@@ -46,25 +46,25 @@ The filtered subscriptions are stored in the new `azureResourceGroups.selectedSu
 
 You can use the Accounts and Tenants view to manage and authenticate tenants. By checking and unchecking tenants, subscriptions within the Resources view and subscription filter will be filtered out.
 
-<img width = "900" alt = "Accounts & Tenants view" src = "resources/readme/TenantsView.gif">
+<img width = "900" alt = "Accounts & Tenants view" src = "https://github.com/user-attachments/assets/d34c1f79-fb21-46f9-af3a-cbb109ba0414">
 
 #### Sign In to another account
 
 With the Accounts & Tenants view we have also added multi-account support. You can sign into a new account by clicking the + icon in the right corner of the view.
 
-<img width = "400" alt = "Sign in to Account" src = "resources/readme/accounts.png">
+<img width = "400" alt = "Sign in to Account" src = "https://github.com/user-attachments/assets/6f853bee-da97-40ea-9fa0-4f4c4b11d636">
 
 #### Sign In to a Specific Directory/Tenant
 
 Within the tenants view you can now Sign In to a specific Tenant by checking an unauthenticated tenant.
 
-<img width = "400" alt = "Authenticate Tenant" src = "resources/readme/tenantAuth.png">
+<img width = "400" alt = "Authenticate Tenant" src = "https://github.com/user-attachments/assets/b4cc98b2-e427-40f9-86d9-29bc13a681fd">
 
 Users are still able to use the "Sign in to Tenant (Directory)" along with the tenats view. This is useful for directories/tenants that require MFA. Executing this command will show a menu with a list of unauthenticated directories. If the list is empty, then sessions exist for each directory already.
 
 #### Using Sovereign Clouds
 
-<img width = "400" alt = "Sovereign Clouds" src = "resources/readme/sovereignCloud.png">
+<img width = "400" alt = "Sovereign Clouds" src = "https://github.com/user-attachments/assets/d07af7a8-eab9-46db-8ab5-f386c5c78b57">
 
 To connect to a sovereign cloud users can click the gear button on the right side of the tenants view. This will bring up a list of sovereign clouds and once chosen the `microsoft-sovereign-cloud.environment` setting will automatically be set.
 
