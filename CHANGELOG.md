@@ -1,6 +1,21 @@
 # Change Log
 
 ## Unreleased
+## 0.9.9 - 2024-11-05
+# Fixed
+* Minor fixes for VS Code for the Web - Azure
+
+## 0.9.8 - 2024-10-29
+### Added
+* [[944]](https://github.com/microsoft/vscode-azureresourcegroups/pull/944) Add VS Code for the web - Azure walkthrough
+* [[942]](https://github.com/microsoft/vscode-azureresourcegroups/pull/942) Add an install toast for the new GitHub Copilot for Azure extension
+
+### Engineering
+* [[945]](https://github.com/microsoft/vscode-azureresourcegroups/pull/945) Add cloud shell telemetry
+
+## 0.9.7 - 2024-10-09
+### Fixed
+* [[934]](https://github.com/microsoft/vscode-azureresourcegroups/pull/934) Add feature to scope select subscriptions prompt by tenant
 
 ## 0.9.6 - 2024-09-30
 ### Fixed

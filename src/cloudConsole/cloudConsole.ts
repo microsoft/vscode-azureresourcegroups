@@ -360,12 +360,14 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                     // If they have only one tenant with subscriptions, use it. If there's no tenant with subscriptions, use the first tenant.
                     selectedTenant = tenantsWithSubs[0] ?? tenants[0];
                 } else {
+                    const duplicates = tenantsWithSubs.filter((tenant, index, self) => self.findIndex(t => t.tenantId === tenant.tenantId) !== index);
                     // Multipe tenants with subscriptions, user must pick a tenant
                     serverQueue.push({ type: 'log', args: [localize('selectingTenant', `Selecting tenant...`)] });
                     const picks = tenantsWithSubs.map(tenant => {
                         const defaultDomainName: string | undefined = tenant.defaultDomain;
+                        const isDuplicate = duplicates.some(dup => dup.tenantId === tenant.tenantId);
                         return <IAzureQuickPickItem<TenantIdDescription>>{
-                            label: tenant.displayName,
+                            label: isDuplicate ? `${tenant.displayName} (${tenant.account.label})` : tenant.displayName,
                             description: defaultDomainName,
                             data: tenant,
                         };

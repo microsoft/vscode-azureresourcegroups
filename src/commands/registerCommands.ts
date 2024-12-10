@@ -12,8 +12,9 @@ import { loadAllSubscriptionRoleAssignments } from '../managedIdentity/loadAllSu
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
+import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { logIn } from './accounts/logIn';
-import { selectSubscriptions } from './accounts/selectSubscriptions';
+import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
 import { maintainCloudShellConnection } from './cloudShell';
 import { createResource } from './createResource';
@@ -29,6 +30,7 @@ import { reviewIssues } from './helpAndFeedback/reviewIssues';
 import { installExtension } from './installExtension';
 import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
+import { configureSovereignCloud } from './sovereignCloud/configureSovereignCloud';
 import { editTags } from './tags/editTags';
 import { viewProperties } from './viewProperties';
 
@@ -41,6 +43,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.refreshTree', () => ext.actions.refreshAzureTree());
     registerCommand('azureWorkspace.refreshTree', () => ext.actions.refreshWorkspaceTree());
     registerCommand('azureFocusView.refreshTree', () => ext.actions.refreshFocusTree());
+    registerCommand('azureTenantsView.refreshTree', () => ext.actions.refreshTenantTree());
 
     // v1.5 client extensions attach these commands to tree item context menus for refreshing their tree items
     registerCommand('azureResourceGroups.refresh', async (context, node?: ResourceGroupsItem) => {
@@ -64,11 +67,22 @@ export function registerCommands(): void {
         ext.actions.refreshFocusTree(node);
     });
 
+    registerCommand('azureTenantsView.refresh', async (context, node?: ResourceGroupsItem) => {
+        await handleAzExtTreeItemRefresh(context, node); // for compatibility with v1.5 client extensions
+        ext.actions.refreshTenantTree(node);
+    });
+
+    registerCommand('azureTenantsView.signInToTenant', async (_context, node: TenantTreeItem) => {
+        await (await ext.subscriptionProviderFactory()).signIn(node.tenantId, node.account);
+        ext.actions.refreshTenantTree(node);
+    });
+
     registerCommand('azureResourceGroups.focusGroup', focusGroup);
     registerCommand('azureResourceGroups.unfocusGroup', unfocusGroup);
 
     registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context));
-    registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext) => selectSubscriptions(context));
+    registerCommand('azureTenantsView.addAccount', (context: IActionContext) => logIn(context));
+    registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext, options: SelectSubscriptionOptions) => selectSubscriptions(context, options));
     registerCommand('azureResourceGroups.signInToTenant', async () => signInToTenant(await ext.subscriptionProviderFactory()));
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
@@ -106,6 +120,8 @@ export function registerCommands(): void {
 
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
     registerCommand('azureResources.loadAllSubscriptionRoleAssignments', loadAllSubscriptionRoleAssignments);
+
+    registerCommand('azureTenantsView.configureSovereignCloud', configureSovereignCloud);
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {

@@ -20,6 +20,7 @@ export namespace extActions {
     export let refreshWorkspaceTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
     export let refreshAzureTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
     export let refreshFocusTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
+    export let refreshTenantTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
 }
 
 /**
@@ -33,6 +34,7 @@ export namespace ext {
     // TODO: do we need this? only used by load more command
     export let workspaceTree: AzExtTreeDataProvider;
     export let workspaceTreeView: TreeView<unknown>;
+    export let tenantTreeView: TreeView<unknown>
     export let activityLogTree: AzExtTreeDataProvider;
     export let activityLogTreeItem: ActivityLogTreeItem;
     export let helpTree: AzExtTreeDataProvider;

@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { TenantIdDescription } from '@azure/arm-resources-subscriptions';
-import type { AzureSubscription, AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
+import type { AzureSubscription, AzureSubscriptionProvider, AzureTenant } from '@microsoft/vscode-azext-azureauth';
 import { Disposable, Event } from 'vscode';
 import { MockResources } from './mockServiceFactory';
 
@@ -25,6 +24,10 @@ export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider 
             isCustomCloud: false,
             name: subscription.name,
             tenantId: 'tenantId',
+            account: {
+                id: 'accountId',
+                label: 'accountLabel',
+            },
             subscriptionId: subscription.subscriptionId,
         } as unknown as AzureSubscription));
     }
@@ -41,9 +44,13 @@ export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider 
         throw new Error('Method not implemented.');
     }
 
-    public async getTenants(): Promise<TenantIdDescription[]> {
+    public async getTenants(): Promise<AzureTenant[]> {
         return [{
             tenantId: 'tenantId',
+            account: {
+                id: 'accountId',
+                label: 'accountLabel',
+            }
         }];
     }
 

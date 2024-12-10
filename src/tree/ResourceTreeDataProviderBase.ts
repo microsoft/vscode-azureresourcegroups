@@ -102,7 +102,6 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     async findItemById(id: string): Promise<ResourceGroupsItem | undefined> {
         let element: ResourceGroupsItem | undefined = undefined;
-
         outerLoop: while (true) {
             const children: ResourceGroupsItem[] | null | undefined = await this.getChildren(element);
 
@@ -124,7 +123,9 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     protected isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
-        return id.toLowerCase().startsWith(element.id.toLowerCase() + '/');
+        // remove accounts/<accountId>/tenant/<tenantId> from the beginning of the id
+        const elementId = element.id.replace(/\/accounts\/[^/]+\/tenants\/[^/]+\//i, '/').toLowerCase() + '/';
+        return id.toLowerCase().startsWith(elementId);
     }
 
     protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;
