@@ -42,13 +42,31 @@ You can filter the displayed subscriptions just as before, by selecting the Filt
 
 The filtered subscriptions are stored in the new `azureResourceGroups.selectedSubscriptions` setting.
 
+#### Manage Accounts & Tenants
+
+You can use the Accounts and Tenants view to manage and authenticate tenants. By checking and unchecking tenants, subscriptions within the Resources view and subscription filter will be filtered out.
+
+<img width = "900" alt = "Accounts & Tenants view" src = "resources/readme/TenantsView.gif">
+
+#### Sign In to another account
+
+With the Accounts & Tenants view we have also added multi-account support. You can sign into a new account by clicking the + icon in the right corner of the view.
+
+<img width = "400" alt = "Sign in to Account" src = "resources/readme/accounts.png">
+
 #### Sign In to a Specific Directory/Tenant
 
-Use the new "Sign in to Directory" command to sign in to directories that cannot be automatically authenticated to on initial sign in. This is useful for directories/tenants that require MFA. Executing this command will show a menu with a list of unauthenticated directories. If the list is empty, then sessions exist for each directory already.
+Within the tenants view you can now Sign In to a specific Tenant by checking an unauthenticated tenant.
+
+<img width = "400" alt = "Authenticate Tenant" src = "resources/readme/tenantAuth.png">
+
+Users are still able to use the "Sign in to Tenant (Directory)" along with the tenats view. This is useful for directories/tenants that require MFA. Executing this command will show a menu with a list of unauthenticated directories. If the list is empty, then sessions exist for each directory already.
 
 #### Using Sovereign Clouds
 
-To connect to a sovereign cloud, set the `microsoft-sovereign-cloud.environment` setting.
+<img width = "400" alt = "Sovereign Clouds" src = "resources/readme/sovereignCloud.png">
+
+To connect to a sovereign cloud users can click the gear button on the right side of the tenants view. This will bring up a list of sovereign clouds and once chosen the `microsoft-sovereign-cloud.environment` setting will automatically be set.
 
 ## Support for [vscode.dev](https://vscode.dev/)
 
