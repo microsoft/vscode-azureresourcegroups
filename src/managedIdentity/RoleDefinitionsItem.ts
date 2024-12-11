@@ -42,10 +42,19 @@ export class RoleDefinitionsItem implements ResourceGroupsItem {
             iconPath = getIconPath(getAzExtResourceType({ type: parsedAzureResourceId.provider }));
         }
         catch (error) {
-            // if this fails, then it was a resource group ID
-            parsedAzureResourceGroupId = parseAzureResourceGroupId(scope);
-            label = parsedAzureResourceGroupId.resourceGroup;
-            iconPath = getIconPath(AzExtResourceType.ResourceGroup);
+            try {
+                // if it's not a resource, then it's possibly a resource group or subscription
+                parsedAzureResourceGroupId = parseAzureResourceGroupId(scope);
+                label = parsedAzureResourceGroupId.resourceGroup;
+                iconPath = getIconPath(AzExtResourceType.ResourceGroup);
+            } catch (error) {
+                // if it's not a resource group, then it's a subscription
+                const subscriptions = await (await ext.subscriptionProviderFactory()).getSubscriptions(false);
+                const subscriptionId = scope.split('/').pop();
+                label = subscriptions.find(s => s.subscriptionId === subscriptionId)?.name ?? scope;
+                iconPath = getIconPath(AzExtResourceType.Subscription);
+            }
+
         }
 
         if (fromOtherSub) {

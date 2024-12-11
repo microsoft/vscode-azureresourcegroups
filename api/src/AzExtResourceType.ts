@@ -70,6 +70,7 @@ export enum AzExtResourceType {
     SpringApps = 'SpringApps',
     SqlDatabases = 'SqlDatabases',
     SqlServers = 'SqlServers',
+    Subscription = 'Subscription',
     VirtualMachineScaleSets = 'VirtualMachineScaleSets',
     VirtualNetworks = 'VirtualNetworks',
     WebHostingEnvironments = 'WebHostingEnvironments',

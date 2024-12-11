@@ -43,11 +43,7 @@ export class ManagedIdentityBranchDataProvider extends vscode.Disposable impleme
 
     async getChildren(element: ResourceGroupsItem): Promise<ResourceGroupsItem[] | null | undefined> {
         return (await element.getChildren?.())?.map((child) => {
-            if (child.id) {
-                return ext.azureTreeState.wrapItemInStateHandling(child, () => this.refresh(child))
-            }
-
-            return child;
+            return ext.azureTreeState.wrapItemInStateHandling(child, () => this.refresh(child))
         });
     }
 
