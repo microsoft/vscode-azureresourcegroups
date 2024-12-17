@@ -24,6 +24,7 @@ export enum AzExtResourceType {
     ResourceGroup = 'ResourceGroup',
 
     // Below are not supported but have icons in the Resources extension
+    AiFoundry = 'AiFoundry',
     ApiManagementService = 'ApiManagementService',
     ApplicationInsights = 'ApplicationInsights',
     AppServiceKubernetesEnvironment = 'AppServiceKubernetesEnvironment',
@@ -48,6 +49,7 @@ export enum AzExtResourceType {
     LoadBalancers = 'LoadBalancers',
     LogicApp = 'LogicApp',
     LogicWorkflows = 'LogicWorkflows',
+    MachineLearningWorkspace = 'MachineLearningWorkspace',
     ManagedIdentityUserAssignedIdentities = 'ManagedIdentityUserAssignedIdentities',
     MysqlServers = 'MysqlServers',
     NetworkApplicationGateways = 'NetworkApplicationGateways',
