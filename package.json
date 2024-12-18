@@ -537,6 +537,10 @@
                 {
                     "command": "azureTenantsView.addAccount",
                     "when": "never"
+                },
+                {
+                    "command": "azureTenantsView.signInToTenant",
+                    "when": "never"
                 }
             ],
             "azureResourceGroups.groupBy": [
