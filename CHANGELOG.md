@@ -1,6 +1,14 @@
 # Change Log
 
 ## Unreleased
+
+## 0.10.0 - 2024-12-17
+
+### Added
+* [[869]](https://github.com/microsoft/vscode-azureresourcegroups/pull/869) Accounts & Tenants view
+* [[926]](https://github.com/microsoft/vscode-azureresourcegroups/pull/926) Shortcut to switching to sovereign clouds
+* [[979]](https://github.com/microsoft/vscode-azureresourcegroups/pull/979) An "Add account" button
+
 ## 0.9.9 - 2024-11-05
 # Fixed
 * Minor fixes for VS Code for the Web - Azure
