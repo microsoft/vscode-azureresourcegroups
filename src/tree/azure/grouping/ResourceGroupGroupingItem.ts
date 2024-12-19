@@ -12,6 +12,7 @@ import { ITagsModel, ResourceTags } from "../../../commands/tags/TagFileSystem";
 import { canFocusContextValue, showHiddenTypesSettingKey } from "../../../constants";
 import { settingUtils } from "../../../utils/settingUtils";
 import { createPortalUrl } from "../../../utils/v2/createPortalUrl";
+import { createAzureIdPrefix } from "../idPrefix";
 import { GroupingItem, GroupingItemOptions } from "./GroupingItem";
 import { GroupingItemFactoryOptions } from "./GroupingItemFactory";
 
@@ -25,7 +26,6 @@ export class ResourceGroupGroupingItem extends GroupingItem {
     constructor(readonly resourceGroup: AzureResource, options: GroupingItemOptions, factoryOptions: GroupingItemFactoryOptions) {
         super(options, factoryOptions);
 
-        this.id = resourceGroup.id;
         this.portalUrl = createPortalUrl(resourceGroup.subscription, resourceGroup.id);
         this.viewProperties = {
             label: resourceGroup.name,
@@ -36,6 +36,7 @@ export class ResourceGroupGroupingItem extends GroupingItem {
             ...this.resourceGroup.subscription,
             ...createSubscriptionContext(resourceGroup.subscription),
         };
+        this.id = `${createAzureIdPrefix(this.subscription)}${resourceGroup.id}`;
         this.tagsModel = new ResourceTags(resourceGroup);
         this.contextValues.push('hasPortalUrl', 'azureResourceGroup', canFocusContextValue);
     }
