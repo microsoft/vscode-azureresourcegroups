@@ -112,6 +112,8 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
             for (const child of children) {
                 if (child.id.toLowerCase() === id.toLowerCase()) {
                     return child;
+                } else if (removePrefix(child.id.toLowerCase()) === id.toLowerCase()) {
+                    return child;
                 } else if (this.isAncestorOf(child, id)) {
                     element = child;
                     continue outerLoop;
@@ -123,10 +125,14 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     }
 
     protected isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
-        // remove accounts/<accountId>/tenant/<tenantId> from the beginning of the id
-        const elementId = element.id.replace(/\/accounts\/[^/]+\/tenants\/[^/]+\//i, '/').toLowerCase() + '/';
-        return id.toLowerCase().startsWith(elementId);
+        // remove accounts / <accountId>/tenant/<tenantId> from the beginning of the id
+        const elementId = removePrefix(element.id) + '/';
+        return id.toLowerCase().startsWith(elementId.toLowerCase());
     }
 
     protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;
+}
+
+function removePrefix(id: string): string {
+    return id.replace(/\/accounts\/[^/]+\/tenants\/[^/]+\//i, '/')
 }
