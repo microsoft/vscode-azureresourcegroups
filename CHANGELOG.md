@@ -9,8 +9,6 @@ This view allows user to manage their accounts and tenants. By checking and unch
 
 <img width = "900" alt = "Accounts & Tenants view" src = "https://github.com/user-attachments/assets/d34c1f79-fb21-46f9-af3a-cbb109ba0414">
 
-There is a known issue associated with this release where if a user has a subscription shared by multiple authenticated tenants and is grouping their resources by resource group when expanding the subscriptions shared by multiple tenants all but one will error. For more information see this [issue](https://github.com/microsoft/vscode-azureresourcegroups/issues/972). As a workaround users can either group by resource type or uncheck tenants that contain an instance of the shared subscription.
-
 ### Added
 * [[869]](https://github.com/microsoft/vscode-azureresourcegroups/pull/869) Accounts & Tenants view
 * [[926]](https://github.com/microsoft/vscode-azureresourcegroups/pull/926) Shortcut to switching to sovereign clouds
