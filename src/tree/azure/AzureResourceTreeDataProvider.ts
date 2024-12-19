@@ -150,6 +150,12 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         }
     }
 
+    async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
+        const ti = await element.getTreeItem();
+        ti.tooltip = ti.id;
+        return ti;
+    }
+
     private hasSentSubscriptionTelemetry = false;
     private sendSubscriptionTelemetryIfNeeded(): void {
         if (this.hasSentSubscriptionTelemetry) {
