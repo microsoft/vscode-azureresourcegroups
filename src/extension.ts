@@ -10,6 +10,7 @@ import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWi
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
+import { AzExtResourceType } from '../api/src/AzExtResourceType';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
 import { registerActivity } from './activityLog/registerActivity';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
@@ -29,6 +30,7 @@ import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { ext } from './extensionVariables';
 import { gitHubCopilotForAzureToast } from './gitHubCopilotForAzure';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
+import { ManagedIdentityBranchDataProvider } from './managedIdentity/ManagedIdentityBranchDataProvider';
 import { survey } from './nps';
 import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
@@ -185,6 +187,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     };
 
     ext.v2.api = v2ApiFactory.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
+    ext.managedIdentityBranchDataProvider = new ManagedIdentityBranchDataProvider();
+    ext.v2.api.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ManagedIdentityUserAssignedIdentities, ext.managedIdentityBranchDataProvider);
 
     ext.appResourceTree = new CompatibleAzExtTreeDataProvider(azureResourceTreeDataProvider);
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
