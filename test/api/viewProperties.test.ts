@@ -90,7 +90,7 @@ suite('AzureResourceModel.viewProperties tests', async () => {
         const functionGroup = groups!.find(g => g.label?.toString().includes('Func'));
         const children = await tdp.getChildren(functionGroup) as BranchDataItemWrapper[];
 
-        const functionApp1Item = children.find(child => child.id === mockResources.functionApp1.id);
+        const functionApp1Item = children.find(child => child.id.endsWith(mockResources.functionApp1.id));
         assert.ok(functionApp1Item);
 
         assert.ok(hasViewProperties(functionApp1Item));
