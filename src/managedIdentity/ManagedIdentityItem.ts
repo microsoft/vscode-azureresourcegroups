@@ -46,8 +46,8 @@ export class ManagedIdentityItem implements ResourceBase {
 
             const resources = await getAzureResourcesService().listResources(context, this.subscription);
 
-            const assignedRoleAssignment = new RoleAssignmentsItem('Assigned to', this.subscription, msi);
-            const accessRoleAssignment = new RoleAssignmentsItem('Grants access to', this.subscription, msi);
+            const assignedRoleAssignment = new RoleAssignmentsItem('Source resources', this.subscription, msi);
+            const accessRoleAssignment = new RoleAssignmentsItem('Target services', this.subscription, msi);
 
             const assignedResources = resources.filter((r) => {
                 const userAssignedIdentities = r.identity?.userAssignedIdentities;
@@ -70,8 +70,6 @@ export class ManagedIdentityItem implements ResourceBase {
             const filteredBySub = roleAssignment.filter((ra) => ra.principalId === msi.principalId);
 
             const targetResources = await accessRoleAssignment.getRoleDefinitionsItems(filteredBySub);
-            assignedRoleAssignment.addChildren(assignedResources);
-            accessRoleAssignment.addChildren(targetResources);
             accessRoleAssignment.addChild(new GenericItem('Show resources from other subscriptions...',
                 {
                     iconPath: new ThemeIcon('sync'),
@@ -81,12 +79,14 @@ export class ManagedIdentityItem implements ResourceBase {
 
             const children = [];
 
-            if ((await assignedRoleAssignment.getChildren()).length > 0) {
+            if (roleAssignment.length > 0) {
                 // if there weren't any assigned resources, don't show that section
                 children.push(assignedRoleAssignment);
+                children.push(...assignedResources);
             }
 
             children.push(accessRoleAssignment);
+            children.push(...targetResources);
             return children;
         });
 

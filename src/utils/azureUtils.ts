@@ -101,7 +101,7 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     Images: { displayName: localize('images', 'Images') },
     LoadBalancers: { displayName: localize('loadBalancers', 'Load balancers') },
     LogicApp: { displayName: localize('logicApp', 'Logic App') },
-    ManagedIdentityUserAssignedIdentities: { displayName: localize('managedIdentity', 'User Assigned Managed Identities (Read-Only)') },
+    ManagedIdentityUserAssignedIdentities: { displayName: localize('managedIdentity', 'Managed Identities') },
     MongoClusters: { displayName: localize('mongoclusters', 'Azure Cosmos DB for MongoDB (vCore)') },
     MysqlServers: { displayName: localize('mysqlServers', 'MySql servers') },
     NetworkInterfaces: { displayName: localize('networkInterfaces', 'Network interfaces') },

@@ -24,15 +24,12 @@ export class RoleAssignmentsItem implements ResourceGroupsItem {
 
     getTreeItem(): TreeItem {
         return {
-            description: this.label,
+            label: this.label,
             id: this.id,
-            collapsibleState: TreeItemCollapsibleState.Collapsed,
+            collapsibleState: TreeItemCollapsibleState.None,
         }
     }
 
-    async getChildren(): Promise<(RoleDefinitionsItem | GenericItem)[]> {
-        return this.children;
-    }
 
     addChild(child: RoleDefinitionsItem | GenericItem): void {
         this.children.push(child);
