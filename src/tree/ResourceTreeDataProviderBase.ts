@@ -134,5 +134,5 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 }
 
 function removePrefix(id: string): string {
-    return id.replace(/\/accounts\/[^/]+\/tenants\/[^/]+\//i, '/')
+    return id.replace(/\/accounts\/.+\/tenants\/[^/]+\//i, '/')
 }
