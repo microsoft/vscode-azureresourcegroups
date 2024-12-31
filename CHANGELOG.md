@@ -3,7 +3,7 @@
 ## 0.10.1 - 2024-12-31
 
 # Fixed
-* Fixed an issue where tree items can't be found if the account id has a slash in it. This was impacting Azure Functions deploy scenarios. https://github.com/microsoft/vscode-azurefunctions/issues/4355
+* [[4335]](https://github.com/microsoft/vscode-azurefunctions/issues/4355) Fixed issue that impacted Azure Function deployment due to tree items not being found if the account id had a slash in it.
 
 
 ## 0.10.0 - 2024-12-30
