@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.10.1 - 2024-12-31
+
+# Fixed
+* [[4335]](https://github.com/microsoft/vscode-azurefunctions/issues/4355) Fixed issue that impacted Azure Function deployment due to tree items not being found if the account id had a slash in it.
+
+
 ## 0.10.0 - 2024-12-30
 
 ### What's new
