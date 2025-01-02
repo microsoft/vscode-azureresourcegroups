@@ -162,7 +162,8 @@ export const azureExtensions: IAzExtMetadata[] = [
         publisher: 'microsoft-devdiv',
         label: 'AI Foundry',
         resourceTypes: [AzExtResourceType.AiFoundry],
-        reportIssueCommandId: 'azure-ai-extension.reportIssue'
+        reportIssueCommandId: 'azure-ai-extension.reportIssue',
+        private: true
     },
 ];
 
@@ -187,6 +188,7 @@ export interface IAzExtMetadata {
     resourceTypes: AzExtResourceType[];
     tutorial?: IAzExtTutorial;
     reportIssueCommandId?: string;
+    private?: boolean;
 }
 
 export interface IAzExtResourceType {
