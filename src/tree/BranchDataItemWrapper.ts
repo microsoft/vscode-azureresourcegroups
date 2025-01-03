@@ -50,7 +50,7 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
         } else {
             this.id = this.branchItem.id ?? this?.options?.defaultId ?? uuidv4();
         }
-        this.id = this.options?.idPrefix ? `${this.options.idPrefix}/${this.id}` : this.id;
+        this.id = createBranchItemId(this.id, this.options?.idPrefix);
     }
 
     public readonly id: string;
@@ -123,10 +123,19 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
 export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItemWrapper;
 
 export function createBranchDataItemFactory(itemCache: BranchDataItemCache): BranchDataItemFactory {
-    return (branchItem, branchDataProvider, options) =>
-        itemCache.createOrGetItem(
+    return (branchItem, branchDataProvider, options) => {
+        return itemCache.createOrGetItem(
             branchItem,
             () => new BranchDataItemWrapper(branchItem, branchDataProvider, itemCache, options),
-            `${options?.idPrefix ?? ''}${branchItem.id}`,
+            createBranchItemId(branchItem.id, options?.idPrefix),
         )
+    }
+}
+
+function createBranchItemId(id?: string, prefix?: string): string {
+    if (prefix?.endsWith('/') && id?.startsWith('/')) {
+        return `${prefix}${id.substring(1)}`;
+    } else {
+        return `${prefix ?? ''}${id}`;
+    }
 }
