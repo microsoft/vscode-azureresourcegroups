@@ -7,9 +7,9 @@ import { isAzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from 'vscode';
 import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel, Wrapper } from '../../api/src/index';
-import { DefaultAzureResourceBranchDataProvider } from './azure/DefaultAzureResourceBranchDataProvider';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
+import { DefaultAzureResourceBranchDataProvider } from './azure/DefaultAzureResourceBranchDataProvider';
 
 export type BranchDataItemOptions = {
     contextValues?: string[];
@@ -123,13 +123,12 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
 export type BranchDataItemFactory = (branchItem: ResourceModelBase, branchDataProvider: BranchDataProvider<ResourceBase, ResourceModelBase>, options?: BranchDataItemOptions) => BranchDataItemWrapper;
 
 export function createBranchDataItemFactory(itemCache: BranchDataItemCache): BranchDataItemFactory {
-    return (branchItem, branchDataProvider, options) => {
-        return itemCache.createOrGetItem(
+    return (branchItem, branchDataProvider, options) =>
+        itemCache.createOrGetItem(
             branchItem,
             () => new BranchDataItemWrapper(branchItem, branchDataProvider, itemCache, options),
             createBranchItemId(branchItem.id, options?.idPrefix),
         )
-    }
 }
 
 function createBranchItemId(id?: string, prefix?: string): string {
