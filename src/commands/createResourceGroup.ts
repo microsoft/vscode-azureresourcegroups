@@ -9,6 +9,7 @@ import { window } from 'vscode';
 import { AzureSubscription } from '../../api/src/index';
 import { ext } from '../extensionVariables';
 import { SubscriptionItem } from '../tree/azure/SubscriptionItem';
+import { getAccountAndTenantPrefix } from '../tree/azure/idPrefix';
 import { createActivityContext } from '../utils/activityUtils';
 import { localize } from '../utils/localize';
 
@@ -37,5 +38,5 @@ export async function createResourceGroup(context: IActionContext, node?: Subscr
     if (!wizardContext.suppressNotification) {
         void window.showInformationMessage(localize('createdRg', 'Created resource group "{0}".', newResourceGroupName));
     }
-    ext.azureTreeState.notifyChildrenChanged(`/subscriptions/${subscription.subscriptionId}`);
+    ext.azureTreeState.notifyChildrenChanged(`${getAccountAndTenantPrefix(subscription)}/subscriptions/${subscription.subscriptionId}`);
 }

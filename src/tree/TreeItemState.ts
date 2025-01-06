@@ -25,6 +25,8 @@ export class TreeItemStateStore implements vscode.Disposable {
 
     /**
      * Notify a resource that its children have changed.
+     *
+     * @param id id needs to include the account and tenant id
      */
     notifyChildrenChanged(id: string): void {
         this.onDidUpdateStateEmitter.fire(id);
@@ -51,6 +53,9 @@ export class TreeItemStateStore implements vscode.Disposable {
         });
     }
 
+    /**
+     * @param id id needs to include the account and tenant id
+     */
     async runWithTemporaryDescription<T = void>(id: string, description: string, callback: () => Promise<T>): Promise<T> {
         let result: T;
         this.update(id, { ...this.getState(id), temporaryDescription: description, spinner: true });
