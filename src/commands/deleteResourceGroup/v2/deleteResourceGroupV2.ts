@@ -10,6 +10,7 @@ import { AzureResource, AzureSubscription } from '../../../../api/src/index';
 import { createResourceGroup } from '../../../api/DefaultAzureResourceProvider';
 import { ext } from '../../../extensionVariables';
 import { isResourceGroupGroupingItem, ResourceGroupGroupingItem } from '../../../tree/azure/grouping/ResourceGroupGroupingItem';
+import { createAzureIdPrefix } from '../../../tree/azure/idPrefix';
 import { createActivityContext } from '../../../utils/activityUtils';
 import { createResourceClient } from '../../../utils/azureClients';
 import { localize } from '../../../utils/localize';
@@ -111,7 +112,7 @@ async function deleteResourceGroups(context: IActionContext, subscription: Azure
             }
         }
 
-        void ext.azureTreeState.runWithTemporaryDescription(rg.id, localize('deleting', 'Deleting...'), async () => {
+        void ext.azureTreeState.runWithTemporaryDescription(`${createAzureIdPrefix(rg.subscription)}${rg.id}`, localize('deleting', 'Deleting...'), async () => {
             const wizard = new AzureWizard<DeleteResourceGroupContext>({
                 subscription: createSubscriptionContext(subscription),
                 resourceGroupToDelete: rg.name,
@@ -123,7 +124,7 @@ async function deleteResourceGroups(context: IActionContext, subscription: Azure
             });
 
             await wizard.execute();
-            ext.azureTreeState.notifyChildrenChanged(`/subscriptions/${rg.subscription.subscriptionId}`);
+            ext.azureTreeState.notifyChildrenChanged(`${createAzureIdPrefix(rg.subscription)}/subscriptions/${rg.subscription.subscriptionId}`);
         });
     }
 }
