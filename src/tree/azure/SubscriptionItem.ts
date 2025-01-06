@@ -13,7 +13,7 @@ import { createPortalUrl } from "../../utils/v2/createPortalUrl";
 import { ResourceGroupsItem } from "../ResourceGroupsItem";
 import { ResourceGroupsTreeContext } from "../ResourceGroupsTreeContext";
 import { AzureResourceGroupingManager } from "./grouping/AzureResourceGroupingManager";
-import { createAzureIdPrefix } from "./idPrefix";
+import { getAccountAndTenantPrefix } from "./idPrefix";
 
 export class SubscriptionItem implements ResourceGroupsItem {
     constructor(
@@ -29,7 +29,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
             ...subscription
         };
 
-        this.id = `${createAzureIdPrefix(this.subscription)}/subscriptions/${subscription.subscriptionId}`;
+        this.id = `${getAccountAndTenantPrefix(this.subscription)}/subscriptions/${subscription.subscriptionId}`;
         this.description = description ? description : '';
 
         this.portalUrl = createPortalUrl(this.subscription, `/subscriptions/${this.subscription.subscriptionId}`);

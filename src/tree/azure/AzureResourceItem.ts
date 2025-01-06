@@ -11,7 +11,7 @@ import { createPortalUrl } from '../../utils/v2/createPortalUrl';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { BranchDataItemOptions, BranchDataItemWrapper } from '../BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
-import { createAzureIdPrefix } from './idPrefix';
+import { getAccountAndTenantPrefix } from './idPrefix';
 
 export class AzureResourceItem<T extends AzureResource> extends BranchDataItemWrapper {
     constructor(
@@ -28,7 +28,7 @@ export class AzureResourceItem<T extends AzureResource> extends BranchDataItemWr
     }
 
     override readonly portalUrl: Uri;
-    readonly id = `${createAzureIdPrefix(this.resource.subscription)}${this.resource.id}`;
+    readonly id = `${getAccountAndTenantPrefix(this.resource.subscription)}${this.resource.id}`;
     readonly tagsModel = new ResourceTags(this.resource);
 
     override async getParent(): Promise<ResourceGroupsItem | undefined> {
@@ -59,6 +59,6 @@ export function createResourceItemFactory<T extends AzureResource>(itemCache: Br
         itemCache.createOrGetItem(
             branchItem,
             () => new AzureResourceItem(resource, branchItem, branchDataProvider, itemCache, parent, options),
-            `${createAzureIdPrefix(resource.subscription)}${resource.id}`,
+            `${getAccountAndTenantPrefix(resource.subscription)}${resource.id}`,
         );
 }
