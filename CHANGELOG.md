@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.10.2 - 2025-01-09
+
+## Fixed
+* [[1369]](https://github.com/microsoft/vscode-azurestorage/issues/1369) Could not find $web blob container when deploying to static website via Azure Storage
+
 ## 0.10.1 - 2024-12-31
 
 ### Fixed
