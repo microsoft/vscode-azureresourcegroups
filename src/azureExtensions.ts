@@ -35,6 +35,7 @@ export const azureExtensions: IAzExtMetadata[] = [
         name: 'vscode-azurefunctions',
         label: 'Functions',
         resourceTypes: [
+            AzExtResourceType.DurableTaskScheduler,
             AzExtResourceType.FunctionApp
         ],
         tutorial: {
@@ -160,6 +161,7 @@ export const azureExtensions: IAzExtMetadata[] = [
 ];
 
 export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
+    DurableTaskScheduler: 'microsoft.durabletask/schedulers',
     FunctionApp: 'microsoft.web/functionapp',
     AppServices: 'microsoft.web/sites',
     StaticWebApps: 'microsoft.web/staticsites',

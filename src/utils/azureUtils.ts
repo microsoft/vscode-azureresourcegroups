@@ -96,6 +96,7 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     ContainerAppsEnvironment: { displayName: localize('containerAppsEnv', 'Container Apps') },
     ContainerRegistry: { displayName: localize('containerRegistry', 'Container registry') },
     Disks: { displayName: localize('disks', 'Disks') },
+    DurableTaskScheduler: { displayName: localize('durableTaskScheduler', 'Durable Task Scheduler') },
     FrontDoorAndCdnProfiles: { displayName: localize('frontDoorAndcdnProfiles', 'Front Door and CDN profiles') },
     FunctionApp: { displayName: localize('functionApp', 'Function App') },
     Images: { displayName: localize('images', 'Images') },
