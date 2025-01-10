@@ -158,8 +158,8 @@ export const azureExtensions: IAzExtMetadata[] = [
         reportIssueCommandId: 'azureWebPubSub.reportIssue'
     },
     {
-        name: 'vscode-ai-foundry-extension',
-        publisher: 'microsoft-devdiv',
+        name: 'vscode-ai-foundry',
+        publisher: 'ms-toolsai',
         label: 'AI Foundry',
         resourceTypes: [AzExtResourceType.AiFoundry],
         reportIssueCommandId: 'azure-ai-extension.reportIssue',
