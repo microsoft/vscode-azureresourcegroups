@@ -138,7 +138,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurelogicapps',
-        publisher: "ms-azuretools",
+        publisher: 'ms-azuretools',
         label: 'Logic Apps',
         resourceTypes: [
             AzExtResourceType.LogicApp,
@@ -157,9 +157,18 @@ export const azureExtensions: IAzExtMetadata[] = [
         ],
         reportIssueCommandId: 'azureWebPubSub.reportIssue'
     },
+    {
+        name: 'vscode-ai-foundry',
+        publisher: 'ms-toolsai',
+        label: 'AI Foundry',
+        resourceTypes: [AzExtResourceType.AiFoundry],
+        reportIssueCommandId: 'azure-ai-extension.reportIssue',
+        private: true
+    },
 ];
 
 export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
+    AiFoundry: 'microsoft.machinelearningservices/workspaces',
     FunctionApp: 'microsoft.web/functionapp',
     AppServices: 'microsoft.web/sites',
     StaticWebApps: 'microsoft.web/staticsites',
@@ -179,6 +188,7 @@ export interface IAzExtMetadata {
     resourceTypes: AzExtResourceType[];
     tutorial?: IAzExtTutorial;
     reportIssueCommandId?: string;
+    private?: boolean;
 }
 
 export interface IAzExtResourceType {
