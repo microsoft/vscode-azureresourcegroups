@@ -7,6 +7,7 @@ import { AzExtResourceType } from "./AzExtResourceType";
 
 const FunctionAppKind = 'functionapp';
 const LogicAppKind = 'workflowapp';
+const AiFoundryProjectKind = 'project';
 
 /**
  * Gets a normalized type for an Azure resource, accounting for the fact that some
@@ -29,6 +30,14 @@ export function getAzExtResourceType(resource: { type: string; kind?: string; })
                 return AzExtResourceType.AppServices;
             }
 
+        case 'microsoft.machinelearningservices/workspaces':
+            // Azure Machine Learning Workspace and Azure Foundry have the same type
+            if (kind.includes(AiFoundryProjectKind)) {
+                return AzExtResourceType.AiFoundry;
+            } else {
+                return AzExtResourceType.MachineLearningWorkspace;
+            }
+
         default:
             return azureTypeToAzExtResourceTypeMap[type];
     }
@@ -46,6 +55,7 @@ const azureTypeToAzExtResourceTypeMap: Record<string, AzExtResourceType | undefi
     'microsoft.storage/storageaccounts': AzExtResourceType.StorageAccounts,
     'microsoft.web/staticsites': AzExtResourceType.StaticWebApps,
     // The below are not supported by the Azure extensions but have icons in the Resources extension
+    'microsoft.machinelearningservices/workspaces': AzExtResourceType.AiFoundry,
     'microsoft.apimanagement/service': AzExtResourceType.ApiManagementService,
     'microsoft.batch/batchaccounts': AzExtResourceType.BatchAccounts,
     'microsoft.cache/redis': AzExtResourceType.CacheRedis,

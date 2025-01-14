@@ -1,6 +1,30 @@
 # Change Log
 
-## Unreleased
+## 0.10.2 - 2025-01-09
+
+## Fixed
+* [[1369]](https://github.com/microsoft/vscode-azurestorage/issues/1369) Could not find $web blob container when deploying to static website via Azure Storage
+
+## 0.10.1 - 2024-12-31
+
+### Fixed
+* [[4335]](https://github.com/microsoft/vscode-azurefunctions/issues/4355) Fixed issue that impacted Azure Function deployment due to tree items not being found if the account id had a slash in it.
+
+
+## 0.10.0 - 2024-12-30
+
+### What's new
+
+#### Accounts & Tenants view
+This view allows user to manage their accounts and tenants. By checking and unchecking tenants, subscriptions within the Resources view and subscription filter will be filtered out.
+
+<img width = "900" alt = "Accounts & Tenants view" src = "https://github.com/user-attachments/assets/d34c1f79-fb21-46f9-af3a-cbb109ba0414">
+
+### Added
+* [[869]](https://github.com/microsoft/vscode-azureresourcegroups/pull/869) Accounts & Tenants view
+* [[926]](https://github.com/microsoft/vscode-azureresourcegroups/pull/926) Shortcut to switching to sovereign clouds
+* [[979]](https://github.com/microsoft/vscode-azureresourcegroups/pull/979) An "Add account" button
+
 ## 0.9.9 - 2024-11-05
 # Fixed
 * Minor fixes for VS Code for the Web - Azure

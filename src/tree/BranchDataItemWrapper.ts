@@ -7,9 +7,9 @@ import { isAzExtTreeItem } from '@microsoft/vscode-azext-utils';
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from 'vscode';
 import { AzureResourceModel, BranchDataProvider, ResourceBase, ResourceModelBase, ViewPropertiesModel, Wrapper } from '../../api/src/index';
-import { DefaultAzureResourceBranchDataProvider } from './azure/DefaultAzureResourceBranchDataProvider';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
+import { DefaultAzureResourceBranchDataProvider } from './azure/DefaultAzureResourceBranchDataProvider';
 
 export type BranchDataItemOptions = {
     contextValues?: string[];
@@ -17,6 +17,7 @@ export type BranchDataItemOptions = {
     defaults?: vscode.TreeItem;
     portalUrl?: vscode.Uri;
     viewProperties?: ViewPropertiesModel;
+    idPrefix?: string;
 };
 
 function appendContextValues(originalValues: string | undefined, optionsValues: string[] | undefined, extraValues: string[] | undefined): string {
@@ -49,6 +50,7 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
         } else {
             this.id = this.branchItem.id ?? this?.options?.defaultId ?? uuidv4();
         }
+        this.id = createBranchItemId(this.id, this.options?.idPrefix);
     }
 
     public readonly id: string;
@@ -69,12 +71,18 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
             factory(child, this.branchDataProvider, {
                 portalUrl: (child as AzureResourceModel).portalUrl,
                 viewProperties: (child as AzureResourceModel).viewProperties,
+                // recursively prefix child items with the account and tenant id
+                // this ensures that items provided by branch data providers are prefixed
+                idPrefix: this.options?.idPrefix,
             })
         );
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {
         const treeItem = await this.branchDataProvider.getTreeItem(this.branchItem);
+        // set the id of the tree item to the id of the branch item
+        // we do this because the branch item has already modified the item's id (see constructor)
+        treeItem.id = this.id;
 
         const contextValue = appendContextValues(treeItem.contextValue, this.options?.contextValues, this.getExtraContextValues());
 
@@ -119,5 +127,14 @@ export function createBranchDataItemFactory(itemCache: BranchDataItemCache): Bra
         itemCache.createOrGetItem(
             branchItem,
             () => new BranchDataItemWrapper(branchItem, branchDataProvider, itemCache, options),
+            createBranchItemId(branchItem.id, options?.idPrefix),
         )
+}
+
+function createBranchItemId(id?: string, prefix?: string): string {
+    if (prefix?.endsWith('/') && id?.startsWith('/')) {
+        return `${prefix}${id.substring(1)}`;
+    } else {
+        return `${prefix ?? ''}${id}`;
+    }
 }

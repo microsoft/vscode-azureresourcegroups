@@ -17,6 +17,7 @@ import { ResourceGroupsItem } from '../../ResourceGroupsItem';
 import { ResourceGroupsTreeContext } from '../../ResourceGroupsTreeContext';
 import { BranchDataProviderFactory } from '../AzureResourceBranchDataProviderManager';
 import { ResourceItemFactory } from '../AzureResourceItem';
+import { getAccountAndTenantPrefix } from '../idPrefix';
 import { GroupingItemFactoryOptions } from './GroupingItemFactory';
 
 export class GroupingItem implements ResourceGroupsItem {
@@ -56,7 +57,7 @@ export class GroupingItem implements ResourceGroupsItem {
         } : undefined;
 
         if (this.context?.subscription) {
-            this.id = `/subscriptions/${this.context?.subscriptionContext.subscriptionId}/account/${this.context?.subscription.account?.id}/groupings/${this.label}`;
+            this.id = `${getAccountAndTenantPrefix(this.context?.subscription)}/subscriptions/${this.context?.subscriptionContext.subscriptionId}/groupings/${this.label}`;
         } else {
             // favorites groups don't always have a subscription
             this.id = `/groupings/${this.label}`;
@@ -119,7 +120,9 @@ export class GroupingItem implements ResourceGroupsItem {
                             viewProperties: resourceItem.viewProperties ?? {
                                 label: resource.name,
                                 data: resource.raw
-                            }
+                            },
+                            // prefix child items with the account and tenant id
+                            idPrefix: getAccountAndTenantPrefix(resource.subscription),
                         };
 
                         items.push(this.resourceItemFactory(resource, resourceItem, branchDataProvider, this, options));

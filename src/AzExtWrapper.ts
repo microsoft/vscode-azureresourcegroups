@@ -82,6 +82,10 @@ export class AzExtWrapper {
         return !!this.getCodeExtension();
     }
 
+    public isPrivate(): boolean {
+        return this._data.private === true;
+    }
+
     public meetsMinVersion(): boolean {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         return this.getCodeExtension()?.packageJSON?.contributes?.[contributesKey] !== undefined;
