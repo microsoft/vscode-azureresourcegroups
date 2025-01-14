@@ -69,6 +69,7 @@ const azureTypeToAzExtResourceTypeMap: Record<string, AzExtResourceType | undefi
     'microsoft.dbformysql/servers': AzExtResourceType.MysqlServers,
     'microsoft.devices/iothubs': AzExtResourceType.DeviceIotHubs,
     'microsoft.devtestlab/labs': AzExtResourceType.DevTestLabs,
+    'microsoft.durabletask/schedulers': AzExtResourceType.DurableTaskScheduler,
     'microsoft.eventgrid/domains': AzExtResourceType.EventGridDomains,
     'microsoft.eventgrid/eventsubscriptions': AzExtResourceType.EventGridEventSubscriptions,
     'microsoft.eventgrid/topics': AzExtResourceType.EventGridTopics,

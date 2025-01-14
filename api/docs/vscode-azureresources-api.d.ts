@@ -62,6 +62,7 @@ export declare enum AzExtResourceType {
     DeviceIotHubs = "DeviceIotHubs",
     DevTestLabs = "DevTestLabs",
     Disks = "Disks",
+    DurableTaskScheduler = 'DurableTaskScheduler',
     EventGridDomains = "EventGridDomains",
     EventGridEventSubscriptions = "EventGridEventSubscriptions",
     EventGridTopics = "EventGridTopics",
