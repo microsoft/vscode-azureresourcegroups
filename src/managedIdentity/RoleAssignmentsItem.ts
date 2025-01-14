@@ -6,7 +6,7 @@
 import { AuthorizationManagementClient, RoleAssignment } from "@azure/arm-authorization";
 import { Identity } from "@azure/arm-msi";
 import { createSubscriptionContext } from "@microsoft/vscode-azext-utils";
-import { TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ProviderResult, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { AzureSubscription } from "../../api/src";
 import { GenericItem } from "../tree/GenericItem";
 import { ResourceGroupsItem } from "../tree/ResourceGroupsItem";
@@ -20,6 +20,12 @@ export class RoleAssignmentsItem implements ResourceGroupsItem {
     constructor(label: string, readonly subscription: AzureSubscription, readonly msi: Identity) {
         this.label = label;
         this.id = `${msi.id}/${label}`;
+    }
+    getParent?(): ProviderResult<ResourceGroupsItem> {
+        throw new Error("Method not implemented.");
+    }
+    getChildren(): ProviderResult<ResourceGroupsItem[]> {
+        throw new Error("Method not implemented.");
     }
 
     getTreeItem(): TreeItem {

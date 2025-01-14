@@ -7,15 +7,17 @@ import { AuthorizationManagementClient } from "@azure/arm-authorization";
 import { Identity, ManagedServiceIdentityClient } from "@azure/arm-msi";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, createContextValue, createSubscriptionContext, nonNullProp, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { ResourceBase, type AzureResource, type AzureSubscription, type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
+import { type AzureResource, type AzureSubscription, type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { getAzExtResourceType } from "../../api/src/index";
 import { getAzureResourcesService } from "../services/AzureResourcesService";
 import { GenericItem } from "../tree/GenericItem";
+import { ResourceGroupsItem } from "../tree/ResourceGroupsItem";
 import { getIconPath } from "../utils/azureUtils";
 import { RoleAssignmentsItem } from "./RoleAssignmentsItem";
+import { RoleDefinitionsItem } from "./RoleDefinitionsItem";
 
-export class ManagedIdentityItem implements ResourceBase {
+export class ManagedIdentityItem implements ResourceGroupsItem {
     static readonly contextValue: string = 'managedIdentityItem';
     static readonly contextValueRegExp: RegExp = new RegExp(ManagedIdentityItem.contextValue);
     name: string;
@@ -38,7 +40,7 @@ export class ManagedIdentityItem implements ResourceBase {
         return createContextValue(values);
     }
 
-    async getChildren(): Promise<RoleAssignmentsItem[]> {
+    async getChildren(): Promise<(GenericItem | RoleDefinitionsItem | RoleAssignmentsItem)[]> {
         const result = await callWithTelemetryAndErrorHandling('managedIdentityItem.getChildren', async (context: IActionContext) => {
             const subContext = createSubscriptionContext(this.subscription);
             const msiClient = new ManagedServiceIdentityClient(subContext.credentials, subContext.subscriptionId);

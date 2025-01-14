@@ -6,13 +6,13 @@
 import { AuthorizationManagementClient, RoleAssignment } from '@azure/arm-authorization';
 import { uiUtils } from '@microsoft/vscode-azext-azureutils';
 import { callWithTelemetryAndErrorHandling, createSubscriptionContext, type IActionContext } from '@microsoft/vscode-azext-utils';
-import { type AzureResource, type AzureResourceBranchDataProvider } from '@microsoft/vscode-azureresources-api';
+import { AzureResource, AzureResourceModel, BranchDataProvider } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
 import { localize } from 'vscode-nls';
 import { ext } from '../extensionVariables';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { ManagedIdentityItem } from './ManagedIdentityItem';
-export class ManagedIdentityBranchDataProvider extends vscode.Disposable implements AzureResourceBranchDataProvider<ResourceGroupsItem> {
+export class ManagedIdentityBranchDataProvider extends vscode.Disposable implements BranchDataProvider<AzureResource, AzureResourceModel> {
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<ResourceGroupsItem | undefined>();
     public roleAssignmentsTask: Promise<{ [id: string]: RoleAssignment[] }>;
 
