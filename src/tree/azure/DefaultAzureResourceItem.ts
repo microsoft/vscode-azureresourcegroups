@@ -25,7 +25,7 @@ export class DefaultAzureResourceItem implements ResourceGroupsItem {
     public readonly id: string = this.resource.id;
 
     getChildren(): Promise<ResourceGroupsItem[] | undefined> {
-        if (this.resourceTypeExtension && !this.resourceTypeExtension.isInstalled()) {
+        if (this.resourceTypeExtension && !this.resourceTypeExtension.isInstalled() && !this.resourceTypeExtension.isPrivate()) {
             return Promise.resolve([
                 new GenericItem(
                     localize('installExtensionToEnableFeatures', 'Install extension to enable additional features...'),
