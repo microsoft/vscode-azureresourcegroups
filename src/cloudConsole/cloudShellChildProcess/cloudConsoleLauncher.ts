@@ -58,6 +58,7 @@ async function resize(accessToken: string, terminalUri: string) {
         const { cols, rows } = getWindowSize();
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const response = await request({
+            // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
             uri: `${terminalUri}/size?cols=${cols}&rows=${rows}`,
             method: 'POST',
             headers: {
