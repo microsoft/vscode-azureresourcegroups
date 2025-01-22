@@ -1,8 +1,14 @@
 # Change Log
 
+## 0.10.3 - 2025-01-22
+
+### Added
+[[1015]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1015) Add integration for Azure AI Foundry VS Code extension
+[[1014]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1014) Add Durable Task Scheduler resource type
+
 ## 0.10.2 - 2025-01-09
 
-## Fixed
+### Fixed
 * [[1369]](https://github.com/microsoft/vscode-azurestorage/issues/1369) Could not find $web blob container when deploying to static website via Azure Storage
 
 ## 0.10.1 - 2024-12-31
