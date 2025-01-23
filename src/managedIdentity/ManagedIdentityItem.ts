@@ -63,7 +63,7 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
 
                 return userAssignedIdentities[msi.id] !== undefined
             }).map((r) => {
-                return new GenericItem(nonNullProp(r, 'name'), { iconPath: getIconPath(r.type ? getAzExtResourceType({ type: r.type }) : undefined) });
+                return new GenericItem(nonNullProp(r, 'name'), { id: `${msi.id}/${r.name}`, iconPath: getIconPath(r.type ? getAzExtResourceType({ type: r.type }) : undefined) });
             });
 
             const authClient = new AuthorizationManagementClient(subContext.credentials, subContext.subscriptionId);
@@ -72,23 +72,23 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
             const filteredBySub = roleAssignment.filter((ra) => ra.principalId === msi.principalId);
 
             const targetResources = await accessRoleAssignment.getRoleDefinitionsItems(filteredBySub);
-            accessRoleAssignment.addChild(new GenericItem('Show resources from other subscriptions...',
-                {
-                    iconPath: new ThemeIcon('sync'),
-                    commandId: 'azureResources.loadAllSubscriptionRoleAssignments',
-                    commandArgs: [accessRoleAssignment]
-                }))
-
             const children = [];
 
             if (roleAssignment.length > 0) {
                 // if there weren't any assigned resources, don't show that section
+                assignedRoleAssignment.addChildren(assignedResources);
                 children.push(assignedRoleAssignment);
-                children.push(...assignedResources);
             }
 
+            accessRoleAssignment.addChildren(targetResources);
             children.push(accessRoleAssignment);
-            children.push(...targetResources);
+            accessRoleAssignment.addChild(new GenericItem('Show resources from other subscriptions...',
+                {
+                    id: accessRoleAssignment.id + '/showResourcesFromOtherSubscriptions',
+                    iconPath: new ThemeIcon('sync'),
+                    commandId: 'azureResources.loadAllSubscriptionRoleAssignments',
+                    commandArgs: [accessRoleAssignment]
+                }))
             return children;
         });
 

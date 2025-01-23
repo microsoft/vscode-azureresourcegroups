@@ -12,7 +12,7 @@ import { RoleDefinitionsItem } from "./RoleDefinitionsItem";
 
 export async function loadAllSubscriptionRoleAssignments(_context: IActionContext, node: RoleAssignmentsItem) {
     node.removeLastChild()
-    node.addChild(new GenericItem('', { iconPath: new ThemeIcon('sync~spin'), description: 'Loading...' }));
+    node.addChild(new GenericItem('', { id: `${node.id}/loading`, iconPath: new ThemeIcon('sync~spin'), description: 'Loading...' }));
     ext.managedIdentityBranchDataProvider.refresh(node);
 
     const roleAssignments = await ext.managedIdentityBranchDataProvider.roleAssignmentsTask;

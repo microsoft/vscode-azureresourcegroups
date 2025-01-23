@@ -21,21 +21,18 @@ export class RoleAssignmentsItem implements ResourceGroupsItem {
         this.label = label;
         this.id = `${msi.id}/${label}`;
     }
-    getParent?(): ProviderResult<ResourceGroupsItem> {
-        throw new Error("Method not implemented.");
-    }
+
     getChildren(): ProviderResult<ResourceGroupsItem[]> {
-        throw new Error("Method not implemented.");
+        return this.children;
     }
 
     getTreeItem(): TreeItem {
         return {
             label: this.label,
             id: this.id,
-            collapsibleState: TreeItemCollapsibleState.None,
+            collapsibleState: this.children.length < 10 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed,
         }
     }
-
 
     addChild(child: RoleDefinitionsItem | GenericItem): void {
         this.children.push(child);

@@ -84,7 +84,7 @@ export class RoleDefinitionsItem implements ResourceGroupsItem {
 
     getChildren(): ResourceGroupsItem[] {
         return this.roleDefintions.map((rd) => {
-            return new GenericItem("", { description: rd.roleName });
+            return new GenericItem("", { id: `${rd.id}/${rd.roleName}`, description: rd.roleName });
         });
     }
 
