@@ -48,7 +48,6 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
             const msi: Identity = await msiClient.userAssignedIdentities.get(nonNullProp(this.resource, 'resourceGroup'), this.resource.name);
 
             const resources = await getAzureResourcesService().listResources(context, this.subscription);
-
             const assignedRoleAssignment = new RoleAssignmentsItem(localize('sourceResources', 'Source resources'), this.subscription, msi);
             const accessRoleAssignment = new RoleAssignmentsItem(localize('targetServices', 'Target services'), this.subscription, msi);
 
@@ -73,7 +72,7 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
             // filter the role assignments to only show the ones that are assigned to the msi
             const filteredBySub = roleAssignment.filter((ra) => ra.principalId === msi.principalId);
 
-            const targetResources = await accessRoleAssignment.getRoleDefinitionsItems(filteredBySub);
+            const targetResources = await accessRoleAssignment.getRoleDefinitionsItems(context, filteredBySub);
             const children = [];
 
             if (assignedResources.length > 0) {
