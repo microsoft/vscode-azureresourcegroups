@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AuthorizationManagementClient } from "@azure/arm-authorization";
+import { ManagedServiceIdentityClient } from "@azure/arm-msi";
 import { ResourceManagementClient } from '@azure/arm-resources';
 import { AzExtClientContext, createAzureClient, parseClientContext } from '@microsoft/vscode-azext-azureutils';
 
@@ -15,4 +17,12 @@ export async function createResourceClient(context: AzExtClientContext): Promise
     } else {
         return createAzureClient(context, (await import('@azure/arm-resources')).ResourceManagementClient);
     }
+}
+
+export async function createManagedServiceIdentityClient(context: AzExtClientContext): Promise<ManagedServiceIdentityClient> {
+    return createAzureClient(context, (await import('@azure/arm-msi')).ManagedServiceIdentityClient);
+}
+
+export async function createAuthorizationManagementClient(context: AzExtClientContext): Promise<AuthorizationManagementClient> {
+    return createAzureClient(context, (await import('@azure/arm-authorization')).AuthorizationManagementClient);
 }

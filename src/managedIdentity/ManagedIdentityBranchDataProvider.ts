@@ -30,9 +30,9 @@ export class ManagedIdentityBranchDataProvider extends vscode.Disposable impleme
 
     public async initialize(): Promise<{ [id: string]: RoleAssignment[] }> {
         const provider = await ext.subscriptionProviderFactory();
-        const subscriptions = await provider.getSubscriptions(false);
+        const allSubscriptions = await provider.getSubscriptions(false /*filter*/);
         const roleAssignments: { [id: string]: RoleAssignment[] } = {};
-        await Promise.allSettled(subscriptions.map(async (subscription) => {
+        await Promise.allSettled(allSubscriptions.map(async (subscription) => {
             const subContext = createSubscriptionContext(subscription);
             const authClient = new AuthorizationManagementClient(subContext.credentials, subContext.subscriptionId);
             roleAssignments[subscription.subscriptionId] = await uiUtils.listAllIterator(authClient.roleAssignments.listForSubscription());

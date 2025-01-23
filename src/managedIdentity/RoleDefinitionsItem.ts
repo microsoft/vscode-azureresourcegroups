@@ -58,13 +58,13 @@ export class RoleDefinitionsItem implements ResourceGroupsItem {
         }
 
         if (fromOtherSub) {
-            // retrieve subscriptions to use display name
+            // retrieve subscriptions to use display name if it's from another subscription
             const subscriptions = await (await ext.subscriptionProviderFactory()).getSubscriptions(false);
             description = subscriptions.find(s => s.subscriptionId === (parsedAzureResourceGroupId?.subscriptionId ?? parsedAzureResourceId?.subscriptionId))?.name;
         }
 
         return new RoleDefinitionsItem({
-            id: `${msiId}${scope}`,
+            id: `${msiId}/${scope}`,
             label,
             iconPath,
             description,

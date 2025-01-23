@@ -3,13 +3,14 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AuthorizationManagementClient, RoleAssignment } from "@azure/arm-authorization";
+import { RoleAssignment } from "@azure/arm-authorization";
 import { Identity } from "@azure/arm-msi";
-import { createSubscriptionContext } from "@microsoft/vscode-azext-utils";
+import { createSubscriptionContext, IActionContext } from "@microsoft/vscode-azext-utils";
 import { ProviderResult, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { AzureSubscription } from "../../api/src";
 import { GenericItem } from "../tree/GenericItem";
 import { ResourceGroupsItem } from "../tree/ResourceGroupsItem";
+import { createAuthorizationManagementClient } from "../utils/azureClients";
 import { RoleDefinitionsItem } from "./RoleDefinitionsItem";
 
 export class RoleAssignmentsItem implements ResourceGroupsItem {
@@ -46,9 +47,9 @@ export class RoleAssignmentsItem implements ResourceGroupsItem {
         this.children.pop();
     }
 
-    async getRoleDefinitionsItems(roleAssignments: RoleAssignment[], fromOtherSubs?: boolean): Promise<RoleDefinitionsItem[]> {
+    async getRoleDefinitionsItems(context: IActionContext, roleAssignments: RoleAssignment[], fromOtherSubs?: boolean): Promise<RoleDefinitionsItem[]> {
         const subContext = createSubscriptionContext(this.subscription);
-        const authClient = new AuthorizationManagementClient(subContext.credentials, subContext.subscriptionId);
+        const authClient = await createAuthorizationManagementClient([context, subContext]);
         const roleDefinitionsItems: RoleDefinitionsItem[] = [];
         await Promise.all(roleAssignments
             .map(async (ra) => {
@@ -57,12 +58,15 @@ export class RoleAssignmentsItem implements ResourceGroupsItem {
                 }
                 const scopeSplit = ra.scope.split('/');
                 const name = scopeSplit.pop();
+
                 if (name && (!fromOtherSubs || !ra.scope?.includes(this.subscription.subscriptionId))) {
                     const roleDefinition = await authClient.roleDefinitions.getById(ra.roleDefinitionId);
+                    // if the role defition is not found, create a new one and push the role definition to it
                     if (!roleDefinitionsItems.some((rdi) => rdi.label === name)) {
                         const rdi = await RoleDefinitionsItem.createRoleDefinitionsItem(ra.scope, roleDefinition, this.msi.id, fromOtherSubs);
                         roleDefinitionsItems.push(rdi);
                     } else {
+                        // if the role definition is found, add the role definition to the existing role definition item
                         roleDefinitionsItems.find((rdi) => rdi.label === name)?.addRoleDefinition(roleDefinition);
                     }
                 }

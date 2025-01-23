@@ -10,7 +10,7 @@ import { GenericItem } from "../tree/GenericItem";
 import { RoleAssignmentsItem } from "./RoleAssignmentsItem";
 import { RoleDefinitionsItem } from "./RoleDefinitionsItem";
 
-export async function loadAllSubscriptionRoleAssignments(_context: IActionContext, node: RoleAssignmentsItem) {
+export async function loadAllSubscriptionRoleAssignments(context: IActionContext, node: RoleAssignmentsItem) {
     node.removeLastChild()
     node.addChild(new GenericItem('', { id: `${node.id}/loading`, iconPath: new ThemeIcon('sync~spin'), description: 'Loading...' }));
     ext.managedIdentityBranchDataProvider.refresh(node);
@@ -21,7 +21,7 @@ export async function loadAllSubscriptionRoleAssignments(_context: IActionContex
         return (roleAssignments)[subscription].filter((ra) => ra.principalId === node.msi.principalId)
     }).filter((ra) => ra.length > 0).flat();
 
-    const roleDefinitionsItems: RoleDefinitionsItem[] = await node.getRoleDefinitionsItems(filteredBySub, true);
+    const roleDefinitionsItems: RoleDefinitionsItem[] = await node.getRoleDefinitionsItems(context, filteredBySub, true);
 
     node.removeLastChild();
     node.addChildren(roleDefinitionsItems);
