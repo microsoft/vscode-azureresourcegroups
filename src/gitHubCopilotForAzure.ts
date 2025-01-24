@@ -13,11 +13,16 @@ const ghcpfaExtensionId = 'ms-azuretools.vscode-azure-github-copilot';
 const ghcpfaLearnPage = 'https://aka.ms/GetGitHubCopilotForAzure';
 const dontShowKey = 'ghcpfa/dontShow';
 
+function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 /**
  * Conditionally show an install toast for the GitHub Copilot for Azure extension
  */
 export function gitHubCopilotForAzureToast({ globalState }: ExtensionContext): void {
     void callWithTelemetryAndErrorHandling('ghcpfaToast', async (context: IActionContext) => {
+        await delay(10 * 1000); // Wait 10 seconds to show toast. This gives time for the extension to install.
         context.telemetry.properties.isActivationEvent = 'true';
 
         const arePrecursorExtensionsInstalled: boolean = isExtensionInstalled(ghcpExtensionId) && isExtensionInstalled(ghcpChatExtensionId);
