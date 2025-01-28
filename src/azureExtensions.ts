@@ -159,6 +159,13 @@ export const azureExtensions: IAzExtMetadata[] = [
         reportIssueCommandId: 'azureWebPubSub.reportIssue'
     },
     {
+        name: 'vscode-azureresourcegroups',
+        label: 'Managed Identity',
+        resourceTypes: [
+            AzExtResourceType.ManagedIdentityUserAssignedIdentities
+        ]
+    },
+    {
         name: 'vscode-ai-foundry',
         publisher: 'ms-toolsai',
         label: 'AI Foundry',

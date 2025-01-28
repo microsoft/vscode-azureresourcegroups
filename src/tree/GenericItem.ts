@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import { ResourceGroupsItem } from "./ResourceGroupsItem";
 
 export interface GenericItemOptions {
+    readonly id?: string;
     readonly children?: ResourceGroupsItem[];
     readonly commandArgs?: unknown[];
     readonly commandId?: string;
@@ -33,9 +34,10 @@ export interface GenericItemOptions {
 
 export class GenericItem implements ResourceGroupsItem {
     constructor(public readonly label: string, private readonly options?: GenericItemOptions) {
+        this.id = options?.id ?? label;
     }
 
-    readonly id: string = this.label;
+    readonly id: string;
 
     getChildren(): vscode.ProviderResult<ResourceGroupsItem[]> {
         return this.options?.children;
