@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.10.4 - 2025-01-28
+
+### Fixed
+[[1026]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1026) Add 10 second delay before checking for GitHub Copilot for Azure to prevent notification from appearing when the extension is installing
+
 ## 0.10.3 - 2025-01-22
 
 ### Added
