@@ -20,6 +20,7 @@ export function createWrappedAzureResourcesExtensionApi(api: AzureResourcesApiIn
         apiVersion: api.apiVersion,
         activity: wrapFunctionsInTelemetry({
             registerActivity: api.activity.registerActivity.bind(api) as typeof api.activity.registerActivity,
+            getActivities: api.activity.getActivities.bind(api) as typeof api.activity.getActivities,
         }, wrapOptions),
         resources: {
             azureResourceTreeDataProvider: api.resources.azureResourceTreeDataProvider,
