@@ -16,14 +16,14 @@ import { RoleDefinitionsItem } from "./RoleDefinitionsItem";
 export class RoleAssignmentsItem implements ResourceGroupsItem {
     public id: string;
     public label: string;
-    private children: (RoleDefinitionsItem | GenericItem)[] = [];
+    private children: (ResourceGroupsItem | GenericItem)[] = [];
 
     constructor(label: string, readonly subscription: AzureSubscription, readonly msi: Identity) {
         this.label = label;
         this.id = `${msi.id}/${label}`;
     }
 
-    getChildren(): ProviderResult<ResourceGroupsItem[]> {
+    getChildren(): ProviderResult<(ResourceGroupsItem | GenericItem)[]> {
         return this.children;
     }
 
@@ -35,11 +35,11 @@ export class RoleAssignmentsItem implements ResourceGroupsItem {
         }
     }
 
-    addChild(child: RoleDefinitionsItem | GenericItem): void {
+    addChild(child: ResourceGroupsItem | GenericItem): void {
         this.children.push(child);
     }
 
-    addChildren(children: (RoleDefinitionsItem | GenericItem)[]): void {
+    addChildren(children: (ResourceGroupsItem | GenericItem)[]): void {
         this.children.push(...children);
     }
 
@@ -63,7 +63,7 @@ export class RoleAssignmentsItem implements ResourceGroupsItem {
                     const roleDefinition = await authClient.roleDefinitions.getById(ra.roleDefinitionId);
                     // if the role defition is not found, create a new one and push the role definition to it
                     if (!roleDefinitionsItems.some((rdi) => rdi.label === name)) {
-                        const rdi = await RoleDefinitionsItem.createRoleDefinitionsItem(ra.scope, roleDefinition, this.msi.id, fromOtherSubs);
+                        const rdi = await RoleDefinitionsItem.createRoleDefinitionsItem(ra.scope, roleDefinition, this.msi.id, this.subscription, fromOtherSubs);
                         roleDefinitionsItems.push(rdi);
                     } else {
                         // if the role definition is found, add the role definition to the existing role definition item

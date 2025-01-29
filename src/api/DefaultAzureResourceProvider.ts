@@ -51,7 +51,7 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
     }
 }
 
-function createAzureResource(subscription: AzureSubscription, resource: GenericResource): AzureResource {
+export function createAzureResource(subscription: AzureSubscription, resource: GenericResource): AzureResource {
     const resourceId = nonNullProp(resource, 'id');
 
     return {
