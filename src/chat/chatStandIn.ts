@@ -10,10 +10,10 @@ const GitHubCopilotForAzureExtensionId = 'ms-azuretools.vscode-azure-github-copi
 
 export function registerChatStandInParticipantIfNeeded(context: vscode.ExtensionContext): void {
     const ghcp4aInstalled = vscode.extensions.getExtension(GitHubCopilotForAzureExtensionId) !== undefined;
-    const chatStandInDisabled = vscode.workspace.getConfiguration('azureResourceGroups').get<boolean | undefined>('disableChatStandin');
+    const disableChatStandIn = vscode.workspace.getConfiguration('azureResourceGroups').get<boolean | undefined>('disableChatStandIn');
 
     if (ghcp4aInstalled || // If the GitHub Copilot for Azure extension is already installed, don't register the chat participant
-        chatStandInDisabled === true) { // If the user has disabled chat standin by any means, don't register the chat participant
+        disableChatStandIn === true) { // If the user has disabled chat standin by any means, don't register the chat participant
         return;
     }
 

@@ -43,7 +43,7 @@
                 "fullName": "%chatParticipants.azure.fullName%",
                 "description": "GitHub Copilot for Azure",
                 "isSticky": false,
-                "when": "config.azureResourceGroups.disableChatStandin != true",
+                "when": "config.azureResourceGroups.disableChatStandIn != true",
                 "disambiguation": [
                     {
                         "category": "azure_learn",
