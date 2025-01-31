@@ -18,7 +18,7 @@ export function registerChatStandInParticipantIfNeeded(context: vscode.Extension
     }
 
     const chatStandInParticipant = vscode.chat.createChatParticipant(
-        'ms-azuretools.azure-agent',
+        'ms-azuretools.azure-agent-stand-in',
         (cr, cc, rs, t) => callWithTelemetryAndErrorHandling('azureResources.chatStandIn', ac => chatStandIn(ac, cr, cc, rs, t))
     );
     chatStandInParticipant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'resources', 'GitHubCopilotforAzure.svg');

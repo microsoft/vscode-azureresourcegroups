@@ -38,7 +38,7 @@
     "contributes": {
         "chatParticipants": [
             {
-                "id": "ms-azuretools.azure-agent",
+                "id": "ms-azuretools.azure-agent-stand-in",
                 "name": "azure",
                 "fullName": "%chatParticipants.azure.fullName%",
                 "description": "GitHub Copilot for Azure",
@@ -697,6 +697,11 @@
                         "items": {
                             "type": "string"
                         }
+                    },
+                    "azureResourceGroups.disableChatStandIn": {
+                        "type": "boolean",
+                        "description": "%azureResourceGroups.disableChatStandIn%",
+                        "default": false
                     }
                 }
             }
