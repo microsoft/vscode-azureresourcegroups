@@ -8,8 +8,9 @@ import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, createContextValue, createSubscriptionContext, nonNullProp, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureResource, type AzureSubscription, type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
-import { getAzExtResourceType } from "../../api/src/index";
+import { createAzureResource } from "../api/DefaultAzureResourceProvider";
 import { getAzureResourcesService } from "../services/AzureResourcesService";
+import { DefaultAzureResourceItem } from "../tree/azure/DefaultAzureResourceItem";
 import { GenericItem } from "../tree/GenericItem";
 import { ResourceGroupsItem } from "../tree/ResourceGroupsItem";
 import { createAuthorizationManagementClient, createManagedServiceIdentityClient } from "../utils/azureClients";
@@ -64,7 +65,8 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
 
                 return userAssignedIdentities[msi.id] !== undefined
             }).map((r) => {
-                return new GenericItem(nonNullProp(r, 'name'), { id: `${msi.id}/${r.name}`, iconPath: getIconPath(r.type ? getAzExtResourceType({ type: r.type }) : undefined) });
+                const azureResoure = createAzureResource(this.subscription, r);
+                return new DefaultAzureResourceItem(azureResoure);
             });
 
             const authClient = await createAuthorizationManagementClient([context, subContext]);

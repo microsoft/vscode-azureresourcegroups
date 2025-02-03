@@ -6,13 +6,15 @@
 import { RoleDefinition } from "@azure/arm-authorization";
 import { parseAzureResourceGroupId, parseAzureResourceId, ParsedAzureResourceGroupId, ParsedAzureResourceId } from "@microsoft/vscode-azext-azureutils";
 import { TreeItemIconPath } from "@microsoft/vscode-azext-utils";
-import { TreeItem, TreeItemCollapsibleState } from "vscode";
+import { AzureSubscription } from "api/src";
+import { TreeItem, TreeItemCollapsibleState, Uri } from "vscode";
 import { AzExtResourceType } from "../../api/src/AzExtResourceType";
 import { getAzExtResourceType } from "../../api/src/getAzExtResourceType";
 import { ext } from "../extensionVariables";
 import { GenericItem } from "../tree/GenericItem";
 import { ResourceGroupsItem } from "../tree/ResourceGroupsItem";
 import { getIconPath } from "../utils/azureUtils";
+import { createPortalUrl } from "../utils/v2/createPortalUrl";
 
 export class RoleDefinitionsItem implements ResourceGroupsItem {
     public id: string;
@@ -20,16 +22,31 @@ export class RoleDefinitionsItem implements ResourceGroupsItem {
     public iconPath: TreeItemIconPath;
     public description: string | undefined;
     public roleDefintions: RoleDefinition[] = [];
+    public readonly portalUrl: Uri;
 
-    constructor(options: { label: string, id: string, iconPath: TreeItemIconPath, description: string | undefined, roleDefinition: RoleDefinition }) {
+    constructor(options: {
+        label: string,
+        id: string,
+        iconPath: TreeItemIconPath,
+        description: string | undefined,
+        roleDefinition: RoleDefinition,
+        subscription: AzureSubscription,
+        scope: string
+    }) {
         this.label = options.label;
         this.id = options.id;
         this.iconPath = options.iconPath;
         this.roleDefintions.push(options.roleDefinition);
         this.description = options.description;
+        this.portalUrl = createPortalUrl(options.subscription, options.scope);
     }
 
-    public static async createRoleDefinitionsItem(scope: string, roleDefinition: RoleDefinition, msiId: string | undefined, fromOtherSub?: boolean): Promise<RoleDefinitionsItem> {
+    public static async createRoleDefinitionsItem(scope: string,
+        roleDefinition: RoleDefinition,
+        msiId: string | undefined,
+        subscription: AzureSubscription,
+        fromOtherSub?: boolean): Promise<RoleDefinitionsItem> {
+
         let parsedAzureResourceId: ParsedAzureResourceId | undefined;
         let parsedAzureResourceGroupId: ParsedAzureResourceGroupId | undefined;
         let label: string;
@@ -54,7 +71,6 @@ export class RoleDefinitionsItem implements ResourceGroupsItem {
                 label = subscriptions.find(s => s.subscriptionId === subscriptionId)?.name ?? scope;
                 iconPath = getIconPath(AzExtResourceType.Subscription);
             }
-
         }
 
         if (fromOtherSub) {
@@ -68,7 +84,9 @@ export class RoleDefinitionsItem implements ResourceGroupsItem {
             label,
             iconPath,
             description,
-            roleDefinition
+            roleDefinition,
+            subscription,
+            scope
         });
     }
 
@@ -84,7 +102,7 @@ export class RoleDefinitionsItem implements ResourceGroupsItem {
 
     getChildren(): ResourceGroupsItem[] {
         return this.roleDefintions.map((rd) => {
-            return new GenericItem("", { id: `${this.id}/${rd.id}`, description: rd.roleName });
+            return new GenericItem("", { id: `${this.id}/${rd.id}`, description: rd.roleName, tooltip: rd.description });
         });
     }
 

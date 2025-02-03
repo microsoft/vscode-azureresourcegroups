@@ -15,6 +15,7 @@ export interface GenericItemOptions {
     readonly contextValue?: string;
     readonly iconPath?: TreeItemIconPath;
     readonly description?: string;
+    readonly tooltip?: string;
     readonly collapsibleState?: vscode.TreeItemCollapsibleState;
     readonly checkboxState?: vscode.TreeItemCheckboxState | {
         /**
@@ -55,6 +56,7 @@ export class GenericItem implements ResourceGroupsItem {
         }
 
         treeItem.description = this.options?.description;
+        treeItem.tooltip = this.options?.tooltip;
         treeItem.contextValue = this.options?.contextValue;
         treeItem.iconPath = this.options?.iconPath;
         treeItem.checkboxState = this.options?.checkboxState;
