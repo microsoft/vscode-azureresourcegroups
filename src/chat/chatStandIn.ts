@@ -24,7 +24,7 @@ export function registerChatStandInParticipantIfNeeded(context: vscode.Extension
     chatStandInParticipant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'resources', 'GitHubCopilotforAzure.svg');
 
     context.subscriptions.push(chatStandInParticipant);
-    registerCommand('azureResourcesGroups.installGitHubCopilotForAzure', installGitHubCopilotForAzure);
+    registerCommand('azureResourcesGroups.installGitHubCopilotForAzureFromChat', installGitHubCopilotForAzureFromChat);
 }
 
 async function chatStandIn(
@@ -37,13 +37,13 @@ async function chatStandIn(
     responseStream.markdown(vscode.l10n.t('I can help with that. First, you need to install the GitHub Copilot for Azure extension.'));
     responseStream.button({
         title: vscode.l10n.t('Install GitHub Copilot for Azure'),
-        command: 'azureResourcesGroups.installGitHubCopilotForAzure',
+        command: 'azureResourcesGroups.installGitHubCopilotForAzureFromChat',
     });
 
     responseStream.markdown(vscode.l10n.t('After that, please repeat your question.'));
 }
 
-async function installGitHubCopilotForAzure(context: IActionContext): Promise<void> {
+async function installGitHubCopilotForAzureFromChat(context: IActionContext): Promise<void> {
     try {
         await vscode.commands.executeCommand('workbench.extensions.installExtension', GitHubCopilotForAzureExtensionId);
     } catch (error) {
