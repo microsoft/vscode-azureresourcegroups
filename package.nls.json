@@ -42,5 +42,7 @@
     "azureResourceGroups.unfocusGroup": "Unfocus Group",
     "azureResourceGroups.clearActivities": "Clear Completed Activities",
     "azureResourceGroups.toggleShowAllResources": "Show/Hide Filtered Resources",
-    "azureResourceGroups.showGroupOptions": "Show Grouping Options"
+    "azureResourceGroups.showGroupOptions": "Show Grouping Options",
+    "azureResourceGroups.enableChatStandIn": "Enable the @azure chat stand-in",
+    "chatParticipants.azure.fullName": "Azure (Preview)"
 }

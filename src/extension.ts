@@ -23,12 +23,12 @@ import { registerApplicationResourceResolver } from './api/compatibility/registe
 import { registerWorkspaceResourceProvider } from './api/compatibility/registerWorkspaceResourceProvider';
 import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
+import { registerChatStandInParticipantIfNeeded } from './chat/chatStandIn';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { ext } from './extensionVariables';
-import { gitHubCopilotForAzureToast } from './gitHubCopilotForAzure';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
 import { ManagedIdentityBranchDataProvider } from './managedIdentity/ManagedIdentityBranchDataProvider';
 import { survey } from './nps';
@@ -109,8 +109,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         }));
 
         registerCommands();
-        gitHubCopilotForAzureToast(context);
         survey(context);
+
+        registerChatStandInParticipantIfNeeded(context);
     });
 
     const extensionManager = new ResourceGroupsExtensionManager()
