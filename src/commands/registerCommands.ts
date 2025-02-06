@@ -7,6 +7,7 @@ import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { askAgentAboutResource } from '../chat/askAgentAboutResource';
+import { askAzureInCommandPalette } from '../chat/askAzure';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
 import { loadAllSubscriptionRoleAssignments } from '../managedIdentity/loadAllSubscriptionRoleAssignments';
@@ -118,6 +119,7 @@ export function registerCommands(): void {
         context.telemetry.properties.url = url;
         await openUrl(url)
     });
+    registerCommand('azureResourceGroups.askAzure', askAzureInCommandPalette);
 
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
     registerCommand('azureResources.loadAllSubscriptionRoleAssignments', loadAllSubscriptionRoleAssignments);
