@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
-import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+import { TargetServiceRoleAssignmentItem } from 'node_modules/@microsoft/vscode-azext-azureutils';
 import { commands } from 'vscode';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
-import { loadAllSubscriptionRoleAssignments } from '../managedIdentity/loadAllSubscriptionRoleAssignments';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
@@ -119,9 +119,13 @@ export function registerCommands(): void {
     });
 
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
-    registerCommand('azureResources.loadAllSubscriptionRoleAssignments', loadAllSubscriptionRoleAssignments);
-
     registerCommand('azureTenantsView.configureSovereignCloud', configureSovereignCloud);
+    registerCommandWithTreeNodeUnwrapping('azureResourceGroups.loadAllSubscriptionRoleAssignments', async (context: IActionContext, node: TargetServiceRoleAssignmentItem) => {
+        await ext.azureTreeState.runWithTemporaryDescription(node.id, `Loading role assignments...`, async () => {
+            await node.loadAllSubscriptionRoleAssignments(context);
+            ext.azureTreeState.notifyChildrenChanged(node.id);
+        });
+    });
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
