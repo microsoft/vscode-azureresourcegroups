@@ -29,7 +29,7 @@ export function registerChatStandInParticipantIfNeeded(context: vscode.Extension
 
 async function chatStandIn(
     _actionContext: IActionContext,
-    _request: vscode.ChatRequest,
+    request: vscode.ChatRequest,
     _context: vscode.ChatContext,
     responseStream: vscode.ChatResponseStream,
     _token: vscode.CancellationToken
@@ -40,7 +40,11 @@ async function chatStandIn(
         command: 'azureResourcesGroups.installGitHubCopilotForAzureFromChat',
     });
 
-    responseStream.markdown(vscode.l10n.t('After that, please repeat your question.'));
+    if (request.prompt.startsWith("/setResourceContext ")) {
+        responseStream.markdown(vscode.l10n.t(`After that, please use \`Ask @azure\` again to set your resource context.`));
+    } else {
+        responseStream.markdown(vscode.l10n.t('After that, please repeat your question.'));
+    }
 }
 
 async function installGitHubCopilotForAzureFromChat(context: IActionContext): Promise<void> {
