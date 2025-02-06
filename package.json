@@ -331,6 +331,10 @@
                 "title": "%azureTenantsView.configureSovereignCloud%",
                 "category": "Azure",
                 "icon": "$(gear)"
+            },
+            {
+                "command": "azureResourceGroups.askAgentAboutResource",
+                "title": "%azureResourceGroups.askAzure%"
             }
         ],
         "viewsContainers": {
@@ -556,6 +560,16 @@
                     "command": "azureTenantsView.signInToTenant",
                     "when": "view == azureTenantsView && viewItem =~ /tenantNameNotSignedIn/",
                     "group": "1@1"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutResource",
+                    "when": "view =~ /azureResourceGroups|azureFocusView/ && viewItem =~ /hasPortalUrl/ && github.copilot-chat.activated && config.azureResourceGroups.enableChatStandIn",
+                    "group": "1@9"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutResource",
+                    "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && github.copilot-chat.activated && config.azureResourceGroups.enableChatStandIn",
+                    "group": "7@9"
                 }
             ],
             "commandPalette": [
@@ -606,6 +620,10 @@
                 {
                     "command": "azureTenantsView.signInToTenant",
                     "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutResource",
+                    "when": "github.copilot-chat.activated"
                 }
             ],
             "azureResourceGroups.groupBy": [
