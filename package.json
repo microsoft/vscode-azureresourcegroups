@@ -623,7 +623,7 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutResource",
-                    "when": "github.copilot-chat.activated"
+                    "when": "never"
                 }
             ],
             "azureResourceGroups.groupBy": [
