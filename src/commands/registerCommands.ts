@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
-import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
+import { askAgentAboutResource } from '../chat/askAgentAboutResource';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
 import { loadAllSubscriptionRoleAssignments } from '../managedIdentity/loadAllSubscriptionRoleAssignments';
@@ -122,6 +123,7 @@ export function registerCommands(): void {
     registerCommand('azureResources.loadAllSubscriptionRoleAssignments', loadAllSubscriptionRoleAssignments);
 
     registerCommand('azureTenantsView.configureSovereignCloud', configureSovereignCloud);
+    registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
