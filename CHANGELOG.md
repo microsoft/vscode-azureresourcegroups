@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.10.5 - 2025-01-28
+
+### Added
+[[1031]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1031) Allow service and target resources to openInPortal and add tooltips to role definitions  
+[[1034]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1034) Implement stand-in chat provider for `@azure`
+[[1035]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1035) Create fake ask azure command
+
 ## 0.10.4 - 2025-01-28
 
 ### Fixed
