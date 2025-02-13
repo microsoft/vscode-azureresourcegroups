@@ -1,6 +1,6 @@
 # Change Log
 
-## 0.10.5 - 2025-01-28
+## 0.10.5 - 2025-02-13
 
 ### Added
 [[1031]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1031) Allow service and target resources to openInPortal and add tooltips to role definitions  
