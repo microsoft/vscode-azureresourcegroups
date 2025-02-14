@@ -309,6 +309,11 @@
                 "category": "Azure"
             },
             {
+                "command": "azureResourceGroups.askAzure",
+                "title": "%azureResourceGroups.askAzure%",
+                "category": "Azure"
+            },
+            {
                 "command": "azureTenantsView.refresh",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
