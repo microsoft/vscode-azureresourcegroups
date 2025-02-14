@@ -7,7 +7,7 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 
 export async function askAzureInCommandPalette(context: IActionContext) {
-    const prompt = await context.ui.showInputBox({ prompt: `@azure What do you want to ask about Azure?` });
+    const prompt = await context.ui.showInputBox({ prompt: `What do you want to ask about Azure?` });
     await vscode.commands.executeCommand("workbench.action.chat.newChat");
-    await vscode.commands.executeCommand("workbench.action.chat.open", { query: prompt });
+    await vscode.commands.executeCommand("workbench.action.chat.open", { query: `@azure ${prompt}` });
 }
