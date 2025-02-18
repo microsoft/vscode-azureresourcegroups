@@ -14,12 +14,13 @@ function nodeHasIdAndMaybeResource(node: unknown): node is { id: string, resourc
         ) &&
         (
             // Make sure node.resource is undefined or a not-null object
-            (node as { resource?: { kind?: string } }).resource === undefined ||
-            (typeof (node as { resource: { kind?: string } }).resource === "object" && (node as { resource: { kind?: string } }).resource !== null)
+            (node as { resource?: unknown }).resource === undefined ||
+            (typeof (node as { resource: unknown }).resource === "object" && (node as { resource: unknown }).resource !== null)
         ) &&
         (
             // Make sure node.resource.kind is undefined or a string
-            typeof (node as { resource: { kind?: string } }).resource?.kind === "string" || (node as { resource: { kind?: string } }).resource?.kind === undefined
+            (node as { resource: { kind?: string } }).resource?.kind === undefined ||
+            typeof (node as { resource: { kind?: string } }).resource?.kind === "string"
         );
 }
 
