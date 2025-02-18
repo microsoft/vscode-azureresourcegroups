@@ -6,14 +6,14 @@
 import { ext } from "../extensionVariables";
 
 function nodeHasIdAndMaybeResource(node: unknown): node is { id: string, resource?: { kind?: string } } {
-    // Make sure node is an object and not null
+    // Make sure node is a not-null object
     return typeof node === "object" && node !== null &&
         (
             // Make sure node has an id property that is a string
             typeof (node as { id: string }).id === "string"
         ) &&
         (
-            // Make sure node has a resource property that is an object and not null
+            // Make sure node.resource is undefined or a not-null object
             (node as { resource?: { kind?: string } }).resource === undefined ||
             (typeof (node as { resource: { kind?: string } }).resource === "object" && (node as { resource: { kind?: string } }).resource !== null)
         ) &&
