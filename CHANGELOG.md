@@ -1,6 +1,6 @@
 # Change Log
 
-## 0.10.6 - 2025-02-19
+## 0.10.6 - 2025-02-20
 
 ### Added
 * [[1037]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1037) Add an Ask @azure command to command palette
