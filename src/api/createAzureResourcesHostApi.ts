@@ -12,7 +12,7 @@ import { AzureResourceBranchDataProviderManager } from '../tree/azure/AzureResou
 import { AzureResourceTreeDataProvider } from '../tree/azure/AzureResourceTreeDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from '../tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceResourceTreeDataProvider } from '../tree/workspace/WorkspaceResourceTreeDataProvider';
-import { getRecentlyUsedAzureResources, getSelectedAzureResource } from '../utils/usedAndSelectedResources';
+import { getRecentlyUsedAzureNodes, getSelectedAzureNode } from '../utils/usedAndSelectedResources';
 import { AzureResourceProviderManager, WorkspaceResourceProviderManager } from './ResourceProviderManagers';
 
 export function createAzureResourcesHostApi(
@@ -55,11 +55,11 @@ export function createAzureResourcesHostApi(
         },
 
         getRecentlyUsedAzureNodes: () => {
-            return getRecentlyUsedAzureResources();
+            return getRecentlyUsedAzureNodes();
         },
 
         getSelectedAzureNode: () => {
-            return getSelectedAzureResource();
+            return getSelectedAzureNode();
         },
     }
 }

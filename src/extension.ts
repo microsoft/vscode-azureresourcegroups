@@ -47,7 +47,7 @@ import { registerTenantTree } from './tree/tenants/registerTenantTree';
 import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDefaultBranchDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
-import { listenForRecentlyUsedWithResources } from './utils/usedAndSelectedResources';
+import { listenForRecentlyUsedNodes } from './utils/usedAndSelectedResources';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
     // the entry point for vscode.dev is this activate, not main.js, so we need to instantiate perfStats here
@@ -114,7 +114,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
         registerChatStandInParticipantIfNeeded(context);
 
-        listenForRecentlyUsedWithResources();
+        listenForRecentlyUsedNodes();
     });
 
     const extensionManager = new ResourceGroupsExtensionManager()
