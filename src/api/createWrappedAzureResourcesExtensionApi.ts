@@ -32,8 +32,8 @@ export function createWrappedAzureResourcesExtensionApi(api: AzureResourcesApiIn
                 registerAzureResourceProvider: api.resources.registerAzureResourceProvider.bind(api) as typeof api.resources.registerAzureResourceProvider,
                 registerWorkspaceResourceProvider: api.resources.registerWorkspaceResourceProvider.bind(api) as typeof api.resources.registerWorkspaceResourceProvider,
                 registerWorkspaceResourceBranchDataProvider: api.resources.registerWorkspaceResourceBranchDataProvider.bind(api) as typeof api.resources.registerWorkspaceResourceBranchDataProvider,
-                getRecentlyUsedAzureResources: api.resources.getRecentlyUsedAzureResources.bind(api) as typeof api.resources.getRecentlyUsedAzureResources,
-                getSelectedAzureResource: api.resources.getSelectedAzureResource.bind(api) as typeof api.resources.getSelectedAzureResource,
+                getRecentlyUsedAzureResources: api.resources.getRecentlyUsedAzureNodes.bind(api) as typeof api.resources.getRecentlyUsedAzureNodes,
+                getSelectedAzureResource: api.resources.getSelectedAzureNode.bind(api) as typeof api.resources.getSelectedAzureNode,
             }, wrapOptions),
         }
     });

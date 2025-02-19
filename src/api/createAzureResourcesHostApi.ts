@@ -54,11 +54,11 @@ export function createAzureResourcesHostApi(
             });
         },
 
-        getRecentlyUsedAzureResources: () => {
+        getRecentlyUsedAzureNodes: () => {
             return getRecentlyUsedAzureResources();
         },
 
-        getSelectedAzureResource: () => {
+        getSelectedAzureNode: () => {
             return getSelectedAzureResource();
         },
     }
