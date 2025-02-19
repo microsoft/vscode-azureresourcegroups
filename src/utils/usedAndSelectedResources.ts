@@ -3,13 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem } from "@microsoft/vscode-azext-utils";
 import { TreeView } from "vscode";
 import { ext } from "../extensionVariables";
 
 
 export async function getSelectedAzureNode(): Promise<string | undefined> {
-    const resourceTreeView = (ext.appResourceTreeView as TreeView<AzExtTreeItem>);
+    const resourceTreeView = (ext.appResourceTreeView as TreeView<{ id?: string }>);
     const selectedItem = resourceTreeView.selection.at(0);
     return selectedItem?.id;
 }
@@ -36,7 +35,7 @@ function addToRecentlyUsedNodes(newNodeId: string): void {
 }
 
 export function listenForRecentlyUsedNodes(): void {
-    const resourceTreeView = (ext.appResourceTreeView as TreeView<AzExtTreeItem>);
+    const resourceTreeView = (ext.appResourceTreeView as TreeView<{ id?: string }>);
 
     ext.context.subscriptions.push(resourceTreeView.onDidChangeSelection((e) => {
         const newSelectionId = e.selection.at(0)?.id;
