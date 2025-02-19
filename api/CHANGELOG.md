@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## [2.4.0] - 2025-02-19
+
+* Add `getRecentlyUsedAzureNodes` to the resources API. You can use this API to get a list of node IDs for nodes recently used/interacted with in the Azure tree view.
+* Add `getSelectedAzureNode` to the resources API. You can use this API to get the node ID of the currently selected Azure node in the Azure tree view.
+
 ## [2.3.2] - 2024-08-19
 
 * Add "MongoClusters" resource type
