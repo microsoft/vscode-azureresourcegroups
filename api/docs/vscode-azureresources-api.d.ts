@@ -43,12 +43,14 @@ export declare enum AzExtResourceType {
     ContainerApps = "ContainerApps",
     ContainerAppsEnvironment = "ContainerAppsEnvironment",
     FunctionApp = "FunctionApp",
+    MongoClusters = "MongoClusters",
     PostgresqlServersFlexible = "PostgresqlServersFlexible",
     PostgresqlServersStandard = "PostgresqlServersStandard",
     StaticWebApps = "StaticWebApps",
     StorageAccounts = "StorageAccounts",
     VirtualMachines = "VirtualMachines",
     ResourceGroup = "ResourceGroup",
+    AiFoundry = "AiFoundry",
     ApiManagementService = "ApiManagementService",
     ApplicationInsights = "ApplicationInsights",
     AppServiceKubernetesEnvironment = "AppServiceKubernetesEnvironment",
@@ -62,7 +64,7 @@ export declare enum AzExtResourceType {
     DeviceIotHubs = "DeviceIotHubs",
     DevTestLabs = "DevTestLabs",
     Disks = "Disks",
-    DurableTaskScheduler = 'DurableTaskScheduler',
+    DurableTaskScheduler = "DurableTaskScheduler",
     EventGridDomains = "EventGridDomains",
     EventGridEventSubscriptions = "EventGridEventSubscriptions",
     EventGridTopics = "EventGridTopics",
@@ -74,8 +76,8 @@ export declare enum AzExtResourceType {
     LoadBalancers = "LoadBalancers",
     LogicApp = "LogicApp",
     LogicWorkflows = "LogicWorkflows",
+    MachineLearningWorkspace = "MachineLearningWorkspace",
     ManagedIdentityUserAssignedIdentities = "ManagedIdentityUserAssignedIdentities",
-    MongoClusters = 'MongoClusters',
     MysqlServers = "MysqlServers",
     NetworkApplicationGateways = "NetworkApplicationGateways",
     NetworkApplicationSecurityGroups = "NetworkApplicationSecurityGroups",
@@ -97,6 +99,7 @@ export declare enum AzExtResourceType {
     SpringApps = "SpringApps",
     SqlDatabases = "SqlDatabases",
     SqlServers = "SqlServers",
+    Subscription = "Subscription",
     VirtualMachineScaleSets = "VirtualMachineScaleSets",
     VirtualNetworks = "VirtualNetworks",
     WebHostingEnvironments = "WebHostingEnvironments",
@@ -243,6 +246,10 @@ export declare interface AzureSubscription {
      * The tenant to which this subscription belongs or undefined, if not associated with a specific tenant.
      */
     readonly tenantId: string;
+    /**
+     * The account associated with this subscription. This is optional as we only need the account if there are duplicate subscriptions.
+     */
+    readonly account?: vscode.AuthenticationSessionAccountInformation;
 }
 
 /**
@@ -382,6 +389,18 @@ export declare interface ResourcesApi {
      * @param options - Options for revealing the resource. See {@link vscode.TreeView.reveal}
      */
     revealAzureResource(id: string, options?: VSCodeRevealOptions): Promise<void>;
+    /**
+     * Gets a list of node IDs for nodes recently used/interacted with in the Azure tree view.
+     *
+     * @returns A promise that resolves to a list of node IDs.
+     */
+    getRecentlyUsedAzureNodes(): Promise<string[]>;
+    /**
+     * Gets the node ID for the currently selected Azure node in the Azure tree view.
+     *
+     * @returns A promise that resolves to the node ID or undefined if no node is selected.
+     */
+    getSelectedAzureNode(): Promise<string | undefined>;
 }
 
 export declare function unwrapArgs<T>(args?: unknown[]): [node?: T, nodes?: T[], ...args: unknown[]];
@@ -464,5 +483,4 @@ export declare interface Wrapper {
     unwrap<T>(): T;
 }
 
-export { };
-
+export { }
