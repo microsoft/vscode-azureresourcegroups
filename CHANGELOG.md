@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.10.6 - 2025-02-19
+
+### Added
+* [[1037]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1037) Add an Ask @azure command to command palette
+* [[1052]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1052) Add v2 resources API for getting selected resource and recently used resources
+
 ## 0.10.5 - 2025-02-14
 
 ### Added
