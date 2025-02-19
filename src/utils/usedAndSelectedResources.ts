@@ -14,7 +14,7 @@ export async function getSelectedAzureResource(): Promise<string | undefined> {
     return selectedItem?.id;
 }
 
-const maxRecentlyUsedResources = 10;
+const maxRecentlyUsedResources = 15;
 const recentlyUsedWithResources: string[] = [];
 
 export async function getRecentlyUsedAzureResources(): Promise<string[]> {
