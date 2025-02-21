@@ -47,21 +47,23 @@
                 "disambiguation": [
                     {
                         "category": "azure_learn",
-                        "description": "The user has a conceptual question about Azure.",
+                        "description": "The user has a conceptual question about Azure, including features and capabilities, guidance to onboarding or migrating to Azure, general recommendations regarding Azure, or how-to instructions for using Azure services",
                         "examples": [
                             "What is the difference between a blob container and a file share?",
                             "Does Azure let me choose where my resources are located?",
                             "What are the pros and cons of function apps vs container apps?",
-                            "How does Azure compare to other cloud offerings?"
+                            "How does Azure compare to other cloud offerings?",
+                            "Do static web apps support static ip addresses?"
                         ]
                     },
                     {
                         "category": "azure_resources",
-                        "description": "The user wants information about their Azure resources.",
+                        "description": "The user wants information about their Azure resources, subscriptions, or resource groups.",
                         "examples": [
                             "What is the application URL of my container app?",
                             "How many of my virtual machines are currently in a running state?",
-                            "How many cosmos databases have I created in west us 2?"
+                            "How many cosmos databases have I created in west us 2?",
+                            "Where is GPT-4o mini available using my subscription?"
                         ]
                     },
                     {
