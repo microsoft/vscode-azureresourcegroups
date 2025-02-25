@@ -829,6 +829,16 @@
                             "svg": "resources/walkthrough/createresource.svg",
                             "altText": "Create Azure resources."
                         }
+                    },
+                    {
+                        "id": "ask-azure",
+                        "title": "Ask @azure",
+                        "when": "github.copilot-chat.activated",
+                        "description": "%walkthrough.askAzure.description%",
+                        "media": {
+                            "image": "resources/walkthrough/askAzure.gif",
+                            "altText": "Enter @azure in GitHub Copilot Chat"
+                        }
                     }
                 ]
             }
