@@ -833,10 +833,11 @@
                     {
                         "id": "ask-azure",
                         "title": "Ask @azure",
+                        "when": "github.copilot-chat.activated",
                         "description": "%walkthrough.askAzure.description%",
                         "media": {
                             "image": "resources/walkthrough/askAzure.gif",
-                            "altText": "Use @azure in the GitHub Copilot chat window"
+                            "altText": "Enter @azure in GitHub Copilot Chat"
                         }
                     }
                 ]
