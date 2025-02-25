@@ -836,7 +836,7 @@
                         "when": "github.copilot-chat.activated",
                         "description": "%walkthrough.askAzure.description%",
                         "media": {
-                            "image": "resources/walkthrough/askAzure.gif",
+                            "image": "https://github.com/microsoft/vscode-azureresourcegroups/raw/main/resources/walkthrough/askAzure.gif",
                             "altText": "Enter @azure in GitHub Copilot Chat"
                         }
                     }
