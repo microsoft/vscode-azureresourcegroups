@@ -53,7 +53,7 @@
         ]
     },
     "walkthrough.askAzure.description": {
-        "message": "Enter @azure in the GitHub Copilot Chat to start a conversation.\n @azure can help with learning about Azure, deploying resources, troubleshooting web app problems, querying Azure costs and more without having to switch to the Azure Portal.\n[Chat with @azure](command:azureResourceGroups.askAzure?%5B%22@azure%20What%20kinds%20of%20things%20can%20you%20help%20me%20with?%22%5D)",
+        "message": "Enter @azure in the GitHub Copilot Chat to start a conversation.\n @azure can help with learning about Azure, deploying resources, troubleshooting web app problems, querying Azure costs and more without having to switch to the Azure Portal.\n[Chat with @azure](command:azureResourceGroups.askAzure?%5B%22What%20kinds%20of%20things%20can%20you%20help%20me%20with?%22%5D)",
         "comment": [
             "{Locked='@azure'}",
             "Do not translate '@azure'; it is the syntax for addressing the Azure agent.",
