@@ -3,9 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import { callWithTelemetryAndErrorHandling, parseError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/src/index';
+import { ext } from '../extensionVariables';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { BranchDataItemWrapper } from './BranchDataItemWrapper';
 import { InvalidItem } from './InvalidItem';
@@ -40,6 +42,35 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
         // TODO: If only individual resources change, just update the tree related to those resources.
         this.resourceProviderManagerListener = onDidChangeResource(() => this.onDidChangeTreeDataEmitter.fire());
+    }
+
+    protected statusSubscription: vscode.Disposable | undefined;
+    private subscriptionProvider?: AzureSubscriptionProvider;
+    private nextSessionChangeMessageMinimumTime = 0;
+    private sessionChangeMessageInterval = 1 * 1000; // 1 second
+
+    protected async getAzureSubscriptionProvider(): Promise<AzureSubscriptionProvider> {
+        // override for testing
+        if (ext.testing.overrideAzureSubscriptionProvider) {
+            return ext.testing.overrideAzureSubscriptionProvider();
+        } else {
+            if (!this.subscriptionProvider) {
+                this.subscriptionProvider = await ext.subscriptionProviderFactory();
+            }
+
+            this.statusSubscription = vscode.authentication.onDidChangeSessions((evt: vscode.AuthenticationSessionsChangeEvent) => {
+                if (evt.provider.id === 'microsoft' || evt.provider.id === 'microsoft-sovereign-cloud') {
+                    if (Date.now() > this.nextSessionChangeMessageMinimumTime) {
+                        this.nextSessionChangeMessageMinimumTime = Date.now() + this.sessionChangeMessageInterval;
+                        // This event gets HEAVILY spammed and needs to be debounced
+                        // Suppress additional messages for 1 second after the first one
+                        this.notifyTreeDataChanged();
+                    }
+                }
+            });
+
+            return this.subscriptionProvider;
+        }
     }
 
     onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;

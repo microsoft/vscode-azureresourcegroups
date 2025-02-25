@@ -14,9 +14,9 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
-import { OnGetChildrenBase, getAzureSubscriptionProvider } from '../OnGetChildrenBase';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { TreeItemStateStore } from '../TreeItemState';
+import { onGetAzureChildrenBase } from '../onGetAzureChildrenBase';
 import { AzureResourceTreeDataProviderBase } from './AzureResourceTreeDataProviderBase';
 import { SubscriptionItem } from './SubscriptionItem';
 import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingManager';
@@ -66,9 +66,9 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         if (element) {
             return await element.getChildren();
         } else {
-            const subscriptionProvider = await getAzureSubscriptionProvider(this);
+            const subscriptionProvider = await this.getAzureSubscriptionProvider();
             // When a user is signed in 'OnGetChildrenBase' will return no children
-            const children: ResourceGroupsItem[] = await OnGetChildrenBase(subscriptionProvider, this);
+            const children: ResourceGroupsItem[] = await onGetAzureChildrenBase(subscriptionProvider, this);
 
             if (children.length === 0) {
                 this.sendSubscriptionTelemetryIfNeeded();
@@ -162,7 +162,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
             context.telemetry.properties.isActivationEvent = 'true';
             context.errorHandling.suppressDisplay = true;
 
-            const subscriptionProvider = await getAzureSubscriptionProvider(this);
+            const subscriptionProvider = await this.getAzureSubscriptionProvider();
             const subscriptions = await subscriptionProvider.getSubscriptions(false);
 
             const tenantSet = new Set<string>();
