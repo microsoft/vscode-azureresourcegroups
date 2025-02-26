@@ -35,7 +35,6 @@ import { survey } from './nps';
 import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
-import { getAzureSubscriptionProvider } from './tree/OnGetChildrenBase';
 import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
 import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
@@ -195,7 +194,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
 
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
-        async (filter: boolean) => { return await (await getAzureSubscriptionProvider(azureResourceTreeDataProvider)).getSubscriptions(filter) };
+        async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getSubscriptions(filter) };
 
     return createApiProvider(
         [

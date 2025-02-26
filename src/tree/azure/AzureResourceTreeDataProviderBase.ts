@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
@@ -15,11 +14,6 @@ import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingMa
 import { GroupingItem } from './grouping/GroupingItem';
 
 export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeDataProviderBase {
-    public subscriptionProvider: AzureSubscriptionProvider | undefined;
-    public statusSubscription: vscode.Disposable | undefined;
-    public nextSessionChangeMessageMinimumTime = 0;
-    public sessionChangeMessageInterval = 1 * 1000; // 1 second
-
     constructor(
         itemCache: BranchDataItemCache,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,

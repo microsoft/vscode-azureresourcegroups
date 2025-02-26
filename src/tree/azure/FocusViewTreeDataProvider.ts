@@ -12,7 +12,6 @@ import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { settingUtils } from '../../utils/settingUtils';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { getAzureSubscriptionProvider } from '../OnGetChildrenBase';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { TreeItemStateStore } from '../TreeItemState';
 import { AzureResourceTreeDataProviderBase } from './AzureResourceTreeDataProviderBase';
@@ -54,7 +53,7 @@ export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase
                 return [];
             }
 
-            const provider = await getAzureSubscriptionProvider(this);
+            const provider = await this.getAzureSubscriptionProvider();
             let subscriptions: AzureSubscription[] | undefined;
             if (await provider.isSignedIn() && (subscriptions = await provider.getSubscriptions(true)).length > 0) {
                 const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);

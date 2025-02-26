@@ -3,26 +3,21 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscriptionProvider, getConfiguredAuthProviderId } from '@microsoft/vscode-azext-azureauth';
+import { getConfiguredAuthProviderId } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, callWithTelemetryAndErrorHandling, nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { ResourceModelBase } from 'api/src';
 import * as vscode from 'vscode';
 import { TenantResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
-import { OnGetChildrenBase, getAzureSubscriptionProvider } from '../OnGetChildrenBase';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from "../ResourceTreeDataProviderBase";
+import { onGetAzureChildrenBase } from '../onGetAzureChildrenBase';
 import { TenantResourceBranchDataProviderManager } from "./TenantResourceBranchDataProviderManager";
 import { TenantTreeItem } from './TenantTreeItem';
 import { isTenantFilteredOut } from './registerTenantTree';
 
 export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase {
-    public subscriptionProvider: AzureSubscriptionProvider | undefined;
-    public statusSubscription: vscode.Disposable | undefined;
-    public nextSessionChangeMessageMinimumTime = 0;
-    public sessionChangeMessageInterval = 1 * 1000; // 1 second
-
     constructor(
         protected readonly branchDataProviderManager: TenantResourceBranchDataProviderManager,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -47,8 +42,8 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
             if (element) {
                 return await element.getChildren();
             } else {
-                const subscriptionProvider = await getAzureSubscriptionProvider(this);
-                const children: ResourceGroupsItem[] = await OnGetChildrenBase(subscriptionProvider);
+                const subscriptionProvider = await this.getAzureSubscriptionProvider();
+                const children: ResourceGroupsItem[] = await onGetAzureChildrenBase(subscriptionProvider);
 
                 if (children.length === 0) {
                     const accounts = Array.from((await vscode.authentication.getAccounts(getConfiguredAuthProviderId()))).sort((a, b) => a.label.localeCompare(b.label));

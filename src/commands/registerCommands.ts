@@ -4,8 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
+<<<<<<< HEAD
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, nonNullValue, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+=======
+import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+>>>>>>> d5164271639e7b888d118854e88d30bf4cb0acab
 import { commands } from 'vscode';
+import { askAgentAboutResource } from '../chat/askAgentAboutResource';
+import { askAzureInCommandPalette } from '../chat/askAzure';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
 import { TargetServiceRoleAssignmentItem } from '../managedIdentity/TargetServiceRoleAssignmentItem';
@@ -117,6 +123,7 @@ export function registerCommands(): void {
         context.telemetry.properties.url = url;
         await openUrl(url)
     });
+    registerCommand('azureResourceGroups.askAzure', askAzureInCommandPalette);
 
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
     registerCommand('azureTenantsView.configureSovereignCloud', configureSovereignCloud);
@@ -126,6 +133,7 @@ export function registerCommands(): void {
         ext.managedIdentityBranchDataProvider.refresh(node as ResourceGroupsItem);
         ext.azureTreeState.notifyChildrenChanged(node.id);
     });
+    registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
