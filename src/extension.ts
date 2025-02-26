@@ -12,7 +12,7 @@ import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { AzExtResourceType } from '../api/src/AzExtResourceType';
 import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
-import { registerActivity } from './activityLog/registerActivity';
+import { getActivities, registerActivity } from './activityLog/api';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/ResourceGroupsExtensionManager';
 import { AzureResourceProviderManager, TenantResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
@@ -178,7 +178,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                         workspaceResourceTreeDataProvider,
                     ),
                     activity: {
-                        registerActivity
+                        registerActivity,
+                        getActivities,
                     },
                 },
                 options?.extensionId ?? 'unknown'
