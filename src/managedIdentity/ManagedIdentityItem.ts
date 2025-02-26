@@ -4,15 +4,15 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { Identity } from "@azure/arm-msi";
-import { TargetServiceRoleAssignmentItem } from '@microsoft/vscode-azext-azureutils';
+import { createManagedServiceIdentityClient } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, createContextValue, createSubscriptionContext, nonNullProp, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureResource, type AzureSubscription, type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
 import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { getAzureResourcesService } from "../services/AzureResourcesService";
 import { ResourceGroupsItem } from "../tree/ResourceGroupsItem";
-import { createManagedServiceIdentityClient } from "../utils/azureClients";
 import { getIconPath } from "../utils/azureUtils";
 import { SourceResourceIdentityItem } from "./SourceResourceIdentityItem";
+import { TargetServiceRoleAssignmentItem } from "./TargetServiceRoleAssignmentItem";
 
 export class ManagedIdentityItem implements ResourceGroupsItem {
     static readonly contextValue: string = 'managedIdentityItem';
@@ -45,7 +45,7 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
 
             const resources = await getAzureResourcesService().listResources(context, this.subscription);
             const sourceResourceItem = new SourceResourceIdentityItem(this.subscription, msi, resources);
-            const targetServiceItem = await TargetServiceRoleAssignmentItem.createTargetServiceRoleAssignmentItem(context, this.subscription, msi);
+            const targetServiceItem = new TargetServiceRoleAssignmentItem(this.subscription, msi);
 
             const children = [];
 
@@ -54,12 +54,11 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
                 children.push(sourceResourceItem);
             }
 
-
             children.push(targetServiceItem);
             return children;
         });
 
-        return result ?? [];
+        return result as TreeElementBase[] ?? [];
     }
 
     getTreeItem(): TreeItem {
