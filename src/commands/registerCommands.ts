@@ -126,7 +126,6 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping('azureResourceGroups.loadAllSubscriptionRoleAssignments', async (_context: IActionContext, node?: TargetServiceRoleAssignmentItem) => {
         node = nonNullValue(node);
         node.setAllSubscriptionsLoaded();
-        ext.managedIdentityBranchDataProvider.refresh(node as ResourceGroupsItem);
         ext.azureTreeState.notifyChildrenChanged(node.id);
     });
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
