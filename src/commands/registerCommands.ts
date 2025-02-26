@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
-import { AzExtTreeItem, IActionContext, isAzExtTreeItem, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, isAzExtTreeItem, nonNullValue, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { askAgentAboutResource } from '../chat/askAgentAboutResource';
 import { askAzureInCommandPalette } from '../chat/askAzure';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
-import { loadAllSubscriptionRoleAssignments } from '../managedIdentity/loadAllSubscriptionRoleAssignments';
+import { TargetServiceRoleAssignmentItem } from '../managedIdentity/TargetServiceRoleAssignmentItem';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
@@ -122,9 +122,12 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.askAzure', askAzureInCommandPalette);
 
     registerCommand('azureWorkspace.loadMore', async (context: IActionContext, node: AzExtTreeItem) => await ext.workspaceTree.loadMore(node, context));
-    registerCommand('azureResources.loadAllSubscriptionRoleAssignments', loadAllSubscriptionRoleAssignments);
-
     registerCommand('azureTenantsView.configureSovereignCloud', configureSovereignCloud);
+    registerCommandWithTreeNodeUnwrapping('azureResourceGroups.loadAllSubscriptionRoleAssignments', async (_context: IActionContext, node?: TargetServiceRoleAssignmentItem) => {
+        node = nonNullValue(node);
+        node.setAllSubscriptionsLoaded();
+        ext.azureTreeState.notifyChildrenChanged(node.id);
+    });
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
 }
 
