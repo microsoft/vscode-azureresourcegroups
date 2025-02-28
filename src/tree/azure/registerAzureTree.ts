@@ -9,6 +9,7 @@ import { AzureResource } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
+import { listenForRecentlyUsedNodes } from '../../utils/usedAndSelectedResources';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { TreeItemStateStore } from '../TreeItemState';
@@ -49,6 +50,8 @@ export function registerAzureTree(context: vscode.ExtensionContext, options: Reg
     });
     context.subscriptions.push(treeView);
     ext.appResourceTreeView = treeView as unknown as vscode.TreeView<AzExtTreeItem>;
+
+    listenForRecentlyUsedNodes();
 
     return azureResourceTreeDataProvider;
 }

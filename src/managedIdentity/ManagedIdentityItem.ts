@@ -4,20 +4,15 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { Identity } from "@azure/arm-msi";
-import { uiUtils } from "@microsoft/vscode-azext-azureutils";
+import { createManagedServiceIdentityClient } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, createContextValue, createSubscriptionContext, nonNullProp, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureResource, type AzureSubscription, type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
-import { ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
-import { createAzureResource } from "../api/DefaultAzureResourceProvider";
+import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { getAzureResourcesService } from "../services/AzureResourcesService";
-import { DefaultAzureResourceItem } from "../tree/azure/DefaultAzureResourceItem";
-import { GenericItem } from "../tree/GenericItem";
 import { ResourceGroupsItem } from "../tree/ResourceGroupsItem";
-import { createAuthorizationManagementClient, createManagedServiceIdentityClient } from "../utils/azureClients";
 import { getIconPath } from "../utils/azureUtils";
-import { localize } from "../utils/localize";
-import { RoleAssignmentsItem } from "./RoleAssignmentsItem";
-import { RoleDefinitionsItem } from "./RoleDefinitionsItem";
+import { SourceResourceIdentityItem } from "./SourceResourceIdentityItem";
+import { TargetServiceRoleAssignmentItem } from "./TargetServiceRoleAssignmentItem";
 
 export class ManagedIdentityItem implements ResourceGroupsItem {
     static readonly contextValue: string = 'managedIdentityItem';
@@ -42,60 +37,28 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
         return createContextValue(values);
     }
 
-    async getChildren(): Promise<(GenericItem | RoleDefinitionsItem | RoleAssignmentsItem)[]> {
+    async getChildren<TreeElementBase>(): Promise<TreeElementBase[]> {
         const result = await callWithTelemetryAndErrorHandling('managedIdentityItem.getChildren', async (context: IActionContext) => {
             const subContext = createSubscriptionContext(this.subscription);
             const msiClient = await createManagedServiceIdentityClient([context, subContext]);
             const msi: Identity = await msiClient.userAssignedIdentities.get(nonNullProp(this.resource, 'resourceGroup'), this.resource.name);
 
             const resources = await getAzureResourcesService().listResources(context, this.subscription);
-            const assignedRoleAssignment = new RoleAssignmentsItem(localize('sourceResources', 'Source resources'), this.subscription, msi);
-            const accessRoleAssignment = new RoleAssignmentsItem(localize('targetServices', 'Target services'), this.subscription, msi);
+            const sourceResourceItem = new SourceResourceIdentityItem(this.subscription, msi, resources);
+            const targetServiceItem = new TargetServiceRoleAssignmentItem(this.subscription, msi);
 
-            const assignedResources = resources.filter((r) => {
-                // verify the msi is assigned to the resource by checking if the msi id is in the userAssignedIdentities
-                const userAssignedIdentities = r.identity?.userAssignedIdentities;
-                if (!userAssignedIdentities) {
-                    return false;
-                }
-
-                if (!msi.id) {
-                    return false;
-                }
-
-                return userAssignedIdentities[msi.id] !== undefined
-            }).map((r) => {
-                const azureResoure = createAzureResource(this.subscription, r);
-                return new DefaultAzureResourceItem(azureResoure);
-            });
-
-            const authClient = await createAuthorizationManagementClient([context, subContext]);
-            const roleAssignment = await uiUtils.listAllIterator(authClient.roleAssignments.listForSubscription());
-            // filter the role assignments to only show the ones that are assigned to the msi
-            const filteredBySub = roleAssignment.filter((ra) => ra.principalId === msi.principalId);
-
-            const targetResources = await accessRoleAssignment.getRoleDefinitionsItems(context, filteredBySub);
             const children = [];
 
-            if (assignedResources.length > 0) {
+            if (sourceResourceItem.getChildren().length > 0) {
                 // if there weren't any assigned resources, don't show that section
-                assignedRoleAssignment.addChildren(assignedResources);
-                children.push(assignedRoleAssignment);
+                children.push(sourceResourceItem);
             }
 
-            accessRoleAssignment.addChildren(targetResources);
-            children.push(accessRoleAssignment);
-            accessRoleAssignment.addChild(new GenericItem(localize('showResources', 'Show resources from other subscriptions...'),
-                {
-                    id: accessRoleAssignment.id + '/showResourcesFromOtherSubscriptions',
-                    iconPath: new ThemeIcon('sync'),
-                    commandId: 'azureResources.loadAllSubscriptionRoleAssignments',
-                    commandArgs: [accessRoleAssignment]
-                }))
+            children.push(targetServiceItem);
             return children;
         });
 
-        return result ?? [];
+        return result as TreeElementBase[] ?? [];
     }
 
     getTreeItem(): TreeItem {

@@ -25,3 +25,4 @@ tools/**
 tsconfig.json
 typings/**
 webpack.config*
+resources/walkthrough/*.gif

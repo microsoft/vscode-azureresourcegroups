@@ -6,15 +6,12 @@
 import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
 import * as vscode from 'vscode';
 import { isLoggingIn } from "../commands/accounts/logIn";
-import { ext } from "../extensionVariables";
 import { localize } from "../utils/localize";
 import { GenericItem } from "./GenericItem";
 import { ResourceGroupsItem } from "./ResourceGroupsItem";
 import { AzureResourceTreeDataProvider } from "./azure/AzureResourceTreeDataProvider";
-import { AzureResourceTreeDataProviderBase } from "./azure/AzureResourceTreeDataProviderBase";
-import { TenantResourceTreeDataProvider } from "./tenants/TenantResourceTreeDataProvider";
 
-export async function OnGetChildrenBase(subscriptionProvider: AzureSubscriptionProvider, tdp?: AzureResourceTreeDataProvider): Promise<ResourceGroupsItem[]> {
+export async function onGetAzureChildrenBase(subscriptionProvider: AzureSubscriptionProvider, tdp?: AzureResourceTreeDataProvider): Promise<ResourceGroupsItem[]> {
     const children: ResourceGroupsItem[] = [];
 
     if (subscriptionProvider) {
@@ -57,28 +54,4 @@ export async function OnGetChildrenBase(subscriptionProvider: AzureSubscriptionP
         }
     }
     return children;
-}
-
-export async function getAzureSubscriptionProvider(tdp: AzureResourceTreeDataProviderBase | TenantResourceTreeDataProvider): Promise<AzureSubscriptionProvider> {
-    // override for testing
-    if (ext.testing.overrideAzureSubscriptionProvider) {
-        return ext.testing.overrideAzureSubscriptionProvider();
-    } else {
-        if (!tdp.subscriptionProvider) {
-            tdp.subscriptionProvider = await ext.subscriptionProviderFactory();
-        }
-
-        tdp.statusSubscription = vscode.authentication.onDidChangeSessions((evt: vscode.AuthenticationSessionsChangeEvent) => {
-            if (evt.provider.id === 'microsoft' || evt.provider.id === 'microsoft-sovereign-cloud') {
-                if (Date.now() > tdp.nextSessionChangeMessageMinimumTime) {
-                    tdp.nextSessionChangeMessageMinimumTime = Date.now() + tdp.sessionChangeMessageInterval;
-                    // This event gets HEAVILY spammed and needs to be debounced
-                    // Suppress additional messages for 1 second after the first one
-                    tdp.notifyTreeDataChanged();
-                }
-            }
-        });
-
-        return tdp.subscriptionProvider;
-    }
 }

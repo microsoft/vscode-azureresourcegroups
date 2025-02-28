@@ -60,4 +60,18 @@ export interface ResourcesApi {
      * @param options - Options for revealing the resource. See {@link vscode.TreeView.reveal}
      */
     revealAzureResource(id: string, options?: VSCodeRevealOptions): Promise<void>;
+
+    /**
+     * Gets a list of node IDs for nodes recently used/interacted with in the Azure tree view.
+     *
+     * @returns A promise that resolves to a list of node IDs.
+     */
+    getRecentlyUsedAzureNodes(): Promise<string[]>;
+
+    /**
+     * Gets the node ID for the currently selected Azure node in the Azure tree view.
+     *
+     * @returns A promise that resolves to the node ID or undefined if no node is selected.
+     */
+    getSelectedAzureNode(): Promise<string | undefined>;
 }

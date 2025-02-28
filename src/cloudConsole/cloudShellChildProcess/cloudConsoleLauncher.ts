@@ -119,6 +119,7 @@ function connectSocket(ipcHandle: string, url: string) {
         agent = url.startsWith('ws:') || url.startsWith('http:') ? new HttpProxyAgent(proxy) : new HttpsProxyAgent(proxy);
     }
 
+    // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
     const ws = new WS(url, {
         agent
     });

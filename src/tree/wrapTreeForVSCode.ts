@@ -4,7 +4,6 @@
 *--------------------------------------------------------------------------------------------*/
 
 import type { Event, ProviderResult, TreeDataProvider, TreeItem } from "vscode";
-import { ext } from "../extensionVariables";
 import { BranchDataItemCache } from "./BranchDataItemCache";
 import { ResourceGroupsItem } from "./ResourceGroupsItem";
 import { ResourceTreeDataProviderBase } from "./ResourceTreeDataProviderBase";
@@ -36,8 +35,6 @@ class OnRefreshTreeDataProvider implements TreeDataProvider<ResourceGroupsItem> 
     getChildren(element?: ResourceGroupsItem): ProviderResult<ResourceGroupsItem[]> {
         if (!element) {
             this.onRefresh();
-            // when refreshing the root of the tree, we need to ensure that the managed identity branch data provider is re-initialized
-            void ext.managedIdentityBranchDataProvider.initialize();
         }
         return this.treeDataProvider.getChildren(element);
     }
