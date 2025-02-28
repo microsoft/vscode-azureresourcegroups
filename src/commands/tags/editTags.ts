@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { azureResourceExperience, IActionContext } from "@microsoft/vscode-azext-utils";
+import { azureResourceExperience, IActionContext, PickExperienceContext } from "@microsoft/vscode-azext-utils";
 import { AzureResource } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
 import { AzureResourceItem } from "../../tree/azure/AzureResourceItem";
 
 export async function editTags(context: IActionContext, item?: AzureResourceItem<AzureResource>): Promise<void> {
+    (context as PickExperienceContext).dontUnwrap = true;
     if (!item) {
-        item = await azureResourceExperience<AzureResourceItem<AzureResource>>({ ...context, dontUnwrap: true }, ext.v2.api.resources.azureResourceTreeDataProvider);
+        item = await azureResourceExperience<AzureResourceItem<AzureResource>>(context, ext.v2.api.resources.azureResourceTreeDataProvider);
     }
 
     if (!item.tagsModel) {

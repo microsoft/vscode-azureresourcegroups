@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { azureResourceExperience, IActionContext, openReadOnlyJson } from '@microsoft/vscode-azext-utils';
+import { azureResourceExperience, IActionContext, openReadOnlyJson, type PickExperienceContext } from '@microsoft/vscode-azext-utils';
 import { v4 as uuidv4 } from "uuid";
 import { ViewPropertiesModel, ViewPropertiesModelAsync } from '../../api/src/index';
 import { ext } from '../extensionVariables';
@@ -12,7 +12,8 @@ import { localize } from '../utils/localize';
 
 export async function viewProperties(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
     if (!node) {
-        node = await azureResourceExperience<ResourceGroupsItem>({ ...context, dontUnwrap: true }, ext.v2.api.resources.azureResourceTreeDataProvider);
+        (context as PickExperienceContext).dontUnwrap = true;
+        node = await azureResourceExperience<ResourceGroupsItem>(context, ext.v2.api.resources.azureResourceTreeDataProvider);
     }
 
     if (!hasViewProperties(node)) {
