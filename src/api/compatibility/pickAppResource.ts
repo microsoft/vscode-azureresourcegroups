@@ -18,6 +18,7 @@ export function createCompatibilityPickAppResource() {
             childItemFilter: convertExpectedChildContextValueToContextValueFilter(options?.expectedChildContextValue)
         });
 
+        context.resourceId = result.id;
         return result;
     }
 }

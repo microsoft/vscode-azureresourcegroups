@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { azureResourceExperience, IActionContext, openUrl, ResourceGroupsItem } from '@microsoft/vscode-azext-utils';
+import { azureResourceExperience, IActionContext, openUrl, PickExperienceContext, ResourceGroupsItem } from '@microsoft/vscode-azext-utils';
 import { Uri } from 'vscode';
 import { ext } from '../extensionVariables';
 import { localize } from '../utils/localize';
 
 export async function openInPortal(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
+    (context as PickExperienceContext).dontUnwrap = true;
     if (!node) {
-        node = await azureResourceExperience({ ...context, dontUnwrap: true }, ext.v2.api.resources.azureResourceTreeDataProvider);
+        node = await azureResourceExperience(context, ext.v2.api.resources.azureResourceTreeDataProvider);
     }
 
     if (hasPortalUrl(node)) {
