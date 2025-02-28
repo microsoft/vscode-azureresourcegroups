@@ -5,6 +5,7 @@
 
 import { callWithTelemetryAndErrorHandling, IActionContext, registerCommand } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { askAgentAboutResourcePrompt } from './askAgentAboutResource';
 
 const GitHubCopilotForAzureExtensionId = 'ms-azuretools.vscode-azure-github-copilot';
 
@@ -29,7 +30,7 @@ export function registerChatStandInParticipantIfNeeded(context: vscode.Extension
 
 async function chatStandIn(
     _actionContext: IActionContext,
-    _request: vscode.ChatRequest,
+    request: vscode.ChatRequest,
     _context: vscode.ChatContext,
     responseStream: vscode.ChatResponseStream,
     _token: vscode.CancellationToken
@@ -40,7 +41,9 @@ async function chatStandIn(
         command: 'azureResourcesGroups.installGitHubCopilotForAzureFromChat',
     });
 
-    responseStream.markdown(vscode.l10n.t('After that, please repeat your question.'));
+    const postButtonMessage = request.prompt === askAgentAboutResourcePrompt ? vscode.l10n.t(`After that, please use \`Ask @azure\` again.`) :
+        vscode.l10n.t('After that, please repeat your question.');
+    responseStream.markdown(postButtonMessage);
 }
 
 async function installGitHubCopilotForAzureFromChat(context: IActionContext): Promise<void> {
