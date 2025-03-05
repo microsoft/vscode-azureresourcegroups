@@ -1,5 +1,17 @@
 # Change Log
 
+## 0.10.7 - 2025-03-05
+
+### Added
+* [[1058]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1058) Add Ask azure walkthrough step 
+
+### Changed
+* [[1061]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1061) Updated Disambiguations to improve intent detection for `@azure`
+* [[1036]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1036) Improve managed identity view
+
+### Fixed
+*  [[1036]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1036) Fix slow loading time for Azure Resources view 
+
 ## 0.10.6 - 2025-02-20
 
 ### Added
