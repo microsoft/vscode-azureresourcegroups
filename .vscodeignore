@@ -26,3 +26,5 @@ tsconfig.json
 typings/**
 webpack.config*
 resources/walkthrough/*.gif
+api/**
+component-detection-pip-report.json
