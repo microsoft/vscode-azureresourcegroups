@@ -18,6 +18,11 @@ export function createCompatibilityPickAppResource() {
             childItemFilter: convertExpectedChildContextValueToContextValueFilter(options?.expectedChildContextValue)
         });
 
+        context.telemetry.properties.resourceId = result.id;
+        if (result.subscription) {
+            context.telemetry.properties.subscriptionId = result.subscription.subscriptionId;
+        }
+
         return result;
     }
 }
