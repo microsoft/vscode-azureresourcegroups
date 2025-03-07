@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.10.8 - 2025-03-10
+
+### Changed
+* [[1076](https://github.com/microsoft/vscode-azureresourcegroups/pull/1076)] Automatically collect subscription and resource information for telemetry. [How to disable telemetry reporting](https://code.visualstudio.com/docs/supporting/FAQ#_how-to-disable-telemetry-reporting)
+
 ## 0.10.7 - 2025-03-05
 
 ### Added
