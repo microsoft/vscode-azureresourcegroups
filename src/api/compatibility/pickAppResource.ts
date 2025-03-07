@@ -19,8 +19,14 @@ export function createCompatibilityPickAppResource() {
         });
 
         context.telemetry.properties.resourceId = result.id;
-        if (result.subscription) {
+
+        try {
+            // AzExtTreeItems throw when subscription is undefined. It's unlikely to happen here, but better safe than sorry.
+            // see https://github.com/microsoft/vscode-azuretools/blob/cc1feb3a819dd503eb59ebcc1a70051d4e9a3432/utils/src/tree/AzExtTreeItem.ts#L154
             context.telemetry.properties.subscriptionId = result.subscription.subscriptionId;
+        } catch (e) {
+            // don't block execution just because we can't set the telemetry properties
+            // see https://github.com/microsoft/vscode-azureresourcegroups/issues/1080
         }
 
         return result;
