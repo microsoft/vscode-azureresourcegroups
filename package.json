@@ -103,6 +103,20 @@
                 ]
             }
         ],
+        "languageModelTools": [
+            {
+                "displayName": "Azure Resources: Get Selected Azure Nodes",
+                "icon": "$(azure)",
+                "inputSchema": {},
+                "modelDescription": "Gets the selected Azure nodes from the Azure Resources tree view in Visual Studio Code.",
+                "name": "azureResources_getSelectedAzureNodes",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "selectedAzureNodes",
+                "tags": [
+                    "vscode_editing"
+                ]
+            }
+        ],
         "terminal": {
             "profiles": [
                 {
@@ -860,6 +874,9 @@
             }
         ]
     },
+    "enabledApiProposals": [
+        "chatParticipantPrivate"
+    ],
     "scripts": {
         "vscode:prepublish": "npm run webpack-prod",
         "build": "tsc",
@@ -917,7 +934,7 @@
         "@azure/ms-rest-js": "^2.7.0",
         "@microsoft/vscode-azext-azureauth": "^4.0.3",
         "@microsoft/vscode-azext-azureutils": "^3.1.4",
-        "@microsoft/vscode-azext-utils": "^2.6.3",
+        "@microsoft/vscode-azext-utils": "file:../vscode-azuretools/utils/microsoft-vscode-azext-utils-2.6.3.tgz",
         "buffer": "^6.0.3",
         "form-data": "^4.0.1",
         "jsonc-parser": "^2.2.1",

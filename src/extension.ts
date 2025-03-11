@@ -24,6 +24,7 @@ import { registerWorkspaceResourceProvider } from './api/compatibility/registerW
 import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
 import { registerChatStandInParticipantIfNeeded } from './chat/chatStandIn';
+import { registerLMTools } from './chat/tools/registerLMTools';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
@@ -111,6 +112,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         survey(context);
 
         registerChatStandInParticipantIfNeeded(context);
+        registerLMTools();
     });
 
     const extensionManager = new ResourceGroupsExtensionManager()
