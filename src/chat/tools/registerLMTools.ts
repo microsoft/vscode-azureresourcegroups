@@ -4,8 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { registerLMTool } from '@microsoft/vscode-azext-utils';
+import { CreateResourceGroup } from './CreateResourceGroup';
 import { GetSelectedAzureNodes } from './GetSelectedAzureNodes';
 
 export function registerLMTools(): void {
     registerLMTool('azureResources_getSelectedAzureNodes', new GetSelectedAzureNodes());
+    registerLMTool('azureResources_createResourceGroup', new CreateResourceGroup());
 }
