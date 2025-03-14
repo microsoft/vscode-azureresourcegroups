@@ -35,8 +35,7 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
 
         return {
             content: convertedItems
-                .map(item => JSON.stringify(item))
-                .map(jsonItem => new vscode.LanguageModelTextPart(jsonItem)),
+                .map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))),
         };
     }
 }
