@@ -33,9 +33,15 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
             convertedItems.push(convertedItem);
         }
 
+        // For now, return the converted items as a single JSON string
+        // Due to https://github.com/microsoft/vscode-copilot/issues/14276
+        // return {
+        //     content: convertedItems
+        //         .map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))),
+        // };
+
         return {
-            content: convertedItems
-                .map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))),
+            content: [new vscode.LanguageModelTextPart(JSON.stringify(convertedItems))],
         };
     }
 }
