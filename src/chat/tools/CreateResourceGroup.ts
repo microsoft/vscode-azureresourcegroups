@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IResourceGroupWizardContext } from '@microsoft/vscode-azext-azureutils';
 import { AzExtLMTool, IActionContext } from '@microsoft/vscode-azext-utils';
-import { IResourceGroupWizardContext } from 'node_modules/@microsoft/vscode-azext-azureutils';
 import * as vscode from 'vscode';
 import { createResourceGroup } from '../../commands/createResourceGroup';
 
@@ -25,19 +25,7 @@ export class CreateResourceGroup implements AzExtLMTool<CreateResourceGroupArgum
     }
 
     public async invoke(context: IActionContext, options: vscode.LanguageModelToolInvocationOptions<CreateResourceGroupArguments>, _token: vscode.CancellationToken): Promise<vscode.LanguageModelToolResult> {
-        try {
-            await createResourceGroup({ ...context, newResourceGroupName: options.input.resourceGroupName, /* _location: options.input.location NOT WORKING */ } as IActionContext & Partial<IResourceGroupWizardContext>);
-        } catch (e) {
-            if (e instanceof Error) {
-                return {
-                    content: [new vscode.LanguageModelTextPart(vscode.l10n.t('Failed to create resource group: {0}', e.message))],
-                }
-            } else {
-                return {
-                    content: [new vscode.LanguageModelTextPart(vscode.l10n.t('Failed to create resource group: {0}', JSON.stringify(e)))],
-                }
-            }
-        }
+        await createResourceGroup({ ...context, newResourceGroupName: options.input.resourceGroupName, /* _location: options.input.location NOT WORKING */ } as IActionContext & Partial<IResourceGroupWizardContext>);
 
         return {
             content: [new vscode.LanguageModelTextPart('Resource group created successfully.')],
