@@ -118,6 +118,19 @@
                 ]
             },
             {
+                "displayName": "Azure Resources: Get Azure Activity Log",
+                "icon": "$(azure)",
+                "inputSchema": {},
+                "modelDescription": "Gets the Azure activity log",
+                "name": "azureResources_getAzureActivityLog",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "azureActivityLog",
+                "tags": [
+                    "azure",
+                    "vscode_editing"
+                ]
+            },
+            {
                 "displayName": "Azure Resources: Create Resource Group",
                 "icon": "$(azure)",
                 "inputSchema": {
