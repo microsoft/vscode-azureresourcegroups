@@ -13,7 +13,7 @@ type ConvertedActivityTreeItem = {
     description?: string;
     status?: ActivityStatus;
     error?: unknown;
-    children?: { label: string, description?: string, }[];
+    children?: { label: string; description?: string; }[];
 }
 
 export class GetAzureActivityLog implements AzExtLMTool<void> {
