@@ -105,13 +105,13 @@
         ],
         "languageModelTools": [
             {
-                "displayName": "Azure Resources: Get Selected Azure Nodes",
+                "displayName": "Azure Resources: Get Selected Azure Node",
                 "icon": "$(azure)",
                 "inputSchema": {},
-                "modelDescription": "Gets the selected Azure nodes from the Azure Resources tree view in Visual Studio Code.",
-                "name": "azureResources_getSelectedAzureNodes",
+                "modelDescription": "Gets the selected Azure node from the Azure Resources tree view in Visual Studio Code.",
+                "name": "azureResources_getSelectedAzureNode",
                 "canBeReferencedInPrompt": true,
-                "toolReferenceName": "selectedAzureNodes",
+                "toolReferenceName": "selectedAzureNode",
                 "tags": [
                     "azure",
                     "vscode_editing"

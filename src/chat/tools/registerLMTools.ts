@@ -6,11 +6,11 @@
 import { registerLMTool } from '@microsoft/vscode-azext-utils';
 import { CreateResourceGroup } from './CreateResourceGroup';
 import { GetAzureActivityLog } from './GetAzureActivityLog';
-import { GetSelectedAzureNodes } from './GetSelectedAzureNodes';
+import { GetSelectedAzureNode } from './GetSelectedAzureNode';
 
 export function registerLMTools(): void {
     // Contextual tools
-    registerLMTool('azureResources_getSelectedAzureNodes', new GetSelectedAzureNodes());
+    registerLMTool('azureResources_getSelectedAzureNode', new GetSelectedAzureNode());
     registerLMTool('azureResources_getAzureActivityLog', new GetAzureActivityLog());
 
     // Functional tools
