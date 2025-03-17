@@ -14,7 +14,7 @@ type CreateResourceGroupArguments = {
 };
 
 export class CreateResourceGroup implements AzExtLMTool<CreateResourceGroupArguments> {
-    public prepareInvocation?(_context: IActionContext, options: vscode.LanguageModelToolInvocationPrepareOptions<CreateResourceGroupArguments>, _token: vscode.CancellationToken): vscode.PreparedToolInvocation {
+    public prepareInvocation(_context: IActionContext, options: vscode.LanguageModelToolInvocationPrepareOptions<CreateResourceGroupArguments>, _token: vscode.CancellationToken): vscode.PreparedToolInvocation {
         return {
             confirmationMessages: {
                 title: vscode.l10n.t('Create Resource Group'),
