@@ -113,8 +113,7 @@
                 "canBeReferencedInPrompt": true,
                 "toolReferenceName": "selectedAzureNode",
                 "tags": [
-                    "azure",
-                    "vscode_editing"
+                    "azure"
                 ]
             },
             {
@@ -126,8 +125,7 @@
                 "canBeReferencedInPrompt": true,
                 "toolReferenceName": "azureActivityLog",
                 "tags": [
-                    "azure",
-                    "vscode_editing"
+                    "azure"
                 ]
             },
             {
@@ -157,8 +155,7 @@
                 "modelDescription": "Creates a resource group in Azure",
                 "name": "azureResources_createResourceGroup",
                 "tags": [
-                    "azure",
-                    "vscode_editing"
+                    "azure"
                 ]
             }
         ],
@@ -919,9 +916,6 @@
             }
         ]
     },
-    "enabledApiProposals": [
-        "chatParticipantPrivate"
-    ],
     "scripts": {
         "vscode:prepublish": "npm run webpack-prod",
         "build": "tsc",
