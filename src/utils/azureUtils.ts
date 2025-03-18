@@ -85,7 +85,7 @@ interface AzExtResourceTypeDisplayInfo {
 }
 
 const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDisplayInfo>> = {
-    AiFoundry: { displayName: localize('aiFoundry', 'AI Foundry') },
+    AiFoundry: { displayName: localize('aiFoundry', 'Azure AI Foundry') },
     ApplicationInsights: { displayName: localize('insightsComponents', 'Application Insights') },
     AppServiceKubernetesEnvironment: { displayName: localize('containerService', 'App Service Kubernetes Environment') },
     AppServicePlans: { displayName: localize('serverFarms', 'App Service plans') },
