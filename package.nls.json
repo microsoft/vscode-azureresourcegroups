@@ -46,6 +46,7 @@
     "azureResourceGroups.enableChatStandIn": "Enable the @azure chat stand-in",
     "chatParticipants.azure.fullName": "Azure (Preview)",
     "azureResourceGroups.loadAllSubscriptionRoleAssignments": "Load all role assignments across subscriptions...",
+    "azureResourceGroups.askAgentAboutActivityLog": "Ask Copilot Chat about Activity Log",
     "azureResourceGroups.askAzure": {
         "message": "Ask @azure",
         "comment": [

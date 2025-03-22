@@ -8,9 +8,9 @@ import * as vscode from 'vscode';
 import { ActivityStatus, ActivityTreeItem } from '../../activityLog/ActivityTreeItem';
 import { ext } from '../../extensionVariables';
 
-export class GetAzureActivityLog implements AzExtLMTool<void> {
-    public async invoke(context: IActionContext, _options: vscode.LanguageModelToolInvocationOptions<void>, _token: vscode.CancellationToken): Promise<vscode.LanguageModelToolResult> {
-        const convertedActivityTreeItems = await convertActivityTreeToSimpleObjectArray(context);
+export class GetAzureActivityLog<T extends { treeId?: string }> implements AzExtLMTool<T> {
+    public async invoke(context: IActionContext, options: vscode.LanguageModelToolInvocationOptions<T>, _token: vscode.CancellationToken): Promise<vscode.LanguageModelToolResult> {
+        const convertedActivityTreeItems = await convertActivityTreeToSimpleObjectArray(context, options.input.treeId);
 
         return {
             content: [new vscode.LanguageModelTextPart(JSON.stringify(convertedActivityTreeItems))],
@@ -22,20 +22,22 @@ type ConvertedActivityTreeItem = {
     label: string;
     description?: string;
     status?: ActivityStatus;
+    selected?: boolean;
     error?: unknown;
     children?: ConvertedActivityTreeItem[];
 }
 
-async function convertActivityTreeToSimpleObjectArray(context: IActionContext): Promise<ConvertedActivityTreeItem[]> {
+async function convertActivityTreeToSimpleObjectArray(context: IActionContext, selectedTreeId?: string): Promise<ConvertedActivityTreeItem[]> {
     // The root tree item is not visible to the user, so we need to get its children, not it
     const treeItems = await ext.activityLogTreeItem.loadAllChildren(context);
-    return Promise.all(treeItems.map(treeItem => convertTreeItemToSimpleObject(context, treeItem)));
+    return Promise.all(treeItems.map(treeItem => convertTreeItemToSimpleObject(context, treeItem, selectedTreeId)));
 }
 
-async function convertTreeItemToSimpleObject(context: IActionContext, treeItem: AzExtTreeItem): Promise<ConvertedActivityTreeItem> {
+async function convertTreeItemToSimpleObject(context: IActionContext, treeItem: AzExtTreeItem, selectedTreeId?: string): Promise<ConvertedActivityTreeItem> {
     const convertedItem: ConvertedActivityTreeItem = {
         label: treeItem.label,
         description: treeItem.description,
+        selected: treeItem.id === selectedTreeId,
     };
 
     if (treeItem instanceof ActivityTreeItem) {
@@ -48,7 +50,7 @@ async function convertTreeItemToSimpleObject(context: IActionContext, treeItem: 
         // If the tree item has children, recursively convert them
         const children = await treeItem.loadAllChildren(context);
         if (children.length > 0) {
-            convertedItem.children = await Promise.all(children.map(child => convertTreeItemToSimpleObject(context, child)));
+            convertedItem.children = await Promise.all(children.map(child => convertTreeItemToSimpleObject(context, child, selectedTreeId)));
         }
     }
 

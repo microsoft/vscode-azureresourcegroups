@@ -120,7 +120,15 @@
             {
                 "displayName": "Azure Resources: Get Azure Activity Log",
                 "icon": "$(azure)",
-                "inputSchema": {},
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "treeId": {
+                            "type": "string",
+                            "description": "The ID of the selected activity tree itemd (optional)."
+                        }
+                    }
+                },
                 "modelDescription": "Gets the Azure activity log",
                 "name": "azureResources_getAzureActivityLog",
                 "canBeReferencedInPrompt": true,
@@ -407,6 +415,12 @@
             {
                 "command": "azureResourceGroups.askAgentAboutResource",
                 "title": "%azureResourceGroups.askAzure%"
+            },
+            {
+                "command": "azureResourceGroups.askAgentAboutActivityLog",
+                "title": "%azureResourceGroups.askAgentAboutActivityLog%",
+                "category": "Azure",
+                "icon": "$(copilot)"
             }
         ],
         "viewsContainers": {
@@ -535,6 +549,11 @@
                     "command": "azureTenantsView.refreshTree",
                     "when": "view == azureTenantsView",
                     "group": "navigation@10"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLog",
+                    "when": "view == azureActivityLog",
+                    "group": "navigation@1"
                 },
                 {
                     "command": "azureResourceGroups.clearActivities",
