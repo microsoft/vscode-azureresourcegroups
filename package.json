@@ -671,6 +671,16 @@
                     "command": "azureResourceGroups.askAgentAboutResource",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && github.copilot-chat.activated && config.azureResourceGroups.enableChatStandIn",
                     "group": "7@9"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLog",
+                    "when": "view == azureActivityLog && viewItem =~ /activityTreeItem/i",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLog",
+                    "when": "view == azureActivityLog && viewItem =~ /activityTreeItem/i",
+                    "group": "inline"
                 }
             ],
             "commandPalette": [

@@ -3,18 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 
-const genericActivityLogPrompt = vscode.l10n.t(`I'd like to ask you questions about my activity log`);
+// Todo: Add telemetry properties for the entrypoint so we can determine which users prefer
 
-export async function askAgentAboutActivityLog() {
-    await vscode.commands.executeCommand("workbench.action.chat.newEditSession");
-    // await vscode.commands.executeCommand("workbench.action.chat.toggleAgentMode", { mode: 'agent' });
-    await vscode.commands.executeCommand("workbench.action.chat.openEditSession", { query: genericActivityLogPrompt });
+const genericActivityLogPrompt = vscode.l10n.t(`I'd like to ask you questions about my VS Code activity log.`);
+
+export async function askAgentAboutActivityLog(_context: IActionContext, node?: AzExtTreeItem) {
+    await vscode.commands.executeCommand("workbench.action.chat.newChat");
+
+    if (!node) {
+        await vscode.commands.executeCommand("workbench.action.chat.open", { query: `#azureActivityLog ${genericActivityLogPrompt}` });
+    } else {
+        await vscode.commands.executeCommand("workbench.action.chat.open", { query: `#azureActivityLog ${genericActivityLogPrompt} I'm interested in the activity item with treeId: ${node.id}.` });
+    }
 }
-
-// const activityLogItemPrompt = vscode.l10n.t(`I'd like to learn more about activity log tree item`);
-
-// export async function askAgentAboutActivityLogItem(context: IActionContext, item: ActivityLogTreeItem) {
-//     //
-// }

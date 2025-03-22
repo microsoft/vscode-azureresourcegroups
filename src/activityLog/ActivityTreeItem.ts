@@ -14,11 +14,11 @@ export enum ActivityStatus {
 }
 
 export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable {
-
+    public static contextValue: string = 'activityTreeItem';
     public startedAtMs: number;
 
     public get contextValue(): string {
-        const contextValues = new Set(['azureActivity', ...(this.state.contextValuesToAdd ?? [])]);
+        const contextValues = new Set([ActivityTreeItem.contextValue, ...(this.state.contextValuesToAdd ?? [])]);
         return Array.from(contextValues).sort().join(';');
     }
 
