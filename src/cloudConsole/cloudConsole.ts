@@ -354,7 +354,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                     tenantsIdsWithSubs.add(sub.tenantId);
                 });
                 const tenantsWithSubs = tenants.filter(tenant => tenantsIdsWithSubs.has(nonNullProp(tenant, 'tenantId')));
-                serverQueue.push({ type: 'log', args: [localize('foundTenants', `Found ${tenantsWithSubs.length} authenticated tenant${tenants.length > 1 ? 's' : ''}. Please use the "Sign in to directory..." command to sign in to additional tenants.`)] });
+                serverQueue.push({ type: 'log', args: [localize('foundTenants', `Found ${tenantsWithSubs.length} authenticated tenant${tenants.length > 1 ? 's' : ''}. Please use the "Sign in to Tenant (Directory)..." command to sign in to additional tenants.`)] });
 
                 if (tenantsWithSubs.length <= 1) {
                     // If they have only one tenant with subscriptions, use it. If there's no tenant with subscriptions, use the first tenant.
