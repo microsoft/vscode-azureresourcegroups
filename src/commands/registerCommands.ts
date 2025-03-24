@@ -6,7 +6,7 @@
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, nonNullValue, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
-import { askAgentAboutActivityLog } from '../chat/askAgentAboutActivityLog';
+import { askAgentAboutActivityLog, askAgentAboutActivityLogItem } from '../chat/askAgentAboutActivityLog';
 import { askAgentAboutResource } from '../chat/askAgentAboutResource';
 import { askAzureInCommandPalette } from '../chat/askAzure';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
@@ -130,7 +130,8 @@ export function registerCommands(): void {
         ext.azureTreeState.notifyChildrenChanged(node.id);
     });
 
-    registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLog", askAgentAboutActivityLog);
+    registerCommand("azureResourceGroups.askAgentAboutActivityLog", askAgentAboutActivityLog);
+    registerCommandWithTreeNodeUnwrapping('azureResourceGroups.askAgentAboutActivityLogItem', askAgentAboutActivityLogItem);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
 }
 

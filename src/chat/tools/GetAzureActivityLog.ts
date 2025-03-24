@@ -13,7 +13,11 @@ export class GetAzureActivityLog<T extends { treeId?: string }> implements AzExt
         const convertedActivityTreeItems = await convertActivityTreeToSimpleObjectArray(context, options.input.treeId);
 
         return {
-            content: [new vscode.LanguageModelTextPart(JSON.stringify(convertedActivityTreeItems))],
+            content: [
+                convertedActivityTreeItems.length ?
+                    new vscode.LanguageModelTextPart(`Tree item data: ${JSON.stringify(convertedActivityTreeItems)}. (If an item is selected, focus your summary on the selected item.)`) :
+                    new vscode.LanguageModelTextPart('There is no activity data to analyze.')
+            ]
         };
     }
 }
@@ -37,7 +41,7 @@ async function convertTreeItemToSimpleObject(context: IActionContext, treeItem: 
     const convertedItem: ConvertedActivityTreeItem = {
         label: treeItem.label,
         description: treeItem.description,
-        selected: treeItem.id === selectedTreeId,
+        selected: !!selectedTreeId && treeItem.id === selectedTreeId,
     };
 
     if (treeItem instanceof ActivityTreeItem) {

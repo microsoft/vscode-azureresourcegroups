@@ -421,6 +421,12 @@
                 "title": "%azureResourceGroups.askAgentAboutActivityLog%",
                 "category": "Azure",
                 "icon": "$(copilot)"
+            },
+            {
+                "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                "title": "%azureResourceGroups.askAgentAboutActivityLogItem%",
+                "category": "Azure",
+                "icon": "$(copilot)"
             }
         ],
         "viewsContainers": {
@@ -673,12 +679,12 @@
                     "group": "7@9"
                 },
                 {
-                    "command": "azureResourceGroups.askAgentAboutActivityLog",
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
                     "when": "view == azureActivityLog && viewItem =~ /activityTreeItem/i",
                     "group": "1@1"
                 },
                 {
-                    "command": "azureResourceGroups.askAgentAboutActivityLog",
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
                     "when": "view == azureActivityLog && viewItem =~ /activityTreeItem/i",
                     "group": "inline"
                 }
@@ -734,6 +740,10 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutResource",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
                     "when": "never"
                 }
             ],

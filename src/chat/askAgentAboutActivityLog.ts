@@ -6,16 +6,18 @@
 import { AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 
-// Todo: Add telemetry properties for the entrypoint so we can determine which users prefer
+const activityLogTool: string = 'azureActivityLog';
+const genericActivityLogPrompt: string = vscode.l10n.t(`Help me understand important information in my VS Code activity log`);
 
-const genericActivityLogPrompt = vscode.l10n.t(`I'd like to ask you questions about my VS Code activity log.`);
-
-export async function askAgentAboutActivityLog(_context: IActionContext, node?: AzExtTreeItem) {
+export async function askAgentAboutActivityLog(): Promise<void> {
     await vscode.commands.executeCommand("workbench.action.chat.newChat");
+    await vscode.commands.executeCommand("workbench.action.chat.open", { query: `#${activityLogTool} ${genericActivityLogPrompt}` });
+}
 
+export async function askAgentAboutActivityLogItem(_: IActionContext, node?: AzExtTreeItem): Promise<void> {
     if (!node) {
-        await vscode.commands.executeCommand("workbench.action.chat.open", { query: `#azureActivityLog ${genericActivityLogPrompt}` });
-    } else {
-        await vscode.commands.executeCommand("workbench.action.chat.open", { query: `#azureActivityLog ${genericActivityLogPrompt} I'm interested in the activity item with treeId: ${node.id}.` });
+        return await askAgentAboutActivityLog();
     }
+    await vscode.commands.executeCommand("workbench.action.chat.newChat");
+    await vscode.commands.executeCommand("workbench.action.chat.open", { query: `#${activityLogTool} ${genericActivityLogPrompt}. I'm interested in learning more about the activity item with treeId: ${node.id}.` });
 }
