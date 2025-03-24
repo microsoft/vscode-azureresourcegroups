@@ -1,5 +1,14 @@
 # Change Log
 
+## 0.10.9 - 2025-03-24
+
+## Fixed
+* [[#1084](https://github.com/microsoft/vscode-azureresourcegroups/pull/1084)] Fix duplicate id issue for Install extension tree items
+* [[#1092](https://github.com/microsoft/vscode-azureresourcegroups/pull/1092)] Fix icon and publisher for Azure AI Foundry 
+* [[#1093](https://github.com/microsoft/vscode-azureresourcegroups/pull/1093)] Revert "Updated Disambiguations to improve intent detection for `@azure`"
+*  [[#1096](https://github.com/microsoft/vscode-azureresourcegroups/pull/1096)] Fix outdated string in cloud shell logs
+* [[#1098](https://github.com/microsoft/vscode-azureresourcegroups/pull/1098)] Fix Managed Identity target service icons not showing up
+
 ## 0.10.8 - 2025-03-10
 
 ### Changed
