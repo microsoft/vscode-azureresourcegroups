@@ -11,10 +11,7 @@ import { ext } from '../../extensionVariables';
 export class GetAzureActivityLog implements AzExtLMTool<void> {
     public async invoke(context: IActionContext, _options: vscode.LanguageModelToolInvocationOptions<void>, _token: vscode.CancellationToken): Promise<vscode.LanguageModelToolResult> {
         const convertedActivityTreeItems = await convertActivityTreeToSimpleObjectArray(context);
-
-        return {
-            content: [new vscode.LanguageModelTextPart(JSON.stringify(convertedActivityTreeItems))],
-        };
+        return new vscode.LanguageModelToolResult(convertedActivityTreeItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))));
     }
 }
 

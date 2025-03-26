@@ -27,8 +27,6 @@ export class CreateResourceGroup implements AzExtLMTool<CreateResourceGroupArgum
     public async invoke(context: IActionContext, options: vscode.LanguageModelToolInvocationOptions<CreateResourceGroupArguments>, _token: vscode.CancellationToken): Promise<vscode.LanguageModelToolResult> {
         await createResourceGroup({ ...context, newResourceGroupName: options.input.resourceGroupName, /* _location: options.input.location NOT WORKING */ } as IActionContext & Partial<IResourceGroupWizardContext>);
 
-        return {
-            content: [new vscode.LanguageModelTextPart('Resource group created successfully.')],
-        }
+        return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('Resource group created successfully.')]);
     }
 }
