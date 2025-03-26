@@ -53,7 +53,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
         label: localize('loading', 'Loading...')
     }
 
-    public initialCollapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None;
+    public initialCollapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.Expanded;
 
     public status?: ActivityStatus;
     public error?: unknown;
