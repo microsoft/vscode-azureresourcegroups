@@ -11,6 +11,11 @@ import { ext } from '../../extensionVariables';
 export class GetAzureActivityLog implements AzExtLMTool<void> {
     public async invoke(context: IActionContext, _options: vscode.LanguageModelToolInvocationOptions<void>, _token: vscode.CancellationToken): Promise<vscode.LanguageModelToolResult> {
         const convertedActivityTreeItems = await convertActivityTreeToSimpleObjectArray(context);
+
+        if (convertedActivityTreeItems.length === 0) {
+            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No activity log items found.')]);
+        }
+
         return new vscode.LanguageModelToolResult(convertedActivityTreeItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))));
     }
 }
@@ -26,7 +31,7 @@ type ConvertedActivityTreeItem = {
 async function convertActivityTreeToSimpleObjectArray(context: IActionContext): Promise<ConvertedActivityTreeItem[]> {
     // The root tree item is not visible to the user, so we need to get its children, not it
     const treeItems = await ext.activityLogTreeItem.loadAllChildren(context);
-    return Promise.all(treeItems.map(treeItem => convertTreeItemToSimpleObject(context, treeItem)));
+    return await Promise.all(treeItems.map(treeItem => convertTreeItemToSimpleObject(context, treeItem)));
 }
 
 async function convertTreeItemToSimpleObject(context: IActionContext, treeItem: AzExtTreeItem): Promise<ConvertedActivityTreeItem> {

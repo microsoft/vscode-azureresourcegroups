@@ -11,10 +11,10 @@ export class GetSelectedAzureNode<T = never> implements AzExtLMTool<T> {
     public async invoke(_context: IActionContext, _options: vscode.LanguageModelToolInvocationOptions<T>, _token: vscode.CancellationToken): Promise<vscode.LanguageModelToolResult> {
         const result = await getSelectedAzureNode();
 
-        if (result) {
-            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(result)]);
+        if (!result) {
+            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No selected Azure nodes.')]);
         }
 
-        return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No selected Azure nodes.')]);
+        return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(result)]);
     }
 }
