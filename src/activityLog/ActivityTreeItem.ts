@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, dateUtils, IActionContext, nonNullValueAndProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable, ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { localize } from "../utils/localize";
@@ -28,10 +28,13 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
 
     public get description(): string | undefined {
         if (this.status === ActivityStatus.Done) {
+            const start: Date = nonNullValueAndProp(this.activity, 'startTime');
+            const end: Date = nonNullValueAndProp(this.activity, 'endTime');
+
             if (this.error) {
-                return localize('failed', 'Failed');
+                return localize('failed', `Failed (${dateUtils.getDurationInMinutesAndSeconds(start, end)})`);
             } else {
-                return localize('succeeded', 'Succeeded');
+                return localize('succeeded', `Succeeded (${dateUtils.getDurationInMinutesAndSeconds(start, end)})`);
             }
         } else {
             return this.latestProgress?.message;
@@ -59,11 +62,11 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     public error?: unknown;
     private latestProgress?: { message?: string };
 
-    public constructor(parent: AzExtParentTreeItem, activity: Activity) {
+    public constructor(parent: AzExtParentTreeItem, private readonly activity: Activity) {
         super(parent);
         this.id = activity.id;
         this.setupListeners(activity);
-        this.startedAtMs = Date.now();
+        this.startedAtMs = activity.startTime?.getTime() || Date.now();
     }
 
     public dispose(): void {
