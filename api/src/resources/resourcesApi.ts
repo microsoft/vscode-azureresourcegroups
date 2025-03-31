@@ -62,6 +62,14 @@ export interface ResourcesApi {
     revealAzureResource(id: string, options?: VSCodeRevealOptions): Promise<void>;
 
     /**
+     * Reveal a resource in the Workspace tree view.
+     *
+     * @param id - The Workspace Resource ID to reveal in the Workspace tree view.
+     * @param options - Options for revealing the resource. See {@link vscode.TreeView.reveal}
+     */
+    revealWorkspaceResource(id: string, options?: VSCodeRevealOptions): Promise<void>;
+
+    /**
      * Gets a list of node IDs for nodes recently used/interacted with in the Azure tree view.
      *
      * @returns A promise that resolves to a list of node IDs.
