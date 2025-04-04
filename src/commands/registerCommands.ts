@@ -74,6 +74,10 @@ export function registerCommands(): void {
         ext.actions.refreshTenantTree(node);
     });
 
+    registerCommand('azureActivityLogView.refresh', async (_context, node?: ResourceGroupsItem) => {
+        ext.actions.refreshActivityLogTree(node);
+    });
+
     registerCommand('azureTenantsView.signInToTenant', async (_context, node: TenantTreeItem) => {
         await (await ext.subscriptionProviderFactory()).signIn(node.tenantId, node.account);
         ext.actions.refreshTenantTree(node);

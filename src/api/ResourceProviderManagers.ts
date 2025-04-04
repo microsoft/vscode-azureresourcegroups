@@ -91,3 +91,6 @@ export class WorkspaceResourceProviderManager extends ResourceProviderManager<vo
 
 export class TenantResourceProviderManager extends ResourceProviderManager<void, TenantResource, TenantResourceProvider> {
 }
+
+export class ActivityLogResourceProviderManager extends ResourceProviderManager<void, ResourceBase, ResourceProvider<void, ResourceBase>> {
+}

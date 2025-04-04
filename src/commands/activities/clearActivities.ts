@@ -7,5 +7,5 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
 
 export async function clearActivities(context: IActionContext): Promise<void> {
-    await ext.activityLogTreeItem.clearActivities(context);
+    await ext.activityLogTree.clearActivities(context);
 }

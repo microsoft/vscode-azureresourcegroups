@@ -11,11 +11,9 @@ import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { AzExtResourceType } from '../api/src/AzExtResourceType';
-import { ActivityLogTreeItem } from './activityLog/ActivityLogsTreeItem';
-import { registerActivity } from './activityLog/registerActivity';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/ResourceGroupsExtensionManager';
-import { AzureResourceProviderManager, TenantResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
+import { ActivityLogResourceProviderManager, AzureResourceProviderManager, TenantResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
 import { InternalAzureResourceGroupsExtensionApi } from './api/compatibility/AzureResourceGroupsExtensionApi';
 import { CompatibleAzExtTreeDataProvider } from './api/compatibility/CompatibleAzExtTreeDataProvider';
 import { createCompatibilityPickAppResource } from './api/compatibility/pickAppResource';
@@ -25,6 +23,8 @@ import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
 import { registerChatStandInParticipantIfNeeded } from './chat/chatStandIn';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
+import { registerActivity } from './commands/activities/registerActivity';
+import { registerActivityLogTree } from './commands/activities/registerActivityLogTree';
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
@@ -36,6 +36,8 @@ import { getSubscriptionProviderFactory } from './services/getSubscriptionProvid
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
+import { ActivityLogResourceBranchDataProviderManager } from './tree/activitiyLog/ActivityLogBranchDataProviderManager';
+import { ActivityLogDefaultBranchDataProvider } from './tree/activitiyLog/ActivityLogDefaultBranchDataProvider';
 import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
 import { registerAzureTree } from './tree/azure/registerAzureTree';
@@ -69,11 +71,14 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     context.subscriptions.push(refreshWorkspaceTreeEmitter);
     const refreshTenantTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
     context.subscriptions.push(refreshTenantTreeEmitter);
+    const refreshActivityLogTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+    context.subscriptions.push(refreshActivityLogTreeEmitter);
 
     ext.actions.refreshWorkspaceTree = (data) => refreshWorkspaceTreeEmitter.fire(data);
     ext.actions.refreshAzureTree = (data) => refreshAzureTreeEmitter.fire(data);
     ext.actions.refreshFocusTree = (data) => refreshFocusTreeEmitter.fire(data);
     ext.actions.refreshTenantTree = (data) => refreshTenantTreeEmitter.fire(data);
+    ext.actions.refreshActivityLogTree = (data) => refreshActivityLogTreeEmitter.fire(data);
 
     await callWithTelemetryAndErrorHandling('azureResourceGroups.activate', async (activateContext: IActionContext) => {
         activateContext.telemetry.properties.isActivationEvent = 'true';
@@ -91,10 +96,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         const helpTreeItem: HelpTreeItem = new HelpTreeItem();
         ext.helpTree = new AzExtTreeDataProvider(helpTreeItem, 'ms-azuretools.loadMore');
         context.subscriptions.push(vscode.window.createTreeView('ms-azuretools.helpAndFeedback', { treeDataProvider: ext.helpTree }));
-
-        context.subscriptions.push(ext.activityLogTreeItem = new ActivityLogTreeItem());
-        ext.activityLogTree = new AzExtTreeDataProvider(ext.activityLogTreeItem, 'azureActivityLog.loadMore');
-        context.subscriptions.push(vscode.window.createTreeView('azureActivityLog', { treeDataProvider: ext.activityLogTree }));
 
         context.subscriptions.push(vscode.window.registerTerminalProfileProvider('azureResourceGroups.cloudShellBash', {
             provideTerminalProfile: async (token: vscode.CancellationToken) => {
@@ -129,6 +130,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         new WorkspaceDefaultBranchDataProvider(),
         type => void extensionManager.activateWorkspaceResourceBranchDataProvider(type));
     const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
+    const activityLogResourceBranchDataProviderManager = new ActivityLogResourceBranchDataProviderManager(new ActivityLogDefaultBranchDataProvider());
+    const activityLogResourceProviderManager = new ActivityLogResourceProviderManager(async () => { return undefined });
 
     const tenantResourceBranchDataProviderManager = new TenantResourceBranchDataProviderManager(
         new TenantDefaultBranchDataProvider());
@@ -161,7 +164,13 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         tenantResourceBranchDataProviderManager,
         refreshEvent: refreshTenantTreeEmitter.event,
         itemCache: tenantResourcesBranchDataItemCache
-    })
+    });
+
+    ext.activityLogTree = registerActivityLogTree(context, {
+        activityLogResourceProviderManager,
+        activityLogResourceBranchDataProviderManager,
+        refreshEvent: refreshActivityLogTreeEmitter.event
+    });
 
     const v2ApiFactory: AzureExtensionApiFactory<AzureResourcesApiInternal> = {
         apiVersion: '2.0.0',
