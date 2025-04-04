@@ -38,7 +38,8 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
                 return localize('succeeded', `Succeeded (${dateTimeUtils.getFormattedDurationInMinutesAndSeconds(durationMs)})`);
             }
         } else {
-            return this.latestProgress?.message;
+            return this.timer;
+            // return this.latestProgress?.message;
         }
     }
 
@@ -62,6 +63,8 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     public status?: ActivityStatus;
     public error?: unknown;
     private latestProgress?: { message?: string };
+    private timer?: string;
+    private timeout?: NodeJS.Timeout;
 
     public constructor(parent: AzExtParentTreeItem, private readonly activity: Activity) {
         super(parent);
@@ -99,6 +102,19 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     private onStart(data: OnStartActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnStart', async (context) => {
             this.startedAtMs = Date.now();
+
+            this.timeout = setInterval(() => {
+                this.timer = dateTimeUtils.getFormattedDurationInMinutesAndSeconds(Date.now() - this.startedAtMs);
+                void this.refresh(context);
+            }, 1000);
+            this.disposables.push({
+                dispose: () => {
+                    if (this.timeout) {
+                        clearInterval(this.timeout);
+                    }
+                }
+            });
+
             this.status = ActivityStatus.Running;
             this.state = data;
             await this.refresh(context);
@@ -107,6 +123,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
 
     private onSuccess(data: OnSuccessActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnSuccess', async (context) => {
+            clearInterval(this.timeout);
             this.state = data;
             this.status = ActivityStatus.Done;
             if (this.state.getChildren) {
@@ -118,6 +135,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
 
     private onError(data: OnErrorActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnError', async (context) => {
+            clearInterval(this.timeout);
             this.state = data;
             this.status = ActivityStatus.Done;
             this.error = data.error;
