@@ -7,13 +7,13 @@ import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
 import { AzExtTreeDataProvider, IAzExtLogOutputChannel, IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
 import { AzExtResourceType } from "api/src/AzExtResourceType";
 import { DiagnosticCollection, Disposable, ExtensionContext, TreeView } from "vscode";
-import { ActivityLogTreeItem } from "./activityLog/ActivityLogsTreeItem";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
 import { ManagedIdentityBranchDataProvider } from "./managedIdentity/ManagedIdentityBranchDataProvider";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
 import { ResourceGroupsItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
+import { ActivityLogTreeDataProvider } from "./tree/activitiyLog/ActivityLogBranchDataProvider";
 import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
 
 export namespace extActions {
@@ -21,6 +21,7 @@ export namespace extActions {
     export let refreshAzureTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
     export let refreshFocusTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
     export let refreshTenantTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
+    export let refreshActivityLogTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
 }
 
 /**
@@ -35,8 +36,8 @@ export namespace ext {
     export let workspaceTree: AzExtTreeDataProvider;
     export let workspaceTreeView: TreeView<unknown>;
     export let tenantTreeView: TreeView<unknown>
-    export let activityLogTree: AzExtTreeDataProvider;
-    export let activityLogTreeItem: ActivityLogTreeItem;
+    export let activityLogTree: ActivityLogTreeDataProvider;
+    export let activityLogTreeView: TreeView<unknown>;
     export let helpTree: AzExtTreeDataProvider;
     export let outputChannel: IAzExtLogOutputChannel;
     export let ignoreBundle: boolean | undefined;

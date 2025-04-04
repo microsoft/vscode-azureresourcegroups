@@ -3,18 +3,20 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
-import { Disposable, ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
-import { localize } from "../utils/localize";
+import { Disposable, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
+import { ext } from "../../extensionVariables";
+import { localize } from "../../utils/localize";
+import { ResourceGroupsItem } from "../ResourceGroupsItem";
 
 export enum ActivityStatus {
     Running = 'running',
     Done = 'done'
 }
 
-export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable {
-
+export class ActivityItem implements ResourceGroupsItem, Disposable {
+    public readonly id: string;
     public startedAtMs: number;
 
     public get contextValue(): string {
@@ -53,14 +55,23 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
         label: localize('loading', 'Loading...')
     }
 
+    getTreeItem(): TreeItem | Thenable<TreeItem> {
+        return {
+            label: this.label,
+            description: this.description,
+            iconPath: this.iconPath,
+            contextValue: this.contextValue,
+            collapsibleState: this.initialCollapsibleState
+        }
+    }
+
     public initialCollapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None;
 
     public status?: ActivityStatus;
     public error?: unknown;
     private latestProgress?: { message?: string };
 
-    public constructor(parent: AzExtParentTreeItem, activity: Activity) {
-        super(parent);
+    public constructor(activity: Activity) {
         this.id = activity.id;
         this.setupListeners(activity);
         this.startedAtMs = Date.now();
@@ -72,9 +83,10 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
 
     private readonly disposables: Disposable[] = [];
 
-    public async loadMoreChildrenImpl(_clearCache: boolean, _context: IActionContext): Promise<AzExtTreeItem[]> {
+    public async getChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
         if (this.state.getChildren) {
-            return await this.state.getChildren(this);
+            return [] // TODO: Update utils package for Activity.state to not return AzExtTreeItems
+            //  await this.state.getChildren(this);
         }
         return [];
     }
@@ -88,37 +100,37 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
             context.telemetry.suppressIfSuccessful = true;
             this.latestProgress = data.message ? { message: data?.message } : this.latestProgress;
             this.state = data;
-            await this.refresh(context);
+            ext.actions.refreshActivityLogTree(this);
         });
     }
 
     private onStart(data: OnStartActivityData): void {
-        void callWithTelemetryAndErrorHandling('activityOnStart', async (context) => {
+        void callWithTelemetryAndErrorHandling('activityOnStart', async (_context) => {
             this.startedAtMs = Date.now();
             this.status = ActivityStatus.Running;
             this.state = data;
-            await this.refresh(context);
+            ext.actions.refreshActivityLogTree(this);
         });
     }
 
     private onSuccess(data: OnSuccessActivityData): void {
-        void callWithTelemetryAndErrorHandling('activityOnSuccess', async (context) => {
+        void callWithTelemetryAndErrorHandling('activityOnSuccess', async (_context) => {
             this.state = data;
             this.status = ActivityStatus.Done;
             if (this.state.getChildren) {
                 this.initialCollapsibleState = TreeItemCollapsibleState.Expanded;
             }
-            await this.refresh(context);
+            ext.actions.refreshActivityLogTree(this);
         })
     }
 
     private onError(data: OnErrorActivityData): void {
-        void callWithTelemetryAndErrorHandling('activityOnError', async (context) => {
+        void callWithTelemetryAndErrorHandling('activityOnError', async (_context) => {
             this.state = data;
             this.status = ActivityStatus.Done;
             this.error = data.error;
             this.initialCollapsibleState = TreeItemCollapsibleState.Expanded;
-            await this.refresh(context);
+            ext.actions.refreshActivityLogTree(this);
         });
     }
 
