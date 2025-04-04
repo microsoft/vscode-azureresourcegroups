@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, dateTimeUtils, IActionContext, nonNullValueAndProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, dateTimeUtils, IActionContext, nonNullProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable, ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { localize } from "../utils/localize";
@@ -28,8 +28,8 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
 
     public get description(): string | undefined {
         if (this.status === ActivityStatus.Done) {
-            const start: Date = nonNullValueAndProp(this.activity, 'startTime');
-            const end: Date = nonNullValueAndProp(this.activity, 'endTime');
+            const start: Date = nonNullProp(this.activity, 'startTime');
+            const end: Date = nonNullProp(this.activity, 'endTime');
 
             const durationMs: number = end.getTime() - start.getTime();
             if (this.error) {
@@ -38,7 +38,8 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
                 return localize('succeeded', `Succeeded (${dateTimeUtils.getFormattedDurationInMinutesAndSeconds(durationMs)})`);
             }
         } else {
-            return this.latestProgress?.message;
+            return this.timer;
+            // return this.latestProgress?.message ? `${this.latestProgress.message} (${this.timer})` : this.timer;
         }
     }
 
@@ -62,6 +63,8 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     public status?: ActivityStatus;
     public error?: unknown;
     private latestProgress?: { message?: string };
+    private timer: string = '';
+    private timeout?: NodeJS.Timeout;
 
     public constructor(parent: AzExtParentTreeItem, private readonly activity: Activity) {
         super(parent);
@@ -71,6 +74,10 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     }
 
     public dispose(): void {
+        // Clear the timeout when disposing
+        if (this.timeout) {
+            clearTimeout(this.timeout);
+        }
         this.disposables.forEach(d => { d.dispose() });
     }
 
@@ -99,6 +106,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     private onStart(data: OnStartActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnStart', async (context) => {
             this.startedAtMs = Date.now();
+            this.startTimer(context);
             this.status = ActivityStatus.Running;
             this.state = data;
             await this.refresh(context);
@@ -112,6 +120,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
             if (this.state.getChildren) {
                 this.initialCollapsibleState = TreeItemCollapsibleState.Expanded;
             }
+            clearTimeout(this.timeout);
             await this.refresh(context);
         })
     }
@@ -122,6 +131,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
             this.status = ActivityStatus.Done;
             this.error = data.error;
             this.initialCollapsibleState = TreeItemCollapsibleState.Expanded;
+            clearTimeout(this.timeout);
             await this.refresh(context);
         });
     }
@@ -131,5 +141,23 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
         this.disposables.push(activity.onStart(this.onStart.bind(this)));
         this.disposables.push(activity.onSuccess(this.onSuccess.bind(this)));
         this.disposables.push(activity.onError(this.onError.bind(this)));
+    }
+
+    private startTimer(context: IActionContext) {
+        if (this.timeout) {
+            clearTimeout(this.timeout);
+        }
+
+        this.timer = dateTimeUtils.getFormattedDurationInMinutesAndSeconds(Date.now() - this.startedAtMs);
+        void this.refresh(context);
+
+        // Set the timeout for the next second tick boundary
+        const nextTickMs: number = 1000 - (Date.now() % 1000);
+        this.timeout = setTimeout(() => this.startTimer(context), nextTickMs);
+
+        // ext.outputChannel.appendLog(this.timer);
+        // ext.outputChannel.appendLog(`nowMs: ${Date.now().toString()}`);
+        // ext.outputChannel.appendLog(`Time diff: ${duration}`);
+        // ext.outputChannel.appendLog(`Next tick: ${nextTickMs}`);
     }
 }
