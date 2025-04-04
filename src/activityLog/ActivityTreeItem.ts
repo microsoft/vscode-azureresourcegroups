@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, dateUtils, IActionContext, nonNullValueAndProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, dateTimeUtils, IActionContext, nonNullValueAndProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable, ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { localize } from "../utils/localize";
@@ -31,10 +31,11 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
             const start: Date = nonNullValueAndProp(this.activity, 'startTime');
             const end: Date = nonNullValueAndProp(this.activity, 'endTime');
 
+            const durationMs: number = end.getTime() - start.getTime();
             if (this.error) {
-                return localize('failed', `Failed (${dateUtils.getDurationInMinutesAndSeconds(start, end)})`);
+                return localize('failed', `Failed (${dateTimeUtils.getFormattedDurationInMinutesAndSeconds(durationMs)})`);
             } else {
-                return localize('succeeded', `Succeeded (${dateUtils.getDurationInMinutesAndSeconds(start, end)})`);
+                return localize('succeeded', `Succeeded (${dateTimeUtils.getFormattedDurationInMinutesAndSeconds(durationMs)})`);
             }
         } else {
             return this.latestProgress?.message;
