@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, dateTimeUtils, IActionContext, nonNullValueAndProp, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { AzExtParentTreeItem, AzExtTreeItem, callWithTelemetryAndErrorHandling, dateTimeUtils, IActionContext, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable, ThemeColor, ThemeIcon, TreeItemCollapsibleState } from "vscode";
 import { localize } from "../utils/localize";
@@ -28,18 +28,14 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
 
     public get description(): string | undefined {
         if (this.status === ActivityStatus.Done) {
-            const start: Date = nonNullValueAndProp(this.activity, 'startTime');
-            const end: Date = nonNullValueAndProp(this.activity, 'endTime');
-
-            const durationMs: number = end.getTime() - start.getTime();
             if (this.error) {
-                return localize('failed', `Failed (${dateTimeUtils.getFormattedDurationInMinutesAndSeconds(durationMs)})`);
+                return localize('failed', `Failed ({0})`, this.timer);
             } else {
-                return localize('succeeded', `Succeeded (${dateTimeUtils.getFormattedDurationInMinutesAndSeconds(durationMs)})`);
+                return localize('succeeded', `Succeeded ({0})`, this.timer);
             }
         } else {
-            return this.timer;
-            // return this.latestProgress?.message;
+            const timer: string = this.timer ?? '0s';
+            return this.latestProgress?.message ? `${this.latestProgress.message} (${timer})` : timer;
         }
     }
 
@@ -66,11 +62,11 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     private timer?: string;
     private timeout?: NodeJS.Timeout;
 
-    public constructor(parent: AzExtParentTreeItem, private readonly activity: Activity) {
+    public constructor(parent: AzExtParentTreeItem, activity: Activity) {
         super(parent);
         this.id = activity.id;
         this.setupListeners(activity);
-        this.startedAtMs = activity.startTime?.getTime() || Date.now();
+        this.startedAtMs = Date.now();
     }
 
     public dispose(): void {
@@ -102,7 +98,6 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     private onStart(data: OnStartActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnStart', async (context) => {
             this.startedAtMs = Date.now();
-
             this.timeout = setInterval(() => {
                 this.timer = dateTimeUtils.getFormattedDurationInMinutesAndSeconds(Date.now() - this.startedAtMs);
                 void this.refresh(context);
@@ -114,7 +109,6 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
                     }
                 }
             });
-
             this.status = ActivityStatus.Running;
             this.state = data;
             await this.refresh(context);
