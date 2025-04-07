@@ -34,7 +34,7 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
                 return localize('succeeded', `Succeeded ({0})`, this.timer);
             }
         } else {
-            return this.latestProgress?.message ? `${this.latestProgress.message} (${this.timer})` : this.timer;
+            return this.timer;
         }
     }
 
@@ -57,7 +57,6 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
 
     public status?: ActivityStatus;
     public error?: unknown;
-    private latestProgress?: { message?: string };
     private timer?: string = '0s';
     private timeout?: NodeJS.Timeout;
 
@@ -88,7 +87,6 @@ export class ActivityTreeItem extends AzExtParentTreeItem implements Disposable 
     private onProgress(data: OnProgressActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnProgress', async (context) => {
             context.telemetry.suppressIfSuccessful = true;
-            this.latestProgress = data.message !== undefined ? { message: data.message } : this.latestProgress;
             this.state = data;
             await this.refresh(context);
         });
