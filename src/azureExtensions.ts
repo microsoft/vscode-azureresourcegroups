@@ -136,8 +136,7 @@ export const azureExtensions: IAzExtMetadata[] = [
         publisher: 'TeamsDevApp',
         label: 'Azure AI Foundry',
         resourceTypes: [AzExtResourceType.AiFoundry],
-        reportIssueCommandId: 'azure-ai-extension.reportIssue',
-        private: true
+        reportIssueCommandId: 'azure-ai-foundry.reportIssue'
     },
 ];
 
