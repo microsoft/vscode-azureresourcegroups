@@ -4,8 +4,8 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { Activity } from "@microsoft/vscode-azext-utils/hostapi";
-import { ext } from "../extensionVariables";
+import { ext } from "../../extensionVariables";
 
 export async function registerActivity(activity: Activity): Promise<void> {
-    await ext.activityLogTreeItem.addActivity(activity);
+    await ext.activityLogTree.addActivity(activity);
 }

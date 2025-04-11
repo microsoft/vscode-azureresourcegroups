@@ -10,7 +10,7 @@ import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { ResourceGroupsItem } from '../ResourceGroupsItem';
+import { TreeDataItem } from '../ResourceGroupsItem';
 import { createTreeView } from '../createTreeView';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { AzureResourceBranchDataProviderManager } from './AzureResourceBranchDataProviderManager';
@@ -22,7 +22,7 @@ import { GroupingItemFactory } from './grouping/GroupingItemFactory';
 interface RegisterAzureTreeOptions {
     azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
     azureResourceProviderManager: AzureResourceProviderManager,
-    refreshEvent: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
+    refreshEvent: vscode.Event<void | TreeDataItem | TreeDataItem[] | null | undefined>,
     itemCache: BranchDataItemCache,
 }
 

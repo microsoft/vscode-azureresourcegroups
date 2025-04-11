@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { getConfiguredAuthProviderId } from '@microsoft/vscode-azext-azureauth';
-import { IActionContext, callWithTelemetryAndErrorHandling, nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
+import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling, nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { ResourceModelBase } from 'api/src';
 import * as vscode from 'vscode';
 import { TenantResourceProviderManager } from '../../api/ResourceProviderManagers';
@@ -21,7 +21,7 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
     constructor(
         protected readonly branchDataProviderManager: TenantResourceBranchDataProviderManager,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
-        onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
+        onRefresh: vscode.Event<void | TreeElementBase | TreeElementBase[] | null | undefined>,
         protected readonly resourceProviderManager: TenantResourceProviderManager,
         branchItemCache: BranchDataItemCache,
         callOnDispose?: () => void) {

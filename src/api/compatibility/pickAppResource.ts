@@ -5,6 +5,7 @@
 
 import { AzExtTreeItem, ContextValueFilter, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
 import { PickAppResourceOptions } from "@microsoft/vscode-azext-utils/hostapi";
+import { TelemetryTrustedValue } from "vscode";
 import { AzExtResourceType, getAzExtResourceType } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
 
@@ -18,7 +19,7 @@ export function createCompatibilityPickAppResource() {
             childItemFilter: convertExpectedChildContextValueToContextValueFilter(options?.expectedChildContextValue)
         });
 
-        context.telemetry.properties.resourceId = result.id;
+        context.telemetry.properties.resourceId = result.id ? new TelemetryTrustedValue(result.id) : undefined;
 
         try {
             // AzExtTreeItems throw when subscription is undefined. It's unlikely to happen here, but better safe than sorry.

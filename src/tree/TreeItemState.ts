@@ -3,8 +3,8 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { TreeElementBase } from 'node_modules/@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ResourceGroupsItem } from './ResourceGroupsItem';
 
 interface TreeItemState {
     /**
@@ -32,7 +32,7 @@ export class TreeItemStateStore implements vscode.Disposable {
         this.onDidUpdateStateEmitter.fire(id);
     }
 
-    wrapItemInStateHandling(item: ResourceGroupsItem, refresh: (item: ResourceGroupsItem) => void): ResourceGroupsItem {
+    wrapItemInStateHandling(item: TreeElementBase, refresh: (item: TreeElementBase) => void): TreeElementBase {
         const getTreeItem = item.getTreeItem.bind(item) as typeof item.getTreeItem;
         item.getTreeItem = async () => {
             const treeItem = await getTreeItem();
@@ -79,7 +79,7 @@ export class TreeItemStateStore implements vscode.Disposable {
         return treeItem;
     }
 
-    private onDidRequestRefresh(id: string, callback: () => void): void {
+    private onDidRequestRefresh(id: string | undefined, callback: () => void): void {
         this.disposables.push(this.onDidUpdateStateEvent((eventId: string) => {
             if (eventId === id) {
                 callback();
