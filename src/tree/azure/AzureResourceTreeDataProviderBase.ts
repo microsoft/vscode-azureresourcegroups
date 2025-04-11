@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { TreeElementBase } from 'node_modules/@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
@@ -17,7 +18,7 @@ export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeData
     constructor(
         itemCache: BranchDataItemCache,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
-        onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
+        onRefresh: vscode.Event<void | TreeElementBase | TreeElementBase[] | null | undefined>,
         state: TreeItemStateStore,
         protected readonly resourceGroupingManager: AzureResourceGroupingManager,
         protected readonly resourceProviderManager: AzureResourceProviderManager,

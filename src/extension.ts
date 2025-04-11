@@ -35,7 +35,7 @@ import { survey } from './nps';
 import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
-import { ResourceGroupsItem } from './tree/ResourceGroupsItem';
+import { TreeDataItem } from './tree/ResourceGroupsItem';
 import { ActivityLogResourceBranchDataProviderManager } from './tree/activitiyLog/ActivityLogBranchDataProviderManager';
 import { ActivityLogDefaultBranchDataProvider } from './tree/activitiyLog/ActivityLogDefaultBranchDataProvider';
 import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResourceBranchDataProviderManager';
@@ -63,15 +63,15 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
 
-    const refreshAzureTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+    const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);
-    const refreshFocusTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+    const refreshFocusTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshFocusTreeEmitter);
-    const refreshWorkspaceTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+    const refreshWorkspaceTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshWorkspaceTreeEmitter);
-    const refreshTenantTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+    const refreshTenantTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshTenantTreeEmitter);
-    const refreshActivityLogTreeEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+    const refreshActivityLogTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshActivityLogTreeEmitter);
 
     ext.actions.refreshWorkspaceTree = (data) => refreshWorkspaceTreeEmitter.fire(data);

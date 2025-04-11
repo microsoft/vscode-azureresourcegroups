@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { WorkspaceResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { createTreeView } from '../createTreeView';
-import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
 import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceBranchDataProviderManager';
 import { WorkspaceResourceTreeDataProvider } from './WorkspaceResourceTreeDataProvider';
@@ -18,7 +17,7 @@ import { WorkspaceResourceTreeDataProvider } from './WorkspaceResourceTreeDataPr
 interface RegisterWorkspaceTreeOptions {
     workspaceResourceBranchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
     workspaceResourceProviderManager: WorkspaceResourceProviderManager,
-    refreshEvent: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
+    refreshEvent: vscode.Event<void | TreeElementBase | TreeElementBase[] | null | undefined>,
 }
 
 export function registerWorkspaceTree(context: vscode.ExtensionContext, options: RegisterWorkspaceTreeOptions): WorkspaceResourceTreeDataProvider {

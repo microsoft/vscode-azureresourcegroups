@@ -6,15 +6,15 @@
 import { isAzExtTreeItem } from "@microsoft/vscode-azext-utils";
 import { TreeDataProvider, TreeView, TreeViewOptions, window } from "vscode";
 import { BranchDataItemCache } from "./BranchDataItemCache";
-import { ResourceGroupsItem } from "./ResourceGroupsItem";
+import { TreeDataItem } from "./ResourceGroupsItem";
 
-export interface InternalTreeView extends TreeView<ResourceGroupsItem> {
-    _reveal: TreeView<ResourceGroupsItem>['reveal'];
+export interface InternalTreeView extends TreeView<TreeDataItem> {
+    _reveal: TreeView<TreeDataItem>['reveal'];
 }
 
-interface InternalTreeViewOptions extends TreeViewOptions<ResourceGroupsItem> {
-    treeDataProvider: TreeDataProvider<ResourceGroupsItem>;
-    findItemById: (id: string) => Promise<ResourceGroupsItem | undefined>;
+interface InternalTreeViewOptions extends TreeViewOptions<TreeDataItem> {
+    treeDataProvider: TreeDataProvider<TreeDataItem>;
+    findItemById: (id: string) => Promise<TreeDataItem | undefined>;
     itemCache: BranchDataItemCache;
     /**
      * See {@link TreeView.description}
@@ -31,7 +31,7 @@ interface InternalTreeViewOptions extends TreeViewOptions<ResourceGroupsItem> {
  * - sets the `description` if present in options
  * - modifies `TreeView.reveal` {@link ResourceTreeDataProviderBase.reveal}
  */
-export function createTreeView(viewId: string, options: InternalTreeViewOptions): TreeView<ResourceGroupsItem> {
+export function createTreeView(viewId: string, options: InternalTreeViewOptions): TreeView<TreeDataItem> {
     const treeView = window.createTreeView(viewId, options);
     treeView.title = options.title;
     treeView.description = options.description;
@@ -44,12 +44,12 @@ export function createTreeView(viewId: string, options: InternalTreeViewOptions)
 /**
  * v1.5 compatibility for TreeView.reveal
  */
-function modifyReveal(treeView: TreeView<ResourceGroupsItem>, findItemById: (id: string) => Promise<ResourceGroupsItem | undefined>, itemCache: BranchDataItemCache): void {
+function modifyReveal(treeView: TreeView<TreeDataItem>, findItemById: (id: string) => Promise<TreeDataItem | undefined>, itemCache: BranchDataItemCache): void {
     (treeView as InternalTreeView)._reveal = treeView.reveal.bind(treeView) as typeof treeView.reveal;
 
     treeView.reveal = async (element, options) => {
-        // For compatibility: convert AzExtTreeItems into ResourceGroupsItems
-        const item: ResourceGroupsItem | undefined = isAzExtTreeItem(element) ? itemCache.getItemForBranchItem(element) ?? await findItemById(element.fullId) : element;
+        // For compatibility: convert AzExtTreeItems into TreeDataItems
+        const item: TreeDataItem | undefined = isAzExtTreeItem(element) ? itemCache.getItemForBranchItem(element) ?? await findItemById(element.fullId) : element;
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         await (treeView as InternalTreeView)._reveal(item!, options);
     }

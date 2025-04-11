@@ -7,14 +7,14 @@ import { ParsedAzureResourceId } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeItem, IActionContext, maskUserInfo, parseError } from '@microsoft/vscode-azext-utils';
 import { VSCodeRevealOptions } from '../../api/src/index';
 import { ext } from '../extensionVariables';
-import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
+import { TreeDataItem } from '../tree/ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../tree/ResourceTreeDataProviderBase';
 
 export async function revealResource(context: IActionContext, resourceId: string, options?: VSCodeRevealOptions): Promise<void> {
     setTelemetryPropertiesForId(context, resourceId);
 
     try {
-        const item: ResourceGroupsItem | undefined = await (ext.v2.api.resources.azureResourceTreeDataProvider as ResourceTreeDataProviderBase).findItemById(resourceId);
+        const item: TreeDataItem | undefined = await (ext.v2.api.resources.azureResourceTreeDataProvider as ResourceTreeDataProviderBase).findItemById(resourceId);
         if (item) {
             await ext.appResourceTreeView.reveal(item as unknown as AzExtTreeItem, options ?? { expand: false, focus: true, select: true });
         }

@@ -11,14 +11,14 @@ import { ActivityLogTreeDataProvider } from "../../tree/activitiyLog/ActivityLog
 import { ActivityLogResourceBranchDataProviderManager } from "../../tree/activitiyLog/ActivityLogBranchDataProviderManager";
 import { BranchDataItemCache } from "../../tree/BranchDataItemCache";
 import { createTreeView } from "../../tree/createTreeView";
-import { ResourceGroupsItem } from "../../tree/ResourceGroupsItem";
+import { TreeDataItem } from "../../tree/ResourceGroupsItem";
 import { wrapTreeForVSCode } from "../../tree/wrapTreeForVSCode";
 import { localize } from "../../utils/localize";
 
 interface RegisterActivityLogTreeOptions {
     activityLogResourceBranchDataProviderManager: ActivityLogResourceBranchDataProviderManager,
     activityLogResourceProviderManager: ActivityLogResourceProviderManager,
-    refreshEvent: Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
+    refreshEvent: Event<void | TreeDataItem | TreeDataItem[] | null | undefined>,
 }
 
 export function registerActivityLogTree(context: ExtensionContext, options: RegisterActivityLogTreeOptions): ActivityLogTreeDataProvider {

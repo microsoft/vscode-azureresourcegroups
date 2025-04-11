@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, IActionContext, TreeElementBase } from '@microsoft/vscode-azext-utils';
 import { Activity } from '@microsoft/vscode-azext-utils/hostapi';
 import { commands, Event } from 'vscode';
 import { ActivityLogResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { ext } from '../../extensionVariables';
 import { settingUtils } from '../../utils/settingUtils';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from '../ResourceTreeDataProviderBase';
 import { WorkspaceResourceBranchDataProviderManager } from '../workspace/WorkspaceResourceBranchDataProviderManager';
 import { ActivityItem, ActivityStatus } from './ActivityItem';
@@ -19,7 +18,7 @@ export class ActivityLogTreeDataProvider extends ResourceTreeDataProviderBase {
     private activityTreeItems: Record<string, ActivityItem> = {};
     constructor(
         branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
-        onRefresh: Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
+        onRefresh: Event<void | TreeElementBase | TreeElementBase[] | null | undefined>,
         resourceProviderManager: ActivityLogResourceProviderManager,
         branchItemCache: BranchDataItemCache) {
         super(
@@ -29,8 +28,8 @@ export class ActivityLogTreeDataProvider extends ResourceTreeDataProviderBase {
             onRefresh);
     }
 
-    async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
-        if (element) {
+    async onGetChildren(element?: TreeElementBase | undefined): Promise<TreeElementBase[] | null | undefined> {
+        if (element?.getChildren) {
             return await element.getChildren();
         } else {
             return Object.values(this.activityTreeItems).filter((activity) => !!activity.status);

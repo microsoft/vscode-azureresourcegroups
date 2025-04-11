@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { TreeElementBase } from 'node_modules/@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { WorkspaceResource } from '../../../api/src/index';
 import { WorkspaceResourceProviderManager } from '../../api/ResourceProviderManagers';
@@ -17,7 +18,7 @@ import { WorkspaceResourceBranchDataProviderManager } from './WorkspaceResourceB
 export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderBase {
     constructor(
         private readonly branchDataProviderManager: WorkspaceResourceBranchDataProviderManager,
-        onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
+        onRefresh: vscode.Event<void | TreeElementBase | TreeElementBase[] | null | undefined>,
         private readonly resourceProviderManager: WorkspaceResourceProviderManager,
         branchItemCache: BranchDataItemCache) {
         super(

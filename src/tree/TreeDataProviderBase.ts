@@ -3,18 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import { callWithTelemetryAndErrorHandling, parseError, TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/src/index';
-import { ext } from '../extensionVariables';
 import { BranchDataItemCache } from './BranchDataItemCache';
-import { BranchDataItemWrapper } from './BranchDataItemWrapper';
 import { InvalidItem } from './InvalidItem';
-import { ResourceGroupsItem, TreeDataItem } from './ResourceGroupsItem';
-import { TreeItemStateStore } from './TreeItemState';
 
-export abstract class ResourceTreeDataProviderBase extends vscode.Disposable implements vscode.TreeDataProvider<TreeDataItem> {
+export abstract class TreeDataProviderBase extends vscode.Disposable implements vscode.TreeDataProvider<TreeElementBase> {
     private readonly branchTreeDataChangeSubscription: vscode.Disposable;
     private readonly refreshSubscription: vscode.Disposable;
     private readonly resourceProviderManagerListener: vscode.Disposable;
@@ -24,8 +19,8 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         protected readonly itemCache: BranchDataItemCache,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
         onDidChangeResource: vscode.Event<ResourceBase | undefined>,
-        onRefresh: vscode.Event<void | TreeDataItem | TreeDataItem[] | null | undefined>,
-        private readonly state?: TreeItemStateStore,
+        onRefresh: vscode.Event<void | TreeElementBase | TreeElementBase[] | null | undefined>,
+        // private readonly state?: TreeItemStateStore,
         callOnDispose?: () => void) {
         super(
             () => {
@@ -44,39 +39,39 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         this.resourceProviderManagerListener = onDidChangeResource(() => this.onDidChangeTreeDataEmitter.fire());
     }
 
-    protected statusSubscription: vscode.Disposable | undefined;
-    private subscriptionProvider?: AzureSubscriptionProvider;
-    private nextSessionChangeMessageMinimumTime = 0;
-    private sessionChangeMessageInterval = 1 * 1000; // 1 second
+    // protected statusSubscription: vscode.Disposable | undefined;
+    // private subscriptionProvider?: AzureSubscriptionProvider;
+    // private nextSessionChangeMessageMinimumTime = 0;
+    // private sessionChangeMessageInterval = 1 * 1000; // 1 second
 
-    protected async getAzureSubscriptionProvider(): Promise<AzureSubscriptionProvider> {
-        // override for testing
-        if (ext.testing.overrideAzureSubscriptionProvider) {
-            return ext.testing.overrideAzureSubscriptionProvider();
-        } else {
-            if (!this.subscriptionProvider) {
-                this.subscriptionProvider = await ext.subscriptionProviderFactory();
-            }
+    // protected async getAzureSubscriptionProvider(): Promise<AzureSubscriptionProvider> {
+    //     // override for testing
+    //     if (ext.testing.overrideAzureSubscriptionProvider) {
+    //         return ext.testing.overrideAzureSubscriptionProvider();
+    //     } else {
+    //         if (!this.subscriptionProvider) {
+    //             this.subscriptionProvider = await ext.subscriptionProviderFactory();
+    //         }
 
-            this.statusSubscription = vscode.authentication.onDidChangeSessions((evt: vscode.AuthenticationSessionsChangeEvent) => {
-                if (evt.provider.id === 'microsoft' || evt.provider.id === 'microsoft-sovereign-cloud') {
-                    if (Date.now() > this.nextSessionChangeMessageMinimumTime) {
-                        this.nextSessionChangeMessageMinimumTime = Date.now() + this.sessionChangeMessageInterval;
-                        // This event gets HEAVILY spammed and needs to be debounced
-                        // Suppress additional messages for 1 second after the first one
-                        this.notifyTreeDataChanged();
-                    }
-                }
-            });
+    //         this.statusSubscription = vscode.authentication.onDidChangeSessions((evt: vscode.AuthenticationSessionsChangeEvent) => {
+    //             if (evt.provider.id === 'microsoft' || evt.provider.id === 'microsoft-sovereign-cloud') {
+    //                 if (Date.now() > this.nextSessionChangeMessageMinimumTime) {
+    //                     this.nextSessionChangeMessageMinimumTime = Date.now() + this.sessionChangeMessageInterval;
+    //                     // This event gets HEAVILY spammed and needs to be debounced
+    //                     // Suppress additional messages for 1 second after the first one
+    //                     this.notifyTreeDataChanged();
+    //                 }
+    //             }
+    //         });
 
-            return this.subscriptionProvider;
-        }
-    }
+    //         return this.subscriptionProvider;
+    //     }
+    // }
 
-    onDidChangeTreeData: vscode.Event<void | TreeElementBase | TreeElementBase[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
+    public onDidChangeTreeData: vscode.Event<void | TreeElementBase | TreeElementBase[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
 
-    notifyTreeDataChanged(data: void | ResourceModelBase | ResourceModelBase[] | null | undefined): void {
-        const rgItems: TreeDataItem[] = [];
+    public notifyTreeDataChanged(data: void | ResourceModelBase | ResourceModelBase[] | null | undefined): void {
+        const rgItems: TreeElementBase[] = [];
 
         // eslint-disable-next-line no-extra-boolean-cast
         if (!!data) {
@@ -100,7 +95,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         }
     }
 
-    async getTreeItem(element: TreeDataItem): Promise<vscode.TreeItem> {
+    async getTreeItem(element: TreeElementBase): Promise<vscode.TreeItem> {
         try {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             return (await callWithTelemetryAndErrorHandling('getTreeItem', async (context) => {
@@ -113,28 +108,26 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         }
     }
 
-    async getChildren(element?: TreeDataItem | undefined): Promise<TreeDataItem[] | null | undefined> {
-        const children = await this.onGetChildren(element);
-        return children?.map(child => {
-            if (this.state) {
-                // don't wrap items that belong to branch data providers
-                if (child instanceof BranchDataItemWrapper) {
-                    return child;
-                }
-                return this.state.wrapItemInStateHandling(child, (item) => this.onDidChangeTreeDataEmitter.fire(item));
-            }
-            return child;
-        });
-    }
+    abstract getChildren(element?: TreeElementBase | undefined): Promise<TreeElementBase[] | null | undefined>;
+    // const children = await this.onGetChildren(element);
+    // return children?.map(child => {
+    //     if (this.state) {
+    //         // don't wrap items that belong to branch data providers
+    //         if (child instanceof BranchDataItemWrapper) {
+    //             return child;
+    //         }
+    //         return this.state.wrapItemInStateHandling(child, (item) => this.onDidChangeTreeDataEmitter.fire(item));
+    //     }
+    //     return child;
+    // });
 
-    getParent(element: ResourceGroupsItem): vscode.ProviderResult<TreeDataItem> {
-        return element.getParent?.();
-    }
+    abstract getParent(element: TreeElementBase): vscode.ProviderResult<TreeElementBase>
+    // return element.getParent?.();
 
-    async findItemById(id: string): Promise<TreeDataItem | undefined> {
-        let element: TreeDataItem | undefined = undefined;
+    async findItemById(id: string): Promise<TreeElementBase | undefined> {
+        let element: TreeElementBase | undefined = undefined;
         outerLoop: while (true) {
-            const children: TreeDataItem[] | null | undefined = await this.getChildren(element);
+            const children: TreeElementBase[] | null | undefined = await this.getChildren(element);
 
             if (!children) {
                 return;
@@ -155,15 +148,15 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         }
     }
 
-    protected isAncestorOf(element: TreeDataItem, id: string): boolean {
+    protected isAncestorOf(element: TreeElementBase, id: string): boolean {
         // remove accounts / <accountId>/tenant/<tenantId> from the beginning of the id
         const elementId = removePrefix(element.id) + '/';
         return id.toLowerCase().startsWith(elementId.toLowerCase());
     }
 
-    protected abstract onGetChildren(element?: TreeDataItem | undefined): Promise<TreeDataItem[] | null | undefined>;
+    protected abstract onGetChildren(element?: TreeElementBase | undefined): Promise<TreeElementBase[] | null | undefined>;
 }
 
 function removePrefix(id?: string): string {
-    return id?.replace(/\/accounts\/.+\/tenants\/[^/]+\//i, '/') || '';
+    return id ? id.replace(/\/accounts\/.+\/tenants\/[^/]+\//i, '/') : '';
 }

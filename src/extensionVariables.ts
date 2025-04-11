@@ -11,17 +11,17 @@ import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
 import { ManagedIdentityBranchDataProvider } from "./managedIdentity/ManagedIdentityBranchDataProvider";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
-import { ResourceGroupsItem } from "./tree/ResourceGroupsItem";
+import { TreeDataItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
 import { ActivityLogTreeDataProvider } from "./tree/activitiyLog/ActivityLogBranchDataProvider";
 import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
 
 export namespace extActions {
-    export let refreshWorkspaceTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
-    export let refreshAzureTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
-    export let refreshFocusTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
-    export let refreshTenantTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
-    export let refreshActivityLogTree: (data?: ResourceGroupsItem | ResourceGroupsItem[] | null | undefined | void) => void;
+    export let refreshWorkspaceTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
+    export let refreshAzureTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
+    export let refreshFocusTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
+    export let refreshTenantTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
+    export let refreshActivityLogTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
 }
 
 /**

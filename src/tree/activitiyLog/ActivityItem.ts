@@ -3,19 +3,19 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, TreeElementBase, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ext } from "../../extensionVariables";
 import { localize } from "../../utils/localize";
-import { ResourceGroupsItem } from "../ResourceGroupsItem";
+import { TreeDataItem } from "../ResourceGroupsItem";
 
 export enum ActivityStatus {
     Running = 'running',
     Done = 'done'
 }
 
-export class ActivityItem implements ResourceGroupsItem, Disposable {
+export class ActivityItem implements TreeElementBase, Disposable {
     public readonly id: string;
     public startedAtMs: number;
 
@@ -83,10 +83,9 @@ export class ActivityItem implements ResourceGroupsItem, Disposable {
 
     private readonly disposables: Disposable[] = [];
 
-    public async getChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
+    public async getChildren(): Promise<TreeDataItem[] | null | undefined> {
         if (this.state.getChildren) {
-            return [] // TODO: Update utils package for Activity.state to not return AzExtTreeItems
-            //  await this.state.getChildren(this);
+            return await this.state.getChildren(this);
         }
         return [];
     }

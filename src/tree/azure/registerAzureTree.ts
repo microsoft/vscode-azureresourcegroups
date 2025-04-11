@@ -11,7 +11,7 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { listenForRecentlyUsedNodes } from '../../utils/usedAndSelectedResources';
 import { BranchDataItemCache } from '../BranchDataItemCache';
-import { ResourceGroupsItem } from '../ResourceGroupsItem';
+import { TreeDataItem } from '../ResourceGroupsItem';
 import { TreeItemStateStore } from '../TreeItemState';
 import { createTreeView } from '../createTreeView';
 import { wrapTreeForVSCode } from '../wrapTreeForVSCode';
@@ -24,7 +24,7 @@ import { GroupingItemFactory } from './grouping/GroupingItemFactory';
 interface RegisterAzureTreeOptions {
     azureResourceBranchDataProviderManager: AzureResourceBranchDataProviderManager,
     azureResourceProviderManager: AzureResourceProviderManager,
-    refreshEvent: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
+    refreshEvent: vscode.Event<void | TreeDataItem | TreeDataItem[] | null | undefined>,
     itemCache: BranchDataItemCache,
 }
 
