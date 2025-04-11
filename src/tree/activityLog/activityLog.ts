@@ -27,14 +27,10 @@ export interface ActivityLogResource extends ResourceBase {
 }
 
 /**
- * Represents a model of an individual activity log resource or its child items.
- */
-export type ActivityLogResourceModel = ResourceModelBase;
-/**
  * A provider for supplying items for the activity log resource tree
  */
 export type ActivityLogResourceProvider = ResourceProvider<void, ActivityLogResource>;
 /**
  * A provider for visualizing items in the activity log resource tree
  */
-export type ActivityLogResourceBranchDataProvider<TModel extends ActivityLogResourceModel> = BranchDataProvider<ActivityLogResource, TModel>;
+export type ActivityLogResourceBranchDataProvider<TModel extends ResourceModelBase> = BranchDataProvider<ActivityLogResource, TModel>;

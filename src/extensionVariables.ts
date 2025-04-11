@@ -13,7 +13,7 @@ import { ManagedIdentityBranchDataProvider } from "./managedIdentity/ManagedIden
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
 import { TreeDataItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
-import { ActivityLogTreeDataProvider } from "./tree/activitiyLog/ActivityLogBranchDataProvider";
+import { ActivityLogTreeDataProvider } from "./tree/activityLog/ActivityLogBranchDataProvider";
 import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
 
 export namespace extActions {

@@ -36,8 +36,8 @@ import { getSubscriptionProviderFactory } from './services/getSubscriptionProvid
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { TreeDataItem } from './tree/ResourceGroupsItem';
-import { ActivityLogResourceBranchDataProviderManager } from './tree/activitiyLog/ActivityLogBranchDataProviderManager';
-import { ActivityLogDefaultBranchDataProvider } from './tree/activitiyLog/ActivityLogDefaultBranchDataProvider';
+import { ActivityLogResourceBranchDataProviderManager } from './tree/activityLog/ActivityLogBranchDataProviderManager';
+import { ActivityLogDefaultBranchDataProvider } from './tree/activityLog/ActivityLogDefaultBranchDataProvider';
 import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResourceBranchDataProviderManager';
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
 import { registerAzureTree } from './tree/azure/registerAzureTree';

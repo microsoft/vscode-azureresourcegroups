@@ -90,10 +90,6 @@ export class ActivityItem implements TreeElementBase, Disposable {
         return [];
     }
 
-    public hasMoreChildrenImpl(): boolean {
-        return false;
-    }
-
     private onProgress(data: OnProgressActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnProgress', async (context) => {
             context.telemetry.suppressIfSuccessful = true;
