@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, dateTimeUtils, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ext } from "../../extensionVariables";
@@ -30,10 +30,21 @@ export class ActivityItem implements ResourceGroupsItem, Disposable {
 
     public get description(): string | undefined {
         if (this.status === ActivityStatus.Done) {
+            let duration: string | undefined;
+            if (this.activity.startTime && this.activity.endTime) {
+                const startTimeMs: number = this.activity.startTime.getTime();
+                const endTimeMs: number = this.activity.endTime.getTime();
+                duration = dateTimeUtils.getFormattedDurationInMinutesAndSeconds(endTimeMs - startTimeMs);
+            }
+
             if (this.error) {
-                return localize('failed', 'Failed');
+                return duration ?
+                    localize('failedWithDuration', 'Failed ({0})', duration) :
+                    localize('failed', 'Failed');
             } else {
-                return localize('succeeded', 'Succeeded');
+                return duration ?
+                    localize('succeededWithDuration', 'Succeeded ({0})', duration) :
+                    localize('succeeded', 'Succeeded');
             }
         } else {
             return this.latestProgress?.message;
@@ -65,16 +76,16 @@ export class ActivityItem implements ResourceGroupsItem, Disposable {
         }
     }
 
-    public initialCollapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None;
+    public initialCollapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.Expanded;
 
     public status?: ActivityStatus;
     public error?: unknown;
     private latestProgress?: { message?: string };
 
-    public constructor(activity: Activity) {
+    public constructor(readonly activity: Activity) {
         this.id = activity.id;
         this.setupListeners(activity);
-        this.startedAtMs = Date.now();
+        this.startedAtMs = activity.startTime?.getTime() ?? Date.now();
     }
 
     public dispose(): void {
@@ -85,8 +96,7 @@ export class ActivityItem implements ResourceGroupsItem, Disposable {
 
     public async getChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
         if (this.state.getChildren) {
-            return [] // TODO: Update utils package for Activity.state to not return AzExtTreeItems
-            //  await this.state.getChildren(this);
+            return await this.state.getChildren(this) as ResourceGroupsItem[];
         }
         return [];
     }
@@ -98,7 +108,7 @@ export class ActivityItem implements ResourceGroupsItem, Disposable {
     private onProgress(data: OnProgressActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnProgress', async (context) => {
             context.telemetry.suppressIfSuccessful = true;
-            this.latestProgress = data.message ? { message: data?.message } : this.latestProgress;
+            this.latestProgress = data.message !== undefined ? { message: data.message } : this.latestProgress;
             this.state = data;
             ext.actions.refreshActivityLogTree(this);
         });
@@ -106,7 +116,7 @@ export class ActivityItem implements ResourceGroupsItem, Disposable {
 
     private onStart(data: OnStartActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnStart', async (_context) => {
-            this.startedAtMs = Date.now();
+            this.startedAtMs = this.activity.startTime?.getTime() ?? Date.now();
             this.status = ActivityStatus.Running;
             this.state = data;
             ext.actions.refreshActivityLogTree(this);
