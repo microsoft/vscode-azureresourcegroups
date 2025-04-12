@@ -101,6 +101,73 @@
                 ]
             }
         ],
+        "languageModelTools": [
+            {
+                "displayName": "Azure Resources: Get Selected Azure Node",
+                "icon": "$(azure)",
+                "inputSchema": {},
+                "modelDescription": "Gets the selected Azure node from the Azure Resources tree view in Visual Studio Code.",
+                "name": "azureResources_getSelectedAzureNode",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "selectedAzureNode",
+                "tags": [
+                    "azure",
+                    "vscode_editing"
+                ]
+            },
+            {
+                "displayName": "Azure Resources: Get Azure Activity Log",
+                "icon": "$(azure)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "treeId": {
+                            "type": "string",
+                            "description": "The ID of the selected activity tree itemd (optional)."
+                        }
+                    }
+                },
+                "modelDescription": "Gets the Azure activity log",
+                "name": "azureResources_getAzureActivityLog",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "azureActivityLog",
+                "tags": [
+                    "azure",
+                    "vscode_editing"
+                ]
+            },
+            {
+                "displayName": "Azure Resources: Create Resource Group",
+                "icon": "$(azure)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "resourceGroupName": {
+                            "type": "string",
+                            "description": "The name of the resource group to create."
+                        },
+                        "location": {
+                            "type": "string",
+                            "description": "The Azure location where the resource group will be created.",
+                            "enum": [
+                                "eastus",
+                                "westus"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "resourceGroupName",
+                        "location"
+                    ]
+                },
+                "modelDescription": "Creates a resource group in Azure",
+                "name": "azureResources_createResourceGroup",
+                "tags": [
+                    "azure",
+                    "vscode_editing"
+                ]
+            }
+        ],
         "terminal": {
             "profiles": [
                 {
@@ -346,6 +413,18 @@
             {
                 "command": "azureResourceGroups.askAgentAboutResource",
                 "title": "%azureResourceGroups.askAzure%"
+            },
+            {
+                "command": "azureResourceGroups.askAgentAboutActivityLog",
+                "title": "%azureResourceGroups.askAgentAboutActivityLog%",
+                "category": "Azure",
+                "icon": "$(copilot)"
+            },
+            {
+                "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                "title": "%azureResourceGroups.askAgentAboutActivityLogItem%",
+                "category": "Azure",
+                "icon": "$(copilot)"
             }
         ],
         "viewsContainers": {
@@ -476,6 +555,11 @@
                     "group": "navigation@10"
                 },
                 {
+                    "command": "azureResourceGroups.askAgentAboutActivityLog",
+                    "when": "view == azureActivityLog",
+                    "group": "navigation@1"
+                },
+                {
                     "command": "azureResourceGroups.clearActivities",
                     "when": "view == azureActivityLog",
                     "group": "navigation@1"
@@ -591,6 +675,16 @@
                     "command": "azureResourceGroups.askAgentAboutResource",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && github.copilot-chat.activated && config.azureResourceGroups.enableChatStandIn",
                     "group": "7@9"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "when": "view == azureActivityLog && viewItem =~ /activityTreeItem/i",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "when": "view == azureActivityLog && viewItem =~ /activityTreeItem/i",
+                    "group": "inline"
                 }
             ],
             "commandPalette": [
@@ -644,6 +738,10 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutResource",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
                     "when": "never"
                 }
             ],
@@ -858,6 +956,9 @@
             }
         ]
     },
+    "enabledApiProposals": [
+        "languageModelToolsForAgent"
+    ],
     "scripts": {
         "vscode:prepublish": "npm run webpack-prod",
         "build": "tsc",
