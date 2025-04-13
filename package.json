@@ -678,12 +678,12 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLogItem",
-                    "when": "view == azureActivityLog && viewItem =~ /activityTreeItem/i",
+                    "when": "view == azureActivityLog && viewItem =~ /activityItem/i",
                     "group": "1@1"
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLogItem",
-                    "when": "view == azureActivityLog && viewItem =~ /activityTreeItem/i",
+                    "when": "view == azureActivityLog && viewItem =~ /activityItem/i",
                     "group": "inline"
                 }
             ],
@@ -1016,7 +1016,7 @@
         "@azure/ms-rest-js": "^2.7.0",
         "@microsoft/vscode-azext-azureauth": "^4.0.3",
         "@microsoft/vscode-azext-azureutils": "^3.2.0",
-        "@microsoft/vscode-azext-utils": "^3.0.0",
+        "@microsoft/vscode-azext-utils": "file:../vscode-azuretools/utils/microsoft-vscode-azext-utils-3.0.0.tgz",
         "buffer": "^6.0.3",
         "form-data": "^4.0.1",
         "jsonc-parser": "^2.2.1",

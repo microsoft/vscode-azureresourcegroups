@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, TreeElementBase, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, CommandMetadata, TreeElementBase, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ext } from "../../extensionVariables";
@@ -16,11 +16,18 @@ export enum ActivityStatus {
 }
 
 export class ActivityItem implements TreeElementBase, Disposable {
+    public static contextValue: string = 'activityItem';
+
     public readonly id: string;
     public startedAtMs: number;
+    private _commandMetadata?: CommandMetadata;
+
+    public get commandMetadata(): CommandMetadata | undefined {
+        return this._commandMetadata;
+    }
 
     public get contextValue(): string {
-        const contextValues = new Set(['azureActivity', ...(this.state.contextValuesToAdd ?? [])]);
+        const contextValues = new Set([ActivityItem.contextValue, ...(this.state.contextValuesToAdd ?? [])]);
         return Array.from(contextValues).sort().join(';');
     }
 
@@ -75,6 +82,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
         this.id = activity.id;
         this.setupListeners(activity);
         this.startedAtMs = Date.now();
+        this._commandMetadata = activity.commandMetadata;
     }
 
     public dispose(): void {

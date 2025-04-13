@@ -7,7 +7,7 @@ import { AzExtTreeItem, IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 
 const activityLogTool: string = 'azureActivityLog';
-const genericActivityLogPrompt: string = vscode.l10n.t(`Help me understand important information in my VS Code activity log`);
+const genericActivityLogPrompt: string = vscode.l10n.t(`Help me understand important information in my VS Code activity log.  Only summarize key points, don't expose command metadata directly to users, but leverage this information when answering questions.`);
 
 export async function askAgentAboutActivityLog(): Promise<void> {
     await vscode.commands.executeCommand("workbench.action.chat.newChat");
@@ -19,5 +19,5 @@ export async function askAgentAboutActivityLogItem(_: IActionContext, node?: AzE
         return await askAgentAboutActivityLog();
     }
     await vscode.commands.executeCommand("workbench.action.chat.newChat");
-    await vscode.commands.executeCommand("workbench.action.chat.open", { query: `#${activityLogTool} ${genericActivityLogPrompt}. I'm interested in learning more about the activity item with treeId: ${node.id}.` });
+    await vscode.commands.executeCommand("workbench.action.chat.open", { query: `#${activityLogTool} ${genericActivityLogPrompt} I'm interested in learning more about the activity item with treeId: ${node.id}.` });
 }
