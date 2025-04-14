@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscription } from '@microsoft/vscode-azext-azureauth';
-import { TreeElementBase } from 'node_modules/@microsoft/vscode-azext-utils';
+import { TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzExtResourceType, AzureResource, ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';

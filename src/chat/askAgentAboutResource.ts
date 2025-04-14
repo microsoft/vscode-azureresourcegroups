@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from "node_modules/@microsoft/vscode-azext-utils";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 
 const agentName = "azure";
