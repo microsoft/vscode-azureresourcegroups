@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscription, getUnauthenticatedTenants } from '@microsoft/vscode-azext-azureauth';
-import { IActionContext, callWithTelemetryAndErrorHandling, createSubscriptionContext, nonNullValueAndProp, registerEvent } from '@microsoft/vscode-azext-utils';
+import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling, createSubscriptionContext, nonNullValueAndProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
@@ -28,7 +28,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
         itemCache: BranchDataItemCache,
         state: TreeItemStateStore,
-        onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
+        onRefresh: vscode.Event<void | TreeElementBase | TreeElementBase[] | null | undefined>,
         protected readonly resourceGroupingManager: AzureResourceGroupingManager,
         protected readonly resourceProviderManager: AzureResourceProviderManager) {
         super(
@@ -63,7 +63,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
-        if (element) {
+        if (element?.getChildren) {
             return await element.getChildren();
         } else {
             const subscriptionProvider = await this.getAzureSubscriptionProvider();

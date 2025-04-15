@@ -4,27 +4,27 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
-import { callWithTelemetryAndErrorHandling, parseError } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, parseError, TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/src/index';
 import { ext } from '../extensionVariables';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { BranchDataItemWrapper } from './BranchDataItemWrapper';
 import { InvalidItem } from './InvalidItem';
-import { ResourceGroupsItem } from './ResourceGroupsItem';
+import { ResourceGroupsItem, TreeDataItem } from './ResourceGroupsItem';
 import { TreeItemStateStore } from './TreeItemState';
 
-export abstract class ResourceTreeDataProviderBase extends vscode.Disposable implements vscode.TreeDataProvider<ResourceGroupsItem> {
+export abstract class ResourceTreeDataProviderBase extends vscode.Disposable implements vscode.TreeDataProvider<TreeDataItem> {
     private readonly branchTreeDataChangeSubscription: vscode.Disposable;
     private readonly refreshSubscription: vscode.Disposable;
     private readonly resourceProviderManagerListener: vscode.Disposable;
-    private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>();
+    private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | TreeElementBase | TreeElementBase[] | null | undefined>();
 
     constructor(
         protected readonly itemCache: BranchDataItemCache,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
         onDidChangeResource: vscode.Event<ResourceBase | undefined>,
-        onRefresh: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined>,
+        onRefresh: vscode.Event<void | TreeDataItem | TreeDataItem[] | null | undefined>,
         private readonly state?: TreeItemStateStore,
         callOnDispose?: () => void) {
         super(
@@ -73,10 +73,10 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         }
     }
 
-    onDidChangeTreeData: vscode.Event<void | ResourceGroupsItem | ResourceGroupsItem[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
+    onDidChangeTreeData: vscode.Event<void | TreeElementBase | TreeElementBase[] | null | undefined> = this.onDidChangeTreeDataEmitter.event;
 
     notifyTreeDataChanged(data: void | ResourceModelBase | ResourceModelBase[] | null | undefined): void {
-        const rgItems: ResourceGroupsItem[] = [];
+        const rgItems: TreeDataItem[] = [];
 
         // eslint-disable-next-line no-extra-boolean-cast
         if (!!data) {
@@ -100,7 +100,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         }
     }
 
-    async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
+    async getTreeItem(element: TreeDataItem): Promise<vscode.TreeItem> {
         try {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             return (await callWithTelemetryAndErrorHandling('getTreeItem', async (context) => {
@@ -113,7 +113,7 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         }
     }
 
-    async getChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
+    async getChildren(element?: TreeDataItem | undefined): Promise<TreeDataItem[] | null | undefined> {
         const children = await this.onGetChildren(element);
         return children?.map(child => {
             if (this.state) {
@@ -127,23 +127,23 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         });
     }
 
-    getParent(element: ResourceGroupsItem): vscode.ProviderResult<ResourceGroupsItem> {
+    getParent(element: ResourceGroupsItem): vscode.ProviderResult<TreeDataItem> {
         return element.getParent?.();
     }
 
-    async findItemById(id: string): Promise<ResourceGroupsItem | undefined> {
-        let element: ResourceGroupsItem | undefined = undefined;
+    async findItemById(id: string): Promise<TreeDataItem | undefined> {
+        let element: TreeDataItem | undefined = undefined;
         outerLoop: while (true) {
-            const children: ResourceGroupsItem[] | null | undefined = await this.getChildren(element);
+            const children: TreeDataItem[] | null | undefined = await this.getChildren(element);
 
             if (!children) {
                 return;
             }
 
             for (const child of children) {
-                if (child.id.toLowerCase() === id.toLowerCase()) {
+                if (child.id?.toLowerCase() === id.toLowerCase()) {
                     return child;
-                } else if (removePrefix(child.id.toLowerCase()) === id.toLowerCase()) {
+                } else if (removePrefix(child.id?.toLowerCase()) === id.toLowerCase()) {
                     return child;
                 } else if (this.isAncestorOf(child, id)) {
                     element = child;
@@ -155,15 +155,15 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         }
     }
 
-    protected isAncestorOf(element: ResourceGroupsItem, id: string): boolean {
+    protected isAncestorOf(element: TreeDataItem, id: string): boolean {
         // remove accounts / <accountId>/tenant/<tenantId> from the beginning of the id
         const elementId = removePrefix(element.id) + '/';
         return id.toLowerCase().startsWith(elementId.toLowerCase());
     }
 
-    protected abstract onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined>;
+    protected abstract onGetChildren(element?: TreeDataItem | undefined): Promise<TreeDataItem[] | null | undefined>;
 }
 
-function removePrefix(id: string): string {
-    return id.replace(/\/accounts\/.+\/tenants\/[^/]+\//i, '/')
+function removePrefix(id?: string): string {
+    return id?.replace(/\/accounts\/.+\/tenants\/[^/]+\//i, '/') || '';
 }

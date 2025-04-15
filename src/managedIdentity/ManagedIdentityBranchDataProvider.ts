@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, type IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, TreeElementBase, type IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzureResource, AzureResourceModel, BranchDataProvider } from '@microsoft/vscode-azureresources-api';
 import * as vscode from 'vscode';
 import { localize } from 'vscode-nls';
@@ -11,7 +11,7 @@ import { ext } from '../extensionVariables';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { ManagedIdentityItem } from './ManagedIdentityItem';
 export class ManagedIdentityBranchDataProvider extends vscode.Disposable implements BranchDataProvider<AzureResource, AzureResourceModel> {
-    private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<ResourceGroupsItem | undefined>();
+    private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<TreeElementBase | undefined>();
 
     constructor() {
         super(
@@ -20,11 +20,11 @@ export class ManagedIdentityBranchDataProvider extends vscode.Disposable impleme
             });
     }
 
-    get onDidChangeTreeData(): vscode.Event<ResourceGroupsItem | undefined> {
+    get onDidChangeTreeData(): vscode.Event<TreeElementBase | undefined> {
         return this.onDidChangeTreeDataEmitter.event;
     }
 
-    async getChildren(element: ResourceGroupsItem): Promise<ResourceGroupsItem[] | null | undefined> {
+    async getChildren(element: ResourceGroupsItem): Promise<TreeElementBase[] | null | undefined> {
         return (await element.getChildren?.())?.map((child) => {
             return ext.azureTreeState.wrapItemInStateHandling(child, () => this.refresh(child))
         });
@@ -42,14 +42,14 @@ export class ManagedIdentityBranchDataProvider extends vscode.Disposable impleme
             throw new Error(localize('failedToGetResourceItem', 'Failed to get resource item for "{0}"', element.id));
         }
 
-        return ext.azureTreeState.wrapItemInStateHandling(resourceItem, () => this.refresh(resourceItem));
+        return ext.azureTreeState.wrapItemInStateHandling(resourceItem, () => this.refresh(resourceItem)) as ResourceGroupsItem;
     }
 
     async getTreeItem(element: ResourceGroupsItem): Promise<vscode.TreeItem> {
         return await element.getTreeItem();
     }
 
-    refresh(element?: ResourceGroupsItem): void {
+    refresh(element?: TreeElementBase): void {
         this.onDidChangeTreeDataEmitter.fire(element);
     }
 }
