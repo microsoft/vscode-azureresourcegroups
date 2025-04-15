@@ -141,7 +141,6 @@ export class ActivityItem implements TreeElementBase, Disposable {
     }
 
     private setupListeners(activity: Activity): void {
-        this.disposables.push(activity);
         this.disposables.push(activity.onProgress(this.onProgress.bind(this)));
         this.disposables.push(activity.onStart(this.onStart.bind(this)));
         this.disposables.push(activity.onSuccess(this.onSuccess.bind(this)));
