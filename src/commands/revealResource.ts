@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ParsedAzureResourceId } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeItem, IActionContext, maskUserInfo, parseError } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, ResourceGroupsItem, maskUserInfo, parseError } from '@microsoft/vscode-azext-utils';
 import { VSCodeRevealOptions } from '../../api/src/index';
 import { ext } from '../extensionVariables';
 import { TreeDataItem } from '../tree/ResourceGroupsItem';
