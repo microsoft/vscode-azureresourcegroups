@@ -22,8 +22,8 @@ export class GetAzureActivityLog<T extends GetAzureActivityLogInputSchema> imple
                 convertedActivityTreeItems.length ?
                     new vscode.LanguageModelTextPart(
                         `Tree item data: ${JSON.stringify(convertedActivityTreeItems)}. If an item is marked as selected, focus your summary on the selected item.
-                        When summarizing the data in responses, do not directly expose the structure or content of the underlying object.
-                        When a child item is selected, describe how it relates to the top level item representing the activity command that was run.`
+                        When a child item is selected, explain its relationship to the top-level parent activity item representing the command that was run.
+                        When summarizing the data in responses, do not directly expose the structure or content of the underlying object.`
                     ) :
                     new vscode.LanguageModelTextPart('There is no activity data to analyze.')
             ]
