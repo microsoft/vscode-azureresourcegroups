@@ -67,7 +67,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
         }
     }
 
-    public initialCollapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.Expanded;
+    public initialCollapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.None;
 
     public status?: ActivityStatus;
     public error?: unknown;
