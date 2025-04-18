@@ -16,11 +16,13 @@ export enum ActivityStatus {
 }
 
 export class ActivityItem implements TreeElementBase, Disposable {
+    static contextValue: string = 'activityItem';
+
     public readonly id: string;
     public startedAtMs: number;
 
     public get contextValue(): string {
-        const contextValues = new Set(['azureActivity', ...(this.state.contextValuesToAdd ?? [])]);
+        const contextValues = new Set([ActivityItem.contextValue, ...(this.state.contextValuesToAdd ?? [])]);
         return Array.from(contextValues).sort().join(';');
     }
 

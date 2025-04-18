@@ -101,6 +101,29 @@
                 ]
             }
         ],
+        "languageModelTools": [
+            {
+                "displayName": "Azure Resources: Get Azure Activity Log",
+                "icon": "$(azure)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "treeId": {
+                            "type": "string",
+                            "description": "The ID of the selected activity tree item (optional)."
+                        }
+                    }
+                },
+                "modelDescription": "Gets the Azure activity log",
+                "name": "azureResources_getAzureActivityLog",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "azureActivityLog",
+                "tags": [
+                    "azure",
+                    "vscode_editing"
+                ]
+            }
+        ],
         "terminal": {
             "profiles": [
                 {
@@ -320,6 +343,18 @@
                 "category": "Azure"
             },
             {
+                "command": "azureResourceGroups.askAgentAboutActivityLog",
+                "title": "%azureResourceGroups.askAgentAboutActivityLog%",
+                "category": "Azure",
+                "icon": "$(copilot)"
+            },
+            {
+                "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                "title": "%azureResourceGroups.askAgentAboutActivityLogItem%",
+                "category": "Azure",
+                "icon": "$(copilot)"
+            },
+            {
                 "command": "azureTenantsView.refresh",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
@@ -476,6 +511,11 @@
                     "group": "navigation@10"
                 },
                 {
+                    "command": "azureResourceGroups.askAgentAboutActivityLog",
+                    "when": "view == azureActivityLog",
+                    "group": "navigation@1"
+                },
+                {
                     "command": "azureResourceGroups.clearActivities",
                     "when": "view == azureActivityLog",
                     "group": "navigation@1"
@@ -591,6 +631,16 @@
                     "command": "azureResourceGroups.askAgentAboutResource",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && github.copilot-chat.activated && config.azureResourceGroups.enableChatStandIn",
                     "group": "7@9"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "when": "view == azureActivityLog && (viewItem =~ /activityItem/i || viewItem =~ /activityChildItem/i)",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "when": "view == azureActivityLog && (viewItem =~ /activityItem/i || viewItem =~ /activityChildItem/i)",
+                    "group": "inline"
                 }
             ],
             "commandPalette": [
@@ -644,6 +694,10 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutResource",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
                     "when": "never"
                 }
             ],
