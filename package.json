@@ -634,12 +634,12 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLogItem",
-                    "when": "view == azureActivityLog && (viewItem =~ /activityItem/i || viewItem =~ /activityChildItem/i)",
+                    "when": "view == azureActivityLog && viewItem =~ /activity/i",
                     "group": "1@1"
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLogItem",
-                    "when": "view == azureActivityLog && (viewItem =~ /activityItem/i || viewItem =~ /activityChildItem/i)",
+                    "when": "view == azureActivityLog && viewItem =~ /activity/i",
                     "group": "inline"
                 }
             ],

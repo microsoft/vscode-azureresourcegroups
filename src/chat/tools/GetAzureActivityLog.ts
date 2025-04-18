@@ -21,9 +21,9 @@ export class GetAzureActivityLog<T extends GetAzureActivityLogInputSchema> imple
             content: [
                 convertedActivityTreeItems.length ?
                     new vscode.LanguageModelTextPart(
-                        `Tree item data: ${JSON.stringify(convertedActivityTreeItems)}.
-                        Summarize this activity log tree data in natural language, focusing on key details like labels, statuses, and errors.
-                        Highlight the selected item if applicable, but exposing the information as raw JSON.`
+                        `Tree item data: ${JSON.stringify(convertedActivityTreeItems)}. If an item is marked as selected, focus your summary on the selected item.
+                        When summarizing the data in responses, do not directly expose the structure or content of the underlying object.
+                        When a child item is selected, describe how it relates to the top level item representing the activity command that was run.`
                     ) :
                     new vscode.LanguageModelTextPart('There is no activity data to analyze.')
             ]
@@ -85,7 +85,7 @@ async function convertItemToSimpleActivityChildObject(context: IActionContext, i
     };
 
     if (item.getChildren) {
-        // If the tree item has children, recursively convert them
+        // If there are more children, recursively convert them
         const children = await item.getChildren() ?? [];
         if (children.length > 0) {
             convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child, selectedTreeId)));
