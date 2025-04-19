@@ -15,14 +15,14 @@ export class GetAzureActivityLog<T extends GetAzureActivityLogInputSchema> imple
         return {
             content: [
                 convertedActivityItems.length ?
-                    instructLanguageModelResponse(JSON.stringify(convertedActivityItems), options.input.promptType ?? ActivityLogPromptType.Explain) :
+                    constructLMToolResponse(JSON.stringify(convertedActivityItems), options.input.promptType ?? ActivityLogPromptType.Explain) :
                     new vscode.LanguageModelTextPart('There is no activity data to analyze.')
             ]
         };
     }
 }
 
-function instructLanguageModelResponse(treeItemData: string, promptType: ActivityLogPromptType): vscode.LanguageModelTextPart {
+function constructLMToolResponse(treeItemData: string, promptType: ActivityLogPromptType): vscode.LanguageModelTextPart {
     switch (promptType) {
         case ActivityLogPromptType.Fix:
             return new vscode.LanguageModelTextPart(
