@@ -22,17 +22,17 @@ export async function askAgentAboutActivityLogItem(_: IActionContext, promptType
 }
 
 const explainActivityLogPrompt: string = vscode.l10n.t('Help explain the important information in my VS Code activity log.');
-const fixActivityItemPrompt: string = vscode.l10n.t('Help me diagnose and fix the error in my VS Code activity log.');
+const fixActivityLogPrompt: string = vscode.l10n.t('Help me diagnose and fix the error in my VS Code activity log.');
 
 function generateActivityLogPrompt(promptType: ActivityLogPromptType, treeId?: string): string {
     switch (promptType) {
         case ActivityLogPromptType.Fix:
             return treeId ?
-                `${fixActivityItemPrompt} I'm interested in fixing the activity item with treeId: ${treeId}.` :
-                `${fixActivityItemPrompt}`;
+                `${fixActivityLogPrompt} ${vscode.l10n.t(`I'm interested in fixing the activity item with treeId: {0}.`, treeId)}` :
+                `${fixActivityLogPrompt}`;
         case ActivityLogPromptType.Explain:
             return treeId ?
-                `${explainActivityLogPrompt} I'm interested in the activity item with treeId: ${treeId}.` :
+                `${explainActivityLogPrompt} ${vscode.l10n.t(`I'm interested in the activity item with treeId: {0}.`, treeId)}` :
                 `${explainActivityLogPrompt}`
     }
 }
