@@ -114,7 +114,7 @@
                         },
                         "promptType": {
                             "type": "string",
-                            "description": "Specifies the type of prompt context to use, such as whether to explain an item or fix an issue in the activity log (optional).",
+                            "description": "Specifies the type of prompt to supply, such as whether to explain an item or fix an issue in the activity log (optional).",
                             "enum": [
                                 "fix",
                                 "explain"
