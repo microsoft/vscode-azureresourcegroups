@@ -32,7 +32,7 @@ function generateActivityLogPrompt(promptType: ActivityLogPromptType, treeId?: s
                 `${fixActivityLogPrompt}`;
         case ActivityLogPromptType.Explain:
             return treeId ?
-                `${explainActivityLogPrompt} ${vscode.l10n.t(`I'm interested in the activity item with treeId: {0}.`, treeId)}` :
+                `${explainActivityLogPrompt} ${vscode.l10n.t(`I'm interested in an explanation of activity item with treeId: {0}.`, treeId)}` :
                 `${explainActivityLogPrompt}`
     }
 }
