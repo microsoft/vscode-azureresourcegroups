@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { activityFailContext, activitySuccessContext, callWithTelemetryAndErrorHandling, createContextValue, TreeElementBase, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { activityFailContext, activitySuccessContext, callWithTelemetryAndErrorHandling, CommandMetadata, createContextValue, TreeElementBase, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ext } from "../../extensionVariables";
@@ -20,6 +20,11 @@ export class ActivityItem implements TreeElementBase, Disposable {
 
     public readonly id: string;
     public startedAtMs: number;
+    private _commandMetadata?: CommandMetadata;
+
+    public get commandMetadata(): CommandMetadata | undefined {
+        return this._commandMetadata;
+    }
 
     public get contextValue(): string {
         const contextValues: string[] = [ActivityItem.contextValue];
@@ -82,6 +87,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
         this.id = activity.id;
         this.setupListeners(activity);
         this.startedAtMs = Date.now();
+        this._commandMetadata = activity.commandMetadata;
     }
 
     public dispose(): void {

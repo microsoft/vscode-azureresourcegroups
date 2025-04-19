@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ActivityChildItemBase, ActivityChildType, IActionContext } from "@microsoft/vscode-azext-utils";
+import { ActivityChildItemBase, ActivityChildType, CommandMetadata, IActionContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../../extensionVariables";
 import { ActivityItem, ActivityStatus } from "../../../tree/activityLog/ActivityItem";
 import { TreeDataItem } from "../../../tree/ResourceGroupsItem";
@@ -14,6 +14,7 @@ export type ConvertedActivityItem = {
     status?: ActivityStatus;
     selected?: boolean;
     error?: unknown;
+    commandMetadata?: CommandMetadata;
     children?: ConvertedActivityChildItem[];
 }
 
