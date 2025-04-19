@@ -101,6 +101,37 @@
                 ]
             }
         ],
+        "languageModelTools": [
+            {
+                "displayName": "Azure Resources: Get Azure Activity Log",
+                "icon": "$(azure)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "treeId": {
+                            "type": "string",
+                            "description": "The ID of the selected activity tree item (optional). If not specified, all items in the activity log will be focused on with equal importance."
+                        },
+                        "promptType": {
+                            "type": "string",
+                            "description": "Specifies the type of prompt to supply, such as whether to explain an item or fix an issue in the activity log (optional).",
+                            "enum": [
+                                "fix",
+                                "explain"
+                            ]
+                        }
+                    }
+                },
+                "modelDescription": "Gets the Azure activity log",
+                "name": "azureResources_getAzureActivityLog",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "azureActivityLog",
+                "tags": [
+                    "azure",
+                    "vscode_editing"
+                ]
+            }
+        ],
         "terminal": {
             "profiles": [
                 {
@@ -320,6 +351,24 @@
                 "category": "Azure"
             },
             {
+                "command": "azureResourceGroups.askAgentAboutActivityLog",
+                "title": "%azureResourceGroups.askAgentAboutActivityLog%",
+                "category": "Azure",
+                "icon": "$(copilot)"
+            },
+            {
+                "command": "azureResourceGroups.askAgentExplainActivityLogItem",
+                "title": "%azureResourceGroups.askAgentExplainActivityLogItem%",
+                "category": "Azure",
+                "icon": "$(copilot)"
+            },
+            {
+                "command": "azureResourceGroups.askAgentFixActivityLogItem",
+                "title": "%azureResourceGroups.askAgentFixActivityLogItem%",
+                "category": "Azure",
+                "icon": "$(copilot)"
+            },
+            {
                 "command": "azureTenantsView.refresh",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
@@ -476,6 +525,11 @@
                     "group": "navigation@10"
                 },
                 {
+                    "command": "azureResourceGroups.askAgentAboutActivityLog",
+                    "when": "view == azureActivityLog",
+                    "group": "navigation@1"
+                },
+                {
                     "command": "azureResourceGroups.clearActivities",
                     "when": "view == azureActivityLog",
                     "group": "navigation@1"
@@ -591,6 +645,26 @@
                     "command": "azureResourceGroups.askAgentAboutResource",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && github.copilot-chat.activated && config.azureResourceGroups.enableChatStandIn",
                     "group": "7@9"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentFixActivityLogItem",
+                    "when": "view == azureActivityLog && (viewItem =~ /activity:fail/i || viewItem =~ /activity:error/i)",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentFixActivityLogItem",
+                    "when": "view == azureActivityLog && (viewItem =~ /activity:fail/i || viewItem =~ /activity:error/i)",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentExplainActivityLogItem",
+                    "when": "view == azureActivityLog && viewItem =~ /activity/i",
+                    "group": "1@2"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentExplainActivityLogItem",
+                    "when": "view == azureActivityLog && viewItem =~ /activity/i && !(viewItem =~ /activity:fail/i || viewItem =~ /activity:error/i)",
+                    "group": "inline"
                 }
             ],
             "commandPalette": [
@@ -644,6 +718,14 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutResource",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentFixActivityLogItem",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentExplainActivityLogItem",
                     "when": "never"
                 }
             ],
@@ -915,7 +997,7 @@
         "@azure/ms-rest-js": "^2.7.0",
         "@microsoft/vscode-azext-azureauth": "^4.0.3",
         "@microsoft/vscode-azext-azureutils": "^3.2.0",
-        "@microsoft/vscode-azext-utils": "^3.0.0",
+        "@microsoft/vscode-azext-utils": "^3.0.1",
         "buffer": "^6.0.3",
         "form-data": "^4.0.1",
         "jsonc-parser": "^2.2.1",
