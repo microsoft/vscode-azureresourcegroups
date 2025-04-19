@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { registerLMTool } from '@microsoft/vscode-azext-utils';
-import { GetAzureActivityLog } from './GetAzureActivityLog/GetAzureActivityLog';
+export enum ActivityLogPromptType {
+    Fix = 'fix',
+    Explain = 'explain',
+}
 
-export function registerLMTools(): void {
-    // Contextual tools
-    registerLMTool('azureResources_getAzureActivityLog', new GetAzureActivityLog());
-
-    // Functional tools
+export interface GetAzureActivityLogInputSchema {
+    treeId?: string;
+    promptType: ActivityLogPromptType;
 }

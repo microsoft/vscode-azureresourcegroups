@@ -110,7 +110,16 @@
                     "properties": {
                         "treeId": {
                             "type": "string",
-                            "description": "The ID of the selected activity tree item (optional)."
+                            "description": "The ID of the selected activity tree item (optional). If not specified, all items in the activity log will be focused on with equal importance."
+                        },
+                        "promptType": {
+                            "type": "string",
+                            "description": "Specifies the type of prompt context to use, such as whether to explain an item or fix an issue in the activity log (optional).",
+                            "enum": [
+                                "fix",
+                                "explain"
+                            ],
+                            "default": "explain"
                         }
                     }
                 },
@@ -349,8 +358,14 @@
                 "icon": "$(copilot)"
             },
             {
-                "command": "azureResourceGroups.askAgentAboutActivityLogItem",
-                "title": "%azureResourceGroups.askAgentAboutActivityLogItem%",
+                "command": "azureResourceGroups.askAgentExplainActivityLogItem",
+                "title": "%azureResourceGroups.askAgentExplainActivityLogItem%",
+                "category": "Azure",
+                "icon": "$(copilot)"
+            },
+            {
+                "command": "azureResourceGroups.askAgentFixActivityLogItem",
+                "title": "%azureResourceGroups.askAgentFixActivityLogItem%",
                 "category": "Azure",
                 "icon": "$(copilot)"
             },
@@ -633,13 +648,23 @@
                     "group": "7@9"
                 },
                 {
-                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
-                    "when": "view == azureActivityLog && viewItem =~ /activity/i",
+                    "command": "azureResourceGroups.askAgentFixActivityLogItem",
+                    "when": "view == azureActivityLog && (viewItem =~ /activity:fail/i || viewItem =~ /activity:error/i)",
                     "group": "1@1"
                 },
                 {
-                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "command": "azureResourceGroups.askAgentFixActivityLogItem",
+                    "when": "view == azureActivityLog && (viewItem =~ /activity:fail/i || viewItem =~ /activity:error/i)",
+                    "group": "inline"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentExplainActivityLogItem",
                     "when": "view == azureActivityLog && viewItem =~ /activity/i",
+                    "group": "1@2"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentExplainActivityLogItem",
+                    "when": "view == azureActivityLog && viewItem =~ /activity/i && !(viewItem =~ /activity:fail/i || viewItem =~ /activity:error/i)",
                     "group": "inline"
                 }
             ],
@@ -697,7 +722,11 @@
                     "when": "never"
                 },
                 {
-                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "command": "azureResourceGroups.askAgentFixActivityLogItem",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentExplainActivityLogItem",
                     "when": "never"
                 }
             ],
