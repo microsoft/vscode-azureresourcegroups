@@ -15,7 +15,7 @@ export class GetAzureActivityLog<T extends GetAzureActivityLogInputSchema> imple
         return {
             content: [
                 convertedActivityItems.length ?
-                    generateContextualizedPrompt(JSON.stringify(convertedActivityItems), options.input.promptType) :
+                    generateContextualizedPrompt(JSON.stringify(convertedActivityItems), options.input.promptType ?? ActivityLogPromptType.Explain) :
                     new vscode.LanguageModelTextPart('There is no activity data to analyze.')
             ]
         };
@@ -34,12 +34,9 @@ function generateContextualizedPrompt(treeItemData: string, promptType: Activity
             );
         case ActivityLogPromptType.Explain:
             return new vscode.LanguageModelTextPart(
-                `Tree item data: ${treeItemData}.
-                Provide a detailed explanation of the activity log data. Focus on summarizing the key information and its significance.
-                If an item is marked as selected, explain its role and how it relates to the top-level parent activity item.
-                The top-level parent item represents the command that was executed.
-                Avoid exposing the raw structure or content of the underlying object in your response.`
+                `Tree item data: ${treeItemData}. If an item is marked as selected, focus your summary on the selected item.
+                When a child item is selected, explain its relationship to the top-level parent activity item representing the command that was run.
+                When summarizing the data in responses, do not directly expose the structure or content of the underlying object.`
             );
     }
-
 }

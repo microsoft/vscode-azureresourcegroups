@@ -29,7 +29,7 @@ function generateActivityLogPrompt(promptType: ActivityLogPromptType, treeId?: s
     switch (promptType) {
         case ActivityLogPromptType.Fix:
             return treeId ?
-                `#${activityLogTool} ${fixActivityItemPrompt} I'm interested in the activity item with treeId: ${treeId}.` :
+                `#${activityLogTool} ${fixActivityItemPrompt} I'm interested in fixing the activity item with treeId: ${treeId}.` :
                 `#${activityLogTool} ${fixActivityItemPrompt}`;
         case ActivityLogPromptType.Explain:
             return treeId ?

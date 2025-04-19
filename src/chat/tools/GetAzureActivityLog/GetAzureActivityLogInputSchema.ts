@@ -10,5 +10,5 @@ export enum ActivityLogPromptType {
 
 export interface GetAzureActivityLogInputSchema {
     treeId?: string;
-    promptType: ActivityLogPromptType;
+    promptType?: ActivityLogPromptType;
 }

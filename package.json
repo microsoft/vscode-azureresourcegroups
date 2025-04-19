@@ -118,8 +118,7 @@
                             "enum": [
                                 "fix",
                                 "explain"
-                            ],
-                            "default": "explain"
+                            ]
                         }
                     }
                 },
