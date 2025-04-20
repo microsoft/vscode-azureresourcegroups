@@ -42,6 +42,7 @@ async function convertItemToSimpleActivityObject(context: IActionContext, item: 
         status: item.status,
         selected: selectedTreeId ? item.id === selectedTreeId : undefined,
         error: item.error,
+        commandMetadata: item.commandMetadata,
     };
 
     if (item.getChildren) {
