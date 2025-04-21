@@ -337,7 +337,7 @@
                 "command": "azureResourceGroups.askAgentAboutActivityLog",
                 "title": "%azureResourceGroups.askAgentAboutActivityLog%",
                 "category": "Azure",
-                "icon": "$(copilot)"
+                "icon": "$(sparkle)"
             },
             {
                 "command": "azureTenantsView.refresh",
