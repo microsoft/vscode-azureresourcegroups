@@ -4,18 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
-import { ActivityChildItemBase, AzExtTreeItem, IActionContext, isAzExtTreeItem, nonNullValue, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, isAzExtTreeItem, nonNullValue, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
-import { askAgentAboutActivityLog, askAgentAboutActivityLogItem } from '../chat/askAgentAboutActivityLog';
+import { askAgentAboutActivityLog } from '../chat/askAgentAboutActivityLog';
 import { askAgentAboutResource } from '../chat/askAgentAboutResource';
 import { askAzureInCommandPalette } from '../chat/askAzure';
-import { ActivityLogPromptType } from '../chat/tools/GetAzureActivityLog/GetAzureActivityLogInputSchema';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
 import { TargetServiceRoleAssignmentItem } from '../managedIdentity/TargetServiceRoleAssignmentItem';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
-import { ActivityItem } from '../tree/activityLog/ActivityItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { logIn } from './accounts/logIn';
@@ -136,8 +134,6 @@ export function registerCommands(): void {
         ext.azureTreeState.notifyChildrenChanged(node.id);
     });
     registerCommand("azureResourceGroups.askAgentAboutActivityLog", askAgentAboutActivityLog);
-    registerCommandWithTreeNodeUnwrapping('azureResourceGroups.askAgentFixActivityLogItem', (context: IActionContext, node?: ActivityItem | ActivityChildItemBase) => askAgentAboutActivityLogItem(context, ActivityLogPromptType.Fix, node));
-    registerCommandWithTreeNodeUnwrapping('azureResourceGroups.askAgentExplainActivityLogItem', (context: IActionContext, node?: ActivityItem | ActivityChildItemBase) => askAgentAboutActivityLogItem(context, ActivityLogPromptType.Explain, node));
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
 }
 

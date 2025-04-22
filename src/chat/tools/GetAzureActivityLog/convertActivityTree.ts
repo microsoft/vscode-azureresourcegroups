@@ -12,7 +12,6 @@ export type ConvertedActivityItem = {
     label?: string;
     description?: string;
     status?: ActivityStatus;
-    selected?: boolean;
     error?: unknown;
     commandMetadata?: CommandMetadata;
     children?: ConvertedActivityChildItem[];
@@ -22,16 +21,15 @@ type ConvertedActivityChildItem = {
     label?: string;
     description?: string;
     type?: ActivityChildType;
-    selected?: boolean;
     children?: ConvertedActivityChildItem[];
 };
 
-export async function convertActivityTreeToSimpleObjectArray(context: IActionContext, selectedTreeId?: string): Promise<ConvertedActivityItem[]> {
+export async function convertActivityTreeToSimpleObjectArray(context: IActionContext): Promise<ConvertedActivityItem[]> {
     const treeItems: TreeDataItem[] = await ext.activityLogTree.getChildren() ?? [];
-    return Promise.all(treeItems.map(treeItem => convertItemToSimpleActivityObject(context, treeItem, selectedTreeId)));
+    return Promise.all(treeItems.map(treeItem => convertItemToSimpleActivityObject(context, treeItem)));
 }
 
-async function convertItemToSimpleActivityObject(context: IActionContext, item: TreeDataItem, selectedTreeId?: string): Promise<ConvertedActivityItem> {
+async function convertItemToSimpleActivityObject(context: IActionContext, item: TreeDataItem): Promise<ConvertedActivityItem> {
     if (!(item instanceof ActivityItem)) {
         return {};
     }
@@ -40,7 +38,6 @@ async function convertItemToSimpleActivityObject(context: IActionContext, item: 
         label: item.label,
         description: item.description,
         status: item.status,
-        selected: selectedTreeId ? item.id === selectedTreeId : undefined,
         error: item.error,
         commandMetadata: item.commandMetadata,
     };
@@ -48,26 +45,25 @@ async function convertItemToSimpleActivityObject(context: IActionContext, item: 
     if (item.getChildren) {
         const children = await item.getChildren() ?? [];
         if (children.length > 0) {
-            convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child as ActivityChildItemBase, selectedTreeId)));
+            convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child as ActivityChildItemBase)));
         }
     }
 
     return convertedItem;
 }
 
-async function convertItemToSimpleActivityChildObject(context: IActionContext, item: ActivityChildItemBase, selectedTreeId?: string): Promise<ConvertedActivityChildItem> {
+async function convertItemToSimpleActivityChildObject(context: IActionContext, item: ActivityChildItemBase): Promise<ConvertedActivityChildItem> {
     const convertedItem: ConvertedActivityChildItem = {
         label: item.label,
         type: item.activityType,
         description: item.description,
-        selected: selectedTreeId ? item.id === selectedTreeId : undefined,
     };
 
     if (item.getChildren) {
         // If there are more children, recursively convert them
         const children = await item.getChildren() ?? [];
         if (children.length > 0) {
-            convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child, selectedTreeId)));
+            convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child)));
         }
     }
 
