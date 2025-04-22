@@ -17,6 +17,14 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
             return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No activity log items found.')]);
         }
 
-        return new vscode.LanguageModelToolResult(convertedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))));
+        return new vscode.LanguageModelToolResult([
+            ...convertedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))),
+            new vscode.LanguageModelTextPart(
+                `Prioritize any command metadata first when formulating responses.  Respond in natural language to users. Don\'t expose
+                the underlying object shape.`
+            ),
+            new vscode.LanguageModelTextPart(`When diagnosing errors, focus on actionable steps and recommendations that the users can follow to fix the error.`),
+            new vscode.LanguageModelTextPart(`Focus on solutions that are specifically tailored for VS Code through Azure extensions, not the Azure CLI or Azure Portal.`),
+        ]);
     }
 }
