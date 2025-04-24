@@ -18,7 +18,6 @@ import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
-import { maintainCloudShellConnection } from './cloudShell';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroupV2 } from './deleteResourceGroup/v2/deleteResourceGroupV2';
@@ -38,8 +37,6 @@ import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
     registerCommand('azureResourceGroups.uploadFileCloudConsole', uploadFileToCloudShell);
-
-    registerCommand('azureResourceGroups.maintainCloudShellConnection', maintainCloudShellConnection);
 
     // Special-case refresh that ignores the selected/focused node and always refreshes the entire tree. Used by the refresh button in the tree title.
     registerCommand('azureResourceGroups.refreshTree', () => ext.actions.refreshAzureTree());
