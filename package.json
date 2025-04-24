@@ -132,11 +132,6 @@
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.maintainCloudShellConnection",
-                "title": "Maintain Cloud Shell connection",
-                "category": "Azure"
-            },
-            {
                 "command": "azureResourceGroups.signInToTenant",
                 "title": "%azureResourceGroups.signInToTenant%",
                 "category": "Azure"
@@ -597,10 +592,6 @@
                 {
                     "command": "azureResourceGroups.uploadFileCloudConsole",
                     "when": "isWorkspaceTrusted"
-                },
-                {
-                    "command": "azureResourceGroups.maintainCloudShellConnection",
-                    "when": "never"
                 },
                 {
                     "command": "azureResourceGroups.showGroupOptions",
