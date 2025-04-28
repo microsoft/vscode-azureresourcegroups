@@ -44,6 +44,7 @@ export class SubscriptionItem implements ResourceGroupsItem {
     async getChildren(): Promise<ResourceGroupsItem[]> {
         return await callWithTelemetryAndErrorHandling('subscriptionItem.getChildren', async (context: IActionContext) => {
             const resources = await this.resourceProviderManager.getResources(this.subscription);
+            context.telemetry.properties.subscriptionId = this.subscription.subscriptionId;
             context.telemetry.measurements.resourceCount = resources.length;
 
             const groupBySetting = settingUtils.getWorkspaceSetting<string>('groupBy');

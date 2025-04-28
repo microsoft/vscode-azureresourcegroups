@@ -96,6 +96,10 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                     if (tenantFiltedSubcriptions) {
                         return tenantFiltedSubcriptions.map(
                             subscription => {
+                                // for telemetry purposes, do not wait
+                                void callWithTelemetryAndErrorHandling('azureResourceGroups.getTenantFiltedSubcription', async (context: IActionContext) => {
+                                    context.telemetry.properties.subscriptionId = subscription.subscriptionId;
+                                });
                                 if (duplicates.includes(subscription)) {
                                     return new SubscriptionItem(
                                         {
@@ -121,6 +125,10 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                     } else {
                         return subscriptions.map(
                             subscription => {
+                                // for telemetry purposes, do not wait
+                                void callWithTelemetryAndErrorHandling('azureResourceGroups.getSubscription', async (context: IActionContext) => {
+                                    context.telemetry.properties.subscriptionId = subscription.subscriptionId;
+                                });
                                 if (duplicates.includes(subscription)) {
                                     return new SubscriptionItem(
                                         {
