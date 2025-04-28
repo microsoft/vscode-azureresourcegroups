@@ -19,7 +19,6 @@ export async function logIn(_context: IActionContext): Promise<void> {
         _isLoggingIn = false;
         ext.actions.refreshAzureTree(); // Refresh now that sign in is complete
         ext.actions.refreshTenantTree(); // Refresh now that sign in is complete
-
     }
 }
 
