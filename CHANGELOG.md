@@ -1,10 +1,27 @@
 # Change Log
 
+## 0.10.10 - 2025-04-28
+
+### Overview
+This release makes it easier to explore your Azure resources as `ActivityItem` nodes now expand automatically to show child activities. Install the AI Foundry extension with one click from the `Azure AI Foundry` node in the Azure Resources view.
+
+### Added
+* [[1108](https://github.com/microsoft/vscode-azureresourcegroups/pull/1108)] Add `revealWorkspaceResource` function to expose resources in **Workspaces**.
+* [[1114](https://github.com/microsoft/vscode-azureresourcegroups/pull/1114)] Enable installing the **AI Foundry** extension.
+* [[1125](https://github.com/microsoft/vscode-azureresourcegroups/pull/1125)] Make initial collapsible state for `ActivityItem` **expanded** to support `ActivityItem` children.
+
+### Removed
+* [[1105](https://github.com/microsoft/vscode-azureresourcegroups/pull/1105)] Removed obsolete **`mongoClusters` feature flag**.
+
+### Fixed
+* [[1128](https://github.com/microsoft/vscode-azureresourcegroups/pull/1128)] Updated **subscription IDs context** handling.
+
+
 ## 0.10.9 - 2025-03-24
 
 ## Fixed
 * [[#1084](https://github.com/microsoft/vscode-azureresourcegroups/pull/1084)] Fix duplicate id issue for Install extension tree items
-* [[#1092](https://github.com/microsoft/vscode-azureresourcegroups/pull/1092)] Fix icon and publisher for Azure AI Foundry 
+* [[#1092](https://github.com/microsoft/vscode-azureresourcegroups/pull/1092)] Fix icon and publisher for Azure AI Foundry
 * [[#1093](https://github.com/microsoft/vscode-azureresourcegroups/pull/1093)] Revert "Updated Disambiguations to improve intent detection for `@azure`"
 *  [[#1096](https://github.com/microsoft/vscode-azureresourcegroups/pull/1096)] Fix outdated string in cloud shell logs
 * [[#1098](https://github.com/microsoft/vscode-azureresourcegroups/pull/1098)] Fix Managed Identity target service icons not showing up
@@ -17,14 +34,14 @@
 ## 0.10.7 - 2025-03-05
 
 ### Added
-* [[1058]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1058) Add Ask azure walkthrough step 
+* [[1058]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1058) Add Ask azure walkthrough step
 
 ### Changed
 * [[1061]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1061) Updated Disambiguations to improve intent detection for `@azure`
 * [[1036]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1036) Improve managed identity view
 
 ### Fixed
-*  [[1036]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1036) Fix slow loading time for Azure Resources view 
+*  [[1036]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1036) Fix slow loading time for Azure Resources view
 
 ## 0.10.6 - 2025-02-20
 
@@ -35,7 +52,7 @@
 ## 0.10.5 - 2025-02-14
 
 ### Added
-[[1031]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1031) Allow service and target resources to openInPortal and add tooltips to role definitions  
+[[1031]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1031) Allow service and target resources to openInPortal and add tooltips to role definitions
 [[1034]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1034) Implement stand-in chat provider for `@azure`
 [[1035]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1035) Create fake ask azure command
 
