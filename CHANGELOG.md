@@ -1,6 +1,6 @@
 # Change Log
 
-## 0.10.10 - 2025-04-28
+## 0.10.10 - 2025-04-30
 
 ### Overview
 This release makes it easier to explore your Azure resources as `ActivityItem` nodes now expand automatically to show child activities. Install the AI Foundry extension with one click from the `Azure AI Foundry` node in the Azure Resources view.
