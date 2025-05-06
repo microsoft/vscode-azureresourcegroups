@@ -56,6 +56,7 @@ const azureTypeToAzExtResourceTypeMap: Record<string, AzExtResourceType | undefi
     'microsoft.web/staticsites': AzExtResourceType.StaticWebApps,
     // The below are not supported by the Azure extensions but have icons in the Resources extension
     'microsoft.machinelearningservices/workspaces': AzExtResourceType.AiFoundry,
+    'microsoft.cognitiveservices/accounts/projects': AzExtResourceType.AiFoundry,
     'microsoft.apimanagement/service': AzExtResourceType.ApiManagementService,
     'microsoft.batch/batchaccounts': AzExtResourceType.BatchAccounts,
     'microsoft.cache/redis': AzExtResourceType.CacheRedis,
