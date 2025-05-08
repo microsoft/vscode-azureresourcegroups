@@ -141,7 +141,7 @@ export const azureExtensions: IAzExtMetadata[] = [
 ];
 
 export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
-    AiFoundry: 'microsoft.cognitiveServices/accounts',
+    AiFoundry: 'microsoft.cognitiveservices/accounts/projects',
     DurableTaskScheduler: 'microsoft.durabletask/schedulers',
     FunctionApp: 'microsoft.web/functionapp',
     AppServices: 'microsoft.web/sites',
