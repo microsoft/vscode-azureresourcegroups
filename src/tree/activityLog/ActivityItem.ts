@@ -17,7 +17,6 @@ export enum ActivityStatus {
 
 export class ActivityItem implements TreeElementBase, Disposable {
     public readonly id: string;
-    public startedAtMs: number;
 
     public get contextValue(): string {
         const contextValues = new Set(['azureActivity', ...(this.state.contextValuesToAdd ?? [])]);
@@ -85,7 +84,6 @@ export class ActivityItem implements TreeElementBase, Disposable {
     public constructor(readonly activity: Activity) {
         this.id = activity.id;
         this.setupListeners(activity);
-        this.startedAtMs = this.activity.startTime?.getTime() ?? Date.now();
     }
 
     public dispose(): void {
@@ -112,7 +110,6 @@ export class ActivityItem implements TreeElementBase, Disposable {
 
     private onStart(data: OnStartActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnStart', async (_context) => {
-            this.startedAtMs = this.activity.startTime?.getTime() ?? Date.now();
             this.status = ActivityStatus.Running;
             this.state = data;
             ext.actions.refreshActivityLogTree(this);
