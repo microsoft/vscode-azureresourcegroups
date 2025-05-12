@@ -38,11 +38,11 @@ export class ActivityItem implements TreeElementBase, Disposable {
 
             if (this.error) {
                 return duration ?
-                    localize('failedWithDuration', 'Failed ({0})', duration) :
+                    localize('failedWithDuration', 'Failed in {0}', duration) :
                     localize('failed', 'Failed');
             } else {
                 return duration ?
-                    localize('succeededWithDuration', 'Succeeded ({0})', duration) :
+                    localize('succeededWithDuration', 'Succeeded in {0}', duration) :
                     localize('succeeded', 'Succeeded');
             }
         } else {
