@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, TreeElementBase, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, dateTimeUtils, TreeElementBase, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ext } from "../../extensionVariables";
@@ -17,7 +17,6 @@ export enum ActivityStatus {
 
 export class ActivityItem implements TreeElementBase, Disposable {
     public readonly id: string;
-    public startedAtMs: number;
 
     public get contextValue(): string {
         const contextValues = new Set(['azureActivity', ...(this.state.contextValuesToAdd ?? [])]);
@@ -30,10 +29,21 @@ export class ActivityItem implements TreeElementBase, Disposable {
 
     public get description(): string | undefined {
         if (this.status === ActivityStatus.Done) {
+            let duration: string | undefined;
+            if (this.activity.startTime && this.activity.endTime) {
+                const startTimeMs: number = this.activity.startTime.getTime();
+                const endTimeMs: number = this.activity.endTime.getTime();
+                duration = dateTimeUtils.getFormattedDurationInMinutesAndSeconds(endTimeMs - startTimeMs);
+            }
+
             if (this.error) {
-                return localize('failed', 'Failed');
+                return duration ?
+                    localize('failedWithDuration', 'Failed in {0}', duration) :
+                    localize('failed', 'Failed');
             } else {
-                return localize('succeeded', 'Succeeded');
+                return duration ?
+                    localize('succeededWithDuration', 'Succeeded in {0}', duration) :
+                    localize('succeeded', 'Succeeded');
             }
         } else {
             return this.latestProgress?.message;
@@ -71,10 +81,9 @@ export class ActivityItem implements TreeElementBase, Disposable {
     public error?: unknown;
     private latestProgress?: { message?: string };
 
-    public constructor(activity: Activity) {
+    public constructor(readonly activity: Activity) {
         this.id = activity.id;
         this.setupListeners(activity);
-        this.startedAtMs = Date.now();
     }
 
     public dispose(): void {
@@ -101,7 +110,6 @@ export class ActivityItem implements TreeElementBase, Disposable {
 
     private onStart(data: OnStartActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnStart', async (_context) => {
-            this.startedAtMs = Date.now();
             this.status = ActivityStatus.Running;
             this.state = data;
             ext.actions.refreshActivityLogTree(this);
