@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ParsedAzureResourceId } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeItem, IActionContext, maskUserInfo, parseError } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, ResourceGroupsItem, maskUserInfo, parseError } from '@microsoft/vscode-azext-utils';
 import { VSCodeRevealOptions } from '../../api/src/index';
 import { ext } from '../extensionVariables';
 import { TreeDataItem } from '../tree/ResourceGroupsItem';
@@ -17,6 +17,17 @@ export async function revealResource(context: IActionContext, resourceId: string
         const item: TreeDataItem | undefined = await (ext.v2.api.resources.azureResourceTreeDataProvider as ResourceTreeDataProviderBase).findItemById(resourceId);
         if (item) {
             await ext.appResourceTreeView.reveal(item as unknown as AzExtTreeItem, options ?? { expand: false, focus: true, select: true });
+        }
+    } catch (error) {
+        context.telemetry.properties.revealError = maskUserInfo(parseError(error).message, []);
+    }
+}
+
+export async function revealWorkspaceResource(context: IActionContext, resourceId: string, options?: VSCodeRevealOptions): Promise<void> {
+    try {
+        const item: ResourceGroupsItem | undefined = await (ext.v2.api.resources.workspaceResourceTreeDataProvider as ResourceTreeDataProviderBase).findItemById(resourceId);
+        if (item) {
+            await ext.workspaceTreeView.reveal(item as unknown as AzExtTreeItem, options ?? { expand: false, focus: true, select: true });
         }
     } catch (error) {
         context.telemetry.properties.revealError = maskUserInfo(parseError(error).message, []);

@@ -6,7 +6,7 @@
 import { callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzExtResourceType, AzureResource, BranchDataProvider, ResourceModelBase, VSCodeRevealOptions, WorkspaceResource, WorkspaceResourceProvider } from '../../api/src/index';
-import { revealResource } from '../commands/revealResource';
+import { revealResource, revealWorkspaceResource } from '../commands/revealResource';
 import { AzureResourceProvider, AzureResourcesHostApiInternal } from '../hostapi.v2.internal';
 import { AzureResourceBranchDataProviderManager } from '../tree/azure/AzureResourceBranchDataProviderManager';
 import { AzureResourceTreeDataProvider } from '../tree/azure/AzureResourceTreeDataProvider';
@@ -51,6 +51,15 @@ export function createAzureResourcesHostApi(
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.suppressReportIssue = true;
                 return revealResource(context, id, options);
+            });
+        },
+
+        revealWorkspaceResource: (id: string, options?: VSCodeRevealOptions) => {
+            return callWithTelemetryAndErrorHandling('internalRevealWorkspaceResource', context => {
+                context.errorHandling.rethrow = true;
+                context.errorHandling.suppressDisplay = true;
+                context.errorHandling.suppressReportIssue = true;
+                return revealWorkspaceResource(context, id, options);
             });
         },
 
