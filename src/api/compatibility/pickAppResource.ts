@@ -3,9 +3,8 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtTreeItem, ContextValueFilter, ITreeItemPickerContext, PickTreeItemWithCompatibility } from "@microsoft/vscode-azext-utils";
+import { AzExtTreeItem, ContextValueFilter, ITreeItemPickerContext, PickTreeItemWithCompatibility, } from "@microsoft/vscode-azext-utils";
 import { PickAppResourceOptions } from "@microsoft/vscode-azext-utils/hostapi";
-import { TelemetryTrustedValue } from "vscode";
 import { AzExtResourceType, getAzExtResourceType } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
 
@@ -18,8 +17,9 @@ export function createCompatibilityPickAppResource() {
             resourceTypes: convertAppResourceFilterToAzExtResourceType(options?.filter),
             childItemFilter: convertExpectedChildContextValueToContextValueFilter(options?.expectedChildContextValue)
         });
-
-        context.telemetry.properties.resourceId = result.id ? new TelemetryTrustedValue(result.id) : undefined;
+        if (result.id) {
+            // setAzureResourceIdTelemetryProperties(context, result.id)
+        }
 
         try {
             // AzExtTreeItems throw when subscription is undefined. It's unlikely to happen here, but better safe than sorry.
