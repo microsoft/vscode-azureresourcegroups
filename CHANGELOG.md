@@ -1,5 +1,14 @@
 # Change Log
 
+## 0.10.11 - 2025-05-13
+
+### Overview
+This release improves real-time activity progress and expands support for AI Foundry projects, enabling a new project type within the Azure Resources view.
+
+### Added
+* [[1119](https://github.com/microsoft/vscode-azureresourcegroups/pull/1119)] Add **live timer** to activities in the **Activity Log**.
+* [[1135](https://github.com/microsoft/vscode-azureresourcegroups/pull/1135)] Support new type of **AI Foundry** projects.
+
 ## 0.10.10 - 2025-04-30
 
 ### Overview
@@ -15,7 +24,6 @@ This release makes it easier to explore your Azure resources as `ActivityItem` n
 
 ### Fixed
 * [[1128](https://github.com/microsoft/vscode-azureresourcegroups/pull/1128)] Updated **subscription IDs context** handling.
-
 
 ## 0.10.9 - 2025-03-24
 
