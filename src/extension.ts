@@ -215,12 +215,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
             context.telemetry.properties.isActivationEvent = 'true';
 
             try {
-                const accounts = await vscode.authentication.getAccounts(AUTH_PROVIDER_ID);
-                if (accounts.length === 0) {
-                    ext.outputChannel.appendLine('No Azure accounts found.');
-                    return;
-                }
-
                 const session = await vscode.authentication.getSession(
                     AUTH_PROVIDER_ID,
                     SCOPES);
@@ -249,7 +243,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
 
                 // Write to a well-known location in .azure home directory
-                const authDir = path.join(os.homedir(), '.azure', 'vscode-auth', 'vscode-azureresourcegroups');
+                // This ensures a consistent, well-known location for other tools and applications to store and retrieve authentication records.
+                // Didn't use GlobalStorage path, as that brings added risk of regressions for auth record location which is used by external tools and apps, if the location changes in the future.
+                const authDir = path.join(os.homedir(), '.azure', 'auth-records', 'ms-azuretools.vscode-azureresourcegroups');
                 const authRecordPath = path.join(authDir, 'authRecord.json');
 
                 // Ensure directory exists
