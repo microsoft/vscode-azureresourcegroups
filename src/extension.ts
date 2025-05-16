@@ -203,7 +203,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.v2.api.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ManagedIdentityUserAssignedIdentities, ext.managedIdentityBranchDataProvider);
 
 
-    // TODO: Register a listener (Call registerEvent (util method)) to export auth record.
     const AUTH_PROVIDER_ID = 'microsoft'; // VS Code Azure auth provider
     const SCOPES = ['https://management.azure.com/.default']; // Default ARM scope
 
@@ -231,14 +230,20 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                     return;
                 }
 
-                const tenantId = session.account.id.split('.')[1];
+                // Default tenant from session
+                const defaultTenantId = session.account.id.split('.')[1];
+
+                // Check if extension context args contain tenant override
+                const tenantFromArg = vscode.workspace.getConfiguration().get<string>('@azure.argTenant');
+
+                const effectiveTenantId = tenantFromArg || defaultTenantId;
 
                 // AuthenticationRecord structure
                 const authRecord = {
                     username: session.account.label,
                     authority: 'https://login.microsoftonline.com', // VS Code auth provider default
                     homeAccountId: `${session.account.id}`,
-                    tenantId: tenantId,
+                    tenantId: effectiveTenantId,
                     clientId: "aebc6443-996d-45c2-90f0-388ff96faa56" // VS Code client ID
                 };
 
