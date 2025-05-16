@@ -6,9 +6,12 @@
 'use strict';
 
 import { registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerEvent, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { AzExtResourceType } from '../api/src/AzExtResourceType';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
@@ -198,6 +201,64 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.v2.api = v2ApiFactory.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
     ext.managedIdentityBranchDataProvider = new ManagedIdentityBranchDataProvider();
     ext.v2.api.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ManagedIdentityUserAssignedIdentities, ext.managedIdentityBranchDataProvider);
+
+
+    // TODO: Register a listener (Call registerEvent (util method)) to export auth record.
+    const AUTH_PROVIDER_ID = 'microsoft'; // VS Code Azure auth provider
+    const SCOPES = ['https://management.azure.com/.default']; // Default ARM scope
+
+    registerEvent(
+        'treeView.onDidChangeSessions',
+        vscode.authentication.onDidChangeSessions,
+        async (context: IActionContext, _e: vscode.AuthenticationSessionsChangeEvent) => {
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
+            context.telemetry.properties.isActivationEvent = 'true';
+
+            try {
+                const accounts = await vscode.authentication.getAccounts(AUTH_PROVIDER_ID);
+                if (accounts.length === 0) {
+                    ext.outputChannel.appendLine('No Azure accounts found.');
+                    return;
+                }
+
+                const session = await vscode.authentication.getSession(
+                    AUTH_PROVIDER_ID,
+                    SCOPES);
+
+                if (!session) {
+                    ext.outputChannel.appendLine('No session available for Azure account.');
+                    return;
+                }
+
+                const tenantId = session.account.id.split('.')[1];
+
+                // AuthenticationRecord structure
+                const authRecord = {
+                    username: session.account.label,
+                    authority: 'https://login.microsoftonline.com', // VS Code auth provider default
+                    homeAccountId: `${session.account.id}`,
+                    tenantId: tenantId,
+                    clientId: "aebc6443-996d-45c2-90f0-388ff96faa56" // VS Code client ID
+                };
+
+
+                // Write to a well-known location in .azure home directory
+                const authDir = path.join(os.homedir(), '.azure', 'vscode-auth', 'vscode-azureresourcegroups');
+                const authRecordPath = path.join(authDir, 'authRecord.json');
+
+                // Ensure directory exists
+                fs.mkdirSync(authDir, { recursive: true });
+
+                // Write auth record
+                fs.writeFileSync(authRecordPath, JSON.stringify(authRecord, null, 2));
+                ext.outputChannel.appendLine(`Authentication record exported to: ${authRecordPath}`);
+            } catch (err) {
+                ext.outputChannel.appendLine(`Error exporting auth record: ${err instanceof Error ? err.message : String(err)}`);
+            }
+        }
+    );
+
 
     ext.appResourceTree = new CompatibleAzExtTreeDataProvider(azureResourceTreeDataProvider);
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
