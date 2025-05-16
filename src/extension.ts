@@ -6,9 +6,12 @@
 'use strict';
 
 import { registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerEvent, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { AzExtResourceType } from '../api/src/AzExtResourceType';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
@@ -198,6 +201,65 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.v2.api = v2ApiFactory.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
     ext.managedIdentityBranchDataProvider = new ManagedIdentityBranchDataProvider();
     ext.v2.api.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ManagedIdentityUserAssignedIdentities, ext.managedIdentityBranchDataProvider);
+
+
+    const AUTH_PROVIDER_ID = 'microsoft'; // VS Code Azure auth provider
+    const SCOPES = ['https://management.azure.com/.default']; // Default ARM scope
+
+    registerEvent(
+        'treeView.onDidChangeSessions',
+        vscode.authentication.onDidChangeSessions,
+        async (context: IActionContext, _e: vscode.AuthenticationSessionsChangeEvent) => {
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.suppressIfSuccessful = true;
+            context.telemetry.properties.isActivationEvent = 'true';
+
+            try {
+                const session = await vscode.authentication.getSession(
+                    AUTH_PROVIDER_ID,
+                    SCOPES);
+
+                if (!session) {
+                    ext.outputChannel.appendLine('No session available for Azure account.');
+                    return;
+                }
+
+                // Default tenant from session
+                const defaultTenantId = session.account.id.split('.')[1];
+
+                // Check if extension context args contain tenant override
+                const tenantFromArg = vscode.workspace.getConfiguration().get<string>('@azure.argTenant');
+
+                const effectiveTenantId = tenantFromArg || defaultTenantId;
+
+                // AuthenticationRecord structure
+                const authRecord = {
+                    username: session.account.label,
+                    authority: 'https://login.microsoftonline.com', // VS Code auth provider default
+                    homeAccountId: `${session.account.id}`,
+                    tenantId: effectiveTenantId,
+                    clientId: "aebc6443-996d-45c2-90f0-388ff96faa56" // VS Code client ID
+                };
+
+
+                // Write to a well-known location in .azure home directory
+                // This ensures a consistent, well-known location for other tools and applications to store and retrieve authentication records.
+                // Didn't use GlobalStorage path, as that brings added risk of regressions for auth record location which is used by external tools and apps, if the location changes in the future.
+                const authDir = path.join(os.homedir(), '.azure', 'auth-records', 'ms-azuretools.vscode-azureresourcegroups');
+                const authRecordPath = path.join(authDir, 'authRecord.json');
+
+                // Ensure directory exists
+                fs.mkdirSync(authDir, { recursive: true });
+
+                // Write auth record
+                fs.writeFileSync(authRecordPath, JSON.stringify(authRecord, null, 2));
+                ext.outputChannel.appendLine(`Authentication record exported to: ${authRecordPath}`);
+            } catch (err) {
+                ext.outputChannel.appendLine(`Error exporting auth record: ${err instanceof Error ? err.message : String(err)}`);
+            }
+        }
+    );
+
 
     ext.appResourceTree = new CompatibleAzExtTreeDataProvider(azureResourceTreeDataProvider);
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
