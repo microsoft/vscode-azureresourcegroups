@@ -48,7 +48,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
             }
         } else {
             // Add live timer for running activities
-            let message = this.latestProgress?.message;
+            const message = this.latestProgress?.message;
             if (this.activity.startTime) {
                 const startTimeMs: number = this.activity.startTime.getTime();
                 const currentTimeMs: number = new Date().getTime();
