@@ -17,6 +17,7 @@ export enum ActivityStatus {
 
 export class ActivityItem implements TreeElementBase, Disposable {
     public readonly id: string;
+    private refreshTimer: NodeJS.Timeout | undefined;
 
     public get contextValue(): string {
         const contextValues = new Set(['azureActivity', ...(this.state.contextValuesToAdd ?? [])]);
@@ -46,7 +47,15 @@ export class ActivityItem implements TreeElementBase, Disposable {
                     localize('succeeded', 'Succeeded');
             }
         } else {
-            return this.latestProgress?.message;
+            // Add live timer for running activities
+            let message = this.latestProgress?.message;
+            if (this.activity.startTime) {
+                const startTimeMs: number = this.activity.startTime.getTime();
+                const currentTimeMs: number = new Date().getTime();
+                const duration = dateTimeUtils.getFormattedDurationInMinutesAndSeconds(currentTimeMs - startTimeMs);
+                return message ? `${message} (${duration})` : `Running (${duration})`;
+            }
+            return message;
         }
     }
 
@@ -87,10 +96,27 @@ export class ActivityItem implements TreeElementBase, Disposable {
     }
 
     public dispose(): void {
+        this.stopTimerRefresh();
         this.disposables.forEach(d => { d.dispose() });
     }
 
     private readonly disposables: Disposable[] = [];
+
+    private startTimerRefresh(): void {
+        if (!this.refreshTimer) {
+            // Refresh every second to update the timer display
+            this.refreshTimer = setInterval(() => {
+                ext.actions.refreshActivityLogTree(this);
+            }, 1000);
+        }
+    }
+
+    private stopTimerRefresh(): void {
+        if (this.refreshTimer) {
+            clearInterval(this.refreshTimer);
+            this.refreshTimer = undefined;
+        }
+    }
 
     public async getChildren(): Promise<TreeDataItem[] | null | undefined> {
         if (this.state.getChildren) {
@@ -112,6 +138,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
         void callWithTelemetryAndErrorHandling('activityOnStart', async (_context) => {
             this.status = ActivityStatus.Running;
             this.state = data;
+            this.startTimerRefresh(); // Start timer refresh for running activities
             ext.actions.refreshActivityLogTree(this);
         });
     }
@@ -120,6 +147,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
         void callWithTelemetryAndErrorHandling('activityOnSuccess', async (_context) => {
             this.state = data;
             this.status = ActivityStatus.Done;
+            this.stopTimerRefresh(); // Stop timer refresh when activity completes
             if (this.state.getChildren) {
                 this.initialCollapsibleState = TreeItemCollapsibleState.Expanded;
             }
@@ -132,6 +160,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
             this.state = data;
             this.status = ActivityStatus.Done;
             this.error = data.error;
+            this.stopTimerRefresh(); // Stop timer refresh when activity errors
             this.initialCollapsibleState = TreeItemCollapsibleState.Expanded;
             ext.actions.refreshActivityLogTree(this);
         });
