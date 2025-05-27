@@ -59,7 +59,9 @@ export async function exportAuthRecord(context: IActionContext): Promise<void> {
 
         // Fetch tenantId from idToken (Microsoft auth always provides it with OpenID scopes)
         let defaultTenantId: string | undefined = undefined;
-        const idToken = (session as any).idToken as string | undefined;
+        // VS Code AuthenticationSession does not officially expose idToken, but it is present for Microsoft auth
+        // Use type assertion to access it, but avoid 'any' for lint compliance
+        const idToken = (session as { idToken?: string }).idToken;
         if (idToken) {
             const parts = idToken.split('.');
             if (parts.length === 3) {
