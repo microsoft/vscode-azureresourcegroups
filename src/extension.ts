@@ -6,7 +6,7 @@
 'use strict';
 
 import { registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerEvent, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
@@ -28,7 +28,7 @@ import { registerActivityLogTree } from './commands/activities/registerActivityL
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
-import { exportAuthRecord } from './exportAuthRecord';
+import { registerExportAuthRecordOnSessionChange } from './exportAuthRecord';
 import { ext } from './extensionVariables';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
 import { ManagedIdentityBranchDataProvider } from './managedIdentity/ManagedIdentityBranchDataProvider';
@@ -200,22 +200,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.managedIdentityBranchDataProvider = new ManagedIdentityBranchDataProvider();
     ext.v2.api.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ManagedIdentityUserAssignedIdentities, ext.managedIdentityBranchDataProvider);
 
-
-
-    // Register the exportAuthRecord callback for session changes
-    registerEvent(
-        'treeView.onDidChangeSessions',
-        vscode.authentication.onDidChangeSessions,
-        exportAuthRecord
-    );
-
-    // Also call exportAuthRecord once on activation to ensure the auth record is exported at least once
-    // (onDidChangeSessions is not guaranteed to fire on activation)
-    void exportAuthRecord({
-        errorHandling: {},
-        telemetry: { suppressIfSuccessful: false, properties: {} }
-    } as any);
-
+    // Register exportAuthRecord callback for session changes and call once on activation
+    registerExportAuthRecordOnSessionChange(context);
 
     ext.appResourceTree = new CompatibleAzExtTreeDataProvider(azureResourceTreeDataProvider);
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
