@@ -53,29 +53,8 @@ export async function exportAuthRecord(context: IActionContext): Promise<void> {
             return;
         }
 
-        // Fetch tenantId from idToken (Microsoft auth always provides it with OpenID scopes)
-        let defaultTenantId: string | undefined = undefined;
-        // VS Code AuthenticationSession does not officially expose idToken, but it is present for Microsoft auth
-        // Use type assertion to access it, but avoid 'any' for lint compliance
-        const idToken = (session as { idToken?: unknown }).idToken;
-        if (typeof idToken === 'string') {
-            const parts = idToken.split('.');
-            if (parts.length === 3) {
-                try {
-                    const payloadStr = Buffer.from(parts[1], 'base64').toString('utf8');
-                    const payload: Record<string, unknown> = JSON.parse(payloadStr);
-                    if (typeof payload.tid === 'string') {
-                        defaultTenantId = payload.tid;
-                    }
-                } catch (e) {
-                    ext.outputChannel.appendLine('Failed to parse idToken for tenantId.');
-                }
-            }
-        }
-
-        // Check if extension context args contain tenant override
-        const tenantFromArg = vscode.workspace.getConfiguration().get<string>('@azure.argTenant');
-        const tenantId = tenantFromArg || defaultTenantId;
+        // Get tenantId from idToken or config override
+        const tenantId = getTenantId(session);
 
         // AuthenticationRecord structure
         const authRecord = {
@@ -83,36 +62,72 @@ export async function exportAuthRecord(context: IActionContext): Promise<void> {
             authority: 'https://login.microsoftonline.com', // VS Code auth provider default
             homeAccountId: `${session.account.id}`,
             tenantId,
-            clientId: 'aebc6443-996d-45c2-90f0-388ff96faa56' // VS Code client ID
+            clientId: 'aebc6443-996d-45c2-90f0-388ff96faa56', // VS Code client ID
+            datetime: new Date().toISOString() // Current UTC time in ISO8601 format
         };
 
-        // Write to a well-known location in .azure home directory (handle both .azure and .Azure for cross-platform compatibility)
-        // If either exists, use it; otherwise, create .azure
-        // This ensures a consistent, well-known location for other tools and applications to store and retrieve authentication records.
-        // Allows tools to write auth records to a central location for other apps to read from.
-        // Didn't use GlobalStorage path, as that brings added risk of regressions for auth record location which is used by external tools and apps, if the location changes in the future.
-        const homeDir = os.homedir();
-        const azureDir = path.join(homeDir, '.azure');
-        const altAzureDir = path.join(homeDir, '.Azure');
-        let baseAzureDir: string;
-        if (await fs.pathExists(azureDir)) {
-            baseAzureDir = azureDir;
-        } else if (await fs.pathExists(altAzureDir)) {
-            baseAzureDir = altAzureDir;
-        } else {
-            baseAzureDir = azureDir;
-            await fs.ensureDir(baseAzureDir);
-        }
-        const authDir = path.join(baseAzureDir, 'auth-records', 'ms-azuretools.vscode-azureresourcegroups');
-        const authRecordPath = path.join(authDir, 'authRecord.json');
-
-        // Ensure directory exists (async)
-        await fs.ensureDir(authDir);
-
-        // Write auth record (async)
-        await fs.writeFile(authRecordPath, JSON.stringify(authRecord, null, 2));
-        ext.outputChannel.appendLine(`Authentication record exported to: ${authRecordPath}`);
+        // Export the auth record to the user's .azure directory
+        await persistAuthRecord(authRecord);
     } catch (err) {
         ext.outputChannel.appendLine(`Error exporting auth record: ${err instanceof Error ? err.message : String(err)}`);
     }
+}
+
+// Helper to get tenantId from session or config override
+function getTenantId(session: unknown): string | undefined {
+    const tenantFromArg = vscode.workspace.getConfiguration().get<string>('@azure.argTenant');
+    if (tenantFromArg) {
+        return tenantFromArg;
+    }
+    return extractTenantIdFromIdToken(session);
+}
+
+// Helper to extract tenantId (tid) from the idToken of a VS Code authentication session (For MS Auth, this will be present).
+function extractTenantIdFromIdToken(session: unknown): string | undefined {
+    const idToken = (session as { idToken?: unknown }).idToken;
+    if (typeof idToken === 'string') {
+        const parts = idToken.split('.');
+        if (parts.length === 3) {
+            try {
+                const payloadStr = Buffer.from(parts[1], 'base64').toString('utf8');
+                const payload = JSON.parse(payloadStr) as Record<string, unknown>;
+                if (typeof payload.tid === 'string') {
+                    return payload.tid;
+                }
+            } catch (e) {
+                ext.outputChannel.appendLine('Failed to parse idToken for tenantId.');
+            }
+        }
+    }
+    return undefined;
+}
+
+// Helper to persist the authentication record to the user's .azure directory
+async function persistAuthRecord(authRecord: Record<string, unknown>): Promise<void> {
+    // Write to a well-known location in .azure home directory (handle both .azure and .Azure for cross-platform compatibility)
+    // If either exists, use it; otherwise, create .azure
+    // This ensures a consistent, well-known location for other tools and applications to store and retrieve authentication records.
+    // Allows tools to write auth records to a central location for other apps to read from.
+    // Didn't use GlobalStorage path, as that brings added risk of regressions for auth record location which is used by external tools and apps, if the location changes in the future.
+    const homeDir = os.homedir();
+    const azureDir = path.join(homeDir, '.azure');
+    const altAzureDir = path.join(homeDir, '.Azure');
+    let baseAzureDir: string;
+    if (await fs.pathExists(azureDir)) {
+        baseAzureDir = azureDir;
+    } else if (await fs.pathExists(altAzureDir)) {
+        baseAzureDir = altAzureDir;
+    } else {
+        baseAzureDir = azureDir;
+        await fs.ensureDir(baseAzureDir);
+    }
+    const authDir = path.join(baseAzureDir, 'auth-records', 'ms-azuretools.vscode-azureresourcegroups');
+    const authRecordPath = path.join(authDir, 'authRecord.json');
+
+    // Ensure directory exists (async)
+    await fs.ensureDir(authDir);
+
+    // Write auth record (async)
+    await fs.writeFile(authRecordPath, JSON.stringify(authRecord, null, 2));
+    ext.outputChannel.appendLine(`Authentication record exported to: ${authRecordPath}`);
 }
