@@ -3,25 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, IActionContext, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as fs from 'fs-extra';
 import * as os from 'os';
 import * as path from 'path';
+import type { ExtensionContext } from 'vscode';
 import * as vscode from 'vscode';
 import { ext } from './extensionVariables';
-
 
 /**
  * Registers the exportAuthRecord callback for session changes and ensures the auth record is exported at least once on activation.
  */
-import { callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
-import type { ExtensionContext } from 'vscode';
 export function registerExportAuthRecordOnSessionChange(_context: ExtensionContext) {
-    const { registerEvent } = require('@microsoft/vscode-azext-utils');
-    const vscode = require('vscode');
     registerEvent(
         'treeView.onDidChangeSessions',
-        vscode.authentication.onDidChangeSessions,
+        (vscode as typeof import('vscode')).authentication.onDidChangeSessions,
         exportAuthRecord
     );
 
@@ -61,13 +57,16 @@ export async function exportAuthRecord(context: IActionContext): Promise<void> {
         let defaultTenantId: string | undefined = undefined;
         // VS Code AuthenticationSession does not officially expose idToken, but it is present for Microsoft auth
         // Use type assertion to access it, but avoid 'any' for lint compliance
-        const idToken = (session as { idToken?: string }).idToken;
-        if (idToken) {
+        const idToken = (session as { idToken?: unknown }).idToken;
+        if (typeof idToken === 'string') {
             const parts = idToken.split('.');
             if (parts.length === 3) {
                 try {
-                    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
-                    defaultTenantId = payload.tid; // Use the 'tid' claim from the idToken
+                    const payloadStr = Buffer.from(parts[1], 'base64').toString('utf8');
+                    const payload: Record<string, unknown> = JSON.parse(payloadStr);
+                    if (typeof payload.tid === 'string') {
+                        defaultTenantId = payload.tid;
+                    }
                 } catch (e) {
                     ext.outputChannel.appendLine('Failed to parse idToken for tenantId.');
                 }
