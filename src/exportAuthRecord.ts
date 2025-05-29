@@ -54,7 +54,7 @@ export async function exportAuthRecord(context: IActionContext): Promise<void> {
         }
 
         // Get tenantId from idToken or config override
-        const tenantId = getTenantId(session);
+        const tenantId = getTenantId(session, context);
 
         // AuthenticationRecord structure
         const authRecord = {
@@ -74,7 +74,7 @@ export async function exportAuthRecord(context: IActionContext): Promise<void> {
 }
 
 // Helper to get tenantId from session or config override
-function getTenantId(session: unknown): string | undefined {
+function getTenantId(session: unknown, context?: IActionContext): string | undefined {
     let tenantFromArg: string | undefined = undefined;
     try {
         // This handles the case if an error is thrown, if the configuration is not registered by any extension
@@ -86,11 +86,11 @@ function getTenantId(session: unknown): string | undefined {
     if (tenantFromArg) {
         return tenantFromArg;
     }
-    return extractTenantIdFromIdToken(session);
+    return extractTenantIdFromIdToken(session, context);
 }
 
 // Helper to extract tenantId (tid) from the idToken of a VS Code authentication session (For MS Auth, this will be present).
-function extractTenantIdFromIdToken(session: unknown): string | undefined {
+function extractTenantIdFromIdToken(session: unknown, context?: IActionContext): string | undefined {
     const idToken = (session as { idToken?: unknown }).idToken;
     if (typeof idToken === 'string') {
         const parts = idToken.split('.');
@@ -103,6 +103,9 @@ function extractTenantIdFromIdToken(session: unknown): string | undefined {
                 }
             } catch (e) {
                 ext.outputChannel.appendLine('Failed to parse idToken for tenantId.');
+                if (context) {
+                    context.telemetry.properties.result = 'Failed';
+                }
             }
         }
     }
