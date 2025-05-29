@@ -75,7 +75,14 @@ export async function exportAuthRecord(context: IActionContext): Promise<void> {
 
 // Helper to get tenantId from session or config override
 function getTenantId(session: unknown): string | undefined {
-    const tenantFromArg = vscode.workspace.getConfiguration().get<string>('@azure.argTenant');
+    let tenantFromArg: string | undefined = undefined;
+    try {
+        // This handles the case if an error is thrown, if the configuration is not registered by any extension
+        tenantFromArg = vscode.workspace.getConfiguration().get<string>('@azure.argTenant');
+    } catch (err) {
+        // If the configuration is not found, ignore and proceed
+        ext.outputChannel.appendLine('No @azure.argTenant configuration found. Proceeding without tenant override.');
+    }
     if (tenantFromArg) {
         return tenantFromArg;
     }
