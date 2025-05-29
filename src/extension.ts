@@ -28,6 +28,7 @@ import { registerActivityLogTree } from './commands/activities/registerActivityL
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
+import { registerExportAuthRecordOnSessionChange } from './exportAuthRecord';
 import { ext } from './extensionVariables';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
 import { ManagedIdentityBranchDataProvider } from './managedIdentity/ManagedIdentityBranchDataProvider';
@@ -198,6 +199,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.v2.api = v2ApiFactory.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
     ext.managedIdentityBranchDataProvider = new ManagedIdentityBranchDataProvider();
     ext.v2.api.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ManagedIdentityUserAssignedIdentities, ext.managedIdentityBranchDataProvider);
+
+    // Register exportAuthRecord callback for session changes and call once on activation
+    registerExportAuthRecordOnSessionChange(context);
 
     ext.appResourceTree = new CompatibleAzExtTreeDataProvider(azureResourceTreeDataProvider);
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
