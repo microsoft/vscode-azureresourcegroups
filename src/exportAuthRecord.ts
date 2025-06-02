@@ -17,7 +17,7 @@ import { ext } from './extensionVariables';
 export function registerExportAuthRecordOnSessionChange(_context: ExtensionContext) {
     registerEvent(
         'treeView.onDidChangeSessions',
-        (vscode as typeof import('vscode')).authentication.onDidChangeSessions,
+        vscode.authentication.onDidChangeSessions,
         exportAuthRecord
     );
 
@@ -62,7 +62,9 @@ export async function exportAuthRecord(context: IActionContext): Promise<void> {
             authority: 'https://login.microsoftonline.com', // VS Code auth provider default
             homeAccountId: `${session.account.id}`,
             tenantId,
-            clientId: 'aebc6443-996d-45c2-90f0-388ff96faa56', // VS Code client ID
+            // This is the public client ID used by VS Code for Microsoft authentication.
+            // See: https://github.com/microsoft/vscode/blob/973a531c70579b7a51544f32931fdafd32de285e/extensions/microsoft-authentication/src/AADHelper.ts#L21
+            clientId: 'aebc6443-996d-45c2-90f0-388ff96faa56',
             datetime: new Date().toISOString() // Current UTC time in ISO8601 format
         };
 
@@ -131,7 +133,7 @@ async function persistAuthRecord(authRecord: Record<string, unknown>): Promise<v
         baseAzureDir = azureDir;
         await fs.ensureDir(baseAzureDir);
     }
-    const authDir = path.join(baseAzureDir, 'auth-records', 'ms-azuretools.vscode-azureresourcegroups');
+    const authDir = path.join(baseAzureDir, 'ms-azuretools.vscode-azureresourcegroups');
     const authRecordPath = path.join(authDir, 'authRecord.json');
 
     // Ensure directory exists (async)
