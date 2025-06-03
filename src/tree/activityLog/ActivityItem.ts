@@ -75,8 +75,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
         }
     }
 
-    public initialCollapsibleState: TreeItemCollapsibleState = TreeItemCollapsibleState.Expanded;
-
+    public initialCollapsibleState: TreeItemCollapsibleState;
     public status?: ActivityStatus;
     public error?: unknown;
     private latestProgress?: { message?: string };
@@ -84,6 +83,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
     public constructor(readonly activity: Activity) {
         this.id = activity.id;
         this.setupListeners(activity);
+        this.initialCollapsibleState = activity.hasChildren ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.None;
     }
 
     public dispose(): void {
