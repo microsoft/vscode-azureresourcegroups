@@ -49,7 +49,6 @@ export async function exportAuthRecord(context: IActionContext): Promise<void> {
         );
 
         if (!session) {
-            ext.outputChannel.appendLine('No session available for Azure account.');
             return;
         }
 
@@ -135,11 +134,25 @@ async function persistAuthRecord(authRecord: Record<string, unknown>): Promise<v
     }
     const authDir = path.join(baseAzureDir, 'ms-azuretools.vscode-azureresourcegroups');
     const authRecordPath = path.join(authDir, 'authRecord.json');
+    const gitignorePath = path.join(authDir, '.gitignore');
 
     // Ensure directory exists (async)
     await fs.ensureDir(authDir);
 
+
+    // Only write .gitignore if it doesn't exist or doesn't contain the required rule
+    const gitignoreContent = `# Ignore all authentication records in this directory\nauthRecord.json\n# Do not ignore this .gitignore file itself\n!.gitignore\n`;
+    let shouldWriteGitignore = true;
+    if (await fs.pathExists(gitignorePath)) {
+        const existing = await fs.readFile(gitignorePath, 'utf8');
+        if (existing.includes('authRecord.json')) {
+            shouldWriteGitignore = false;
+        }
+    }
+    if (shouldWriteGitignore) {
+        await fs.writeFile(gitignorePath, gitignoreContent);
+    }
+
     // Write auth record (async)
     await fs.writeFile(authRecordPath, JSON.stringify(authRecord, null, 2));
-    ext.outputChannel.appendLine(`Authentication record exported to: ${authRecordPath}`);
 }
