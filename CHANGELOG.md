@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.10.12 - 2025-06-10
+
+### Added
+* [[1145](https://github.com/microsoft/vscode-azureresourcegroups/pull/1145)] Add support for exporting the authentication record
+
 ## 0.10.11 - 2025-05-13
 
 ### Overview
