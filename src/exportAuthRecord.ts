@@ -41,12 +41,8 @@ export async function exportAuthRecord(context: IActionContext): Promise<void> {
     context.telemetry.properties.isActivationEvent = 'true';
 
     try {
-        // Use silent: true to avoid prompting the user unexpectedly
-        const session = await vscode.authentication.getSession(
-            AUTH_PROVIDER_ID,
-            SCOPES,
-            { silent: true }
-        );
+
+        const session = await getAuthenticationSession(AUTH_PROVIDER_ID, SCOPES);
 
         if (!session) {
             // If no session is found, clean up any existing auth record and exit
@@ -170,4 +166,44 @@ async function cleanupAuthRecordIfPresent(): Promise<void> {
     if (await fs.pathExists(authRecordPath)) {
         await fs.remove(authRecordPath);
     }
+}
+
+// Helper to get the authentication session for the given auth provider and scopes
+async function getAuthenticationSession(
+    authProviderId: string,
+    scopes: string[]
+): Promise<vscode.AuthenticationSession | undefined> {
+    const allAccounts = await vscode.authentication.getAccounts(authProviderId);
+
+    // Try to get the current authentication session silently.
+    let session = await vscode.authentication.getSession(
+        authProviderId,
+        scopes,
+        { silent: true }
+    );
+
+    if (session) {
+        // Ensure session represents the active accounts. (i.e. not a user being logged out.)
+        const isLoggedIn = allAccounts.some(account => account.id === session?.id);
+        if (!isLoggedIn) {
+            session = undefined; // Reset session if it doesn't match any active account, as it represents a user being logged out.
+        }
+    }
+
+    if (!session && allAccounts.length > 0) {
+        // no active session found, but accounts exist
+        // Get the first available session for the active accounts.
+        for (const account of allAccounts) {
+            session = await vscode.authentication.getSession(
+                authProviderId,
+                scopes,
+                { silent: true, account }
+            );
+            if (session) {
+                break;
+            }
+        }
+    }
+
+    return session;
 }
