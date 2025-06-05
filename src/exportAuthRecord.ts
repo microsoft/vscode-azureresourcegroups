@@ -184,7 +184,7 @@ async function getAuthenticationSession(
 
     if (session) {
         // Ensure session represents the active accounts. (i.e. not a user being logged out.)
-        const isLoggedIn = allAccounts.some(account => account.id === session?.id);
+        const isLoggedIn = allAccounts.some(account => account.id === session?.account.id);
         if (!isLoggedIn) {
             session = undefined; // Reset session if it doesn't match any active account, as it represents a user being logged out.
         }
