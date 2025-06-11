@@ -41,14 +41,12 @@ export async function exportAuthRecord(context: IActionContext): Promise<void> {
     context.telemetry.properties.isActivationEvent = 'true';
 
     try {
-        // Use silent: true to avoid prompting the user unexpectedly
-        const session = await vscode.authentication.getSession(
-            AUTH_PROVIDER_ID,
-            SCOPES,
-            { silent: true }
-        );
+
+        const session = await getAuthenticationSession(AUTH_PROVIDER_ID, SCOPES);
 
         if (!session) {
+            // If no session is found, clean up any existing auth record and exit
+            await cleanupAuthRecordIfPresent();
             return;
         }
 
@@ -120,25 +118,13 @@ async function persistAuthRecord(authRecord: Record<string, unknown>): Promise<v
     // This ensures a consistent, well-known location for other tools and applications to store and retrieve authentication records.
     // Allows tools to write auth records to a central location for other apps to read from.
     // Didn't use GlobalStorage path, as that brings added risk of regressions for auth record location which is used by external tools and apps, if the location changes in the future.
-    const homeDir = os.homedir();
-    const azureDir = path.join(homeDir, '.azure');
-    const altAzureDir = path.join(homeDir, '.Azure');
-    let baseAzureDir: string;
-    if (await fs.pathExists(azureDir)) {
-        baseAzureDir = azureDir;
-    } else if (await fs.pathExists(altAzureDir)) {
-        baseAzureDir = altAzureDir;
-    } else {
-        baseAzureDir = azureDir;
-        await fs.ensureDir(baseAzureDir);
-    }
+    const baseAzureDir = await getAzureDir();
     const authDir = path.join(baseAzureDir, 'ms-azuretools.vscode-azureresourcegroups');
     const authRecordPath = path.join(authDir, 'authRecord.json');
     const gitignorePath = path.join(authDir, '.gitignore');
 
     // Ensure directory exists (async)
     await fs.ensureDir(authDir);
-
 
     // Only write .gitignore if it doesn't exist or doesn't contain the required rule
     const gitignoreContent = `# Ignore all authentication records in this directory\nauthRecord.json\n# Do not ignore this .gitignore file itself\n!.gitignore\n`;
@@ -155,4 +141,69 @@ async function persistAuthRecord(authRecord: Record<string, unknown>): Promise<v
 
     // Write auth record (async)
     await fs.writeFile(authRecordPath, JSON.stringify(authRecord, null, 2));
+}
+
+// Helper to get the base Azure directory (.azure or .Azure) in the user's home directory
+async function getAzureDir(): Promise<string> {
+    const homeDir = os.homedir();
+    const azureDir = path.join(homeDir, '.azure');
+    const altAzureDir = path.join(homeDir, '.Azure');
+    if (await fs.pathExists(azureDir)) {
+        return azureDir;
+    } else if (await fs.pathExists(altAzureDir)) {
+        return altAzureDir;
+    } else {
+        await fs.ensureDir(azureDir);
+        return azureDir;
+    }
+}
+
+// Helper to clean up the persisted auth record if present
+async function cleanupAuthRecordIfPresent(): Promise<void> {
+    const baseAzureDir = await getAzureDir();
+    const authDir = path.join(baseAzureDir, 'ms-azuretools.vscode-azureresourcegroups');
+    const authRecordPath = path.join(authDir, 'authRecord.json');
+    if (await fs.pathExists(authRecordPath)) {
+        await fs.remove(authRecordPath);
+    }
+}
+
+// Helper to get the authentication session for the given auth provider and scopes
+async function getAuthenticationSession(
+    authProviderId: string,
+    scopes: string[]
+): Promise<vscode.AuthenticationSession | undefined> {
+    const allAccounts = await vscode.authentication.getAccounts(authProviderId);
+
+    // Try to get the current authentication session silently.
+    let session = await vscode.authentication.getSession(
+        authProviderId,
+        scopes,
+        { silent: true }
+    );
+
+    if (session) {
+        // Ensure session represents the active accounts. (i.e. not a user being logged out.)
+        const isLoggedIn = allAccounts.some(account => account.id === session?.account.id);
+        if (!isLoggedIn) {
+            session = undefined; // Reset session if it doesn't match any active account, as it represents a user being logged out.
+        }
+    }
+
+    if (!session && allAccounts.length > 0) {
+        // no active session found, but accounts exist
+        // Get the first available session for the active accounts.
+        for (const account of allAccounts) {
+            session = await vscode.authentication.getSession(
+                authProviderId,
+                scopes,
+                { silent: true, account }
+            );
+            if (session) {
+                break;
+            }
+        }
+    }
+
+    return session;
 }
