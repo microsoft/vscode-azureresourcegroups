@@ -83,7 +83,8 @@ export class ActivityItem implements TreeElementBase, Disposable {
     public constructor(readonly activity: Activity) {
         this.id = activity.id;
         this.setupListeners(activity);
-        this.initialCollapsibleState = activity.hasChildren ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.None;
+        // To ensure backwards compatability with extensions that have children, but haven't yet updated to the latest utils, default to `Expanded` even when `hasChildren` is `undefined`
+        this.initialCollapsibleState = activity.hasChildren === false ? TreeItemCollapsibleState.None : TreeItemCollapsibleState.Expanded;
     }
 
     public dispose(): void {
@@ -120,8 +121,8 @@ export class ActivityItem implements TreeElementBase, Disposable {
         void callWithTelemetryAndErrorHandling('activityOnSuccess', async (_context) => {
             this.state = data;
             this.status = ActivityStatus.Done;
-            if (this.state.getChildren) {
-                this.initialCollapsibleState = TreeItemCollapsibleState.Expanded;
+            if (!this.state.getChildren) {
+                this.initialCollapsibleState = TreeItemCollapsibleState.None;
             }
             ext.actions.refreshActivityLogTree(this);
         })
