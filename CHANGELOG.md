@@ -1,5 +1,8 @@
 # Change Log
 
+## 0.10.13 - 2025-06-12
+* [[1157](https://github.com/microsoft/vscode-azureresourcegroups/pull/1157)] Remove Preview from stand-in chat participant name
+
 ## 0.10.12 - 2025-06-10
 
 ### Added
