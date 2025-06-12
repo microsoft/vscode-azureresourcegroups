@@ -83,7 +83,8 @@ export class ActivityItem implements TreeElementBase, Disposable {
     public constructor(readonly activity: Activity) {
         this.id = activity.id;
         this.setupListeners(activity);
-        // To ensure backwards compatability with extensions that have children but haven't yet updated to the latest utils, keeping defaulting to `Expanded` when `hasChildren` is `undefined`
+        // To ensure backwards compatibility with extensions that have children but haven't yet updated to the version of utils providing the `hasChildren` property,
+        // we keep defaulting to `Expanded` when `hasChildren` is `undefined`.
         this.initialCollapsibleState = activity.hasChildren === false ? TreeItemCollapsibleState.None : TreeItemCollapsibleState.Expanded;
     }
 
