@@ -119,7 +119,6 @@ async function deleteResourceGroups(context: IActionContext, subscription: Azure
                 activityTitle: localize('deleteResourceGroup', 'Delete resource group "{0}"', rg.name),
                 ...(await createActivityContext()),
                 ...context,
-                // Since there's only one execute step emitting the same progress message as the main activity, just suppress and show the timer
                 suppressProgress: true,
             }, {
                 executeSteps: [new DeleteResourceGroupStep()]
