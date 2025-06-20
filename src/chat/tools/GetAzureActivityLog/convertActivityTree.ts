@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ActivityChildItemBase, ActivityChildType, IActionContext } from "@microsoft/vscode-azext-utils";
+import { ActivityAttributes, ActivityChildItemBase, ActivityChildType, IActionContext } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../../extensionVariables";
 import { ActivityItem, ActivityStatus } from "../../../tree/activityLog/ActivityItem";
 import { TreeDataItem } from "../../../tree/ResourceGroupsItem";
@@ -13,6 +13,7 @@ export type ConvertedActivityItem = {
     description?: string;
     status?: ActivityStatus;
     error?: unknown;
+    activityAttributes?: ActivityAttributes;
     children?: ConvertedActivityChildItem[];
 }
 
@@ -38,6 +39,7 @@ async function convertItemToSimpleActivityObject(context: IActionContext, item: 
         description: item.description,
         status: item.status,
         error: item.error,
+        activityAttributes: item.activityAttributes,
     };
 
     if (item.getChildren) {

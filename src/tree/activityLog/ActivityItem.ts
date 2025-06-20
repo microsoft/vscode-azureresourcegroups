@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, dateTimeUtils, TreeElementBase, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
+import { ActivityAttributes, callWithTelemetryAndErrorHandling, dateTimeUtils, TreeElementBase, TreeItemIconPath } from "@microsoft/vscode-azext-utils";
 import { Activity, ActivityTreeItemOptions, OnErrorActivityData, OnProgressActivityData, OnStartActivityData, OnSuccessActivityData } from "@microsoft/vscode-azext-utils/hostapi";
 import { Disposable, ThemeColor, ThemeIcon, TreeItem, TreeItemCollapsibleState } from "vscode";
 import { ext } from "../../extensionVariables";
@@ -17,6 +17,11 @@ export enum ActivityStatus {
 
 export class ActivityItem implements TreeElementBase, Disposable {
     public readonly id: string;
+    private _activityAttributes?: ActivityAttributes;
+
+    public get activityAttributes(): ActivityAttributes | undefined {
+        return this._activityAttributes;
+    }
 
     public get contextValue(): string {
         const contextValues = new Set(['azureActivity', ...(this.state.contextValuesToAdd ?? [])]);
@@ -86,6 +91,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
         // To ensure backwards compatibility with extensions that have children but haven't yet updated to the version of utils providing the `hasChildren` property,
         // default to `Expanded` when `hasChildren` is `undefined`.
         this.initialCollapsibleState = activity.hasChildren === false ? TreeItemCollapsibleState.None : TreeItemCollapsibleState.Expanded;
+        this._activityAttributes = activity.attributes;
     }
 
     public dispose(): void {
