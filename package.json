@@ -101,6 +101,20 @@
                 ]
             }
         ],
+        "languageModelTools": [
+            {
+                "displayName": "Azure Resources: Get Azure Activity Log",
+                "icon": "$(azure)",
+                "inputSchema": {},
+                "modelDescription": "Gets the Azure activity log",
+                "name": "azureResources_getAzureActivityLog",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "azureActivityLog",
+                "tags": [
+                    "azure"
+                ]
+            }
+        ],
         "terminal": {
             "profiles": [
                 {
@@ -315,6 +329,12 @@
                 "category": "Azure"
             },
             {
+                "command": "azureResourceGroups.askAgentAboutActivityLog",
+                "title": "%azureResourceGroups.askAgentAboutActivityLog%",
+                "category": "Azure",
+                "icon": "$(sparkle)"
+            },
+            {
                 "command": "azureTenantsView.refresh",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
@@ -459,6 +479,11 @@
                     "command": "azureResourceGroups.refreshTree",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@3"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLog",
+                    "when": "view == azureActivityLog",
+                    "group": "navigation@1"
                 },
                 {
                     "command": "azureWorkspace.refreshTree",
