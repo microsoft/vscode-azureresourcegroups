@@ -6,6 +6,5 @@ export async function createActivityContext(): Promise<ExecuteActivityContext> {
     return {
         registerActivity: async (activity) => registerActivity(activity),
         suppressNotification: await settingUtils.getWorkspaceSetting('suppressActivityNotifications'),
-        activityAttributes: {},
     };
 }
