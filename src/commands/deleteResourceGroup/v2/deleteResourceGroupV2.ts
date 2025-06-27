@@ -119,6 +119,7 @@ async function deleteResourceGroups(context: IActionContext, subscription: Azure
                 activityTitle: localize('deleteResourceGroup', 'Delete resource group "{0}"', rg.name),
                 ...(await createActivityContext()),
                 ...context,
+                suppressProgress: true,
             }, {
                 executeSteps: [new DeleteResourceGroupStep()]
             });
