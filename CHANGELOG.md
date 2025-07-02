@@ -10,7 +10,6 @@ This release brings Copilot integration to the Azure activity log. Users can now
 - Example of Copilot chat with Azure activity log context:
 ![Copilot Chat with Activity Log Context](resources/changelog/0.11.0/copilotChatWithActivityContext.png)
 
-
 ### Added
 * [[1162](https://github.com/microsoft/vscode-azureresourcegroups/pull/1162)] Incorporate `ActivityAttributes` for use as Copilot context
 * [[1160](https://github.com/microsoft/vscode-azureresourcegroups/pull/1160)] Hook up Copilot for the activity log and expose basic commands
