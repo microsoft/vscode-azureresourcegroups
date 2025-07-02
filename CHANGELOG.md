@@ -1,14 +1,14 @@
 # Change Log
 
-## 0.10.14 - 2025-07-02
+## 0.11.0 - 2025-07-02
 ### Overview
 This release brings Copilot integration to the Azure activity log. Users can now leverage Copilot to gain insights from the Azure activity log by clicking the new sparkle icon in the top right corner. Additionally, client extensions can now provide enhanced context to the shared Azure Resources activity log using `ActivityAttributes`, allowing them to incrementally contribute detailed command data and metadata. This enables Copilot to deliver more relevant and informative responses for users.
 
 - Example of Copilot integration in the Azure activity log:
-![Activity Log with Sparkle Icon](resources/changelog/0.10.14/activityLogWithCopilot.png)
+![Activity Log with Sparkle Icon](resources/changelog/0.11.0/activityLogWithCopilot.png)
 
 - Example of Copilot chat with Azure activity log context:
-![Copilot Chat with Activity Log Context](resources/changelog/0.10.14/copilotChatWithActivityContext.png)
+![Copilot Chat with Activity Log Context](resources/changelog/0.11.0/copilotChatWithActivityContext.png)
 
 
 ### Added
