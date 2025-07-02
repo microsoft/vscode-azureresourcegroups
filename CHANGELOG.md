@@ -2,7 +2,7 @@
 
 ## 0.10.14 - 2025-07-02
 ### Overview
-This release brings Copilot integration to the Azure activity log. Users can now leverage Copilot to gain insights from the Azure activity log by clicking the new sparkle icon in the top right corner. Additionally, client extensions can now provide enhanced context to the shared Azure Resources activity log using `ActivityAttributes`, allowing them to contribute detailed command data and metadata. This enables Copilot to deliver more relevant and informative responses for users.
+This release brings Copilot integration to the Azure activity log. Users can now leverage Copilot to gain insights from the Azure activity log by clicking the new sparkle icon in the top right corner. Additionally, client extensions can now provide enhanced context to the shared Azure Resources activity log using `ActivityAttributes`, allowing them to incrementally contribute detailed command data and metadata. This enables Copilot to deliver more relevant and informative responses for users.
 
 ![Azure Activity Log with Copilot](resources/changelog/0.10.14/activityLogWithCopilot.png)
 
