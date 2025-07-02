@@ -1,5 +1,18 @@
 # Change Log
 
+## 0.10.14 - 2025-07-02
+### Overview
+This release brings Copilot integration to the Azure activity log. Users can now leverage Copilot to gain insights from the Azure activity log by clicking the new sparkle icon in the top right corner. Additionally, client extensions can now provide enhanced context to the shared Azure Resources activity log using `ActivityAttributes`, allowing them to contribute detailed command data and metadata. This enables Copilot to deliver more relevant and informative responses for users.
+
+![Azure Activity Log with Copilot](resources/changelog/0.10.14/activityLogWithCopilot.png)
+
+### Added
+* [[1162](https://github.com/microsoft/vscode-azureresourcegroups/pull/1162)] Incorporate `ActivityAttributes` for use as Copilot context
+* [[1160](https://github.com/microsoft/vscode-azureresourcegroups/pull/1160)] Hook up Copilot for the activity log and expose basic commands
+
+### Changed
+* [[1163](https://github.com/microsoft/vscode-azureresourcegroups/pull/1163)] Only show timer in the Azure Activity log when deleting a resource group
+
 ## 0.10.13 - 2025-06-12
 * [[1157](https://github.com/microsoft/vscode-azureresourcegroups/pull/1157)] Remove Preview from stand-in chat participant name
 
