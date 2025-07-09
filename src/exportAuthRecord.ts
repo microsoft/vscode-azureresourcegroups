@@ -122,24 +122,6 @@ async function persistAuthRecord(authRecord: Record<string, unknown>): Promise<v
     const authDir = path.join(baseAzureDir, 'ms-azuretools.vscode-azureresourcegroups');
     const authRecordPath = path.join(authDir, 'authRecord.json');
     const gitignorePath = path.join(authDir, '.gitignore');
-
-    // Ensure directory exists (async)
-    await fs.ensureDir(authDir);
-
-    // Only write .gitignore if it doesn't exist or doesn't contain the required rule
-    const gitignoreContent = `# Ignore all authentication records in this directory\nauthRecord.json\n# Do not ignore this .gitignore file itself\n!.gitignore\n`;
-    let shouldWriteGitignore = true;
-    if (await fs.pathExists(gitignorePath)) {
-        const existing = await fs.readFile(gitignorePath, 'utf8');
-        if (existing.includes('authRecord.json')) {
-            shouldWriteGitignore = false;
-        }
-    }
-    if (shouldWriteGitignore) {
-        await fs.writeFile(gitignorePath, gitignoreContent);
-    }
-
-
     // Write README.md explaining the purpose and contents of authRecord.json
     const readmePath = path.join(authDir, 'README.md');
     const readmeContent = [
@@ -170,8 +152,23 @@ async function persistAuthRecord(authRecord: Record<string, unknown>): Promise<v
         "- While `authRecord.json` itself isn't inherently dangerous, it should still be excluded from source control. A preconfigued `.gitignore` file is written alongside the file for that purpose.",
         ''
     ].join('\n');
-    await fs.writeFile(readmePath, readmeContent);
 
+    // Ensure directory exists (async)
+    await fs.ensureDir(authDir);
+
+    // Only write .gitignore if it doesn't exist or doesn't contain the required rule
+    const gitignoreContent = `# Ignore all authentication records in this directory\nauthRecord.json\n# Do not ignore this .gitignore file itself\n!.gitignore\n`;
+    let shouldWriteGitignore = true;
+    if (await fs.pathExists(gitignorePath)) {
+        const existing = await fs.readFile(gitignorePath, 'utf8');
+        if (existing.includes('authRecord.json')) {
+            shouldWriteGitignore = false;
+        }
+    }
+    if (shouldWriteGitignore) {
+        await fs.writeFile(gitignorePath, gitignoreContent);
+    }
+    await fs.writeFile(readmePath, readmeContent);
     // Write auth record (async)
     await fs.writeFile(authRecordPath, JSON.stringify(authRecord, null, 2));
 }
