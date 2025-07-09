@@ -152,7 +152,6 @@ async function persistAuthRecord(authRecord: Record<string, unknown>): Promise<v
     const gitignorePath = path.join(authDir, '.gitignore');
     // Write README.md explaining the purpose and contents of authRecord.json
     const readmePath = path.join(authDir, 'README.md');
-    await fs.writeFile(readmePath, AUTH_RECORD_README);
 
     // Ensure directory exists (async)
     await fs.ensureDir(authDir);
