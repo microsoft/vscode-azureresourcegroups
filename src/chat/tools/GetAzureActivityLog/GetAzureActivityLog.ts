@@ -21,10 +21,10 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
 }
 
 type TelemetryCounters = {
-    commandIds: string[];
-    failedCommandIds: string[];
-    commandIdsWithAttributes: string[];
-    failedCommandIdsWithAttributes: string[];
+    commandIds: Set<string>;
+    failedCommandIds: Set<string>;
+    commandIdsWithAttributes: Set<string>;
+    failedCommandIdsWithAttributes: Set<string>;
     totalFailedActivities: number;
 };
 
@@ -35,16 +35,16 @@ function logTelemetry(context: IActionContext, convertedActivityItems: Converted
         }
 
         if (activityItem.commandId) {
-            telemetry.commandIds.push(activityItem.commandId);
+            telemetry.commandIds.add(activityItem.commandId);
             if (activityItem.activityAttributes) {
-                telemetry.commandIdsWithAttributes.push(activityItem.commandId);
+                telemetry.commandIdsWithAttributes.add(activityItem.commandId);
             }
 
 
             if (activityItem.error) {
-                telemetry.failedCommandIds.push(activityItem.commandId);
+                telemetry.failedCommandIds.add(activityItem.commandId);
                 if (activityItem.activityAttributes) {
-                    telemetry.failedCommandIdsWithAttributes.push(activityItem.commandId);
+                    telemetry.failedCommandIdsWithAttributes.add(activityItem.commandId);
                 }
             }
         }
@@ -52,19 +52,19 @@ function logTelemetry(context: IActionContext, convertedActivityItems: Converted
         return telemetry;
 
     }, {
-        commandIds: [],
-        failedCommandIds: [],
-        commandIdsWithAttributes: [],
-        failedCommandIdsWithAttributes: [],
+        commandIds: new Set(),
+        failedCommandIds: new Set(),
+        commandIdsWithAttributes: new Set(),
+        failedCommandIdsWithAttributes: new Set(),
         totalFailedActivities: 0,
     });
 
     context.telemetry.properties.activityCount = String(convertedActivityItems.length);
     context.telemetry.properties.failedActivityCount = String(telemetry.totalFailedActivities);
 
-    context.telemetry.properties.uniqueCommandIds = Array.from(new Set(telemetry.commandIds)).join(',');
-    context.telemetry.properties.uniqueFailedCommandIds = Array.from(new Set(telemetry.failedCommandIds)).join(',');
+    context.telemetry.properties.uniqueCommandIds = Array.from(telemetry.commandIds).join(',');
+    context.telemetry.properties.uniqueFailedCommandIds = Array.from(telemetry.failedCommandIds).join(',');
 
-    context.telemetry.properties.uniqueCommandIdsWithAttributes = Array.from(new Set(telemetry.commandIdsWithAttributes)).join(',');
-    context.telemetry.properties.uniqueFailedCommandIdsWithAttributes = Array.from(new Set(telemetry.failedCommandIdsWithAttributes)).join(',');
+    context.telemetry.properties.uniqueCommandIdsWithAttributes = Array.from(telemetry.commandIdsWithAttributes).join(',');
+    context.telemetry.properties.uniqueFailedCommandIdsWithAttributes = Array.from(telemetry.failedCommandIdsWithAttributes).join(',');
 }
