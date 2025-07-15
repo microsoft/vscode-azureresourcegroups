@@ -34,17 +34,18 @@ function logTelemetry(context: IActionContext, convertedActivityItems: Converted
             telemetry.totalFailedActivities++;
         }
 
-        if (activityItem.commandId) {
-            telemetry.commandIds.push(activityItem.commandId);
+        const commandId: string | undefined = activityItem.activityAttributes?.commandId;
+        if (commandId) {
+            telemetry.commandIds.push(commandId);
             if (activityItem.activityAttributes) {
-                telemetry.commandIdsWithAttributes.push(activityItem.commandId);
+                telemetry.commandIdsWithAttributes.push(commandId);
             }
 
 
             if (activityItem.error) {
-                telemetry.failedCommandIds.push(activityItem.commandId);
+                telemetry.failedCommandIds.push(commandId);
                 if (activityItem.activityAttributes) {
-                    telemetry.failedCommandIdsWithAttributes.push(activityItem.commandId);
+                    telemetry.failedCommandIdsWithAttributes.push(commandId);
                 }
             }
         }
