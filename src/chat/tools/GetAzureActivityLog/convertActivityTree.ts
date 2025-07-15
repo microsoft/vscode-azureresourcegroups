@@ -11,6 +11,7 @@ import { TreeDataItem } from "../../../tree/ResourceGroupsItem";
 export type ConvertedActivityItem = {
     label?: string;
     description?: string;
+    commandId?: string;
     status?: ActivityStatus;
     error?: unknown;
     activityAttributes?: ActivityAttributes;

@@ -10,8 +10,29 @@ import { convertActivityTreeToSimpleObjectArray, ConvertedActivityItem } from '.
 export class GetAzureActivityLog implements AzExtLMTool<void> {
     public async invoke(context: IActionContext): Promise<vscode.LanguageModelToolResult> {
         const convertedActivityItems: ConvertedActivityItem[] = await convertActivityTreeToSimpleObjectArray(context);
+
+        type ReduceCounters = { commandIds: string[]; failedCommandIds: string[], totalFailedActivities: number };
+        const { commandIds, failedCommandIds, totalFailedActivities } = convertedActivityItems.reduce<ReduceCounters>((counter, activityItem) => {
+            if (activityItem.error) {
+                counter.totalFailedActivities++;
+            }
+
+            if (activityItem.commandId) {
+                counter.commandIds.push(activityItem.commandId);
+
+                if (activityItem.error) {
+                    counter.failedCommandIds.push(activityItem.commandId);
+                }
+            }
+
+            return counter;
+        }, { commandIds: [], failedCommandIds: [], totalFailedActivities: 0 });
+
         context.telemetry.properties.activityCount = String(convertedActivityItems.length);
-        context.telemetry.properties.failedActivityCount = String(convertedActivityItems.filter(item => !!item.error).length);
+        context.telemetry.properties.failedActivityCount = String(totalFailedActivities);
+
+        context.telemetry.properties.commandIds = commandIds.join(',');
+        context.telemetry.properties.failedCommandIds = failedCommandIds.join(',');
 
         if (convertedActivityItems.length === 0) {
             return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No activity log items found.')]);
