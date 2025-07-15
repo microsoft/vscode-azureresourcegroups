@@ -62,9 +62,9 @@ function logTelemetry(context: IActionContext, convertedActivityItems: Converted
     context.telemetry.properties.activityCount = String(convertedActivityItems.length);
     context.telemetry.properties.failedActivityCount = String(telemetry.totalFailedActivities);
 
-    context.telemetry.properties.commandIds = telemetry.commandIds.join(',');
-    context.telemetry.properties.failedCommandIds = telemetry.failedCommandIds.join(',');
+    context.telemetry.properties.uniqueCommandIds = Array.from(new Set(telemetry.commandIds)).join(',');
+    context.telemetry.properties.uniqueFailedCommandIds = Array.from(new Set(telemetry.failedCommandIds)).join(',');
 
-    context.telemetry.properties.commandIdsWithAttributes = telemetry.commandIdsWithAttributes.join(',');
-    context.telemetry.properties.failedCommandIdsWithAttributes = telemetry.failedCommandIdsWithAttributes.join(',');
+    context.telemetry.properties.uniqueCommandIdsWithAttributes = Array.from(new Set(telemetry.commandIdsWithAttributes)).join(',');
+    context.telemetry.properties.uniqueFailedCommandIdsWithAttributes = Array.from(new Set(telemetry.failedCommandIdsWithAttributes)).join(',');
 }
