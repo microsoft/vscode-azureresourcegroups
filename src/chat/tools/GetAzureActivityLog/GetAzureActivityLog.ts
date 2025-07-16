@@ -59,15 +59,15 @@ function logTelemetry(context: IActionContext, convertedActivityItems: Converted
         totalFailedActivities: 0,
     });
 
-    // i.e. activity totals
+    // i.e. total activities
     context.telemetry.properties.activityCount = String(convertedActivityItems.length);
     context.telemetry.properties.failedActivityCount = String(telemetry.totalFailedActivities);
 
-    // i.e. commands w/ ids
+    // i.e. unique command ids
     context.telemetry.properties.uniqueCallbackIds = Array.from(telemetry.callbackIds).join(',');
     context.telemetry.properties.uniqueFailedCallbackIds = Array.from(telemetry.failedCallbackIds).join(',');
 
-    // i.e. commands w/ command metadata
+    // i.e. unique command ids w/ command metadata
     context.telemetry.properties.uniqueCallbackIdsWithAttributes = Array.from(telemetry.callbackIdsWithAttributes).join(',');
     context.telemetry.properties.uniqueFailedCallbackIdsWithAttributes = Array.from(telemetry.failedCallbackIdsWithAttributes).join(',');
 }
