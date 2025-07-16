@@ -18,7 +18,7 @@ export enum ActivityStatus {
 export class ActivityItem implements TreeElementBase, Disposable {
     public readonly id: string;
     private _activityAttributes?: ActivityAttributes;
-    private _commandId?: string;
+    private _callbackId?: string;
 
     public get activityAttributes(): ActivityAttributes | undefined {
         return this._activityAttributes;
@@ -33,8 +33,8 @@ export class ActivityItem implements TreeElementBase, Disposable {
         return this.state.label;
     }
 
-    public get commandId(): string | undefined {
-        return this._commandId;
+    public get callbackId(): string | undefined {
+        return this._callbackId;
     }
 
     public get description(): string | undefined {
@@ -97,7 +97,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
         // default to `Expanded` when `hasChildren` is `undefined`.
         this.initialCollapsibleState = activity.hasChildren === false ? TreeItemCollapsibleState.None : TreeItemCollapsibleState.Expanded;
         this._activityAttributes = activity.attributes;
-        this._commandId = activity.commandId;
+        this._callbackId = activity.callbackId;
     }
 
     public dispose(): void {

@@ -21,10 +21,10 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
 }
 
 type TelemetryCounters = {
-    commandIds: Set<string>;
-    failedCommandIds: Set<string>;
-    commandIdsWithAttributes: Set<string>;
-    failedCommandIdsWithAttributes: Set<string>;
+    callbackIds: Set<string>;
+    failedCallbackIds: Set<string>;
+    callbackIdsWithAttributes: Set<string>;
+    failedCallbackIdsWithAttributes: Set<string>;
     totalFailedActivities: number;
 };
 
@@ -34,17 +34,17 @@ function logTelemetry(context: IActionContext, convertedActivityItems: Converted
             telemetry.totalFailedActivities++;
         }
 
-        if (activityItem.commandId) {
-            telemetry.commandIds.add(activityItem.commandId);
+        if (activityItem.callbackId) {
+            telemetry.callbackIds.add(activityItem.callbackId);
             if (activityItem.activityAttributes) {
-                telemetry.commandIdsWithAttributes.add(activityItem.commandId);
+                telemetry.callbackIdsWithAttributes.add(activityItem.callbackId);
             }
 
 
             if (activityItem.error) {
-                telemetry.failedCommandIds.add(activityItem.commandId);
+                telemetry.failedCallbackIds.add(activityItem.callbackId);
                 if (activityItem.activityAttributes) {
-                    telemetry.failedCommandIdsWithAttributes.add(activityItem.commandId);
+                    telemetry.failedCallbackIdsWithAttributes.add(activityItem.callbackId);
                 }
             }
         }
@@ -52,19 +52,22 @@ function logTelemetry(context: IActionContext, convertedActivityItems: Converted
         return telemetry;
 
     }, {
-        commandIds: new Set(),
-        failedCommandIds: new Set(),
-        commandIdsWithAttributes: new Set(),
-        failedCommandIdsWithAttributes: new Set(),
+        callbackIds: new Set(),
+        failedCallbackIds: new Set(),
+        callbackIdsWithAttributes: new Set(),
+        failedCallbackIdsWithAttributes: new Set(),
         totalFailedActivities: 0,
     });
 
+    // i.e. activity totals
     context.telemetry.properties.activityCount = String(convertedActivityItems.length);
     context.telemetry.properties.failedActivityCount = String(telemetry.totalFailedActivities);
 
-    context.telemetry.properties.uniqueCommandIds = Array.from(telemetry.commandIds).join(',');
-    context.telemetry.properties.uniqueFailedCommandIds = Array.from(telemetry.failedCommandIds).join(',');
+    // i.e. commands w/ ids
+    context.telemetry.properties.uniqueCallbackIds = Array.from(telemetry.callbackIds).join(',');
+    context.telemetry.properties.uniqueFailedCallbackIds = Array.from(telemetry.failedCallbackIds).join(',');
 
-    context.telemetry.properties.uniqueCommandIdsWithAttributes = Array.from(telemetry.commandIdsWithAttributes).join(',');
-    context.telemetry.properties.uniqueFailedCommandIdsWithAttributes = Array.from(telemetry.failedCommandIdsWithAttributes).join(',');
+    // i.e. commands w/ command metadata
+    context.telemetry.properties.uniqueCallbackIdsWithAttributes = Array.from(telemetry.callbackIdsWithAttributes).join(',');
+    context.telemetry.properties.uniqueFailedCallbackIdsWithAttributes = Array.from(telemetry.failedCallbackIdsWithAttributes).join(',');
 }

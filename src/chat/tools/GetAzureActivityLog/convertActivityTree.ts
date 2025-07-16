@@ -10,7 +10,7 @@ import { TreeDataItem } from "../../../tree/ResourceGroupsItem";
 
 export type ConvertedActivityItem = {
     label?: string;
-    commandId?: string;
+    callbackId?: string;
     description?: string;
     status?: ActivityStatus;
     error?: unknown;
@@ -37,7 +37,7 @@ async function convertItemToSimpleActivityObject(context: IActionContext, item: 
 
     const convertedItem: ConvertedActivityItem = {
         label: item.label,
-        commandId: item.commandId,
+        callbackId: item.callbackId,
         description: item.description,
         status: item.status,
         error: item.error,
