@@ -934,7 +934,7 @@
         "@microsoft/vscode-azext-azureutils": "^3.3.1",
         "@microsoft/vscode-azext-utils": "^3.2.0",
         "buffer": "^6.0.3",
-        "form-data": "^4.0.1",
+        "form-data": "^4.0.4",
         "fs-extra": "^11.3.0",
         "jsonc-parser": "^2.2.1",
         "node-fetch": "^3.3.2",
