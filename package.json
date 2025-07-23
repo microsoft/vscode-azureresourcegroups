@@ -120,17 +120,20 @@
                 "inputSchema": {
                     "tree": {
                         "type": "object",
-                        "description": "Root node of the tree. Each node must have a 'label' (string) and may have a 'children' array of nodes. Example: { label: 'Root', children: [{ label: 'Child 1' }, { label: 'Child 2' }] }"
+                        "description": "Root node of the tree. Each node must have a 'label' (string) and may have a 'children' array of nodes. Optionally, nodes can specify a 'resourceType' property to show an Azure resource icon. Example: { label: 'Root', children: [{ label: 'App Service', resourceType: 'Microsoft.Web/sites' }, { label: 'Resource Group', resourceType: 'Microsoft.Resources/resourceGroups' }] }"
                     }
                 },
-                "modelDescription": "Displays a tree view from a JSON structure. The input must be an object with a 'label' property and optional 'children' array. All nodes must use 'label' for display text.",
+                "modelDescription": "Displays a tree view from a JSON structure. The input must be an object with a 'label' property and optional 'children' array. Nodes can specify a 'resourceType' property to show an Azure resource icon. Supported resource types include: Microsoft.Web/sites, Microsoft.Resources/resourceGroups, Microsoft.KeyVault/vaults, Microsoft.Storage/storageAccounts, Microsoft.DocumentDB/databaseAccounts, Microsoft.ContainerInstance/containerGroups, Microsoft.ManagedIdentity/userAssignedIdentities.",
                 "name": "lmTool_showTreeView",
                 "canBeReferencedInPrompt": true,
                 "toolReferenceName": "lmToolShowTreeView",
-                "userDescription": "Displays a tree view from a JSON structure. Input must use 'label' for node names and 'children' for sub-nodes. Example: { tree: { label: 'Root', children: [{ label: 'Child 1' }] } }.",
+                "userDescription": "Displays a tree view from a JSON structure. Input must use 'label' for node names and 'children' for sub-nodes. To show Azure resource icons, add a 'resourceType' property to a node. Example: { tree: { label: 'Root', children: [{ label: 'App Service', resourceType: 'Microsoft.Web/sites' }, { label: 'Resource Group', resourceType: 'Microsoft.Resources/resourceGroups' }] } }.",
                 "tags": [
                     "tree",
-                    "lmtool"
+                    "lmtool",
+                    "azure",
+                    "resourceType",
+                    "icon"
                 ]
             }
         ],
