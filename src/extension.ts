@@ -115,6 +115,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
         registerChatStandInParticipantIfNeeded(context);
         registerLMTools();
+        // Register LM Tool Tree View
+        const { registerLmToolTreeView } = await import('./registerLmToolTreeView');
+        registerLmToolTreeView(context);
     });
 
     const extensionManager = new ResourceGroupsExtensionManager()

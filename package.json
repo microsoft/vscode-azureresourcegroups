@@ -113,22 +113,27 @@
                 "tags": [
                     "azure"
                 ]
+            },
+            {
+                "displayName": "LM Tool: Show Tree View",
+                "icon": "$(list-tree)",
+                "inputSchema": {
+                    "tree": {
+                        "type": "object",
+                        "description": "Root node of the tree. Each node must have a 'label' (string) and may have a 'children' array of nodes. Example: { label: 'Root', children: [{ label: 'Child 1' }, { label: 'Child 2' }] }"
+                    }
+                },
+                "modelDescription": "Displays a tree view from a JSON structure. The input must be an object with a 'label' property and optional 'children' array. All nodes must use 'label' for display text.",
+                "name": "lmTool_showTreeView",
+                "canBeReferencedInPrompt": true,
+                "toolReferenceName": "lmToolShowTreeView",
+                "userDescription": "Displays a tree view from a JSON structure. Input must use 'label' for node names and 'children' for sub-nodes. Example: { tree: { label: 'Root', children: [{ label: 'Child 1' }] } }.",
+                "tags": [
+                    "tree",
+                    "lmtool"
+                ]
             }
         ],
-        "terminal": {
-            "profiles": [
-                {
-                    "id": "azureResourceGroups.cloudShellBash",
-                    "title": "%azureResourceGroups.cloudShellBash%",
-                    "icon": "$(azure)"
-                },
-                {
-                    "id": "azureResourceGroups.cloudShellPowerShell",
-                    "title": "%azureResourceGroups.cloudShellPowerShell%",
-                    "icon": "$(azure)"
-                }
-            ]
-        },
         "x-azResources": {
             "commands": [
                 {
@@ -209,10 +214,9 @@
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.createResource",
-                "title": "Create Resource...",
-                "category": "Azure",
-                "icon": "$(add)"
+                "command": "lmTool.showTreeView",
+                "title": "Show LM Tool Tree View",
+                "category": "LM Tool"
             },
             {
                 "command": "azureResourceGroups.deleteResourceGroupV2",
@@ -382,6 +386,12 @@
         "views": {
             "azure": [
                 {
+                    "id": "lmToolTreeView",
+                    "name": "LM Tool Tree View",
+                    "visibility": "visible",
+                    "icon": "$(list-tree)"
+                },
+                {
                     "id": "azureFocusView",
                     "name": "Focused Resources",
                     "visibility": "hidden",
@@ -455,6 +465,12 @@
                 }
             ],
             "view/title": [
+                {
+                    "id": "lmToolTreeView",
+                    "name": "LM Tool Tree View",
+                    "visibility": "visible",
+                    "icon": "$(list-tree)"
+                },
                 {
                     "command": "azureResourceGroups.createResource",
                     "when": "view == azureResourceGroups",
