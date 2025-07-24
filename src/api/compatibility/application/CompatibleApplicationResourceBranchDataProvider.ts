@@ -32,7 +32,7 @@ export class CompatibleApplicationResourceBranchDataProvider<TResource extends A
         } catch (error) {
             const pError = parseError(error);
             ext.outputChannel.appendLog(l10n.t('Error resolving "{0}": {1}', element.id, pError.message));
-            throw new Error(pError.message);
+            throw pError;
         }
 
         // if the resolver returns undefined without throwing an error, we treat it as a failure to resolve
