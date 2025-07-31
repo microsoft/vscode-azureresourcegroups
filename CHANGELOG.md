@@ -1,5 +1,14 @@
 # Change Log
 
+## 0.11.1 - 2025-07-31
+### Added
+* [[1177](https://github.com/microsoft/vscode-azureresourcegroups/pull/1177)] Add Copilot telemetry and log VS Code command IDs for `GetAzureActivityLog` LM tool
+
+### Changed
+* [[1187](https://github.com/microsoft/vscode-azureresourcegroups/pull/1187)] Only show the live timer when running `createResourceGroup`
+* [[1181](https://github.com/microsoft/vscode-azureresourcegroups/pull/1181)] Change the sparkle icon to the Copilot icon
+* [[1180](https://github.com/microsoft/vscode-azureresourcegroups/pull/1180)] Improve error handling when resolving branch resources
+
 ## 0.11.0 - 2025-07-02
 ### Overview
 This release brings Copilot integration to the Azure activity log. Users can now leverage Copilot to gain insights from the Azure activity log by clicking the new sparkle icon in the top right corner. Additionally, client extensions can now provide enhanced context to the shared Azure Resources activity log using `ActivityAttributes`, allowing them to incrementally contribute detailed command data and metadata. This enables Copilot to deliver more relevant and informative responses for users.
