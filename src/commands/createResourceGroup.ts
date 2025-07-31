@@ -22,8 +22,9 @@ export async function createResourceGroup(context: IActionContext, node?: Subscr
     const wizardContext: IResourceGroupWizardContext & ExecuteActivityContext = {
         ...context,
         ...createSubscriptionContext(subscription),
+        ...await createActivityContext(),
         suppress403Handling: true,
-        ...(await createActivityContext()),
+        suppressNotification: true,
     };
 
     const title: string = localize('createResourceGroup', 'Create Resource Group');
