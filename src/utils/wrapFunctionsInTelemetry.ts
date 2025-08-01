@@ -66,6 +66,7 @@ export function wrapFunctionsInTelemetry<TFunctions extends ObjectWithFunctions>
                 context.errorHandling.rethrow = true;
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.suppressReportIssue = true;
+                context.errorHandling.forceIncludeInReportIssueCommand = true;
                 options?.beforeHook?.(context);
                 try {
                     return await func(...args);
@@ -98,6 +99,7 @@ export function wrapFunctionsInTelemetrySync<TFunctions extends ObjectWithFuncti
                 context.errorHandling.rethrow = true;
                 context.errorHandling.suppressDisplay = true;
                 context.errorHandling.suppressReportIssue = true;
+                context.errorHandling.forceIncludeInReportIssueCommand = true;
                 options?.beforeHook?.(context);
                 try {
                     return func(...args);
