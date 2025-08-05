@@ -19,8 +19,8 @@ export function getAzExtResourceType(resource: { type: string; kind?: string; })
     const type = resource.type.toLowerCase();
     const kind = resource.kind?.toLowerCase() || '';
 
-    switch (type) {
-        case 'microsoft.web/sites':
+    switch (true) {
+        case type === 'microsoft.web/sites':
             // Logic apps, function apps, and app services all have the same type
             if (kind.includes(FunctionAppKind) && kind.includes(LogicAppKind)) {
                 return AzExtResourceType.LogicApp;
@@ -30,13 +30,17 @@ export function getAzExtResourceType(resource: { type: string; kind?: string; })
                 return AzExtResourceType.AppServices;
             }
 
-        case 'microsoft.machinelearningservices/workspaces':
+        case type === 'microsoft.machinelearningservices/workspaces':
             // Azure Machine Learning Workspace and Azure Foundry have the same type
             if (kind.includes(AiFoundryProjectKind)) {
                 return AzExtResourceType.AiFoundry;
             } else {
                 return AzExtResourceType.MachineLearningWorkspace;
             }
+
+        // Example: Microsoft.DurableTask/schedulers/{schedulerName}/taskhubs
+        case type.startsWith('microsoft.durabletask') && type.endsWith('taskhubs'):
+            return AzExtResourceType.DurableTaskHub;
 
         default:
             return azureTypeToAzExtResourceTypeMap[type];

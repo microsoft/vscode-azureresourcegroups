@@ -39,6 +39,7 @@ export enum AzExtResourceType {
     DevTestLabs = 'DevTestLabs',
     Disks = 'Disks',
     DurableTaskScheduler = 'DurableTaskScheduler',
+    DurableTaskHub = 'DurableTaskHub',
     EventGridDomains = 'EventGridDomains',
     EventGridEventSubscriptions = 'EventGridEventSubscriptions',
     EventGridTopics = 'EventGridTopics',
