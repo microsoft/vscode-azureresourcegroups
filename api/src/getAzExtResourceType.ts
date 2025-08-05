@@ -38,7 +38,7 @@ export function getAzExtResourceType(resource: { type: string; kind?: string; })
                 return AzExtResourceType.MachineLearningWorkspace;
             }
 
-        // Example: Microsoft.DurableTask/schedulers/{schedulerName}/taskhubs
+        // Microsoft.DurableTask/schedulers/{schedulerName}/taskhubs
         case type.startsWith('microsoft.durabletask') && type.endsWith('taskhubs'):
             return AzExtResourceType.DurableTaskHub;
 
