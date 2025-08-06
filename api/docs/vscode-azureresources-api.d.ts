@@ -65,6 +65,7 @@ export declare enum AzExtResourceType {
     DevTestLabs = "DevTestLabs",
     Disks = "Disks",
     DurableTaskScheduler = "DurableTaskScheduler",
+    DurableTaskHub = "DurableTaskHub",
     EventGridDomains = "EventGridDomains",
     EventGridEventSubscriptions = "EventGridEventSubscriptions",
     EventGridTopics = "EventGridTopics",
@@ -490,4 +491,5 @@ export declare interface Wrapper {
     unwrap<T>(): T;
 }
 
-export { }
+export { };
+
