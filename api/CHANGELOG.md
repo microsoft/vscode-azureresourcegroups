@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## [2.5.1] - 2025-08-06
+
+* Add `DurableTaskHub` resource type
+
 ## [2.5.0] - 2025-04-15
 
 * Add `revealWorkspaceResource` function to the resources API.
