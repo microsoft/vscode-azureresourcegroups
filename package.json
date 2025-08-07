@@ -943,8 +943,5 @@
         "vscode-nls": "^5.0.1",
         "vscode-uri": "^3.0.7",
         "ws": "^8.17.1"
-    },
-    "overrides": {
-        "@types/vinyl": "2.0.12"
     }
 }
