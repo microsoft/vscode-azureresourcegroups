@@ -116,7 +116,7 @@ function connectSocket(ipcHandle: string, url: string) {
     const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || undefined;
     let agent: http.Agent | undefined = undefined;
     if (proxy) {
-        agent = url.startsWith('ws:') || url.startsWith('http:') ? new HttpProxyAgent(proxy) : new HttpsProxyAgent(proxy);
+        agent = url.startsWith('ws:') || url.startsWith('http:') ? new HttpProxyAgent(proxy) as unknown as http.Agent : new HttpsProxyAgent(proxy) as unknown as http.Agent;
     }
 
     // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
