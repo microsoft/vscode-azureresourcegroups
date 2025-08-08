@@ -92,7 +92,6 @@ async function resize(accessToken: string, terminalUri: string) {
         }
 
         await delay(1000 * (i + 1));
-        continue;
     }
 
     console.log('Failed to resize terminal.');
