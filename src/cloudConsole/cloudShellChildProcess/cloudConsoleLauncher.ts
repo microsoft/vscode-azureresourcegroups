@@ -11,7 +11,6 @@
 import * as http from 'http';
 import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
-import * as request from 'request-promise';
 import * as WS from 'ws';
 import { readJSON } from './readJSON';
 
@@ -56,39 +55,44 @@ async function resize(accessToken: string, terminalUri: string) {
         }
 
         const { cols, rows } = getWindowSize();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const response = await request({
-            // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
-            uri: `${terminalUri}/size?cols=${cols}&rows=${rows}`,
+
+        // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
+        const uri = `${terminalUri}/size?cols=${cols}&rows=${rows}`;
+
+        const response = await fetch(uri, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${accessToken}`
             },
-            simple: false,
-            resolveWithFullResponse: true,
-            json: true,
             // Provide empty body so that 'Content-Type' header is set properly
-            body: {}
+            body: '{}'
         });
 
-        /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-        if (response.statusCode < 200 || response.statusCode > 299) {
-            if (response.statusCode !== 503 && response.statusCode !== 504 && response.body && response.body.error) {
-                if (response.body && response.body.error && response.body.error.message) {
-                    console.log(`${response.body.error.message} (${response.statusCode})`);
-                } else {
-                    console.log(response.statusCode, response.headers, response.body);
-                }
-                break;
-            }
-            await delay(1000 * (i + 1));
-            continue;
+        if (response.ok) {
+            return;
         }
-        /* eslint-enable @typescript-eslint/no-unsafe-member-access */
 
-        return;
+        if (response.status !== 503 && response.status !== 504) {
+            console.log('Status: ', response.status);
+            console.log('Headers: ', response.headers);
+
+            try {
+                const body = await response.text();
+                try {
+                    console.log('Body: ', JSON.parse(body));
+                } catch {
+                    console.log('Body: ', body);
+                }
+            } catch {
+                console.log('Failed to read body.');
+            }
+            break;
+        }
+
+        await delay(1000 * (i + 1));
+        continue;
     }
 
     console.log('Failed to resize terminal.');
