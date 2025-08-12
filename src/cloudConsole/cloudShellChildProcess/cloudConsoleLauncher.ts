@@ -117,14 +117,14 @@ async function sendData(socketPath: string, data: string): Promise<http.Incoming
 function connectSocket(ipcHandle: string, url: string) {
 
     const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || undefined;
-    let agent: http.Agent | undefined = undefined;
+    let agent: http.Agent | HttpProxyAgent | HttpsProxyAgent | undefined = undefined;
     if (proxy) {
         agent = url.startsWith('ws:') || url.startsWith('http:') ? new HttpProxyAgent(proxy) : new HttpsProxyAgent(proxy);
     }
 
     // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
     const ws = new WS(url, {
-        agent
+        agent: agent as unknown as http.Agent
     });
 
     ws.on('open', function () {
