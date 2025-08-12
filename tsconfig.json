@@ -21,7 +21,7 @@
                 "*"
             ],
         },
-        "skipLibCheck": true
+        "skipLibCheck": false
     },
     "exclude": [
         "node_modules",
