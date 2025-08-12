@@ -44,7 +44,7 @@ async function listIcons(): Promise<void> {
 async function cleanReadme(): Promise<void> {
     const readmePath: string = path.join(__dirname, 'README.md');
     let data: string = (await fs.readFile(readmePath)).toString();
-    data = data.replace(/<!-- region exclude-from-marketplace -->.*?<!-- endregion exclude-from-marketplace -->/gis, '');
+    data = data.replace(/<!-- region exclude-from-marketplace -->[\s\S]*?<!-- endregion exclude-from-marketplace -->/gi, '');
     await fs.writeFile(readmePath, data);
 }
 
