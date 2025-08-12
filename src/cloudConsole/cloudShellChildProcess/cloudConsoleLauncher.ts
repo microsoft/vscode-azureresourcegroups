@@ -59,7 +59,7 @@ async function resize(accessToken: string, terminalUri: string) {
         // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
         const uri = `${terminalUri}/size?cols=${cols}&rows=${rows}`;
 
-        const response = await fetch(uri, {
+        const response = await fetch(uri, { // CodeQL [SM04580] The url of this outgoing request is not controlled by users. This code is run client-side.
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
