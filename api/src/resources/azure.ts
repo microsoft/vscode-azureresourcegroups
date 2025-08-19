@@ -23,6 +23,7 @@ export interface AzureAuthentication {
      * Gets a VS Code authentication session for an Azure subscription.
      *
      * @param scopes - The scopes for which the authentication is needed. Use AuthenticationSessionRequest for supporting challenge requests.
+     * Note: use of AuthenticationSessionRequest requires VS Code v1.104
      *
      * @returns A VS Code authentication session or undefined, if none could be obtained.
      */
