@@ -18,7 +18,7 @@
     "license": "MIT",
     "devDependencies": {
         "@types/node": "^16.0.0",
-        "@types/vscode": "^1.90.0"
+        "@types/vscode": "1.90.0"
     },
     "peerDependencies": {
         "@azure/ms-rest-azure-env": "^2.0.0"
