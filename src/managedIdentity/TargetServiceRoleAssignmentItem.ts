@@ -25,13 +25,13 @@ export class TargetServiceRoleAssignmentItem implements TreeElementBase {
 
     async getChildren(): Promise<TreeElementBase[]> {
         return await callWithTelemetryAndErrorHandling('TargetServiceRoleAssignmentItem.getChildren', async (context: IActionContext) => {
-            const children = await createRoleDefinitionsItems(context, this.subscription, this.msi);
+            const children = await createRoleDefinitionsItems(context, this.subscription, this.msi, this.subscription.subscriptionId);
 
             if (this._loadedAllSubscriptions) {
                 // filter out this sub since it's already loaded
                 const subscriptions = (await (await ext.subscriptionProviderFactory()).getSubscriptions(false)).filter(s => s.subscriptionId !== this.subscription.subscriptionId);
                 await Promise.allSettled(subscriptions.map(async (subscription) => {
-                    children.push(...await createRoleDefinitionsItems(context, subscription, this.msi));
+                    children.push(...await createRoleDefinitionsItems(context, subscription, this.msi, this.subscription.subscriptionId));
                 }));
             }
 
