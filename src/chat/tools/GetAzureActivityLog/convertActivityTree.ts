@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ActivityAttributes, ActivityChildItemBase, ActivityChildType, IActionContext } from "@microsoft/vscode-azext-utils";
+import { ActivityAttributes, ActivityChildItemBase, ActivityChildType } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../../extensionVariables";
 import { ActivityItem, ActivityStatus } from "../../../tree/activityLog/ActivityItem";
 import { TreeDataItem } from "../../../tree/ResourceGroupsItem";
+import { GetAzureActivityLogContext } from "./GetAzureActivityLogContext";
 
 export type ConvertedActivityItem = {
     label?: string;
@@ -25,14 +26,19 @@ type ConvertedActivityChildItem = {
     children?: ConvertedActivityChildItem[];
 };
 
-export async function convertActivityTreeToSimpleObjectArray(context: IActionContext): Promise<ConvertedActivityItem[]> {
+export async function convertActivityTreeToSimpleObjectArray(context: GetAzureActivityLogContext): Promise<ConvertedActivityItem[]> {
     const treeItems: TreeDataItem[] = await ext.activityLogTree.getChildren() ?? [];
     return Promise.all(treeItems.map(treeItem => convertItemToSimpleActivityObject(context, treeItem)));
 }
 
-async function convertItemToSimpleActivityObject(context: IActionContext, item: TreeDataItem): Promise<ConvertedActivityItem> {
+async function convertItemToSimpleActivityObject(context: GetAzureActivityLogContext, item: TreeDataItem): Promise<ConvertedActivityItem> {
     if (!(item instanceof ActivityItem)) {
         return {};
+    }
+
+    if (context.selectedTreeItemId && item.id === context.selectedTreeItemId) {
+        context.hasSelectedTreeItem = true;
+        context.selectedTreeItemCallbackId = item.callbackId;
     }
 
     const convertedItem: ConvertedActivityItem = {
@@ -47,14 +53,19 @@ async function convertItemToSimpleActivityObject(context: IActionContext, item: 
     if (item.getChildren) {
         const children = await item.getChildren() ?? [];
         if (children.length > 0) {
-            convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child as ActivityChildItemBase)));
+            convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child as ActivityChildItemBase, item.callbackId)));
         }
     }
 
     return convertedItem;
 }
 
-async function convertItemToSimpleActivityChildObject(context: IActionContext, item: ActivityChildItemBase): Promise<ConvertedActivityChildItem> {
+async function convertItemToSimpleActivityChildObject(context: GetAzureActivityLogContext, item: ActivityChildItemBase, callbackId?: string): Promise<ConvertedActivityChildItem> {
+    if (context.selectedTreeItemId && item.id === context.selectedTreeItemId) {
+        context.hasSelectedTreeItem = true;
+        context.selectedTreeItemCallbackId = callbackId;
+    }
+
     const convertedItem: ConvertedActivityChildItem = {
         label: item.label,
         type: item.activityType,
@@ -65,7 +76,7 @@ async function convertItemToSimpleActivityChildObject(context: IActionContext, i
         // If there are more children, recursively convert them
         const children = await item.getChildren() ?? [];
         if (children.length > 0) {
-            convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child)));
+            convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child, callbackId)));
         }
     }
 

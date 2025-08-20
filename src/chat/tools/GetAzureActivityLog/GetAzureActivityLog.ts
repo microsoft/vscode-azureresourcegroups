@@ -3,20 +3,37 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtLMTool, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtLMTool } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { ext } from '../../../extensionVariables';
+import { getActivityLogTreeItemId } from '../../askAgentAboutActivityLog';
 import { convertActivityTreeToSimpleObjectArray, ConvertedActivityItem } from './convertActivityTree';
+import { GetAzureActivityLogContext } from './GetAzureActivityLogContext';
 
 export class GetAzureActivityLog implements AzExtLMTool<void> {
-    public async invoke(context: IActionContext): Promise<vscode.LanguageModelToolResult> {
+    public async invoke(context: GetAzureActivityLogContext): Promise<vscode.LanguageModelToolResult> {
+        context.selectedTreeItemId = getActivityLogTreeItemId();
+
         const convertedActivityItems: ConvertedActivityItem[] = await convertActivityTreeToSimpleObjectArray(context);
         logTelemetry(context, convertedActivityItems);
+
+        if (context.selectedTreeItemId && !context.hasSelectedTreeItem) {
+            const warning: string = vscode.l10n.t('Internal error: Tree item ID mismatch. We were unable to instruct Copilot to focus on the selected items.');
+            void vscode.window.showWarningMessage(warning);
+            ext.outputChannel.warn(warning);
+        }
 
         if (convertedActivityItems.length === 0) {
             return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No activity log items found.')]);
         }
 
-        return new vscode.LanguageModelToolResult(convertedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))));
+        let lmTextParts: vscode.LanguageModelTextPart[] = [];
+        if (context.hasSelectedTreeItem) {
+            lmTextParts.push(new vscode.LanguageModelTextPart(`Focus on the selected tree item with id: ${context.selectedTreeItemId}.`));
+        }
+
+        lmTextParts = lmTextParts.concat(convertedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))));
+        return new vscode.LanguageModelToolResult(lmTextParts);
     }
 }
 
@@ -28,7 +45,7 @@ type TelemetryCounters = {
     totalFailedActivities: number;
 };
 
-function logTelemetry(context: IActionContext, convertedActivityItems: ConvertedActivityItem[]) {
+function logTelemetry(context: GetAzureActivityLogContext, convertedActivityItems: ConvertedActivityItem[]) {
     const telemetry: TelemetryCounters = convertedActivityItems.reduce<TelemetryCounters>((telemetry, activityItem) => {
         if (activityItem.error) {
             telemetry.totalFailedActivities++;
@@ -58,6 +75,12 @@ function logTelemetry(context: IActionContext, convertedActivityItems: Converted
         failedCallbackIdsWithAttributes: new Set(),
         totalFailedActivities: 0,
     });
+
+    if (context.selectedTreeItemId) {
+        context.telemetry.properties.selectedTreeItemId = context.selectedTreeItemId;
+        context.telemetry.properties.hasSelectedTreeItem = context.hasSelectedTreeItem ? 'true' : 'false';
+        context.telemetry.properties.selectedTreeItemCallbackId = context.selectedTreeItemCallbackId;
+    }
 
     // i.e. total activities
     context.telemetry.properties.activityCount = String(convertedActivityItems.length);

@@ -130,7 +130,7 @@ export function registerCommands(): void {
         node.setAllSubscriptionsLoaded();
         ext.azureTreeState.notifyChildrenChanged(node.id);
     });
-    registerCommand("azureResourceGroups.askAgentAboutActivityLog", askAgentAboutActivityLog);
+    registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLog", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
 }
 
