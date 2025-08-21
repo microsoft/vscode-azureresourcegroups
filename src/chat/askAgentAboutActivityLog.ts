@@ -10,19 +10,19 @@ const genericActivityLogPrompt: string = vscode.l10n.t('Help explain important i
 
 export async function askAgentAboutActivityLog(_: IActionContext, item?: ActivityChildItemBase): Promise<void> {
     if (item) {
-        activityLogTreeItemId = item.id;
+        selectedActivityItemId = item.id;
     }
 
     await vscode.commands.executeCommand("workbench.action.chat.newChat");
     await vscode.commands.executeCommand("workbench.action.chat.open", { mode: 'agent', query: genericActivityLogPrompt });
 }
 
-let activityLogTreeItemId: string | undefined;
+let selectedActivityItemId: string | undefined;
 
-export function getActivityLogTreeItemId(): string | undefined {
-    return activityLogTreeItemId;
+export function getSelectedActivityItemId(): string | undefined {
+    return selectedActivityItemId;
 }
 
-export function resetActivityLogTreeItemId(): void {
-    activityLogTreeItemId = undefined;
+export function resetSelectedActivityItemId(): void {
+    selectedActivityItemId = undefined;
 }
