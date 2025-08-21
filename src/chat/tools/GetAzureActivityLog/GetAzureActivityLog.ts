@@ -22,7 +22,7 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
         }
 
         if (context.selectedTreeItemId && !context.hasSelectedTreeItem) {
-            const warning: string = vscode.l10n.t('Tree item ID mismatch. We were unable to instruct Copilot to focus on the selected item.');
+            const warning: string = vscode.l10n.t('Tree item ID mismatch - unable to instruct Copilot to focus on the selected item.');
             void vscode.window.showWarningMessage(warning);
             ext.outputChannel.warn(warning);
         }
