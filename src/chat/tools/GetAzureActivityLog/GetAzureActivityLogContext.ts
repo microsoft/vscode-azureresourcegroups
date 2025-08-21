@@ -18,7 +18,9 @@ export interface GetAzureActivityLogContext extends IActionContext {
     selectedTreeItemCallbackId?: string;
 
     /**
-     * Boolean value confirming that a `selectedTreeItemId` was both provided and found for the tree data set.
+     * Boolean value confirming that:
+     * 1. A `selectedTreeItemId` was provided via user selection,
+     * 2. The matching tree item was actually found in the activity tree data set.
      */
     hasSelectedTreeItem?: boolean;
 
