@@ -13,6 +13,7 @@ export type ConvertedActivityItem = {
     label?: string;
     callbackId?: string;
     description?: string;
+    selected?: boolean;
     status?: ActivityStatus;
     error?: unknown;
     activityAttributes?: ActivityAttributes;
@@ -22,6 +23,7 @@ export type ConvertedActivityItem = {
 type ConvertedActivityChildItem = {
     label?: string;
     description?: string;
+    selected?: boolean;
     type?: ActivityChildType;
     children?: ConvertedActivityChildItem[];
 };
@@ -36,11 +38,6 @@ async function convertItemToSimpleActivityObject(context: GetAzureActivityLogCon
         return {};
     }
 
-    if (context.selectedTreeItemId && item.id === context.selectedTreeItemId) {
-        context.hasSelectedTreeItem = true;
-        context.selectedTreeItemCallbackId = item.callbackId;
-    }
-
     const convertedItem: ConvertedActivityItem = {
         label: item.label,
         callbackId: item.callbackId,
@@ -49,6 +46,12 @@ async function convertItemToSimpleActivityObject(context: GetAzureActivityLogCon
         error: item.error,
         activityAttributes: item.activityAttributes,
     };
+
+    if (context.selectedTreeItemId && item.id === context.selectedTreeItemId) {
+        convertedItem.selected = true;
+        context.hasSelectedTreeItem = true;
+        context.selectedTreeItemCallbackId = item.callbackId;
+    }
 
     if (item.getChildren) {
         const children = await item.getChildren() ?? [];
@@ -61,16 +64,17 @@ async function convertItemToSimpleActivityObject(context: GetAzureActivityLogCon
 }
 
 async function convertItemToSimpleActivityChildObject(context: GetAzureActivityLogContext, item: ActivityChildItemBase, callbackId?: string): Promise<ConvertedActivityChildItem> {
-    if (context.selectedTreeItemId && item.id === context.selectedTreeItemId) {
-        context.hasSelectedTreeItem = true;
-        context.selectedTreeItemCallbackId = callbackId;
-    }
-
     const convertedItem: ConvertedActivityChildItem = {
         label: item.label,
         type: item.activityType,
         description: item.description,
     };
+
+    if (context.selectedTreeItemId && item.id === context.selectedTreeItemId) {
+        convertedItem.selected = true;
+        context.hasSelectedTreeItem = true;
+        context.selectedTreeItemCallbackId = callbackId;
+    }
 
     if (item.getChildren) {
         // If there are more children, recursively convert them

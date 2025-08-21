@@ -18,7 +18,7 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
         logTelemetry(context, convertedActivityItems);
 
         if (context.selectedTreeItemId && !context.hasSelectedTreeItem) {
-            const warning: string = vscode.l10n.t('Internal error: Tree item ID mismatch. We were unable to instruct Copilot to focus on the selected items.');
+            const warning: string = vscode.l10n.t('Tree item ID mismatch. We were unable to instruct Copilot to focus on the selected item.');
             void vscode.window.showWarningMessage(warning);
             ext.outputChannel.warn(warning);
         }
@@ -29,9 +29,10 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
 
         let lmTextParts: vscode.LanguageModelTextPart[] = [];
         if (context.hasSelectedTreeItem) {
-            lmTextParts.push(new vscode.LanguageModelTextPart(`Focus on the selected tree item with id: ${context.selectedTreeItemId}.`));
+            lmTextParts.push(new vscode.LanguageModelTextPart(`Focus on the tree item marked as "selected". Provide a helpful explanation of the targeted activity item. It may be helpful to incorporate information from the activity item's parent or siblings (especially any activity attributes, if they exist).`));
         }
 
+        lmTextParts.push(new vscode.LanguageModelTextPart('When explaining data from activity items, prefer explaining the data more conversationally rather than re-providing the raw json data.'));
         lmTextParts = lmTextParts.concat(convertedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))));
         return new vscode.LanguageModelToolResult(lmTextParts);
     }
