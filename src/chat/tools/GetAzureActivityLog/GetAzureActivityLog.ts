@@ -17,14 +17,14 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
         const convertedActivityItems: ConvertedActivityItem[] = await convertActivityTreeToSimpleObjectArray(context);
         logTelemetry(context, convertedActivityItems);
 
+        if (convertedActivityItems.length === 0) {
+            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No activity log items found.')]);
+        }
+
         if (context.selectedTreeItemId && !context.hasSelectedTreeItem) {
             const warning: string = vscode.l10n.t('Tree item ID mismatch. We were unable to instruct Copilot to focus on the selected item.');
             void vscode.window.showWarningMessage(warning);
             ext.outputChannel.warn(warning);
-        }
-
-        if (convertedActivityItems.length === 0) {
-            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No activity log items found.')]);
         }
 
         let lmTextParts: vscode.LanguageModelTextPart[] = [];
