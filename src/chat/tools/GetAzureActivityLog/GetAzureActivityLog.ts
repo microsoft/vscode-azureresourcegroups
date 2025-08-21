@@ -81,7 +81,7 @@ function logTelemetry(context: GetAzureActivityLogContext, convertedActivityItem
 
     if (context.selectedTreeItemId) {
         context.telemetry.properties.selectedTreeItemId = context.selectedTreeItemId;
-        context.telemetry.properties.hasSelectedTreeItem = context.hasSelectedTreeItem ? 'true' : 'false';
+        context.telemetry.properties.hasSelectedTreeItem = String(!!context.hasSelectedTreeItem);
         context.telemetry.properties.selectedTreeItemCallbackId = context.selectedTreeItemCallbackId;
     }
 
