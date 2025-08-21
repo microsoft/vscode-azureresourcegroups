@@ -27,13 +27,13 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
             ext.outputChannel.warn(warning);
         }
 
-        let lmTextParts: vscode.LanguageModelTextPart[] = [];
+        const lmTextParts: vscode.LanguageModelTextPart[] = [];
         if (context.hasSelectedTreeItem) {
             lmTextParts.push(new vscode.LanguageModelTextPart(`Focus on the tree item marked as "selected". Provide a helpful explanation of the targeted activity item. It may be helpful to incorporate information from the activity item's parent or siblings (especially any activity attributes, if they exist).`));
         }
 
         lmTextParts.push(new vscode.LanguageModelTextPart('When explaining data from activity items, prefer explaining the data more conversationally rather than re-providing the raw json data.'));
-        lmTextParts = lmTextParts.concat(convertedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))));
+        lmTextParts.push(...convertedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))));
 
         resetSelectedActivityItemId();
         return new vscode.LanguageModelToolResult(lmTextParts);
@@ -79,6 +79,7 @@ function logTelemetry(context: GetAzureActivityLogContext, convertedActivityItem
         totalFailedActivities: 0,
     });
 
+    // tree item selection
     if (context.selectedTreeItemId) {
         context.telemetry.properties.selectedTreeItemId = context.selectedTreeItemId;
         context.telemetry.properties.hasSelectedTreeItem = String(!!context.hasSelectedTreeItem);
