@@ -8,12 +8,12 @@ import { IActionContext } from "@microsoft/vscode-azext-utils";
 export interface GetAzureActivityLogContext extends IActionContext {
     /**
      * The id of the activity log tree item that was selected by the user.
-     * This id is considered optional as the user is not required to select a particular tree item.
+     * This id is considered optional as the user is not always required to select a tree item.
      */
     selectedTreeItemId?: string;
 
     /**
-     * Specifies which `callbackId` (or command id) the tree item is associated with.
+     * Specifies which `callbackId` (or command id) the selected tree item is associated with.
      */
     selectedTreeItemCallbackId?: string;
 
