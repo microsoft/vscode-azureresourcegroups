@@ -51,6 +51,7 @@ async function convertItemToSimpleActivityObject(context: GetAzureActivityLogCon
         convertedItem.selected = true;
         context.hasSelectedTreeItem = true;
         context.selectedTreeItemCallbackId = item.callbackId;
+        context.isSelectedTreeItemChild = false;
     }
 
     if (item.getChildren) {
@@ -74,6 +75,7 @@ async function convertItemToSimpleActivityChildObject(context: GetAzureActivityL
         convertedItem.selected = true;
         context.hasSelectedTreeItem = true;
         context.selectedTreeItemCallbackId = callbackId;
+        context.isSelectedTreeItemChild = true;
     }
 
     if (item.getChildren) {

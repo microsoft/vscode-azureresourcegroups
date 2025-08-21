@@ -83,6 +83,7 @@ function logTelemetry(context: GetAzureActivityLogContext, convertedActivityItem
         context.telemetry.properties.selectedTreeItemId = context.selectedTreeItemId;
         context.telemetry.properties.hasSelectedTreeItem = String(!!context.hasSelectedTreeItem);
         context.telemetry.properties.selectedTreeItemCallbackId = context.selectedTreeItemCallbackId;
+        context.telemetry.properties.isSelectedTreeItemChild = String(!!context.isSelectedTreeItemChild);
     }
 
     // i.e. total activities
