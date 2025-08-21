@@ -21,14 +21,14 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
             return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No activity log items found.')]);
         }
 
-        if (context.selectedTreeItemId && !context.hasSelectedTreeItem) {
+        if (context.selectedTreeItemId && !context.foundSelectedTreeItem) {
             const warning: string = vscode.l10n.t('Tree item ID mismatch - failed to instruct Copilot to focus on the selected item.');
             void vscode.window.showWarningMessage(warning);
             ext.outputChannel.warn(warning);
         }
 
         const lmTextParts: vscode.LanguageModelTextPart[] = [];
-        if (context.hasSelectedTreeItem) {
+        if (context.foundSelectedTreeItem) {
             lmTextParts.push(new vscode.LanguageModelTextPart(`Focus on the tree item marked as "selected". Provide a helpful explanation of the targeted activity item. It may be helpful to incorporate information from the activity item's parent or siblings (especially any activity attributes, if they exist).`));
         }
 
@@ -82,7 +82,7 @@ function logTelemetry(context: GetAzureActivityLogContext, convertedActivityItem
     // tree item selection
     if (context.selectedTreeItemId) {
         context.telemetry.properties.selectedTreeItemId = context.selectedTreeItemId;
-        context.telemetry.properties.hasSelectedTreeItem = String(!!context.hasSelectedTreeItem);
+        context.telemetry.properties.foundSelectedTreeItem = String(!!context.foundSelectedTreeItem);
         context.telemetry.properties.selectedTreeItemCallbackId = context.selectedTreeItemCallbackId;
         context.telemetry.properties.isSelectedTreeItemChild = String(!!context.isSelectedTreeItemChild);
     }

@@ -22,10 +22,10 @@ export interface GetAzureActivityLogContext extends IActionContext {
      * 1. A `selectedTreeItemId` was provided via user selection,
      * 2. The matching tree item was actually found in the activity tree data set.
      */
-    hasSelectedTreeItem?: boolean;
+    foundSelectedTreeItem?: boolean;
 
     /**
-     * Boolean value indicating whether the selected tree item was an activity child item
+     * Boolean value indicating whether the found selected tree item was an activity child
      */
     isSelectedTreeItemChild?: boolean;
 }
