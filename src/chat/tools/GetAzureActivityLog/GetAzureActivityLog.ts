@@ -6,7 +6,7 @@
 import { AzExtLMTool } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ext } from '../../../extensionVariables';
-import { getActivityLogTreeItemId } from '../../askAgentAboutActivityLog';
+import { getActivityLogTreeItemId, resetActivityLogTreeItemId } from '../../askAgentAboutActivityLog';
 import { convertActivityTreeToSimpleObjectArray, ConvertedActivityItem } from './convertActivityTree';
 import { GetAzureActivityLogContext } from './GetAzureActivityLogContext';
 
@@ -34,6 +34,8 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
 
         lmTextParts.push(new vscode.LanguageModelTextPart('When explaining data from activity items, prefer explaining the data more conversationally rather than re-providing the raw json data.'));
         lmTextParts = lmTextParts.concat(convertedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))));
+
+        resetActivityLogTreeItemId();
         return new vscode.LanguageModelToolResult(lmTextParts);
     }
 }

@@ -22,3 +22,7 @@ let activityLogTreeItemId: string | undefined;
 export function getActivityLogTreeItemId(): string | undefined {
     return activityLogTreeItemId;
 }
+
+export function resetActivityLogTreeItemId(): void {
+    activityLogTreeItemId = undefined;
+}
