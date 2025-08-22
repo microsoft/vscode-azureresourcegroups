@@ -4,28 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { ActivitySelectionCache } from "../../askAgentAboutActivityLog/ActivitySelectionCache";
 
 export interface GetAzureActivityLogContext extends IActionContext {
-    /**
-     * The id of the activity log tree item that was selected by the user.
-     * This id is considered optional as the user is not always required to select a tree item.
-     */
-    selectedTreeItemId?: string;
-
-    /**
-     * Specifies which `callbackId` (or command id) the selected tree item is associated with.
-     */
-    selectedTreeItemCallbackId?: string;
-
-    /**
-     * Boolean value confirming that:
-     * 1. A `selectedTreeItemId` was provided via user selection,
-     * 2. The matching tree item was actually found in the activity tree data set.
-     */
-    foundSelectedTreeItem?: boolean;
-
-    /**
-     * Boolean value indicating whether the found selected tree item was an activity child
-     */
-    isSelectedTreeItemChild?: boolean;
+    activitySelectionCache: ActivitySelectionCache;
 }

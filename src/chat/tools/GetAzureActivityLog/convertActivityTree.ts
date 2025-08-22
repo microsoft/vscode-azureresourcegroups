@@ -13,7 +13,6 @@ export type ConvertedActivityItem = {
     label?: string;
     callbackId?: string;
     description?: string;
-    selected?: boolean;
     status?: ActivityStatus;
     error?: unknown;
     activityAttributes?: ActivityAttributes;
@@ -23,19 +22,25 @@ export type ConvertedActivityItem = {
 type ConvertedActivityChildItem = {
     label?: string;
     description?: string;
-    selected?: boolean;
     type?: ActivityChildType;
     children?: ConvertedActivityChildItem[];
 };
 
 export async function convertActivityTreeToSimpleObjectArray(context: GetAzureActivityLogContext): Promise<ConvertedActivityItem[]> {
     const treeItems: TreeDataItem[] = await ext.activityLogTree.getChildren() ?? [];
-    return Promise.all(treeItems.map(treeItem => convertItemToSimpleActivityObject(context, treeItem)));
+    return (await Promise.all(treeItems.map(treeItem => convertItemToSimpleActivityObject(context, treeItem)))).filter(item => !!item) as ConvertedActivityItem[];
 }
 
-async function convertItemToSimpleActivityObject(context: GetAzureActivityLogContext, item: TreeDataItem): Promise<ConvertedActivityItem> {
+export type UnselectedActivityItem = ConvertedActivityItem & {
+    /**
+     * Internal flag to mark for removal
+     */
+    _unselect?: boolean;
+};
+
+async function convertItemToSimpleActivityObject(context: GetAzureActivityLogContext, item: TreeDataItem): Promise<ConvertedActivityItem | undefined> {
     if (!(item instanceof ActivityItem)) {
-        return {};
+        return undefined;
     }
 
     const convertedItem: ConvertedActivityItem = {
@@ -47,11 +52,8 @@ async function convertItemToSimpleActivityObject(context: GetAzureActivityLogCon
         activityAttributes: item.activityAttributes,
     };
 
-    if (context.selectedTreeItemId && item.id === context.selectedTreeItemId) {
-        convertedItem.selected = true;
-        context.foundSelectedTreeItem = true;
-        context.isSelectedTreeItemChild = false;
-        context.selectedTreeItemCallbackId = item.callbackId;
+    if (context.activitySelectionCache.selectionCount && !context.activitySelectionCache.hasActivityItem(item.id)) {
+        (convertedItem as UnselectedActivityItem)._unselect = true;
     }
 
     if (item.getChildren) {
@@ -70,13 +72,6 @@ async function convertItemToSimpleActivityChildObject(context: GetAzureActivityL
         type: item.activityType,
         description: item.description,
     };
-
-    if (context.selectedTreeItemId && item.id === context.selectedTreeItemId) {
-        convertedItem.selected = true;
-        context.foundSelectedTreeItem = true;
-        context.isSelectedTreeItemChild = true;
-        context.selectedTreeItemCallbackId = callbackId;
-    }
 
     if (item.getChildren) {
         // If there are more children, recursively convert them

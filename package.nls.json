@@ -47,6 +47,7 @@
     "chatParticipants.azure.fullName": "Azure",
     "azureResourceGroups.loadAllSubscriptionRoleAssignments": "Load all role assignments across subscriptions...",
     "azureResourceGroups.askAgentAboutActivityLog": "Ask Copilot about the Azure Activity Log",
+    "azureResourceGroups.askAgentAboutActivityLogItem": "Ask Copilot about this activity",
     "azureResourceGroups.askAzure": {
         "message": "Ask @azure",
         "comment": [

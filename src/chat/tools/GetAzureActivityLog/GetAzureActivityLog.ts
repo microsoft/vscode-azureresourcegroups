@@ -3,99 +3,45 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtLMTool } from '@microsoft/vscode-azext-utils';
+import { AzExtLMTool, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ext } from '../../../extensionVariables';
-import { getSelectedActivityItemId, resetSelectedActivityItemId } from '../../askAgentAboutActivityLog';
-import { convertActivityTreeToSimpleObjectArray, ConvertedActivityItem } from './convertActivityTree';
+import { activitySelectionCache } from '../../askAgentAboutActivityLog/ActivitySelectionCache';
+import { convertActivityTreeToSimpleObjectArray, ConvertedActivityItem, UnselectedActivityItem } from './convertActivityTree';
 import { GetAzureActivityLogContext } from './GetAzureActivityLogContext';
+import { logActivityTreeTelemetry, logSelectedActivityTelemetry } from './logTelemetry';
 
 export class GetAzureActivityLog implements AzExtLMTool<void> {
-    public async invoke(context: GetAzureActivityLogContext): Promise<vscode.LanguageModelToolResult> {
-        context.selectedTreeItemId = getSelectedActivityItemId();
+    public async invoke(invocationContext: IActionContext): Promise<vscode.LanguageModelToolResult> {
+        const context: GetAzureActivityLogContext = Object.assign(invocationContext, { activitySelectionCache });
 
         const convertedActivityItems: ConvertedActivityItem[] = await convertActivityTreeToSimpleObjectArray(context);
-        logTelemetry(context, convertedActivityItems);
+        logActivityTreeTelemetry(context, convertedActivityItems);
 
-        if (convertedActivityItems.length === 0) {
-            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No activity log items found.')]);
+        let selectedActivityItems: ConvertedActivityItem[] = convertedActivityItems;
+        if (context.activitySelectionCache.selectionCount) {
+            selectedActivityItems = convertedActivityItems.filter(item => !(item as UnselectedActivityItem)._unselect);
+            logSelectedActivityTelemetry(context, selectedActivityItems);
         }
 
-        if (context.selectedTreeItemId && !context.foundSelectedTreeItem) {
-            const warning: string = vscode.l10n.t('Tree item ID mismatch - failed to instruct Copilot to focus on the selected item.');
-            void vscode.window.showWarningMessage(warning);
+        // If we weren't able to verify all of the selected items, fallback to providing the entire activity tree
+        if (selectedActivityItems.length !== context.activitySelectionCache.selectionCount) {
+            selectedActivityItems = convertedActivityItems;
+
+            const warning: string = vscode.l10n.t('Failed to match some of the selected item(s). Falling back to providing the entire activity log tree.');
+            void context.ui.showWarningMessage(warning);
             ext.outputChannel.warn(warning);
         }
 
-        const lmTextParts: vscode.LanguageModelTextPart[] = [];
-        if (context.foundSelectedTreeItem) {
-            lmTextParts.push(new vscode.LanguageModelTextPart(`Focus on the tree item marked as "selected". Provide a helpful explanation of the targeted activity item. It may be helpful to incorporate information from the activity item's parent or siblings (especially any activity attributes, if they exist).`));
+        context.activitySelectionCache.resetActivityItems();
+
+        if (selectedActivityItems.length === 0) {
+            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No activity log items found.')]);
         }
 
-        lmTextParts.push(new vscode.LanguageModelTextPart('When explaining data from activity items, prefer explaining the data more conversationally rather than re-providing the raw json data.'));
-        lmTextParts.push(...convertedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))));
-
-        resetSelectedActivityItemId();
-        return new vscode.LanguageModelToolResult(lmTextParts);
+        return new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart('When explaining data from activity items, prefer explaining the data more conversationally rather than re-providing the raw json data.'),
+            ...selectedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))),
+        ]);
     }
-}
-
-type TelemetryCounters = {
-    callbackIds: Set<string>;
-    failedCallbackIds: Set<string>;
-    callbackIdsWithAttributes: Set<string>;
-    failedCallbackIdsWithAttributes: Set<string>;
-    totalFailedActivities: number;
-};
-
-function logTelemetry(context: GetAzureActivityLogContext, convertedActivityItems: ConvertedActivityItem[]) {
-    const telemetry: TelemetryCounters = convertedActivityItems.reduce<TelemetryCounters>((telemetry, activityItem) => {
-        if (activityItem.error) {
-            telemetry.totalFailedActivities++;
-        }
-
-        if (activityItem.callbackId) {
-            telemetry.callbackIds.add(activityItem.callbackId);
-            if (activityItem.activityAttributes) {
-                telemetry.callbackIdsWithAttributes.add(activityItem.callbackId);
-            }
-
-
-            if (activityItem.error) {
-                telemetry.failedCallbackIds.add(activityItem.callbackId);
-                if (activityItem.activityAttributes) {
-                    telemetry.failedCallbackIdsWithAttributes.add(activityItem.callbackId);
-                }
-            }
-        }
-
-        return telemetry;
-
-    }, {
-        callbackIds: new Set(),
-        failedCallbackIds: new Set(),
-        callbackIdsWithAttributes: new Set(),
-        failedCallbackIdsWithAttributes: new Set(),
-        totalFailedActivities: 0,
-    });
-
-    // tree item selection
-    if (context.selectedTreeItemId) {
-        context.telemetry.properties.selectedTreeItemId = context.selectedTreeItemId;
-        context.telemetry.properties.foundSelectedTreeItem = String(!!context.foundSelectedTreeItem);
-        context.telemetry.properties.selectedTreeItemCallbackId = context.selectedTreeItemCallbackId;
-        context.telemetry.properties.isSelectedTreeItemChild = String(!!context.isSelectedTreeItemChild);
-    }
-
-    // i.e. total activities
-    context.telemetry.properties.activityCount = String(convertedActivityItems.length);
-    context.telemetry.properties.failedActivityCount = String(telemetry.totalFailedActivities);
-
-    // i.e. unique command ids
-    context.telemetry.properties.uniqueCallbackIds = Array.from(telemetry.callbackIds).join(',');
-    context.telemetry.properties.uniqueFailedCallbackIds = Array.from(telemetry.failedCallbackIds).join(',');
-
-    // i.e. unique command ids w/ command metadata
-    context.telemetry.properties.uniqueCallbackIdsWithAttributes = Array.from(telemetry.callbackIdsWithAttributes).join(',');
-    context.telemetry.properties.uniqueFailedCallbackIdsWithAttributes = Array.from(telemetry.failedCallbackIdsWithAttributes).join(',');
 }
