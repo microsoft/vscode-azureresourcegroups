@@ -23,7 +23,7 @@ export async function askAgentAboutActivityLog(context: IActionContext, item?: A
                 treeItems.map(item => {
                     return {
                         id: item.id,
-                        label: (item as ActivityItem)?.label,
+                        label: (item as ActivityItem).label,
                     };
                 }),
                 {
