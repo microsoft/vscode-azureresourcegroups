@@ -59,14 +59,14 @@ async function convertItemToSimpleActivityObject(context: GetAzureActivityLogCon
     if (item.getChildren) {
         const children = await item.getChildren() ?? [];
         if (children.length > 0) {
-            convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child as ActivityChildItemBase, item.callbackId)));
+            convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child as ActivityChildItemBase)));
         }
     }
 
     return convertedItem;
 }
 
-async function convertItemToSimpleActivityChildObject(context: GetAzureActivityLogContext, item: ActivityChildItemBase, callbackId?: string): Promise<ConvertedActivityChildItem> {
+async function convertItemToSimpleActivityChildObject(context: GetAzureActivityLogContext, item: ActivityChildItemBase): Promise<ConvertedActivityChildItem> {
     const convertedItem: ConvertedActivityChildItem = {
         label: item.label,
         type: item.activityType,
@@ -77,7 +77,7 @@ async function convertItemToSimpleActivityChildObject(context: GetAzureActivityL
         // If there are more children, recursively convert them
         const children = await item.getChildren() ?? [];
         if (children.length > 0) {
-            convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child, callbackId)));
+            convertedItem.children = await Promise.all(children.map(child => convertItemToSimpleActivityChildObject(context, child)));
         }
     }
 
