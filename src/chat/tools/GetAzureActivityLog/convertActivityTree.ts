@@ -33,7 +33,7 @@ export async function convertActivityTreeToSimpleObjectArray(context: GetAzureAc
 
 export type UnselectedActivityItem = ConvertedActivityItem & {
     /**
-     * Internal flag to mark for removal
+     * Internal flag to mark item for removal
      */
     _unselect?: boolean;
 };
