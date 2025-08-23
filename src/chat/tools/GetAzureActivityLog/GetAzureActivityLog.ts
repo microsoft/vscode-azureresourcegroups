@@ -7,7 +7,7 @@ import { AzExtLMTool, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ext } from '../../../extensionVariables';
 import { ActivitySelectionCache } from '../../askAgentAboutActivityLog/ActivitySelectionCache';
-import { convertActivityTreeToSimpleObjectArray, ConvertedActivityItem, UnselectedActivityItem } from './convertActivityTree';
+import { convertActivityTreeToSimpleObjectArray, ConvertedActivityItem, ExcludedActivityItem } from './convertActivityTree';
 import { GetAzureActivityLogContext } from './GetAzureActivityLogContext';
 import { logActivityTreeTelemetry, logSelectedActivityTelemetry } from './logTelemetry';
 
@@ -20,7 +20,7 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
 
         let selectedActivityItems: ConvertedActivityItem[] = convertedActivityItems;
         if (context.activitySelectionCache.selectionCount) {
-            selectedActivityItems = convertedActivityItems.filter(item => !(item as UnselectedActivityItem)._unselect);
+            selectedActivityItems = convertedActivityItems.filter(item => !(item as ExcludedActivityItem)._exclude);
             logSelectedActivityTelemetry(context, selectedActivityItems);
         }
 

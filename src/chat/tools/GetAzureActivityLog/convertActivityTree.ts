@@ -31,11 +31,11 @@ export async function convertActivityTreeToSimpleObjectArray(context: GetAzureAc
     return (await Promise.all(treeItems.map(treeItem => convertItemToSimpleActivityObject(context, treeItem)))).filter(item => !!item) as ConvertedActivityItem[];
 }
 
-export type UnselectedActivityItem = ConvertedActivityItem & {
+export type ExcludedActivityItem = ConvertedActivityItem & {
     /**
-     * Internal flag to mark item for removal
+     * Internal flag to mark item as excluded
      */
-    _unselect?: boolean;
+    _exclude?: boolean;
 };
 
 async function convertItemToSimpleActivityObject(context: GetAzureActivityLogContext, item: TreeDataItem): Promise<ConvertedActivityItem | undefined> {
@@ -53,7 +53,7 @@ async function convertItemToSimpleActivityObject(context: GetAzureActivityLogCon
     };
 
     if (context.activitySelectionCache.selectionCount && !context.activitySelectionCache.hasActivityItem(item.id)) {
-        (convertedItem as UnselectedActivityItem)._unselect = true;
+        (convertedItem as ExcludedActivityItem)._exclude = true;
     }
 
     if (item.getChildren) {
