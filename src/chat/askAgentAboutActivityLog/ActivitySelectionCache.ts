@@ -8,7 +8,7 @@ export class ActivitySelectionCache {
     private readonly _selectedActivityItemIds: Set<string> = new Set();
 
     private constructor() {
-        // Private constructor to enforce singleton
+        // Private constructor to enforce a singleton pattern
     }
 
     static getInstance(): ActivitySelectionCache {
@@ -40,5 +40,3 @@ export class ActivitySelectionCache {
         this._selectedActivityItemIds.clear();
     }
 }
-
-export const activitySelectionCache = ActivitySelectionCache.getInstance();

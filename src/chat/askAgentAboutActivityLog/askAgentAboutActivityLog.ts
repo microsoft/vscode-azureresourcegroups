@@ -8,11 +8,13 @@ import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
 import { ActivityItem } from "../../tree/activityLog/ActivityItem";
 import { TreeDataItem } from "../../tree/ResourceGroupsItem";
-import { activitySelectionCache } from "./ActivitySelectionCache";
+import { ActivitySelectionCache } from "./ActivitySelectionCache";
 
 const genericActivityLogPrompt: string = vscode.l10n.t('Help explain important information from my Azure activity log.');
 
 export async function askAgentAboutActivityLog(context: IActionContext, item?: ActivityChildItemBase): Promise<void> {
+    const activitySelectionCache = ActivitySelectionCache.getInstance();
+
     if (item?.id) {
         activitySelectionCache.addActivityItems(item.id);
     } else {
