@@ -22,21 +22,19 @@ export class ActivitySelectionCache {
         return this._selectedActivityItemIds.size;
     }
 
-    hasActivityItem(itemId: string): boolean {
-        return this._selectedActivityItemIds.has(itemId);
+    hasActivity(id: string): boolean {
+        return this._selectedActivityItemIds.has(id);
     }
 
-    getActivityItems(): string[] {
+    getActivityIds(): string[] {
         return Array.from(this._selectedActivityItemIds);
     }
 
-    addActivityItems(...itemIds: string[]): void {
-        for (const itemId of itemIds) {
-            this._selectedActivityItemIds.add(itemId);
-        }
+    addActivity(id: string): void {
+        this._selectedActivityItemIds.add(id);
     }
 
-    resetActivityItems(): void {
+    reset(): void {
         this._selectedActivityItemIds.clear();
     }
 }

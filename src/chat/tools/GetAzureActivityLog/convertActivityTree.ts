@@ -52,7 +52,7 @@ async function convertItemToSimpleActivityObject(context: GetAzureActivityLogCon
         activityAttributes: item.activityAttributes,
     };
 
-    if (context.activitySelectionCache.selectionCount && !context.activitySelectionCache.hasActivityItem(item.id)) {
+    if (context.activitySelectionCache.selectionCount && !context.activitySelectionCache.hasActivity(item.id)) {
         (convertedItem as ExcludedActivityItem)._exclude = true;
     }
 

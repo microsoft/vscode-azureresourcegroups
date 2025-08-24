@@ -33,7 +33,7 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
             ext.outputChannel.warn(warning);
         }
 
-        context.activitySelectionCache.resetActivityItems();
+        context.activitySelectionCache.reset();
 
         if (selectedActivityItems.length === 0) {
             return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No activity log items found.')]);

@@ -16,7 +16,7 @@ export async function askAgentAboutActivityLog(context: IActionContext, item?: A
     const activitySelectionCache = ActivitySelectionCache.getInstance();
 
     if (item?.id) {
-        activitySelectionCache.addActivityItems(item.id);
+        activitySelectionCache.addActivity(item.id);
     } else {
         const treeItems: TreeDataItem[] = await ext.activityLogTree.getChildren() ?? [];
 
@@ -37,7 +37,7 @@ export async function askAgentAboutActivityLog(context: IActionContext, item?: A
 
             for (const item of selectedItems) {
                 if (item.id) {
-                    activitySelectionCache.addActivityItems(item.id);
+                    activitySelectionCache.addActivity(item.id);
                 }
             }
         }
