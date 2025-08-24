@@ -22,12 +22,12 @@ export class ActivitySelectionCache {
         return this._selectedActivityItemIds.size;
     }
 
-    hasActivity(id: string): boolean {
-        return this._selectedActivityItemIds.has(id);
+    listIds(): string[] {
+        return Array.from(this._selectedActivityItemIds);
     }
 
-    getActivityIds(): string[] {
-        return Array.from(this._selectedActivityItemIds);
+    hasActivity(id: string): boolean {
+        return this._selectedActivityItemIds.has(id);
     }
 
     addActivity(id: string): void {
