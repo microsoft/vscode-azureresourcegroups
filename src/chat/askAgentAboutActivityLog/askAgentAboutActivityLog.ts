@@ -20,7 +20,7 @@ export async function askAgentAboutActivityLog(context: IActionContext, item?: A
     } else {
         const treeItems: TreeDataItem[] = await ext.activityLogTree.getChildren() ?? [];
 
-        if (treeItems.length > 0) {
+        if (treeItems.length > 1) {
             const selectedItems = await context.ui.showQuickPick(
                 treeItems.map(item => {
                     return {
@@ -31,7 +31,9 @@ export async function askAgentAboutActivityLog(context: IActionContext, item?: A
                 {
                     suppressPersistence: true,
                     canPickMany: true,
-                    placeHolder: vscode.l10n.t('Select activity items to provide as context'),
+                    placeHolder: vscode.l10n.t('Select activity items for Copilot'),
+                    // All picks should start out selected by default
+                    isPickSelected: () => true,
                 },
             );
 
