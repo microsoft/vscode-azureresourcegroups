@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
-import { ActivityChildItemBase, AzExtTreeItem, IActionContext, isAzExtTreeItem, nonNullValue, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeItem, IActionContext, isAzExtTreeItem, nonNullValue, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { askAgentAboutActivityLog } from '../chat/askAgentAboutActivityLog/askAgentAboutActivityLog';
 import { askAgentAboutResource } from '../chat/askAgentAboutResource';
@@ -14,6 +14,7 @@ import { ext } from '../extensionVariables';
 import { TargetServiceRoleAssignmentItem } from '../managedIdentity/TargetServiceRoleAssignmentItem';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
+import { ActivityItem } from '../tree/activityLog/ActivityItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { logIn } from './accounts/logIn';
@@ -130,7 +131,7 @@ export function registerCommands(): void {
         node.setAllSubscriptionsLoaded();
         ext.azureTreeState.notifyChildrenChanged(node.id);
     });
-    registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityChildItemBase) => await askAgentAboutActivityLog(context));
+    registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityItem) => await askAgentAboutActivityLog(context));
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
 }

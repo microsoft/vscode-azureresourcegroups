@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ActivityChildItemBase, IActionContext } from "@microsoft/vscode-azext-utils";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
 import { ActivityItem } from "../../tree/activityLog/ActivityItem";
@@ -12,7 +12,7 @@ import { ActivitySelectionCache } from "./ActivitySelectionCache";
 
 const genericActivityLogPrompt: string = vscode.l10n.t('Help explain important information from my Azure activity log.');
 
-export async function askAgentAboutActivityLog(context: IActionContext, item?: ActivityChildItemBase): Promise<void> {
+export async function askAgentAboutActivityLog(context: IActionContext, item?: ActivityItem): Promise<void> {
     const activitySelectionCache = ActivitySelectionCache.getInstance();
 
     if (item?.id) {
