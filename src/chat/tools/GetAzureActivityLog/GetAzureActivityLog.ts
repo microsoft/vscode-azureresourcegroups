@@ -28,7 +28,7 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
         if (selectedActivityItems.length !== context.activitySelectionCache.selectionCount) {
             selectedActivityItems = convertedActivityItems;
 
-            const warning: string = vscode.l10n.t('Failed to match some of the selected item(s). Falling back to providing the entire activity log tree.');
+            const warning: string = vscode.l10n.t('Failed to provide some of the selected item(s) to Copilot. Falling back to providing the entire activity log tree.');
             void context.ui.showWarningMessage(warning);
             ext.outputChannel.warn(warning);
         }
