@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## [2.6.0] - 2025-08-19
+
+- Support challenges in `AzureAuthentication.getSessionWithScopes`. This relies on the proposed authenticationChallenges VS Code API. https://github.com/microsoft/vscode-azureresourcegroups/issues/1200
+
 ## [2.5.1] - 2025-08-06
 
 * Add `DurableTaskHub` resource type
