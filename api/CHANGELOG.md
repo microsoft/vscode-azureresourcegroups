@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## Unreleased: [2.6.2]
+
+* Add new resource types to prepare for Azure Cosmos DB for MongoDB (RU) and (vCore) extension migration
+
 ## [2.6.1] - 2025-08-27
 
 * Adjust to changes in the authentication challenges typings in VS Code.
