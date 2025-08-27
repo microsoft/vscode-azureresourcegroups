@@ -11,6 +11,8 @@ export enum AzExtResourceType {
     AppServices = 'AppServices',
     ArcEnabledMachines = 'ArcEnabledMachines',
     AzureCosmosDb = 'AzureCosmosDb',
+    AzureCosmosDbForMongoDbRu = 'AzureCosmosDbForMongoDbRu',
+    AzureDocumentDb = 'AzureDocumentDb',
     ContainerApps = 'ContainerApps',
     ContainerAppsEnvironment = 'ContainerAppsEnvironment',
     FunctionApp = 'FunctionApp',

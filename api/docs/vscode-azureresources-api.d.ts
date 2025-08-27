@@ -40,6 +40,8 @@ export declare enum AzExtResourceType {
     AppServices = "AppServices",
     ArcEnabledMachines = "ArcEnabledMachines",
     AzureCosmosDb = "AzureCosmosDb",
+    AzureCosmosDbForMongoDbRu = "AzureCosmosDbForMongoDbRu",
+    AzureDocumentDb = "AzureDocumentDb",
     ContainerApps = "ContainerApps",
     ContainerAppsEnvironment = "ContainerAppsEnvironment",
     FunctionApp = "FunctionApp",
@@ -492,4 +494,4 @@ export declare interface Wrapper {
     unwrap<T>(): T;
 }
 
-export { };
+export { }
