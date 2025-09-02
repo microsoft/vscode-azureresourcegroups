@@ -8,6 +8,7 @@ import { AzExtResourceType } from "./AzExtResourceType";
 const FunctionAppKind = 'functionapp';
 const LogicAppKind = 'workflowapp';
 const AiFoundryProjectKind = 'project';
+const AzureCosmosDBMongoRUKind = 'mongodb';
 
 /**
  * Gets a normalized type for an Azure resource, accounting for the fact that some
@@ -38,6 +39,14 @@ export function getAzExtResourceType(resource: { type: string; kind?: string; })
                 return AzExtResourceType.MachineLearningWorkspace;
             }
 
+        // Azure Cosmos DB for MongoDB (RU)
+        case type === 'microsoft.documentdb/databaseaccounts':
+            if (kind.includes(AzureCosmosDBMongoRUKind)) {
+                return AzExtResourceType.AzureCosmosDbForMongoDbRu;
+            } else {
+                return AzExtResourceType.AzureCosmosDb;
+            }
+
         // Microsoft.DurableTask/schedulers/{schedulerName}/taskhubs
         case type.startsWith('microsoft.durabletask') && type.endsWith('taskhubs'):
             return AzExtResourceType.DurableTaskHub;
@@ -55,7 +64,7 @@ const azureTypeToAzExtResourceTypeMap: Record<string, AzExtResourceType | undefi
     'microsoft.dbforpostgresql/flexibleservers': AzExtResourceType.PostgresqlServersFlexible,
     'microsoft.dbforpostgresql/servers': AzExtResourceType.PostgresqlServersStandard,
     'microsoft.documentdb/databaseaccounts': AzExtResourceType.AzureCosmosDb,
-    'microsoft.documentdb/mongoclusters': AzExtResourceType.MongoClusters,
+    'microsoft.documentdb/mongoclusters': AzExtResourceType.AzureDocumentDb,
     'microsoft.storage/storageaccounts': AzExtResourceType.StorageAccounts,
     'microsoft.web/staticsites': AzExtResourceType.StaticWebApps,
     // The below are not supported by the Azure extensions but have icons in the Resources extension

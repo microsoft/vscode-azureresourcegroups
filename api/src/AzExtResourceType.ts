@@ -16,6 +16,7 @@ export enum AzExtResourceType {
     ContainerApps = 'ContainerApps',
     ContainerAppsEnvironment = 'ContainerAppsEnvironment',
     FunctionApp = 'FunctionApp',
+    // The 'MongoClusters' value is being phased out with the introduction of https://github.com/microsoft/vscode-documentdb/pull/238
     /** @deprecated The 'MongoClusters' value will be removed in future releases. It's being phased out. */
     MongoClusters = 'MongoClusters',
     PostgresqlServersFlexible = 'PostgresqlServersFlexible',
