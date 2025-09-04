@@ -249,8 +249,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                 apiVersion: "3.0.0",
                 createApi: () => {
                     return {
-                    apiVersion: "3.0.0",
-                    isDocumentDbExtensionSupportEnabled: () => true,
+                        apiVersion: "3.0.0",
+                        isDocumentDbExtensionSupportEnabled: () => true,
                     };
                 },
             } as AzureExtensionApi
