@@ -80,11 +80,18 @@ export const azureExtensions: IAzExtMetadata[] = [
         label: 'Databases',
         resourceTypes: [
             AzExtResourceType.AzureCosmosDb,
-            AzExtResourceType.MongoClusters,
             AzExtResourceType.PostgresqlServersStandard,
             AzExtResourceType.PostgresqlServersFlexible,
         ],
         reportIssueCommandId: 'azureDatabases.reportIssue'
+    },
+    {
+        name: 'vscode-documentdb',
+        label: 'Databases',
+        resourceTypes: [
+            AzExtResourceType.AzureCosmosDbForMongoDbRu,
+            AzExtResourceType.AzureDocumentDb,
+        ],
     },
     {
         name: 'vscode-azurecontainerapps',
