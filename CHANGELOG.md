@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.11.2 - 2025-09-15
+### Added
+* [[1229](https://github.com/microsoft/vscode-azureresourcegroups/pull/1229)] Add support for new Azure resource types
+
 ## 0.11.1 - 2025-07-31
 ### Added
 * [[1177](https://github.com/microsoft/vscode-azureresourcegroups/pull/1177)] Add Copilot telemetry and log VS Code command IDs for `GetAzureActivityLog` LM tool
