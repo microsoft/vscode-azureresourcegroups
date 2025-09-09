@@ -40,9 +40,12 @@ export declare enum AzExtResourceType {
     AppServices = "AppServices",
     ArcEnabledMachines = "ArcEnabledMachines",
     AzureCosmosDb = "AzureCosmosDb",
+    AzureCosmosDbForMongoDbRu = "AzureCosmosDbForMongoDbRu",
+    AzureDocumentDb = "AzureDocumentDb",
     ContainerApps = "ContainerApps",
     ContainerAppsEnvironment = "ContainerAppsEnvironment",
     FunctionApp = "FunctionApp",
+    /** @deprecated The 'MongoClusters' value will be removed in future releases. It's being phased out. */
     MongoClusters = "MongoClusters",
     PostgresqlServersFlexible = "PostgresqlServersFlexible",
     PostgresqlServersStandard = "PostgresqlServersStandard",
