@@ -124,12 +124,12 @@ export declare interface AzureAuthentication {
     /**
      * Gets a VS Code authentication session for an Azure subscription.
      *
-     * @param scopes - The scopes for which the authentication is needed. Use AuthenticationWWWAuthenticateRequest for supporting challenge requests.
-     * Note: use of AuthenticationWWWAuthenticateRequest requires VS Code v1.104
+     * @param scopes - The scopes for which the authentication is needed. Use AuthenticationWwwAuthenticateRequest for supporting challenge requests.
+     * Note: use of AuthenticationWwwAuthenticateRequest requires VS Code v1.104
      *
      * @returns A VS Code authentication session or undefined, if none could be obtained.
      */
-    getSessionWithScopes(scopes: string[] | vscode.AuthenticationWWWAuthenticateRequest): vscode.ProviderResult<vscode.AuthenticationSession>;
+    getSessionWithScopes(scopes: string[] | vscode.AuthenticationWwwAuthenticateRequest): vscode.ProviderResult<vscode.AuthenticationSession>;
 }
 
 export declare interface AzureExtensionApi {
@@ -495,4 +495,4 @@ export declare interface Wrapper {
     unwrap<T>(): T;
 }
 
-export { }
+export { };
