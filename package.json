@@ -928,7 +928,7 @@
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
-        "@microsoft/vscode-azext-azureauth": "^4.2.2",
+        "@microsoft/vscode-azext-azureauth": "file:../vscode-azuretools/auth/microsoft-vscode-azext-azureauth-4.2.2.tgz",
         "@microsoft/vscode-azext-azureutils": "^3.5.2",
         "@microsoft/vscode-azext-utils": "^3.4.2",
         "buffer": "^6.0.3",
