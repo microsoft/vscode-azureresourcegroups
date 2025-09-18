@@ -30,7 +30,7 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
      * @returns Deduped list of Azure resources in the specified subscription
      */
     private async listResources(context: IActionContext, subscription: AzureSubscription): Promise<AzureResource[]> {
-        const allResources = await getAzureResourcesService().listResources(context, subscription);
+        const allResources = await getAzureResourcesService().listResources(subscription);
 
         // dedupe resources to fix https://github.com/microsoft/vscode-azureresourcegroups/issues/526
         const allResourcesDeduped: GenericResource[] = [...new Map(allResources.map((item) => [item.id, item])).values()];
@@ -45,7 +45,7 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
     }
 
     private async listResourceGroups(context: IActionContext, subscription: AzureSubscription): Promise<AzureResource[]> {
-        const allResourceGroups: ResourceGroup[] = await getAzureResourcesService().listResourceGroups(context, subscription);
+        const allResourceGroups: ResourceGroup[] = await getAzureResourcesService().listResourceGroups(subscription);
         context.telemetry.measurements.resourceGroupCount = allResourceGroups.length;
         return allResourceGroups.map(resource => createResourceGroup(subscription, resource));
     }
