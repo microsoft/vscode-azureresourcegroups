@@ -106,13 +106,13 @@ export const createMockSubscriptionWithFunctions = (): BasicMockResources => {
 export function createMockAzureResourcesServiceFactory(mockResources: MockResources): AzureResourcesServiceFactory {
     return () => {
         return {
-            async listResources(_context, subscription: AzureSubscription): Promise<GenericResource[]> {
+            async listResources(subscription: AzureSubscription): Promise<GenericResource[]> {
                 if (mockResources.subscriptionsMap.has(subscription.subscriptionId)) {
                     return mockResources.subscriptionsMap.get(subscription.subscriptionId)!.resources;
                 }
                 throw new Error(`Subscription ${subscription.subscriptionId} not found. \n\t${mockResources.subscriptions.map(s => s.subscriptionId).join('\n\t')}`);
             },
-            async listResourceGroups(_context, subscription: AzureSubscription): Promise<ResourceGroup[]> {
+            async listResourceGroups(subscription: AzureSubscription): Promise<ResourceGroup[]> {
                 if (mockResources.subscriptionsMap.has(subscription.subscriptionId)) {
                     return mockResources.subscriptionsMap.get(subscription.subscriptionId)!.resourceGroups;
                 }
