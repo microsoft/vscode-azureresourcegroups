@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## [2.6.3] - 2025-09-22
+
+* Upgrade vscode typings to 1.104.0 for authentication challenge typings in VS Code.
+
 ## [2.6.2] - 2025-09-10
 
 * Adjust to changes in the authentication challenges typings in VS Code.
