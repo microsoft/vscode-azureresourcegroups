@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.11.3 - 2025-09-25
+### Added
+* [[1191]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1191) Resources API: Add `DurableTaskHub` resource type
+
+### Changed
+* [[1233]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1233) Changes were made to support the upcoming multi-factor authentication requirements for Azure
+
 ## 0.11.2 - 2025-09-15
 ### Added
 * [[1229](https://github.com/microsoft/vscode-azureresourcegroups/pull/1229)] Add support for new Azure resource types
