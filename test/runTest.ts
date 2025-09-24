@@ -8,7 +8,7 @@ import * as path from 'path';
 
 async function main(): Promise<void> {
     try {
-        const vscodeExecutablePath = await downloadAndUnzipVSCode();
+        const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
 
         const repoRoot: string = path.resolve(__dirname, '..', '..');
 
