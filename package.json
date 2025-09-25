@@ -332,7 +332,13 @@
                 "command": "azureResourceGroups.askAgentAboutActivityLog",
                 "title": "%azureResourceGroups.askAgentAboutActivityLog%",
                 "category": "Azure",
-                "icon": "$(copilot)"
+                "icon": "$(chat-sparkle)"
+            },
+            {
+                "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                "title": "%azureResourceGroups.askAgentAboutActivityLogItem%",
+                "category": "Azure",
+                "icon": "$(chat-sparkle)"
             },
             {
                 "command": "azureTenantsView.refresh",
@@ -611,6 +617,16 @@
                     "command": "azureResourceGroups.askAgentAboutResource",
                     "when": "view == kubernetes.cloudExplorer && viewItem =~ /aks\\.cluster/i && github.copilot-chat.activated && config.azureResourceGroups.enableChatStandIn",
                     "group": "7@9"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "when": "view == azureActivityLog && viewItem =~ /activityItem/i",
+                    "group": "1@1"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "when": "view == azureActivityLog && viewItem =~ /activityItem/i",
+                    "group": "inline"
                 }
             ],
             "commandPalette": [
@@ -660,6 +676,10 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutResource",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.askAgentAboutActivityLogItem",
                     "when": "never"
                 }
             ],
