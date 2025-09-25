@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.11.4 - 2025-09-25
+### Added
+* [[1247]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1247) Enable `authenticationChallenges` proposed API
+
 ## 0.11.3 - 2025-09-25
 ### Added
 * [[1191]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1191) Resources API: Add `DurableTaskHub` resource type
