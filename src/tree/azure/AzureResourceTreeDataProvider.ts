@@ -99,7 +99,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                             void callWithTelemetryAndErrorHandling('azureResourceGroups.duplicate', async (context: IActionContext) => {
                                 if (!getDuplicateSubscriptionModeSetting()) {
                                     const turnOn: vscode.MessageItem = { title: localize('turnOn', 'Turn On') };
-                                    const response: vscode.MessageItem | undefined = await context.ui.showWarningMessage(localize('turnOnSetting', 'We detected multiple subscriptions in the same account. To have a better experience please turn on the "Duplicate Subscription Mode" setting.'), turnOn);
+                                    const response: vscode.MessageItem | undefined = await context.ui.showWarningMessage(localize('turnOnSetting', 'We detected duplicate subscriptions in the same account. To have a better experience please turn on the "Duplicate Subscription Mode" setting.'), turnOn);
                                     warningShown = true;
                                     if (response === turnOn) {
                                         await turnOnDuplicateSubscriptionModeSetting();
