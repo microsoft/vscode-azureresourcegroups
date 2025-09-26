@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscription, getUnauthenticatedTenants } from '@microsoft/vscode-azext-azureauth';
-import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling, createSubscriptionContext, nonNullValueAndProp, registerEvent } from '@microsoft/vscode-azext-utils';
+import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, nonNullValueAndProp, registerEvent, TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
 import { AzureResourceProviderManager } from '../../api/ResourceProviderManagers';
-import { getDuplicateSubscriptions, getTenantFilteredSubscriptions } from '../../commands/accounts/selectSubscriptions';
+import { getDuplicateSubscriptionModeSetting, getDuplicateSubscriptions, getDuplicateSubsInSameAccount, getTenantFilteredSubscriptions, turnOnDuplicateSubscriptionModeSetting } from '../../commands/accounts/selectSubscriptions';
 import { showHiddenTypesSettingKey } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
@@ -89,18 +89,46 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                         })]
                     }
                 } else {
-                    //find duplicate subscriptions and change the name to include the account name
+                    //find duplicate subscriptions and change the name to include the account name if duplicate subs are in the same account add the tenant name instead
                     const duplicates = getDuplicateSubscriptions(subscriptions);
+                    let duplicatesWithSameAccount: AzureSubscription[];
+                    if (duplicates.length > 0) {
+                        let warningShown: boolean = false;
+                        duplicatesWithSameAccount = getDuplicateSubsInSameAccount(duplicates)
+                        if (duplicatesWithSameAccount.length > 0 && !warningShown) {
+                            void callWithTelemetryAndErrorHandling('azureResourceGroups.duplicate', async (context: IActionContext) => {
+                                if (!getDuplicateSubscriptionModeSetting()) {
+                                    const turnOn: vscode.MessageItem = { title: localize('turnOn', 'Turn On') };
+                                    const response: vscode.MessageItem | undefined = await context.ui.showWarningMessage(localize('turnOnSetting', 'We detected multiple subscriptions in the same account. To have a better experience please turn on the "Duplicate Subscription Mode" setting.'), turnOn);
+                                    warningShown = true;
+                                    if (response === turnOn) {
+                                        await turnOnDuplicateSubscriptionModeSetting();
+                                    }
+                                }
+                            });
+                        }
+                    }
 
-                    const tenantFiltedSubcriptions = getTenantFilteredSubscriptions(subscriptions);
-                    if (tenantFiltedSubcriptions) {
-                        return tenantFiltedSubcriptions.map(
+                    const tenantFilteredSubcriptions = getTenantFilteredSubscriptions(subscriptions);
+                    if (tenantFilteredSubcriptions) {
+                        return tenantFilteredSubcriptions.map(
                             subscription => {
                                 // for telemetry purposes, do not wait
                                 void callWithTelemetryAndErrorHandling('azureResourceGroups.getTenantFiltedSubcription', async (context: IActionContext) => {
                                     context.telemetry.properties.subscriptionId = subscription.subscriptionId;
                                 });
-                                if (duplicates.includes(subscription)) {
+                                if (duplicatesWithSameAccount.includes(subscription)) {
+                                    return new SubscriptionItem(
+                                        {
+                                            subscription: subscription,
+                                            subscriptionContext: createSubscriptionContext(subscription),
+                                            refresh: item => this.notifyTreeDataChanged(item),
+                                        },
+                                        this.resourceGroupingManager,
+                                        this.resourceProviderManager,
+                                        subscription,
+                                        `(${subscription.tenantId})`);
+                                } else if (duplicates.includes(subscription)) {
                                     return new SubscriptionItem(
                                         {
                                             subscription: subscription,

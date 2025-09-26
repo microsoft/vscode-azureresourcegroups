@@ -757,6 +757,11 @@
                         "type": "boolean",
                         "description": "%azureResourceGroups.enableChatStandIn%",
                         "default": true
+                    },
+                    "azureResourceGroups.duplicateSubscriptionMode": {
+                        "type": "boolean",
+                        "description": "%azureResourceGroups.duplicateSubscriptionMode%",
+                        "default": false
                     }
                 }
             }

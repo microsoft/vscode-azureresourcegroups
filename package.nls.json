@@ -20,6 +20,7 @@
     "azureTenantsView.signInToTenant": "Sign in to Tenant",
     "azureTenantsView.configureSovereignCloud": "Configure Sovereign Cloud",
     "azureResourceGroups.selectedSubscriptions": "Selected Subscriptions",
+    "azureResourceGroups.duplicateSubscriptionMode": "Duplicate Subscription Mode",
     "azureResourceGroups.revealResource": "Reveal Resource",
     "azureResourceGroups.viewProperties": "View Properties",
     "azureResourceGroups.deleteConfirmation": "The behavior to use when confirming delete of a resource group.",
