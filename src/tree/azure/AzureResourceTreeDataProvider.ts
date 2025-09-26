@@ -89,7 +89,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                         })]
                     }
                 } else {
-                    //find duplicate subscriptions and change the name to include the account name if duplicate subs are in the same account add the tenant name instead
+                    //find duplicate subscriptions and change the name to include the account name. If duplicate subs are in the same account add the tenant id instead
                     const duplicates = getDuplicateSubscriptions(subscriptions);
                     let duplicatesWithSameAccount: AzureSubscription[];
                     if (duplicates.length > 0) {
