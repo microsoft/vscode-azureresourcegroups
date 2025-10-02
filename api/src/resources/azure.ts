@@ -22,12 +22,12 @@ export interface AzureAuthentication {
     /**
      * Gets a VS Code authentication session for an Azure subscription.
      *
-     * @param scopes - The scopes for which the authentication is needed. Use AuthenticationWwwAuthenticateRequest for supporting challenge requests.
-     * Note: use of AuthenticationWwwAuthenticateRequest requires VS Code v1.104
+     * @param scopeListOrRequest - The scopes for which the authentication is needed. Use AuthenticationWwwAuthenticateRequest for supporting challenge requests.
+     * Note: use of AuthenticationWwwAuthenticateRequest requires VS Code v1.105.0
      *
      * @returns A VS Code authentication session or undefined, if none could be obtained.
      */
-    getSessionWithScopes(scopes: string[] | vscode.AuthenticationWwwAuthenticateRequest): vscode.ProviderResult<vscode.AuthenticationSession>;
+    getSessionWithScopes(scopeListOrRequest: string[] | vscode.AuthenticationWwwAuthenticateRequest): vscode.ProviderResult<vscode.AuthenticationSession>;
 }
 
 /**
