@@ -889,7 +889,7 @@
         "webpack-prod": "npm run build && gulp webpack-prod",
         "webpack-profile": "webpack --profile --json --mode production > webpack-stats.json && echo Use http://webpack.github.io/analyse to analyze the stats",
         "all": "npm i && npm run lint && npm test",
-        "api-extractor": "pushd api && npm run api-extractor && popd"
+        "api-extractor": "cd api && npm run api-extractor"
     },
     "devDependencies": {
         "@azure/arm-authorization": "^9.0.0",
