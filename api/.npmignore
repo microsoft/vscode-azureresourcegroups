@@ -16,7 +16,9 @@ resources/*.png
 *.tsbuildinfo
 docs/
 
-out/**/*.d.ts
-out/**/*.d.ts.map
-out/**/*.js.map
+dist/**/*.d.ts
+dist/**/*.d.ts.map
+dist/**/*.js.map
 api-extractor.json
+
+!dist/vscode-azureresources-api.d.ts
