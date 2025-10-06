@@ -10,12 +10,10 @@
         "declaration": true,
         "declarationMap": true,
         "rootDir": ".",
-        "outDir": "out",
         "baseUrl": "./",
     },
     "exclude": [
         "node_modules",
-        "out",
         "dist",
     ]
 }

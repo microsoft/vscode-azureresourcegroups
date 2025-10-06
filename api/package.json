@@ -7,12 +7,15 @@
         "url": "https://github.com/Microsoft/vscode-azureresourcegroups",
         "directory": "api"
     },
-    "module": "out/src/index.js",
+    "module": "dist/esm/src/index.js",
+    "main": "dist/cjs/src/index.js",
     "types": "dist/vscode-azureresources-api.d.ts",
     "scripts": {
         "prepack": "npm run api-extractor",
         "api-extractor": "npm run build && api-extractor run",
-        "build": "tsc -p ./"
+        "build": "npm run build:esm && npm run build:cjs",
+        "build:esm": "tsc -p ./ --outDir dist/esm",
+        "build:cjs": "tsc -p ./ --outDir dist/cjs --module nodenext --moduleResolution nodenext"
     },
     "author": "Microsoft",
     "license": "MIT",
