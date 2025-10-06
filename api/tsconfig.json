@@ -12,8 +12,4 @@
         "rootDir": ".",
         "baseUrl": "./",
     },
-    "exclude": [
-        "node_modules",
-        "dist",
-    ]
 }
