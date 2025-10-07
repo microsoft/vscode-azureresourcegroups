@@ -49,7 +49,7 @@ async function chatStandIn(
     });
 
     const postButtonMessage = request.prompt === askAgentAboutResourcePrompt ? vscode.l10n.t(`After that, please use \`Ask @azure\` again.`) :
-        vscode.l10n.t(`After that, please repeat your question.\n\n`);
+        vscode.l10n.t(`After that, please repeat your question.`);
     responseStream.markdown(postButtonMessage);
 }
 
