@@ -43,16 +43,14 @@ async function chatStandIn(
         command: 'azureResourcesGroups.installGitHubCopilotForAzureFromChat',
     });
 
-    const postButtonMessage = request.prompt === askAgentAboutResourcePrompt ? vscode.l10n.t(`After that, please use \`Ask @azure\` again.`) :
-        vscode.l10n.t(`After that, please repeat your question.\n\n`);
-    responseStream.markdown(postButtonMessage);
-
-    responseStream.markdown(vscode.l10n.t('Or you can also disable this message by clicking the button below.'));
-
     responseStream.button({
         title: vscode.l10n.t(`Don't ask me again`),
         command: 'azureResourceGroups.updateChatStandInSetting'
     });
+
+    const postButtonMessage = request.prompt === askAgentAboutResourcePrompt ? vscode.l10n.t(`After that, please use \`Ask @azure\` again.`) :
+        vscode.l10n.t(`After that, please repeat your question.\n\n`);
+    responseStream.markdown(postButtonMessage);
 }
 
 async function installGitHubCopilotForAzureFromChat(context: IActionContext): Promise<void> {
