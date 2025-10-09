@@ -17,12 +17,15 @@ export class DefaultAzureResourceItem implements ResourceGroupsItem {
     private readonly resourceTypeExtension: AzExtWrapper | undefined;
     public readonly portalUrl: vscode.Uri;
 
-    constructor(private readonly resource: AzureResource) {
+    constructor(
+        private readonly resource: AzureResource,
+        private readonly options: { treeId?: string } = {},
+    ) {
         this.resourceTypeExtension = getAzureExtensions().find(ext => ext.matchesApplicationResourceType(resource));
         this.portalUrl = createPortalUrl(resource.subscription, resource.id);
     }
 
-    public readonly id: string = this.resource.id;
+    public readonly id: string = this.options.treeId ?? this.resource.id;
 
     getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         if (this.resourceTypeExtension && !this.resourceTypeExtension.isInstalled() && !this.resourceTypeExtension.isPrivate()) {
