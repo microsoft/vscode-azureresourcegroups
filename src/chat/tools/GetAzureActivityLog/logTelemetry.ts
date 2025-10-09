@@ -9,11 +9,11 @@ import { GetAzureActivityLogContext } from "./GetAzureActivityLogContext";
 /**
  * Log telemetry for the entire activity tree (before any selection filtering)
  */
-export function logActivityTreeTelemetry(context: GetAzureActivityLogContext, activityTree: ConvertedActivityItem[]): void {
-    const telemetry: TelemetryProperties = getCommonTelemetryProperties(activityTree);
+export function logActivityTelemetry(context: GetAzureActivityLogContext, activityItems: ConvertedActivityItem[]): void {
+    const telemetry: TelemetryProperties = getCommonTelemetryProperties(activityItems);
 
     // i.e. total activities
-    context.telemetry.properties.activityCount = String(activityTree.length);
+    context.telemetry.properties.activityCount = String(activityItems.length);
     context.telemetry.properties.failedActivityCount = String(telemetry.totalFailedActivities);
 
     // i.e. unique command ids

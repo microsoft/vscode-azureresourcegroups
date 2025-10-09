@@ -9,14 +9,14 @@ import { ext } from '../../../extensionVariables';
 import { ActivitySelectionCache } from '../../askAgentAboutActivityLog/ActivitySelectionCache';
 import { convertActivityTreeToSimpleObjectArray, ConvertedActivityItem, ExcludedActivityItem } from './convertActivityTree';
 import { GetAzureActivityLogContext } from './GetAzureActivityLogContext';
-import { logActivityTreeTelemetry, logSelectedActivityTelemetry } from './logTelemetry';
+import { logActivityTelemetry, logSelectedActivityTelemetry } from './logTelemetry';
 
 export class GetAzureActivityLog implements AzExtLMTool<void> {
     public async invoke(invocationContext: IActionContext): Promise<vscode.LanguageModelToolResult> {
         const context: GetAzureActivityLogContext = Object.assign(invocationContext, { activitySelectionCache: ActivitySelectionCache.getInstance() });
 
         const convertedActivityItems: ConvertedActivityItem[] = await convertActivityTreeToSimpleObjectArray(context);
-        logActivityTreeTelemetry(context, convertedActivityItems);
+        logActivityTelemetry(context, convertedActivityItems);
 
         let selectedActivityItems: ConvertedActivityItem[] = convertedActivityItems;
         if (context.activitySelectionCache.selectionCount) {
