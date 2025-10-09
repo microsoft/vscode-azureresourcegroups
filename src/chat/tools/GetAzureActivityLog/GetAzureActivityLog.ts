@@ -18,11 +18,8 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
         const convertedActivityItems: ConvertedActivityItem[] = await convertActivityTreeToSimpleObjectArray(context);
         logActivityTelemetry(context, convertedActivityItems);
 
-        let selectedActivityItems: ConvertedActivityItem[] = convertedActivityItems;
-        if (context.activitySelectedCache.selectionCount) {
-            selectedActivityItems = convertedActivityItems.filter(item => !(item as ExcludedActivityItem)._exclude);
-            logSelectedActivityTelemetry(context, selectedActivityItems);
-        }
+        let selectedActivityItems: ConvertedActivityItem[] = convertedActivityItems.filter(item => !(item as ExcludedActivityItem)._exclude);
+        logSelectedActivityTelemetry(context, selectedActivityItems);
 
         // If we weren't able to verify all of the selected items, fallback to providing the entire activity tree
         if (selectedActivityItems.length !== context.activitySelectedCache.selectionCount) {
@@ -36,7 +33,7 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
         context.activitySelectedCache.reset();
 
         if (selectedActivityItems.length === 0) {
-            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No activity log items found.')]);
+            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(`No activity log items ${convertedActivityItems.length ? 'selected' : 'found'}.`)]);
         }
 
         return new vscode.LanguageModelToolResult([
