@@ -3,19 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export class ActivitySelectionCache {
-    private static _instance: ActivitySelectionCache;
+export class ActivitySelectedCache {
+    private static _instance: ActivitySelectedCache;
     private readonly _selectedActivityItemIds: Set<string> = new Set();
 
     private constructor() {
         // Private constructor to enforce a singleton pattern
     }
 
-    static getInstance(): ActivitySelectionCache {
-        if (!ActivitySelectionCache._instance) {
-            ActivitySelectionCache._instance = new ActivitySelectionCache();
+    static getInstance(): ActivitySelectedCache {
+        if (!ActivitySelectedCache._instance) {
+            ActivitySelectedCache._instance = new ActivitySelectedCache();
         }
-        return ActivitySelectionCache._instance;
+        return ActivitySelectedCache._instance;
     }
 
     get selectionCount(): number {

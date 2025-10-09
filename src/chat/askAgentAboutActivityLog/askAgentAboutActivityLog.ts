@@ -8,15 +8,15 @@ import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
 import { ActivityItem } from "../../tree/activityLog/ActivityItem";
 import { TreeDataItem } from "../../tree/ResourceGroupsItem";
-import { ActivitySelectionCache } from "./ActivitySelectionCache";
+import { ActivitySelectedCache } from "./ActivitySelectedCache";
 
 const genericActivityLogPrompt: string = vscode.l10n.t('Help explain important information from my Azure activity log.');
 
 export async function askAgentAboutActivityLog(context: IActionContext, item?: ActivityItem): Promise<void> {
-    const activitySelectionCache = ActivitySelectionCache.getInstance();
+    const activitySelectedCache = ActivitySelectedCache.getInstance();
 
     if (item?.id) {
-        activitySelectionCache.addActivity(item.id);
+        activitySelectedCache.addActivity(item.id);
     } else {
         const treeItems: TreeDataItem[] = await ext.activityLogTree.getChildren() ?? [];
 
@@ -39,7 +39,7 @@ export async function askAgentAboutActivityLog(context: IActionContext, item?: A
 
             for (const item of selectedItems) {
                 if (item.id) {
-                    activitySelectionCache.addActivity(item.id);
+                    activitySelectedCache.addActivity(item.id);
                 }
             }
         }

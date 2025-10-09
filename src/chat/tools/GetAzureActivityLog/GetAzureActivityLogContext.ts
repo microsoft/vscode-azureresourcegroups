@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { ActivitySelectionCache } from "../../askAgentAboutActivityLog/ActivitySelectionCache";
+import { ActivitySelectedCache } from "../../askAgentAboutActivityLog/ActivitySelectedCache";
 
 export interface GetAzureActivityLogContext extends IActionContext {
-    activitySelectionCache: ActivitySelectionCache;
+    activitySelectedCache: ActivitySelectedCache;
 }

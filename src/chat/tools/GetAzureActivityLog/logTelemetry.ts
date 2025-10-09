@@ -32,7 +32,7 @@ export function logSelectedActivityTelemetry(context: GetAzureActivityLogContext
     const telemetry: TelemetryProperties = getCommonTelemetryProperties(selectedActivityItems);
 
     context.telemetry.properties.hasSelectedActivities = String(!!selectedActivityItems.length);
-    context.telemetry.properties.missingSelectedActivities = String(selectedActivityItems.length !== context.activitySelectionCache.selectionCount);
+    context.telemetry.properties.missingSelectedActivities = String(selectedActivityItems.length !== context.activitySelectedCache.selectionCount);
 
     // i.e. total activities (selected)
     context.telemetry.properties.selectedActivityCount = String(selectedActivityItems.length);
