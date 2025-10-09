@@ -1,5 +1,21 @@
 # Change Log
 
+## 0.11.4 - 2025-09-25
+### Added
+* [[1247]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1247) Enable `authenticationChallenges` proposed API
+
+## 0.11.3 - 2025-09-25
+### Added
+* [[1191]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1191) Resources API: Add `DurableTaskHub` resource type
+
+### Changed
+* [[1233]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1233) Changes were made to support the upcoming multi-factor authentication requirements for Azure
+
+## 0.11.2 - 2025-09-15
+### Added
+* [[1229](https://github.com/microsoft/vscode-azureresourcegroups/pull/1229)] Add support for new Azure resource types
+
+
 ## 0.11.1 - 2025-07-31
 ### Added
 * [[1177](https://github.com/microsoft/vscode-azureresourcegroups/pull/1177)] Add Copilot telemetry and log VS Code command IDs for `GetAzureActivityLog` LM tool

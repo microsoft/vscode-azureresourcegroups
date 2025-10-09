@@ -24,11 +24,10 @@
         "skipLibCheck": false
     },
     "exclude": [
-        "node_modules",
+        "**/node_modules",
         ".vscode-test",
         "gulpfile.ts",
-        "api/dist",
-        "api/out",
-        "out"
+        "**/dist",
+        "**/out"
     ]
 }

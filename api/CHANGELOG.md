@@ -6,9 +6,26 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## [3.0.0] - 2025-10-06
+
+* Package is now a combined CJS+ESM package.
+* VSCode engine version of ^1.105.0 has been added. Adopts finalized authentication challenge typings.
+
+## [2.6.3] - 2025-09-22
+
+* Upgrade vscode typings to 1.104.0 for authentication challenge typings in VS Code.
+
+## [2.6.2] - 2025-09-10
+
+* Adjust to changes in the authentication challenges typings in VS Code.
+
+## [2.6.1] - 2025-08-27
+
+* Adjust to changes in the authentication challenges typings in VS Code.
+
 ## [2.6.0] - 2025-08-19
 
-- Support challenges in `AzureAuthentication.getSessionWithScopes`. This relies on the proposed authenticationChallenges VS Code API. https://github.com/microsoft/vscode-azureresourcegroups/issues/1200
+* Support challenges in `AzureAuthentication.getSessionWithScopes`. This relies on the proposed authenticationChallenges VS Code API. https://github.com/microsoft/vscode-azureresourcegroups/issues/1200
 
 ## [2.5.1] - 2025-08-06
 
