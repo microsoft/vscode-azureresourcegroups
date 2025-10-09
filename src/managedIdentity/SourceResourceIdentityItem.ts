@@ -40,7 +40,7 @@ export class SourceResourceIdentityItem implements ResourceGroupsItem {
             return userAssignedIdentities[msi.id] !== undefined
         }).map((r) => {
             const sourceResource = createAzureResource(this.subscription, r);
-            return new DefaultAzureResourceItem(sourceResource, { treeId: `${msi.id}/${sourceResource.id}` /** Also include the msi id to ensure uniqueness */ });
+            return new DefaultAzureResourceItem(sourceResource, { treeItemId: `${msi.id}/${sourceResource.id}` /** Also include the msi id to ensure uniqueness */ });
         });
         return assignedResources;
     }

@@ -19,13 +19,13 @@ export class DefaultAzureResourceItem implements ResourceGroupsItem {
 
     constructor(
         private readonly resource: AzureResource,
-        private readonly options: { treeId?: string } = {},
+        private readonly options: { treeItemId?: string } = {},
     ) {
         this.resourceTypeExtension = getAzureExtensions().find(ext => ext.matchesApplicationResourceType(resource));
         this.portalUrl = createPortalUrl(resource.subscription, resource.id);
     }
 
-    public readonly id: string = this.options.treeId ?? this.resource.id;
+    public readonly id: string = this.options.treeItemId ?? this.resource.id;
 
     getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         if (this.resourceTypeExtension && !this.resourceTypeExtension.isInstalled() && !this.resourceTypeExtension.isPrivate()) {
