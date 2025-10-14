@@ -12,7 +12,7 @@ export interface AzureResourcesAuthApi extends AzureExtensionApi {
     createAzureResourcesApiSession(clientExtensionId: string, clientExtensionVersion: string, clientExtensionToken: string): Promise<void>;
 }
 
-export function createAzureResourcesAuthApiFactory(resourcesApiFactoryV2: AzureExtensionApiFactory<AzureResourcesApiInternal>): AzureExtensionApiFactory<AzureResourcesAuthApi> {
+export function createAzureResourcesAuthApiFactory(resourcesApiInternalFactory: AzureExtensionApiFactory<AzureResourcesApiInternal>): AzureExtensionApiFactory<AzureResourcesAuthApi> {
     return {
         apiVersion: '3.0.0',
         createApi: (options?: GetApiOptions) => {
@@ -22,7 +22,7 @@ export function createAzureResourcesAuthApiFactory(resourcesApiFactoryV2: AzureE
                     return await callWithTelemetryAndErrorHandling('api.getAzureResourcesApi', async (context: IActionContext) => {
                         addAuthTelemetryAndErrorHandling(context, options?.extensionId);
                         const { clientExtensionId } = await getAzureResourcesApiSessionInternal(context, azureResourcesToken);
-                        return resourcesApiFactoryV2.createApi({ extensionId: clientExtensionId });
+                        return resourcesApiInternalFactory.createApi({ extensionId: clientExtensionId });
                     });
                 },
                 createAzureResourcesApiSession: async (clientExtensionId: string, clientExtensionVersion: string, clientExtensionToken: string) => {

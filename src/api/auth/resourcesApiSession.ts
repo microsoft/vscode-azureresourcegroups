@@ -42,7 +42,7 @@ export async function createAzureResourcesApiSessionInternal(context: IActionCon
         });
 
         const clientApi = await getClientExtensionApi(clientExtensionId, clientExtensionVersion);
-        await clientApi.receiveAzExtResourcesSession?.(azureResourcesToken, clientExtensionToken);
+        await clientApi.receiveAzureResourcesSession?.(azureResourcesToken, clientExtensionToken);
 
     } catch (err) {
         const failed: string = localize('createResourcesApiSession.failed', 'Failed to create Azure Resources API session for extension "{0}".', clientExtensionId);
@@ -104,20 +104,11 @@ export async function getAzureResourcesApiSessionInternal(context: IActionContex
     }
 }
 
-type AzureExtensionApiV3 = AzureExtensionApi & {
-    receiveAzExtResourcesSession?(resourcesToken: string, clientToken: string): void | Promise<void>;
-};
-
-// Todo: update apiUtils
-export async function getClientExtensionApi(clientExtensionId: string, clientExtensionVersion: string): Promise<AzureExtensionApiV3> {
+export async function getClientExtensionApi(clientExtensionId: string, clientExtensionVersion: string): Promise<AzureExtensionApi> {
     const extensionProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>(clientExtensionId);
     if (extensionProvider) {
-        return extensionProvider.getApi<AzureExtensionApiV3>(clientExtensionVersion);
+        return extensionProvider.getApi<AzureExtensionApi>(clientExtensionVersion);
     } else {
         throw new Error(localize('noClientExt', 'Could not find Azure extension API for extension ID "{0}".', clientExtensionId));
     }
 }
-
-// Todo: Update utils with new types
-// Use container apps to try and connect and set up a handshake
-// Clean up api

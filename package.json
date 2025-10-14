@@ -927,7 +927,7 @@
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
         "@microsoft/vscode-azext-azureauth": "^5.0.0",
         "@microsoft/vscode-azext-azureutils": "^4.0.0",
-        "@microsoft/vscode-azext-utils": "^4.0.0",
+        "@microsoft/vscode-azext-utils": "file:../vscode-azuretools/utils/microsoft-vscode-azext-utils-4.0.0.tgz",
         "buffer": "^6.0.3",
         "form-data": "^4.0.4",
         "fs-extra": "^11.3.0",
