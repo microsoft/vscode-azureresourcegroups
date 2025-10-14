@@ -1,5 +1,16 @@
 # Change Log
 
+## 0.11.5 - 2025-10-14
+### Added
+* [[1256]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1256) Add button to chat stand in to disable `enableChatStandIn` setting
+
+### Changed
+* [[1260]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1260) Adopt the finalized auth challenges API
+* [[1257]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1257) Convert `@microsoft/vscode-azureresources-api` from CJS to CJS+ESM, and update for finalization of auth challenges API
+
+### Fixed
+* [[1261]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1261) Ensure tree item id uniqueness for user-assigned identity source resource items
+
 ## 0.11.4 - 2025-09-25
 ### Added
 * [[1247]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1247) Enable `authenticationChallenges` proposed API
