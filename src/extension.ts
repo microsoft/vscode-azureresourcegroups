@@ -21,6 +21,9 @@ import { registerApplicationResourceResolver } from './api/compatibility/registe
 import { registerWorkspaceResourceProvider } from './api/compatibility/registerWorkspaceResourceProvider';
 import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
+import { AzureResourcesAuthApi } from './auth/AzureResourcesAuthApi';
+import { createAzExtResourcesSession, getAzExtResourcesApi } from './auth/createAzExtResourcesSession';
+import { createWrappedAzureResourcesExtensionAuthApi } from './auth/createWrappedAzureResourcesExtensionAuthApi';
 import { registerChatStandInParticipantIfNeeded } from './chat/chatStandIn';
 import { registerLMTools } from './chat/tools/registerLMTools';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
@@ -31,7 +34,6 @@ import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
 import { registerExportAuthRecordOnSessionChange } from './exportAuthRecord';
 import { ext } from './extensionVariables';
-import { AzureResourcesApiInternal } from './hostapi.v2.internal';
 import { ManagedIdentityBranchDataProvider } from './managedIdentity/ManagedIdentityBranchDataProvider';
 import { survey } from './nps';
 import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
@@ -175,7 +177,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         refreshEvent: refreshActivityLogTreeEmitter.event
     });
 
-    const v2ApiFactory: AzureExtensionApiFactory<AzureResourcesApiInternal> = {
+    ext.resourcesApiFactoryV2 = {
         apiVersion: '2.0.0',
         createApi: (options?: GetApiOptions) => {
             return createWrappedAzureResourcesExtensionApi(
@@ -198,7 +200,21 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         }
     };
 
-    ext.v2.api = v2ApiFactory.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
+    const azureResourcesAuthFactory: AzureExtensionApiFactory<AzureResourcesAuthApi> = {
+        apiVersion: '3.0.0',
+        createApi: (options?: GetApiOptions) => {
+            return createWrappedAzureResourcesExtensionAuthApi(
+                {
+                    apiVersion: '3.0.0',
+                    createAzExtResourcesSession,
+                    getAzExtResourcesApi,
+                },
+                options?.extensionId ?? 'unknown',
+            );
+        },
+    };
+
+    ext.v2.api = ext.resourcesApiFactoryV2.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
     ext.managedIdentityBranchDataProvider = new ManagedIdentityBranchDataProvider();
     ext.v2.api.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ManagedIdentityUserAssignedIdentities, ext.managedIdentityBranchDataProvider);
 
@@ -228,7 +244,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                     getSubscriptions,
                 }),
             },
-            v2ApiFactory,
+            azureResourcesAuthFactory,
             /**
              * This is a temporary API and will be removed in a future version once the staged introduction
              * of the "DocumentDB for VS Code" extension is complete.
