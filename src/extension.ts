@@ -6,7 +6,7 @@
 'use strict';
 
 import { registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzureExtensionApi, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, AzureExtensionApi, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
@@ -14,6 +14,7 @@ import { AzExtResourceType } from '../api/src/AzExtResourceType';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/ResourceGroupsExtensionManager';
 import { ActivityLogResourceProviderManager, AzureResourceProviderManager, TenantResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
+import { createAzureResourcesAuthApiFactory } from './api/auth/createAzureResourcesAuthApiFactory';
 import { InternalAzureResourceGroupsExtensionApi } from './api/compatibility/AzureResourceGroupsExtensionApi';
 import { CompatibleAzExtTreeDataProvider } from './api/compatibility/CompatibleAzExtTreeDataProvider';
 import { createCompatibilityPickAppResource } from './api/compatibility/pickAppResource';
@@ -21,9 +22,6 @@ import { registerApplicationResourceResolver } from './api/compatibility/registe
 import { registerWorkspaceResourceProvider } from './api/compatibility/registerWorkspaceResourceProvider';
 import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
-import { AzureResourcesAuthApi } from './auth/AzureResourcesAuthApi';
-import { createAzExtResourcesSession, getAzExtResourcesApi } from './auth/createAzExtResourcesSession';
-import { createWrappedAzureResourcesExtensionAuthApi } from './auth/createWrappedAzureResourcesExtensionAuthApi';
 import { registerChatStandInParticipantIfNeeded } from './chat/chatStandIn';
 import { registerLMTools } from './chat/tools/registerLMTools';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
@@ -200,20 +198,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         }
     };
 
-    const azureResourcesAuthFactory: AzureExtensionApiFactory<AzureResourcesAuthApi> = {
-        apiVersion: '3.0.0',
-        createApi: (options?: GetApiOptions) => {
-            return createWrappedAzureResourcesExtensionAuthApi(
-                {
-                    apiVersion: '3.0.0',
-                    createAzExtResourcesSession,
-                    getAzExtResourcesApi,
-                },
-                options?.extensionId ?? 'unknown',
-            );
-        },
-    };
-
     ext.v2.api = ext.resourcesApiFactoryV2.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
     ext.managedIdentityBranchDataProvider = new ManagedIdentityBranchDataProvider();
     ext.v2.api.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ManagedIdentityUserAssignedIdentities, ext.managedIdentityBranchDataProvider);
@@ -244,7 +228,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                     getSubscriptions,
                 }),
             },
-            azureResourcesAuthFactory,
+            createAzureResourcesAuthApiFactory(),
             /**
              * This is a temporary API and will be removed in a future version once the staged introduction
              * of the "DocumentDB for VS Code" extension is complete.
