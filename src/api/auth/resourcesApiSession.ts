@@ -7,7 +7,6 @@ import { AzureExtensionApi, IActionContext, IParsedError, maskUserInfo, maskValu
 import { apiUtils } from 'api/src/utils/apiUtils';
 import * as jwt from 'jsonwebtoken';
 import { ext } from '../../extensionVariables';
-import { AzureResourcesApiInternal } from '../../hostapi.v2.internal';
 import { localize } from '../../utils/localize';
 
 const tokenSecret: string = crypto.randomUUID();
@@ -56,7 +55,12 @@ export async function createAzureResourcesApiSessionInternal(context: IActionCon
     }
 }
 
-export async function getAzureResourcesApiInternal(context: IActionContext, azureResourcesToken: string): Promise<AzureResourcesApiInternal | undefined> {
+type AzExtTokenPayload = jwt.JwtPayload & {
+    clientExtensionId?: string;
+    clientExtensionVersion?: string;
+};
+
+export async function getAzureResourcesApiSessionInternal(context: IActionContext, azureResourcesToken: string): Promise<AzExtTokenPayload> {
     ext.outputChannel.info(localize('getAzureResourcesApi.start', 'Received request for the Azure Resources API.'));
 
     if (!azureResourcesToken) {
@@ -84,8 +88,8 @@ export async function getAzureResourcesApiInternal(context: IActionContext, azur
             throw new Error(localize('getAzureResourcesApi.notAllowed', 'Requesting extension "{0}" is not on the allow list.', jwtPayload.clientExtensionId ?? 'unknown'));
         }
 
-        ext.outputChannel.info(localize('getAzureResourcesApi.success', 'Sending Azure Resources API to extension "{0}".', jwtPayload.clientExtensionId));
-        return ext.resourcesApiFactoryV2.createApi({ extensionId: jwtPayload.clientExtensionId });
+        ext.outputChannel.info(localize('getAzureResourcesApi.success', 'Successfully verified extension "{0}".', jwtPayload.clientExtensionId));
+        return jwtPayload;
 
     } catch (err) {
         const failed: string = localize('getAzureResourcesApi.failed', 'Failed to authenticate extension.');
@@ -100,11 +104,6 @@ export async function getAzureResourcesApiInternal(context: IActionContext, azur
     }
 }
 
-type AzExtTokenPayload = jwt.JwtPayload & {
-    clientExtensionId?: string;
-    clientExtensionVersion?: string;
-};
-
 type AzureExtensionApiV3 = AzureExtensionApi & {
     receiveAzExtResourcesSession?(resourcesToken: string, clientToken: string): void | Promise<void>;
 };
@@ -118,3 +117,7 @@ export async function getClientExtensionApi(clientExtensionId: string, clientExt
         throw new Error(localize('noClientExt', 'Could not find Azure extension API for extension ID "{0}".', clientExtensionId));
     }
 }
+
+// Todo: Update utils with new types
+// Use container apps to try and connect and set up a handshake
+// Clean up api

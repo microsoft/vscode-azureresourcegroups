@@ -5,14 +5,14 @@
 
 import { AzureExtensionApi, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, GetApiOptions, IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzureResourcesApiInternal } from '../../hostapi.v2.internal';
-import { createAzureResourcesApiSessionInternal, getAzureResourcesApiInternal } from './azureResourcesAuthApi';
+import { createAzureResourcesApiSessionInternal, getAzureResourcesApiSessionInternal } from './resourcesApiSession';
 
 export interface AzureResourcesAuthApi extends AzureExtensionApi {
     getAzureResourcesApi(azureResourcesToken: string): Promise<AzureResourcesApiInternal | undefined>;
     createAzureResourcesApiSession(clientExtensionId: string, clientExtensionVersion: string, clientExtensionToken: string): Promise<void>;
 }
 
-export function createAzureResourcesAuthApiFactory(): AzureExtensionApiFactory<AzureResourcesAuthApi> {
+export function createAzureResourcesAuthApiFactory(resourcesApiFactoryV2: AzureExtensionApiFactory<AzureResourcesApiInternal>): AzureExtensionApiFactory<AzureResourcesAuthApi> {
     return {
         apiVersion: '3.0.0',
         createApi: (options?: GetApiOptions) => {
@@ -21,7 +21,8 @@ export function createAzureResourcesAuthApiFactory(): AzureExtensionApiFactory<A
                 getAzureResourcesApi: async (azureResourcesToken: string) => {
                     return await callWithTelemetryAndErrorHandling('api.getAzureResourcesApi', async (context: IActionContext) => {
                         addAuthTelemetryAndErrorHandling(context, options?.extensionId);
-                        return await getAzureResourcesApiInternal(context, azureResourcesToken);
+                        const { clientExtensionId } = await getAzureResourcesApiSessionInternal(context, azureResourcesToken);
+                        return resourcesApiFactoryV2.createApi({ extensionId: clientExtensionId });
                     });
                 },
                 createAzureResourcesApiSession: async (clientExtensionId: string, clientExtensionVersion: string, clientExtensionToken: string) => {
