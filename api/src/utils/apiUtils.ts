@@ -10,6 +10,14 @@ export interface AzureExtensionApi {
      * The API version for this extension. It should be versioned separately from the extension and ideally remains backwards compatible.
      */
     apiVersion: string;
+    /**
+     * An optional endpoint that an Azure extension should export in its API if it wants to be able to receive Azure Resource API sessions
+     * Todo: Add a reference to handshake in a README?
+     * @param azureResourcesToken - The token to use for accessing the Azure Resources API
+     * @param clientToken - The token that was initially generated and passed to the Azure Resources API create session request.
+     * This token is used to verify that the correct issuer is passing the Azure Resources token.
+     */
+    receiveAzureResourcesSession?(azureResourcesToken: string, clientToken: string): void | Promise<void>;
 }
 
 export interface GetApiOptions {

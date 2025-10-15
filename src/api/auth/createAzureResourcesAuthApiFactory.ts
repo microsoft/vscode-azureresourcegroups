@@ -3,32 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureExtensionApi, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, GetApiOptions, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, GetApiOptions, IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzureResourcesApiInternal } from '../../hostapi.v2.internal';
-import { createAzureResourcesApiSessionInternal, getAzureResourcesApiSessionInternal } from './resourcesApiSession';
+import { AzureResourcesAuthApiInternal } from '../../hostapi.v3.internal';
+import { createAzureResourcesApiSessionInternal, verifyAzureResourcesApiSessionInternal } from './authApiInternal';
 
-export interface AzureResourcesAuthApi extends AzureExtensionApi {
-    getAzureResourcesApi(azureResourcesToken: string): Promise<AzureResourcesApiInternal | undefined>;
-    createAzureResourcesApiSession(clientExtensionId: string, clientExtensionVersion: string, clientExtensionToken: string): Promise<void>;
-}
-
-export function createAzureResourcesAuthApiFactory(resourcesApiInternalFactory: AzureExtensionApiFactory<AzureResourcesApiInternal>): AzureExtensionApiFactory<AzureResourcesAuthApi> {
+export function createAzureResourcesAuthApiFactory(resourcesApiInternalFactory: AzureExtensionApiFactory<AzureResourcesApiInternal>): AzureExtensionApiFactory<AzureResourcesAuthApiInternal> {
     return {
         apiVersion: '3.0.0',
         createApi: (options?: GetApiOptions) => {
             return {
                 apiVersion: '3.0.0',
-                getAzureResourcesApi: async (azureResourcesToken: string) => {
+                getAzureResourcesApi: async (clientExtensionId: string, azureResourcesCredential: string) => {
                     return await callWithTelemetryAndErrorHandling('api.getAzureResourcesApi', async (context: IActionContext) => {
-                        addAuthTelemetryAndErrorHandling(context, options?.extensionId);
-                        const { clientExtensionId } = await getAzureResourcesApiSessionInternal(context, azureResourcesToken);
-                        return resourcesApiInternalFactory.createApi({ extensionId: clientExtensionId });
+                        addCommonAuthTelemetryAndErrorHandling(context, options?.extensionId);
+                        return await verifyAzureResourcesApiSessionInternal(context, clientExtensionId, azureResourcesCredential) ?
+                            resourcesApiInternalFactory.createApi({ extensionId: clientExtensionId }) : undefined;
                     });
                 },
-                createAzureResourcesApiSession: async (clientExtensionId: string, clientExtensionVersion: string, clientExtensionToken: string) => {
+                createAzureResourcesApiSession: async (clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string) => {
                     return await callWithTelemetryAndErrorHandling('api.createAzureResourcesApiSession', async (context: IActionContext) => {
-                        addAuthTelemetryAndErrorHandling(context, options?.extensionId);
-                        return await createAzureResourcesApiSessionInternal(context, clientExtensionId, clientExtensionVersion, clientExtensionToken);
+                        addCommonAuthTelemetryAndErrorHandling(context, options?.extensionId);
+                        return await createAzureResourcesApiSessionInternal(context, clientExtensionId, clientExtensionVersion, clientExtensionCredential);
                     });
                 },
             };
@@ -36,7 +32,7 @@ export function createAzureResourcesAuthApiFactory(resourcesApiInternalFactory: 
     };
 }
 
-function addAuthTelemetryAndErrorHandling(context: IActionContext, extensionId?: string): void {
+function addCommonAuthTelemetryAndErrorHandling(context: IActionContext, extensionId?: string): void {
     context.telemetry.properties.callingExtensionId = extensionId;
     context.telemetry.properties.isActivationEvent = 'true';
     context.telemetry.properties.apiVersion = '3.0.0';

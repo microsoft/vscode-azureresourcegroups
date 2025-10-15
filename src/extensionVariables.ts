@@ -51,10 +51,10 @@ export namespace ext {
 
     export let subscriptionProviderFactory: () => Promise<AzureSubscriptionProvider>;
     export let managedIdentityBranchDataProvider: ManagedIdentityBranchDataProvider;
-    export let resourcesApiFactoryV2: AzureExtensionApiFactory<AzureResourcesApiInternal>;
 
     export namespace v2 {
         export let api: AzureResourcesApiInternal;
+        export let factory: AzureExtensionApiFactory<AzureResourcesApiInternal>;
     }
 
     export namespace testing {
