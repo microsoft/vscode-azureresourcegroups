@@ -5,6 +5,7 @@
 
 export * from './auth/AzExtCredentialManager';
 export * from './auth/AzExtSignatureCredentialManager';
+export * from './auth/handshake';
 export * from './AzExtResourceType';
 export * from './extensionApi';
 export * from './getAzExtResourceType';

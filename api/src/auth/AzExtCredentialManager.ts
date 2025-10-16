@@ -8,9 +8,9 @@ export interface AzExtCredentialManager<T> {
     verifyCredential(credential: string, expectedPayload?: T): AzExtVerifyCredentialResult<T> | Promise<AzExtVerifyCredentialResult<T>>;
 
     /**
-     * Masks sensitive information from a given string to ensure private credential management keys are not contained.
-     * @param data The string to be processed.
-     * @returns The string with any sensitive credentials masked.
+     * Masks sensitive information from a given string to ensure private credential management keys from the manager are not exposed.
+     * @param data - The string to be processed.
+     * @returns The same string stripped of any sensitive credentials.
      */
     maskCredentials(data: string): string;
 }
