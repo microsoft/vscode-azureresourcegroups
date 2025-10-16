@@ -20,6 +20,10 @@ export class AzExtSignatureCredentialManager implements AzExtCredentialManager<s
         this._privateKey = privateKey;
     }
 
+    get publicKey(): string {
+        return this._publicKey;
+    }
+
     createCredential(payload: string): string {
         return this.createSignature(this._privateKey, payload);
     }
