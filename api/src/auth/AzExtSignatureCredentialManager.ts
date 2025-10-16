@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as crypto from "crypto";
+import { maskValue } from "../utils/maskValue";
 import { AzExtCredentialManager } from "./AzExtCredentialManager";
 
 export class AzExtSignatureCredentialManager implements AzExtCredentialManager<string> {
@@ -28,8 +29,11 @@ export class AzExtSignatureCredentialManager implements AzExtCredentialManager<s
         return { verified, payload: verified ? payload : undefined };
     }
 
-    getMaskValues(): string[] {
-        return [this._privateKey, this._publicKey];
+    maskCredentials(data: string): string {
+        for (const mask of [this._publicKey, this._privateKey]) {
+            data = maskValue(data, mask);
+        }
+        return data;
     }
 
     private generateExtensionPublicAndPrivateKeys(): crypto.KeyPairSyncResult<string, string> {

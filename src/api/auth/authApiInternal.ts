@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureExtensionApi, IActionContext, IParsedError, maskUserInfo, maskValue, parseError } from '@microsoft/vscode-azext-utils';
+import { AzureExtensionApi, IActionContext, IParsedError, maskUserInfo, parseError } from '@microsoft/vscode-azext-utils';
 import { AzExtCredentialManager } from '../../../api/src/auth/AzExtCredentialManager';
 import { AzExtSignatureCredentialManager } from '../../../api/src/auth/AzExtSignatureCredentialManager';
 import { apiUtils } from '../../../api/src/utils/apiUtils';
@@ -39,9 +39,9 @@ export async function createAzureResourcesApiSessionInternal(context: IActionCon
         ext.outputChannel.error(failed);
 
         const perr: IParsedError = parseError(err);
-        const maskCredentials: string[] = azureResourcesCredentialManager.getMaskValues();
-        context.telemetry.properties.createResourcesApiSessionError = maskUserInfo(perr.message, maskCredentials);
-        ext.outputChannel.error(maskValues(perr.message, maskCredentials));
+        const perrMessage: string = azureResourcesCredentialManager.maskCredentials(perr.message);
+        context.telemetry.properties.createResourcesApiSessionError = maskUserInfo(perrMessage, []);
+        ext.outputChannel.error(perrMessage);
         throw new Error(failed);
     }
 }
@@ -75,9 +75,9 @@ export async function verifyAzureResourcesApiSessionInternal(context: IActionCon
         ext.outputChannel.error(failed);
 
         const perr: IParsedError = parseError(err);
-        const maskCredentials: string[] = azureResourcesCredentialManager.getMaskValues();
-        ext.outputChannel.error(maskValues(perr.message, maskCredentials));
-        context.telemetry.properties.getAzureResourcesApiError = maskUserInfo(perr.message, maskCredentials);
+        const perrMessage: string = azureResourcesCredentialManager.maskCredentials(perr.message);
+        ext.outputChannel.error(perrMessage);
+        context.telemetry.properties.getAzureResourcesApiError = maskUserInfo(perrMessage, []);
         return false;
     }
 }
@@ -89,11 +89,4 @@ export async function getClientExtensionApi(clientExtensionId: string, clientExt
     } else {
         throw new Error(localize('noClientExt', 'Could not find Azure extension API for extension ID "{0}".', clientExtensionId));
     }
-}
-
-function maskValues(message: string, valuesToMask: string[]): string {
-    for (const value of valuesToMask) {
-        message = maskValue(message, value);
-    }
-    return message;
 }
