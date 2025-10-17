@@ -13,8 +13,9 @@ import { ext } from './extensionVariables';
 
 /**
  * Thread-safe state manager for authentication accounts
+ * @internal - Only exported for testing purposes
  */
-class AuthAccountStateManager {
+export class AuthAccountStateManager {
     private static instance: AuthAccountStateManager;
     private accountsCache: readonly vscode.AuthenticationSessionAccountInformation[] = [];
     private isUpdating: boolean = false;
@@ -150,6 +151,7 @@ export function registerExportAuthRecordOnSessionChange(_context: ExtensionConte
 /**
  * Get the singleton instance of AuthAccountStateManager for managing authentication accounts state.
  * This provides thread-safe access to accounts fetched during auth record persistence.
+ * @internal - Only exported for testing purposes
  */
 export function getAuthAccountStateManager(): AuthAccountStateManager {
     return AuthAccountStateManager.getInstance();
