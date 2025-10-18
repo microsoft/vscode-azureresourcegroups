@@ -5,7 +5,6 @@
 
 import { AzureExtensionApi, IActionContext, IParsedError, maskUserInfo, parseError } from '@microsoft/vscode-azext-utils';
 import { AzExtCredentialManager } from '../../../api/src/auth/AzExtCredentialManager';
-import { AzExtSignatureCredentialManager } from '../../../api/src/auth/AzExtSignatureCredentialManager';
 import { apiUtils } from '../../../api/src/utils/apiUtils';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
@@ -15,70 +14,72 @@ const allowedExtensionIds = [
     'ms-azuretools.vscode-azurecontainerapps',
 ];
 
-const azureResourcesCredentialManager: AzExtCredentialManager<string> = new AzExtSignatureCredentialManager();
-
-export async function createAzureResourcesApiSessionInternal(context: IActionContext, clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string): Promise<void> {
+export async function createAzureResourcesApiSessionInternal(context: IActionContext, credentialManager: AzExtCredentialManager<unknown>, clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string): Promise<void> {
     context.telemetry.properties.clientExtensionId = clientExtensionId;
     context.telemetry.properties.clientExtensionVersion = clientExtensionVersion;
 
     if (!allowedExtensionIds.includes(clientExtensionId)) {
-        const denied: string = localize('createResourcesApiSession.denied', 'Azure Resources API session denied for extension "{0}".', clientExtensionId);
-        context.telemetry.properties.createResourcesApiSessionError = denied;
-        context.telemetry.properties.allowed = 'false';
-        ext.outputChannel.warn(denied);
-        throw new Error(denied);
+        context.telemetry.properties.allowedExtension = 'false';
+        ext.outputChannel.warn(localize('createResourcesApiSession.denied', 'Azure Resources API session denied for extension "{0}".', clientExtensionId));
+        throw new Error('🧙 No, thank you! We don\'t want any more visitors, well-wishers, or distant relations! 🧝🦶');
     }
 
-    context.telemetry.properties.allowed = 'true';
+    context.telemetry.properties.allowedExtension = 'true';
 
     try {
         const clientApi = await getClientExtensionApi(clientExtensionId, clientExtensionVersion);
-        await clientApi.receiveAzureResourcesSession?.(await azureResourcesCredentialManager.createCredential(clientExtensionId), clientExtensionCredential);
+        await clientApi.receiveAzureResourcesSession?.(await credentialManager.createCredential(clientExtensionId), clientExtensionCredential);
     } catch (err) {
         const failed: string = localize('createResourcesApiSession.failed', 'Failed to create Azure Resources API session for extension "{0}".', clientExtensionId);
         ext.outputChannel.error(failed);
 
         const perr: IParsedError = parseError(err);
-        const perrMessage: string = azureResourcesCredentialManager.maskCredentials(perr.message);
+        const perrMessage: string = credentialManager.maskCredentials(perr.message);
         context.telemetry.properties.createResourcesApiSessionError = maskUserInfo(perrMessage, []);
         ext.outputChannel.error(perrMessage);
         throw new Error(failed);
     }
 }
 
-export async function verifyAzureResourcesApiSessionInternal(context: IActionContext, clientExtensionId: string, azureResourcesCredential: string): Promise<boolean> {
+export async function verifyAzureResourcesApiSessionInternal(context: IActionContext, credentialManager: AzExtCredentialManager<unknown>, clientExtensionId: string, azureResourcesCredential: string): Promise<boolean> {
+    const getApiVerifyError: string = `${clientExtensionId || 'Unknown Extension'} - 🧙 You shall not pass! 🔥`;
+
     if (!clientExtensionId || !azureResourcesCredential) {
-        return false;
+        context.telemetry.properties.deniedReason = 'missingDetails';
+        throw new Error(getApiVerifyError);
     }
 
     context.telemetry.properties.clientExtensionId = clientExtensionId;
 
     try {
-        const { verified } = await azureResourcesCredentialManager.verifyCredential(azureResourcesCredential, clientExtensionId);
+        const { verified } = await credentialManager.verifyCredential(azureResourcesCredential, clientExtensionId);
 
         if (!verified) {
-            context.telemetry.properties.deniedReason = 'notVerified';
-            throw new Error(localize('getAzureResourcesApi.notVerified', 'Provided a credential that failed verification.'));
+            context.telemetry.properties.deniedReason = 'failedVerification';
+            const failedVerification: string = localize('getAzureResourcesApi.failedVerification', 'Extension claiming to be "{0}" provided a credential that failed verification.', clientExtensionId);
+            ext.outputChannel.error(failedVerification);
+            throw new Error(failedVerification);
         }
 
         if (!allowedExtensionIds.includes(clientExtensionId)) {
             context.telemetry.properties.deniedReason = 'notAllowed';
-            throw new Error(localize('getAzureResourcesApi.notAllowed', 'Requesting extension is not on the allow list.'));
+            ext.outputChannel.warn(localize('getAzureResourcesApi.notAllowed', 'Extension claiming to be "{0}" is not on the allow list.', clientExtensionId));
+            throw new Error(getApiVerifyError);
         }
 
         ext.outputChannel.info(localize('getAzureResourcesApi.success', 'Successfully verified extension "{0}".', clientExtensionId));
         return true;
 
     } catch (err) {
-        const failed: string = localize('getAzureResourcesApi.failed', 'Failed to authenticate extension "{0}".', clientExtensionId);
+        const failed: string = localize('getAzureResourcesApi.verifyError', 'Failed to verify extension "{0}".', clientExtensionId);
         context.telemetry.properties.deniedReason ||= 'verifyError';
         ext.outputChannel.error(failed);
 
         const perr: IParsedError = parseError(err);
-        const perrMessage: string = azureResourcesCredentialManager.maskCredentials(perr.message);
+        const perrMessage: string = credentialManager.maskCredentials(perr.message);
         ext.outputChannel.error(perrMessage);
         context.telemetry.properties.getAzureResourcesApiError = maskUserInfo(perrMessage, []);
-        return false;
+        throw new Error(perrMessage);
     }
 }
 

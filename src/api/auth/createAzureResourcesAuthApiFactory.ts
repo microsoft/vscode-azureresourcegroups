@@ -3,28 +3,41 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, GetApiOptions, IActionContext } from '@microsoft/vscode-azext-utils';
-import { AzureResourcesApiInternal } from '../../hostapi.v2.internal';
-import { AzureResourcesAuthApiInternal } from '../../hostapi.v3.internal';
+import { AzureExtensionApi, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, GetApiOptions, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtCredentialManager } from '../../../api/src/auth/AzExtCredentialManager';
+import { AzureResourcesAuthApiInternal } from '../../hostapi.v4.internal';
 import { createAzureResourcesApiSessionInternal, verifyAzureResourcesApiSessionInternal } from './authApiInternal';
 
-export function createAzureResourcesAuthApiFactory(resourcesApiInternalFactory: AzureExtensionApiFactory<AzureResourcesApiInternal>): AzureExtensionApiFactory<AzureResourcesAuthApiInternal> {
+const v4: string = '4.0.0';
+
+export function createAzureResourcesAuthApiFactory(credentialManager: AzExtCredentialManager<unknown>, apiFactories: Map<string, AzureExtensionApiFactory<AzureExtensionApi>>): AzureExtensionApiFactory<AzureResourcesAuthApiInternal> {
     return {
-        apiVersion: '3.0.0',
+        apiVersion: v4,
         createApi: (options?: GetApiOptions) => {
             return {
-                apiVersion: '3.0.0',
-                getAzureResourcesApi: async (clientExtensionId: string, azureResourcesCredential: string) => {
+                apiVersion: v4,
+                getAzureResourcesApi: async (clientExtensionId: string, azureResourcesApiVersions: string[], azureResourcesCredential: string) => {
                     return await callWithTelemetryAndErrorHandling('api.getAzureResourcesApi', async (context: IActionContext) => {
-                        addCommonAuthTelemetryAndErrorHandling(context, options?.extensionId);
-                        return await verifyAzureResourcesApiSessionInternal(context, clientExtensionId, azureResourcesCredential) ?
-                            resourcesApiInternalFactory.createApi({ extensionId: clientExtensionId }) : undefined;
-                    });
+                        addCommonTelemetryAndErrorHandling(context, options?.extensionId);
+
+                        const verified: boolean = await verifyAzureResourcesApiSessionInternal(context, credentialManager, clientExtensionId, azureResourcesCredential);
+                        if (!verified) {
+                            return [];
+                        }
+
+                        return azureResourcesApiVersions
+                            .map((apiVersion) => {
+                                const apiFactory = apiFactories.get(apiVersion);
+                                return apiFactory?.createApi({ extensionId: clientExtensionId });
+                            })
+                            .filter(api => !!api) as AzureExtensionApi[];
+
+                    }) ?? [];
                 },
                 createAzureResourcesApiSession: async (clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string) => {
                     return await callWithTelemetryAndErrorHandling('api.createAzureResourcesApiSession', async (context: IActionContext) => {
-                        addCommonAuthTelemetryAndErrorHandling(context, options?.extensionId);
-                        return await createAzureResourcesApiSessionInternal(context, clientExtensionId, clientExtensionVersion, clientExtensionCredential);
+                        addCommonTelemetryAndErrorHandling(context, options?.extensionId);
+                        return await createAzureResourcesApiSessionInternal(context, credentialManager, clientExtensionId, clientExtensionVersion, clientExtensionCredential);
                     });
                 },
             };
@@ -32,10 +45,10 @@ export function createAzureResourcesAuthApiFactory(resourcesApiInternalFactory: 
     };
 }
 
-function addCommonAuthTelemetryAndErrorHandling(context: IActionContext, extensionId?: string): void {
+function addCommonTelemetryAndErrorHandling(context: IActionContext, extensionId?: string): void {
     context.telemetry.properties.callingExtensionId = extensionId;
     context.telemetry.properties.isActivationEvent = 'true';
-    context.telemetry.properties.apiVersion = '3.0.0';
+    context.telemetry.properties.apiVersion = '4.0.0';
     context.errorHandling.rethrow = true;
     context.errorHandling.suppressDisplay = true;
     context.errorHandling.suppressReportIssue = true;

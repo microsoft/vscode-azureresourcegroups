@@ -4,19 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { l10n } from "vscode";
-import { AzureResourcesExtensionApi, AzureResourcesExtensionAuthApi } from "../extensionApi";
+import { AzureResourcesExtensionApi, AzureResourcesExtensionAuthApi } from "../extensionApis";
 import { apiUtils, AzureExtensionApi } from "../utils/apiUtils";
 import { delay } from "../utils/delay";
 import { AzExtCredentialManager } from "./AzExtCredentialManager";
 
-const azureResourcesDefaultApiVersion = '3.0.0';
+const azureResourcesAuthApiVersion: string = '4.0.0';
 const azureResourcesExtId = 'ms-azuretools.vscode-azureresourcegroups';
 
 export type AzureResourcesHandshakeContext = {
-    azureResourcesApiVersion?: string;
+    azureResourcesApiVersions: string[];
     clientExtensionId: string;
     clientCredentialManager: AzExtCredentialManager<unknown>;
-    onDidReceiveAzureResourcesApi: (azureResourcesApi: AzureResourcesExtensionApi) => void | Promise<void>;
+    onDidReceiveAzureResourcesApis: (azureResourcesApis: (AzureResourcesExtensionApi | AzureExtensionApi)[]) => void | Promise<void>;
 };
 
 export function prepareAzureResourcesHandshake(context: AzureResourcesHandshakeContext, clientExtensionApi: AzureExtensionApi): { api: AzureExtensionApi, initiateHandshake: () => void | Promise<void> } {
@@ -36,8 +36,7 @@ export async function requestAzureResourcesSession(context: AzureResourcesHandsh
         // Log and continue (shouldn't hurt to try anyway)
     }
 
-    const azureResourcesApiVersion: string = context.azureResourcesApiVersion ?? azureResourcesDefaultApiVersion;
-    const resourcesApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesApiVersion);
+    const resourcesApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
     const clientExtensionCredential: string = await context.clientCredentialManager.createCredential(context.clientExtensionId);
     await resourcesApi.createAzureResourcesApiSession(context.clientExtensionId, clientApiVersion, clientExtensionCredential);
 }
@@ -52,7 +51,7 @@ async function verifyExtensionsReady(context: AzureResourcesHandshakeContext, cl
 
         try {
             if (
-                await getClientExtensionApi<AzureExtensionApi>(azureResourcesExtId, context.azureResourcesApiVersion ?? azureResourcesDefaultApiVersion) &&
+                await getClientExtensionApi<AzureExtensionApi>(azureResourcesExtId, azureResourcesAuthApiVersion) &&
                 await getClientExtensionApi<AzureExtensionApi>(context.clientExtensionId, clientApiVersion)
             ) {
                 return true;
@@ -77,15 +76,13 @@ function createReceiveAzureResourcesSession(context: AzureResourcesHandshakeCont
             return;
         }
 
-        const azureResourcesApiVersion: string = context.azureResourcesApiVersion ?? azureResourcesDefaultApiVersion;
-        const resourcesAuthApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesApiVersion);
-        const resourcesApi = await resourcesAuthApi.getAzureResourcesApi(context.clientExtensionId, azureResourcesCredential);
-
-        if (!resourcesApi) {
-            return;
+        const resourcesAuthApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
+        const resourcesApis = await resourcesAuthApi.getAzureResourcesApi(context.clientExtensionId, context.azureResourcesApiVersions, azureResourcesCredential) ?? [];
+        if (!resourcesApis.length) {
+            throw new Error();
         }
 
-        await context.onDidReceiveAzureResourcesApi(resourcesApi);
+        await context.onDidReceiveAzureResourcesApis(resourcesApis);
     }
 }
 

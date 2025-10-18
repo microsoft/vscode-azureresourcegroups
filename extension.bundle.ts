@@ -18,7 +18,7 @@ export { LocationListStep } from '@microsoft/vscode-azext-azureutils';
 export * from '@microsoft/vscode-azext-utils';
 export * from './api/src/AzExtResourceType';
 // export * from './api/src';
-export * from './api/src/extensionApi';
+export * from './api/src/extensionApis';
 export * from './api/src/resources/azure';
 export * from './api/src/resources/base';
 export * from './api/src/resources/workspace';
