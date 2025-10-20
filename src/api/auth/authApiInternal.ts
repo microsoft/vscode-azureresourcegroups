@@ -10,6 +10,7 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 
 const allowedExtensionIds = [
+    // Todo: Add remainder of extension ids
     'ms-azuretools.vscode-azurefunctions',
     'ms-azuretools.vscode-azurecontainerapps',
 ];

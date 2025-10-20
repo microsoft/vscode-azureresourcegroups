@@ -12,11 +12,12 @@ import { AzureResourcesApiRequestContext } from "./AzureResourcesApiRequestConte
 const azureResourcesAuthApiVersion: string = '4.0.0';
 const azureResourcesExtId = 'ms-azuretools.vscode-azureresourcegroups';
 
-export type PrepareAzureResourcesApiRequestResult<T extends AzureExtensionApi> = {
+export type AzureResourcesApiRequestPrep<T extends AzureExtensionApi> = {
     /**
      * The modified client extension API.  Ensures the required `receiveAzureResourcesSession` method has been added.
      */
     clientApi: T & Required<Pick<T, 'receiveAzureResourcesSession'>>;
+
     /**
      * Initiates the authentication handshake required to obtain the Azure Resources API.
      * This process includes polling to ensure that both the Azure Resources extension and the client extension
@@ -31,7 +32,7 @@ export type PrepareAzureResourcesApiRequestResult<T extends AzureExtensionApi> =
     requestResourcesApi: (maxWaitTimeMs?: number) => void;
 };
 
-export function prepareAzureResourcesApiRequest<T extends AzureExtensionApi>(context: AzureResourcesApiRequestContext, clientExtensionApi: T): PrepareAzureResourcesApiRequestResult<T> {
+export function prepareAzureResourcesApiRequest<T extends AzureExtensionApi>(context: AzureResourcesApiRequestContext, clientExtensionApi: T): AzureResourcesApiRequestPrep<T> {
     if (!clientExtensionApi.receiveAzureResourcesSession) {
         clientExtensionApi.receiveAzureResourcesSession = createReceiveAzureResourcesSession(context);
     }
@@ -45,12 +46,33 @@ export function prepareAzureResourcesApiRequest<T extends AzureExtensionApi>(con
 export async function requestAzureResourcesSession(context: AzureResourcesApiRequestContext, clientApiVersion: string, maxWaitTimeMs: number = 1000 * 10): Promise<void> {
     const areExtensionsReady: boolean = await verifyExtensionsReady(context, clientApiVersion, maxWaitTimeMs /** maxWaitTimeMs */);
     if (!areExtensionsReady) {
-        // Log and continue (shouldn't hurt to try anyway)
+        // What should we do here?
     }
 
     const resourcesApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
     const clientExtensionCredential: string = await context.clientCredentialManager.createCredential(context.clientExtensionId);
     await resourcesApi.createAzureResourcesApiSession(context.clientExtensionId, clientApiVersion, clientExtensionCredential);
+}
+
+function createReceiveAzureResourcesSession(context: AzureResourcesApiRequestContext): AzureExtensionApi['receiveAzureResourcesSession'] {
+    return async function (azureResourcesCredential: string, clientCredential: string): Promise<void> {
+        if (!azureResourcesCredential || !clientCredential) {
+            return;
+        }
+
+        const { verified } = await context.clientCredentialManager.verifyCredential(clientCredential, context.clientExtensionId);
+        if (!verified) {
+            return;
+        }
+
+        const resourcesAuthApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
+        const resourcesApis = await resourcesAuthApi.getAzureResourcesApi(context.clientExtensionId, context.azureResourcesApiVersions, azureResourcesCredential) ?? [];
+        if (!resourcesApis.length) {
+            throw new Error();
+        }
+
+        await context.onDidReceiveAzureResourcesApis(resourcesApis);
+    }
 }
 
 async function verifyExtensionsReady(context: AzureResourcesApiRequestContext, clientApiVersion: string, maxWaitTimeMs: number): Promise<boolean> {
@@ -74,27 +96,6 @@ async function verifyExtensionsReady(context: AzureResourcesApiRequestContext, c
     }
 
     return false;
-}
-
-function createReceiveAzureResourcesSession(context: AzureResourcesApiRequestContext): AzureExtensionApi['receiveAzureResourcesSession'] {
-    return async function (azureResourcesCredential: string, clientCredential: string): Promise<void> {
-        if (!azureResourcesCredential || !clientCredential) {
-            return;
-        }
-
-        const { verified } = await context.clientCredentialManager.verifyCredential(clientCredential, context.clientExtensionId);
-        if (!verified) {
-            return;
-        }
-
-        const resourcesAuthApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
-        const resourcesApis = await resourcesAuthApi.getAzureResourcesApi(context.clientExtensionId, context.azureResourcesApiVersions, azureResourcesCredential) ?? [];
-        if (!resourcesApis.length) {
-            throw new Error();
-        }
-
-        await context.onDidReceiveAzureResourcesApis(resourcesApis);
-    }
 }
 
 async function getClientExtensionApi<T extends AzureExtensionApi>(clientExtensionId: string, clientExtensionVersion: string): Promise<T> {

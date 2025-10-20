@@ -249,6 +249,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
      * Dependent extensions should rely on this API signal rather than the extension version.
      *
      * This temporary API will be removed in a future version once the migration is complete.
+     * See: https://github.com/microsoft/vscode-azureresourcegroups/pull/1223
      */
     const v3: string = '3.0.0';
     const azureResourcesV3ApiFactory: AzureExtensionApiFactory<AzureExtensionApi> = {
