@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// Sourced from the utils shared package
+// Copy from the utils shared package
 export function maskValue(data: string, valueToMask: string | undefined): string {
     if (valueToMask) {
         const formsOfValue: string[] = [valueToMask, encodeURIComponent(valueToMask)];

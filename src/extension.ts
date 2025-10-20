@@ -202,8 +202,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         }
     };
 
-    ext.v2.factory = azureResourcesV2ApiFactory;
-    ext.v2.api = ext.v2.factory.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
+    ext.v2.api = azureResourcesV2ApiFactory.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
     ext.managedIdentityBranchDataProvider = new ManagedIdentityBranchDataProvider();
     ext.v2.api.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ManagedIdentityUserAssignedIdentities, ext.managedIdentityBranchDataProvider);
 
