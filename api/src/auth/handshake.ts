@@ -4,34 +4,46 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { l10n } from "vscode";
-import { AzureResourcesExtensionApi, AzureResourcesExtensionAuthApi } from "../extensionApis";
+import { AzureResourcesExtensionAuthApi } from "../extensionApis";
 import { apiUtils, AzureExtensionApi } from "../utils/apiUtils";
 import { delay } from "../utils/delay";
-import { AzExtCredentialManager } from "./AzExtCredentialManager";
+import { AzureResourcesApiRequestContext } from "./AzureResourcesApiRequestContext";
 
 const azureResourcesAuthApiVersion: string = '4.0.0';
 const azureResourcesExtId = 'ms-azuretools.vscode-azureresourcegroups';
 
-export type AzureResourcesHandshakeContext = {
-    azureResourcesApiVersions: string[];
-    clientExtensionId: string;
-    clientCredentialManager: AzExtCredentialManager<unknown>;
-    onDidReceiveAzureResourcesApis: (azureResourcesApis: (AzureResourcesExtensionApi | AzureExtensionApi)[]) => void | Promise<void>;
+export type PrepareAzureResourcesApiRequestResult<T extends AzureExtensionApi> = {
+    /**
+     * The modified client extension API.  Ensures the required `receiveAzureResourcesSession` method has been added.
+     */
+    clientApi: T & Required<Pick<T, 'receiveAzureResourcesSession'>>;
+    /**
+     * Initiates the authentication handshake required to obtain the Azure Resources API.
+     * This process includes polling to ensure that both the Azure Resources extension and the client extension
+     * have exported APIs that are ready for use. The polling will continue until the specified maximum wait time is reached.
+     *
+     * If your extension has a longer activation time, you can specify a custom maximum wait time.
+     * It is recommended to call this and immediately export your API to ensure that it is ready within the max wait time allotted.
+     *
+     * @param maxWaitTimeMs - The maximum time, in milliseconds, to wait for the APIs to become ready before timing out.
+     *                        Defaults to 10 seconds (10,000 ms).
+     */
+    requestResourcesApi: (maxWaitTimeMs?: number) => void;
 };
 
-export function prepareAzureResourcesHandshake(context: AzureResourcesHandshakeContext, clientExtensionApi: AzureExtensionApi): { api: AzureExtensionApi, initiateHandshake: () => void | Promise<void> } {
+export function prepareAzureResourcesApiRequest<T extends AzureExtensionApi>(context: AzureResourcesApiRequestContext, clientExtensionApi: T): PrepareAzureResourcesApiRequestResult<T> {
     if (!clientExtensionApi.receiveAzureResourcesSession) {
         clientExtensionApi.receiveAzureResourcesSession = createReceiveAzureResourcesSession(context);
     }
 
     return {
-        api: clientExtensionApi,
-        initiateHandshake: () => requestAzureResourcesSession(context, clientExtensionApi.apiVersion),
+        clientApi: clientExtensionApi as T & Required<Pick<T, 'receiveAzureResourcesSession'>>,
+        requestResourcesApi: (maxWaitTimeMs?: number) => void requestAzureResourcesSession(context, clientExtensionApi.apiVersion, maxWaitTimeMs),
     };
 }
 
-export async function requestAzureResourcesSession(context: AzureResourcesHandshakeContext, clientApiVersion: string): Promise<void> {
-    const areExtensionsReady: boolean = await verifyExtensionsReady(context, clientApiVersion, 1000 * 10 /** maxWaitTimeMs */);
+export async function requestAzureResourcesSession(context: AzureResourcesApiRequestContext, clientApiVersion: string, maxWaitTimeMs: number = 1000 * 10): Promise<void> {
+    const areExtensionsReady: boolean = await verifyExtensionsReady(context, clientApiVersion, maxWaitTimeMs /** maxWaitTimeMs */);
     if (!areExtensionsReady) {
         // Log and continue (shouldn't hurt to try anyway)
     }
@@ -41,7 +53,7 @@ export async function requestAzureResourcesSession(context: AzureResourcesHandsh
     await resourcesApi.createAzureResourcesApiSession(context.clientExtensionId, clientApiVersion, clientExtensionCredential);
 }
 
-async function verifyExtensionsReady(context: AzureResourcesHandshakeContext, clientApiVersion: string, maxWaitTimeMs: number): Promise<boolean> {
+async function verifyExtensionsReady(context: AzureResourcesApiRequestContext, clientApiVersion: string, maxWaitTimeMs: number): Promise<boolean> {
     const start: number = Date.now();
 
     while (true) {
@@ -57,15 +69,14 @@ async function verifyExtensionsReady(context: AzureResourcesHandshakeContext, cl
                 return true;
             }
         } catch {
-            // Wait briefly and try again
-            await delay(500);
+            await delay(0);
         }
     }
 
     return false;
 }
 
-function createReceiveAzureResourcesSession(context: AzureResourcesHandshakeContext): AzureExtensionApi['receiveAzureResourcesSession'] {
+function createReceiveAzureResourcesSession(context: AzureResourcesApiRequestContext): AzureExtensionApi['receiveAzureResourcesSession'] {
     return async function (azureResourcesCredential: string, clientCredential: string): Promise<void> {
         if (!azureResourcesCredential || !clientCredential) {
             return;
