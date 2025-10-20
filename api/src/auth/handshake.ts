@@ -8,7 +8,7 @@ import { AzureResourcesExtensionAuthApi } from "../extensionApis";
 import { apiUtils, AzureExtensionApi } from "../utils/apiUtils";
 import { delay } from "../utils/delay";
 import { AzureResourcesApiRequestContext } from "./AzureResourcesApiRequestContext";
-import { AzureResourcesHandshakeErrors } from "./handshakeErrors";
+import { AzureResourcesHandshakeErrors } from "./errors";
 
 const azureResourcesAuthApiVersion: string = '4.0.0';
 const azureResourcesExtId = 'ms-azuretools.vscode-azureresourcegroups';
@@ -38,8 +38,8 @@ export function prepareAzureResourcesApiRequest<T extends AzureExtensionApi>(con
         throw new Error('You must specify at least one Azure Resources API version.');
     }
 
-    if (!clientExtensionApi.receiveAzureResourcesSession) {
-        clientExtensionApi.receiveAzureResourcesSession = createReceiveAzureResourcesSession(context);
+    if (!clientExtensionApi.receiveAzureResourcesApiSession) {
+        clientExtensionApi.receiveAzureResourcesApiSession = createReceiveAzureResourcesSession(context);
     }
 
     return {
@@ -72,7 +72,7 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
     }
 }
 
-function createReceiveAzureResourcesSession(context: AzureResourcesApiRequestContext): AzureExtensionApi['receiveAzureResourcesSession'] {
+function createReceiveAzureResourcesSession(context: AzureResourcesApiRequestContext): AzureExtensionApi['receiveAzureResourcesApiSession'] {
     return async function (azureResourcesCredential: string, clientCredential: string): Promise<void> {
         if (!azureResourcesCredential || !clientCredential) {
             await context.onHandshakeError?.(AzureResourcesHandshakeErrors.INSUFFICIENT_CREDENTIALS);

@@ -17,7 +17,7 @@ export interface AzureExtensionApi {
      * @param clientToken - The token that was initially generated and passed to the Azure Resources API create session request.
      * This token is used to verify that the correct issuer is passing the Azure Resources token.
      */
-    receiveAzureResourcesSession?(azureResourcesToken: string, clientToken: string): void | Promise<void>;
+    receiveAzureResourcesApiSession?(azureResourcesToken: string, clientToken: string): void | Promise<void>;
 }
 
 export interface GetApiOptions {

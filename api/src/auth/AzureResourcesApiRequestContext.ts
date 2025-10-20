@@ -6,7 +6,7 @@
 import { AzureResourcesExtensionApi } from "../extensionApis";
 import { AzureExtensionApi } from "../utils/apiUtils";
 import { AzExtCredentialManager } from "./AzExtCredentialManager";
-import { AzureResourcesHandshakeError } from "./handshakeErrors";
+import { AzureResourcesHandshakeError } from "./errors";
 
 export interface AzureResourcesApiRequestContext {
     azureResourcesApiVersions: string[];
