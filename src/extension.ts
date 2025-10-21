@@ -215,8 +215,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
         async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getSubscriptions(filter) };
 
-    const azureResourcesApiCredentialManager: AzExtCredentialManager<string> = new AzExtSignatureCredentialManager();
-
     const azureResourcesInternalApiFactory: AzureExtensionApiFactory<AzureExtensionApi> = {
         apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
         createApi: () => new InternalAzureResourceGroupsExtensionApi({
@@ -261,10 +259,11 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         },
     };
 
-    const azureResourcesApiFactories: Map<string, AzureExtensionApiFactory<AzureExtensionApi>> = new Map([
-        [InternalAzureResourceGroupsExtensionApi.apiVersion, azureResourcesInternalApiFactory],
-        [v2, azureResourcesV2ApiFactory],
-        [v3, azureResourcesV3ApiFactory],
+    const azureResourcesApiCredentialManager: AzExtCredentialManager<string> = new AzExtSignatureCredentialManager();
+    const azureResourcesApiProvider: apiUtils.AzureExtensionApiProvider = createApiProvider([
+        azureResourcesInternalApiFactory,
+        azureResourcesV2ApiFactory,
+        azureResourcesV3ApiFactory,
     ]);
 
     return createApiProvider(
@@ -275,7 +274,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
             azureResourcesV3ApiFactory,
 
             // This will eventually be the only part of the API exposed publically
-            createAzureResourcesAuthApiFactory(azureResourcesApiCredentialManager, azureResourcesApiFactories),
+            createAzureResourcesAuthApiFactory(azureResourcesApiCredentialManager, azureResourcesApiProvider),
         ]
     );
 }

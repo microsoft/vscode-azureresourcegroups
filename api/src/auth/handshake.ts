@@ -15,9 +15,9 @@ const azureResourcesExtId = 'ms-azuretools.vscode-azureresourcegroups';
 
 export type AzureResourcesApiRequestPrep<T extends AzureExtensionApi> = {
     /**
-     * The modified client extension API.  Ensures the required `receiveAzureResourcesSession` method has been added.
+     * The modified client extension API.  Ensures the required `receiveAzureResourcesApiSession` method has been added.
      */
-    clientApi: T & Required<Pick<T, 'receiveAzureResourcesSession'>>;
+    clientApi: T & Required<Pick<T, 'receiveAzureResourcesApiSession'>>;
 
     /**
      * Initiates the authentication handshake required to obtain the Azure Resources API.
@@ -30,21 +30,32 @@ export type AzureResourcesApiRequestPrep<T extends AzureExtensionApi> = {
      * @param maxWaitTimeMs - The maximum time, in milliseconds, to wait for the APIs to become ready before timing out.
      *                        Defaults to 10 seconds (10,000 ms).
      */
-    requestResourcesApi: (maxWaitTimeMs?: number) => void;
+    requestResourcesApis: (maxWaitTimeMs?: number) => void;
 };
 
+/**
+ * Prepares a client extension's API so that it can make a request for the Azure Resources API.
+ *
+ * This function ensures the client extension API includes the required receiver method for handling
+ * authentication handshake sessions. It returns an enhanced API object along with a method to initiate
+ * the handshake process.
+ *
+ * @param context - Configuration and handlers for the Azure Resources API request process
+ * @param clientExtensionApi - The client extension's API object to be modified
+ * @returns An object containing the enhanced client API and a method to request the Azure Resources API
+ */
 export function prepareAzureResourcesApiRequest<T extends AzureExtensionApi>(context: AzureResourcesApiRequestContext, clientExtensionApi: T): AzureResourcesApiRequestPrep<T> {
     if (!context.azureResourcesApiVersions.length) {
         throw new Error('You must specify at least one Azure Resources API version.');
     }
 
     if (!clientExtensionApi.receiveAzureResourcesApiSession) {
-        clientExtensionApi.receiveAzureResourcesApiSession = createReceiveAzureResourcesSession(context);
+        clientExtensionApi.receiveAzureResourcesApiSession = createReceiveAzureResourcesApiSession(context);
     }
 
     return {
-        clientApi: clientExtensionApi as T & Required<Pick<T, 'receiveAzureResourcesSession'>>,
-        requestResourcesApi: (maxWaitTimeMs?: number) => void requestAzureResourcesSession(context, clientExtensionApi.apiVersion, maxWaitTimeMs),
+        clientApi: clientExtensionApi as T & Required<Pick<T, 'receiveAzureResourcesApiSession'>>,
+        requestResourcesApis: (maxWaitTimeMs?: number) => void requestAzureResourcesSession(context, clientExtensionApi.apiVersion, maxWaitTimeMs),
     };
 }
 
@@ -72,7 +83,7 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
     }
 }
 
-function createReceiveAzureResourcesSession(context: AzureResourcesApiRequestContext): AzureExtensionApi['receiveAzureResourcesApiSession'] {
+function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequestContext): AzureExtensionApi['receiveAzureResourcesApiSession'] {
     return async function (azureResourcesCredential: string, clientCredential: string): Promise<void> {
         if (!azureResourcesCredential || !clientCredential) {
             await context.onHandshakeError?.(AzureResourcesHandshakeErrors.INSUFFICIENT_CREDENTIALS);
@@ -91,7 +102,7 @@ function createReceiveAzureResourcesSession(context: AzureResourcesApiRequestCon
             return;
         }
 
-        let resourcesApis: AzureExtensionApi[] | undefined;
+        let resourcesApis: (AzureExtensionApi | undefined)[] = [];
         try {
             const resourcesAuthApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
             resourcesApis = await resourcesAuthApi.getAzureResourcesApi(context.clientExtensionId, context.azureResourcesApiVersions, azureResourcesCredential) ?? [];

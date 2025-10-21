@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureExtensionApi, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, GetApiOptions, IActionContext } from '@microsoft/vscode-azext-utils';
+import { apiUtils, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, GetApiOptions, IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzExtCredentialManager } from '../../../api/src/auth/AzExtCredentialManager';
 import { AzureResourcesAuthApiInternal } from '../../hostapi.v4.internal';
 import { createAzureResourcesApiSessionInternal, verifyAzureResourcesApiSessionInternal } from './authApiInternal';
 
 const v4: string = '4.0.0';
 
-export function createAzureResourcesAuthApiFactory(credentialManager: AzExtCredentialManager<unknown>, apiFactories: Map<string, AzureExtensionApiFactory<AzureExtensionApi>>): AzureExtensionApiFactory<AzureResourcesAuthApiInternal> {
+export function createAzureResourcesAuthApiFactory(credentialManager: AzExtCredentialManager<unknown>, azureResourcesApiProvider: apiUtils.AzureExtensionApiProvider): AzureExtensionApiFactory<AzureResourcesAuthApiInternal> {
     return {
         apiVersion: v4,
         createApi: (options?: GetApiOptions) => {
@@ -27,10 +27,12 @@ export function createAzureResourcesAuthApiFactory(credentialManager: AzExtCrede
 
                         return azureResourcesApiVersions
                             .map((apiVersion) => {
-                                const apiFactory = apiFactories.get(apiVersion);
-                                return apiFactory?.createApi({ extensionId: clientExtensionId });
-                            })
-                            .filter(api => !!api) as AzureExtensionApi[];
+                                try {
+                                    return azureResourcesApiProvider.getApi(apiVersion, options);
+                                } catch {
+                                    return undefined;
+                                }
+                            });
 
                     }) ?? [];
                 },

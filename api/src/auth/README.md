@@ -20,4 +20,6 @@ Azure Resources APIs are protected behind the v4 authentication layer. This laye
 
 ## Automating the Handshake
 
-<!-- Todo -->
+To simplify the handshake process, we have put together some tools you can use.
+
+
