@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
-import { AzExtTreeDataProvider, AzureExtensionApiFactory, IAzExtLogOutputChannel, IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
+import { AzExtTreeDataProvider, IAzExtLogOutputChannel, IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
 import { AzExtResourceType } from "api/src/AzExtResourceType";
 import { DiagnosticCollection, Disposable, ExtensionContext, TreeView } from "vscode";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
@@ -54,7 +54,6 @@ export namespace ext {
 
     export namespace v2 {
         export let api: AzureResourcesApiInternal;
-        export let factory: AzureExtensionApiFactory<AzureResourcesApiInternal>;
     }
 
     export namespace testing {
