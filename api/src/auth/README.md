@@ -28,8 +28,8 @@ Create your extension's API (`AzureExtensionApi`) and pass it along with the nec
 
 The `prepareAzureResourcesApiRequest` function performs two key operations:
 
-1. **Enhances your extension API** - Returns your client extension API with the required `receiveAzureResourcesApiSession` receiver method automatically added.
-2. **Provides handshake initiation** - Returns a function that initiates the Resources API request handshake when called. This method polls both the client extension and host extension for up to 10 seconds to ensure both parties are ready before starting the handshake process.
+1. **Prepares client extension API** - Returns your client extension API with the required `receiveAzureResourcesApiSession` receiver method automatically added.
+2. **Provides handshake initializer** - Returns a function that initiates the Resources API request handshake when called. This method polls both the client extension and host extension for up to 10 seconds to ensure both parties are ready before starting the handshake process.
 
 ```ts
 const containerAppsApi: api.AzureContainerAppsExtensionApi = {
