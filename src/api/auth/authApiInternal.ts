@@ -43,7 +43,7 @@ export async function createAzureResourcesApiSessionInternal(context: IActionCon
 }
 
 export async function verifyAzureResourcesApiSessionInternal(context: IActionContext, credentialManager: AzExtCredentialManager<unknown>, clientExtensionId: string, azureResourcesCredential: string): Promise<boolean> {
-    const getApiVerifyError: string = `${clientExtensionId || 'Unknown Extension'} - 🧙 You shall not pass! 🔥`;
+    const getApiVerifyError: string = `${clientExtensionId || 'Unknown Extension'} - 🧙 YOU SHALL NOT PASS! 🔥`;
 
     if (!clientExtensionId || !azureResourcesCredential) {
         context.telemetry.properties.deniedReason = 'missingDetails';
