@@ -38,6 +38,7 @@ export class GetAzureActivityLog implements AzExtLMTool<void> {
 
         return new vscode.LanguageModelToolResult([
             new vscode.LanguageModelTextPart('When explaining data from activity items, prefer explaining the data more conversationally rather than re-providing the raw json data.'),
+            new vscode.LanguageModelTextPart('The activities provided are in chronological order.'),
             ...selectedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))),
         ]);
     }
