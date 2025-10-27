@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscription } from '@microsoft/vscode-azext-azureauth';
+import { AzureTenant, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling, createSubscriptionContext, nonNullValueAndProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
@@ -67,26 +67,40 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
             return await element.getChildren();
         } else {
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
-            // When a user is signed in 'OnGetChildrenBase' will return no children
-            const children: ResourceGroupsItem[] = await onGetAzureChildrenBase(subscriptionProvider, this);
 
-            if (children.length === 0) {
+            try {
                 this.sendSubscriptionTelemetryIfNeeded();
-                let subscriptions: AzureSubscription[];
                 await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
-                if ((subscriptions = await subscriptionProvider.getAvailableSubscriptions()).length === 0) { // TODO: manual refresh => noCache: true
-                    if (
-                        // If there are no subscriptions at all (ignoring filters) AND if unauthenticated tenants exist
-                        (await subscriptionProvider.getAvailableSubscriptions({ all: true })).length === 0 &&
-                        (await subscriptionProvider.getUnauthenticatedTenants(undefined)).length > 0
-                    ) {
-                        // Subscriptions might exist in an unauthenticated tenant. Show welcome view.
-                        await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', true);
-                        return [];
+                // TODO: manual refresh => noCache: true
+                const subscriptions = await subscriptionProvider.getAvailableSubscriptions();
+
+                if (subscriptions.length === 0) {
+                    // No subscriptions through the filters. Decide what to show.
+                    const selectSubscriptionsItem = new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
+                        commandId: 'azureResourceGroups.selectSubscriptions'
+                    });
+
+                    const allSubscriptions = await subscriptionProvider.getAvailableSubscriptions({ all: true });
+                    if (allSubscriptions.length === 0) {
+                        // No subscriptions at all (ignoring filters)
+                        const allUnauthenticatedTenants: AzureTenant[] = [];
+                        for (const account of await subscriptionProvider.getAccounts({ all: true })) {
+                            allUnauthenticatedTenants.push(...await subscriptionProvider.getUnauthenticatedTenantsForAccount(account));
+                        }
+
+                        if (allUnauthenticatedTenants.length > 0) {
+                            // Subscriptions might exist in an unauthenticated tenant. Show welcome view.
+                            await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', true);
+                            return [];
+                        } else {
+                            // All tenants are authenticated but no subscriptions exist
+                            // The prior behavior was to still show the Select Subscriptions item in this case
+                            // TODO: this isn't exactly right? Should we throw a `NotSignedInError` instead?
+                            return [selectSubscriptionsItem];
+                        }
                     } else {
-                        return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
-                            commandId: 'azureResourceGroups.selectSubscriptions'
-                        })]
+                        // Subscriptions exist but are all filtered out, show the Select Subscriptions item
+                        return [selectSubscriptionsItem];
                     }
                 } else {
                     //find duplicate subscriptions and change the name to include the account name
@@ -150,11 +164,18 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                     this.resourceGroupingManager,
                                     this.resourceProviderManager,
                                     subscription)
-                            });
+                            }
+                        );
                     }
                 }
+            } catch (error) {
+                if (isNotSignedInError(error)) {
+                    return await onGetAzureChildrenBase(subscriptionProvider, this);
+                }
+
+                // TODO: Else do we throw?
+                return [];
             }
-            return children;
         }
     }
 
