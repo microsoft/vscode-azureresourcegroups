@@ -17,6 +17,7 @@ export async function logIn(_context: IActionContext): Promise<void> {
         await provider.signIn();
     } finally {
         _isLoggingIn = false;
+        // TODO: do we need this or does the session change event take care of it?
         ext.actions.refreshAzureTree(); // Refresh now that sign in is complete
         ext.actions.refreshTenantTree(); // Refresh now that sign in is complete
     }

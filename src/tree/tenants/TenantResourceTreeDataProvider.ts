@@ -48,10 +48,10 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                     const accounts = await subscriptionProvider.getAccounts({ all: true });
                     context.telemetry.properties.accountCount = accounts.length.toString();
                     for (const account of accounts) {
-                        const tenants = await subscriptionProvider.getTenantsForAccount(account, { all: true });
+                        const allTenants = await subscriptionProvider.getTenantsForAccount(account, { all: true });
                         const unauthenticatedTenants = await subscriptionProvider.getUnauthenticatedTenantsForAccount(account);
                         const tenantItems: ResourceGroupsItem[] = [];
-                        for await (const tenant of tenants) {
+                        for await (const tenant of allTenants) {
                             const isSignedIn = !unauthenticatedTenants.some(uat => uat.tenantId === tenant.tenantId);
                             tenantItems.push(new TenantTreeItem(tenant, account, {
                                 contextValue: isSignedIn ? 'tenantName' : 'tenantNameNotSignedIn',
