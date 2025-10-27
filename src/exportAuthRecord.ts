@@ -10,6 +10,7 @@ import * as path from 'path';
 import type { ExtensionContext } from 'vscode';
 import * as vscode from 'vscode';
 import { ext } from './extensionVariables';
+import { inCloudShell } from './utils/inCloudShell';
 
 const AUTH_RECORD_README = `
 The \`authRecord.json\` file is created after authenticating to an Azure subscription from Visual Studio Code (VS Code). For example, via the **Azure: Sign In** command in Command Palette. The directory in which the file resides matches the unique identifier of the [Azure Resources extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azureresourcegroups) responsible for writing the file.
@@ -43,11 +44,15 @@ The file does **not** contain access tokens or secrets. This design avoids the s
  * Registers the exportAuthRecord callback for session changes and ensures the auth record is exported at least once on activation.
  */
 export function registerExportAuthRecordOnSessionChange(_context: ExtensionContext) {
-    registerEvent(
-        'treeView.onDidChangeSessions',
-        vscode.authentication.onDidChangeSessions,
-        exportAuthRecord
-    );
+    if (!inCloudShell()) {
+        // Only outside of Cloud Shell will we monitor for ongoing session changes
+        // Inside we must avoid due to https://github.com/microsoft/vscode-dev/issues/1334
+        registerEvent(
+            'treeView.onDidChangeSessions',
+            vscode.authentication.onDidChangeSessions,
+            exportAuthRecord
+        );
+    }
 
     // Also call exportAuthRecord once on activation to ensure the auth record is exported at least once
     // (onDidChangeSessions is not guaranteed to fire on activation)
@@ -60,13 +65,19 @@ export function registerExportAuthRecordOnSessionChange(_context: ExtensionConte
  * Exports the current authentication record to a well-known location in the user's .azure directory.
  * Used for interoperability with other tools and applications.
  */
-export async function exportAuthRecord(context: IActionContext): Promise<void> {
+export async function exportAuthRecord(context: IActionContext, evt?: vscode.AuthenticationSessionsChangeEvent): Promise<void> {
     const AUTH_PROVIDER_ID = 'microsoft'; // VS Code Azure auth provider
     const SCOPES = ['https://management.azure.com/.default']; // Default ARM scope
 
     context.errorHandling.suppressDisplay = true;
     context.telemetry.suppressIfSuccessful = true;
     context.telemetry.properties.isActivationEvent = 'true';
+
+    if (evt?.provider.id !== AUTH_PROVIDER_ID) {
+        // Ignore events from other auth providers
+        context.telemetry.suppressAll = true;
+        return;
+    }
 
     try {
 
