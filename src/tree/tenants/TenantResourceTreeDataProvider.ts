@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling, nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
+import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import { ResourceModelBase } from 'api/src';
 import * as vscode from 'vscode';
 import { TenantResourceProviderManager } from '../../api/ResourceProviderManagers';
@@ -49,18 +49,19 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                     context.telemetry.properties.accountCount = accounts.length.toString();
                     for (const account of accounts) {
                         const tenants = await subscriptionProvider.getTenantsForAccount(account, { all: true });
+                        const unauthenticatedTenants = await subscriptionProvider.getUnauthenticatedTenantsForAccount(account);
                         const tenantItems: ResourceGroupsItem[] = [];
                         for await (const tenant of tenants) {
-                            const isSignedIn = await subscriptionProvider.isSignedIn(nonNullProp(tenant, 'tenantId'), account);
+                            const isSignedIn = !unauthenticatedTenants.some(uat => uat.tenantId === tenant.tenantId);
                             tenantItems.push(new TenantTreeItem(tenant, account, {
                                 contextValue: isSignedIn ? 'tenantName' : 'tenantNameNotSignedIn',
-                                checkboxState: (!isSignedIn || isTenantFilteredOut(nonNullProp(tenant, 'tenantId'), account.id)) ?
+                                checkboxState: (!isSignedIn || isTenantFilteredOut(tenant.tenantId, account.id)) ?
                                     vscode.TreeItemCheckboxState.Unchecked : vscode.TreeItemCheckboxState.Checked,
                                 description: tenant.tenantId
                             }));
                         }
 
-                        children.push(new GenericItem(nonNullValueAndProp(account, 'label'), {
+                        children.push(new GenericItem(account.label, {
                             children: tenantItems,
                             iconPath: new vscode.ThemeIcon('account'),
                             contextValue: 'accountName',

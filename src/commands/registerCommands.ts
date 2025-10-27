@@ -78,7 +78,7 @@ export function registerCommands(): void {
     });
 
     registerCommand('azureTenantsView.signInToTenant', async (_context, node: TenantTreeItem) => {
-        await (await ext.subscriptionProviderFactory()).signIn(node.tenantId, node.account);
+        await (await ext.subscriptionProviderFactory()).signIn(node, { promptIfNeeded: true });
         ext.actions.refreshTenantTree(node);
     });
 
