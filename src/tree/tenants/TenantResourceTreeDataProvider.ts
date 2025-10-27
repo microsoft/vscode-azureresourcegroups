@@ -3,7 +3,6 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { getConfiguredAuthProviderId } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling, nonNullProp, nonNullValueAndProp } from '@microsoft/vscode-azext-utils';
 import { ResourceModelBase } from 'api/src';
 import * as vscode from 'vscode';
@@ -46,12 +45,10 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                 const children: ResourceGroupsItem[] = await onGetAzureChildrenBase(subscriptionProvider);
 
                 if (children.length === 0) {
-                    const accounts = Array.from((await vscode.authentication.getAccounts(getConfiguredAuthProviderId()))).sort((a, b) => a.label.localeCompare(b.label));
+                    const accounts = await subscriptionProvider.getAccounts({ all: true });
                     context.telemetry.properties.accountCount = accounts.length.toString();
                     for (const account of accounts) {
-                        const tenants = (await subscriptionProvider.getTenants(account))
-                            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                            .sort((a, b) => a.displayName!.localeCompare(b.displayName!));
+                        const tenants = await subscriptionProvider.getTenantsForAccount(account, { all: true });
                         const tenantItems: ResourceGroupsItem[] = [];
                         for await (const tenant of tenants) {
                             const isSignedIn = await subscriptionProvider.isSignedIn(nonNullProp(tenant, 'tenantId'), account);

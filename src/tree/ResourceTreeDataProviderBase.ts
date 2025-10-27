@@ -46,8 +46,6 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     protected statusSubscription: vscode.Disposable | undefined;
     private subscriptionProvider?: AzureSubscriptionProvider;
-    private nextSessionChangeMessageMinimumTime = 0;
-    private sessionChangeMessageInterval = 1 * 1000; // 1 second
 
     protected async getAzureSubscriptionProvider(): Promise<AzureSubscriptionProvider> {
         // override for testing
@@ -58,15 +56,8 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
                 this.subscriptionProvider = await ext.subscriptionProviderFactory();
             }
 
-            this.statusSubscription = vscode.authentication.onDidChangeSessions((evt: vscode.AuthenticationSessionsChangeEvent) => {
-                if (evt.provider.id === 'microsoft' || evt.provider.id === 'microsoft-sovereign-cloud') {
-                    if (Date.now() > this.nextSessionChangeMessageMinimumTime) {
-                        this.nextSessionChangeMessageMinimumTime = Date.now() + this.sessionChangeMessageInterval;
-                        // This event gets HEAVILY spammed and needs to be debounced
-                        // Suppress additional messages for 1 second after the first one
-                        this.notifyTreeDataChanged();
-                    }
-                }
+            this.statusSubscription = this.subscriptionProvider.onRefreshSuggested(() => {
+                this.notifyTreeDataChanged();
             });
 
             return this.subscriptionProvider;
