@@ -944,7 +944,7 @@
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
-        "@microsoft/vscode-azext-azureauth": "^5.0.0",
+        "@microsoft/vscode-azext-azureauth": "^5.1.0",
         "@microsoft/vscode-azext-azureutils": "^4.0.0",
         "@microsoft/vscode-azext-utils": "^4.0.0",
         "buffer": "^6.0.3",
