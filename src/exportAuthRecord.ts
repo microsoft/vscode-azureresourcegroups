@@ -65,13 +65,18 @@ export function registerExportAuthRecordOnSessionChange(_context: ExtensionConte
  * Exports the current authentication record to a well-known location in the user's .azure directory.
  * Used for interoperability with other tools and applications.
  */
-export async function exportAuthRecord(context: IActionContext): Promise<void> {
+export async function exportAuthRecord(context: IActionContext, evt?: vscode.AuthenticationSessionsChangeEvent): Promise<void> {
     const AUTH_PROVIDER_ID = 'microsoft'; // VS Code Azure auth provider
     const SCOPES = ['https://management.azure.com/.default']; // Default ARM scope
 
     context.errorHandling.suppressDisplay = true;
     context.telemetry.suppressIfSuccessful = true;
     context.telemetry.properties.isActivationEvent = 'true';
+
+    if (evt?.provider.id !== AUTH_PROVIDER_ID) {
+        // Ignore events from other auth providers
+        return;
+    }
 
     try {
 
