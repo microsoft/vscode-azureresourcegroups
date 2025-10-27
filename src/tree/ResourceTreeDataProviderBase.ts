@@ -8,6 +8,7 @@ import { callWithTelemetryAndErrorHandling, parseError, TreeElementBase } from '
 import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/src/index';
 import { ext } from '../extensionVariables';
+import { inCloudShell } from '../utils/inCloudShell';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { BranchDataItemWrapper } from './BranchDataItemWrapper';
 import { InvalidItem } from './InvalidItem';
@@ -56,8 +57,9 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
                 this.subscriptionProvider = await ext.subscriptionProviderFactory();
             }
 
-            if (!process.env.AZD_IN_CLOUDSHELL) {
-                // Only outside of Cloud Shell will we monitor for session changes
+            if (!inCloudShell()) {
+                // Only outside of Cloud Shell will we monitor for ongoing session changes
+                // Inside we must avoid due to https://github.com/microsoft/vscode-dev/issues/1334
                 const one = this.subscriptionProvider.onDidSignIn(() => {
                     this.notifyTreeDataChanged();
                 });
