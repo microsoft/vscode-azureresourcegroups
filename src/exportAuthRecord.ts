@@ -75,6 +75,7 @@ export async function exportAuthRecord(context: IActionContext, evt?: vscode.Aut
 
     if (evt?.provider.id !== AUTH_PROVIDER_ID) {
         // Ignore events from other auth providers
+        context.telemetry.suppressAll = true;
         return;
     }
 
