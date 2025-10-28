@@ -3,18 +3,19 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import { ResourceModelBase } from 'api/src';
 import * as vscode from 'vscode';
 import { TenantResourceProviderManager } from '../../api/ResourceProviderManagers';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
+import { getSignInTreeItems, tryGetLoggingInTreeItems } from '../getSignInTreeItems';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from "../ResourceTreeDataProviderBase";
-import { onGetAzureChildrenBase } from '../onGetAzureChildrenBase';
+import { isTenantFilteredOut } from './registerTenantTree';
 import { TenantResourceBranchDataProviderManager } from "./TenantResourceBranchDataProviderManager";
 import { TenantTreeItem } from './TenantTreeItem';
-import { isTenantFilteredOut } from './registerTenantTree';
 
 export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase {
     constructor(
@@ -38,13 +39,18 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
         return await callWithTelemetryAndErrorHandling('azureTenantsView.getChildren', async (context: IActionContext) => {
-            if (element) {
+            if (element?.getChildren) {
                 return await element.getChildren();
             } else {
-                const subscriptionProvider = await this.getAzureSubscriptionProvider();
-                const children: ResourceGroupsItem[] = await onGetAzureChildrenBase(subscriptionProvider);
+                const maybeLogInItems = tryGetLoggingInTreeItems();
+                if (maybeLogInItems?.length) {
+                    return maybeLogInItems;
+                }
 
-                if (children.length === 0) {
+                const subscriptionProvider = await this.getAzureSubscriptionProvider();
+                const children: ResourceGroupsItem[] = [];
+
+                try {
                     const accounts = await subscriptionProvider.getAccounts({ all: true });
                     context.telemetry.properties.accountCount = accounts.length.toString();
                     for (const account of accounts) {
@@ -69,8 +75,15 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                             collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
                         }));
                     }
+                    return children;
+                } catch (error) {
+                    if (isNotSignedInError(error)) {
+                        return getSignInTreeItems(false);
+                    }
+
+                    // TODO: Else do we throw? What did we do before?
+                    return [];
                 }
-                return children;
             }
         });
     }

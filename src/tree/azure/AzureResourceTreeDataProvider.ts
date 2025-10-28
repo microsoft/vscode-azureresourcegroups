@@ -14,12 +14,12 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
+import { getSignInTreeItems, tryGetLoggingInTreeItems } from '../getSignInTreeItems';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { TreeItemStateStore } from '../TreeItemState';
-import { onGetAzureChildrenBase } from '../onGetAzureChildrenBase';
 import { AzureResourceTreeDataProviderBase } from './AzureResourceTreeDataProviderBase';
-import { SubscriptionItem } from './SubscriptionItem';
 import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingManager';
+import { SubscriptionItem } from './SubscriptionItem';
 
 export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProviderBase {
     private readonly groupingChangeSubscription: vscode.Disposable;
@@ -66,6 +66,11 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         if (element?.getChildren) {
             return await element.getChildren();
         } else {
+            const maybeLogInItems = tryGetLoggingInTreeItems();
+            if (maybeLogInItems?.length) {
+                return maybeLogInItems;
+            }
+
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
             try {
@@ -170,10 +175,10 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                 }
             } catch (error) {
                 if (isNotSignedInError(error)) {
-                    return await onGetAzureChildrenBase(subscriptionProvider, this);
+                    return getSignInTreeItems(true);
                 }
 
-                // TODO: Else do we throw?
+                // TODO: Else do we throw? What did we do before?
                 return [];
             }
         }
