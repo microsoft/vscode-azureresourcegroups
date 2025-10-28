@@ -74,10 +74,10 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
             try {
-                this.sendSubscriptionTelemetryIfNeeded();
                 await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
                 // TODO: manual refresh => noCache: true
                 const subscriptions = await subscriptionProvider.getAvailableSubscriptions();
+                this.sendSubscriptionTelemetryIfNeeded(); // Don't send until the above call is done, to avoid cache missing
 
                 if (subscriptions.length === 0) {
                     // No subscriptions through the filters. Decide what to show.
