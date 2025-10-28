@@ -17,7 +17,7 @@ export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider 
         };
     }
 
-    public async getUnauthenticatedTenants(): Promise<AzureTenant[]> {
+    public async getUnauthenticatedTenantsForAccount(): Promise<AzureTenant[]> {
         return [];
     }
 
