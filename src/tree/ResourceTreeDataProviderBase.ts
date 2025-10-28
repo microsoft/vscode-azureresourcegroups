@@ -8,6 +8,7 @@ import { callWithTelemetryAndErrorHandling, parseError, TreeElementBase } from '
 import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/src/index';
 import { ext } from '../extensionVariables';
+import { inCloudShell } from '../utils/inCloudShell';
 import { BranchDataItemCache } from './BranchDataItemCache';
 import { BranchDataItemWrapper } from './BranchDataItemWrapper';
 import { InvalidItem } from './InvalidItem';
@@ -46,8 +47,6 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     protected statusSubscription: vscode.Disposable | undefined;
     private subscriptionProvider?: AzureSubscriptionProvider;
-    private nextSessionChangeMessageMinimumTime = 0;
-    private sessionChangeMessageInterval = 1 * 1000; // 1 second
 
     protected async getAzureSubscriptionProvider(): Promise<AzureSubscriptionProvider> {
         // override for testing
@@ -58,16 +57,19 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
                 this.subscriptionProvider = await ext.subscriptionProviderFactory();
             }
 
-            this.statusSubscription = vscode.authentication.onDidChangeSessions((evt: vscode.AuthenticationSessionsChangeEvent) => {
-                if (evt.provider.id === 'microsoft' || evt.provider.id === 'microsoft-sovereign-cloud') {
-                    if (Date.now() > this.nextSessionChangeMessageMinimumTime) {
-                        this.nextSessionChangeMessageMinimumTime = Date.now() + this.sessionChangeMessageInterval;
-                        // This event gets HEAVILY spammed and needs to be debounced
-                        // Suppress additional messages for 1 second after the first one
-                        this.notifyTreeDataChanged();
-                    }
-                }
-            });
+            if (!inCloudShell()) {
+                // Only outside of Cloud Shell will we monitor for ongoing session changes
+                // Inside we must avoid due to https://github.com/microsoft/vscode-dev/issues/1334
+                const one = this.subscriptionProvider.onDidSignIn(() => {
+                    this.notifyTreeDataChanged();
+                });
+
+                const two = this.subscriptionProvider.onDidSignOut(() => {
+                    this.notifyTreeDataChanged();
+                });
+
+                this.statusSubscription = vscode.Disposable.from(one, two);
+            }
 
             return this.subscriptionProvider;
         }
