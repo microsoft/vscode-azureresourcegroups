@@ -55,20 +55,20 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
         } else {
             if (!this.subscriptionProvider) {
                 this.subscriptionProvider = await ext.subscriptionProviderFactory();
-            }
 
-            if (!inCloudShell()) {
-                // Only outside of Cloud Shell will we monitor for ongoing session changes
-                // Inside we must avoid due to https://github.com/microsoft/vscode-dev/issues/1334
-                const one = this.subscriptionProvider.onDidSignIn(() => {
-                    this.notifyTreeDataChanged();
-                });
+                if (!inCloudShell()) {
+                    // Only outside of Cloud Shell will we monitor for ongoing session changes
+                    // Inside we must avoid due to https://github.com/microsoft/vscode-dev/issues/1334
+                    const one = this.subscriptionProvider.onDidSignIn(() => {
+                        this.notifyTreeDataChanged();
+                    });
 
-                const two = this.subscriptionProvider.onDidSignOut(() => {
-                    this.notifyTreeDataChanged();
-                });
+                    const two = this.subscriptionProvider.onDidSignOut(() => {
+                        this.notifyTreeDataChanged();
+                    });
 
-                this.statusSubscription = vscode.Disposable.from(one, two);
+                    this.statusSubscription = vscode.Disposable.from(one, two);
+                }
             }
 
             return this.subscriptionProvider;
