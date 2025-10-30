@@ -1,5 +1,11 @@
-import { AzureDevOpsSubscriptionProviderInitializer, AzureSubscriptionProvider, createAzureDevOpsSubscriptionProviderFactory } from "@microsoft/vscode-azext-azureauth";
-import { IActionContext } from "@microsoft/vscode-azext-utils";
+/*---------------------------------------------------------------------------------------------
+*  Copyright (c) Microsoft Corporation. All rights reserved.
+*  Licensed under the MIT License. See License.md in the project root for license information.
+*--------------------------------------------------------------------------------------------*/
+
+import type { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
+import { type AzureDevOpsSubscriptionProviderInitializer, createAzureDevOpsSubscriptionProviderFactory } from "@microsoft/vscode-azext-azureauth/azdo";
+import type { IActionContext } from "@microsoft/vscode-azext-utils";
 import { createVSCodeAzureSubscriptionProviderFactory } from "./VSCodeAzureSubscriptionProvider";
 
 /**
@@ -32,7 +38,7 @@ export function getSubscriptionProviderFactory(activateContext?: IActionContext)
 
         const initializer: AzureDevOpsSubscriptionProviderInitializer = {
             serviceConnectionId,
-            domain,
+            tenantId: domain,
             clientId,
         }
         return createAzureDevOpsSubscriptionProviderFactory(initializer);
