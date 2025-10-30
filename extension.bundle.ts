@@ -33,6 +33,8 @@ export * from './src/services/AzureResourcesService';
 export { createResourceGroup } from './src/commands/createResourceGroup';
 export * from './src/commands/deleteResourceGroup/v2/deleteResourceGroupV2';
 export { activate, deactivate } from './src/extension';
+// Export for testing only - not part of public API
+export { AuthAccountStateManager, getAuthAccountStateManager } from './src/exportAuthRecord';
 export * from './src/extensionVariables';
 export * from './src/hostapi.v2.internal';
 export * from './src/tree/azure/AzureResourceItem';

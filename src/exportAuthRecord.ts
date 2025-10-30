@@ -12,6 +12,104 @@ import * as vscode from 'vscode';
 import { ext } from './extensionVariables';
 import { inCloudShell } from './utils/inCloudShell';
 
+/**
+ * Thread-safe state manager for authentication accounts
+ * @internal - Only exported for testing purposes
+ */
+export class AuthAccountStateManager {
+    private static instance: AuthAccountStateManager;
+    private accountsCache: readonly vscode.AuthenticationSessionAccountInformation[] = [];
+    private isUpdating: boolean = false;
+    private pendingPromise: Promise<readonly vscode.AuthenticationSessionAccountInformation[]> | null = null;
+
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    private constructor() { }
+
+    public static getInstance(): AuthAccountStateManager {
+        if (!AuthAccountStateManager.instance) {
+            AuthAccountStateManager.instance = new AuthAccountStateManager();
+        }
+        return AuthAccountStateManager.instance;
+    }
+
+    /**
+     * Get accounts with thread-safe access. If an update is in progress, waits for it to complete.
+     * Returns accounts along with change detection (new accounts added, accounts removed).
+     */
+    public async getAccounts(authProviderId: string): Promise<{
+        accounts: readonly vscode.AuthenticationSessionAccountInformation[];
+        hasNewAccounts: boolean;
+        accountsRemoved: boolean;
+    }> {
+        // If there's already a pending fetch, wait for it
+        if (this.pendingPromise) {
+            const accounts = await this.pendingPromise;
+            return { accounts, hasNewAccounts: false, accountsRemoved: false }; // Already processed
+        }
+
+        // If we're currently updating, create a promise that waits for the update to finish
+        if (this.isUpdating) {
+            const waitPromise = new Promise<readonly vscode.AuthenticationSessionAccountInformation[]>((resolve, reject) => {
+                const timeoutMs = 10000; // 10 seconds timeout
+                const checkInterval = setInterval(() => {
+                    if (!this.isUpdating) {
+                        clearInterval(checkInterval);
+                        clearTimeout(timeoutHandle);
+                        resolve(this.accountsCache);
+                    }
+                }, 100);
+                const timeoutHandle = setTimeout(() => {
+                    clearInterval(checkInterval);
+                    reject(new Error('Timed out waiting for account update to finish.'));
+                }, timeoutMs);
+            });
+            const accounts = await waitPromise;
+            return { accounts, hasNewAccounts: false, accountsRemoved: false }; // Already processed
+        }
+
+        // Fetch fresh accounts
+        this.isUpdating = true;
+        const previousAccountIds = new Set(this.accountsCache.map(acc => acc.id));
+        const previousCount = this.accountsCache.length;
+
+        this.pendingPromise = (async () => {
+            try {
+                const accounts = await vscode.authentication.getAccounts(authProviderId);
+                this.accountsCache = accounts;
+                return accounts;
+            } finally {
+                this.isUpdating = false;
+                this.pendingPromise = null;
+            }
+        })();
+
+        const accounts = await this.pendingPromise;
+
+        // Check if there are any new accounts
+        const hasNewAccounts = accounts.some(acc => !previousAccountIds.has(acc.id));
+
+        // Check if any accounts were removed (sign-out event)
+        // Either count decreased or some previous account IDs are no longer present
+        const accountsRemoved = accounts.length < previousCount;
+
+        return { accounts, hasNewAccounts, accountsRemoved };
+    }
+
+    /**
+     * Get cached accounts without fetching. Returns empty array if not yet fetched.
+     */
+    public getCachedAccounts(): readonly vscode.AuthenticationSessionAccountInformation[] {
+        return [...this.accountsCache];
+    }
+
+    /**
+     * Clear the cached accounts state
+     */
+    public clearCache(): void {
+        this.accountsCache = [];
+    }
+}
+
 const AUTH_RECORD_README = `
 The \`authRecord.json\` file is created after authenticating to an Azure subscription from Visual Studio Code (VS Code). For example, via the **Azure: Sign In** command in Command Palette. The directory in which the file resides matches the unique identifier of the [Azure Resources extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azureresourcegroups) responsible for writing the file.
 
@@ -62,6 +160,15 @@ export function registerExportAuthRecordOnSessionChange(_context: ExtensionConte
 }
 
 /**
+ * Get the singleton instance of AuthAccountStateManager for managing authentication accounts state.
+ * This provides thread-safe access to accounts fetched during auth record persistence.
+ * @internal - Only exported for testing purposes
+ */
+export function getAuthAccountStateManager(): AuthAccountStateManager {
+    return AuthAccountStateManager.getInstance();
+}
+
+/**
  * Exports the current authentication record to a well-known location in the user's .azure directory.
  * Used for interoperability with other tools and applications.
  */
@@ -80,12 +187,56 @@ export async function exportAuthRecord(context: IActionContext, evt?: vscode.Aut
     }
 
     try {
+        // Get accounts and check for changes (new accounts added or accounts removed)
+        const accountStateManager = AuthAccountStateManager.getInstance();
+        const { accounts: allAccounts, hasNewAccounts, accountsRemoved } = await accountStateManager.getAccounts(AUTH_PROVIDER_ID);
 
+        // Scenario 1: No accounts exist at all (all signed out)
+        if (allAccounts.length === 0) {
+            await cleanupAuthRecordIfPresent();
+            return;
+        }
+
+        // Scenario 2: Accounts were removed (sign-out event) but some remain
+        if (accountsRemoved && allAccounts.length > 0) {
+            // Fetch session for one of the remaining accounts and export its auth record
+            const session = await getAuthenticationSession(AUTH_PROVIDER_ID, SCOPES);
+
+            if (!session) {
+                // No valid session for remaining accounts
+                return;
+            }
+
+            // Get tenantId from idToken or config override
+            const tenantId = getTenantId(session, context);
+
+            // AuthenticationRecord structure for the remaining account
+            const authRecord = {
+                username: session.account.label,
+                authority: 'https://login.microsoftonline.com', // VS Code auth provider default
+                homeAccountId: `${session.account.id}`,
+                tenantId,
+                // This is the public client ID used by VS Code for Microsoft authentication.
+                // See: https://github.com/microsoft/vscode/blob/973a531c70579b7a51544f32931fdafd32de285e/extensions/microsoft-authentication/src/AADHelper.ts#L21
+                clientId: 'aebc6443-996d-45c2-90f0-388ff96faa56',
+                datetime: new Date().toISOString() // Current UTC time in ISO8601 format
+            };
+
+            // Export the auth record to the user's .azure directory
+            await persistAuthRecord(authRecord);
+            return;
+        }
+
+        // Scenario 3: No new accounts and no removals (e.g., token refresh)
+        if (!hasNewAccounts && !accountsRemoved) {
+            return;
+        }
+
+        // Scenario 4: New account detected - fetch session and export auth record
         const session = await getAuthenticationSession(AUTH_PROVIDER_ID, SCOPES);
 
         if (!session) {
-            // If no session is found, clean up any existing auth record and exit
-            await cleanupAuthRecordIfPresent();
+            // Session could not be retrieved despite new accounts
             return;
         }
 
@@ -207,14 +358,19 @@ async function cleanupAuthRecordIfPresent(): Promise<void> {
     if (await fs.pathExists(authRecordPath)) {
         await fs.remove(authRecordPath);
     }
+
+    // Clear the cached accounts state when cleaning up
+    AuthAccountStateManager.getInstance().clearCache();
 }
 
 // Helper to get the authentication session for the given auth provider and scopes
+// This should only be called when we know there are accounts
 async function getAuthenticationSession(
     authProviderId: string,
     scopes: string[]
 ): Promise<vscode.AuthenticationSession | undefined> {
-    const allAccounts = await vscode.authentication.getAccounts(authProviderId);
+    const accountStateManager = AuthAccountStateManager.getInstance();
+    const cachedAccounts = accountStateManager.getCachedAccounts();
 
     // Try to get the current authentication session silently.
     let session = await vscode.authentication.getSession(
@@ -225,16 +381,16 @@ async function getAuthenticationSession(
 
     if (session) {
         // Ensure session represents the active accounts. (i.e. not a user being logged out.)
-        const isLoggedIn = allAccounts.some(account => account.id === session?.account.id);
+        const isLoggedIn = cachedAccounts.some(account => account.id === session?.account.id);
         if (!isLoggedIn) {
             session = undefined; // Reset session if it doesn't match any active account, as it represents a user being logged out.
         }
     }
 
-    if (!session && allAccounts.length > 0) {
+    if (!session && cachedAccounts.length > 0) {
         // no active session found, but accounts exist
         // Get the first available session for the active accounts.
-        for (const account of allAccounts) {
+        for (const account of cachedAccounts) {
             session = await vscode.authentication.getSession(
                 authProviderId,
                 scopes,
