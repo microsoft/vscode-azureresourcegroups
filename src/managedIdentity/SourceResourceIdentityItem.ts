@@ -13,7 +13,6 @@ import { DefaultAzureResourceItem } from "../tree/azure/DefaultAzureResourceItem
 import { ResourceGroupsItem } from "../tree/ResourceGroupsItem";
 import { localize } from "../utils/localize";
 
-
 export class SourceResourceIdentityItem implements ResourceGroupsItem {
     static readonly contextValue: string = 'sourceResourceIdentityItem';
     static readonly contextValueRegExp: RegExp = new RegExp(SourceResourceIdentityItem.contextValue);
@@ -40,8 +39,8 @@ export class SourceResourceIdentityItem implements ResourceGroupsItem {
 
             return userAssignedIdentities[msi.id] !== undefined
         }).map((r) => {
-            const azureResoure = createAzureResource(this.subscription, r);
-            return new DefaultAzureResourceItem(azureResoure);
+            const sourceResource = createAzureResource(this.subscription, r);
+            return new DefaultAzureResourceItem(sourceResource, { treeItemId: `${msi.id}/${sourceResource.id}` /** Also include the msi id to ensure uniqueness */ });
         });
         return assignedResources;
     }

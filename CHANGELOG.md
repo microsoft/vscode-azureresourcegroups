@@ -1,4 +1,38 @@
 # Change Log
+## 0.11.6 - 2025-10-30
+This release improves on Azure Activity Log integration with Copilot, giving users the ability to custom select which activities to provide as context before starting new chat sessions. Users can now select activities through the general entry-point in the activity log header ribbon, right-clicking individual activities directly, or interacting with an activity's inline context menu button. In addition, Copilot buttons have been upgraded to the newer chat icon.
+
+![Activity Log Multi-Select with Copilot](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/resources/changelog/0.11.6/activityLogMultiSelect.png)
+
+### Added
+* [[1214](https://github.com/microsoft/vscode-azureresourcegroups/pull/1214)] Enable activity item selection when providing context to Copilot; update Copilot icons
+
+## 0.11.5 - 2025-10-14
+### Added
+* [[1256]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1256) Add button to chat stand in to disable `enableChatStandIn` setting
+
+### Changed
+* [[1260]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1260) Adopt the finalized auth challenges API
+* [[1257]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1257) Convert `@microsoft/vscode-azureresources-api` from CJS to CJS+ESM, and update for finalization of auth challenges API
+
+### Fixed
+* [[1261]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1261) Ensure tree item id uniqueness for user-assigned identity source resource items
+
+## 0.11.4 - 2025-09-25
+### Added
+* [[1247]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1247) Enable `authenticationChallenges` proposed API
+
+## 0.11.3 - 2025-09-25
+### Added
+* [[1191]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1191) Resources API: Add `DurableTaskHub` resource type
+
+### Changed
+* [[1233]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1233) Changes were made to support the upcoming multi-factor authentication requirements for Azure
+
+## 0.11.2 - 2025-09-15
+### Added
+* [[1229](https://github.com/microsoft/vscode-azureresourcegroups/pull/1229)] Add support for new Azure resource types
+
 
 ## 0.11.1 - 2025-07-31
 ### Added
@@ -14,10 +48,10 @@
 This release brings Copilot integration to the Azure activity log. Users can now leverage Copilot to gain insights from the Azure activity log by clicking the new sparkle icon in the top right corner. Additionally, client extensions can now provide enhanced context to the shared Azure Resources activity log using `ActivityAttributes`, allowing them to incrementally contribute detailed command data and metadata. This enables Copilot to deliver more relevant and informative responses for users.
 
 - Example of Copilot integration in the Azure activity log:
-![Activity Log with Sparkle Icon](resources/changelog/0.11.0/activityLogWithCopilot.png)
+![Activity Log with Sparkle Icon](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/resources/changelog/0.11.0/activityLogWithCopilot.png)
 
 - Example of Copilot chat with Azure activity log context:
-![Copilot Chat with Activity Log Context](resources/changelog/0.11.0/copilotChatWithActivityContext.png)
+![Copilot Chat with Activity Log Context](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/resources/changelog/0.11.0/copilotChatWithActivityContext.png)
 
 ### Added
 * [[1162](https://github.com/microsoft/vscode-azureresourcegroups/pull/1162)] Incorporate `ActivityAttributes` for use as Copilot context

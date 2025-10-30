@@ -16,6 +16,7 @@ gulp*
 node_modules/**
 out/**
 resources/readme/**
+resources/changelog/**
 src/**
 stats.json
 test-results.xml

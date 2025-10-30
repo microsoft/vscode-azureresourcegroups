@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ActivityAttributes, ActivityChildItemBase, ActivityChildType, IActionContext } from "@microsoft/vscode-azext-utils";
+import { ActivityAttributes, ActivityChildItemBase, ActivityChildType } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../../extensionVariables";
 import { ActivityItem, ActivityStatus } from "../../../tree/activityLog/ActivityItem";
 import { TreeDataItem } from "../../../tree/ResourceGroupsItem";
+import { GetAzureActivityLogContext } from "./GetAzureActivityLogContext";
 
 export type ConvertedActivityItem = {
     label?: string;
@@ -25,14 +26,21 @@ type ConvertedActivityChildItem = {
     children?: ConvertedActivityChildItem[];
 };
 
-export async function convertActivityTreeToSimpleObjectArray(context: IActionContext): Promise<ConvertedActivityItem[]> {
+export async function convertActivityTreeToSimpleObjectArray(context: GetAzureActivityLogContext): Promise<ConvertedActivityItem[]> {
     const treeItems: TreeDataItem[] = await ext.activityLogTree.getChildren() ?? [];
-    return Promise.all(treeItems.map(treeItem => convertItemToSimpleActivityObject(context, treeItem)));
+    return (await Promise.all(treeItems.map(treeItem => convertItemToSimpleActivityObject(context, treeItem)))).filter(item => !!item) as ConvertedActivityItem[];
 }
 
-async function convertItemToSimpleActivityObject(context: IActionContext, item: TreeDataItem): Promise<ConvertedActivityItem> {
+export type ExcludedActivityItem = ConvertedActivityItem & {
+    /**
+     * Internal flag to mark item as excluded
+     */
+    _exclude?: boolean;
+};
+
+async function convertItemToSimpleActivityObject(context: GetAzureActivityLogContext, item: TreeDataItem): Promise<ConvertedActivityItem | undefined> {
     if (!(item instanceof ActivityItem)) {
-        return {};
+        return undefined;
     }
 
     const convertedItem: ConvertedActivityItem = {
@@ -44,6 +52,10 @@ async function convertItemToSimpleActivityObject(context: IActionContext, item: 
         activityAttributes: item.activityAttributes,
     };
 
+    if (!context.activitySelectedCache.hasActivity(item.id)) {
+        (convertedItem as ExcludedActivityItem)._exclude = true;
+    }
+
     if (item.getChildren) {
         const children = await item.getChildren() ?? [];
         if (children.length > 0) {
@@ -54,7 +66,7 @@ async function convertItemToSimpleActivityObject(context: IActionContext, item: 
     return convertedItem;
 }
 
-async function convertItemToSimpleActivityChildObject(context: IActionContext, item: ActivityChildItemBase): Promise<ConvertedActivityChildItem> {
+async function convertItemToSimpleActivityChildObject(context: GetAzureActivityLogContext, item: ActivityChildItemBase): Promise<ConvertedActivityChildItem> {
     const convertedItem: ConvertedActivityChildItem = {
         label: item.label,
         type: item.activityType,

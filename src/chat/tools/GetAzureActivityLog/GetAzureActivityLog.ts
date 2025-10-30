@@ -5,69 +5,41 @@
 
 import { AzExtLMTool, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { convertActivityTreeToSimpleObjectArray, ConvertedActivityItem } from './convertActivityTree';
+import { ext } from '../../../extensionVariables';
+import { ActivitySelectedCache } from '../../askAgentAboutActivityLog/ActivitySelectedCache';
+import { convertActivityTreeToSimpleObjectArray, ConvertedActivityItem, ExcludedActivityItem } from './convertActivityTree';
+import { GetAzureActivityLogContext } from './GetAzureActivityLogContext';
+import { logActivityTelemetry, logSelectedActivityTelemetry } from './logTelemetry';
 
 export class GetAzureActivityLog implements AzExtLMTool<void> {
-    public async invoke(context: IActionContext): Promise<vscode.LanguageModelToolResult> {
+    public async invoke(invocationContext: IActionContext): Promise<vscode.LanguageModelToolResult> {
+        const context: GetAzureActivityLogContext = Object.assign(invocationContext, { activitySelectedCache: ActivitySelectedCache.getInstance() });
+
         const convertedActivityItems: ConvertedActivityItem[] = await convertActivityTreeToSimpleObjectArray(context);
-        logTelemetry(context, convertedActivityItems);
+        logActivityTelemetry(context, convertedActivityItems);
 
-        if (convertedActivityItems.length === 0) {
-            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart('No activity log items found.')]);
+        let selectedActivityItems: ConvertedActivityItem[] = convertedActivityItems.filter(item => !(item as ExcludedActivityItem)._exclude);
+        logSelectedActivityTelemetry(context, selectedActivityItems);
+
+        // If we weren't able to verify all of the selected items, fallback to providing the entire activity tree
+        if (selectedActivityItems.length !== context.activitySelectedCache.selectionCount) {
+            selectedActivityItems = convertedActivityItems;
+
+            const warning: string = vscode.l10n.t('Failed to provide some of the selected item(s) to Copilot. Falling back to providing the entire activity log tree.');
+            void context.ui.showWarningMessage(warning);
+            ext.outputChannel.warn(warning);
         }
 
-        return new vscode.LanguageModelToolResult(convertedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))));
+        context.activitySelectedCache.reset();
+
+        if (selectedActivityItems.length === 0) {
+            return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(`No activity log items ${convertedActivityItems.length ? 'selected' : 'found'}.`)]);
+        }
+
+        return new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart('When explaining data from activity items, prefer explaining the data more conversationally rather than re-providing the raw json data.'),
+            new vscode.LanguageModelTextPart('The activities provided are in chronological order.'),
+            ...selectedActivityItems.map(item => new vscode.LanguageModelTextPart(JSON.stringify(item))),
+        ]);
     }
-}
-
-type TelemetryCounters = {
-    callbackIds: Set<string>;
-    failedCallbackIds: Set<string>;
-    callbackIdsWithAttributes: Set<string>;
-    failedCallbackIdsWithAttributes: Set<string>;
-    totalFailedActivities: number;
-};
-
-function logTelemetry(context: IActionContext, convertedActivityItems: ConvertedActivityItem[]) {
-    const telemetry: TelemetryCounters = convertedActivityItems.reduce<TelemetryCounters>((telemetry, activityItem) => {
-        if (activityItem.error) {
-            telemetry.totalFailedActivities++;
-        }
-
-        if (activityItem.callbackId) {
-            telemetry.callbackIds.add(activityItem.callbackId);
-            if (activityItem.activityAttributes) {
-                telemetry.callbackIdsWithAttributes.add(activityItem.callbackId);
-            }
-
-
-            if (activityItem.error) {
-                telemetry.failedCallbackIds.add(activityItem.callbackId);
-                if (activityItem.activityAttributes) {
-                    telemetry.failedCallbackIdsWithAttributes.add(activityItem.callbackId);
-                }
-            }
-        }
-
-        return telemetry;
-
-    }, {
-        callbackIds: new Set(),
-        failedCallbackIds: new Set(),
-        callbackIdsWithAttributes: new Set(),
-        failedCallbackIdsWithAttributes: new Set(),
-        totalFailedActivities: 0,
-    });
-
-    // i.e. total activities
-    context.telemetry.properties.activityCount = String(convertedActivityItems.length);
-    context.telemetry.properties.failedActivityCount = String(telemetry.totalFailedActivities);
-
-    // i.e. unique command ids
-    context.telemetry.properties.uniqueCallbackIds = Array.from(telemetry.callbackIds).join(',');
-    context.telemetry.properties.uniqueFailedCallbackIds = Array.from(telemetry.failedCallbackIds).join(',');
-
-    // i.e. unique command ids w/ command metadata
-    context.telemetry.properties.uniqueCallbackIdsWithAttributes = Array.from(telemetry.callbackIdsWithAttributes).join(',');
-    context.telemetry.properties.uniqueFailedCallbackIdsWithAttributes = Array.from(telemetry.failedCallbackIdsWithAttributes).join(',');
 }
