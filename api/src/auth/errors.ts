@@ -4,36 +4,58 @@
  *--------------------------------------------------------------------------------------------*/
 
 /**
- * Standard errors for Azure Resources API handshake operations.
+ * List of errors that could occur during the authentication handshake between client extension and Azure Resources host extension.
  */
 export const AzureResourcesHandshakeErrors = {
-    /**
-     * The client extension failed to export its API within the expected timeout period during handshake initialization.
-     */
-    CLIENT_EXT_NOT_READY: { code: 'ERR_CLIENT_EXT_NOT_READY', message: 'Client extension has no available API.' },
 
     /**
-     * The host extension failed to export its API within the expected timeout period during handshake initialization.
+     * The client extension failed to activate and export its API within the timeout period allotted.
      */
-    HOST_EXT_NOT_READY: { code: 'ERR_HOST_EXT_NOT_READY', message: 'Host extension has no available API.' },
+    CLIENT_EXT_HANDSHAKE_TIMEOUT: {
+        code: 'ERR_CLIENT_EXT_HANDSHAKE_TIMEOUT',
+        message: 'Client extension API not available.'
+    },
 
     /**
-     * The client extension's receiver method was invoked without the required authentication credentials.
+     * The Azure Resources host extension failed to activate and export its API within the timeout period allotted.
      */
-    INSUFFICIENT_CREDENTIALS: { code: 'ERR_INSUFFICIENT_CREDENTIALS', message: 'Insufficient credentials were provided for the operation.' },
+    HOST_EXT_HANDSHAKE_TIMEOUT: {
+        code: 'ERR_HOST_EXT_HANDSHAKE_TIMEOUT',
+        message: 'Azure Resources host extension API not available.'
+    },
 
     /**
-     * The provided client credentials failed verification or could not be validated.
+     * The authentication handshake failed because the client was provided incomplete or missing credentials.
+     *
+     * This occurs when the client's receiver method is invoked without the required
+     * Azure Resources token and client extension token.
      */
-    FAILED_VERIFICATION: { code: 'ERR_FAILED_VERIFICATION' },
+    CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS: {
+        code: 'ERR_CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS',
+        message: 'Insufficient credentials were provided back to the client.',
+    },
 
     /**
-     * An error occurred while requesting the API from the Azure Resources extension.
+     * The client token that was passed back with the Azure Resources token failed verification.
+     *
+     * This may occur when:
+     * - An untrusted extension pretends to be the Azure Resources host extension
+     * - There is a faulty behavior in the client credential manager's verification process
      */
-    FAILED_GET_API: { code: 'ERR_GET_AZURE_RESOURCES_API' },
+    CLIENT_RECEIVED_UNVERIFIED_CREDENTIAL: { code: 'ERR_CLIENT_RECEIVED_UNVERIFIED_CREDENTIAL' },
 
     /**
-     * An unexpected error occurred during the handshake process.
+     * Failed to obtain the Azure Resources API from the host extension.
+     *
+     * This may occur when:
+     * - The Azure Resources extension cannot verify the issued token that was passed back
+     * - The requesting extension is not on the Azure Resources allowlist
+     * - The host extension encounters an internal error during API provisioning
+     */
+    HOST_FAILED_GET_AZURE_RESOURCES_API: { code: 'ERR_HOST_FAILED_GET_AZURE_RESOURCES_API' },
+
+    /**
+     * An unaccounted-for error occurred anytime during the handshake process.
      */
     UNEXPECTED: { code: 'ERR_UNEXPECTED' },
 

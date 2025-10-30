@@ -63,11 +63,11 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
     try {
         const extensionsReady = await verifyExtensionsReady(context, clientApiVersion, maxWaitTimeMs);
         if (!extensionsReady.client) {
-            await context.onHandshakeError?.(AzureResourcesHandshakeErrors.CLIENT_EXT_NOT_READY) ??
+            await context.onHandshakeError?.(AzureResourcesHandshakeErrors.CLIENT_EXT_HANDSHAKE_TIMEOUT) ??
                 void window.showWarningMessage(l10n.t('Client extension "{0}" was not activated in time. Some features may not be available.', context.clientExtensionId));
             return;
         } else if (!extensionsReady.resources) {
-            await context.onHandshakeError?.(AzureResourcesHandshakeErrors.HOST_EXT_NOT_READY) ??
+            await context.onHandshakeError?.(AzureResourcesHandshakeErrors.HOST_EXT_HANDSHAKE_TIMEOUT) ??
                 void window.showWarningMessage(l10n.t('Host extension "{0}" was not activated in time. Some features may not be available.', azureResourcesExtId));
             return;
         }
@@ -86,7 +86,7 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
 function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequestContext): AzureExtensionApi['receiveAzureResourcesApiSession'] {
     return async function (azureResourcesCredential: string, clientCredential: string): Promise<void> {
         if (!azureResourcesCredential || !clientCredential) {
-            await context.onHandshakeError?.(AzureResourcesHandshakeErrors.INSUFFICIENT_CREDENTIALS);
+            await context.onHandshakeError?.(AzureResourcesHandshakeErrors.CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS);
             return;
         }
 
@@ -97,7 +97,7 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
             }
         } catch (err) {
             if (err instanceof Error) {
-                await context.onHandshakeError?.({ code: AzureResourcesHandshakeErrors.FAILED_VERIFICATION.code, message: context.clientCredentialManager.maskCredentials(err.message) });
+                await context.onHandshakeError?.({ code: AzureResourcesHandshakeErrors.CLIENT_RECEIVED_UNVERIFIED_CREDENTIAL.code, message: context.clientCredentialManager.maskCredentials(err.message) });
             }
             return;
         }
@@ -112,7 +112,7 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
             }
         } catch (err) {
             if (err instanceof Error) {
-                await context.onHandshakeError?.({ code: AzureResourcesHandshakeErrors.FAILED_GET_API.code, message: err.message });
+                await context.onHandshakeError?.({ code: AzureResourcesHandshakeErrors.HOST_FAILED_GET_AZURE_RESOURCES_API.code, message: err.message });
             }
             return;
         }

@@ -11,6 +11,8 @@ import { AzureResourcesHandshakeError } from "./errors";
 export interface AzureResourcesApiRequestContext {
     azureResourcesApiVersions: string[];
     clientExtensionId: string;
+
+    // Should we make this optional and provide a default? Or should we remove it entirely and force our own implementation?
     clientCredentialManager: AzExtCredentialManager<unknown>;
 
     /**
