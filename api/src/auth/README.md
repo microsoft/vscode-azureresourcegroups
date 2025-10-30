@@ -70,11 +70,11 @@ const context: AzureResourcesApiRequestContext = {
     // Optional:
     onHandshakeError: (error: AzureResourcesHandshakeError) => {
         switch (true) {
-            case error.code === AzureResourcesHandshakeErrors.CLIENT_EXT_NOT_READY.code:
-            case error.code === AzureResourcesHandshakeErrors.HOST_EXT_NOT_READY.code:
-            case error.code === AzureResourcesHandshakeErrors.INSUFFICIENT_CREDENTIALS.code:
-            case error.code === AzureResourcesHandshakeErrors.FAILED_VERIFICATION.code:
-            case error.code === AzureResourcesHandshakeErrors.FAILED_GET_API.code:
+            case error.code === AzureResourcesHandshakeErrors.CLIENT_EXT_HANDSHAKE_TIMEOUT.code:
+            case error.code === AzureResourcesHandshakeErrors.HOST_EXT_HANDSHAKE_TIMEOUT.code:
+            case error.code === AzureResourcesHandshakeErrors.CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS.code:
+            case error.code === AzureResourcesHandshakeErrors.CLIENT_RECEIVED_UNVERIFIED_CREDENTIAL.code:
+            case error.code === AzureResourcesHandshakeErrors.HOST_FAILED_GET_AZURE_RESOURCES_API.code:
             case error.code === AzureResourcesHandshakeErrors.UNEXPECTED.code:
             default:
         }
