@@ -50,14 +50,14 @@ export class AuthAccountStateManager {
         // If we're currently updating, create a promise that waits for the update to finish
         if (this.isUpdating) {
             const waitPromise = new Promise<readonly vscode.AuthenticationSessionAccountInformation[]>((resolve, reject) => {
-                const timeoutMs = 5000; // 5 seconds timeout
+                const timeoutMs = 10000; // 10 seconds timeout
                 const checkInterval = setInterval(() => {
                     if (!this.isUpdating) {
                         clearInterval(checkInterval);
                         clearTimeout(timeoutHandle);
                         resolve(this.accountsCache);
                     }
-                }, 10);
+                }, 100);
                 const timeoutHandle = setTimeout(() => {
                     clearInterval(checkInterval);
                     reject(new Error('Timed out waiting for account update to finish.'));
