@@ -69,7 +69,7 @@ export namespace apiUtils {
     }
 
     /**
-     * Activates the corresponding extension and returns its exports.
+     * Activates an extension and returns its exports.
      *
      * @returns `undefined` if the extension is not installed
      */
