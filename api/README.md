@@ -223,7 +223,7 @@ This extension declares that it registers a BranchDataProvider for the `Function
 
 On activation, client extensions should request Azure Resources for its API which can be then be used to register branch resources.
 
-For a comprehensive breakdown on how to authenticate and request for the Azure Resources API, please refer to this guide.
+For a comprehensive breakdown on how to authenticate and request for an Azure Resources API, please refer to this guide.
 
 <!-- ## Contribute to the Azure resources view
 

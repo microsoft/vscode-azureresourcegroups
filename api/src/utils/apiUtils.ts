@@ -12,7 +12,7 @@ export interface AzureExtensionApi {
     apiVersion: string;
     /**
      * An optional endpoint that an Azure extension should export in its API if it wants to be able to receive Azure Resource API sessions
-     * Todo: Add a reference to handshake in a README?
+     * Todo: Add reference to auth readme
      * @param azureResourcesToken - The token to use for accessing the Azure Resources API
      * @param clientToken - The token that was initially generated and passed to the Azure Resources API create session request.
      * This token is used to verify that the correct issuer is passing the Azure Resources token.
