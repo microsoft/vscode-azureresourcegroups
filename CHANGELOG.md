@@ -1,5 +1,5 @@
 # Change Log
-## 0.11.6 - 2025-11-04
+## 0.11.6 - 2025-11-03
 This release improves on Azure Activity Log integration with Copilot, giving users the ability to custom select which activities to provide as context before starting new chat sessions. Users can now select activities through the general entry-point in the activity log header ribbon, right-clicking individual activities directly, or interacting with an activity's inline context menu button. In addition, Copilot buttons have been upgraded to the newer chat icon.
 
 ![Activity Log Multi-Select with Copilot](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/resources/changelog/0.11.6/activityLogMultiSelect.png)
