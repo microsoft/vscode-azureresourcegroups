@@ -21,7 +21,7 @@ export function createAzureResourcesAuthApiFactory(coreApiProvider: apiUtils.Azu
                 apiVersion: v4,
                 getAzureResourcesApi: async (clientExtensionId: string, azureResourcesCredential: string, azureResourcesApiVersions: string[]) => {
                     return await callWithTelemetryAndErrorHandling('api.getAzureResourcesApi', async (context: IActionContext) => {
-                        addTelemetryAndErrorHandling(context, options?.extensionId);
+                        setTelemetryAndErrorHandling(context, options?.extensionId);
 
                         const verified: boolean = await verifyAzureResourcesApiSessionInternal(context, credentialManager, clientExtensionId, azureResourcesCredential);
                         if (!verified) {
@@ -41,7 +41,7 @@ export function createAzureResourcesAuthApiFactory(coreApiProvider: apiUtils.Azu
                 },
                 createAzureResourcesApiSession: async (clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string) => {
                     return await callWithTelemetryAndErrorHandling('api.createAzureResourcesApiSession', async (context: IActionContext) => {
-                        addTelemetryAndErrorHandling(context, options?.extensionId);
+                        setTelemetryAndErrorHandling(context, options?.extensionId);
                         return await createAzureResourcesApiSessionInternal(context, credentialManager, clientExtensionId, clientExtensionVersion, clientExtensionCredential);
                     });
                 },
@@ -50,7 +50,7 @@ export function createAzureResourcesAuthApiFactory(coreApiProvider: apiUtils.Azu
     };
 }
 
-function addTelemetryAndErrorHandling(context: IActionContext, extensionId?: string): void {
+function setTelemetryAndErrorHandling(context: IActionContext, extensionId?: string): void {
     context.telemetry.properties.callingExtensionId = extensionId;
     context.telemetry.properties.isActivationEvent = 'true';
     context.telemetry.properties.apiVersion = v4;
