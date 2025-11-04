@@ -15,7 +15,7 @@ Azure Resources APIs are protected behind the new v4 authentication layer. This 
 1. The client extension should then use the credential to retrieve the Azure Resources APIs by calling `getAzureResourcesApis`.
 
 ### Diagram
-
+<!-- Todo: Update diagram -->
 ![Azure Resources Handshake Diagram](../../docs/media/auth/azure-resources-handshake.png)
 
 ## Automating the Handshake
