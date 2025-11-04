@@ -12,3 +12,11 @@ import { AzureExtensionApi } from "./utils/apiUtils";
 export interface AzureResourcesExtensionApi extends AzureExtensionApi {
     resources: ResourcesApi;
 }
+
+/**
+ * The authentication layer (v4) protecting the core Azure Resources extension API.
+ */
+export interface AzureResourcesExtensionAuthApi extends AzureExtensionApi {
+    getAzureResourcesApi(clientExtensionId: string, azureResourcesCredential: string, azureResourceApiVersions: string[]): Promise<(AzureExtensionApi | undefined)[] | undefined>;
+    createAzureResourcesApiSession(clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string): Promise<void>;
+}
