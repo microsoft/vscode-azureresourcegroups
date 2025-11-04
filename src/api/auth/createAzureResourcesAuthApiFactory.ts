@@ -4,21 +4,24 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { apiUtils, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, GetApiOptions, IActionContext } from '@microsoft/vscode-azext-utils';
-import { AzExtCredentialManager } from '../../../api/src/auth/AzExtCredentialManager';
+import { AzExtCredentialManager } from '../../../api/src/auth/credentialManager/AzExtCredentialManager';
+import { AzExtUUIDCredentialManager } from '../../../api/src/auth/credentialManager/AzExtUUIDCredentialManager';
 import { AzureResourcesAuthApiInternal } from '../../hostapi.v4.internal';
 import { createAzureResourcesApiSessionInternal, verifyAzureResourcesApiSessionInternal } from './authApiInternal';
 
 const v4: string = '4.0.0';
 
-export function createAzureResourcesAuthApiFactory(credentialManager: AzExtCredentialManager<unknown>, azureResourcesApiProvider: apiUtils.AzureExtensionApiProvider): AzureExtensionApiFactory<AzureResourcesAuthApiInternal> {
+export function createAzureResourcesAuthApiFactory(coreApiProvider: apiUtils.AzureExtensionApiProvider): AzureExtensionApiFactory<AzureResourcesAuthApiInternal> {
+    const credentialManager: AzExtCredentialManager = new AzExtUUIDCredentialManager();
+
     return {
         apiVersion: v4,
         createApi: (options?: GetApiOptions) => {
             return {
                 apiVersion: v4,
-                getAzureResourcesApi: async (clientExtensionId: string, azureResourcesApiVersions: string[], azureResourcesCredential: string) => {
+                getAzureResourcesApi: async (clientExtensionId: string, azureResourcesCredential: string, azureResourcesApiVersions: string[]) => {
                     return await callWithTelemetryAndErrorHandling('api.getAzureResourcesApi', async (context: IActionContext) => {
-                        addCommonTelemetryAndErrorHandling(context, options?.extensionId);
+                        addTelemetryAndErrorHandling(context, options?.extensionId);
 
                         const verified: boolean = await verifyAzureResourcesApiSessionInternal(context, credentialManager, clientExtensionId, azureResourcesCredential);
                         if (!verified) {
@@ -28,7 +31,7 @@ export function createAzureResourcesAuthApiFactory(credentialManager: AzExtCrede
                         return azureResourcesApiVersions
                             .map((apiVersion) => {
                                 try {
-                                    return azureResourcesApiProvider.getApi(apiVersion, options);
+                                    return coreApiProvider.getApi(apiVersion, options);
                                 } catch {
                                     return undefined;
                                 }
@@ -38,7 +41,7 @@ export function createAzureResourcesAuthApiFactory(credentialManager: AzExtCrede
                 },
                 createAzureResourcesApiSession: async (clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string) => {
                     return await callWithTelemetryAndErrorHandling('api.createAzureResourcesApiSession', async (context: IActionContext) => {
-                        addCommonTelemetryAndErrorHandling(context, options?.extensionId);
+                        addTelemetryAndErrorHandling(context, options?.extensionId);
                         return await createAzureResourcesApiSessionInternal(context, credentialManager, clientExtensionId, clientExtensionVersion, clientExtensionCredential);
                     });
                 },
@@ -47,10 +50,10 @@ export function createAzureResourcesAuthApiFactory(credentialManager: AzExtCrede
     };
 }
 
-function addCommonTelemetryAndErrorHandling(context: IActionContext, extensionId?: string): void {
+function addTelemetryAndErrorHandling(context: IActionContext, extensionId?: string): void {
     context.telemetry.properties.callingExtensionId = extensionId;
     context.telemetry.properties.isActivationEvent = 'true';
-    context.telemetry.properties.apiVersion = '4.0.0';
+    context.telemetry.properties.apiVersion = v4;
     context.errorHandling.rethrow = true;
     context.errorHandling.suppressDisplay = true;
     context.errorHandling.suppressReportIssue = true;

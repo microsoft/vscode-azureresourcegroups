@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export interface AzExtCredentialManager<T> {
-    createCredential(payload?: T): string | Promise<string>;
-    verifyCredential(credential: string, expectedPayload?: T): AzExtVerifyCredentialResult<T> | Promise<AzExtVerifyCredentialResult<T>>;
+export interface AzExtCredentialManager {
+    createCredential(extensionId: string): string | Promise<string>;
+    verifyCredential(credential: string, extensionId?: string): boolean | Promise<boolean>;
 
     /**
      * Masks sensitive information from a given string to ensure private credential management keys from the manager are not exposed.
@@ -14,9 +14,3 @@ export interface AzExtCredentialManager<T> {
      */
     maskCredentials(data: string): string;
 }
-
-export type AzExtVerifyCredentialResult<T> = {
-    verified: boolean;
-    payload?: T;
-    [key: string]: unknown;
-};

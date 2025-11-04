@@ -3,30 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureResourcesExtensionApi } from "../extensionApis";
-import { AzureExtensionApi } from "../utils/apiUtils";
-import { AzExtCredentialManager } from "./AzExtCredentialManager";
-import { AzureResourcesHandshakeError } from "./errors";
+import { AzureResourcesExtensionApi } from "../../extensionApis";
+import { AzureExtensionApi } from "../../utils/apiUtils";
+import { AzureResourcesApiRequestError } from "./apiRequestErrors";
 
 export interface AzureResourcesApiRequestContext {
-    azureResourcesApiVersions: string[];
     clientExtensionId: string;
-
-    // Should we make this optional and provide a default? Or should we remove it entirely and force our own implementation?
-    clientCredentialManager: AzExtCredentialManager<unknown>;
+    azureResourcesApiVersions: string[];
 
     /**
-     * Callback invoked when Azure Resources APIs are successfully obtained during the authentication handshake.
+     * Callback invoked when Azure Resource APIs are successfully obtained through the authentication handshake.
      *
      * @param azureResourcesApis - Array of APIs corresponding to the requested versions. APIs are returned in the same
-     *                             order as specified in `azureResourcesApiVersions`. If a requested version is not
-     *                             available, `undefined` is returned at that position.
+     *                             order as provided in this request context. If a requested version is not
+     *                             available or does not match, `undefined` will be returned at that position.
      */
     onDidReceiveAzureResourcesApis: (azureResourcesApis: (AzureResourcesExtensionApi | AzureExtensionApi | undefined)[]) => void | Promise<void>;
 
     /**
      * Optional callback invoked when an error occurs during the Azure Resources API handshake process.
+     *
      * @param error - The error that occurred during the handshake, containing an error code and message.
      */
-    onHandshakeError?: (error: AzureResourcesHandshakeError) => void | Promise<void>;
+    onApiRequestError?: (error: AzureResourcesApiRequestError) => void | Promise<void>;
 }

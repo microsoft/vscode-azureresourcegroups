@@ -11,8 +11,6 @@ import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { AzExtResourceType } from '../api/src/AzExtResourceType';
-import { AzExtCredentialManager } from '../api/src/auth/AzExtCredentialManager';
-import { AzExtSignatureCredentialManager } from '../api/src/auth/AzExtSignatureCredentialManager';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/ResourceGroupsExtensionManager';
 import { ActivityLogResourceProviderManager, AzureResourceProviderManager, TenantResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
@@ -120,6 +118,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         registerLMTools();
     });
 
+    const v2: string = '2.0.0';
+    const v3: string = '3.0.0';
+
     const extensionManager = new ResourceGroupsExtensionManager()
 
     const azureResourceBranchDataProviderManager = new AzureResourceBranchDataProviderManager(
@@ -178,7 +179,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         refreshEvent: refreshActivityLogTreeEmitter.event
     });
 
-    const v2: string = '2.0.0';
     const azureResourcesV2ApiFactory: AzureExtensionApiFactory<AzureResourcesApiInternal> = {
         apiVersion: v2,
         createApi: (options?: GetApiOptions) => {
@@ -248,7 +248,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
      * This temporary API will be removed in a future version once the migration is complete.
      * See: https://github.com/microsoft/vscode-azureresourcegroups/pull/1223
      */
-    const v3: string = '3.0.0';
     const azureResourcesV3ApiFactory: AzureExtensionApiFactory<AzureExtensionApi> = {
         apiVersion: v3,
         createApi: () => {
@@ -259,8 +258,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         },
     };
 
-    const azureResourcesApiCredentialManager: AzExtCredentialManager<string> = new AzExtSignatureCredentialManager();
-    const azureResourcesApiProvider: apiUtils.AzureExtensionApiProvider = createApiProvider([
+    const coreApiProvider: apiUtils.AzureExtensionApiProvider = createApiProvider([
         azureResourcesInternalApiFactory,
         azureResourcesV2ApiFactory,
         azureResourcesV3ApiFactory,
@@ -268,13 +266,13 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     return createApiProvider(
         [
-            // Todo: Remove once product teams finish migrating to 4.0.0
+            // Todo: Remove once extension clients finish migrating
             azureResourcesInternalApiFactory,
             azureResourcesV2ApiFactory,
             azureResourcesV3ApiFactory,
 
             // This will eventually be the only part of the API exposed publically
-            createAzureResourcesAuthApiFactory(azureResourcesApiCredentialManager, azureResourcesApiProvider),
+            createAzureResourcesAuthApiFactory(coreApiProvider),
         ]
     );
 }

@@ -3,11 +3,9 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-export * from './auth/AzExtCredentialManager';
-export * from './auth/AzExtSignatureCredentialManager';
-export * from './auth/AzureResourcesApiRequestContext';
-export * from './auth/clientHandshake';
-export * from './auth/errors';
+export * from './auth/apiRequest/apiRequest';
+export * from './auth/apiRequest/apiRequestErrors';
+export * from './auth/apiRequest/AzureResourcesApiRequestContext';
 export * from './AzExtResourceType';
 export * from './extensionApis';
 export * from './getAzExtResourceType';

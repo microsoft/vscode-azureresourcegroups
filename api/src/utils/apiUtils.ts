@@ -69,20 +69,12 @@ export namespace apiUtils {
     }
 
     /**
-     * Get extension exports for the extension with the given id. Activates extension first if needed.
+     * Activates the corresponding extension and returns its exports.
      *
      * @returns `undefined` if the extension is not installed
      */
     export async function getExtensionExports<T>(extensionId: string): Promise<T | undefined> {
         const extension: vscode.Extension<T> | undefined = vscode.extensions.getExtension(extensionId);
-        if (extension) {
-            if (!extension.isActive) {
-                await extension.activate();
-            }
-
-            return extension.exports;
-        }
-
-        return undefined;
+        return await extension?.activate();
     }
 }

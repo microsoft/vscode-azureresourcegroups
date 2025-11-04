@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureExtensionApi, IActionContext, IParsedError, maskUserInfo, parseError } from '@microsoft/vscode-azext-utils';
-import { AzExtCredentialManager } from '../../../api/src/auth/AzExtCredentialManager';
+import { IActionContext, IParsedError, maskUserInfo, parseError } from '@microsoft/vscode-azext-utils';
+import { l10n } from 'vscode';
+import { AzExtCredentialManager } from '../../../api/src/auth/credentialManager/AzExtCredentialManager';
 import { apiUtils } from '../../../api/src/utils/apiUtils';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
@@ -15,7 +16,7 @@ const allowedExtensionIds = [
     'ms-azuretools.vscode-azurecontainerapps',
 ];
 
-export async function createAzureResourcesApiSessionInternal(context: IActionContext, credentialManager: AzExtCredentialManager<unknown>, clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string): Promise<void> {
+export async function createAzureResourcesApiSessionInternal(context: IActionContext, credentialManager: AzExtCredentialManager, clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string): Promise<void> {
     context.telemetry.properties.clientExtensionId = clientExtensionId;
     context.telemetry.properties.clientExtensionVersion = clientExtensionVersion;
 
@@ -28,7 +29,7 @@ export async function createAzureResourcesApiSessionInternal(context: IActionCon
     context.telemetry.properties.allowedExtension = 'true';
 
     try {
-        const clientApi = await getClientExtensionApi(clientExtensionId, clientExtensionVersion);
+        const clientApi = await apiUtils.getAzureExtensionApi(ext.context, clientExtensionId, clientExtensionVersion);
         await clientApi.receiveAzureResourcesApiSession?.(await credentialManager.createCredential(clientExtensionId), clientExtensionCredential);
     } catch (err) {
         const failed: string = localize('createResourcesApiSession.failed', 'Failed to create Azure Resources API session for extension "{0}".', clientExtensionId);
@@ -42,7 +43,7 @@ export async function createAzureResourcesApiSessionInternal(context: IActionCon
     }
 }
 
-export async function verifyAzureResourcesApiSessionInternal(context: IActionContext, credentialManager: AzExtCredentialManager<unknown>, clientExtensionId: string, azureResourcesCredential: string): Promise<boolean> {
+export async function verifyAzureResourcesApiSessionInternal(context: IActionContext, credentialManager: AzExtCredentialManager, clientExtensionId: string, azureResourcesCredential: string): Promise<boolean> {
     const getApiVerifyError: string = `${clientExtensionId || 'Unknown Extension'} - 🧙 YOU SHALL NOT PASS! 🔥`;
 
     if (!clientExtensionId || !azureResourcesCredential) {
@@ -52,43 +53,16 @@ export async function verifyAzureResourcesApiSessionInternal(context: IActionCon
 
     context.telemetry.properties.clientExtensionId = clientExtensionId;
 
+    let verified: boolean | undefined;
     try {
-        const { verified } = await credentialManager.verifyCredential(azureResourcesCredential, clientExtensionId);
+        verified = await credentialManager.verifyCredential(azureResourcesCredential, clientExtensionId);
+    } catch { /** Skip; handle below */ }
 
-        if (!verified) {
-            context.telemetry.properties.deniedReason = 'failedVerification';
-            const failedVerification: string = localize('getAzureResourcesApi.failedVerification', 'Extension claiming to be "{0}" provided a credential that failed verification.', clientExtensionId);
-            ext.outputChannel.error(failedVerification);
-            throw new Error(failedVerification);
-        }
-
-        if (!allowedExtensionIds.includes(clientExtensionId)) {
-            context.telemetry.properties.deniedReason = 'notAllowed';
-            ext.outputChannel.warn(localize('getAzureResourcesApi.notAllowed', 'Extension claiming to be "{0}" is not on the allow list.', clientExtensionId));
-            throw new Error(getApiVerifyError);
-        }
-
-        ext.outputChannel.info(localize('getAzureResourcesApi.success', 'Successfully verified extension "{0}".', clientExtensionId));
-        return true;
-
-    } catch (err) {
-        const failed: string = localize('getAzureResourcesApi.verifyError', 'Failed to verify extension "{0}".', clientExtensionId);
-        context.telemetry.properties.deniedReason ||= 'verifyError';
-        ext.outputChannel.error(failed);
-
-        const perr: IParsedError = parseError(err);
-        const perrMessage: string = credentialManager.maskCredentials(perr.message);
-        ext.outputChannel.error(perrMessage);
-        context.telemetry.properties.getAzureResourcesApiError = maskUserInfo(perrMessage, []);
-        throw new Error(perrMessage);
+    if (!verified) {
+        context.telemetry.properties.deniedReason = 'failedVerification';
+        ext.outputChannel.warn(l10n.t('Extension claiming to be "{0}" provided an access token that failed verification.', clientExtensionId));
+        throw new Error(getApiVerifyError);
     }
-}
 
-export async function getClientExtensionApi(clientExtensionId: string, clientExtensionVersion: string): Promise<AzureExtensionApi> {
-    const extensionProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>(clientExtensionId);
-    if (extensionProvider) {
-        return extensionProvider.getApi<AzureExtensionApi>(clientExtensionVersion);
-    } else {
-        throw new Error(localize('noClientExt', 'Could not find Azure extension API for extension ID "{0}".', clientExtensionId));
-    }
+    return verified;
 }
