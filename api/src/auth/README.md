@@ -11,8 +11,8 @@ Azure Resources APIs are protected behind the new v4 authentication layer. This 
 ### Steps
 
 1. On activation, the client extension should export its API and initiate the handshake by calling `createAzureResourcesApiSession`. The client extension should provide its own verification credential as part of this request (more on this later).
-1. The Azure Resources host extension verifies that the requesting extension is on its approved list. If approved, Azure Resources does not respond directly. Instead, it retrieves the extension's API from VS Code directly using the approved extension ID, then delivers the session credential via the `receiveAzureResourcesApiSession` receiver method. This ensures the credential reaches the approved recipient, even if a malicious actor tried to initiate the request. Azure Resources also returns the original client credential so the client extension can verify that it is communicating with the genuine Azure Resources extension and not a pretend actor.
-1. The client extension should then use the credential to retrieve the Azure Resources APIs by calling `getAzureResourcesApis`.
+1. The Azure Resources host extension verifies that the requesting extension is on its approved list. If approved, Azure Resources does not respond directly. Instead, it retrieves the extension's API from VS Code directly using the approved extension ID, then delivers the session credential via the `receiveAzureResourcesApiSession` receiver method. This ensures the credential reaches the approved recipient, even if a malicious actor tried to initiate the request. Azure Resources also returns the original client credential so the client extension can verify that it is communicating with the genuine Azure Resources extension.
+1. The client extension should then use the Azure Resources credential to retrieve the Azure Resources APIs by calling `getAzureResourcesApis`.
 
 ### Diagram
 ![Azure Resources API Request Handshake](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/docs/media/api-request-handshake.png)

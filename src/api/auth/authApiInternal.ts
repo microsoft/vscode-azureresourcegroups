@@ -43,12 +43,14 @@ export async function createAzureResourcesApiSessionInternal(context: IActionCon
     }
 }
 
+export const getApiVerifyError = (clientExtensionId?: string) => `${clientExtensionId || 'Unknown Extension'} - 🧙 YOU SHALL NOT PASS! 🔥`;
+
 export async function verifyAzureResourcesApiSessionInternal(context: IActionContext, credentialManager: AzExtCredentialManager, clientExtensionId: string, azureResourcesCredential: string): Promise<boolean> {
-    const getApiVerifyError: string = `${clientExtensionId || 'Unknown Extension'} - 🧙 YOU SHALL NOT PASS! 🔥`;
+    const apiVerifyError: string = getApiVerifyError(clientExtensionId);
 
     if (!clientExtensionId || !azureResourcesCredential) {
         context.telemetry.properties.deniedReason = 'missingDetails';
-        throw new Error(getApiVerifyError);
+        throw new Error(apiVerifyError);
     }
 
     context.telemetry.properties.clientExtensionId = clientExtensionId;
@@ -61,7 +63,7 @@ export async function verifyAzureResourcesApiSessionInternal(context: IActionCon
     if (!verified) {
         context.telemetry.properties.deniedReason = 'failedVerification';
         ext.outputChannel.warn(l10n.t('Extension claiming to be "{0}" provided an access token that failed verification.', clientExtensionId));
-        throw new Error(getApiVerifyError);
+        throw new Error(apiVerifyError);
     }
 
     return verified;

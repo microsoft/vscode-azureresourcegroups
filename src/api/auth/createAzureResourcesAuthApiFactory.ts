@@ -7,7 +7,7 @@ import { apiUtils, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, 
 import { AzExtCredentialManager } from '../../../api/src/auth/credentialManager/AzExtCredentialManager';
 import { AzExtUUIDCredentialManager } from '../../../api/src/auth/credentialManager/AzExtUUIDCredentialManager';
 import { AzureResourcesAuthApiInternal } from '../../hostapi.v4.internal';
-import { createAzureResourcesApiSessionInternal, verifyAzureResourcesApiSessionInternal } from './authApiInternal';
+import { createAzureResourcesApiSessionInternal, getApiVerifyError, verifyAzureResourcesApiSessionInternal } from './authApiInternal';
 
 const v4: string = '4.0.0';
 
@@ -25,7 +25,7 @@ export function createAzureResourcesAuthApiFactory(coreApiProvider: apiUtils.Azu
 
                         const verified: boolean = await verifyAzureResourcesApiSessionInternal(context, credentialManager, clientExtensionId, azureResourcesCredential);
                         if (!verified) {
-                            return [];
+                            throw new Error(getApiVerifyError(clientExtensionId));
                         }
 
                         return azureResourcesApiVersions
