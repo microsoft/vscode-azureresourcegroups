@@ -222,16 +222,7 @@ This extension declares that it registers a BranchDataProvider for the `Function
 ## Getting started
 
 On activation, client extensions can fetch an instance of the Azure Resources API using utilities provided by the [`@microsoft/vscode-azureresources-api`](https://www.npmjs.com/package/@microsoft/vscode-azureresources-api) package.
-For more information on fetching through the Azure Resources authentication layer, please consult this [guide](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/src/auth/README.md).
-
-```ts
-import { getAzureResourcesExtensionApi } from '@microsoft/vscode-azureresources-api';
-
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
-    const azureResourcesApi = await getAzureResourcesExtensionApi(context, '2.0.0');
-    // ...register providers
-}
-```
+A guide on fetching the API through the Azure Resources authentication layer can be found [here](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/src/auth/README.md).
 
 <!-- ## Contribute to the Azure resources view
 
