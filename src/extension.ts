@@ -179,7 +179,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         refreshEvent: refreshActivityLogTreeEmitter.event
     });
 
-    const azureResourcesV2ApiFactory: AzureExtensionApiFactory<AzureResourcesApiInternal> = {
+    const v2ApiFactory: AzureExtensionApiFactory<AzureResourcesApiInternal> = {
         apiVersion: v2,
         createApi: (options?: GetApiOptions) => {
             return createWrappedAzureResourcesExtensionApi(
@@ -202,7 +202,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         }
     };
 
-    ext.v2.api = azureResourcesV2ApiFactory.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
+    ext.v2.api = v2ApiFactory.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
     ext.managedIdentityBranchDataProvider = new ManagedIdentityBranchDataProvider();
     ext.v2.api.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ManagedIdentityUserAssignedIdentities, ext.managedIdentityBranchDataProvider);
 
@@ -215,7 +215,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
         async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getSubscriptions(filter) };
 
-    const azureResourcesInternalApiFactory: AzureExtensionApiFactory<AzureExtensionApi> = {
+    const internalApiFactory: AzureExtensionApiFactory<AzureExtensionApi> = {
         apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
         createApi: () => new InternalAzureResourceGroupsExtensionApi({
             apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
@@ -248,7 +248,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
      * This temporary API will be removed in a future version once the migration is complete.
      * See: https://github.com/microsoft/vscode-azureresourcegroups/pull/1223
      */
-    const azureResourcesV3ApiFactory: AzureExtensionApiFactory<AzureExtensionApi> = {
+    const v3ApiFactory: AzureExtensionApiFactory<AzureExtensionApi> = {
         apiVersion: v3,
         createApi: () => {
             return {
@@ -259,17 +259,17 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     };
 
     const coreApiProvider: apiUtils.AzureExtensionApiProvider = createApiProvider([
-        azureResourcesInternalApiFactory,
-        azureResourcesV2ApiFactory,
-        azureResourcesV3ApiFactory,
+        internalApiFactory,
+        v2ApiFactory,
+        v3ApiFactory,
     ]);
 
     return createApiProvider(
         [
             // Todo: Remove once extension clients finish migrating
-            azureResourcesInternalApiFactory,
-            azureResourcesV2ApiFactory,
-            azureResourcesV3ApiFactory,
+            internalApiFactory,
+            v2ApiFactory,
+            v3ApiFactory,
 
             // This will eventually be the only part of the API exposed publically
             createAzureResourcesAuthApiFactory(coreApiProvider),
