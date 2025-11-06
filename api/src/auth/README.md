@@ -11,7 +11,9 @@ Azure Resources APIs are protected behind the new v4 authentication layer. This 
 ### Steps
 
 1. On activation, the client extension should export its API and initiate the handshake by calling `createAzureResourcesApiSession`. The client extension should provide its own verification credential as part of this request (more on this later).
+
 1. The Azure Resources host extension verifies that the requesting extension is on its approved list. If approved, Azure Resources does not respond directly. Instead, it retrieves the extension's API from VS Code directly using the approved extension ID, then delivers the session credential via the `receiveAzureResourcesApiSession` receiver method. This ensures the credential reaches the approved recipient, even if a malicious actor tried to initiate the request. Azure Resources also returns the original client credential so the client extension can verify that it is communicating with the genuine Azure Resources extension.
+
 1. The client extension should then use the Azure Resources credential to retrieve the Azure Resources APIs by calling `getAzureResourcesApis`.
 
 ### Diagram
@@ -19,7 +21,7 @@ Azure Resources APIs are protected behind the new v4 authentication layer. This 
 
 ## Automating the Handshake
 
-To simplify the handshake process and reduce boilerplate code, the following tools are made available and outlined below.
+To simplify the handshake process, the following tools are made available and outlined below.
 
 ### The API Request
 
@@ -48,9 +50,12 @@ The following example shows how to configure the context when preparing for an A
 
 ```ts
 const v2: string = '^2.0.0';
+
 const context: AzureResourcesApiRequestContext = {
     azureResourcesApiVersions: [v2],
-    clientExtensionId: ext.context.extension.id,
+    clientExtensionId: 'ms-azuretools.vscode-azurecontainerapps',
+
+    // Successful retrieval of Azure Resources APIs will be returned here
     onDidReceiveAzureResourcesApis: (azureResourcesApis: (AzureResourcesExtensionApi | undefined)[]) => {
         const [rgApiV2] = azureResourcesApis;
         if (!rgApiV2) {
@@ -59,8 +64,9 @@ const context: AzureResourcesApiRequestContext = {
         ext.rgApiV2 = rgApiV2;
         ext.rgApiV2.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ContainerAppsEnvironment, ext.branchDataProvider);
     },
-    // Optional - use for special error handling or telemetry logging
-    onHandshakeError: (error: AzureResourcesHandshakeError) => {
+
+    // Optional
+    onApiRequestError: async (error: AzureResourcesApiRequestError) => {
         switch (true) {
             case error.code === AzureResourcesHandshakeErrors.CLIENT_FAILED_CREATE_CREDENTIAL.code:
             case error.code === AzureResourcesHandshakeErrors.HOST_CREATE_SESSION_FAILED.code:
@@ -70,6 +76,7 @@ const context: AzureResourcesApiRequestContext = {
             default:
         }
     },
+
 };
 ```
 
