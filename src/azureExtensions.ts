@@ -7,6 +7,7 @@ import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { AzExtResourceType } from "../api/src/index";
 import { localize } from "./utils/localize";
 
+// IMPORTANT: THESE ARE DEDUPED AND USED TO BUILD THE FINAL LIST OF ALLOWED EXTENSIONS THAT CAN ACCESS THE CORE AZURE RESOURCES API.
 export const azureExtensions: IAzExtMetadata[] = [
     {
         name: 'vscode-azurefunctions',
