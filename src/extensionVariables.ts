@@ -40,7 +40,6 @@ export namespace ext {
     export let activityLogTreeView: TreeView<unknown>;
     export let helpTree: AzExtTreeDataProvider;
     export let outputChannel: IAzExtLogOutputChannel;
-    export let ignoreBundle: boolean | undefined;
     export const prefix: string = 'azureResourceGroups';
 
     export let tagFS: TagFileSystem;

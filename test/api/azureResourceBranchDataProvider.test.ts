@@ -1,6 +1,12 @@
-import * as assert from "assert";
+import assert from "assert";
 import { commands, TreeDataProvider, TreeItem } from "vscode";
-import { AzExtResourceType, AzureResource, AzureResourceItem, BranchDataItemWrapper, BranchDataProvider, ext, GroupingItem, ResourceGroupsItem, ResourceModelBase, SubscriptionItem } from "../../extension.bundle";
+import { AzExtResourceType, AzureResource, BranchDataProvider, ResourceModelBase } from "../../api/src";
+import { ext } from "../../src/extensionVariables";
+import { BranchDataItemWrapper } from "../../src/tree/BranchDataItemWrapper";
+import { ResourceGroupsItem } from "../../src/tree/ResourceGroupsItem";
+import { AzureResourceItem } from "../../src/tree/azure/AzureResourceItem";
+import { SubscriptionItem } from "../../src/tree/azure/SubscriptionItem";
+import { GroupingItem } from "../../src/tree/azure/grouping/GroupingItem";
 import { createMockSubscriptionWithFunctions } from "./mockServiceFactory";
 
 const api = () => {

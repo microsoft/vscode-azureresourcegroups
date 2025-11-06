@@ -1,8 +1,12 @@
+import assert from "assert";
 import { commands } from "vscode";
-import { ext, GroupingItem, hasPortalUrl, hasViewProperties, ResourceGroupGroupingItem } from "../extension.bundle";
+import { hasPortalUrl } from "../src/commands/openInPortal";
+import { hasViewProperties } from "../src/commands/viewProperties";
+import { ext } from "../src/extensionVariables";
+import { GroupingItem } from "../src/tree/azure/grouping/GroupingItem";
+import { ResourceGroupGroupingItem } from "../src/tree/azure/grouping/ResourceGroupGroupingItem";
 import { createMockSubscriptionWithFunctions } from "./api/mockServiceFactory";
 import { validateSubscription } from "./utils/validateSubscription";
-import assert = require("assert");
 
 const api = () => {
     return ext.v2.api.resources;

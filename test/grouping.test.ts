@@ -1,7 +1,12 @@
+import assert from "assert";
 import { commands } from "vscode";
-import { AzExtResourceType, ext, GroupingItem, isLocationGroupingItem, isResourceGroupGroupingItem, isResourceTypeGroupingItem, LocationGroupingItem, ResourceGroupGroupingItem, ResourceTypeGroupingItem } from "../extension.bundle";
+import { AzExtResourceType } from "../api/src";
+import { ext } from "../src/extensionVariables";
+import { GroupingItem } from "../src/tree/azure/grouping/GroupingItem";
+import { isLocationGroupingItem, LocationGroupingItem } from "../src/tree/azure/grouping/LocationGroupingItem";
+import { isResourceGroupGroupingItem, ResourceGroupGroupingItem } from "../src/tree/azure/grouping/ResourceGroupGroupingItem";
+import { isResourceTypeGroupingItem, ResourceTypeGroupingItem } from "../src/tree/azure/grouping/ResourceTypeGroupingItem";
 import { createMockSubscriptionWithFunctions } from "./api/mockServiceFactory";
-import assert = require("assert");
 
 const api = () => {
     return ext.v2.api.resources;

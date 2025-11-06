@@ -5,8 +5,8 @@
 
 /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
-import * as assert from 'assert';
-import { AuthAccountStateManager, getAuthAccountStateManager } from '../extension.bundle';
+import assert from 'assert';
+import { AuthAccountStateManager, getAuthAccountStateManager } from '../src/exportAuthRecord';
 
 suite('AuthAccountStateManager Tests', () => {
     let stateManager: AuthAccountStateManager;

@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
+import { registerOnActionStartHandler, TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ext, registerOnActionStartHandler, settingUtils } from '../extension.bundle';
+import { ext } from '../src/extensionVariables';
+import { settingUtils } from '../src/utils/settingUtils';
 
 const longRunningLocalTestsEnabled: boolean = !/^(false|0)?$/i.test(process.env.AzCode_EnableLongRunningTestsLocal || '');
 const longRunningRemoteTestsEnabled: boolean = !/^(false|0)?$/i.test(process.env.AzCode_UseAzureFederatedCredentials || '');

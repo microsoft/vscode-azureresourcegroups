@@ -11,7 +11,7 @@
 import * as http from 'http';
 import { HttpProxyAgent } from 'http-proxy-agent';
 import { HttpsProxyAgent } from 'https-proxy-agent';
-import * as WS from 'ws';
+import { default as WS } from 'ws';
 import { readJSON } from './readJSON';
 
 function delay<T = void>(ms: number, result?: T | PromiseLike<T>): Promise<T | PromiseLike<T> | undefined> {

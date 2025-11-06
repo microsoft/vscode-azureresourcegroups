@@ -19,7 +19,7 @@ export class InvalidAzureResourceItem implements ResourceGroupsItem {
         this.portalUrl = createPortalUrl(resource.subscription, resource.id);
     }
 
-    public readonly id: string = this.resource.id;
+    public get id(): string { return this.resource.id; }
 
     getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         return Promise.resolve([new InvalidItem(parseError(this.error))]);

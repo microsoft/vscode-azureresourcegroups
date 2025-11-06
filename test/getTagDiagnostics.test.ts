@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
+import { nonNullValue } from '@microsoft/vscode-azext-utils';
+import assert from 'assert';
 import { Diagnostic } from 'vscode';
-import { getTagDiagnostics, nonNullValue } from '../extension.bundle';
+import { getTagDiagnostics } from '../src/commands/tags/getTagDiagnostics';
 
 const invalidTagType: RegExp = /tag value.*type/i;
 const invalidTagsType: RegExp = /tags.*object.*pairs/i;
