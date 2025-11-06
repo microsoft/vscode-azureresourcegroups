@@ -94,7 +94,7 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
         try {
             const resourcesAuthApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
             const resourcesApis = await resourcesAuthApi.getAzureResourcesApi(context.clientExtensionId, azureResourcesCredential, context.azureResourcesApiVersions);
-            await context.onDidReceiveAzureResourcesApis(resourcesApis);
+            void context.onDidReceiveAzureResourcesApis(resourcesApis);
         } catch (err) {
             if (err instanceof Error) {
                 await context.onApiRequestError?.({ code: AzureResourcesApiRequestErrors.HOST_API_PROVISIONING_FAILED.code, message: clientCredentialManager.maskCredentials(err.message) });
