@@ -22,6 +22,7 @@ export function createAzureResourcesAuthApiFactory(coreApiProvider: apiUtils.Azu
                 getAzureResourcesApi: async (clientExtensionId: string, azureResourcesCredential: string, azureResourcesApiVersions: string[]) => {
                     return await callWithTelemetryAndErrorHandling('api.getAzureResourcesApi', async (context: IActionContext) => {
                         setTelemetryAndErrorHandling(context, options?.extensionId);
+                        clientExtensionId = clientExtensionId?.toLowerCase();
 
                         const verified: boolean = await verifyAzureResourcesApiSessionInternal(context, credentialManager, clientExtensionId, azureResourcesCredential);
                         if (!verified) {
@@ -42,6 +43,8 @@ export function createAzureResourcesAuthApiFactory(coreApiProvider: apiUtils.Azu
                 createAzureResourcesApiSession: async (clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string) => {
                     return await callWithTelemetryAndErrorHandling('api.createAzureResourcesApiSession', async (context: IActionContext) => {
                         setTelemetryAndErrorHandling(context, options?.extensionId);
+                        clientExtensionId = clientExtensionId?.toLowerCase();
+
                         return await createAzureResourcesApiSessionInternal(context, credentialManager, clientExtensionId, clientExtensionVersion, clientExtensionCredential);
                     });
                 },

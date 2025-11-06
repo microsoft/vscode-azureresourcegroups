@@ -7,14 +7,13 @@ import { IActionContext, IParsedError, maskUserInfo, parseError } from '@microso
 import { l10n } from 'vscode';
 import { AzExtCredentialManager } from '../../../api/src/auth/credentialManager/AzExtCredentialManager';
 import { apiUtils } from '../../../api/src/utils/apiUtils';
+import { azureExtensions } from '../../azureExtensions';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 
-const allowedExtensionIds = [
-    // Todo: Add remainder of extension ids
-    'ms-azuretools.vscode-azurefunctions',
-    'ms-azuretools.vscode-azurecontainerapps',
-];
+const allowedExtensionIds: string[] = Array.from(
+    new Set(azureExtensions.map(extension => `${extension.publisher.toLowerCase()}.${extension.name.toLowerCase()}`))
+);
 
 export async function createAzureResourcesApiSessionInternal(context: IActionContext, credentialManager: AzExtCredentialManager, clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string): Promise<void> {
     context.telemetry.properties.clientExtensionId = clientExtensionId;

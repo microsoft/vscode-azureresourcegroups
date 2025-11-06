@@ -152,7 +152,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-ai-foundry',
-        publisher: 'teamsdevapp',
+        publisher: 'TeamsDevApp',
         label: 'Azure AI Foundry',
         resourceTypes: [AzExtResourceType.AiFoundry],
         reportIssueCommandId: 'azure-ai-foundry.reportIssue'
@@ -177,7 +177,7 @@ export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
 export interface IAzExtMetadata {
     name: string;
     label: string;
-    publisher?: string;
+    publisher: string;
     resourceTypes: AzExtResourceType[];
     tutorial?: IAzExtTutorial;
     reportIssueCommandId?: string;
