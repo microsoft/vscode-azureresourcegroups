@@ -10,6 +10,7 @@ import { localize } from "./utils/localize";
 export const azureExtensions: IAzExtMetadata[] = [
     {
         name: 'vscode-azurefunctions',
+        publisher: 'ms-azuretools',
         label: 'Functions',
         resourceTypes: [
             AzExtResourceType.DurableTaskScheduler,
@@ -23,6 +24,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azureappservice',
+        publisher: 'ms-azuretools',
         label: 'App Service',
         resourceTypes: [
             AzExtResourceType.AppServices
@@ -35,6 +37,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurearcenabledmachines',
+        publisher: 'ms-azuretools',
         label: 'Azure Arc-enabled machines',
         resourceTypes: [
             AzExtResourceType.ArcEnabledMachines
@@ -43,6 +46,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurestaticwebapps',
+        publisher: 'ms-azuretools',
         label: 'Static Web Apps',
         resourceTypes: [
             AzExtResourceType.StaticWebApps
@@ -55,12 +59,14 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azureresourcegroups',
+        publisher: 'ms-azuretools',
         label: 'Resource Groups',
         resourceTypes: [],
         reportIssueCommandId: 'azureResourceGroups.reportIssue'
     },
     {
         name: 'vscode-azurestorage',
+        publisher: 'ms-azuretools',
         label: 'Storage',
         resourceTypes: [
             AzExtResourceType.StorageAccounts
@@ -69,6 +75,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurevirtualmachines',
+        publisher: 'ms-azuretools',
         label: 'Virtual Machines',
         resourceTypes: [
             AzExtResourceType.VirtualMachines
@@ -77,6 +84,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-cosmosdb',
+        publisher: 'ms-azuretools',
         label: 'Databases',
         resourceTypes: [
             AzExtResourceType.AzureCosmosDb,
@@ -87,6 +95,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-documentdb',
+        publisher: 'ms-azuretools',
         label: 'Databases',
         resourceTypes: [
             AzExtResourceType.AzureCosmosDbForMongoDbRu,
@@ -95,6 +104,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurecontainerapps',
+        publisher: 'ms-azuretools',
         label: 'Container Apps',
         resourceTypes: [
             AzExtResourceType.ContainerAppsEnvironment,
@@ -125,6 +135,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurewebpubsub',
+        publisher: 'ms-azuretools',
         label: 'Web PubSub',
         resourceTypes: [
             AzExtResourceType.WebPubSub
@@ -133,6 +144,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azureresourcegroups',
+        publisher: 'ms-azuretools',
         label: 'Managed Identity',
         resourceTypes: [
             AzExtResourceType.ManagedIdentityUserAssignedIdentities
@@ -140,7 +152,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-ai-foundry',
-        publisher: 'TeamsDevApp',
+        publisher: 'teamsdevapp',
         label: 'Azure AI Foundry',
         resourceTypes: [AzExtResourceType.AiFoundry],
         reportIssueCommandId: 'azure-ai-foundry.reportIssue'

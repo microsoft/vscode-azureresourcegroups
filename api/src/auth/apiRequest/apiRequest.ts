@@ -11,7 +11,7 @@ import { AzExtUUIDCredentialManager } from "../credentialManager/AzExtUUIDCreden
 import { AzureResourcesApiRequestContext } from "./AzureResourcesApiRequestContext";
 import { AzureResourcesApiRequestErrors } from "./apiRequestErrors";
 
-const azureResourcesAuthApiVersion: string = '4.0.0';
+const azureResourcesAuthApiVersion: string = '^4.0.0';
 const azureResourcesExtId = 'ms-azuretools.vscode-azureresourcegroups';
 
 export type AzureResourcesApiRequestPrep<T extends AzureExtensionApi> = {

@@ -15,8 +15,7 @@ Azure Resources APIs are protected behind the new v4 authentication layer. This 
 1. The client extension should then use the credential to retrieve the Azure Resources APIs by calling `getAzureResourcesApis`.
 
 ### Diagram
-<!-- Todo: Update diagram -->
-![Azure Resources Handshake Diagram](../../docs/media/auth/azure-resources-handshake.png)
+![Azure Resources API Request Handshake](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/docs/media/api-request-handshake.png)
 
 ## Automating the Handshake
 
@@ -48,13 +47,14 @@ return createApiProvider([clientApi]);
 The following example shows how to configure the context when preparing for an Azure Resources API handshake request.
 
 ```ts
+const v2: string = '^2.0.0';
 const context: AzureResourcesApiRequestContext = {
-    azureResourcesApiVersions: ['2.0.0'],
+    azureResourcesApiVersions: [v2],
     clientExtensionId: ext.context.extension.id,
     onDidReceiveAzureResourcesApis: (azureResourcesApis: (AzureResourcesExtensionApi | undefined)[]) => {
         const [rgApiV2] = azureResourcesApis;
         if (!rgApiV2) {
-            throw new Error(localize('failedHostIntegration', 'Failed to integrate with the Azure Resources host.'));
+            throw new Error(l10n.t('Failed to find a matching Azure Resources API for version "{0}".', v2));
         }
         ext.rgApiV2 = rgApiV2;
         ext.rgApiV2.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ContainerAppsEnvironment, ext.branchDataProvider);
@@ -72,3 +72,7 @@ const context: AzureResourcesApiRequestContext = {
     },
 };
 ```
+
+---
+
+[Back to README](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/README.md)
