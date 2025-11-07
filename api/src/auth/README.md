@@ -33,10 +33,8 @@ The `prepareAzureResourcesApiRequest` tool that we provide performs two key oper
 2. **Provides handshake initializer** - Returns a function that initiates the Resources API request handshake when called.  Call this before exporting your API during extension activation.
 
 ```ts
-const containerAppsApi: api.AzureContainerAppsExtensionApi = {
+const containerAppsApi: AzureExtensionApi = {
     apiVersion: '1.0.0',
-    deployImage: deployImageApi,
-    deployWorkspaceProject: deployWorkspaceProjectApi,
 };
 
 const { clientApi, requestResourcesApis } = prepareAzureResourcesApiRequest(context, containerAppsApi);
@@ -65,7 +63,7 @@ const context: AzureResourcesApiRequestContext = {
         ext.rgApiV2.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ContainerAppsEnvironment, ext.branchDataProvider);
     },
 
-    // Optional
+    // Optional: Can use for error handling / telemetry
     onApiRequestError: async (error: AzureResourcesApiRequestError) => {
         switch (true) {
             case error.code === AzureResourcesHandshakeErrors.CLIENT_FAILED_CREATE_CREDENTIAL.code:
