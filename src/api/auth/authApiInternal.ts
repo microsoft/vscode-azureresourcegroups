@@ -11,15 +11,13 @@ import { azureExtensions } from '../../azureExtensions';
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 
-const allowedExtensionIds: string[] = Array.from(
-    new Set(azureExtensions.map(extension => `${extension.publisher.toLowerCase()}.${extension.name.toLowerCase()}`))
-);
+const allowedExtensionIds = new Set(azureExtensions.map(extension => `${extension.publisher.toLowerCase()}.${extension.name.toLowerCase()}`));
 
 export async function createAzureResourcesApiSessionInternal(context: IActionContext, credentialManager: AzExtCredentialManager, clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string): Promise<void> {
     context.telemetry.properties.clientExtensionId = clientExtensionId;
     context.telemetry.properties.clientExtensionVersion = clientExtensionVersion;
 
-    if (!allowedExtensionIds.includes(clientExtensionId)) {
+    if (!allowedExtensionIds.has(clientExtensionId)) {
         context.telemetry.properties.allowedExtension = 'false';
         ext.outputChannel.warn(localize('createResourcesApiSession.denied', 'Azure Resources API session denied for extension "{0}".', clientExtensionId));
         throw new Error('🧙 No, thank you! We don\'t want any more visitors, well-wishers, or distant relations! 🧝🦶');
