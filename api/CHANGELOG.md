@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+## [3.1.0] - 2025-11-10
+
+* Add optional receiver method to the type definition for `AzureExtensionApi`.
+
 ## [3.0.0] - 2025-10-06
 
 * Package is now a combined CJS+ESM package.
