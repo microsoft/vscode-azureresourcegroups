@@ -14,9 +14,9 @@ export default defineConfig([
                 patterns: [
                     {
                         group: ['*api/docs*'],
-                        message: 'Don\'t import from docs. Import from src instead.'
-                    }
-                ]
+                        message: 'Don\'t import from docs. Import from src instead.',
+                    },
+                ],
             }],
         },
     },
