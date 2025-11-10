@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
-## [3.1.0] - 2025-11-10
+## [3.1.0] - 2025-11-11
 
 * Add optional receiver method to the type definition for `AzureExtensionApi`.
 
