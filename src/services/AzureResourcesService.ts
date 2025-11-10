@@ -17,7 +17,7 @@ export const defaultAzureResourcesServiceFactory = (): AzureResourcesService => 
         // If there are duplicate subscriptions in the same account we need to directly call getSessionFromVSCode with the tenantId to ensure we get the correct session
         const duplicateSubsMode: boolean = getDuplicateSubscriptionModeSetting();
         if (duplicateSubsMode) {
-            const session = await getSessionFromVSCode(undefined, subscription.tenantId, { createIfNone: false, silent: true, account: subscription.account })
+            const session = await getSessionFromVSCode(undefined, subscription.tenantId, { createIfNone: false, silent: true, account: subscription.account });
             const credential = createCredential(() => session);
             return new ResourceManagementClient(credential, subscription.subscriptionId);
         } else {

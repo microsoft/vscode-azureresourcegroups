@@ -23,6 +23,7 @@ import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingMa
 
 export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProviderBase {
     private readonly groupingChangeSubscription: vscode.Disposable;
+    private hasShownDuplicateWarning: boolean = false;
 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -91,16 +92,15 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                 } else {
                     //find duplicate subscriptions and change the name to include the account name. If duplicate subs are in the same account add the tenant id instead
                     const duplicates = getDuplicateSubscriptions(subscriptions);
-                    let duplicatesWithSameAccount: AzureSubscription[];
+                    let duplicatesWithSameAccount: AzureSubscription[] = [];
                     if (duplicates.length > 0) {
-                        let warningShown: boolean = false;
                         duplicatesWithSameAccount = getDuplicateSubsInSameAccount(duplicates)
-                        if (duplicatesWithSameAccount.length > 0 && !warningShown) {
+                        if (duplicatesWithSameAccount.length > 0 && !this.hasShownDuplicateWarning) {
+                            this.hasShownDuplicateWarning = true;
                             void callWithTelemetryAndErrorHandling('azureResourceGroups.duplicate', async (context: IActionContext) => {
                                 if (!getDuplicateSubscriptionModeSetting()) {
                                     const turnOn: vscode.MessageItem = { title: localize('turnOn', 'Turn On') };
                                     const response: vscode.MessageItem | undefined = await context.ui.showWarningMessage(localize('turnOnSetting', 'We detected duplicate subscriptions in the same account. To have a better experience please turn on the "Duplicate Subscription Mode" setting.'), turnOn);
-                                    warningShown = true;
                                     if (response === turnOn) {
                                         await turnOnDuplicateSubscriptionModeSetting();
                                     }
