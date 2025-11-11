@@ -5,15 +5,12 @@
 
 import { apiUtils, AzureExtensionApiFactory, callWithTelemetryAndErrorHandling, GetApiOptions, IActionContext } from '@microsoft/vscode-azext-utils';
 import { AzExtCredentialManager } from '../../../api/src/auth/credentialManager/AzExtCredentialManager';
-import { AzExtUUIDCredentialManager } from '../../../api/src/auth/credentialManager/AzExtUUIDCredentialManager';
 import { AzureResourcesAuthApiInternal } from '../../hostapi.v4.internal';
 import { createAzureResourcesApiSessionInternal, getApiVerifyError, verifyAzureResourcesApiSessionInternal } from './authApiInternal';
 
 const v4: string = '4.0.0';
 
-export function createAzureResourcesAuthApiFactory(coreApiProvider: apiUtils.AzureExtensionApiProvider): AzureExtensionApiFactory<AzureResourcesAuthApiInternal> {
-    const credentialManager: AzExtCredentialManager = new AzExtUUIDCredentialManager();
-
+export function createAzureResourcesAuthApiFactory(credentialManager: AzExtCredentialManager, coreApiProvider: apiUtils.AzureExtensionApiProvider): AzureExtensionApiFactory<AzureResourcesAuthApiInternal> {
     return {
         apiVersion: v4,
         createApi: (options?: GetApiOptions) => {

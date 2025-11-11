@@ -16,7 +16,7 @@ export interface AzureResourcesExtensionApi extends AzureExtensionApi {
 /**
  * The authentication layer (v4) protecting the core Azure Resources extension API.
  */
-export interface AzureResourcesExtensionAuthApi extends AzureExtensionApi {
+export interface AzureResourcesExtensionAuthApi extends Omit<AzureExtensionApi, 'receiveAzureResourcesApiSession'> {
     getAzureResourcesApi(clientExtensionId: string, azureResourcesCredential: string, azureResourcesApiVersions: string[]): Promise<(AzureExtensionApi | undefined)[]>;
     createAzureResourcesApiSession(clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string): Promise<void>;
 }

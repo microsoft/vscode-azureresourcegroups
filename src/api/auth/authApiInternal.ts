@@ -27,7 +27,8 @@ export async function createAzureResourcesApiSessionInternal(context: IActionCon
 
     try {
         const clientApi = await apiUtils.getAzureExtensionApi(ext.context, clientExtensionId, clientExtensionVersion);
-        await clientApi.receiveAzureResourcesApiSession?.(await credentialManager.createCredential(clientExtensionId), clientExtensionCredential);
+        const azureResourcesCredential: string = await credentialManager.createCredential(clientExtensionId);
+        await clientApi.receiveAzureResourcesApiSession?.(azureResourcesCredential, clientExtensionCredential);
     } catch (err) {
         const failed: string = localize('createResourcesApiSession.failed', 'Failed to create Azure Resources API session for extension "{0}".', clientExtensionId);
         ext.outputChannel.error(failed);
