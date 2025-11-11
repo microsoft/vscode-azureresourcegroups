@@ -7,11 +7,13 @@ import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { AzExtResourceType } from "../api/src/index";
 import { localize } from "./utils/localize";
 
+const msAzureToolsPublisher: string = 'ms-azuretools';
+
 // IMPORTANT: THESE ARE DEDUPED AND USED TO BUILD THE FINAL LIST OF ALLOWED EXTENSIONS THAT CAN ACCESS THE CORE AZURE RESOURCES API.
 export const azureExtensions: IAzExtMetadata[] = [
     {
         name: 'vscode-azurefunctions',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Functions',
         resourceTypes: [
             AzExtResourceType.DurableTaskScheduler,
@@ -25,7 +27,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azureappservice',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'App Service',
         resourceTypes: [
             AzExtResourceType.AppServices
@@ -38,7 +40,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurearcenabledmachines',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Azure Arc-enabled machines',
         resourceTypes: [
             AzExtResourceType.ArcEnabledMachines
@@ -47,7 +49,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurestaticwebapps',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Static Web Apps',
         resourceTypes: [
             AzExtResourceType.StaticWebApps
@@ -60,14 +62,14 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azureresourcegroups',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Resource Groups',
         resourceTypes: [],
         reportIssueCommandId: 'azureResourceGroups.reportIssue'
     },
     {
         name: 'vscode-azurestorage',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Storage',
         resourceTypes: [
             AzExtResourceType.StorageAccounts
@@ -76,7 +78,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurevirtualmachines',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Virtual Machines',
         resourceTypes: [
             AzExtResourceType.VirtualMachines
@@ -85,7 +87,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-cosmosdb',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Databases',
         resourceTypes: [
             AzExtResourceType.AzureCosmosDb,
@@ -96,7 +98,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-documentdb',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Databases',
         resourceTypes: [
             AzExtResourceType.AzureCosmosDbForMongoDbRu,
@@ -105,7 +107,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurecontainerapps',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Container Apps',
         resourceTypes: [
             AzExtResourceType.ContainerAppsEnvironment,
@@ -123,7 +125,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurelogicapps',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Logic Apps',
         resourceTypes: [
             AzExtResourceType.LogicApp,
@@ -136,7 +138,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurewebpubsub',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Web PubSub',
         resourceTypes: [
             AzExtResourceType.WebPubSub
@@ -145,7 +147,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azureresourcegroups',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Managed Identity',
         resourceTypes: [
             AzExtResourceType.ManagedIdentityUserAssignedIdentities
