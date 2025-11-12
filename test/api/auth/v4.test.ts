@@ -14,7 +14,7 @@ const extensionVersion: string = '^4.0.0';
 
 suite('v4 API auth tests', async () => {
     test('v4 API should be defined', async () => {
-        const apiProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>('ms-azuretools.vscode-azureresourcegroups');
+        const apiProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>(extensionId);
         assert.ok(apiProvider, 'API provider is undefined');
 
         const v4Api = apiProvider.getApi('^4.0.0', { extensionId: 'ms-azuretools.vscode-azureresourcegroups-tests' });
