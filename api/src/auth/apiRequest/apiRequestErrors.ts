@@ -21,10 +21,7 @@ export const AzureResourcesApiRequestErrors = {
     /**
      * An error occurred because the client's receiver method was provided incomplete or missing credentials.
      */
-    CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS: {
-        code: 'ERR_CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS',
-        message: 'Insufficient credentials were provided back to the client.',
-    },
+    CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS: { code: 'ERR_CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS' },
 
     /**
      * The client's receiver method was provided a client credential that failed verification.
@@ -45,6 +42,6 @@ export const AzureResourcesApiRequestErrors = {
      */
     HOST_API_PROVISIONING_FAILED: { code: 'ERR_HOST_API_PROVISIONING_FAILED' },
 
-} as const;
+} as const satisfies Record<string, { code: string }>;
 
-export type AzureResourcesApiRequestError = Omit<typeof AzureResourcesApiRequestErrors[keyof typeof AzureResourcesApiRequestErrors], 'message'> & { message: string };
+export type AzureResourcesApiRequestError = typeof AzureResourcesApiRequestErrors[keyof typeof AzureResourcesApiRequestErrors] & { message: string };

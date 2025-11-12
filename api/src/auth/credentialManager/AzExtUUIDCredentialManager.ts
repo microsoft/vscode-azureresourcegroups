@@ -11,7 +11,7 @@ import { AzExtCredentialManager } from "./AzExtCredentialManager";
  * A simple, light-weight credential manager that issues and tracks randomly generated UUIDs for extension verification.
  */
 export class AzExtUUIDCredentialManager implements AzExtCredentialManager {
-    private _uuidMap: Map<string, string> = new Map();
+    protected _uuidMap: Map<string, string> = new Map();
 
     createCredential(extensionId: string): string {
         const uuid: string = crypto.randomUUID();

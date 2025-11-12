@@ -9,14 +9,14 @@ import { AzureExtensionApi } from "./utils/apiUtils";
 /**
  * The current (v2) Azure Resources extension API.
  */
-export interface AzureResourcesExtensionApi extends AzureExtensionApi {
+export interface AzureResourcesExtensionApi extends Omit<AzureExtensionApi, 'receiveAzureResourcesApiSession'> {
     resources: ResourcesApi;
 }
 
 /**
  * The authentication layer (v4) protecting the core Azure Resources extension API.
  */
-export interface AzureResourcesExtensionAuthApi extends AzureExtensionApi {
-    getAzureResourcesApi(clientExtensionId: string, azureResourcesCredential: string, azureResourcesApiVersions: string[]): Promise<(AzureExtensionApi | undefined)[]>;
+export interface AzureResourcesExtensionAuthApi extends Omit<AzureExtensionApi, 'receiveAzureResourcesApiSession'> {
+    getAzureResourcesApis(clientExtensionId: string, azureResourcesCredential: string, azureResourcesApiVersions: string[]): Promise<(AzureExtensionApi | undefined)[]>;
     createAzureResourcesApiSession(clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string): Promise<void>;
 }

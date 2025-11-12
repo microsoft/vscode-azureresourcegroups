@@ -19,7 +19,7 @@ export function createAzureResourcesAuthApiFactory(coreApiProvider: apiUtils.Azu
         createApi: (options?: GetApiOptions) => {
             return {
                 apiVersion: v4,
-                getAzureResourcesApi: async (clientExtensionId: string, azureResourcesCredential: string, azureResourcesApiVersions: string[]) => {
+                getAzureResourcesApis: async (clientExtensionId: string, azureResourcesCredential: string, azureResourcesApiVersions: string[]) => {
                     return await callWithTelemetryAndErrorHandling('api.getAzureResourcesApi', async (context: IActionContext) => {
                         setTelemetryAndErrorHandling(context, options?.extensionId);
                         clientExtensionId = clientExtensionId?.toLowerCase();

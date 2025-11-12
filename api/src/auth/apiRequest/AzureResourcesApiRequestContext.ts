@@ -14,6 +14,9 @@ export interface AzureResourcesApiRequestContext {
     /**
      * Callback invoked when Azure Resource APIs are successfully obtained through the authentication handshake.
      *
+     * @remarks Errors thrown during execution of this callback will be part of a separate process and will not naturally bubble up to users.
+     * If you wish to surface specific errors to users, please consider using the VS Code API to display these manually.
+     *
      * @param azureResourcesApis - Array of APIs corresponding to the requested versions. APIs are returned in the same
      *                             order as provided in this request context. If a requested version is not
      *                             available or does not match, `undefined` will be returned at that position.
@@ -22,6 +25,9 @@ export interface AzureResourcesApiRequestContext {
 
     /**
      * Optional callback invoked when an error occurs during the Azure Resources API handshake process.
+     *
+     * @remarks Errors thrown during execution of this callback will be part of a separate process and will not naturally bubble up to users.
+     * If you wish to surface specific errors to users, please consider using the VS Code API to display these manually.
      *
      * @param error - The error that occurred during the handshake, containing an error code and message.
      */
