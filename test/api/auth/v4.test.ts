@@ -67,7 +67,7 @@ suite('v4 API auth tests', async () => {
         const authApi: AzureResourcesExtensionAuthApi = createAuthApi(credentialManager, coreApiVersions);
         await authApi.createAzureResourcesApiSession(extensionId, extensionVersion, crypto.randomUUID());
 
-        const resourcesApis = await authApi.getAzureResourcesApi(extensionId, nonNullValue(credentialManager.uuidMap.get(extensionId)), ['0.0.1', '^2.0.0']);
+        const resourcesApis = await authApi.getAzureResourcesApis(extensionId, nonNullValue(credentialManager.uuidMap.get(extensionId)), ['0.0.1', '^2.0.0']);
         assert.match(resourcesApis[0]?.apiVersion ?? '', /^0.0.1$/);
         assert.match(resourcesApis[1]?.apiVersion ?? '', /^2./);
     });
@@ -76,7 +76,7 @@ suite('v4 API auth tests', async () => {
         const credentialManager = new MockUUIDCredentialManager();
         const coreApiVersions: string[] = ['0.0.1', '2.0.0', '3.0.0'];
         const authApi: AzureResourcesExtensionAuthApi = createAuthApi(credentialManager, coreApiVersions);
-        assertThrowsAsync(async () => await authApi.getAzureResourcesApi(extensionId, crypto.randomUUID(), ['^2.0.0']));
+        assertThrowsAsync(async () => await authApi.getAzureResourcesApis(extensionId, crypto.randomUUID(), ['^2.0.0']));
     });
 
     test('getAzureResourcesApis should not spill sensitive extension credentials in errors', async () => {
@@ -88,7 +88,7 @@ suite('v4 API auth tests', async () => {
         credentialManager.createCredential('extension3');
 
         try {
-            await authApi.getAzureResourcesApi(extensionId, crypto.randomUUID(), ['^2.0.0']);
+            await authApi.getAzureResourcesApis(extensionId, crypto.randomUUID(), ['^2.0.0']);
             assert.fail('Should throw if requesting Azure Resources APIs without a valid credential.');
         } catch (err) {
             const perr = parseError(err);
