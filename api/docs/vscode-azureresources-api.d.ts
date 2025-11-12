@@ -217,6 +217,9 @@ export declare interface AzureResourcesApiRequestContext {
     /**
      * Callback invoked when Azure Resource APIs are successfully obtained through the authentication handshake.
      *
+     * @remarks Errors thrown during execution of this callback will be part of a separate process and will not naturally bubble up to users.
+     * If you wish to surface specific errors to users, please consider using the VS Code API to display these manually.
+     *
      * @param azureResourcesApis - Array of APIs corresponding to the requested versions. APIs are returned in the same
      *                             order as provided in this request context. If a requested version is not
      *                             available or does not match, `undefined` will be returned at that position.
@@ -225,12 +228,15 @@ export declare interface AzureResourcesApiRequestContext {
     /**
      * Optional callback invoked when an error occurs during the Azure Resources API handshake process.
      *
+     * @remarks Errors thrown during execution of this callback will be part of a separate process and will not naturally bubble up to users.
+     * If you wish to surface specific errors to users, please consider using the VS Code API to display these manually.
+     *
      * @param error - The error that occurred during the handshake, containing an error code and message.
      */
     onApiRequestError?: (error: AzureResourcesApiRequestError) => void | Promise<void>;
 }
 
-export declare type AzureResourcesApiRequestError = Omit<typeof AzureResourcesApiRequestErrors[keyof typeof AzureResourcesApiRequestErrors], 'message'> & {
+export declare type AzureResourcesApiRequestError = typeof AzureResourcesApiRequestErrors[keyof typeof AzureResourcesApiRequestErrors] & {
     message: string;
 };
 
@@ -255,7 +261,6 @@ export declare const AzureResourcesApiRequestErrors: {
      */
     readonly CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS: {
         readonly code: "ERR_CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS";
-        readonly message: "Insufficient credentials were provided back to the client.";
     };
     /**
      * The client's receiver method was provided a client credential that failed verification.
@@ -294,15 +299,15 @@ export declare type AzureResourcesApiRequestPrep<T extends AzureExtensionApi> = 
 /**
  * The current (v2) Azure Resources extension API.
  */
-export declare interface AzureResourcesExtensionApi extends AzureExtensionApi {
+export declare interface AzureResourcesExtensionApi extends Omit<AzureExtensionApi, 'receiveAzureResourcesApiSession'> {
     resources: ResourcesApi;
 }
 
 /**
  * The authentication layer (v4) protecting the core Azure Resources extension API.
  */
-export declare interface AzureResourcesExtensionAuthApi extends AzureExtensionApi {
-    getAzureResourcesApi(clientExtensionId: string, azureResourcesCredential: string, azureResourcesApiVersions: string[]): Promise<(AzureExtensionApi | undefined)[]>;
+export declare interface AzureResourcesExtensionAuthApi extends Omit<AzureExtensionApi, 'receiveAzureResourcesApiSession'> {
+    getAzureResourcesApis(clientExtensionId: string, azureResourcesCredential: string, azureResourcesApiVersions: string[]): Promise<(AzureExtensionApi | undefined)[]>;
     createAzureResourcesApiSession(clientExtensionId: string, clientExtensionVersion: string, clientExtensionCredential: string): Promise<void>;
 }
 
@@ -605,4 +610,4 @@ export declare interface Wrapper {
     unwrap<T>(): T;
 }
 
-export { };
+export { }
