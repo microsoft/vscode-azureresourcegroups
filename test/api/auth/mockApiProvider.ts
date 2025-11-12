@@ -5,6 +5,10 @@
 
 import { apiUtils, AzureExtensionApi, AzureExtensionApiFactory, createApiProvider, GetApiOptions } from "../../../extension.bundle";
 
+/**
+ * Creates a mock API provider with API factories matching the versions provided.
+ * Only the values required by the interface will be implemented.
+ */
 export function createMockApiProvider(versions: string[]): apiUtils.AzureExtensionApiProvider {
     const apiFactories: AzureExtensionApiFactory<AzureExtensionApi>[] = versions.map(version => {
         return {

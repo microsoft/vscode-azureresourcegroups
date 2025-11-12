@@ -12,7 +12,7 @@ import { createMockApiProvider } from "./mockApiProvider";
 const extensionId: string = 'ms-azuretools.vscode-azureresourcegroups';
 const extensionVersion: string = '^4.0.0';
 
-suite('v4 API auth layer tests', async () => {
+suite('v4 API auth tests', async () => {
     test('v4 API should be defined', async () => {
         const apiProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>('ms-azuretools.vscode-azureresourcegroups');
         assert.ok(apiProvider, 'API provider is undefined');
@@ -97,6 +97,9 @@ suite('v4 API auth layer tests', async () => {
     });
 });
 
+/**
+ * Use to quickly bootstrap a testable auth API with core API factories matching the provided versions.
+ */
 function createAuthApi(credentialManager: AzExtCredentialManager, coreApiVersions: string[]): AzureResourcesExtensionAuthApi {
     const coreApiProvider = createMockApiProvider(coreApiVersions);
     const authApiProvider = createAzureResourcesAuthApiFactory(credentialManager, coreApiProvider);
