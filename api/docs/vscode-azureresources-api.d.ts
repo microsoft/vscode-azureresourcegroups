@@ -233,32 +233,27 @@ export declare interface AzureResourcesApiRequestContext {
     onApiRequestError?: (error: AzureResourcesApiRequestError) => void | Promise<void>;
 }
 
-export declare type AzureResourcesApiRequestError = typeof AzureResourcesApiRequestErrors[keyof typeof AzureResourcesApiRequestErrors] & {
+export declare type AzureResourcesApiRequestError = {
+    code: AzureResourcesApiRequestErrorCode;
     message: string;
 };
 
 /**
- * List of errors that could occur during the authentication handshake between client extension and Azure Resources host extension.
+ * Error codes that could appear during the API request handshake between client extension and Azure Resources host extension.
  */
-export declare const AzureResourcesApiRequestErrors: {
+export declare enum AzureResourcesApiRequestErrorCode {
     /**
      * An error occurred while the client extension was creating its verification credential for the Azure Resources host extension.
      */
-    readonly CLIENT_FAILED_CREATE_CREDENTIAL: {
-        readonly code: "ERR_CLIENT_FAILED_CREATE_CREDENTIAL";
-    };
+    CLIENT_FAILED_CREATE_CREDENTIAL = "ERR_CLIENT_FAILED_CREATE_CREDENTIAL",
     /**
      * An error occurred while the Azure Resources host extension was trying to create an API session.
      */
-    readonly HOST_CREATE_SESSION_FAILED: {
-        readonly code: "ERR_HOST_CREATE_SESSION_FAILED";
-    };
+    HOST_CREATE_SESSION_FAILED = "ERR_HOST_CREATE_SESSION_FAILED",
     /**
      * An error occurred because the client's receiver method was provided incomplete or missing credentials.
      */
-    readonly CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS: {
-        readonly code: "ERR_CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS";
-    };
+    CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS = "ERR_CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS",
     /**
      * The client's receiver method was provided a client credential that failed verification.
      *
@@ -266,9 +261,7 @@ export declare const AzureResourcesApiRequestErrors: {
      * - An untrusted extension pretends to be the Azure Resources host extension and tries to pass a fake credential
      * - There is a faulty behavior in the client's verification process
      */
-    readonly CLIENT_CREDENTIAL_FAILED_VERIFICATION: {
-        readonly code: "ERR_CLIENT_CREDENTIAL_FAILED_VERIFICATION";
-    };
+    CLIENT_CREDENTIAL_FAILED_VERIFICATION = "ERR_CLIENT_CREDENTIAL_FAILED_VERIFICATION",
     /**
      * An error occurred while asking the Azure Resources host extension to provision the specified APIs.
      *
@@ -277,10 +270,8 @@ export declare const AzureResourcesApiRequestErrors: {
      * - The requesting extension is not on the Azure Resources allow list
      * - The host extension encounters an internal error during API provisioning
      */
-    readonly HOST_API_PROVISIONING_FAILED: {
-        readonly code: "ERR_HOST_API_PROVISIONING_FAILED";
-    };
-};
+    HOST_API_PROVISIONING_FAILED = "ERR_HOST_API_PROVISIONING_FAILED"
+}
 
 export declare type AzureResourcesApiRequestPrep<T extends AzureExtensionApi> = {
     /**
