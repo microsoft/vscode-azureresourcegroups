@@ -239,7 +239,7 @@ export declare type AzureResourcesApiRequestError = {
 };
 
 /**
- * Error codes that could appear during the API request handshake between client extension and Azure Resources host extension.
+ * Codes for errors that could appear during the API request handshake between client extension and Azure Resources host extension.
  */
 export declare enum AzureResourcesApiRequestErrorCode {
     /**
