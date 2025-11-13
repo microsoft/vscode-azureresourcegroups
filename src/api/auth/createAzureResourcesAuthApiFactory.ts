@@ -17,7 +17,7 @@ export function createAzureResourcesAuthApiFactory(credentialManager: AzExtCrede
             return {
                 apiVersion: v4,
                 getAzureResourcesApis: async (clientExtensionId: string, azureResourcesCredential: string, azureResourcesApiVersions: string[]) => {
-                    return await callWithTelemetryAndErrorHandling('api.getAzureResourcesApi', async (context: IActionContext) => {
+                    return await callWithTelemetryAndErrorHandling('api.getAzureResourcesApis', async (context: IActionContext) => {
                         setTelemetryAndErrorHandling(context, options?.extensionId);
                         clientExtensionId = clientExtensionId?.toLowerCase();
 
