@@ -9,7 +9,7 @@ import { apiUtils, AzureExtensionApi } from "../../utils/apiUtils";
 import { AzExtCredentialManager } from "../credentialManager/AzExtCredentialManager";
 import { AzExtUUIDCredentialManager } from "../credentialManager/AzExtUUIDCredentialManager";
 import { AzureResourcesApiRequestContext } from "./AzureResourcesApiRequestContext";
-import { AzureResourcesApiRequestErrors } from "./apiRequestErrors";
+import { AzureResourcesApiRequestErrorCode } from "./apiRequestErrors";
 
 const azureResourcesAuthApiVersion: string = '^4.0.0';
 const azureResourcesExtId = 'ms-azuretools.vscode-azureresourcegroups';
@@ -56,7 +56,7 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
         clientCredential = await clientCredentialManager.createCredential(context.clientExtensionId);
     } catch (err) {
         if (err instanceof Error) {
-            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrors.CLIENT_FAILED_CREATE_CREDENTIAL.code, message: clientCredentialManager.maskCredentials(err.message) })
+            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.CLIENT_FAILED_CREATE_CREDENTIAL, message: clientCredentialManager.maskCredentials(err.message) })
         }
         return;
     }
@@ -66,7 +66,7 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
         await resourcesApi.createAzureResourcesApiSession(context.clientExtensionId, clientApiVersion, clientCredential);
     } catch (err) {
         if (err instanceof Error) {
-            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrors.HOST_CREATE_SESSION_FAILED.code, message: clientCredentialManager.maskCredentials(err.message) });
+            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.HOST_CREATE_SESSION_FAILED, message: clientCredentialManager.maskCredentials(err.message) });
         }
         return;
     }
@@ -75,7 +75,7 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
 function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequestContext, clientCredentialManager: AzExtCredentialManager): AzureExtensionApi['receiveAzureResourcesApiSession'] {
     return async function (azureResourcesCredential: string, clientCredential: string): Promise<void> {
         if (!azureResourcesCredential || !clientCredential) {
-            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrors.CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS.code, message: 'Insufficient credentials were provided back to the client.' });
+            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS, message: 'Insufficient credentials were provided back to the client.' });
             return;
         }
 
@@ -86,7 +86,7 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
             }
         } catch (err) {
             if (err instanceof Error) {
-                void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrors.CLIENT_CREDENTIAL_FAILED_VERIFICATION.code, message: clientCredentialManager.maskCredentials(err.message) });
+                void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.CLIENT_CREDENTIAL_FAILED_VERIFICATION, message: clientCredentialManager.maskCredentials(err.message) });
             }
             return;
         }
@@ -97,7 +97,7 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
             void context.onDidReceiveAzureResourcesApis(resourcesApis);
         } catch (err) {
             if (err instanceof Error) {
-                void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrors.HOST_API_PROVISIONING_FAILED.code, message: clientCredentialManager.maskCredentials(err.message) });
+                void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.HOST_API_PROVISIONING_FAILED, message: clientCredentialManager.maskCredentials(err.message) });
             }
             return;
         }

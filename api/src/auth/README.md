@@ -63,14 +63,16 @@ const context: AzureResourcesApiRequestContext = {
         ext.rgApiV2.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ContainerAppsEnvironment, ext.branchDataProvider);
     },
 
-    // Optional: Can use for error handling / telemetry
+    // OPTIONAL: Can use for special error handling & telemetry
+    // NOTE: Errors thrown during execution of this callback may be part of a separate process and may not bubble up to users.
+    // If you wish to surface specific errors to users, please consider logging them or using the VS Code API to display them through UI.
     onApiRequestError: async (error: AzureResourcesApiRequestError) => {
         switch (true) {
-            case error.code === AzureResourcesHandshakeErrors.CLIENT_FAILED_CREATE_CREDENTIAL.code:
-            case error.code === AzureResourcesHandshakeErrors.HOST_CREATE_SESSION_FAILED.code:
-            case error.code === AzureResourcesHandshakeErrors.CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS.code:
-            case error.code === AzureResourcesHandshakeErrors.CLIENT_CREDENTIAL_FAILED_VERIFICATION.code:
-            case error.code === AzureResourcesHandshakeErrors.HOST_API_PROVISIONING_FAILED.code:
+            case error.code === AzureResourcesApiRequestErrorCode.CLIENT_FAILED_CREATE_CREDENTIAL:
+            case error.code === AzureResourcesApiRequestErrorCode.HOST_CREATE_SESSION_FAILED:
+            case error.code === AzureResourcesApiRequestErrorCode.CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS:
+            case error.code === AzureResourcesApiRequestErrorCode.CLIENT_CREDENTIAL_FAILED_VERIFICATION:
+            case error.code === AzureResourcesApiRequestErrorCode.HOST_API_PROVISIONING_FAILED:
             default:
         }
     },
