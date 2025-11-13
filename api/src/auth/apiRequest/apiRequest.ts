@@ -56,7 +56,7 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
         clientCredential = await clientCredentialManager.createCredential(context.clientExtensionId);
     } catch (err) {
         if (err instanceof Error) {
-            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.CLIENT_FAILED_CREATE_CREDENTIAL, message: clientCredentialManager.maskCredentials(err.message) })
+            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.ClientFailedCreateCredential, message: clientCredentialManager.maskCredentials(err.message) })
         }
         return;
     }
@@ -66,7 +66,7 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
         await resourcesApi.createAzureResourcesApiSession(context.clientExtensionId, clientApiVersion, clientCredential);
     } catch (err) {
         if (err instanceof Error) {
-            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.HOST_CREATE_SESSION_FAILED, message: clientCredentialManager.maskCredentials(err.message) });
+            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.HostCreateSessionFailed, message: clientCredentialManager.maskCredentials(err.message) });
         }
         return;
     }
@@ -75,7 +75,7 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
 function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequestContext, clientCredentialManager: AzExtCredentialManager): AzureExtensionApi['receiveAzureResourcesApiSession'] {
     return async function (azureResourcesCredential: string, clientCredential: string): Promise<void> {
         if (!azureResourcesCredential || !clientCredential) {
-            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.CLIENT_RECEIVED_INSUFFICIENT_CREDENTIALS, message: 'Insufficient credentials were provided back to the client.' });
+            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.ClientReceivedInsufficientCredentials, message: 'Insufficient credentials were provided back to the client.' });
             return;
         }
 
@@ -86,7 +86,7 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
             }
         } catch (err) {
             if (err instanceof Error) {
-                void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.CLIENT_CREDENTIAL_FAILED_VERIFICATION, message: clientCredentialManager.maskCredentials(err.message) });
+                void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.ClientCredentialFailedVerification, message: clientCredentialManager.maskCredentials(err.message) });
             }
             return;
         }
@@ -97,7 +97,7 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
             void context.onDidReceiveAzureResourcesApis(resourcesApis);
         } catch (err) {
             if (err instanceof Error) {
-                void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.HOST_API_PROVISIONING_FAILED, message: clientCredentialManager.maskCredentials(err.message) });
+                void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.HostApiProvisioningFailed, message: clientCredentialManager.maskCredentials(err.message) });
             }
             return;
         }
