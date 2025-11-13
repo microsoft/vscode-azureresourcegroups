@@ -9,7 +9,7 @@ import { localize } from "./utils/localize";
 
 const msAzureToolsPublisher: string = 'ms-azuretools';
 
-// IMPORTANT: THESE ARE DEDUPED AND USED TO BUILD THE FINAL LIST OF ALLOWED EXTENSIONS THAT CAN ACCESS THE CORE AZURE RESOURCES API.
+// IMPORTANT: These are deduped and used to build the final list of allowed extensions that can access the core Azure Resources API.
 export const azureExtensions: IAzExtMetadata[] = [
     {
         name: 'vscode-azurefunctions',
