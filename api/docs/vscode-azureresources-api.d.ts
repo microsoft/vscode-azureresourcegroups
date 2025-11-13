@@ -225,8 +225,8 @@ export declare interface AzureResourcesApiRequestContext {
     /**
      * Optional callback invoked when an error occurs during the Azure Resources API handshake process.
      *
-     * @remarks Errors thrown during execution of this callback may be part of a separate process and will not naturally bubble up to users.
-     * If you wish to surface specific errors to users, please consider using the VS Code API to display these manually.
+     * @remarks Errors thrown during execution of this callback may be part of a separate process and may not bubble up to users.
+     * If you wish to surface specific errors to users, please consider logging them or using the VS Code API to display them through UI.
      *
      * @param error - The error that occurred during the handshake, containing an error code and message.
      */
