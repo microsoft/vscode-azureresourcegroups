@@ -3,11 +3,36 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtUUIDCredentialManager } from "../../../extension.bundle";
+import { AzExtCredentialManager, maskValue } from "../../../extension.bundle";
 
-export class MockUUIDCredentialManager extends AzExtUUIDCredentialManager {
-    // This value is normally protected, so we should add a getter so we have a way to monitor the values during tests
+/**
+ * A mock credential manager with the same implementation as `AzExtUUIDCredentialManager`,
+ * but with a public getter to inspect the UUIDs during test.
+ */
+export class MockUUIDCredentialManager implements AzExtCredentialManager {
+    #uuidMap: Map<string, string> = new Map();
+
     get uuidMap() {
-        return this._uuidMap;
+        return this.#uuidMap;
+    }
+
+    createCredential(extensionId: string): string {
+        const uuid: string = crypto.randomUUID();
+        this.#uuidMap.set(extensionId, uuid);
+        return uuid;
+    }
+
+    verifyCredential(credential: string, extensionId: string): boolean {
+        if (!credential || !extensionId) {
+            return false;
+        }
+        return credential === this.#uuidMap.get(extensionId);
+    }
+
+    maskCredentials(data: string): string {
+        for (const uuid of this.#uuidMap.values()) {
+            data = maskValue(data, uuid);
+        }
+        return data;
     }
 }
