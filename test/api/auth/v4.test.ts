@@ -26,7 +26,6 @@ suite('v4 API auth tests', async () => {
     // kind of still works for testing.  It will basically run everything exactly the same except at the end - the exported API for Azure Resources will be missing
     // the receiver method so the credential has no way to be passed back to the extension through its API.
     // Since we inject and hold a copy of the credential manager during tests, we can simply grab the generated credential from the manager.
-    // Client side handshake testing should be done separately to ensure that the receiver method is being called and passed the correct credential.
 
     test('createAzureResourcesApiSession should provide a credential but not return it directly', async () => {
         const credentialManager = new MockUUIDCredentialManager();
