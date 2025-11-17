@@ -1,6 +1,9 @@
-import * as assert from "assert";
+import assert from "assert";
 import { Event, TreeDataProvider, TreeItem } from "vscode";
-import { BranchDataItemWrapper, ext, isWrapper, ResourceGroupsItem, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from "../../extension.bundle";
+import { isWrapper, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from "../../api/src";
+import { ext } from "../../src/extensionVariables";
+import { BranchDataItemWrapper } from "../../src/tree/BranchDataItemWrapper";
+import { ResourceGroupsItem } from "../../src/tree/ResourceGroupsItem";
 import { TestBranchDataProvider } from "./TestBranchDataProvider";
 
 const getWorkspaceResourceProviderStub: (onCalled?: () => void, resources?: WorkspaceResource[]) => WorkspaceResourceProvider = (onCalled, resources) => {

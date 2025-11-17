@@ -1,6 +1,6 @@
 import assert from "assert";
 import { Event, EventEmitter, TreeItem } from "vscode";
-import { WorkspaceResource, WorkspaceResourceBranchDataProvider } from "../../extension.bundle";
+import type { WorkspaceResource, WorkspaceResourceBranchDataProvider } from "../../api/src";
 
 export class TestBranchDataProvider implements WorkspaceResourceBranchDataProvider<WorkspaceResource> {
 

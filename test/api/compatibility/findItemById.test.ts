@@ -3,10 +3,12 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import assert from 'assert';
 import { randomUUID } from 'crypto';
 import { commands, TreeItem } from 'vscode';
-import { AzExtResourceType, AzureResource, BranchDataProvider, ext, IActionContext, ResourceModelBase } from '../../../extension.bundle';
+import { AzExtResourceType, AzureResource, BranchDataProvider, ResourceModelBase } from '../../../api/src';
+import { ext } from '../../../src/extensionVariables';
 import { api } from '../api';
 import { createMockSubscriptionWithFunctions } from '../mockServiceFactory';
 

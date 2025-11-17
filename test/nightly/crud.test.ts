@@ -3,10 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type Location } from '@azure/arm-resources-subscriptions';
-import { createTestActionContext, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
+import type { Location } from '@azure/arm-resources-subscriptions';
+import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
+import { AzExtParentTreeItem, createTestActionContext, IActionContext, randomUtils, runWithTestActionContext } from '@microsoft/vscode-azext-utils';
 import assert from "assert";
-import { AzExtParentTreeItem, IActionContext, LocationListStep, SubscriptionItem, createResourceClient, createResourceGroup, deleteResourceGroupV2, ext, randomUtils, settingUtils } from '../../extension.bundle';
+import { createResourceGroup } from '../../src/commands/createResourceGroup';
+import { deleteResourceGroupV2 } from '../../src/commands/deleteResourceGroup/v2/deleteResourceGroupV2';
+import { ext } from '../../src/extensionVariables';
+import { SubscriptionItem } from '../../src/tree/azure/SubscriptionItem';
+import { createResourceClient } from '../../src/utils/azureClients';
+import { settingUtils } from '../../src/utils/settingUtils';
 import { longRunningTestsEnabled } from "../global.test";
 
 let rgName: string;

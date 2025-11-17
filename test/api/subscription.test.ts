@@ -1,6 +1,6 @@
 import assert from "assert";
 import * as vscode from 'vscode';
-import { hasPortalUrl } from '../../extension.bundle';
+import { hasPortalUrl } from "../../src/commands/openInPortal";
 import { validateSubscription } from '../utils/validateSubscription';
 import { api } from "./api";
 import { AzureResourceTreeDataProvider } from "./azureResourceBranchDataProvider.test";
