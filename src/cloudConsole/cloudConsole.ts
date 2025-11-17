@@ -7,7 +7,7 @@ import { TenantIdDescription } from '@azure/arm-resources-subscriptions';
 import { AzureSubscriptionProvider, getConfiguredAzureEnv } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, IAzureQuickPickItem, IParsedError, callWithTelemetryAndErrorHandlingSync, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
 import * as cp from 'child_process';
-import * as FormData from 'form-data';
+import FormData from 'form-data';
 import { ReadStream } from 'fs';
 import { ClientRequest } from 'http';
 import { Socket } from 'net';
@@ -594,7 +594,7 @@ export async function getUserSettings(accessToken: string): Promise<UserSettings
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-    return (await response.json()).properties;
+    return (await response.json() as { properties?: UserSettings }).properties;
 }
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
@@ -602,7 +602,7 @@ export async function provisionConsole(accessToken: string, userSettings: UserSe
     let response = await createTerminal(accessToken, userSettings, osType, true);
     for (let i = 0; i < 10; i++, response = await createTerminal(accessToken, userSettings, osType, false)) {
         if (response.status < 200 || response.status > 299) {
-            const body = await response.json();
+            const body = await response.json() as { error?: { code?: string; message?: string } };
             if (response.status === 409 && response.body && body.error && body.error.code === Errors.DeploymentOsTypeConflict) {
                 throw new Error(Errors.DeploymentOsTypeConflict);
             } else if (body && body.error && body.error.message) {
@@ -612,7 +612,7 @@ export async function provisionConsole(accessToken: string, userSettings: UserSe
             }
         }
 
-        const consoleResource = await response.json();
+        const consoleResource = await response.json() as { properties: { provisioningState: string; uri: string } };
         if (consoleResource.properties.provisioningState === 'Succeeded') {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             return consoleResource.properties.uri;
@@ -653,7 +653,7 @@ export async function resetConsole(accessToken: string, armEndpoint: string) {
     });
 
     /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-    const body = await response.json();
+    const body = await response.json() as { error?: { message?: string } };
     /* eslint-disable @typescript-eslint/no-unsafe-member-access */
     if (response.status < 200 || response.status > 299) {
         if (body && body.error && body.error.message) {
@@ -670,7 +670,7 @@ export async function connectTerminal(accessToken: string, consoleUri: string, s
         /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
         const response = await initializeTerminal(accessToken, consoleUri, shellType, initialSize);
 
-        const body = await response.json();
+        const body = await response.json() as { id: string; socketUri: string, error?: { message?: string } };
         if (response.status < 200 || response.status > 299) {
             if (response.status !== 503 && response.status !== 504 && body && body.error) {
                 if (body && body.error && body.error.message) {
