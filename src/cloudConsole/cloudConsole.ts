@@ -336,12 +336,12 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
             liveServerQueue = serverQueue;
 
             const tenants: AzureTenant[] = [];
-            for (const account of await subscriptionProvider.getAccounts({ all: true })) {
-                tenants.push(...await subscriptionProvider.getTenantsForAccount(account, { all: true }));
+            for (const account of await subscriptionProvider.getAccounts({ filter: false })) {
+                tenants.push(...await subscriptionProvider.getTenantsForAccount(account, { filter: false }));
             }
             let selectedTenant: TenantIdDescription | undefined = undefined;
 
-            const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ all: true });
+            const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ filter: false });
             if (tenants.length <= 1) {
                 serverQueue.push({ type: 'log', args: [localize('foundOneTenant', `Found 1 tenant.`)] });
                 // if they have only one tenant, use it
