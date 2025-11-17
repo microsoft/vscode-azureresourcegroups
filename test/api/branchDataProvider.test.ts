@@ -117,6 +117,7 @@ suite('Branch data provider tests', async () => {
 
         const rootChildren = await api().workspaceResourceTreeDataProvider.getChildren() as any[];
         const testChild = rootChildren.find(c => c.id === workspaceResource.id);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         branchDataProvider.assertGetTreeItemCalledAsync(async () => {
             await api().workspaceResourceTreeDataProvider.getTreeItem(testChild);
         });
@@ -153,6 +154,7 @@ suite('Branch data provider tests', async () => {
         const workspaceResourceChildNode = workspaceResourceChildNodes[0];
         assert.strictEqual(workspaceResourceChildNode.id, workspaceResourceChild.id);
 
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         branchDataProvider.assertGetTreeItemCalledAsync(async () => {
             await api().workspaceResourceTreeDataProvider.getTreeItem(workspaceResourceChildNode);
         });
@@ -229,6 +231,7 @@ async function waitForEventToFire<T>(event: Event<T>): Promise<T> {
                 disposable.dispose();
                 resolve(data);
             } else {
+                // do nothing
             }
         });
     });

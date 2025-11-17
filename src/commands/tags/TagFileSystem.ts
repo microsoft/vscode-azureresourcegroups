@@ -108,7 +108,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
             const update: MessageItem = { title: localize('update', 'Update') };
             await context.ui.showWarningMessage(confirmMessage, { modal: true }, update);
 
-            const tags: { [key: string]: string } = <{}>jsonc.parse(text);
+            const tags = jsonc.parse(text) as { [key: string]: string };
 
             // remove example tag
             if (Object.keys(tags).includes(insertKeyHere) && tags[insertKeyHere] === insertValueHere) {
@@ -129,7 +129,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
         return `${node.displayName}-tags.jsonc`;
     }
 
-    private getFileContentFromTags(tags: {} | undefined): string {
+    private getFileContentFromTags(tags: Tags['tags'] | undefined): string {
         tags = tags || {};
 
         const comment: string = localize('editAndSave', 'Edit and save this file to upload tags in Azure');

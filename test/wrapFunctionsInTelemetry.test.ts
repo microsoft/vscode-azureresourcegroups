@@ -20,6 +20,7 @@ suite('wrapFunctionsInTelemetry', () => {
             }
         };
         const wrappedFunctions = wrapFunctionsInTelemetry(functions);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         assertThrowsAsync(() => wrappedFunctions.asyncFuncThatThrows());
     });
 
@@ -39,7 +40,7 @@ suite('wrapFunctionsInTelemetry', () => {
 
         try {
             await wrappedFunctions.asyncFuncThatThrows();
-        } catch (e) {
+        } catch {
             // ignore error
         }
 
@@ -75,7 +76,7 @@ suite('wrapFunctionsInTelemetrySync', () => {
 
         try {
             wrappedFunctions.funcThatThrows();
-        } catch (e) {
+        } catch {
             // ignore error
         }
 

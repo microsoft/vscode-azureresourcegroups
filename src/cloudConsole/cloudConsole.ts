@@ -69,8 +69,7 @@ async function waitForConnection(this: CloudShell): Promise<boolean> {
             case 'Disconnected':
                 return false;
             default:
-                const status: never = this.status;
-                throw new Error(`Unexpected status '${status}'`);
+                throw new Error(`Unexpected status '${this.status}'`);
         }
     };
     return handleStatus();
@@ -227,7 +226,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                         updateStatus('Disconnected');
                         return requiresNode(context);
                     }
-                } catch (err) {
+                } catch {
                     updateStatus('Disconnected');
                     return requiresNode(context);
                 }
@@ -241,7 +240,9 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                     if (message.type === 'poll') {
                         dequeue = true;
                     } else if (message.type === 'log') {
-                        Array.isArray(message.args) && ext.outputChannel.appendLog((<string[]>message.args).join(' '));
+                        if (Array.isArray(message.args)) {
+                            ext.outputChannel.appendLog((<string[]>message.args).join(' '));
+                        }
                     } else if (message.type === 'size') {
                         deferredInitialSize.resolve(message.size as Size);
                     } else if (message.type === 'status') {
@@ -253,7 +254,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 if (dequeue) {
                     try {
                         response = await serverQueue.dequeue(60000);
-                    } catch (err) {
+                    } catch {
                         // ignore timeout
                     }
                 }
@@ -279,6 +280,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
 
             const env: TerminalOptions['env'] = {
                 // Child process uses this ipc handle to communicate with the extension host
+                // eslint-disable-next-line @typescript-eslint/naming-convention
                 CLOUD_CONSOLE_IPC: server.ipcHandlePath
             };
 
@@ -461,7 +463,9 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
         })().catch(err => {
             const parsedError: IParsedError = parseError(err);
             ext.outputChannel.appendLog(parsedError.message);
-            parsedError.stack && ext.outputChannel.appendLog(parsedError.stack);
+            if (parsedError.stack) {
+                ext.outputChannel.appendLog(parsedError.stack);
+            }
             updateStatus('Disconnected');
             context.telemetry.properties.outcome = 'error';
             context.telemetry.properties.message = parsedError.message;

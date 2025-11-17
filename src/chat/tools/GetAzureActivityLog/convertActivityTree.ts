@@ -35,6 +35,7 @@ export type ExcludedActivityItem = ConvertedActivityItem & {
     /**
      * Internal flag to mark item as excluded
      */
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     _exclude?: boolean;
 };
 

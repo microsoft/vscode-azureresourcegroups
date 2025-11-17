@@ -122,7 +122,7 @@ async function resourceGroupExists(context: IActionContext, rgName: string): Pro
     try {
         await client.resourceGroups.get(rgName);
         return true;
-    } catch (_) {
+    } catch {
         return false;
     }
 }
