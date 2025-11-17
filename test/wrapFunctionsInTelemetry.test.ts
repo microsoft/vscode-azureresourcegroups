@@ -1,5 +1,6 @@
+import { IActionContext } from "@microsoft/vscode-azext-utils";
 import assert from "assert";
-import { IActionContext, wrapFunctionsInTelemetry, wrapFunctionsInTelemetrySync } from "../extension.bundle";
+import { wrapFunctionsInTelemetry, wrapFunctionsInTelemetrySync } from "../src/utils/wrapFunctionsInTelemetry";
 
 suite('wrapFunctionsInTelemetry', () => {
     test('wrapped sync function returns a Promise', () => {
