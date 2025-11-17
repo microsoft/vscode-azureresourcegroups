@@ -20,7 +20,7 @@ export async function askAgentAboutActivityLog(context: IActionContext, item?: A
     } else {
         const treeItems: TreeDataItem[] = await ext.activityLogTree.getChildren() ?? [];
 
-        if (treeItems.length > 1) {
+        if (treeItems.length) {
             const selectedItems = await context.ui.showQuickPick(
                 treeItems.map(item => {
                     return {

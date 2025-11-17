@@ -1,4 +1,17 @@
 # Change Log
+## 0.11.6 - 2025-11-03
+This release improves on Azure Activity Log integration with Copilot, giving users the ability to custom select which activities to provide as context before starting new chat sessions. Users can now select activities through the general entry-point in the activity log header ribbon, right-clicking individual activities directly, or interacting with an activity's inline context menu button. In addition, Copilot buttons have been upgraded to the newer chat icon.
+
+![Activity Log Multi-Select with Copilot](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/resources/changelog/0.11.6/activityLogMultiSelect.png)
+
+### Added
+* [[1214](https://github.com/microsoft/vscode-azureresourcegroups/pull/1214)] Enable activity item selection when providing context to Copilot; update Copilot icons
+
+### Changed
+* [[1267](https://github.com/microsoft/vscode-azureresourcegroups/pull/1267)] Optimize auth record export
+
+### Fixed
+* [[1277](https://github.com/microsoft/vscode-azureresourcegroups/pull/1277)] [[1279](https://github.com/microsoft/vscode-azureresourcegroups/pull/1279)] Update auth package to eliminate event loops in /azure
 
 ## 0.11.5 - 2025-10-14
 ### Added
@@ -41,10 +54,10 @@
 This release brings Copilot integration to the Azure activity log. Users can now leverage Copilot to gain insights from the Azure activity log by clicking the new sparkle icon in the top right corner. Additionally, client extensions can now provide enhanced context to the shared Azure Resources activity log using `ActivityAttributes`, allowing them to incrementally contribute detailed command data and metadata. This enables Copilot to deliver more relevant and informative responses for users.
 
 - Example of Copilot integration in the Azure activity log:
-![Activity Log with Sparkle Icon](resources/changelog/0.11.0/activityLogWithCopilot.png)
+![Activity Log with Sparkle Icon](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/resources/changelog/0.11.0/activityLogWithCopilot.png)
 
 - Example of Copilot chat with Azure activity log context:
-![Copilot Chat with Activity Log Context](resources/changelog/0.11.0/copilotChatWithActivityContext.png)
+![Copilot Chat with Activity Log Context](https://github.com/microsoft/vscode-azureresourcegroups/blob/main/resources/changelog/0.11.0/copilotChatWithActivityContext.png)
 
 ### Added
 * [[1162](https://github.com/microsoft/vscode-azureresourcegroups/pull/1162)] Incorporate `ActivityAttributes` for use as Copilot context
