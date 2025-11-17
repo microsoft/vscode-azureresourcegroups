@@ -892,10 +892,9 @@
         ]
     },
     "scripts": {
-        "vscode:prepublish": "npm run webpack-prod",
-        "build": "tsc",
-        "cleanReadme": "gulp cleanReadme",
-        "compile": "tsc -watch",
+        "build": "npm run build:esbuild & npm run build:check",
+        "build:esbuild": "node esbuild.mjs",
+        "build:check": "tsc --noEmit",
         "package": "vsce package --githubBranch main",
         "lint": "eslint --ext .ts .",
         "lint-fix": "eslint --ext .ts . --fix",
