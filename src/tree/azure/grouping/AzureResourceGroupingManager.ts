@@ -167,7 +167,7 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
                     parent,
                     label: resourceGroupName,
                     iconPath: treeUtils.getIconPath('resourceGroup'),
-                })
+                });
             },
         });
     }

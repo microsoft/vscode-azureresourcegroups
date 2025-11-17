@@ -18,7 +18,7 @@ export function createCompatibilityPickAppResource() {
             childItemFilter: convertExpectedChildContextValueToContextValueFilter(options?.expectedChildContextValue)
         });
         if (result.id) {
-            setAzureResourceIdTelemetryProperties(context, result.id)
+            setAzureResourceIdTelemetryProperties(context, result.id);
         }
 
         try {
@@ -31,11 +31,11 @@ export function createCompatibilityPickAppResource() {
         }
 
         return result;
-    }
+    };
 }
 
 function convertExpectedChildContextValueToContextValueFilter(expectedChildContextValue?: PickAppResourceOptions['expectedChildContextValue']): ContextValueFilter | undefined {
-    return expectedChildContextValue ? { include: expectedChildContextValue } : undefined
+    return expectedChildContextValue ? { include: expectedChildContextValue } : undefined;
 }
 
 function convertAppResourceFilterToAzExtResourceType(filter?: PickAppResourceOptions['filter']): AzExtResourceType[] | undefined {

@@ -39,7 +39,6 @@ interface WrapFunctionsInTelemetryOptions {
 }
 
 type AsyncFunctions<T extends Record<string, (...args: unknown[]) => unknown | Promise<unknown>>> = {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     [P in keyof T]: AsyncFunction<T[P]>;
 };
 
@@ -73,7 +72,7 @@ export function wrapFunctionsInTelemetry<TFunctions extends ObjectWithFunctions>
                     handleError(e, (options?.callbackIdPrefix ?? '') + functionName);
                 }
             });
-        }
+        };
     });
 
     return wrappedFunctions as AsyncFunctions<TFunctions>;
@@ -105,7 +104,7 @@ export function wrapFunctionsInTelemetrySync<TFunctions extends ObjectWithFuncti
                     handleError(e, (options?.callbackIdPrefix ?? '') + functionName);
                 }
             });
-        }
+        };
     });
 
     return wrappedFunctions as TFunctions;

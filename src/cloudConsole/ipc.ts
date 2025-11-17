@@ -43,7 +43,6 @@ export class Server {
     constructor(public ipcHandlePath: string, onRequest: http.RequestListener) {
         this.server = http.createServer((req, res) => {
             Promise.resolve(onRequest(req, res))
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 .catch((err) => console.error(err && err.message || err));
         });
         this.server.on('error', err => console.error(err));

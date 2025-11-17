@@ -20,7 +20,7 @@ suite('isWrapper', () => {
 
     test('Wrapper', () => {
         const actualWrapper: Wrapper = {
-            unwrap: <T>() => { return undefined as unknown as T },
+            unwrap: <T>() => { return undefined as unknown as T; },
         };
 
         assert.strictEqual(isWrapper(actualWrapper), true);

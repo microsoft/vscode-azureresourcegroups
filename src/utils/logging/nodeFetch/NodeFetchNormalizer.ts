@@ -22,7 +22,7 @@ export class NodeFetchNormalizer implements HttpNormalizer<Request, NodeFetchRes
             bodyAsText: info.bodyAsText,
             status: info.response.status,
             headers: this.convertNodeFetchHeaders(info.response.headers),
-        }
+        };
     }
 
     private convertNodeFetchHeaders(headers: Headers): Record<string, string> {

@@ -75,7 +75,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
 
     private state: ActivityTreeItemOptions = {
         label: localize('loading', 'Loading...')
-    }
+    };
 
     getTreeItem(): TreeItem | Thenable<TreeItem> {
         return {
@@ -84,7 +84,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
             iconPath: this.iconPath,
             contextValue: this.contextValue,
             collapsibleState: this.initialCollapsibleState
-        }
+        };
     }
 
     public initialCollapsibleState: TreeItemCollapsibleState;
@@ -103,7 +103,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
     }
 
     public dispose(): void {
-        this.disposables.forEach(d => { d.dispose() });
+        this.disposables.forEach(d => { d.dispose(); });
     }
 
     private readonly disposables: Disposable[] = [];
@@ -140,7 +140,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
                 this.initialCollapsibleState = TreeItemCollapsibleState.None;
             }
             ext.actions.refreshActivityLogTree(this);
-        })
+        });
     }
 
     private onError(data: OnErrorActivityData): void {
