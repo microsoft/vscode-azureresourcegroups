@@ -4,8 +4,10 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { GenericResource, ResourceGroup } from "@azure/arm-resources";
+import { AzureSubscription } from "@microsoft/vscode-azext-azureauth";
 import { randomUUID } from "crypto";
-import { AzureResourcesServiceFactory, AzureSubscription, ext } from "../../extension.bundle";
+import { ext } from "../../src/extensionVariables";
+import { AzureResourcesServiceFactory } from "../../src/services/AzureResourcesService";
 import { MockAzureSubscriptionProvider } from "./MockAzureSubscriptionProvider";
 
 export class MockResources {
@@ -30,12 +32,12 @@ class MockResourceGroup implements ResourceGroup {
     readonly type: string = 'microsoft.resources/resourcegroups';
     constructor(private readonly subscriptionId: string, public readonly name: string, public readonly location: string) { }
     readonly resources: MockResource[] = [];
-    readonly id: string = `${this.subscriptionId}/resourceGroups/${this.name}`;
+    get id(): string { return `${this.subscriptionId}/resourceGroups/${this.name}`; };
 }
 
 class MockResource implements GenericResource {
     constructor(private readonly resourceGroupId: string, public readonly name: string, public readonly type: string, public readonly kind: string) { }
-    readonly id: string = `${this.resourceGroupId}/providers/${this.type}/${this.name}`;
+    get id(): string { return `${this.resourceGroupId}/providers/${this.type}/${this.name}`; };
 }
 
 function addSubscription(resources: MockResources, name: string) {

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
-import { AuthAccountStateManager, getAuthAccountStateManager } from '../extension.bundle';
+import assert from 'assert';
+import { AuthAccountStateManager, getAuthAccountStateManager } from '../src/exportAuthRecord';
 
 suite('AuthAccountStateManager Tests', () => {
     let stateManager: AuthAccountStateManager;

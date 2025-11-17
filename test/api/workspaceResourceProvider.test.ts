@@ -1,6 +1,6 @@
 import assert from "assert";
 import { TreeItem } from "vscode";
-import { ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from "../../extension.bundle";
+import type { ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from "../../api/src";
 import { api } from "./api";
 
 class TestWorkspaceResourceProvider implements WorkspaceResourceProvider {

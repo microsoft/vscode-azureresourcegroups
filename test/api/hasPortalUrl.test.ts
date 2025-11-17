@@ -1,7 +1,8 @@
-import { AzureResourceModel } from "@microsoft/vscode-azureresources-api";
-import * as assert from 'assert';
+import assert from 'assert';
 import { commands, TreeItem, Uri } from "vscode";
-import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, BranchDataItemWrapper, ext } from "../../extension.bundle";
+import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, AzureResourceModel } from "../../api/src";
+import { ext } from "../../src/extensionVariables";
+import { BranchDataItemWrapper } from '../../src/tree/BranchDataItemWrapper';
 import { createMockSubscriptionWithFunctions } from "./mockServiceFactory";
 
 const api = () => {
