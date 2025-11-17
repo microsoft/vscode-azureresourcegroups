@@ -94,7 +94,7 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     AvailabilitySets: { displayName: localize('availabilitySets', 'Availability sets') },
     AzureCosmosDb: { displayName: localize('azureCosmosDb', 'Azure Cosmos DB') },
     AzureCosmosDbForMongoDbRu: { displayName: localize('azureCosmosDbForMongoDbRu', 'Azure Cosmos DB for MongoDB (RU)') },
-    AzureDocumentDb: { displayName: localize('azureDocumentDB', 'Azure Cosmos DB for MongoDB (vCore)') },
+    AzureDocumentDb: { displayName: localize('azureDocumentDB', 'Azure DocumentDB') },
     BatchAccounts: { displayName: localize('batchAccounts', 'Batch accounts') },
     ContainerAppsEnvironment: { displayName: localize('containerAppsEnv', 'Container Apps') },
     ContainerRegistry: { displayName: localize('containerRegistry', 'Container registry') },
@@ -106,7 +106,7 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     LoadBalancers: { displayName: localize('loadBalancers', 'Load balancers') },
     LogicApp: { displayName: localize('logicApp', 'Logic App') },
     ManagedIdentityUserAssignedIdentities: { displayName: localize('managedIdentity', 'Managed Identities') },
-    MongoClusters: { displayName: localize('mongoclusters', 'Azure Cosmos DB for MongoDB (vCore)') }, // TODO: remove in 2026: phased out with the introduction of https://github.com/microsoft/vscode-documentdb/pull/238
+    MongoClusters: { displayName: localize('mongoclusters', 'Azure DocumentDB') }, // TODO: remove in 2026: phased out with the introduction of https://github.com/microsoft/vscode-documentdb/pull/238
     MysqlServers: { displayName: localize('mysqlServers', 'MySql servers') },
     NetworkInterfaces: { displayName: localize('networkInterfaces', 'Network interfaces') },
     NetworkSecurityGroups: { displayName: localize('networkSecurityGroups', 'Network security groups') },
