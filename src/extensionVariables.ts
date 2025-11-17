@@ -35,7 +35,7 @@ export namespace ext {
     // TODO: do we need this? only used by load more command
     export let workspaceTree: AzExtTreeDataProvider;
     export let workspaceTreeView: TreeView<unknown>;
-    export let tenantTreeView: TreeView<unknown>
+    export let tenantTreeView: TreeView<unknown>;
     export let activityLogTree: ActivityLogTreeDataProvider;
     export let activityLogTreeView: TreeView<unknown>;
     export let helpTree: AzExtTreeDataProvider;

@@ -12,12 +12,12 @@ const getWorkspaceResourceProviderStub: (onCalled?: () => void, resources?: Work
             onCalled?.();
             return resources ?? [];
         }
-    }
-}
+    };
+};
 
 const api = () => {
     return ext.v2.api.resources;
-}
+};
 
 /**
  * Todo:
@@ -52,7 +52,7 @@ suite('Branch data provider tests', async () => {
             getTreeItem: (resource: WorkspaceResource): TreeItem => {
                 return new TreeItem(resource.name);
             }
-        })
+        });
 
         const children = await api().workspaceResourceTreeDataProvider.getChildren() as any[];
         const testChild = children.find(c => c.id === workspaceResource.id);
@@ -84,7 +84,7 @@ suite('Branch data provider tests', async () => {
             getTreeItem: (resource: WorkspaceResource): TreeItem => {
                 return new TreeItem(resource.name);
             }
-        })
+        });
 
         const children = await api().workspaceResourceTreeDataProvider.getChildren() as any[];
         const testChild = children.find(c => c.id === workspaceResource.id);
@@ -111,7 +111,7 @@ suite('Branch data provider tests', async () => {
             id: 'test-resource-child',
             name: 'Test Resource 3 Child',
             resourceType: workspaceResourceType,
-        }
+        };
 
         branchDataProvider.registerChildren(workspaceResource, [childResource]);
 
@@ -204,7 +204,7 @@ function setupTestBranchDataProvider() {
         id: 'test-resource-child',
         name: 'Test Resource 3 Child',
         resourceType: workspaceResourceType,
-    }
+    };
 
     branchDataProvider.registerChildren(workspaceResource, [childResource]);
 

@@ -129,7 +129,7 @@ export function createBranchDataItemFactory(itemCache: BranchDataItemCache): Bra
             branchItem,
             () => new BranchDataItemWrapper(branchItem, branchDataProvider, itemCache, options),
             createBranchItemId(branchItem.id, options?.idPrefix),
-        )
+        );
 }
 
 function createBranchItemId(id?: string, prefix?: string): string {

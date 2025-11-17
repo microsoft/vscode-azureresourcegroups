@@ -897,9 +897,8 @@
         "build:check": "tsc --noEmit",
         "package": "vsce package --githubBranch main",
         "lint": "eslint --max-warnings 0",
-        "lint-fix": "npm run lint -- --fix",
         "test": "vscode-test",
-        "all": "npm i && npm run lint && npm test",
+        "all": "npm i && npm run lint && npm run build && npm run package && npm test",
         "api-extractor": "cd api && npm run api-extractor"
     },
     "devDependencies": {

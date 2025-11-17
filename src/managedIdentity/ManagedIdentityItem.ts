@@ -70,7 +70,7 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
             iconPath: getIconPath(this.resource.resourceType),
             contextValue: this.contextValue,
             collapsibleState: TreeItemCollapsibleState.Collapsed,
-        }
+        };
     }
 }
 

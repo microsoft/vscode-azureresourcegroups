@@ -14,7 +14,7 @@ export class MockResources {
     get subscriptions(): MockSubscription[] {
         return Array.from(this.subscriptionsMap.values());
     }
-    subscriptionsMap: Map<string, MockSubscription> = new Map();
+    subscriptionsMap = new Map<string, MockSubscription>();
 }
 
 class MockSubscription {
@@ -103,7 +103,7 @@ export const createMockSubscriptionWithFunctions = (): BasicMockResources => {
     const mockAzureSubscriptionProvider = new MockAzureSubscriptionProvider(mockResources);
     ext.testing.overrideAzureSubscriptionProvider = () => mockAzureSubscriptionProvider;
     return mockResources;
-}
+};
 
 export function createMockAzureResourcesServiceFactory(mockResources: MockResources): AzureResourcesServiceFactory {
     return () => {
@@ -120,7 +120,7 @@ export function createMockAzureResourcesServiceFactory(mockResources: MockResour
                 }
                 throw new Error(`Subscription ${subscription.subscriptionId} not found. \n\t${mockResources.subscriptions.map(s => s.subscriptionId).join('\n\t')}`);
             },
-        }
-    }
+        };
+    };
 }
 

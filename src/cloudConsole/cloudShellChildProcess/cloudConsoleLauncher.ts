@@ -193,7 +193,6 @@ export function main() {
         // eslint-disable-next-line no-cond-assign
         while (res = await sendData(ipcHandle, JSON.stringify([{ type: 'poll' }]))) {
             for (const message of await readJSON(res)) {
-                /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
                 if (message.type === 'log') {
                     console.log(...(message.args) as []);
                 } else if (message.type === 'connect') {

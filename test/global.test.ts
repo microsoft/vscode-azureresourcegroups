@@ -27,7 +27,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
         // Use `TestUserInput` by default so we get an error if an unexpected call to `context.ui` occurs, rather than timing out
         context.ui = new TestUserInput(vscode);
     });
-    const groupBySetting = settingUtils.getWorkspaceSetting('groupBy')
+    const groupBySetting = settingUtils.getWorkspaceSetting('groupBy');
     userSettings.push({ key: 'groupBy', value: groupBySetting });
 
     const deleteConfirmationSetting = settingUtils.getWorkspaceSetting('deleteConfirmation');

@@ -10,7 +10,7 @@ import { validateSubscription } from "./utils/validateSubscription";
 
 const api = () => {
     return ext.v2.api.resources;
-}
+};
 
 suite('ResourceGroupGroupingItem', async () => {
     test('Validate element', async () => {

@@ -10,7 +10,7 @@ import { createMockSubscriptionWithFunctions } from "./api/mockServiceFactory";
 
 const api = () => {
     return ext.v2.api.resources;
-}
+};
 
 suite('Azure resource grouping tests', async () => {
     test('Group by resource type', async () => {

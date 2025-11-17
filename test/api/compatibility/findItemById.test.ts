@@ -20,7 +20,7 @@ suite('findItemById', () => {
             getResourceItem: (resource: AzureResource): ResourceModelBase => {
                 return {
                     id: resource.id,
-                }
+                };
             },
             getChildren: (_resource: AzureResource): AzureResource[] => {
                 return [];
@@ -28,7 +28,7 @@ suite('findItemById', () => {
             getTreeItem: (resource: AzureResource): TreeItem => {
                 return new TreeItem(resource.name);
             }
-        }
+        };
 
         api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, azureResourceBranchDataProvider);
 
@@ -59,7 +59,7 @@ suite('findItemById', () => {
             getResourceItem: (resource: AzureResource): ResourceModelBase => {
                 return {
                     id: resource.id,
-                }
+                };
             },
             getChildren: (_resource: AzureResource): AzureResource[] => {
                 return [];
@@ -67,7 +67,7 @@ suite('findItemById', () => {
             getTreeItem: (resource: AzureResource): TreeItem => {
                 return new TreeItem(resource.name);
             }
-        }
+        };
 
         api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, azureResourceBranchDataProvider);
         await commands.executeCommand('azureResourceGroups.groupBy.resourceType');

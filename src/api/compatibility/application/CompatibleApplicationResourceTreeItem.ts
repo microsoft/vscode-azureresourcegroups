@@ -132,10 +132,10 @@ export function createResolvableProxy<T extends AzExtParentTreeItem>(resolvable:
          */
         getPrototypeOf: (target: Resolvable<T>): AzExtParentTreeItem | AzExtTreeItem => {
             if (resolvable?.resolveResult) {
-                return resolvable.resolveResult.loadMoreChildrenImpl ? AzExtParentTreeItem.prototype : AzExtTreeItem.prototype
+                return resolvable.resolveResult.loadMoreChildrenImpl ? AzExtParentTreeItem.prototype : AzExtTreeItem.prototype;
             }
             return target;
         }
-    }
+    };
     return new Proxy(resolvable, providerHandler);
 }

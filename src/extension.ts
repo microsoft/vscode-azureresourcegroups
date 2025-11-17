@@ -116,7 +116,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         registerLMTools();
     });
 
-    const extensionManager = new ResourceGroupsExtensionManager()
+    const extensionManager = new ResourceGroupsExtensionManager();
 
     const azureResourceBranchDataProviderManager = new AzureResourceBranchDataProviderManager(
         new DefaultAzureResourceBranchDataProvider(),
@@ -133,11 +133,11 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         type => void extensionManager.activateWorkspaceResourceBranchDataProvider(type));
     const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
     const activityLogResourceBranchDataProviderManager = new ActivityLogResourceBranchDataProviderManager(new ActivityLogDefaultBranchDataProvider());
-    const activityLogResourceProviderManager = new ActivityLogResourceProviderManager(async () => { return undefined });
+    const activityLogResourceProviderManager = new ActivityLogResourceProviderManager(async () => { return undefined; });
 
     const tenantResourceBranchDataProviderManager = new TenantResourceBranchDataProviderManager(
         new TenantDefaultBranchDataProvider());
-    const tenantResourceProviderManager = new TenantResourceProviderManager(async () => { return undefined });
+    const tenantResourceProviderManager = new TenantResourceProviderManager(async () => { return undefined; });
 
     const azureResourcesBranchDataItemCache = new BranchDataItemCache();
     const azureResourceTreeDataProvider = registerAzureTree(context, {
@@ -208,7 +208,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
 
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
-        async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getSubscriptions(filter) };
+        async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getSubscriptions(filter); };
 
     return createApiProvider(
         [
