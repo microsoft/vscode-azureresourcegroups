@@ -8,8 +8,8 @@ import { BranchDataItemWrapper } from './BranchDataItemWrapper';
 import { ResourceGroupsItem } from './ResourceGroupsItem';
 
 export class BranchDataItemCache {
-    private readonly branchItemToResourceGroupsItemCache: Map<ResourceModelBase, ResourceGroupsItem> = new Map();
-    private readonly idToBranchItemCache: Map<string, ResourceModelBase> = new Map();
+    private readonly branchItemToResourceGroupsItemCache = new Map<ResourceModelBase, ResourceGroupsItem>();
+    private readonly idToBranchItemCache = new Map<string, ResourceModelBase>();
 
     addBranchItem(branchItem: ResourceModelBase, item: ResourceGroupsItem): void {
         this.branchItemToResourceGroupsItemCache.set(branchItem, item);

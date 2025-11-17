@@ -6,7 +6,7 @@ import assert = require("assert");
 
 const api = () => {
     return ext.v2.api.resources;
-}
+};
 
 type Mutable<T> = {
     -readonly [k in keyof T]: T[k];
@@ -36,7 +36,7 @@ class ViewPropertiesBranchDataProvider implements AzureResourceBranchDataProvide
                     foo: 'bar',
                 },
                 label: 'properties',
-            }
+            };
         }
 
         return [childModel];
@@ -47,7 +47,7 @@ class ViewPropertiesBranchDataProvider implements AzureResourceBranchDataProvide
             label: resource.name,
             id: resource.id,
             contextValue: 'validItem'
-        }
+        };
     }
 }
 

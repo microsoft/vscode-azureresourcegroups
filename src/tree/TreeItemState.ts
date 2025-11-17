@@ -40,7 +40,7 @@ export class TreeItemStateStore implements vscode.Disposable {
                 return this.applyToTreeItem({ ...treeItem, id: treeItem.id });
             }
             return treeItem;
-        }
+        };
 
         this.onDidRequestRefresh(item.id, () => refresh(item));
 
