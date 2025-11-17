@@ -201,10 +201,10 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                 visibleTenants,
                 visibleSubscriptions,
                 subscriptionIdList,
-                subscriptionIdListIsIncomplete
+                subscriptionIdListIsIncomplete,
             } = await getMetricsForTelemetry(await this.getAzureSubscriptionProvider());
 
-            // Number of tenants and subscriptions really belong in Measurements but for backwards compatibility
+            // These counts really belong in Measurements but for backwards compatibility
             // they will be put into Properties instead.
             context.telemetry.properties.numaccounts = totalAccounts.toString();
             context.telemetry.properties.numtenants = visibleTenants.toString();
