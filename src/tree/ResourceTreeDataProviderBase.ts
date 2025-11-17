@@ -59,15 +59,9 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
                 if (!inCloudShell()) {
                     // Only outside of Cloud Shell will we monitor for ongoing session changes
                     // Inside we must avoid due to https://github.com/microsoft/vscode-dev/issues/1334
-                    const one = this.subscriptionProvider.onDidSignIn(() => {
+                    this.statusSubscription = this.subscriptionProvider.onRefreshSuggested(() => {
                         this.notifyTreeDataChanged();
                     });
-
-                    const two = this.subscriptionProvider.onDidSignOut(() => {
-                        this.notifyTreeDataChanged();
-                    });
-
-                    this.statusSubscription = vscode.Disposable.from(one, two);
                 }
             }
 
