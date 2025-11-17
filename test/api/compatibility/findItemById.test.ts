@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import assert = require('assert');
+import assert from 'assert';
 import { randomUUID } from 'crypto';
 import { commands, TreeItem } from 'vscode';
 import { AzExtResourceType, AzureResource, BranchDataProvider, ext, IActionContext, ResourceModelBase } from '../../../extension.bundle';

@@ -1,4 +1,4 @@
-import assert = require("assert");
+import assert from "assert";
 import { IActionContext, wrapFunctionsInTelemetry, wrapFunctionsInTelemetrySync } from "../extension.bundle";
 
 suite('wrapFunctionsInTelemetry', () => {
@@ -19,6 +19,7 @@ suite('wrapFunctionsInTelemetry', () => {
             }
         };
         const wrappedFunctions = wrapFunctionsInTelemetry(functions);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         assertThrowsAsync(() => wrappedFunctions.asyncFuncThatThrows());
     });
 
@@ -38,7 +39,7 @@ suite('wrapFunctionsInTelemetry', () => {
 
         try {
             await wrappedFunctions.asyncFuncThatThrows();
-        } catch (e) {
+        } catch {
             // ignore error
         }
 
@@ -74,7 +75,7 @@ suite('wrapFunctionsInTelemetrySync', () => {
 
         try {
             wrappedFunctions.funcThatThrows();
-        } catch (e) {
+        } catch {
             // ignore error
         }
 

@@ -9,6 +9,7 @@ import { BranchDataItemCache } from "./BranchDataItemCache";
 import { TreeDataItem } from "./ResourceGroupsItem";
 
 export interface InternalTreeView extends TreeView<TreeDataItem> {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     _reveal: TreeView<TreeDataItem>['reveal'];
 }
 
