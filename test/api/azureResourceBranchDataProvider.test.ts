@@ -5,7 +5,7 @@ import { createMockSubscriptionWithFunctions } from "./mockServiceFactory";
 
 const api = () => {
     return ext.v2.api.resources;
-}
+};
 
 suite('Azure Resource Branch Data Provider tests', async () => {
     test('Registered Azure resource branch data provider is used', async () => {
@@ -16,7 +16,7 @@ suite('Azure Resource Branch Data Provider tests', async () => {
                 getResourceItemIsCalled = true;
                 return {
                     id: resource.id,
-                }
+                };
             },
             getChildren: (_resource: AzureResource): AzureResource[] => {
                 return [];
@@ -24,7 +24,7 @@ suite('Azure Resource Branch Data Provider tests', async () => {
             getTreeItem: (resource: AzureResource): TreeItem => {
                 return new TreeItem(resource.name);
             }
-        }
+        };
 
         api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, azureResourceBranchDataProvider);
         await commands.executeCommand('azureResourceGroups.groupBy.resourceType');
@@ -56,7 +56,7 @@ suite('Azure Resource Branch Data Provider tests', async () => {
                     label: resource.name,
                     id: resource.id,
                     contextValue: 'validItem'
-                }
+                };
             }
         });
 
@@ -94,7 +94,7 @@ suite('Azure Resource Branch Data Provider tests', async () => {
                     label: resource.name,
                     id: resource.id,
                     contextValue: 'validItem'
-                }
+                };
             }
         });
 

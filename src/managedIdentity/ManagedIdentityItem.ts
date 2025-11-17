@@ -29,7 +29,7 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
     viewProperties: ViewPropertiesModel = {
         data: this.resource,
         label: this.resource.name,
-    }
+    };
 
     private get contextValue(): string {
         const values: string[] = [];
@@ -68,7 +68,7 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
             iconPath: getIconPath(this.resource.resourceType),
             contextValue: this.contextValue,
             collapsibleState: TreeItemCollapsibleState.Collapsed,
-        }
+        };
     }
 }
 

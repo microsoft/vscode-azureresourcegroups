@@ -6,7 +6,7 @@ import { createMockSubscriptionWithFunctions } from "./mockServiceFactory";
 
 const api = () => {
     return ext.v2.api.resources;
-}
+};
 
 type Mutable<T> = {
     -readonly [k in keyof T]: T[k];
@@ -41,7 +41,7 @@ class PortalUrlBranchDataProvider implements AzureResourceBranchDataProvider<Tes
             label: resource.name,
             id: resource.id,
             contextValue: 'validItem'
-        }
+        };
     }
 }
 

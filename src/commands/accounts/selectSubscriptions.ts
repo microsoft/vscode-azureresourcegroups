@@ -61,7 +61,7 @@ export async function selectSubscriptions(context: IActionContext, options?: Sel
                     group: subscription.account.label
                 }))
                 .sort((a, b) => a.label.localeCompare(b.label));
-        }
+        };
 
         const picks = await context.ui.showQuickPick(
             subscriptionQuickPickItems(),

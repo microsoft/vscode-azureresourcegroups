@@ -52,5 +52,5 @@ function modifyReveal(treeView: TreeView<TreeDataItem>, findItemById: (id: strin
         const item: TreeDataItem | undefined = isAzExtTreeItem(element) ? itemCache.getItemForBranchItem(element) ?? await findItemById(element.fullId) : element;
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         await (treeView as InternalTreeView)._reveal(item!, options);
-    }
+    };
 }

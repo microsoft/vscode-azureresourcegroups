@@ -6,7 +6,7 @@ import assert = require("assert");
 
 const api = () => {
     return ext.v2.api.resources;
-}
+};
 
 suite('ResourceGroupGroupingItem', async () => {
     test('Validate element', async () => {
