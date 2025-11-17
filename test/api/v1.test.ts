@@ -1,5 +1,5 @@
+import assert from "assert";
 import { apiUtils } from "../../extension.bundle";
-import assert = require("assert");
 
 suite('v1 API tests', async () => {
     test('v1 API should be defined', async () => {

@@ -1,6 +1,6 @@
+import assert from "assert";
 import { ExtensionContext } from "vscode";
 import { getAzureResourcesExtensionApi } from "../../extension.bundle";
-import assert = require("assert");
 
 suite('getAzureResourcesExtensionApi() tests', async () => {
     async function getApi() {
