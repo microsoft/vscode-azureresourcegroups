@@ -905,7 +905,7 @@
         "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources-subscriptions": "^2.1.0",
         "@microsoft/api-extractor": "^7.33.8",
-        "@microsoft/vscode-azext-eng": "file:../vscode-azuretools/eng/microsoft-vscode-azext-eng-1.0.0-alpha.3.tgz",
+        "@microsoft/vscode-azext-eng": "1.0.0-alpha.3",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "22.x",
         "@types/semver": "^7.7.1",
