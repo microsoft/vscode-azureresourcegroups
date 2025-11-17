@@ -32,10 +32,10 @@ export class ResourceTags implements ITagsModel {
         this.displayType = resource.resourceGroup ? 'resource' : 'resource group';
     }
 
-    readonly id: string = this.resource.id;
-    readonly subscription: AzureSubscription = this.resource.subscription;
+    get id(): string { return this.resource.id; }
+    get subscription(): AzureSubscription { return this.resource.subscription; }
 
-    readonly displayName: string = this.resource.name;
+    get displayName(): string { return this.resource.name; }
     readonly displayType: ITagsModel['displayType'];
 
     cTime!: number;
@@ -77,8 +77,8 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
 
     public async writeFileImpl(context: IActionContext, model: ITagsModel, content: Uint8Array, originalUri: Uri): Promise<void> {
         // weird issue when in vscode.dev, the content Uint8Array has a giant byteOffset that causes it impossible to decode
-        // so re-form the buffer with 0 byteOffset
-        const buf = Buffer.from(content, 0);
+        // so re-form the buffer
+        const buf = Buffer.from(content); // TODO: verify this is still working
         const text: string = buf.toString('utf-8');
 
         const diagnostics: Diagnostic[] = languages.getDiagnostics(originalUri).filter(d => d.severity === DiagnosticSeverity.Error);
