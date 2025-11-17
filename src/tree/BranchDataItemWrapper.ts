@@ -54,6 +54,7 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
     }
 
     public get id(): string { return this._id; }
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     protected _id: string;
 
     get portalUrl(): vscode.Uri | undefined { return this.options?.portalUrl; }
