@@ -26,10 +26,12 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
         this.name = resource.name;
     }
 
-    viewProperties: ViewPropertiesModel = {
-        data: this.resource,
-        label: this.resource.name,
-    };
+    get viewProperties(): ViewPropertiesModel {
+        return {
+            data: this.resource,
+            label: this.resource.name,
+        };
+    }
 
     private get contextValue(): string {
         const values: string[] = [];
