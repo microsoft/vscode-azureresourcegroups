@@ -1,7 +1,7 @@
+import assert from "assert";
 import { commands } from "vscode";
 import { AzExtResourceType, ext, GroupingItem, isLocationGroupingItem, isResourceGroupGroupingItem, isResourceTypeGroupingItem, LocationGroupingItem, ResourceGroupGroupingItem, ResourceTypeGroupingItem } from "../extension.bundle";
 import { createMockSubscriptionWithFunctions } from "./api/mockServiceFactory";
-import assert = require("assert");
 
 const api = () => {
     return ext.v2.api.resources;

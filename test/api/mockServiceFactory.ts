@@ -108,12 +108,14 @@ export function createMockAzureResourcesServiceFactory(mockResources: MockResour
         return {
             async listResources(_context, subscription: AzureSubscription): Promise<GenericResource[]> {
                 if (mockResources.subscriptionsMap.has(subscription.subscriptionId)) {
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                     return mockResources.subscriptionsMap.get(subscription.subscriptionId)!.resources;
                 }
                 throw new Error(`Subscription ${subscription.subscriptionId} not found. \n\t${mockResources.subscriptions.map(s => s.subscriptionId).join('\n\t')}`);
             },
             async listResourceGroups(_context, subscription: AzureSubscription): Promise<ResourceGroup[]> {
                 if (mockResources.subscriptionsMap.has(subscription.subscriptionId)) {
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                     return mockResources.subscriptionsMap.get(subscription.subscriptionId)!.resourceGroups;
                 }
                 throw new Error(`Subscription ${subscription.subscriptionId} not found. \n\t${mockResources.subscriptions.map(s => s.subscriptionId).join('\n\t')}`);

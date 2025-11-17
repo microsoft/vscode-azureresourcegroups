@@ -5,9 +5,9 @@
 
 import { type Location } from '@azure/arm-resources-subscriptions';
 import { createTestActionContext, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
+import assert from "assert";
 import { AzExtParentTreeItem, IActionContext, LocationListStep, SubscriptionItem, createResourceClient, createResourceGroup, deleteResourceGroupV2, ext, randomUtils, settingUtils } from '../../extension.bundle';
 import { longRunningTestsEnabled } from "../global.test";
-import assert = require("assert");
 
 let rgName: string;
 let locations: Location[];
@@ -116,7 +116,7 @@ async function resourceGroupExists(context: IActionContext, rgName: string): Pro
     try {
         await client.resourceGroups.get(rgName);
         return true;
-    } catch (_) {
+    } catch {
         return false;
     }
 }

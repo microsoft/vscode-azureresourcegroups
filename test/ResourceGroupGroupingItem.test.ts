@@ -1,8 +1,8 @@
+import assert from "assert";
 import { commands } from "vscode";
 import { ext, GroupingItem, hasPortalUrl, hasViewProperties, ResourceGroupGroupingItem } from "../extension.bundle";
 import { createMockSubscriptionWithFunctions } from "./api/mockServiceFactory";
 import { validateSubscription } from "./utils/validateSubscription";
-import assert = require("assert");
 
 const api = () => {
     return ext.v2.api.resources;

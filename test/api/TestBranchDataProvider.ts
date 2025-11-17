@@ -1,4 +1,4 @@
-import assert = require("assert");
+import assert from "assert";
 import { Event, EventEmitter, TreeItem } from "vscode";
 import { WorkspaceResource, WorkspaceResourceBranchDataProvider } from "../../extension.bundle";
 
