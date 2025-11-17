@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureTenant, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
+import { AzureTenant, getMetricsForTelemetry, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling, createSubscriptionContext, nonNullValueAndProp, registerEvent } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
@@ -85,11 +85,11 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                         commandId: 'azureResourceGroups.selectSubscriptions'
                     });
 
-                    const allSubscriptions = await subscriptionProvider.getAvailableSubscriptions({ all: true });
+                    const allSubscriptions = await subscriptionProvider.getAvailableSubscriptions({ filter: false });
                     if (allSubscriptions.length === 0) {
                         // No subscriptions at all (ignoring filters)
                         const allUnauthenticatedTenants: AzureTenant[] = [];
-                        for (const account of await subscriptionProvider.getAccounts({ all: true })) {
+                        for (const account of await subscriptionProvider.getAccounts({ filter: false })) {
                             allUnauthenticatedTenants.push(...await subscriptionProvider.getUnauthenticatedTenantsForAccount(account));
                         }
 
@@ -196,21 +196,21 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
             context.telemetry.properties.isActivationEvent = 'true';
             context.errorHandling.suppressDisplay = true;
 
-            const subscriptionProvider = await this.getAzureSubscriptionProvider();
-            const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ all: true });
-
-            const tenantSet = new Set<string>();
-            const subscriptionSet = new Set<string>();
-            subscriptions.forEach(sub => {
-                tenantSet.add(sub.tenantId);
-                subscriptionSet.add(sub.subscriptionId);
-            });
+            const {
+                totalAccounts,
+                visibleTenants,
+                visibleSubscriptions,
+                subscriptionIdList,
+                subscriptionIdListIsIncomplete
+            } = await getMetricsForTelemetry(await this.getAzureSubscriptionProvider());
 
             // Number of tenants and subscriptions really belong in Measurements but for backwards compatibility
             // they will be put into Properties instead.
-            context.telemetry.properties.numtenants = tenantSet.size.toString();
-            context.telemetry.properties.numsubscriptions = subscriptionSet.size.toString();
-            context.telemetry.properties.subscriptions = JSON.stringify(Array.from(subscriptionSet));
+            context.telemetry.properties.numaccounts = totalAccounts.toString();
+            context.telemetry.properties.numtenants = visibleTenants.toString();
+            context.telemetry.properties.numsubscriptions = visibleSubscriptions.toString();
+            context.telemetry.properties.subscriptions = subscriptionIdList;
+            context.telemetry.properties.subscriptionidlistisincomplete = subscriptionIdListIsIncomplete.toString();
         });
     }
 }
