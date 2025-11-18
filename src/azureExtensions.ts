@@ -141,7 +141,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     {
         name: 'vscode-ai-foundry',
         publisher: 'TeamsDevApp',
-        label: 'Azure AI Foundry',
+        label: 'Microsoft Foundry',
         resourceTypes: [AzExtResourceType.AiFoundry],
         reportIssueCommandId: 'azure-ai-foundry.reportIssue'
     },
