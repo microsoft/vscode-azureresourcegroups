@@ -3,6 +3,7 @@
 ## 0.11.7 - 2025-11-18
 
 ### Changed
+* [[1306]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1306) Update Azure AI Foundry branding to Microsoft Foundry
 * [[1286]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1286) Rename "Azure Cosmos DB for MongoDB (vCore)" to "Azure DocumentDB"
 
 ## 0.11.6 - 2025-11-03
