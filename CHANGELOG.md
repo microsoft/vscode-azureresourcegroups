@@ -1,4 +1,10 @@
 # Change Log
+
+## 0.11.7 - 2025-11-18
+
+### Changed
+* [[1286]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1286) Rename "Azure Cosmos DB for MongoDB (vCore)" to "Azure DocumentDB"
+
 ## 0.11.6 - 2025-11-03
 This release improves on Azure Activity Log integration with Copilot, giving users the ability to custom select which activities to provide as context before starting new chat sessions. Users can now select activities through the general entry-point in the activity log header ribbon, right-clicking individual activities directly, or interacting with an activity's inline context menu button. In addition, Copilot buttons have been upgraded to the newer chat icon.
 
