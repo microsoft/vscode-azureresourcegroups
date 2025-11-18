@@ -11,12 +11,10 @@ import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { AzExtResourceType } from '../api/src/AzExtResourceType';
-import { AzExtCredentialManager } from '../api/src/auth/credentialManager/AzExtCredentialManager';
-import { AzExtUUIDCredentialManager } from '../api/src/auth/credentialManager/AzExtUUIDCredentialManager';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/ResourceGroupsExtensionManager';
 import { ActivityLogResourceProviderManager, AzureResourceProviderManager, TenantResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
-import { createAzureResourcesAuthApiFactory } from './api/auth/createAzureResourcesAuthApiFactory';
+import { createAuthApiFactory } from './api/auth/createAuthApiFactory';
 import { InternalAzureResourceGroupsExtensionApi } from './api/compatibility/AzureResourceGroupsExtensionApi';
 import { CompatibleAzExtTreeDataProvider } from './api/compatibility/CompatibleAzExtTreeDataProvider';
 import { createCompatibilityPickAppResource } from './api/compatibility/pickAppResource';
@@ -266,8 +264,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         v3ApiFactory,
     ]);
 
-    const credentialManager: AzExtCredentialManager = new AzExtUUIDCredentialManager();
-
     return createApiProvider(
         [
             // Todo: Remove once extension clients finish migrating
@@ -276,7 +272,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
             v3ApiFactory,
 
             // This will eventually be the only part of the API exposed publically
-            createAzureResourcesAuthApiFactory(credentialManager, coreApiProvider),
+            createAuthApiFactory(coreApiProvider),
         ]
     );
 }

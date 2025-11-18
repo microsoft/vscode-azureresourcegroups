@@ -5,7 +5,7 @@
 
 export * from './auth/apiRequest/apiRequest';
 export * from './auth/apiRequest/apiRequestErrors';
-export * from './auth/apiRequest/AzureResourcesApiRequestContext';
+export { AzureResourcesApiRequestContext } from './auth/apiRequest/AzureResourcesApiRequestContext';
 export * from './AzExtResourceType';
 export * from './extensionApi';
 export * from './getAzExtResourceType';

@@ -4,42 +4,61 @@
 *--------------------------------------------------------------------------------------------*/
 
 import * as assert from "assert";
-import { apiUtils, AzExtCredentialManager, AzureResourcesExtensionAuthApi, createAzureResourcesAuthApiFactory, nonNullValue, parseError } from "../../../extension.bundle";
+import { apiUtils, AzureExtensionApi, AzureResourcesExtensionAuthApi, nonNullValue, parseError } from "../../../extension.bundle";
 import { assertThrowsAsync } from "../../wrapFunctionsInTelemetry.test";
 import { MockUUIDCredentialManager } from "./MockUUIDCredentialManager";
-import { createMockApiProvider } from "./mockApiProvider";
+import { createMockAuthApi } from "./mockAuthApiFactory";
 
-const extensionId: string = 'ms-azuretools.vscode-azureresourcegroups';
-const extensionVersion: string = '^4.0.0';
+const clientExtensionId: string = 'ms-azuretools.vscode-azurecontainerapps';
+const clientExtensionVersion: string = '1.0.0';
 const coreApiVersions: string[] = ['0.0.1', '2.0.0', '3.0.0'];
 
 suite('v4 API auth tests', async () => {
     test('v4 API should be defined', async () => {
-        const apiProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>(extensionId);
+        const apiProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>('ms-azuretools.vscode-azureresourcegroups');
         assert.ok(apiProvider, 'API provider is undefined');
 
-        const v4Api = apiProvider.getApi(extensionVersion, { extensionId: 'ms-azuretools.vscode-azureresourcegroups-tests' });
+        const v4Api = apiProvider.getApi('^4.0.0', { extensionId: 'ms-azuretools.vscode-azureresourcegroups-tests' });
         assert.ok(v4Api);
     });
 
-    // NOTE: `createAzureResourcesApiSession` is not normally intended to be called directly by Azure Resources itself; however, I've found that it
-    // kind of still works for testing.  It will basically run everything exactly the same except at the end - the exported API for Azure Resources will be missing
-    // the receiver method so the credential has no way to be passed back to the extension through its API.
-    // Since we inject and hold a copy of the credential manager during tests, we can simply grab the generated credential from the manager.
+    test('createAzureResourcesApiSession should provide a valid credential but not return it directly', async () => {
+        let apiSession: unknown;
+        let receivedHostCredential: string = '';
+        let receivedClientCredential: string = '';
 
-    test('createAzureResourcesApiSession should provide a credential but not return it directly', async () => {
         const credentialManager = new MockUUIDCredentialManager();
-        const authApi: AzureResourcesExtensionAuthApi = createAuthApi(credentialManager, coreApiVersions);
+        const generatedClientCredential: string = crypto.randomUUID();
 
-        const apiSession = await authApi.createAzureResourcesApiSession(extensionId, extensionVersion, crypto.randomUUID());
+        await new Promise<void>((resolve) => {
+            const timeout = setTimeout(resolve, 5000);
+
+            const mockClientExtensionApi: AzureExtensionApi = {
+                apiVersion: clientExtensionVersion,
+                receiveAzureResourcesApiSession: (hostCredential: string, clientCredential: string) => {
+                    clearTimeout(timeout);
+                    receivedHostCredential = hostCredential;
+                    receivedClientCredential = clientCredential;
+                    resolve();
+                },
+            }
+
+            const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi(coreApiVersions, { credentialManager, extensionApiProvider: { getApi: () => mockClientExtensionApi } });
+            authApi.createAzureResourcesApiSession(clientExtensionId, clientExtensionVersion, generatedClientCredential)
+                .then(session => apiSession = session)
+                .catch(() => { clearTimeout(timeout); resolve() });
+        });
+
         assert.equal(apiSession, undefined);
-        assert.ok(credentialManager.uuidMap.get(extensionId));
+        assert.equal(receivedClientCredential, generatedClientCredential);
+
+        const generatedHostCredential: string = nonNullValue(credentialManager.uuidMap.get(clientExtensionId));
+        assert.equal(receivedHostCredential, generatedHostCredential);
     });
 
     test('createAzureResourcesApiSession should throw if an unallowed extension id is provided', async () => {
-        const credentialManager = new MockUUIDCredentialManager();
-        const authApi: AzureResourcesExtensionAuthApi = createAuthApi(credentialManager, coreApiVersions);
-        assertThrowsAsync(async () => await authApi.createAzureResourcesApiSession('extension1', extensionVersion, crypto.randomUUID()))
+        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi(coreApiVersions);
+        assertThrowsAsync(async () => await authApi.createAzureResourcesApiSession('extension1', clientExtensionVersion, crypto.randomUUID()));
     });
 
     test('createAzureResourcesApiSession should not spill sensitive extension credentials in errors', async () => {
@@ -49,10 +68,10 @@ suite('v4 API auth tests', async () => {
             throw new Error(credentialManager.uuidMap.get('extension1'));
         }
 
-        const authApi: AzureResourcesExtensionAuthApi = createAuthApi(credentialManager, coreApiVersions);
+        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi(coreApiVersions, { credentialManager });
 
         try {
-            await authApi.createAzureResourcesApiSession(extensionId, extensionVersion, crypto.randomUUID());
+            await authApi.createAzureResourcesApiSession(clientExtensionId, clientExtensionVersion, crypto.randomUUID());
             assert.fail('We expect the credential manager to throw in this test.');
         } catch (err) {
             const perr = parseError(err);
@@ -62,32 +81,30 @@ suite('v4 API auth tests', async () => {
 
     test('getAzureResourcesApis should return matching APIs if provided a valid credential', async () => {
         const credentialManager = new MockUUIDCredentialManager();
+        const generatedHostCredential: string = credentialManager.createCredential(clientExtensionId);
 
-        const authApi: AzureResourcesExtensionAuthApi = createAuthApi(credentialManager, coreApiVersions);
-        await authApi.createAzureResourcesApiSession(extensionId, extensionVersion, crypto.randomUUID());
+        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi(coreApiVersions, { credentialManager });
+        const resourcesApis = await authApi.getAzureResourcesApis(clientExtensionId, generatedHostCredential, ['0.0.1', '^2.0.0']);
 
-        const resourcesApis = await authApi.getAzureResourcesApis(extensionId, nonNullValue(credentialManager.uuidMap.get(extensionId)), ['0.0.1', '^2.0.0']);
         assert.match(resourcesApis[0]?.apiVersion ?? '', /^0.0.1$/);
         assert.match(resourcesApis[1]?.apiVersion ?? '', /^2./);
     });
 
     test('getAzureResourcesApis should throw if provided an invalid credential', async () => {
-        const credentialManager = new MockUUIDCredentialManager();
-        const coreApiVersions: string[] = ['0.0.1', '2.0.0', '3.0.0'];
-        const authApi: AzureResourcesExtensionAuthApi = createAuthApi(credentialManager, coreApiVersions);
-        assertThrowsAsync(async () => await authApi.getAzureResourcesApis(extensionId, crypto.randomUUID(), ['^2.0.0']));
+        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi(coreApiVersions);
+        assertThrowsAsync(async () => await authApi.getAzureResourcesApis(clientExtensionId, crypto.randomUUID(), ['^2.0.0']));
     });
 
     test('getAzureResourcesApis should not spill sensitive extension credentials in errors', async () => {
         const credentialManager = new MockUUIDCredentialManager();
-        const authApi: AzureResourcesExtensionAuthApi = createAuthApi(credentialManager, coreApiVersions);
+        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi(coreApiVersions, { credentialManager });
 
         credentialManager.createCredential('extension1');
         credentialManager.createCredential('extension2');
         credentialManager.createCredential('extension3');
 
         try {
-            await authApi.getAzureResourcesApis(extensionId, crypto.randomUUID(), ['^2.0.0']);
+            await authApi.getAzureResourcesApis(clientExtensionId, crypto.randomUUID(), ['^2.0.0']);
             assert.fail('Should throw if requesting Azure Resources APIs without a valid credential.');
         } catch (err) {
             const perr = parseError(err);
@@ -97,12 +114,3 @@ suite('v4 API auth tests', async () => {
         }
     });
 });
-
-/**
- * Use to quickly bootstrap a testable auth API with core API factories matching the provided versions.
- */
-function createAuthApi(credentialManager: AzExtCredentialManager, coreApiVersions: string[]): AzureResourcesExtensionAuthApi {
-    const coreApiProvider = createMockApiProvider(coreApiVersions);
-    const authApiProvider = createAzureResourcesAuthApiFactory(credentialManager, coreApiProvider);
-    return authApiProvider.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups-tests' });
-}
