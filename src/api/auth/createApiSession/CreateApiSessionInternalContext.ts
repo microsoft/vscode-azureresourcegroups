@@ -16,7 +16,6 @@ export interface CreateApiSessionInternalContext extends IActionContext {
     /**
      * An optional API provider to be used in lieu of the VS Code API `vscode.extension.getExtension()`.
      * This should _NOT_ be defined in production environments.
-     * @test Use this to more easily mock and inject custom client extension API exports.
      */
     clientApiProvider?: CreateApiSessionExtensionProvider;
 }
