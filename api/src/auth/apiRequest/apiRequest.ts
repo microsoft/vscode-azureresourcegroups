@@ -104,11 +104,11 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
     }
 }
 
-async function getExtensionApi<T extends AzureExtensionApi>(clientExtensionId: string, clientExtensionVersion: string): Promise<T> {
-    const extensionProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>(clientExtensionId);
+async function getExtensionApi<T extends AzureExtensionApi>(extensionId: string, extensionVersion: string): Promise<T> {
+    const extensionProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>(extensionId);
     if (extensionProvider) {
-        return extensionProvider.getApi<T>(clientExtensionVersion);
+        return extensionProvider.getApi<T>(extensionVersion);
     } else {
-        throw new Error(l10n.t('Could not find Azure extension API for extension "{0}".', clientExtensionId));
+        throw new Error(l10n.t('Could not find Azure extension API for extension "{0}".', extensionId));
     }
 }
