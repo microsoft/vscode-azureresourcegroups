@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureResourcesExtensionApi } from "../../extensionApi";
+import { AzureResourcesExtensionApi, AzureResourcesExtensionAuthApi } from "../../extensionApi";
 import { AzureExtensionApi } from "../../utils/apiUtils";
+import { AzExtCredentialManager } from "../credentialManager/AzExtCredentialManager";
 import { AzureResourcesApiRequestError } from "./apiRequestErrors";
 
 export interface AzureResourcesApiRequestContext {
@@ -29,4 +30,20 @@ export interface AzureResourcesApiRequestContext {
      * @param error - The error that occurred during the handshake, containing an error code and message.
      */
     onApiRequestError?: (error: AzureResourcesApiRequestError) => void | Promise<void>;
+}
+
+// NOTE: Dependency injection options for tests; skip publically exporting this in the index
+export interface CustomRequestDependenciesContext extends AzureResourcesApiRequestContext {
+    /**
+     * An optional credential manager used for issuing and verifying the client extensions credentials. If none are supplied, a simple UUID credential manager is used.
+     * @test Use this to more easily mock and inspect the behavior of the underlying credential manager.
+     */
+    credentialManager?: AzExtCredentialManager;
+
+    /**
+     * An optional API provider to be used in lieu of the VS Code extension provider `vscode.extension.getExtension()`.
+     * This should _NOT_ be used in production environments.
+     * @test Use this to more easily mock and inject custom host extension API exports.
+     */
+    hostApiProvider?: { getApi(): AzureResourcesExtensionAuthApi };
 }
