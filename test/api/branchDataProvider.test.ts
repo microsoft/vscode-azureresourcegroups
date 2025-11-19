@@ -1,10 +1,10 @@
 import assert from "assert";
 import { Event, TreeDataProvider, TreeItem } from "vscode";
 import { isWrapper, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from "../../api/src";
-import { ext } from "../../src/extensionVariables";
 import { BranchDataItemWrapper } from "../../src/tree/BranchDataItemWrapper";
 import { ResourceGroupsItem } from "../../src/tree/ResourceGroupsItem";
 import { TestBranchDataProvider } from "./TestBranchDataProvider";
+import { getCachedTestApi } from "../utils/testApiAccess";
 
 const getWorkspaceResourceProviderStub: (onCalled?: () => void, resources?: WorkspaceResource[]) => WorkspaceResourceProvider = (onCalled, resources) => {
     return {
@@ -16,7 +16,7 @@ const getWorkspaceResourceProviderStub: (onCalled?: () => void, resources?: Work
 };
 
 const api = () => {
-    return ext.v2.api.resources;
+    return getCachedTestApi().getApi().resources;
 };
 
 /**
