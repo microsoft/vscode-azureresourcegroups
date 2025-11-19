@@ -9,9 +9,9 @@ import { createMockAuthApi } from "./mockAuthApi";
 
 const clientExtensionId: string = 'ms-azuretools.vscode-azurecontainerapps';
 
-suite('Azure Resources API client request tests', async () => {
+suite('Azure Resources API client-side request tests', async () => {
     test('prepareAzureResourcesApiRequest should successfully enable the handshake & return available APIs if on the allow list', async () => {
-        let receivedAzureResourcesApis: (AzureExtensionApi | AzureResourcesExtensionApi | undefined)[] = [];
+        let receivedResourcesApis: (AzureExtensionApi | AzureResourcesExtensionApi | undefined)[] = [];
 
         await new Promise<void>((resolve) => {
             const timeout = setTimeout(resolve, 5000);
@@ -21,7 +21,7 @@ suite('Azure Resources API client request tests', async () => {
                 azureResourcesApiVersions: ['0.0.1', '^2.0.0'],
                 onDidReceiveAzureResourcesApis: (azureResourcesApis: (AzureExtensionApi | AzureResourcesExtensionApi | undefined)[]) => {
                     clearTimeout(timeout);
-                    receivedAzureResourcesApis = azureResourcesApis;
+                    receivedResourcesApis = azureResourcesApis;
                     resolve();
                 },
                 onApiRequestError: () => {
@@ -34,15 +34,15 @@ suite('Azure Resources API client request tests', async () => {
                 apiVersion: '1.0.0',
             };
 
-            // Define an external manager so the two preparation calls below point to the same credential manager
+            // Define an external manager so the two preparation calls that follow will point to the same credential manager
             (requestContext as CustomRequestDependenciesContext).credentialManager = new AzExtUUIDCredentialManager();
 
-            // For testing, it is necessary to wire up both the client and host api provider to represent the APIs on each side of the handshake.
-            // The prepare call needs to happen twice in order to set this scenario up - once to generate the client API for the host, and again to
-            // pass in the host API to generate the final handshake request.
+            // For testing, it is necessary to wire up both the client and host api provider to represent APIs on each side of the handshake.
+            // The prepare call needs to happen twice in order to set this scenario up - once to generate the client API for the host to point to,
+            // and then once more to pass to the host API for the final handshake method to point to.
             //
-            // NOTE: This is not normally necessary since VS Code's API does all of this work for us; however, this is not something we can rely on
-            // during tests because of the need to test multiple versions of mocked extension APIs.
+            // NOTE: This is not normally necessary since VS Code's API normally manages extension exports; however, this is not something we can rely on
+            // during tests because we need to be able to test multiple versions of mocked extension APIs in varying scenarios.
 
             const { clientApi } = prepareAzureResourcesApiRequest(requestContext, coreClientExtensionApi);
             const hostApi = createMockAuthApi({ clientApiProvider: { getApi: () => clientApi } });
@@ -52,8 +52,8 @@ suite('Azure Resources API client request tests', async () => {
             requestResourcesApis();
         });
 
-        assert.match(receivedAzureResourcesApis[0]?.apiVersion ?? '', /^0.0.1$/);
-        assert.match(receivedAzureResourcesApis[1]?.apiVersion ?? '', /^2./);
+        assert.match(receivedResourcesApis[0]?.apiVersion ?? '', /^0.0.1$/);
+        assert.match(receivedResourcesApis[1]?.apiVersion ?? '', /^2./);
     });
 
     test('prepareAzureResourcesApiRequest should return an error if not on the allow list', async () => {
