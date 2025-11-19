@@ -25,12 +25,12 @@ export type AuthApiFactoryDependencies = {
      * This should _NEVER_ be defined in production environments.
      * @test Use this to more easily mock and inject custom client extension API exports.
      */
-    extensionApiProvider?: CreateApiSessionExtensionProvider;
+    clientApiProvider?: CreateApiSessionExtensionProvider;
 }
 
 export function createAuthApiFactory(coreApiProvider: apiUtils.AzureExtensionApiProvider, customDependencies?: AuthApiFactoryDependencies): AzureExtensionApiFactory<AzureResourcesAuthApiInternal> {
     const credentialManager = customDependencies?.credentialManager ?? new AzExtUUIDCredentialManager();
-    const extensionApiProvider = customDependencies?.extensionApiProvider;
+    const clientApiProvider = customDependencies?.clientApiProvider;
 
     return {
         apiVersion: v4,
@@ -73,7 +73,7 @@ export function createAuthApiFactory(coreApiProvider: apiUtils.AzureExtensionApi
                             clientExtensionId: clientExtensionId?.toLowerCase(),
                             clientExtensionVersion,
                             clientExtensionCredential,
-                            extensionApiProvider,
+                            clientApiProvider,
                         }) satisfies CreateApiSessionInternalContext);
                     });
                 },

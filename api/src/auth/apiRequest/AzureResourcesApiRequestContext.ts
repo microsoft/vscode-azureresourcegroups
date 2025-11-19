@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureResourcesExtensionApi } from "../../extensionApi";
+import { AzureResourcesExtensionApi, AzureResourcesExtensionAuthApi } from "../../extensionApi";
 import { AzureExtensionApi } from "../../utils/apiUtils";
+import { AzExtCredentialManager } from "../credentialManager/AzExtCredentialManager";
 import { AzureResourcesApiRequestError } from "./apiRequestErrors";
 
 export interface AzureResourcesApiRequestContext {
@@ -29,4 +30,9 @@ export interface AzureResourcesApiRequestContext {
      * @param error - The error that occurred during the handshake, containing an error code and message.
      */
     onApiRequestError?: (error: AzureResourcesApiRequestError) => void | Promise<void>;
+}
+
+export interface AzureResourcesApiRequestTestContext extends AzureResourcesApiRequestContext {
+    customCredentialManager?: AzExtCredentialManager;
+    customHostApiProvider?: { getApi(): AzureResourcesExtensionAuthApi };
 }

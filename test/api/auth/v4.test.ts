@@ -11,9 +11,8 @@ import { createMockAuthApi } from "./mockAuthApiFactory";
 
 const clientExtensionId: string = 'ms-azuretools.vscode-azurecontainerapps';
 const clientExtensionVersion: string = '1.0.0';
-const coreApiVersions: string[] = ['0.0.1', '2.0.0', '3.0.0'];
 
-suite('v4 API auth tests', async () => {
+suite('v4 internal API auth tests', async () => {
     test('v4 API should be defined', async () => {
         const apiProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>('ms-azuretools.vscode-azureresourcegroups');
         assert.ok(apiProvider, 'API provider is undefined');
@@ -43,7 +42,7 @@ suite('v4 API auth tests', async () => {
                 },
             }
 
-            const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi(coreApiVersions, { credentialManager, extensionApiProvider: { getApi: () => mockClientExtensionApi } });
+            const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi({ credentialManager, clientApiProvider: { getApi: () => mockClientExtensionApi } });
             authApi.createAzureResourcesApiSession(clientExtensionId, clientExtensionVersion, generatedClientCredential)
                 .then(session => apiSession = session)
                 .catch(() => { clearTimeout(timeout); resolve() });
@@ -57,7 +56,7 @@ suite('v4 API auth tests', async () => {
     });
 
     test('createAzureResourcesApiSession should throw if an unallowed extension id is provided', async () => {
-        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi(coreApiVersions);
+        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi();
         assertThrowsAsync(async () => await authApi.createAzureResourcesApiSession('extension1', clientExtensionVersion, crypto.randomUUID()));
     });
 
@@ -68,7 +67,7 @@ suite('v4 API auth tests', async () => {
             throw new Error(credentialManager.uuidMap.get('extension1'));
         }
 
-        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi(coreApiVersions, { credentialManager });
+        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi({ credentialManager });
 
         try {
             await authApi.createAzureResourcesApiSession(clientExtensionId, clientExtensionVersion, crypto.randomUUID());
@@ -83,7 +82,7 @@ suite('v4 API auth tests', async () => {
         const credentialManager = new MockUUIDCredentialManager();
         const generatedHostCredential: string = credentialManager.createCredential(clientExtensionId);
 
-        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi(coreApiVersions, { credentialManager });
+        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi({ credentialManager });
         const resourcesApis = await authApi.getAzureResourcesApis(clientExtensionId, generatedHostCredential, ['0.0.1', '^2.0.0']);
 
         assert.match(resourcesApis[0]?.apiVersion ?? '', /^0.0.1$/);
@@ -91,13 +90,13 @@ suite('v4 API auth tests', async () => {
     });
 
     test('getAzureResourcesApis should throw if provided an invalid credential', async () => {
-        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi(coreApiVersions);
+        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi();
         assertThrowsAsync(async () => await authApi.getAzureResourcesApis(clientExtensionId, crypto.randomUUID(), ['^2.0.0']));
     });
 
     test('getAzureResourcesApis should not spill sensitive extension credentials in errors', async () => {
         const credentialManager = new MockUUIDCredentialManager();
-        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi(coreApiVersions, { credentialManager });
+        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi({ credentialManager });
 
         credentialManager.createCredential('extension1');
         credentialManager.createCredential('extension2');

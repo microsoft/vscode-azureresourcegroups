@@ -18,7 +18,7 @@ export interface CreateApiSessionInternalContext extends IActionContext {
      * This should _NEVER_ be defined in production environments.
      * @test Use this to more easily mock and inject custom client extension API exports.
      */
-    extensionApiProvider?: CreateApiSessionExtensionProvider;
+    clientApiProvider?: CreateApiSessionExtensionProvider;
 }
 
 export type CreateApiSessionExtensionProvider = { getApi(clientExtensionId: string, clientExtensionVersion: string): AzureExtensionApi };

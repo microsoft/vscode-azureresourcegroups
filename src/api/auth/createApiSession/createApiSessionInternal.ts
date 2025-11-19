@@ -25,7 +25,7 @@ export async function createApiSessionInternal(context: CreateApiSessionInternal
     context.telemetry.properties.allowedExtension = 'true';
 
     try {
-        const clientApi = context.extensionApiProvider?.getApi(context.clientExtensionId, context.clientExtensionVersion) ??
+        const clientApi = context.clientApiProvider?.getApi(context.clientExtensionId, context.clientExtensionVersion) ??
             await apiUtils.getAzureExtensionApi(ext.context, context.clientExtensionId, context.clientExtensionVersion);
 
         const azureResourcesCredential: string = await context.credentialManager.createCredential(context.clientExtensionId);

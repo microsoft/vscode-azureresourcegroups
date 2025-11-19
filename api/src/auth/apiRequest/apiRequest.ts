@@ -8,7 +8,7 @@ import { AzureResourcesExtensionAuthApi } from "../../extensionApi";
 import { apiUtils, AzureExtensionApi } from "../../utils/apiUtils";
 import { AzExtCredentialManager } from "../credentialManager/AzExtCredentialManager";
 import { AzExtUUIDCredentialManager } from "../credentialManager/AzExtUUIDCredentialManager";
-import { AzureResourcesApiRequestContext } from "./AzureResourcesApiRequestContext";
+import { AzureResourcesApiRequestContext, AzureResourcesApiRequestTestContext } from "./AzureResourcesApiRequestContext";
 import { AzureResourcesApiRequestErrorCode } from "./apiRequestErrors";
 
 const azureResourcesAuthApiVersion: string = '^4.0.0';
@@ -38,7 +38,7 @@ export function prepareAzureResourcesApiRequest<T extends AzureExtensionApi>(con
         throw new Error('You must specify at least one Azure Resources API version.');
     }
 
-    const clientCredentialManager: AzExtCredentialManager = new AzExtUUIDCredentialManager();
+    const clientCredentialManager: AzExtCredentialManager = (context as AzureResourcesApiRequestTestContext).customCredentialManager ?? new AzExtUUIDCredentialManager();
 
     if (!clientExtensionApi.receiveAzureResourcesApiSession) {
         clientExtensionApi.receiveAzureResourcesApiSession = createReceiveAzureResourcesApiSession(context, clientCredentialManager);
@@ -62,7 +62,7 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
     }
 
     try {
-        const resourcesApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
+        const resourcesApi = (context as AzureResourcesApiRequestTestContext).customHostApiProvider?.getApi() ?? await getExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
         await resourcesApi.createAzureResourcesApiSession(context.clientExtensionId, clientApiVersion, clientCredential);
     } catch (err) {
         if (err instanceof Error) {
@@ -92,7 +92,7 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
         }
 
         try {
-            const resourcesAuthApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
+            const resourcesAuthApi = (context as AzureResourcesApiRequestTestContext).customHostApiProvider?.getApi() ?? await getExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
             const resourcesApis = await resourcesAuthApi.getAzureResourcesApis(context.clientExtensionId, azureResourcesCredential, context.azureResourcesApiVersions);
             void context.onDidReceiveAzureResourcesApis(resourcesApis);
         } catch (err) {
@@ -104,11 +104,11 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
     }
 }
 
-async function getClientExtensionApi<T extends AzureExtensionApi>(clientExtensionId: string, clientExtensionVersion: string): Promise<T> {
-    const extensionProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>(clientExtensionId);
+async function getExtensionApi<T extends AzureExtensionApi>(extensionId: string, extensionVersion: string): Promise<T> {
+    const extensionProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>(extensionId);
     if (extensionProvider) {
-        return extensionProvider.getApi<T>(clientExtensionVersion);
+        return extensionProvider.getApi<T>(extensionVersion);
     } else {
-        throw new Error(l10n.t('Could not find Azure extension API for extension "{0}".', clientExtensionId));
+        throw new Error(l10n.t('Could not find Azure extension API for extension "{0}".', extensionId));
     }
 }

@@ -25,9 +25,10 @@ function createMockApiProvider(versions: string[]): apiUtils.AzureExtensionApiPr
 }
 
 /**
- * Creates a mock auth API with core API factories matching the provided versions.
+ * Creates a mock auth API protecting core API versions: ['0.0.1', '2.0.0', '3.0.0']
  */
-export function createMockAuthApi(coreApiVersions: string[], customDependencies?: AuthApiFactoryDependencies): AzureResourcesExtensionAuthApi {
+export function createMockAuthApi(customDependencies?: AuthApiFactoryDependencies): AzureResourcesExtensionAuthApi {
+    const coreApiVersions: string[] = ['0.0.1', '2.0.0', '3.0.0'];
     const coreApiProvider = createMockApiProvider(coreApiVersions);
     const authApiProvider = createAuthApiFactory(coreApiProvider, customDependencies);
     return authApiProvider.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups-tests' });
