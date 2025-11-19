@@ -32,12 +32,13 @@ export interface AzureResourcesApiRequestContext {
     onApiRequestError?: (error: AzureResourcesApiRequestError) => void | Promise<void>;
 }
 
-export interface AzureResourcesApiRequestCustomDependenciesContext extends AzureResourcesApiRequestContext {
+export interface CustomRequestDependenciesContext extends AzureResourcesApiRequestContext {
     /**
      * An optional credential manager used for issuing and verifying the client extensions credentials. If none are supplied, a simple UUID credential manager is used.
      * @test Use this to more easily mock and inspect the behavior of the underlying credential manager.
      */
     credentialManager?: AzExtCredentialManager;
+
     /**
      * An optional API provider to be used in lieu of the VS Code API `vscode.extension.getExtension()`.
      * This should _NEVER_ be used in production environments.

@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import * as assert from "assert";
-import { AzExtUUIDCredentialManager, AzureExtensionApi, AzureResourcesApiRequestCustomDependenciesContext, AzureResourcesApiRequestError, AzureResourcesApiRequestErrorCode, AzureResourcesExtensionApi, prepareAzureResourcesApiRequest } from "../../../extension.bundle";
+import { AzExtUUIDCredentialManager, AzureExtensionApi, AzureResourcesApiRequestContext, AzureResourcesApiRequestError, AzureResourcesApiRequestErrorCode, AzureResourcesExtensionApi, CustomRequestDependenciesContext, prepareAzureResourcesApiRequest } from "../../../extension.bundle";
 import { createMockAuthApi } from "./mockAuthApiFactory";
 
 const clientExtensionId: string = 'ms-azuretools.vscode-azurecontainerapps';
@@ -16,7 +16,7 @@ suite('Azure Resources API - client request tooling tests', async () => {
         await new Promise<void>((resolve) => {
             const timeout = setTimeout(resolve, 5000);
 
-            const requestContext: AzureResourcesApiRequestCustomDependenciesContext = {
+            const requestContext: AzureResourcesApiRequestContext = {
                 clientExtensionId,
                 azureResourcesApiVersions: ['0.0.1', '^2.0.0'],
                 onDidReceiveAzureResourcesApis: (azureResourcesApis: (AzureExtensionApi | AzureResourcesExtensionApi | undefined)[]) => {
@@ -35,7 +35,7 @@ suite('Azure Resources API - client request tooling tests', async () => {
             };
 
             // Define an external manager so the two preparation calls below point to the same credential manager
-            requestContext.credentialManager = new AzExtUUIDCredentialManager();
+            (requestContext as CustomRequestDependenciesContext).credentialManager = new AzExtUUIDCredentialManager();
 
             // For testing, it is necessary to wire up both the client and host api provider to represent the APIs on each side of the handshake.
             // The prepare call needs to happen twice in order to set this scenario up - once to generate the client API for the host, and again to
@@ -46,7 +46,7 @@ suite('Azure Resources API - client request tooling tests', async () => {
 
             const { clientApi } = prepareAzureResourcesApiRequest(requestContext, coreClientExtensionApi);
             const hostApi = createMockAuthApi({ clientApiProvider: { getApi: () => clientApi } });
-            requestContext.hostApiProvider = { getApi: () => hostApi };
+            (requestContext as CustomRequestDependenciesContext).hostApiProvider = { getApi: () => hostApi };
 
             const { requestResourcesApis } = prepareAzureResourcesApiRequest(requestContext, clientApi);
             requestResourcesApis();
@@ -62,7 +62,7 @@ suite('Azure Resources API - client request tooling tests', async () => {
         await new Promise<void>((resolve) => {
             const timeout = setTimeout(resolve, 5000);
 
-            const requestContext: AzureResourcesApiRequestCustomDependenciesContext = {
+            const requestContext: AzureResourcesApiRequestContext = {
                 clientExtensionId: 'extension1',
                 azureResourcesApiVersions: ['0.0.1', '^2.0.0'],
                 onDidReceiveAzureResourcesApis: () => {
