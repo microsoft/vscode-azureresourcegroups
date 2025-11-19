@@ -5,7 +5,7 @@
 
 import * as assert from "assert";
 import { AzExtUUIDCredentialManager, AzureExtensionApi, AzureResourcesApiRequestContext, AzureResourcesApiRequestError, AzureResourcesApiRequestErrorCode, AzureResourcesExtensionApi, CustomRequestDependenciesContext, prepareAzureResourcesApiRequest } from "../../../extension.bundle";
-import { createMockAuthApi } from "./mockAuthApiFactory";
+import { createMockAuthApi } from "./mockAuthApi";
 
 const clientExtensionId: string = 'ms-azuretools.vscode-azurecontainerapps';
 

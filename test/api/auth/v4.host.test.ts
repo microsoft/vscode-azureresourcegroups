@@ -7,7 +7,7 @@ import * as assert from "assert";
 import { apiUtils, AzureExtensionApi, AzureResourcesExtensionAuthApi, nonNullValue, parseError } from "../../../extension.bundle";
 import { assertThrowsAsync } from "../../wrapFunctionsInTelemetry.test";
 import { MockUUIDCredentialManager } from "./MockUUIDCredentialManager";
-import { createMockAuthApi } from "./mockAuthApiFactory";
+import { createMockAuthApi } from "./mockAuthApi";
 
 const clientExtensionId: string = 'ms-azuretools.vscode-azurecontainerapps';
 const clientExtensionVersion: string = '1.0.0';
