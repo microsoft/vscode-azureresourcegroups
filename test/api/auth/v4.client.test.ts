@@ -34,7 +34,7 @@ suite('Azure Resources API client-side request tests', async () => {
                 apiVersion: '1.0.0',
             };
 
-            // Define an external manager so the two preparation calls that follow will point to the same credential manager
+            // Inject an external manager so the two preparation calls that follow will point to the same one
             (requestContext as CustomRequestDependenciesContext).credentialManager = new AzExtUUIDCredentialManager();
 
             // For testing, it is necessary to wire up both the client and host api provider to represent the parties on each side of the handshake.
