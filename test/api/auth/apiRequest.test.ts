@@ -9,7 +9,7 @@ import { createMockAuthApi } from "./mockAuthApiFactory";
 
 const clientExtensionId: string = 'ms-azuretools.vscode-azurecontainerapps';
 
-suite('Azure Resources API - client request tooling tests', async () => {
+suite('Azure Resources API client request tests', async () => {
     test('prepareAzureResourcesApiRequest should successfully complete a handshake & return available APIs if on the allow list', async () => {
         let receivedAzureResourcesApis: (AzureExtensionApi | AzureResourcesExtensionApi | undefined)[] = [];
 
