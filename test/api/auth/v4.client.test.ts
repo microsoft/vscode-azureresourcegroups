@@ -53,7 +53,7 @@ suite('Azure Resources API client-side request tests', async () => {
         });
 
         assert.equal(receivedResourcesApis[0]?.apiVersion, '0.0.1');
-        assert.match(receivedResourcesApis[1]?.apiVersion ?? '', /^2./);
+        assert.match(receivedResourcesApis[1]?.apiVersion ?? '', /^2\./);
     });
 
     test('prepareAzureResourcesApiRequest should return an error if not on the allow list', async () => {
