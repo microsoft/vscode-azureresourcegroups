@@ -41,8 +41,8 @@ export interface CustomRequestDependenciesContext extends AzureResourcesApiReque
     credentialManager?: AzExtCredentialManager;
 
     /**
-     * An optional API provider to be used in lieu of the VS Code API `vscode.extension.getExtension()`.
-     * This should _NEVER_ be used in production environments.
+     * An optional API provider to be used in lieu of the VS Code extension provider `vscode.extension.getExtension()`.
+     * This should _NOT_ be used in production environments.
      * @test Use this to more easily mock and inject custom host extension API exports.
      */
     hostApiProvider?: { getApi(): AzureResourcesExtensionAuthApi };
