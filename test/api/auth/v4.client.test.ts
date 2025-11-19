@@ -42,7 +42,7 @@ suite('Azure Resources API client-side request tests', async () => {
             // and then once more to pass that client to the host API for the final handshake method to point to.
             //
             // NOTE: This is not normally necessary since VS Code's API normally manages extension exports; however, this is not something we can rely on
-            // during tests because we need to be able to test point to our own mocked extension APIs (requiring us to swap out the native VS Code extension provider).
+            // during tests because we need to be able to point to our own mocked APIs (which requires us to swap out the native VS Code extension provider).
 
             const { clientApi } = prepareAzureResourcesApiRequest(requestContext, coreClientExtensionApi);
             const hostApi = createMockAuthApi({ clientApiProvider: { getApi: () => clientApi } });
