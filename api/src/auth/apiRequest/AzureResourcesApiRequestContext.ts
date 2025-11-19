@@ -32,6 +32,7 @@ export interface AzureResourcesApiRequestContext {
     onApiRequestError?: (error: AzureResourcesApiRequestError) => void | Promise<void>;
 }
 
+// NOTE: Dependency injection options for tests; skip exporting this in the index
 export interface CustomRequestDependenciesContext extends AzureResourcesApiRequestContext {
     /**
      * An optional credential manager used for issuing and verifying the client extensions credentials. If none are supplied, a simple UUID credential manager is used.
