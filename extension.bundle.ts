@@ -37,7 +37,7 @@ export * from './src/commands/deleteResourceGroup/v2/deleteResourceGroupV2';
 export { activate, deactivate } from './src/extension';
 // Export for testing only - not part of public API
 export * from './api/src/extensionApi';
-export * from './src/api/auth/createAzureResourcesAuthApiFactory';
+export * from './src/api/auth/createAuthApiFactory';
 export { AuthAccountStateManager, getAuthAccountStateManager } from './src/exportAuthRecord';
 export * from './src/extensionVariables';
 export * from './src/hostapi.v2.internal';

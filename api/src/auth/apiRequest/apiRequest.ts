@@ -62,8 +62,8 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
     }
 
     try {
-        const resourcesApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
-        await resourcesApi.createAzureResourcesApiSession(context.clientExtensionId, clientApiVersion, clientCredential);
+        const resourcesAuthApi = await getExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
+        await resourcesAuthApi.createAzureResourcesApiSession(context.clientExtensionId, clientApiVersion, clientCredential);
     } catch (err) {
         if (err instanceof Error) {
             void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.HostCreateSessionFailed, message: clientCredentialManager.maskCredentials(err.message) });
@@ -92,7 +92,7 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
         }
 
         try {
-            const resourcesAuthApi = await getClientExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
+            const resourcesAuthApi = await getExtensionApi<AzureResourcesExtensionAuthApi>(azureResourcesExtId, azureResourcesAuthApiVersion);
             const resourcesApis = await resourcesAuthApi.getAzureResourcesApis(context.clientExtensionId, azureResourcesCredential, context.azureResourcesApiVersions);
             void context.onDidReceiveAzureResourcesApis(resourcesApis);
         } catch (err) {
@@ -104,7 +104,7 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
     }
 }
 
-async function getClientExtensionApi<T extends AzureExtensionApi>(clientExtensionId: string, clientExtensionVersion: string): Promise<T> {
+async function getExtensionApi<T extends AzureExtensionApi>(clientExtensionId: string, clientExtensionVersion: string): Promise<T> {
     const extensionProvider = await apiUtils.getExtensionExports<apiUtils.AzureExtensionApiProvider>(clientExtensionId);
     if (extensionProvider) {
         return extensionProvider.getApi<T>(clientExtensionVersion);
