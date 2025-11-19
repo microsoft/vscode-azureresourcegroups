@@ -86,7 +86,7 @@ suite('v4 internal API auth tests', async () => {
         const resourcesApis = await authApi.getAzureResourcesApis(clientExtensionId, generatedHostCredential, ['0.0.1', '^2.0.0']);
 
         assert.equal(resourcesApis[0]?.apiVersion, '0.0.1');
-        assert.match(resourcesApis[1]?.apiVersion ?? '', /^2./);
+        assert.match(resourcesApis[1]?.apiVersion ?? '', /^2\./);
     });
 
     test('getAzureResourcesApis should throw if provided an invalid credential', async () => {
