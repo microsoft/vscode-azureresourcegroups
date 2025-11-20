@@ -118,7 +118,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         registerLMTools();
     });
 
-    const extensionManager = new ResourceGroupsExtensionManager()
+    const extensionManager = new ResourceGroupsExtensionManager();
 
     const azureResourceBranchDataProviderManager = new AzureResourceBranchDataProviderManager(
         new DefaultAzureResourceBranchDataProvider(),
