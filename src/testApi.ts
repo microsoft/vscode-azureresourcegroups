@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
-import { AzExtTreeDataProvider } from "@microsoft/vscode-azext-utils";
+import { AzExtTreeDataProvider, UIExtensionVariables } from "@microsoft/vscode-azext-utils";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
 
@@ -18,6 +18,11 @@ export interface TestApi {
      * API version for the test API
      */
     apiVersion: '99.0.0';
+
+    /**
+     * UI extension variables often used for registration in AzExt shared packages
+     */
+    extVars: UIExtensionVariables;
 
     /**
      * Get the extension's internal API instance

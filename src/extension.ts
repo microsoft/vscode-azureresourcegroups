@@ -264,6 +264,10 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
             apiVersion: '99.0.0',
             createApi: () => ({
                 apiVersion: '99.0.0',
+                extVars: {
+                    context: ext.context,
+                    outputChannel: ext.outputChannel,
+                },
                 getApi: () => ext.v2.api,
                 compatibility: {
                     getAppResourceTree: () => ext.appResourceTree,
