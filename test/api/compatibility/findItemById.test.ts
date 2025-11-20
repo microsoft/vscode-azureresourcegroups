@@ -8,9 +8,9 @@ import assert from 'assert';
 import { randomUUID } from 'crypto';
 import { commands, TreeItem } from 'vscode';
 import { AzExtResourceType, AzureResource, BranchDataProvider, ResourceModelBase } from '../../../api/src';
-import { ext } from '../../../src/extensionVariables';
 import { api } from '../api';
 import { createMockSubscriptionWithFunctions } from '../mockServiceFactory';
+import { getCachedTestApi } from '../../utils/testApiAccess';
 
 suite('findItemById', () => {
 
@@ -32,7 +32,7 @@ suite('findItemById', () => {
 
         api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, azureResourceBranchDataProvider);
 
-        const treeItem = await ext.appResourceTree.findTreeItem(mocks.functionApp1.id, {} as unknown as IActionContext);
+        const treeItem = await getCachedTestApi().compatibility.getAppResourceTree().findTreeItem(mocks.functionApp1.id, {} as unknown as IActionContext);
         assert.ok(treeItem);
         assert.strictEqual(treeItem.id, mocks.functionApp1.id);
     }
@@ -72,7 +72,7 @@ suite('findItemById', () => {
         api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, azureResourceBranchDataProvider);
         await commands.executeCommand('azureResourceGroups.groupBy.resourceType');
 
-        const treeItem = await ext.appResourceTree.findTreeItem(`/subscriptions/${randomUUID()}/FunctionApps/${mocks.functionApp1.id}`, {} as unknown as IActionContext);
+        const treeItem = await getCachedTestApi().compatibility.getAppResourceTree().findTreeItem(`/subscriptions/${randomUUID()}/FunctionApps/${mocks.functionApp1.id}`, {} as unknown as IActionContext);
         assert.ok(treeItem);
         assert.strictEqual(treeItem.id, mocks.functionApp1.id);
     });

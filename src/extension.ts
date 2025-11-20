@@ -6,11 +6,12 @@
 'use strict';
 
 import { registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzureExtensionApi, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
 import { AzExtResourceType } from '../api/src/AzExtResourceType';
+import { TestApi } from './testApi';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/ResourceGroupsExtensionManager';
 import { ActivityLogResourceProviderManager, AzureResourceProviderManager, TenantResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
@@ -210,51 +211,75 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
         async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getSubscriptions(filter); };
 
-    return createApiProvider(
-        [
-            {
+    const apiFactories: AzureExtensionApiFactory[] = [
+        {
+            apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
+            createApi: () => new InternalAzureResourceGroupsExtensionApi({
                 apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
-                createApi: () => new InternalAzureResourceGroupsExtensionApi({
-                    apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
-                    appResourceTree: ext.appResourceTree,
-                    appResourceTreeView: ext.appResourceTreeView,
-                    workspaceResourceTree: ext.workspaceTree,
-                    workspaceResourceTreeView: ext.workspaceTreeView,
-                    registerApplicationResourceResolver,
-                    registerWorkspaceResourceProvider,
-                    registerActivity,
-                    pickAppResource: createCompatibilityPickAppResource(),
-                    getSubscriptions,
-                }),
+                appResourceTree: ext.appResourceTree,
+                appResourceTreeView: ext.appResourceTreeView,
+                workspaceResourceTree: ext.workspaceTree,
+                workspaceResourceTreeView: ext.workspaceTreeView,
+                registerApplicationResourceResolver,
+                registerWorkspaceResourceProvider,
+                registerActivity,
+                pickAppResource: createCompatibilityPickAppResource(),
+                getSubscriptions,
+            }),
+        },
+        v2ApiFactory,
+        /**
+         * This is a temporary API and will be removed in a future version once the staged introduction
+         * of the "DocumentDB for VS Code" extension is complete.
+         *
+         * The 3.0.0 API is *NOT* backward-compatible with 2.0.0 on purpose to prevent API users from upgrading to this
+         * temporary API.
+         *
+         * Its primary purpose is to support the user migration from the Azure Databases extension to the Azure DocumentDB extension.
+         * It provides a feature flag that allows dependent extensions (e.g., `vscode-cosmosdb`, `vscode-documentdb`) to detect
+         * when this new functionality is available.
+         *
+         * This API-based signal is necessary due to a staged rollout, allowing users time to upgrade.
+         * Dependent extensions should rely on this API signal rather than the extension version.
+         *
+         * This temporary API will be removed in a future version once the migration is complete.
+         */
+        {
+            apiVersion: "3.0.0",
+            createApi: () => {
+                return {
+                    apiVersion: "3.0.0",
+                    isDocumentDbExtensionSupportEnabled: () => true,
+                };
             },
-            v2ApiFactory,
-            /**
-             * This is a temporary API and will be removed in a future version once the staged introduction
-             * of the "DocumentDB for VS Code" extension is complete.
-             *
-             * The 3.0.0 API is *NOT* backward-compatible with 2.0.0 on purpose to prevent API users from upgrading to this
-             * temporary API.
-             *
-             * Its primary purpose is to support the user migration from the Azure Databases extension to the Azure DocumentDB extension.
-             * It provides a feature flag that allows dependent extensions (e.g., `vscode-cosmosdb`, `vscode-documentdb`) to detect
-             * when this new functionality is available.
-             *
-             * This API-based signal is necessary due to a staged rollout, allowing users time to upgrade.
-             * Dependent extensions should rely on this API signal rather than the extension version.
-             *
-             * This temporary API will be removed in a future version once the migration is complete.
-             */
-            {
-                apiVersion: "3.0.0",
-                createApi: () => {
-                    return {
-                        apiVersion: "3.0.0",
-                        isDocumentDbExtensionSupportEnabled: () => true,
-                    };
+        } as AzureExtensionApiFactory
+    ];
+
+    // Add test API when running tests
+    // This allows tests to access internal extension state
+    if (process.env.VSCODE_RUNNING_TESTS) {
+        const testApiFactory: AzureExtensionApiFactory<TestApi> = {
+            apiVersion: '99.0.0',
+            createApi: () => ({
+                apiVersion: '99.0.0',
+                getApi: () => ext.v2.api,
+                compatibility: {
+                    getAppResourceTree: () => ext.appResourceTree,
                 },
-            } as AzureExtensionApi
-        ]
-    );
+                testing: {
+                    setOverrideAzureServiceFactory: (factory) => {
+                        ext.testing.overrideAzureServiceFactory = factory;
+                    },
+                    setOverrideAzureSubscriptionProvider: (provider) => {
+                        ext.testing.overrideAzureSubscriptionProvider = provider;
+                    },
+                },
+            }),
+        };
+        apiFactories.push(testApiFactory);
+    }
+
+    return createApiProvider(apiFactories);
 }
 
 export function deactivate(): void {

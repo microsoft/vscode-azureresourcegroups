@@ -1,15 +1,15 @@
 import assert from "assert";
 import { commands } from "vscode";
 import { AzExtResourceType } from "../api/src";
-import { ext } from "../src/extensionVariables";
 import { GroupingItem } from "../src/tree/azure/grouping/GroupingItem";
 import { isLocationGroupingItem, LocationGroupingItem } from "../src/tree/azure/grouping/LocationGroupingItem";
 import { isResourceGroupGroupingItem, ResourceGroupGroupingItem } from "../src/tree/azure/grouping/ResourceGroupGroupingItem";
 import { isResourceTypeGroupingItem, ResourceTypeGroupingItem } from "../src/tree/azure/grouping/ResourceTypeGroupingItem";
 import { createMockSubscriptionWithFunctions } from "./api/mockServiceFactory";
+import { getCachedTestApi } from "./utils/testApiAccess";
 
 const api = () => {
-    return ext.v2.api.resources;
+    return getCachedTestApi().getApi().resources;
 };
 
 suite('Azure resource grouping tests', async () => {

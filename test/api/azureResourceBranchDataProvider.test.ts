@@ -1,16 +1,16 @@
 import assert from "assert";
 import { commands, TreeDataProvider, TreeItem } from "vscode";
 import { AzExtResourceType, AzureResource, BranchDataProvider, ResourceModelBase } from "../../api/src";
-import { ext } from "../../src/extensionVariables";
 import { BranchDataItemWrapper } from "../../src/tree/BranchDataItemWrapper";
 import { ResourceGroupsItem } from "../../src/tree/ResourceGroupsItem";
 import { AzureResourceItem } from "../../src/tree/azure/AzureResourceItem";
 import { SubscriptionItem } from "../../src/tree/azure/SubscriptionItem";
 import { GroupingItem } from "../../src/tree/azure/grouping/GroupingItem";
 import { createMockSubscriptionWithFunctions } from "./mockServiceFactory";
+import { getCachedTestApi } from "../utils/testApiAccess";
 
 const api = () => {
-    return ext.v2.api.resources;
+    return getCachedTestApi().getApi().resources;
 };
 
 suite('Azure Resource Branch Data Provider tests', async () => {

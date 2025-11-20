@@ -2,12 +2,12 @@ import assert from "assert";
 import { commands, TreeItem } from "vscode";
 import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, AzureResourceModel } from "../../api/src";
 import { hasViewProperties } from "../../src/commands/viewProperties";
-import { ext } from "../../src/extensionVariables";
 import { BranchDataItemWrapper } from "../../src/tree/BranchDataItemWrapper";
 import { createMockSubscriptionWithFunctions } from "./mockServiceFactory";
+import { getCachedTestApi } from "../utils/testApiAccess";
 
 const api = () => {
-    return ext.v2.api.resources;
+    return getCachedTestApi().getApi().resources;
 };
 
 type Mutable<T> = {
