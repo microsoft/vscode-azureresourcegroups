@@ -78,7 +78,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
     public async writeFileImpl(context: IActionContext, model: ITagsModel, content: Uint8Array, originalUri: Uri): Promise<void> {
         // weird issue when in vscode.dev, the content Uint8Array has a giant byteOffset that causes it impossible to decode
         // so re-form the buffer
-        const buf = Buffer.from(content); // TODO: verify this is still working
+        const buf = Buffer.from(content);
         const text: string = buf.toString('utf-8');
 
         const diagnostics: Diagnostic[] = languages.getDiagnostics(originalUri).filter(d => d.severity === DiagnosticSeverity.Error);
