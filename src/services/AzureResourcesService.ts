@@ -34,8 +34,8 @@ export const defaultAzureResourcesServiceFactory = (): AzureResourcesService => 
             const client = await createClient(context, subscription);
             return uiUtils.listAllIterator(client.resourceGroups.list());
         },
-    }
-}
+    };
+};
 
 export type AzureResourcesServiceFactory = () => AzureResourcesService;
 

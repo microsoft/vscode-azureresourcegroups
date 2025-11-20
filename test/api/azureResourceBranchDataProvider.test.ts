@@ -1,11 +1,17 @@
-import * as assert from "assert";
+import assert from "assert";
 import { commands, TreeDataProvider, TreeItem } from "vscode";
-import { AzExtResourceType, AzureResource, AzureResourceItem, BranchDataItemWrapper, BranchDataProvider, ext, GroupingItem, ResourceGroupsItem, ResourceModelBase, SubscriptionItem } from "../../extension.bundle";
+import { AzExtResourceType, AzureResource, BranchDataProvider, ResourceModelBase } from "../../api/src";
+import { BranchDataItemWrapper } from "../../src/tree/BranchDataItemWrapper";
+import { ResourceGroupsItem } from "../../src/tree/ResourceGroupsItem";
+import { AzureResourceItem } from "../../src/tree/azure/AzureResourceItem";
+import { SubscriptionItem } from "../../src/tree/azure/SubscriptionItem";
+import { GroupingItem } from "../../src/tree/azure/grouping/GroupingItem";
 import { createMockSubscriptionWithFunctions } from "./mockServiceFactory";
+import { getCachedTestApi } from "../utils/testApiAccess";
 
 const api = () => {
-    return ext.v2.api.resources;
-}
+    return getCachedTestApi().getApi().resources;
+};
 
 suite('Azure Resource Branch Data Provider tests', async () => {
     test('Registered Azure resource branch data provider is used', async () => {
@@ -16,7 +22,7 @@ suite('Azure Resource Branch Data Provider tests', async () => {
                 getResourceItemIsCalled = true;
                 return {
                     id: resource.id,
-                }
+                };
             },
             getChildren: (_resource: AzureResource): AzureResource[] => {
                 return [];
@@ -24,7 +30,7 @@ suite('Azure Resource Branch Data Provider tests', async () => {
             getTreeItem: (resource: AzureResource): TreeItem => {
                 return new TreeItem(resource.name);
             }
-        }
+        };
 
         api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, azureResourceBranchDataProvider);
         await commands.executeCommand('azureResourceGroups.groupBy.resourceType');
@@ -56,7 +62,7 @@ suite('Azure Resource Branch Data Provider tests', async () => {
                     label: resource.name,
                     id: resource.id,
                     contextValue: 'validItem'
-                }
+                };
             }
         });
 
@@ -94,7 +100,7 @@ suite('Azure Resource Branch Data Provider tests', async () => {
                     label: resource.name,
                     id: resource.id,
                     contextValue: 'validItem'
-                }
+                };
             }
         });
 

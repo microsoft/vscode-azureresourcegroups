@@ -8,7 +8,11 @@ import { canFocusContextValue } from "../../../constants";
 import { GroupingItem, GroupingItemOptions } from "./GroupingItem";
 import { GroupingItemFactoryOptions } from "./GroupingItemFactory";
 
+const resourceTypeGroupingItemType = 'resourceType';
+
 export class ResourceTypeGroupingItem extends GroupingItem {
+    public override readonly groupingType = resourceTypeGroupingItemType;
+
     constructor(public readonly resourceType: AzExtResourceType | string, options: GroupingItemOptions, factoryOptions: GroupingItemFactoryOptions) {
         super(options, factoryOptions);
 
@@ -17,5 +21,5 @@ export class ResourceTypeGroupingItem extends GroupingItem {
 }
 
 export function isResourceTypeGroupingItem(groupingItem: GroupingItem): groupingItem is ResourceTypeGroupingItem {
-    return groupingItem instanceof ResourceTypeGroupingItem;
+    return groupingItem.groupingType === resourceTypeGroupingItemType;
 }

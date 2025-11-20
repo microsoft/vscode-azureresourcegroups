@@ -21,7 +21,8 @@ export async function viewProperties(context: IActionContext, node?: ResourceGro
 
     // support both async and sync viewProperties models
     const data = isAsyncViewPropertiesModel(node.viewProperties) ? await node.viewProperties.getData() : node.viewProperties.data;
-    await openReadOnlyJson({ fullId: node.id ?? uuidv4(), label: node.viewProperties.label }, data);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await openReadOnlyJson({ fullId: node.id ?? uuidv4(), label: node.viewProperties.label }, data as any);
 }
 
 export function hasViewProperties(node: unknown): node is { viewProperties: ViewPropertiesModel } {

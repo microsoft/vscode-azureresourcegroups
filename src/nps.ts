@@ -44,6 +44,7 @@ export function survey({ globalState }: ExtensionContext): void {
             return;
         }
 
+        // eslint-disable-next-line no-constant-binary-expression
         const isCandidate = true || globalState.get(IS_CANDIDATE_KEY, false)
             || Math.random() < PROBABILITY;
 

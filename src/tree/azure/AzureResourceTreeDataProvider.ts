@@ -87,7 +87,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                     } else {
                         return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
                             commandId: 'azureResourceGroups.selectSubscriptions'
-                        })]
+                        })];
                     }
                 } else {
                     //find duplicate subscriptions and change the name to include the account name. If duplicate subs are in the same account add the tenant id instead
@@ -148,7 +148,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                     },
                                     this.resourceGroupingManager,
                                     this.resourceProviderManager,
-                                    subscription)
+                                    subscription);
                             });
                     } else {
                         return subscriptions.map(
@@ -177,7 +177,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                     },
                                     this.resourceGroupingManager,
                                     this.resourceProviderManager,
-                                    subscription)
+                                    subscription);
                             });
                     }
                 }

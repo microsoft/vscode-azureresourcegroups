@@ -45,7 +45,7 @@ function setTelemetryPropertiesForId(context: IActionContext, resourceId: string
 }
 
 function parsePartialAzureResourceId(id: string): Partial<ParsedAzureResourceId> & Pick<ParsedAzureResourceId, 'rawId'> & { subResourcePath?: string } {
-    const matches = id.match(/^\/subscriptions\/([^\/]*)(\/resourceGroups\/([^\/]*)(\/providers\/([^\/]*\/[^\/]*)\/([^\/]*)(\/(.*))?)?)?$/i);
+    const matches = id.match(/^\/subscriptions\/([^/]*)(\/resourceGroups\/([^/]*)(\/providers\/([^/]*\/[^/]*)\/([^/]*)(\/(.*))?)?)?$/i);
     return {
         rawId: id,
         subscriptionId: matches?.[1],
