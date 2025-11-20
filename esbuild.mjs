@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { autoEsbuildOrWatch, autoSelectEsbuildConfig } from '@microsoft/vscode-azext-eng/esbuild';
-import { copy } from 'esbuild-plugin-copy';
 
 const baseConfig = autoSelectEsbuildConfig();
 
@@ -17,17 +16,6 @@ const finalConfig = {
             in: './src/cloudConsole/cloudShellChildProcess/cloudConsoleLauncher.ts',
             out: 'cloudConsoleLauncher',
         },
-    ],
-    plugins: [
-        ...baseConfig.plugins,
-        copy({
-            assets: [
-                {
-                    from: './node_modules/@microsoft/vscode-azext-azureutils/resources/azureIcons/*.svg',
-                    to: './node_modules/@microsoft/vscode-azext-azureutils/resources/azureIcons',
-                },
-            ],
-        }),
     ],
 };
 
