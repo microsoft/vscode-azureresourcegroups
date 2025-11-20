@@ -13,7 +13,7 @@ export class SovereignCloudListStep extends AzureWizardPromptStep<ConfigureSover
             { label: 'Azure China', data: 'ChinaCloud' },
             { label: 'Azure US Government', data: 'USGovernment' },
             { label: 'A custom Microsoft Sovereign Cloud', data: 'custom' }
-        ]
+        ];
 
         context.sovereignCloud = (await context.ui.showQuickPick(picks, { placeHolder: 'Select a sovereign cloud' })).data;
     }

@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TestOutputChannel, TestUserInput } from '@microsoft/vscode-azext-dev';
+import { registerOnActionStartHandler, TestUserInput } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { ext, registerOnActionStartHandler, settingUtils } from '../extension.bundle';
+import { settingUtils } from '../src/utils/settingUtils';
+import { getTestApi } from './utils/testApiAccess';
 
 const longRunningLocalTestsEnabled: boolean = !/^(false|0)?$/i.test(process.env.AzCode_EnableLongRunningTestsLocal || '');
 const longRunningRemoteTestsEnabled: boolean = !/^(false|0)?$/i.test(process.env.AzCode_UseAzureFederatedCredentials || '');
@@ -17,16 +18,16 @@ export const userSettings: { key: string, value: unknown }[] = [];
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(1 * 60 * 1000);
 
-    await vscode.extensions.getExtension('ms-azuretools.vscode-azureresourcegroups')?.activate();
+    // Initialize test API - this caches it for use throughout tests
+    await getTestApi();
 
     await vscode.commands.executeCommand('azureResourceGroups.refresh'); // activate the extension before tests begin
-    ext.outputChannel = new TestOutputChannel();
 
     registerOnActionStartHandler(context => {
         // Use `TestUserInput` by default so we get an error if an unexpected call to `context.ui` occurs, rather than timing out
         context.ui = new TestUserInput(vscode);
     });
-    const groupBySetting = settingUtils.getWorkspaceSetting('groupBy')
+    const groupBySetting = settingUtils.getWorkspaceSetting('groupBy');
     userSettings.push({ key: 'groupBy', value: groupBySetting });
 
     const deleteConfirmationSetting = settingUtils.getWorkspaceSetting('deleteConfirmation');

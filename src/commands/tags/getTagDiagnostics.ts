@@ -34,7 +34,7 @@ class TagVisitor implements jsonc.JSONVisitor {
      */
     public onObjectBegin = (_offset: number, _length: number, startLine: number, startCharacter: number) => {
         this._objectOpenBracketPositions.push(new Position(startLine, startCharacter));
-    }
+    };
 
     /**
      * Invoked when a closing brace is encountered and an object is completed. The offset and length represent the location of the closing brace.
@@ -45,14 +45,14 @@ class TagVisitor implements jsonc.JSONVisitor {
             const range: Range = new Range(openBracketPosition, new Position(closeBracketLine, closeBracketChar + 1));
             this.addTagValueTypeError(range, 'object');
         }
-    }
+    };
 
     /**
      * Invoked when an open bracket is encountered. The offset and length represent the location of the open bracket.
      */
     public onArrayBegin = (_offset: number, _length: number, startLine: number, startCharacter: number) => {
         this._arrayOpenBracketPositions.push(new Position(startLine, startCharacter));
-    }
+    };
 
     /**
      * Invoked when a closing bracket is encountered. The offset and length represent the location of the closing bracket.
@@ -68,7 +68,7 @@ class TagVisitor implements jsonc.JSONVisitor {
                 this.addTagValueTypeError(range, actualType);
             }
         }
-    }
+    };
 
     /**
      * Invoked when a property is encountered. The offset and length represent the location of the property name.
@@ -107,7 +107,7 @@ class TagVisitor implements jsonc.JSONVisitor {
                 this.addError(range, localize('tooManyTags', 'Only {0} tags are allowed.', maxTags));
             }
         }
-    }
+    };
 
     /**
      * Invoked when a literal value is encountered. The offset and length represent the location of the literal value.
@@ -125,7 +125,7 @@ class TagVisitor implements jsonc.JSONVisitor {
                 this.addError(range, localize('tagValueTooLong', 'Tag value must be {0} characters or less.', max));
             }
         }
-    }
+    };
 
     private addTagsTypeError(range: Range, actualType: string): void {
         this.addError(range, localize('tagsTypeError', 'Tags must be an object of key/value pairs instead of "{0}".', actualType));

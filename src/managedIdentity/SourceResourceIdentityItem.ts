@@ -37,7 +37,7 @@ export class SourceResourceIdentityItem implements ResourceGroupsItem {
                 return false;
             }
 
-            return userAssignedIdentities[msi.id] !== undefined
+            return userAssignedIdentities[msi.id] !== undefined;
         }).map((r) => {
             const sourceResource = createAzureResource(this.subscription, r);
             return new DefaultAzureResourceItem(sourceResource, { treeItemId: `${msi.id}/${sourceResource.id}` /** Also include the msi id to ensure uniqueness */ });
@@ -61,6 +61,6 @@ export class SourceResourceIdentityItem implements ResourceGroupsItem {
             id: this.id,
             contextValue: this.contextValue,
             collapsibleState: TreeItemCollapsibleState.Collapsed,
-        }
+        };
     }
 }

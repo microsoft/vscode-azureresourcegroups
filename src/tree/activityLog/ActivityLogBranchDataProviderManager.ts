@@ -12,7 +12,7 @@ export class ActivityLogResourceBranchDataProviderManager extends ResourceBranch
     ) {
         super(
             defaultProvider,
-            () => { return 'activityLog' }
+            () => { return 'activityLog'; }
         );
     }
 }

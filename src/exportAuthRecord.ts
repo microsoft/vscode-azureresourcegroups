@@ -268,7 +268,7 @@ function getTenantId(session: unknown, context?: IActionContext): string | undef
     try {
         // This handles the case if an error is thrown, if the configuration is not registered by any extension
         tenantFromArg = vscode.workspace.getConfiguration().get<string>('@azure.argTenant');
-    } catch (err) {
+    } catch {
         // If the configuration is not found, ignore and proceed
         ext.outputChannel.appendLine('No @azure.argTenant configuration found. Proceeding without tenant override.');
     }
@@ -290,7 +290,7 @@ function extractTenantIdFromIdToken(session: unknown, context?: IActionContext):
                 if (typeof payload.tid === 'string') {
                     return payload.tid;
                 }
-            } catch (e) {
+            } catch {
                 ext.outputChannel.appendLine('Failed to parse idToken for tenantId.');
                 if (context) {
                     context.telemetry.properties.result = 'Failed';

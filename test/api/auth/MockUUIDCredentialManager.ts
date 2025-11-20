@@ -3,7 +3,8 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzExtCredentialManager, maskValue } from "../../../extension.bundle";
+import { AzExtCredentialManager } from "../../../api/src/auth/credentialManager/AzExtCredentialManager";
+import { maskValue } from "../../../api/src/utils/maskValue";
 
 /**
  * A mock credential manager with the same implementation as `AzExtUUIDCredentialManager`,

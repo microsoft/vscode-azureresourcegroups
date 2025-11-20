@@ -3,8 +3,9 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import assert = require("assert");
-import { AzureSubscription, ISubscriptionContext } from "../../extension.bundle";
+import type { AzureSubscription } from "@microsoft/vscode-azext-azureauth";
+import type { ISubscriptionContext } from "@microsoft/vscode-azext-utils";
+import assert from "assert";
 
 /**
  * Validate that the given object is an ISubscriptionContext & AzureSubscription.

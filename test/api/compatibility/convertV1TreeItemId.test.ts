@@ -3,8 +3,8 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
-import { convertV1TreeItemId } from '../../../extension.bundle';
+import assert from 'assert';
+import { convertV1TreeItemId } from '../../../src/api/compatibility/CompatibleAzExtTreeDataProvider';
 
 suite('convertV1TreeItemId', () => {
     const validArmId = '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-rg/providers/Microsoft.ContainerRegistry/registries/test-registry';

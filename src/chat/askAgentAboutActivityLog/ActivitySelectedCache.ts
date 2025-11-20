@@ -5,7 +5,7 @@
 
 export class ActivitySelectedCache {
     private static _instance: ActivitySelectedCache;
-    private readonly _selectedActivityItemIds: Set<string> = new Set();
+    private readonly _selectedActivityItemIds = new Set<string>();
 
     private constructor() {
         // Private constructor to enforce a singleton pattern

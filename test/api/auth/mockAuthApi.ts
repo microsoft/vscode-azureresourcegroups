@@ -3,7 +3,9 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { apiUtils, AuthApiFactoryDependencies, AzureExtensionApi, AzureExtensionApiFactory, AzureResourcesExtensionAuthApi, createApiProvider, createAuthApiFactory, GetApiOptions } from "../../../extension.bundle";
+import { AzureExtensionApiFactory, createApiProvider } from "@microsoft/vscode-azext-utils";
+import { apiUtils, AzureExtensionApi, AzureResourcesExtensionAuthApi, GetApiOptions } from "../../../api/src";
+import { AuthApiFactoryDependencies, createAuthApiFactory } from "../../../src/api/auth/createAuthApiFactory";
 
 /**
  * Creates a mock API provider with API factories matching the versions provided.

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
-import { isWrapper, Wrapper } from '../../extension.bundle';
+import assert from 'assert';
+import { isWrapper, Wrapper } from '../../api/src';
 
 suite('isWrapper', () => {
 
@@ -20,7 +20,7 @@ suite('isWrapper', () => {
 
     test('Wrapper', () => {
         const actualWrapper: Wrapper = {
-            unwrap: <T>() => { return undefined as unknown as T },
+            unwrap: <T>() => { return undefined as unknown as T; },
         };
 
         assert.strictEqual(isWrapper(actualWrapper), true);

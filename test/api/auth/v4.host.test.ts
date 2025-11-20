@@ -3,8 +3,9 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { nonNullValue, parseError } from "@microsoft/vscode-azext-utils";
 import * as assert from "assert";
-import { apiUtils, AzureExtensionApi, AzureResourcesExtensionAuthApi, nonNullValue, parseError } from "../../../extension.bundle";
+import { apiUtils, AzureExtensionApi, AzureResourcesExtensionAuthApi } from "../../../api/src";
 import { assertThrowsAsync } from "../../wrapFunctionsInTelemetry.test";
 import { MockUUIDCredentialManager } from "./MockUUIDCredentialManager";
 import { createMockAuthApi } from "./mockAuthApi";
