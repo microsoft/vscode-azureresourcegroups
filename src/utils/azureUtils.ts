@@ -40,7 +40,7 @@ export function createGroupConfigFromResource(resource: AppResource, subscriptio
             icon: new ThemeIcon('globe'),
             contextValuesToAdd: ['azureLocationGroup']
         }
-    }
+    };
 
     if (resource.tags) {
         for (const tag of Object.keys(resource.tags)) {
@@ -48,7 +48,7 @@ export function createGroupConfigFromResource(resource: AppResource, subscriptio
                 label: resource.tags[tag],
                 id: `${subscriptionId}/${tag}/${resource.tags[tag]}`,
                 icon: new ThemeIcon('tag')
-            }
+            };
         }
     }
 
@@ -85,7 +85,7 @@ interface AzExtResourceTypeDisplayInfo {
 }
 
 const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDisplayInfo>> = {
-    AiFoundry: { displayName: localize('aiFoundry', 'Azure AI Foundry') },
+    AiFoundry: { displayName: localize('aiFoundry', 'Microsoft Foundry') },
     ApplicationInsights: { displayName: localize('insightsComponents', 'Application Insights') },
     AppServiceKubernetesEnvironment: { displayName: localize('containerService', 'App Service Kubernetes Environment') },
     AppServicePlans: { displayName: localize('serverFarms', 'App Service plans') },
@@ -125,4 +125,4 @@ const azExtDisplayInfo: Partial<Record<AzExtResourceType, AzExtResourceTypeDispl
     VirtualMachineScaleSets: { displayName: localize('virtualMachineScaleSets', 'Virtual machine scale sets') },
     VirtualNetworks: { displayName: localize('virtualNetworks', 'Virtual networks') },
     WebPubSub: { displayName: localize('webPubSub', 'Web PubSub') }
-}
+};

@@ -17,7 +17,7 @@ import { createVSCodeAzureSubscriptionProviderFactory } from "./VSCodeAzureSubsc
  */
 export function getSubscriptionProviderFactory(activateContext?: IActionContext): () => Promise<AzureSubscriptionProvider> {
     // if this for a nightly test, we want to use the test subscription provider
-    const useAzureFederatedCredentials: boolean = !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '')
+    const useAzureFederatedCredentials: boolean = !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '');
     if (useAzureFederatedCredentials) {
         // when running tests, ensure we throw the errors and they aren't silently swallowed
         if (activateContext) {
@@ -40,7 +40,7 @@ export function getSubscriptionProviderFactory(activateContext?: IActionContext)
             serviceConnectionId,
             tenantId: domain,
             clientId,
-        }
+        };
         return createAzureDevOpsSubscriptionProviderFactory(initializer);
     } else {
         return createVSCodeAzureSubscriptionProviderFactory();

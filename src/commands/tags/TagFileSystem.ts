@@ -32,10 +32,10 @@ export class ResourceTags implements ITagsModel {
         this.displayType = resource.resourceGroup ? 'resource' : 'resource group';
     }
 
-    readonly id: string = this.resource.id;
-    readonly subscription: AzureSubscription = this.resource.subscription;
+    get id(): string { return this.resource.id; }
+    get subscription(): AzureSubscription { return this.resource.subscription; }
 
-    readonly displayName: string = this.resource.name;
+    get displayName(): string { return this.resource.name; }
     readonly displayType: ITagsModel['displayType'];
 
     cTime!: number;
@@ -77,8 +77,8 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
 
     public async writeFileImpl(context: IActionContext, model: ITagsModel, content: Uint8Array, originalUri: Uri): Promise<void> {
         // weird issue when in vscode.dev, the content Uint8Array has a giant byteOffset that causes it impossible to decode
-        // so re-form the buffer with 0 byteOffset
-        const buf = Buffer.from(content, 0)
+        // so re-form the buffer
+        const buf = Buffer.from(content);
         const text: string = buf.toString('utf-8');
 
         const diagnostics: Diagnostic[] = languages.getDiagnostics(originalUri).filter(d => d.severity === DiagnosticSeverity.Error);
@@ -108,7 +108,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
             const update: MessageItem = { title: localize('update', 'Update') };
             await context.ui.showWarningMessage(confirmMessage, { modal: true }, update);
 
-            const tags: { [key: string]: string } = <{}>jsonc.parse(text);
+            const tags = jsonc.parse(text) as { [key: string]: string };
 
             // remove example tag
             if (Object.keys(tags).includes(insertKeyHere) && tags[insertKeyHere] === insertValueHere) {
@@ -129,7 +129,7 @@ export class TagFileSystem extends AzExtTreeFileSystem<ITagsModel> {
         return `${node.displayName}-tags.jsonc`;
     }
 
-    private getFileContentFromTags(tags: {} | undefined): string {
+    private getFileContentFromTags(tags: Tags['tags'] | undefined): string {
         tags = tags || {};
 
         const comment: string = localize('editAndSave', 'Edit and save this file to upload tags in Azure');

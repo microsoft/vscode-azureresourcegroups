@@ -25,7 +25,7 @@ export class DefaultAzureResourceItem implements ResourceGroupsItem {
         this.portalUrl = createPortalUrl(resource.subscription, resource.id);
     }
 
-    public readonly id: string = this.options.treeItemId ?? this.resource.id;
+    public get id(): string { return this.options.treeItemId ?? this.resource.id; }
 
     getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         if (this.resourceTypeExtension && !this.resourceTypeExtension.isInstalled() && !this.resourceTypeExtension.isPrivate()) {

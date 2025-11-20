@@ -139,7 +139,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                     },
                                     this.resourceGroupingManager,
                                     this.resourceProviderManager,
-                                    subscription)
+                                    subscription);
                             });
                     } else {
                         return subscriptions.map(
@@ -168,9 +168,8 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                     },
                                     this.resourceGroupingManager,
                                     this.resourceProviderManager,
-                                    subscription)
-                            }
-                        );
+                                    subscription);
+                            });
                     }
                 }
             } catch (error) {
