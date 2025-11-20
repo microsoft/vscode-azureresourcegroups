@@ -11,9 +11,8 @@
     "files.trimTrailingWhitespace": true,
     "search.exclude": {
         "out": true,
+        "dist": true,
         "**/node_modules": true,
         ".vscode-test": true
     },
-    "typescript.preferences.importModuleSpecifier": "project-relative",
-    "typescript.tsdk": "node_modules/typescript/lib"
 }

@@ -1,7 +1,10 @@
-import * as assert from "assert";
+import assert from "assert";
 import { Event, TreeDataProvider, TreeItem } from "vscode";
-import { BranchDataItemWrapper, ext, isWrapper, ResourceGroupsItem, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from "../../extension.bundle";
+import { isWrapper, ResourceModelBase, WorkspaceResource, WorkspaceResourceProvider } from "../../api/src";
+import { BranchDataItemWrapper } from "../../src/tree/BranchDataItemWrapper";
+import { ResourceGroupsItem } from "../../src/tree/ResourceGroupsItem";
 import { TestBranchDataProvider } from "./TestBranchDataProvider";
+import { getCachedTestApi } from "../utils/testApiAccess";
 
 const getWorkspaceResourceProviderStub: (onCalled?: () => void, resources?: WorkspaceResource[]) => WorkspaceResourceProvider = (onCalled, resources) => {
     return {
@@ -9,12 +12,12 @@ const getWorkspaceResourceProviderStub: (onCalled?: () => void, resources?: Work
             onCalled?.();
             return resources ?? [];
         }
-    }
-}
+    };
+};
 
 const api = () => {
-    return ext.v2.api.resources;
-}
+    return getCachedTestApi().getApi().resources;
+};
 
 /**
  * Todo:
@@ -49,7 +52,7 @@ suite('Branch data provider tests', async () => {
             getTreeItem: (resource: WorkspaceResource): TreeItem => {
                 return new TreeItem(resource.name);
             }
-        })
+        });
 
         const children = await api().workspaceResourceTreeDataProvider.getChildren() as any[];
         const testChild = children.find(c => c.id === workspaceResource.id);
@@ -81,7 +84,7 @@ suite('Branch data provider tests', async () => {
             getTreeItem: (resource: WorkspaceResource): TreeItem => {
                 return new TreeItem(resource.name);
             }
-        })
+        });
 
         const children = await api().workspaceResourceTreeDataProvider.getChildren() as any[];
         const testChild = children.find(c => c.id === workspaceResource.id);
@@ -108,12 +111,13 @@ suite('Branch data provider tests', async () => {
             id: 'test-resource-child',
             name: 'Test Resource 3 Child',
             resourceType: workspaceResourceType,
-        }
+        };
 
         branchDataProvider.registerChildren(workspaceResource, [childResource]);
 
         const rootChildren = await api().workspaceResourceTreeDataProvider.getChildren() as any[];
         const testChild = rootChildren.find(c => c.id === workspaceResource.id);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         branchDataProvider.assertGetTreeItemCalledAsync(async () => {
             await api().workspaceResourceTreeDataProvider.getTreeItem(testChild);
         });
@@ -150,6 +154,7 @@ suite('Branch data provider tests', async () => {
         const workspaceResourceChildNode = workspaceResourceChildNodes[0];
         assert.strictEqual(workspaceResourceChildNode.id, workspaceResourceChild.id);
 
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         branchDataProvider.assertGetTreeItemCalledAsync(async () => {
             await api().workspaceResourceTreeDataProvider.getTreeItem(workspaceResourceChildNode);
         });
@@ -201,7 +206,7 @@ function setupTestBranchDataProvider() {
         id: 'test-resource-child',
         name: 'Test Resource 3 Child',
         resourceType: workspaceResourceType,
-    }
+    };
 
     branchDataProvider.registerChildren(workspaceResource, [childResource]);
 
@@ -226,6 +231,7 @@ async function waitForEventToFire<T>(event: Event<T>): Promise<T> {
                 disposable.dispose();
                 resolve(data);
             } else {
+                // do nothing
             }
         });
     });

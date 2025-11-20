@@ -22,18 +22,18 @@ export async function focusGroup(context: IActionContext, item?: GroupingItem): 
         ext.focusedGroup = {
             kind: 'resourceGroup',
             id: item.resourceGroup.id.toLowerCase(),
-        }
+        };
     } else if (isResourceTypeGroupingItem(item)) {
         ext.focusedGroup = {
             kind: 'resourceType',
             type: item.resourceType as AzExtResourceType,
-        }
+        };
         context.telemetry.properties.resourceType = item.resourceType;
     } else if (isLocationGroupingItem(item)) {
         ext.focusedGroup = {
             kind: 'location',
             location: item.location,
-        }
+        };
     }
 
     if (ext.focusedGroup) {

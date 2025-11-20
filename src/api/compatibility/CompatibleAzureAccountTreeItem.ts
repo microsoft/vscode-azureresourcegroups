@@ -8,7 +8,7 @@ import { AzureWizardPromptStep, ISubscriptionActionContext, PickTreeItemWithComp
 import { ext } from "../../extensionVariables";
 
 export class CompatibleAzureAccountTreeItem extends AzureAccountTreeItemBase {
-    public constructor(testAccount?: {}) {
+    public constructor(testAccount?: never) {
         super(undefined, testAccount);
     }
 

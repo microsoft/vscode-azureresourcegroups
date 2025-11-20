@@ -11,7 +11,7 @@ import { wrapFunctionsInTelemetry } from '../utils/wrapFunctionsInTelemetry';
 export abstract class ResourceBranchDataProviderManagerBase<TResourceType, TBranchDataProvider extends BranchDataProvider<ResourceBase, ResourceModelBase>> extends vscode.Disposable {
     private readonly branchDataProviderMap = new Map<TResourceType, { provider: TBranchDataProvider, listener: vscode.Disposable | undefined }>();
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | ResourceModelBase | ResourceModelBase[] | undefined | null>();
-    private readonly onDidChangeBranchDataProvidersEmitter = new vscode.EventEmitter<TResourceType>()
+    private readonly onDidChangeBranchDataProvidersEmitter = new vscode.EventEmitter<TResourceType>();
 
     constructor(
         private readonly defaultProvider: TBranchDataProvider,

@@ -39,5 +39,7 @@ class OnRefreshTreeDataProvider implements TreeDataProvider<TreeDataItem> {
         return this.treeDataProvider.getChildren(element);
     }
 
-    onDidChangeTreeData?: Event<void | TreeDataItem | TreeDataItem[] | null | TreeDataItem> = this.treeDataProvider.onDidChangeTreeData;
+    get onDidChangeTreeData(): Event<void | TreeDataItem | TreeDataItem[] | null | TreeDataItem> | undefined {
+        return this.treeDataProvider.onDidChangeTreeData;
+    }
 }

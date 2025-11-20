@@ -7,7 +7,11 @@ import { canFocusContextValue } from "../../../constants";
 import { GroupingItem, GroupingItemOptions } from "./GroupingItem";
 import { GroupingItemFactoryOptions } from "./GroupingItemFactory";
 
+const locationGroupingItemType = 'location';
+
 export class LocationGroupingItem extends GroupingItem {
+    public override readonly groupingType = locationGroupingItemType;
+
     constructor(public readonly location: string, options: GroupingItemOptions, factoryOptions: GroupingItemFactoryOptions) {
         super(options, factoryOptions);
         this.contextValues.push('locationGroup', canFocusContextValue);
@@ -15,5 +19,5 @@ export class LocationGroupingItem extends GroupingItem {
 }
 
 export function isLocationGroupingItem(groupingItem: GroupingItem): groupingItem is LocationGroupingItem {
-    return groupingItem instanceof LocationGroupingItem;
+    return groupingItem.groupingType === locationGroupingItemType;
 }

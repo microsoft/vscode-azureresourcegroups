@@ -6,7 +6,7 @@
 'use strict';
 
 import { registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzureExtensionApi, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
@@ -36,6 +36,7 @@ import { AzureResourcesApiInternal } from './hostapi.v2.internal';
 import { ManagedIdentityBranchDataProvider } from './managedIdentity/ManagedIdentityBranchDataProvider';
 import { survey } from './nps';
 import { getSubscriptionProviderFactory } from './services/getSubscriptionProviderFactory';
+import { TestApi } from './testApi';
 import { BranchDataItemCache } from './tree/BranchDataItemCache';
 import { HelpTreeItem } from './tree/HelpTreeItem';
 import { TreeDataItem } from './tree/ResourceGroupsItem';
@@ -52,13 +53,12 @@ import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDe
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 
-export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }, ignoreBundle?: boolean): Promise<apiUtils.AzureExtensionApiProvider> {
+export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
     // the entry point for vscode.dev is this activate, not main.js, so we need to instantiate perfStats here
     // the perf stats don't matter for vscode because there is no main file to load-- we may need to see if we can track the download time
     perfStats ||= { loadStartTime: Date.now(), loadEndTime: Date.now() };
 
     ext.context = context;
-    ext.ignoreBundle = ignoreBundle;
     ext.outputChannel = createAzExtLogOutputChannel('Azure Resource Groups');
     context.subscriptions.push(ext.outputChannel);
     context.subscriptions.push(setupAzureLogger(ext.outputChannel));
@@ -138,11 +138,11 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         type => void extensionManager.activateWorkspaceResourceBranchDataProvider(type));
     const workspaceResourceProviderManager = new WorkspaceResourceProviderManager(() => extensionManager.activateWorkspaceResourceProviders());
     const activityLogResourceBranchDataProviderManager = new ActivityLogResourceBranchDataProviderManager(new ActivityLogDefaultBranchDataProvider());
-    const activityLogResourceProviderManager = new ActivityLogResourceProviderManager(async () => { return undefined });
+    const activityLogResourceProviderManager = new ActivityLogResourceProviderManager(async () => { return undefined; });
 
     const tenantResourceBranchDataProviderManager = new TenantResourceBranchDataProviderManager(
         new TenantDefaultBranchDataProvider());
-    const tenantResourceProviderManager = new TenantResourceProviderManager(async () => { return undefined });
+    const tenantResourceProviderManager = new TenantResourceProviderManager(async () => { return undefined; });
 
     const azureResourcesBranchDataItemCache = new BranchDataItemCache();
     const azureResourceTreeDataProvider = registerAzureTree(context, {
@@ -213,9 +213,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
 
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
-        async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getSubscriptions(filter) };
+        async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getSubscriptions(filter); };
 
-    const internalApiFactory: AzureExtensionApiFactory<AzureExtensionApi> = {
+    const internalApiFactory: AzureExtensionApiFactory = {
         apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
         createApi: () => new InternalAzureResourceGroupsExtensionApi({
             apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
@@ -248,7 +248,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
      * This temporary API will be removed in a future version once the migration is complete.
      * See: https://github.com/microsoft/vscode-azureresourcegroups/pull/1223
      */
-    const v3ApiFactory: AzureExtensionApiFactory<AzureExtensionApi> = {
+    const v3ApiFactory: AzureExtensionApiFactory = {
         apiVersion: v3,
         createApi: () => {
             return {
@@ -258,21 +258,43 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         },
     };
 
-    const coreApiProvider: apiUtils.AzureExtensionApiProvider = createApiProvider([
+    const coreApiFactories: AzureExtensionApiFactory[] = [
         internalApiFactory,
         v2ApiFactory,
         v3ApiFactory,
-    ]);
+    ];
+
+    // Add test API when running tests
+    // This allows tests to access internal extension state
+    if (process.env.VSCODE_RUNNING_TESTS) {
+        const testApiFactory: AzureExtensionApiFactory<TestApi> = {
+            apiVersion: '99.0.0',
+            createApi: () => ({
+                apiVersion: '99.0.0',
+                getApi: () => ext.v2.api,
+                compatibility: {
+                    getAppResourceTree: () => ext.appResourceTree,
+                },
+                testing: {
+                    setOverrideAzureServiceFactory: (factory) => {
+                        ext.testing.overrideAzureServiceFactory = factory;
+                    },
+                    setOverrideAzureSubscriptionProvider: (provider) => {
+                        ext.testing.overrideAzureSubscriptionProvider = provider;
+                    },
+                },
+            }),
+        };
+        coreApiFactories.push(testApiFactory);
+    }
 
     return createApiProvider(
         [
             // Todo: Remove once extension clients finish migrating
-            internalApiFactory,
-            v2ApiFactory,
-            v3ApiFactory,
+            ...coreApiFactories,
 
             // This will eventually be the only part of the API exposed publically
-            createAuthApiFactory(coreApiProvider),
+            createAuthApiFactory(createApiProvider(coreApiFactories)),
         ]
     );
 }

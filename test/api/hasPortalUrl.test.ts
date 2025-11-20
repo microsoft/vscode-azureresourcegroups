@@ -1,12 +1,13 @@
-import { AzureResourceModel } from "@microsoft/vscode-azureresources-api";
-import * as assert from 'assert';
+import assert from 'assert';
 import { commands, TreeItem, Uri } from "vscode";
-import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, BranchDataItemWrapper, ext } from "../../extension.bundle";
+import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, AzureResourceModel } from "../../api/src";
+import { BranchDataItemWrapper } from '../../src/tree/BranchDataItemWrapper';
 import { createMockSubscriptionWithFunctions } from "./mockServiceFactory";
+import { getCachedTestApi } from "../utils/testApiAccess";
 
 const api = () => {
-    return ext.v2.api.resources;
-}
+    return getCachedTestApi().getApi().resources;
+};
 
 type Mutable<T> = {
     -readonly [k in keyof T]: T[k];
@@ -41,7 +42,7 @@ class PortalUrlBranchDataProvider implements AzureResourceBranchDataProvider<Tes
             label: resource.name,
             id: resource.id,
             contextValue: 'validItem'
-        }
+        };
     }
 }
 
