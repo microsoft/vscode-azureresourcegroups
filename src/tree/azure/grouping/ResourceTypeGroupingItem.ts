@@ -4,6 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AzExtResourceType } from "api/src/AzExtResourceType";
+import { getName } from "src/utils/azureUtils";
 import * as vscode from 'vscode';
 import { getAzureExtensions } from "../../../AzExtWrapper";
 import { canFocusContextValue } from "../../../constants";
@@ -38,7 +39,7 @@ export class ResourceTypeGroupingItem extends GroupingItem {
         if (this.resourceType === AzExtResourceType.AiFoundry && extension.isInstalled()) {
             return [
                 new GenericItem(
-                    localize('openInFoundryExtension', 'Open in AI Foundry Extension'),
+                    localize('openInFoundryExtension', `Open in ${getName(AzExtResourceType.AiFoundry)} Extension`),
                     {
                         commandArgs: [],
                         commandId: 'microsoft-foundry-resources.focus',
