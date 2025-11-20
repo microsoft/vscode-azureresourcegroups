@@ -21,8 +21,8 @@ export class TenantTreeItem implements ResourceGroupsItem {
         this.tenantId = nonNullValue(this.tenant.tenantId);
     }
 
-    readonly id: string = nonNullValue(this.tenant.tenantId);
-    readonly accountId = this.account.id;
+    get id(): string { return nonNullValue(this.tenant.tenantId); }
+    get accountId(): string { return this.account.id; }
 
 
     getChildren(): vscode.ProviderResult<ResourceGroupsItem[]> {

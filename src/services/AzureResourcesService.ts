@@ -1,7 +1,9 @@
-import type { GenericResource, ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
+import { GenericResource, ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
+import { getSessionFromVSCode } from "@microsoft/vscode-azext-azureauth";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
-import { createSubscriptionContext, IActionContext } from "@microsoft/vscode-azext-utils";
+import { createCredential, createSubscriptionContext, IActionContext } from "@microsoft/vscode-azext-utils";
 import { AzureSubscription } from "api/src/resources/azure";
+import { getDuplicateSubscriptionModeSetting } from "../commands/accounts/selectSubscriptions";
 import { ext } from "../extensionVariables";
 import { createResourceClient } from "../utils/azureClients";
 
@@ -12,8 +14,16 @@ export interface AzureResourcesService {
 
 export const defaultAzureResourcesServiceFactory = (): AzureResourcesService => {
     async function createClient(context: IActionContext, subscription: AzureSubscription): Promise<ResourceManagementClient> {
-        const subContext = createSubscriptionContext(subscription);
-        return await createResourceClient([context, subContext]);
+        // If there are duplicate subscriptions in the same account we need to directly call getSessionFromVSCode with the tenantId to ensure we get the correct session
+        const duplicateSubsMode: boolean = getDuplicateSubscriptionModeSetting();
+        if (duplicateSubsMode) {
+            const session = await getSessionFromVSCode(undefined, subscription.tenantId, { createIfNone: false, silent: true, account: subscription.account });
+            const credential = createCredential(() => session);
+            return new ResourceManagementClient(credential, subscription.subscriptionId);
+        } else {
+            const subContext = createSubscriptionContext(subscription);
+            return await createResourceClient([context, subContext]);
+        }
     }
     return {
         async listResources(context: IActionContext, subscription: AzureSubscription): Promise<GenericResource[]> {
@@ -24,8 +34,8 @@ export const defaultAzureResourcesServiceFactory = (): AzureResourcesService => 
             const client = await createClient(context, subscription);
             return uiUtils.listAllIterator(client.resourceGroups.list());
         },
-    }
-}
+    };
+};
 
 export type AzureResourcesServiceFactory = () => AzureResourcesService;
 

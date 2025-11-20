@@ -70,5 +70,5 @@ export function createAzureResourcesHostApi(
         getSelectedAzureNode: () => {
             return getSelectedAzureNode();
         },
-    }
+    };
 }

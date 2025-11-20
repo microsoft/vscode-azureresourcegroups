@@ -9,6 +9,7 @@ import { BranchDataItemCache } from "./BranchDataItemCache";
 import { TreeDataItem } from "./ResourceGroupsItem";
 
 export interface InternalTreeView extends TreeView<TreeDataItem> {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     _reveal: TreeView<TreeDataItem>['reveal'];
 }
 
@@ -52,5 +53,5 @@ function modifyReveal(treeView: TreeView<TreeDataItem>, findItemById: (id: strin
         const item: TreeDataItem | undefined = isAzExtTreeItem(element) ? itemCache.getItemForBranchItem(element) ?? await findItemById(element.fullId) : element;
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         await (treeView as InternalTreeView)._reveal(item!, options);
-    }
+    };
 }

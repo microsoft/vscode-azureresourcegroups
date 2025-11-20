@@ -31,7 +31,7 @@ export async function createResourceGroup(context: IActionContext, node?: Subscr
     const promptSteps: AzureWizardPromptStep<IResourceGroupWizardContext>[] = [new ResourceGroupNameStep()];
     LocationListStep.addStep(wizardContext, promptSteps);
     const executeSteps: AzureWizardExecuteStep<IResourceGroupWizardContext>[] = [new ResourceGroupCreateStep()];
-    const wizard: AzureWizard<IResourceGroupWizardContext & ExecuteActivityContext> = new AzureWizard(wizardContext, { title, promptSteps, executeSteps });
+    const wizard = new AzureWizard<IResourceGroupWizardContext & ExecuteActivityContext>(wizardContext, { title, promptSteps, executeSteps });
     await wizard.prompt();
     const newResourceGroupName = nonNullProp(wizardContext, 'newResourceGroupName');
     wizardContext.activityTitle = localize('createResourceGroup', 'Create resource group "{0}"', newResourceGroupName);

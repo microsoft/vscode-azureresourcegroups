@@ -4,15 +4,17 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { GenericResource, ResourceGroup } from "@azure/arm-resources";
+import { AzureSubscription } from "@microsoft/vscode-azext-azureauth";
 import { randomUUID } from "crypto";
-import { AzureResourcesServiceFactory, AzureSubscription, ext } from "../../extension.bundle";
+import { AzureResourcesServiceFactory } from "../../src/services/AzureResourcesService";
 import { MockAzureSubscriptionProvider } from "./MockAzureSubscriptionProvider";
+import { getCachedTestApi } from "../utils/testApiAccess";
 
 export class MockResources {
     get subscriptions(): MockSubscription[] {
         return Array.from(this.subscriptionsMap.values());
     }
-    subscriptionsMap: Map<string, MockSubscription> = new Map();
+    subscriptionsMap = new Map<string, MockSubscription>();
 }
 
 class MockSubscription {
@@ -30,12 +32,12 @@ class MockResourceGroup implements ResourceGroup {
     readonly type: string = 'microsoft.resources/resourcegroups';
     constructor(private readonly subscriptionId: string, public readonly name: string, public readonly location: string) { }
     readonly resources: MockResource[] = [];
-    readonly id: string = `${this.subscriptionId}/resourceGroups/${this.name}`;
+    get id(): string { return `${this.subscriptionId}/resourceGroups/${this.name}`; };
 }
 
 class MockResource implements GenericResource {
     constructor(private readonly resourceGroupId: string, public readonly name: string, public readonly type: string, public readonly kind: string) { }
-    readonly id: string = `${this.resourceGroupId}/providers/${this.type}/${this.name}`;
+    get id(): string { return `${this.resourceGroupId}/providers/${this.type}/${this.name}`; };
 }
 
 function addSubscription(resources: MockResources, name: string) {
@@ -97,28 +99,31 @@ class BasicMockResources extends MockResources {
 
 export const createMockSubscriptionWithFunctions = (): BasicMockResources => {
     const mockResources = new BasicMockResources();
-    ext.testing.overrideAzureServiceFactory = createMockAzureResourcesServiceFactory(mockResources);
+    const testApi = getCachedTestApi();
+    testApi.testing.setOverrideAzureServiceFactory(createMockAzureResourcesServiceFactory(mockResources));
     const mockAzureSubscriptionProvider = new MockAzureSubscriptionProvider(mockResources);
-    ext.testing.overrideAzureSubscriptionProvider = () => mockAzureSubscriptionProvider;
+    testApi.testing.setOverrideAzureSubscriptionProvider(() => mockAzureSubscriptionProvider);
     return mockResources;
-}
+};
 
 export function createMockAzureResourcesServiceFactory(mockResources: MockResources): AzureResourcesServiceFactory {
     return () => {
         return {
             async listResources(_context, subscription: AzureSubscription): Promise<GenericResource[]> {
                 if (mockResources.subscriptionsMap.has(subscription.subscriptionId)) {
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                     return mockResources.subscriptionsMap.get(subscription.subscriptionId)!.resources;
                 }
                 throw new Error(`Subscription ${subscription.subscriptionId} not found. \n\t${mockResources.subscriptions.map(s => s.subscriptionId).join('\n\t')}`);
             },
             async listResourceGroups(_context, subscription: AzureSubscription): Promise<ResourceGroup[]> {
                 if (mockResources.subscriptionsMap.has(subscription.subscriptionId)) {
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                     return mockResources.subscriptionsMap.get(subscription.subscriptionId)!.resourceGroups;
                 }
                 throw new Error(`Subscription ${subscription.subscriptionId} not found. \n\t${mockResources.subscriptions.map(s => s.subscriptionId).join('\n\t')}`);
             },
-        }
-    }
+        };
+    };
 }
 

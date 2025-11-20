@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscription } from "@microsoft/vscode-azext-azureauth";
-import { IActionContext, IAzureQuickPickItem } from "@microsoft/vscode-azext-utils";
+import { IActionContext, IAzureQuickPickItem, nonNullValue } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
 import { isTenantFilteredOut } from "../../tree/tenants/registerTenantTree";
@@ -61,7 +61,7 @@ export async function selectSubscriptions(context: IActionContext, options?: Sel
                     group: subscription.account.label
                 }))
                 .sort((a, b) => a.label.localeCompare(b.label));
-        }
+        };
 
         const picks = await context.ui.showQuickPick(
             subscriptionQuickPickItems(),
@@ -128,4 +128,32 @@ export function getDuplicateSubscriptions(subscriptions: AzureSubscription[]): A
     }, {} as Record<string, number>);
 
     return subscriptions.filter(sub => lookup[sub.subscriptionId]);
+}
+
+export function getDuplicateSubsInSameAccount(duplicateSubs: AzureSubscription[]): AzureSubscription[] {
+    const accountGroups = new Map<string, AzureSubscription[]>();
+    for (const duplicate of duplicateSubs) {
+        const accountId = duplicate.account?.id ?? '';
+        if (!accountGroups.has(accountId)) {
+            accountGroups.set(accountId, []);
+        }
+        nonNullValue(accountGroups.get(accountId)).push(duplicate);
+    }
+
+    const result: AzureSubscription[] = [];
+    for (const [, subsInAccount] of accountGroups) {
+        if (subsInAccount.length > 1) {
+            result.push(...subsInAccount);
+        }
+    }
+
+    return result;
+}
+
+export function getDuplicateSubscriptionModeSetting(): boolean {
+    return settingUtils.getGlobalSetting<boolean>('duplicateSubscriptionMode') ?? false;
+}
+
+export async function turnOnDuplicateSubscriptionModeSetting(): Promise<void> {
+    await settingUtils.updateGlobalSetting('duplicateSubscriptionMode', true);
 }
