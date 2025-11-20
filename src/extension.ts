@@ -118,9 +118,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         registerLMTools();
     });
 
-    const v2: string = '2.0.0';
-    const v3: string = '3.0.0';
-
     const extensionManager = new ResourceGroupsExtensionManager()
 
     const azureResourceBranchDataProviderManager = new AzureResourceBranchDataProviderManager(
@@ -180,11 +177,11 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     });
 
     const v2ApiFactory: AzureExtensionApiFactory<AzureResourcesApiInternal> = {
-        apiVersion: v2,
+        apiVersion: '2.0.0',
         createApi: (options?: GetApiOptions) => {
             return createWrappedAzureResourcesExtensionApi(
                 {
-                    apiVersion: v2,
+                    apiVersion: '2.0.0',
                     resources: createAzureResourcesHostApi(
                         azureResourceProviderManager,
                         azureResourceBranchDataProviderManager,
@@ -249,10 +246,10 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
      * See: https://github.com/microsoft/vscode-azureresourcegroups/pull/1223
      */
     const v3ApiFactory: AzureExtensionApiFactory = {
-        apiVersion: v3,
+        apiVersion: '3.0.0',
         createApi: () => {
             return {
-                apiVersion: v3,
+                apiVersion: '3.0.0',
                 isDocumentDbExtensionSupportEnabled: () => true,
             };
         },
