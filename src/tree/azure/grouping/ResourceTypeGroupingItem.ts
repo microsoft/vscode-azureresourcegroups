@@ -3,8 +3,13 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import * as vscode from 'vscode';
 import { AzExtResourceType } from "api/src/AzExtResourceType";
+import { getAzureExtensions } from "../../../AzExtWrapper";
 import { canFocusContextValue } from "../../../constants";
+import { localize } from "../../../utils/localize";
+import { GenericItem } from "../../GenericItem";
+import { ResourceGroupsItem } from "../../ResourceGroupsItem";
 import { GroupingItem, GroupingItemOptions } from "./GroupingItem";
 import { GroupingItemFactoryOptions } from "./GroupingItemFactory";
 
@@ -17,6 +22,30 @@ export class ResourceTypeGroupingItem extends GroupingItem {
         super(options, factoryOptions);
 
         this.contextValues.push('azureResourceTypeGroup', resourceType, canFocusContextValue);
+    }
+
+    override getGenericItemsForEmptyGroup(): ResourceGroupsItem[] | undefined {
+        // Find the extension for this resource type
+        const extension = getAzureExtensions().find(ext =>
+            ext.supportsResourceType(this.resourceType)
+        );
+
+        // If the extension is not installed and is not private, show an "Install extension" item
+        if (extension && !extension.isInstalled() && !extension.isPrivate()) {
+            return [
+                new GenericItem(
+                    localize('openInExtension', 'Open in {0} Extension', extension.label),
+                    {
+                        commandArgs: [extension.id],
+                        commandId: 'azureResourceGroups.installExtension',
+                        contextValue: 'installExtension',
+                        iconPath: new vscode.ThemeIcon('extensions'),
+                        id: `${this.id}/installExtension`
+                    })
+            ];
+        }
+
+        return undefined;
     }
 }
 
