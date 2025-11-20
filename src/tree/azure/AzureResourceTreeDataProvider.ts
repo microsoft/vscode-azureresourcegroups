@@ -94,7 +94,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                     const duplicates = getDuplicateSubscriptions(subscriptions);
                     let duplicatesWithSameAccount: AzureSubscription[] = [];
                     if (duplicates.length > 0) {
-                        duplicatesWithSameAccount = getDuplicateSubsInSameAccount(duplicates)
+                        duplicatesWithSameAccount = getDuplicateSubsInSameAccount(duplicates);
                         if (duplicatesWithSameAccount.length > 0 && !this.hasShownDuplicateWarning) {
                             this.hasShownDuplicateWarning = true;
                             void callWithTelemetryAndErrorHandling('azureResourceGroups.duplicate', async (context: IActionContext) => {
