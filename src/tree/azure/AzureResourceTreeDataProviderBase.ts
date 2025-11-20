@@ -41,6 +41,6 @@ export abstract class AzureResourceTreeDataProviderBase extends ResourceTreeData
         if (element instanceof GroupingItem) {
             return element.resources.some(resource => id.toLowerCase().startsWith(resource.id.toLowerCase()));
         }
-        return super.isAncestorOf(element, id)
+        return super.isAncestorOf(element, id);
     }
 }

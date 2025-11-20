@@ -21,6 +21,8 @@ import { getAccountAndTenantPrefix } from '../idPrefix';
 import { GroupingItemFactoryOptions } from './GroupingItemFactory';
 
 export class GroupingItem implements ResourceGroupsItem {
+    public readonly groupingType: string = 'generic';
+
     readonly id: string;
     public readonly label: string;
     public readonly resources: AzureResource[];

@@ -21,6 +21,7 @@ export interface GetApiOptions {
     readonly extensionId?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace apiUtils {
     export interface AzureExtensionApiProvider {
         /**

@@ -7,6 +7,7 @@ import { TreeItemIconPath } from '@microsoft/vscode-azext-utils';
 import { URI, Utils } from 'vscode-uri';
 import { ext } from '../extensionVariables';
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace treeUtils {
     export function getIconPath(iconName: string): URI {
         return Utils.joinPath(getResourcesPath(), `${iconName}.svg`);

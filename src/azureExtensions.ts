@@ -160,7 +160,7 @@ export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
     PostgresqlServersFlexible: 'microsoft.dbforpostgresql/flexibleservers',
     SpringApps: 'microsoft.appplatform/spring',
     WebPubSub: 'microsoft.signalrservice/webpubsub'
-}
+};
 
 export interface IAzExtMetadata {
     name: string;
