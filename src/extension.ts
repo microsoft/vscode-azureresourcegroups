@@ -212,53 +212,49 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
         async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getSubscriptions(filter); };
 
-    const internalApiFactory: AzureExtensionApiFactory = {
-        apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
-        createApi: () => new InternalAzureResourceGroupsExtensionApi({
-            apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
-            appResourceTree: ext.appResourceTree,
-            appResourceTreeView: ext.appResourceTreeView,
-            workspaceResourceTree: ext.workspaceTree,
-            workspaceResourceTreeView: ext.workspaceTreeView,
-            registerApplicationResourceResolver,
-            registerWorkspaceResourceProvider,
-            registerActivity,
-            pickAppResource: createCompatibilityPickAppResource(),
-            getSubscriptions,
-        }),
-    };
-
-    /**
-     * This is a temporary API and will be removed in a future version once the staged introduction
-     * of the "DocumentDB for VS Code" extension is complete.
-     *
-     * The 3.0.0 API is *NOT* backward-compatible with 2.0.0 on purpose to prevent API users from upgrading to this
-     * temporary API.
-     *
-     * Its primary purpose is to support the user migration from the Azure Databases extension to the Azure DocumentDB extension.
-     * It provides a feature flag that allows dependent extensions (e.g., `vscode-cosmosdb`, `vscode-documentdb`) to detect
-     * when this new functionality is available.
-     *
-     * This API-based signal is necessary due to a staged rollout, allowing users time to upgrade.
-     * Dependent extensions should rely on this API signal rather than the extension version.
-     *
-     * This temporary API will be removed in a future version once the migration is complete.
-     * See: https://github.com/microsoft/vscode-azureresourcegroups/pull/1223
-     */
-    const v3ApiFactory: AzureExtensionApiFactory = {
-        apiVersion: '3.0.0',
-        createApi: () => {
-            return {
-                apiVersion: '3.0.0',
-                isDocumentDbExtensionSupportEnabled: () => true,
-            };
-        },
-    };
-
     const coreApiFactories: AzureExtensionApiFactory[] = [
-        internalApiFactory,
+        {
+            apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
+            createApi: () => new InternalAzureResourceGroupsExtensionApi({
+                apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
+                appResourceTree: ext.appResourceTree,
+                appResourceTreeView: ext.appResourceTreeView,
+                workspaceResourceTree: ext.workspaceTree,
+                workspaceResourceTreeView: ext.workspaceTreeView,
+                registerApplicationResourceResolver,
+                registerWorkspaceResourceProvider,
+                registerActivity,
+                pickAppResource: createCompatibilityPickAppResource(),
+                getSubscriptions,
+            }),
+        },
         v2ApiFactory,
-        v3ApiFactory,
+        /**
+         * This is a temporary API and will be removed in a future version once the staged introduction
+         * of the "DocumentDB for VS Code" extension is complete.
+         *
+         * The 3.0.0 API is *NOT* backward-compatible with 2.0.0 on purpose to prevent API users from upgrading to this
+         * temporary API.
+         *
+         * Its primary purpose is to support the user migration from the Azure Databases extension to the Azure DocumentDB extension.
+         * It provides a feature flag that allows dependent extensions (e.g., `vscode-cosmosdb`, `vscode-documentdb`) to detect
+         * when this new functionality is available.
+         *
+         * This API-based signal is necessary due to a staged rollout, allowing users time to upgrade.
+         * Dependent extensions should rely on this API signal rather than the extension version.
+         *
+         * This temporary API will be removed in a future version once the migration is complete.
+         * See: https://github.com/microsoft/vscode-azureresourcegroups/pull/1223
+         */
+        {
+            apiVersion: "3.0.0",
+            createApi: () => {
+                return {
+                    apiVersion: "3.0.0",
+                    isDocumentDbExtensionSupportEnabled: () => true,
+                };
+            },
+        } as AzureExtensionApiFactory
     ];
 
     // Add test API when running tests
