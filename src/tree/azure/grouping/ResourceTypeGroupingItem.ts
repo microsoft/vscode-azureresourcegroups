@@ -3,8 +3,8 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
 import { AzExtResourceType } from "api/src/AzExtResourceType";
+import * as vscode from 'vscode';
 import { getAzureExtensions } from "../../../AzExtWrapper";
 import { canFocusContextValue } from "../../../constants";
 import { localize } from "../../../utils/localize";
@@ -43,7 +43,7 @@ export class ResourceTypeGroupingItem extends GroupingItem {
                         commandArgs: [],
                         commandId: 'microsoft-foundry-resources.focus',
                         contextValue: 'openInFoundryExtension',
-                        iconPath: new vscode.ThemeIcon('link-external'),
+                        iconPath: new vscode.ThemeIcon('symbol-method-arrow'),
                         id: `${this.id}/openInFoundryExtension`
                     })
             ];
