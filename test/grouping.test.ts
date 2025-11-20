@@ -56,7 +56,7 @@ suite('Azure resource grouping tests', async () => {
         assert.ok(locationGroup);
     });
 
-    test('Resource type group with no resources shows install extension item', async () => {
+    test('Resource type group with no resources shows install or open extension item', async () => {
         createMockSubscriptionWithFunctions();
 
         await commands.executeCommand('azureResourceGroups.groupBy.resourceType');
@@ -75,10 +75,10 @@ suite('Azure resource grouping tests', async () => {
         if (aiFoundryGroup) {
             const children = await aiFoundryGroup.getChildren();
             
-            // Should have at least one child (the "Install extension" item)
-            assert.ok(children && children.length > 0, 'Expected install extension item for empty resource type group');
+            // Should have at least one child (either "Install extension" or "Open in AI Foundry Extension" item)
+            assert.ok(children && children.length > 0, 'Expected extension item for empty resource type group');
             
-            // First child should be a GenericItem with the correct command
+            // First child should be a GenericItem
             const firstChild = children[0];
             assert.ok(firstChild instanceof GenericItem, 'Expected first child to be a GenericItem');
         }

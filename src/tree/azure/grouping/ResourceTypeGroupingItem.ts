@@ -30,8 +30,27 @@ export class ResourceTypeGroupingItem extends GroupingItem {
             ext.supportsResourceType(this.resourceType)
         );
 
+        if (!extension || extension.isPrivate()) {
+            return undefined;
+        }
+
+        // Special handling for AI Foundry - open the view in the extension if installed
+        if (this.resourceType === AzExtResourceType.AiFoundry && extension.isInstalled()) {
+            return [
+                new GenericItem(
+                    localize('openInFoundryExtension', 'Open in AI Foundry Extension'),
+                    {
+                        commandArgs: [],
+                        commandId: 'microsoft-foundry-resources.focus',
+                        contextValue: 'openInFoundryExtension',
+                        iconPath: new vscode.ThemeIcon('link-external'),
+                        id: `${this.id}/openInFoundryExtension`
+                    })
+            ];
+        }
+
         // If the extension is not installed and is not private, show an "Install extension" item
-        if (extension && !extension.isInstalled() && !extension.isPrivate()) {
+        if (!extension.isInstalled()) {
             return [
                 new GenericItem(
                     localize('openInExtension', 'Open in {0} Extension', extension.label),
