@@ -4,7 +4,9 @@
 *--------------------------------------------------------------------------------------------*/
 
 import * as assert from "assert";
-import { AzExtUUIDCredentialManager, AzureExtensionApi, AzureResourcesApiRequestContext, AzureResourcesApiRequestError, AzureResourcesApiRequestErrorCode, AzureResourcesExtensionApi, CustomRequestDependenciesContext, prepareAzureResourcesApiRequest } from "../../../extension.bundle";
+import { AzureExtensionApi, AzureResourcesApiRequestContext, AzureResourcesApiRequestError, AzureResourcesApiRequestErrorCode, AzureResourcesExtensionApi, prepareAzureResourcesApiRequest } from "../../../api/src";
+import { CustomRequestDependenciesContext } from "../../../api/src/auth/apiRequest/AzureResourcesApiRequestContext";
+import { AzExtUUIDCredentialManager } from "../../../api/src/auth/credentialManager/AzExtUUIDCredentialManager";
 import { createMockAuthApi } from "./mockAuthApi";
 
 const clientExtensionId: string = 'ms-azuretools.vscode-azurecontainerapps';
