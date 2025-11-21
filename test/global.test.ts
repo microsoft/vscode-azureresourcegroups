@@ -5,6 +5,7 @@
 
 import { registerOnActionStartHandler, registerUIExtensionVariables, TestUserInput } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
+import { TestApi } from '../src/testApi';
 import { settingUtils } from '../src/utils/settingUtils';
 import { getTestApi } from './utils/testApiAccess';
 
@@ -19,7 +20,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
     this.timeout(1 * 60 * 1000);
 
     // Initialize test API - this caches it for use throughout tests
-    const testApi = await getTestApi();
+    const testApi: TestApi = await getTestApi();
     registerUIExtensionVariables(testApi.extensionVariables.getUI());
 
     await vscode.commands.executeCommand('azureResourceGroups.refresh'); // activate the extension before tests begin
