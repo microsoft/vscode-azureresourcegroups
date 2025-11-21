@@ -268,6 +268,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                 compatibility: {
                     getAppResourceTree: () => ext.appResourceTree,
                 },
+                extensionVariables: {
+                    getOutputChannel: () => ext.outputChannel,
+                },
                 testing: {
                     setOverrideAzureServiceFactory: (factory) => {
                         ext.testing.overrideAzureServiceFactory = factory;
