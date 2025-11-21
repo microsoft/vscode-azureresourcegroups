@@ -41,12 +41,12 @@ suite('v4 internal API auth tests', async () => {
                     receivedClientCredential = clientCredential;
                     resolve();
                 },
-            }
+            };
 
             const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi({ credentialManager, clientApiProvider: { getApi: () => mockClientExtensionApi } });
             authApi.createAzureResourcesApiSession(clientExtensionId, clientExtensionVersion, generatedClientCredential)
                 .then(session => apiSession = session)
-                .catch(() => { clearTimeout(timeout); resolve() });
+                .catch(() => { clearTimeout(timeout); resolve(); });
         });
 
         assert.equal(apiSession, undefined);
@@ -58,7 +58,7 @@ suite('v4 internal API auth tests', async () => {
 
     test('createAzureResourcesApiSession should throw if an unallowed extension id is provided', async () => {
         const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi();
-        assertThrowsAsync(async () => await authApi.createAzureResourcesApiSession('extension1', clientExtensionVersion, crypto.randomUUID()));
+        await assertThrowsAsync(async () => await authApi.createAzureResourcesApiSession('extension1', clientExtensionVersion, crypto.randomUUID()));
     });
 
     test('createAzureResourcesApiSession should not spill sensitive extension credentials in errors', async () => {
@@ -66,7 +66,7 @@ suite('v4 internal API auth tests', async () => {
         credentialManager.createCredential('extension1');
         credentialManager.createCredential = () => {
             throw new Error(credentialManager.uuidMap.get('extension1'));
-        }
+        };
 
         const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi({ credentialManager });
 
@@ -91,8 +91,12 @@ suite('v4 internal API auth tests', async () => {
     });
 
     test('getAzureResourcesApis should throw if provided an invalid credential', async () => {
-        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi();
-        assertThrowsAsync(async () => await authApi.getAzureResourcesApis(clientExtensionId, crypto.randomUUID(), ['^2.0.0']));
+        const credentialManager = new MockUUIDCredentialManager();
+        const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi({ credentialManager });
+        await assertThrowsAsync(async () => await authApi.getAzureResourcesApis(clientExtensionId, crypto.randomUUID(), ['^2.0.0']));
+
+        credentialManager.createCredential(clientExtensionId);
+        await assertThrowsAsync(async () => await authApi.getAzureResourcesApis(clientExtensionId, crypto.randomUUID(), ['^2.0.0']));
     });
 
     test('getAzureResourcesApis should not spill sensitive extension credentials in errors', async () => {
