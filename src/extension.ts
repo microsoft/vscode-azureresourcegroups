@@ -269,6 +269,12 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                     getAppResourceTree: () => ext.appResourceTree,
                 },
                 extensionVariables: {
+                    getUI: () => {
+                        return {
+                            context: ext.context,
+                            outputChannel: ext.outputChannel,
+                        };
+                    },
                     getOutputChannel: () => ext.outputChannel,
                 },
                 testing: {
