@@ -20,7 +20,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 
     // Initialize test API - this caches it for use throughout tests
     const testApi = await getTestApi();
-    registerUIExtensionVariables(testApi.extVars);
+    registerUIExtensionVariables(testApi.extensionVariables.getUI());
 
     await vscode.commands.executeCommand('azureResourceGroups.refresh'); // activate the extension before tests begin
 

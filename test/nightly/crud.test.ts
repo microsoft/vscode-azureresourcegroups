@@ -9,11 +9,11 @@ import { AzExtParentTreeItem, createTestActionContext, IActionContext, randomUti
 import assert from "assert";
 import { createResourceGroup } from '../../src/commands/createResourceGroup';
 import { deleteResourceGroupV2 } from '../../src/commands/deleteResourceGroup/v2/deleteResourceGroupV2';
-import { ext } from '../../src/extensionVariables';
 import { SubscriptionItem } from '../../src/tree/azure/SubscriptionItem';
 import { createResourceClient } from '../../src/utils/azureClients';
 import { settingUtils } from '../../src/utils/settingUtils';
 import { longRunningTestsEnabled } from "../global.test";
+import { getCachedTestApi } from "../utils/testApiAccess";
 
 let rgName: string;
 let locations: Location[];
@@ -27,10 +27,11 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
             this.skip();
         }
 
-        ext.testing.overrideAzureServiceFactory = undefined;
-        ext.testing.overrideAzureSubscriptionProvider = undefined;
+        const testApi = getCachedTestApi();
+        testApi.testing.setOverrideAzureServiceFactory(undefined);
+        testApi.testing.setOverrideAzureSubscriptionProvider(undefined);
 
-        const subscriptionTreeItems = await ext.appResourceTree.getChildren() as unknown as SubscriptionItem[];
+        const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren() as unknown as SubscriptionItem[];
         if (subscriptionTreeItems.length > 0) {
             const testContext = await createTestActionContext();
             testSubscription = subscriptionTreeItems[0] as SubscriptionItem;
@@ -66,12 +67,13 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
     });
 
     test('Get Resources', async () => {
-        const subscriptionTreeItems = await ext.appResourceTree.getChildren();
+        const testApi = getCachedTestApi();
+        const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren();
         assert.ok(subscriptionTreeItems.length > 0);
         for (const subscription of subscriptionTreeItems) {
-            const groupTreeItems = await ext.appResourceTree.getChildren(subscription as AzExtParentTreeItem);
+            const groupTreeItems = await testApi.compatibility.getAppResourceTree().getChildren(subscription as AzExtParentTreeItem);
             await Promise.all(groupTreeItems.map(async g => {
-                const children = await ext.appResourceTree.getChildren(g as AzExtParentTreeItem);
+                const children = await testApi.compatibility.getAppResourceTree().getChildren(g as AzExtParentTreeItem);
                 console.log(children);
             }));
         }
