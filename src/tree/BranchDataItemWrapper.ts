@@ -46,17 +46,19 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
 
         // Use AzExtTreeItem.fullId as id for compatibility.
         if (isAzExtTreeItem(this.branchItem)) {
-            this.id = this.branchItem.fullId;
+            this._id = this.branchItem.fullId;
         } else {
-            this.id = this.branchItem.id ?? this?.options?.defaultId ?? uuidv4();
+            this._id = this.branchItem.id ?? this?.options?.defaultId ?? uuidv4();
         }
-        this.id = createBranchItemId(this.id, this.options?.idPrefix);
+        this._id = createBranchItemId(this._id, this.options?.idPrefix);
     }
 
-    public readonly id: string;
+    public get id(): string { return this._id; }
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    protected _id: string;
 
-    readonly portalUrl: vscode.Uri | undefined = this.options?.portalUrl;
-    readonly viewProperties?: ViewPropertiesModel = this.options?.viewProperties;
+    get portalUrl(): vscode.Uri | undefined { return this.options?.portalUrl; }
+    get viewProperties(): ViewPropertiesModel | undefined { return this.options?.viewProperties; }
 
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         const children = await this.branchDataProvider.getChildren(this.branchItem);
@@ -82,7 +84,7 @@ export class BranchDataItemWrapper implements ResourceGroupsItem, Wrapper {
         const treeItem = await this.branchDataProvider.getTreeItem(this.branchItem);
         // set the id of the tree item to the id of the branch item
         // we do this because the branch item has already modified the item's id (see constructor)
-        treeItem.id = this.id;
+        treeItem.id = this._id;
 
         const contextValue = appendContextValues(treeItem.contextValue, this.options?.contextValues, this.getExtraContextValues());
 
@@ -128,7 +130,7 @@ export function createBranchDataItemFactory(itemCache: BranchDataItemCache): Bra
             branchItem,
             () => new BranchDataItemWrapper(branchItem, branchDataProvider, itemCache, options),
             createBranchItemId(branchItem.id, options?.idPrefix),
-        )
+        );
 }
 
 function createBranchItemId(id?: string, prefix?: string): string {

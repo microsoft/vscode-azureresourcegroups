@@ -16,6 +16,7 @@ import { TreeItemStateStore } from "./tree/TreeItemState";
 import { ActivityLogTreeDataProvider } from "./tree/activityLog/ActivityLogBranchDataProvider";
 import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace extActions {
     export let refreshWorkspaceTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
     export let refreshAzureTree: (data?: TreeDataItem | TreeDataItem[] | null | undefined | void) => void;
@@ -27,6 +28,7 @@ export namespace extActions {
 /**
  * Namespace for common variables used throughout the extension. They must be initialized in the activate() method of extension.ts
  */
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
     export let context: ExtensionContext;
     // TODO: do we need this? only used by load more command
@@ -35,12 +37,11 @@ export namespace ext {
     // TODO: do we need this? only used by load more command
     export let workspaceTree: AzExtTreeDataProvider;
     export let workspaceTreeView: TreeView<unknown>;
-    export let tenantTreeView: TreeView<unknown>
+    export let tenantTreeView: TreeView<unknown>;
     export let activityLogTree: ActivityLogTreeDataProvider;
     export let activityLogTreeView: TreeView<unknown>;
     export let helpTree: AzExtTreeDataProvider;
     export let outputChannel: IAzExtLogOutputChannel;
-    export let ignoreBundle: boolean | undefined;
     export const prefix: string = 'azureResourceGroups';
 
     export let tagFS: TagFileSystem;
@@ -52,10 +53,12 @@ export namespace ext {
     export let subscriptionProviderFactory: () => Promise<AzureSubscriptionProvider>;
     export let managedIdentityBranchDataProvider: ManagedIdentityBranchDataProvider;
 
+    // eslint-disable-next-line @typescript-eslint/no-namespace
     export namespace v2 {
         export let api: AzureResourcesApiInternal;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-namespace
     export namespace testing {
         export let overrideAzureServiceFactory: AzureResourcesServiceFactory | undefined;
         export let overrideAzureSubscriptionProvider: (() => AzureSubscriptionProvider) | undefined;

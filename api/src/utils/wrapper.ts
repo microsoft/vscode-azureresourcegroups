@@ -42,7 +42,7 @@ export function unwrapArgs<T>(args?: unknown[]): [node?: T, nodes?: T[], ...args
         const wrappedNodes = maybeNodeWrapperArray as Wrapper[];
         nodes = [];
         for (const n of wrappedNodes) {
-            nodes.push(n.unwrap<T>())
+            nodes.push(n.unwrap<T>());
         }
     } else if (maybeNodeWrapperArray && Array.isArray(maybeNodeWrapperArray)) {
         // Otherwise, assume it is just an array of T's

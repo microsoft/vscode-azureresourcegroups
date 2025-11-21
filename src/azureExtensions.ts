@@ -156,7 +156,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     {
         name: 'vscode-ai-foundry',
         publisher: 'TeamsDevApp',
-        label: 'Azure AI Foundry',
+        label: 'Microsoft Foundry',
         resourceTypes: [AzExtResourceType.AiFoundry],
         reportIssueCommandId: 'azure-ai-foundry.reportIssue'
     },
@@ -175,7 +175,7 @@ export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
     PostgresqlServersFlexible: 'microsoft.dbforpostgresql/flexibleservers',
     SpringApps: 'microsoft.appplatform/spring',
     WebPubSub: 'microsoft.signalrservice/webpubsub'
-}
+};
 
 export interface IAzExtMetadata {
     name: string;

@@ -57,12 +57,12 @@ export class CompatibleResolvedApplicationResourceTreeItem extends AzExtParentTr
 
     public readonly resource: AzureResource;
 
-    private constructor(resource: AzureResource, resolved: ResolvedAppResourceBase, __subscription: ISubscriptionContext, __treeDataProvider: AzExtTreeDataProvider, azureResource: AzureResource) {
+    private constructor(resource: AzureResource, resolved: ResolvedAppResourceBase, _subscription: ISubscriptionContext, _treeDataProvider: AzExtTreeDataProvider, azureResource: AzureResource) {
         super(
             (<Partial<AzExtParentTreeItem>>{
-                treeDataProvider: __treeDataProvider,
+                treeDataProvider: _treeDataProvider,
                 valuesToMask: [],
-                subscription: __subscription,
+                subscription: _subscription,
                 parent: undefined,
                 removeChildFromCache: () => {
                     this.treeDataProvider.refreshUIOnly(undefined);
@@ -132,10 +132,10 @@ export function createResolvableProxy<T extends AzExtParentTreeItem>(resolvable:
          */
         getPrototypeOf: (target: Resolvable<T>): AzExtParentTreeItem | AzExtTreeItem => {
             if (resolvable?.resolveResult) {
-                return resolvable.resolveResult.loadMoreChildrenImpl ? AzExtParentTreeItem.prototype : AzExtTreeItem.prototype
+                return resolvable.resolveResult.loadMoreChildrenImpl ? AzExtParentTreeItem.prototype : AzExtTreeItem.prototype;
             }
             return target;
         }
-    }
+    };
     return new Proxy(resolvable, providerHandler);
 }

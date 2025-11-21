@@ -16,7 +16,11 @@ import { getAccountAndTenantPrefix } from "../idPrefix";
 import { GroupingItem, GroupingItemOptions } from "./GroupingItem";
 import { GroupingItemFactoryOptions } from "./GroupingItemFactory";
 
+const resourceGroupGroupingItemType = 'resourceGroup';
+
 export class ResourceGroupGroupingItem extends GroupingItem {
+    public override readonly groupingType = resourceGroupGroupingItemType;
+
     readonly id: string;
     readonly viewProperties: ViewPropertiesModel;
     readonly tagsModel: ITagsModel;
@@ -57,5 +61,5 @@ export class ResourceGroupGroupingItem extends GroupingItem {
 }
 
 export function isResourceGroupGroupingItem(groupingItem?: GroupingItem): groupingItem is ResourceGroupGroupingItem {
-    return groupingItem instanceof ResourceGroupGroupingItem;
+    return groupingItem?.groupingType === resourceGroupGroupingItemType;
 }

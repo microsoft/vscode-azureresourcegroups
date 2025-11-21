@@ -3,11 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type Location } from '@azure/arm-resources-subscriptions';
-import { createTestActionContext, runWithTestActionContext } from '@microsoft/vscode-azext-dev';
-import { AzExtParentTreeItem, IActionContext, LocationListStep, SubscriptionItem, createResourceClient, createResourceGroup, deleteResourceGroupV2, ext, randomUtils, settingUtils } from '../../extension.bundle';
+import type { Location } from '@azure/arm-resources-subscriptions';
+import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
+import { AzExtParentTreeItem, createTestActionContext, IActionContext, randomUtils, runWithTestActionContext } from '@microsoft/vscode-azext-utils';
+import assert from "assert";
+import { createResourceGroup } from '../../src/commands/createResourceGroup';
+import { deleteResourceGroupV2 } from '../../src/commands/deleteResourceGroup/v2/deleteResourceGroupV2';
+import { SubscriptionItem } from '../../src/tree/azure/SubscriptionItem';
+import { createResourceClient } from '../../src/utils/azureClients';
+import { settingUtils } from '../../src/utils/settingUtils';
 import { longRunningTestsEnabled } from "../global.test";
-import assert = require("assert");
+import { getCachedTestApi } from "../utils/testApiAccess";
 
 let rgName: string;
 let locations: Location[];
@@ -21,10 +27,11 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
             this.skip();
         }
 
-        ext.testing.overrideAzureServiceFactory = undefined;
-        ext.testing.overrideAzureSubscriptionProvider = undefined;
+        const testApi = getCachedTestApi();
+        testApi.testing.setOverrideAzureServiceFactory(undefined);
+        testApi.testing.setOverrideAzureSubscriptionProvider(undefined);
 
-        const subscriptionTreeItems = await ext.appResourceTree.getChildren() as unknown as SubscriptionItem[];
+        const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren() as unknown as SubscriptionItem[];
         if (subscriptionTreeItems.length > 0) {
             const testContext = await createTestActionContext();
             testSubscription = subscriptionTreeItems[0] as SubscriptionItem;
@@ -60,12 +67,13 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
     });
 
     test('Get Resources', async () => {
-        const subscriptionTreeItems = await ext.appResourceTree.getChildren();
+        const testApi = getCachedTestApi();
+        const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren();
         assert.ok(subscriptionTreeItems.length > 0);
         for (const subscription of subscriptionTreeItems) {
-            const groupTreeItems = await ext.appResourceTree.getChildren(subscription as AzExtParentTreeItem);
+            const groupTreeItems = await testApi.compatibility.getAppResourceTree().getChildren(subscription as AzExtParentTreeItem);
             await Promise.all(groupTreeItems.map(async g => {
-                const children = await ext.appResourceTree.getChildren(g as AzExtParentTreeItem);
+                const children = await testApi.compatibility.getAppResourceTree().getChildren(g as AzExtParentTreeItem);
                 console.log(children);
             }));
         }
@@ -116,7 +124,7 @@ async function resourceGroupExists(context: IActionContext, rgName: string): Pro
     try {
         await client.resourceGroups.get(rgName);
         return true;
-    } catch (_) {
+    } catch {
         return false;
     }
 }
