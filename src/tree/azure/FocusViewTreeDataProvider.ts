@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscription } from '@microsoft/vscode-azext-azureauth';
+import { isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
 import { TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzExtResourceType, AzureResource, ResourceModelBase } from '../../../api/src/index';
@@ -55,8 +55,12 @@ export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase
             }
 
             const provider = await this.getAzureSubscriptionProvider();
-            let subscriptions: AzureSubscription[] | undefined;
-            if (await provider.isSignedIn() && (subscriptions = await provider.getSubscriptions(true)).length > 0) {
+            try {
+                const subscriptions = await provider.getAvailableSubscriptions();
+                if (subscriptions.length === 0) {
+                    return [];
+                }
+
                 const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
 
                 let resources: AzureResource[] = [];
@@ -86,8 +90,12 @@ export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase
                 }
 
                 return focusedGroupItem ? [focusedGroupItem] : [];
-            } else {
-                return [];
+            } catch (error) {
+                if (isNotSignedInError(error)) {
+                    return [];
+                } else {
+                    throw error;
+                }
             }
         }
     }
