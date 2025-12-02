@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
-import { AzExtTreeDataProvider } from "@microsoft/vscode-azext-utils";
+import { AzExtTreeDataProvider, IAzExtLogOutputChannel } from "@microsoft/vscode-azext-utils";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
 
@@ -32,6 +32,16 @@ export interface TestApi {
          * Get the app resource tree (v1 compatibility)
          */
         getAppResourceTree(): AzExtTreeDataProvider;
+    };
+
+    /**
+     * Get extension variables for tests
+     */
+    extensionVariables: {
+        /**
+         * Get the output channel
+         */
+        getOutputChannel(): IAzExtLogOutputChannel;
     };
 
     /**
