@@ -10,6 +10,7 @@ import { askAgentAboutActivityLog } from '../chat/askAgentAboutActivityLog/askAg
 import { askAgentAboutResource } from '../chat/askAgentAboutResource';
 import { askAzureInCommandPalette } from '../chat/askAzure';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
+import { reRunWithCopilot } from '../copilot/reRunWithCopilot';
 import { ext } from '../extensionVariables';
 import { TargetServiceRoleAssignmentItem } from '../managedIdentity/TargetServiceRoleAssignmentItem';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
@@ -134,6 +135,7 @@ export function registerCommands(): void {
     registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityItem) => await askAgentAboutActivityLog(context));
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
+    registerCommand('azureResourceGroups.reRunWithCopilot', async (context: IActionContext, item: ActivityItem) => await reRunWithCopilot(context, item));
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
