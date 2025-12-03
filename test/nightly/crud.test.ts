@@ -4,14 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { Location } from '@azure/arm-resources-subscriptions';
-import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
-import { createTestActionContext, IActionContext, randomUtils, runWithTestActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtParentTreeItem, createTestActionContext, randomUtils, runWithTestActionContext } from '@microsoft/vscode-azext-utils';
 import assert from "assert";
-import { createResourceGroup } from '../../src/commands/createResourceGroup';
-import { deleteResourceGroupV2 } from '../../src/commands/deleteResourceGroup/v2/deleteResourceGroupV2';
-import type { GroupingItem } from '../../src/tree/azure/grouping/GroupingItem';
 import { SubscriptionItem } from '../../src/tree/azure/SubscriptionItem';
-import { createResourceClient } from '../../src/utils/azureClients';
 import { settingUtils } from '../../src/utils/settingUtils';
 import { longRunningTestsEnabled } from "../global.test";
 import { getCachedTestApi } from "../utils/testApiAccess";
@@ -32,12 +27,12 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         testApi.testing.setOverrideAzureServiceFactory(undefined);
         testApi.testing.setOverrideAzureSubscriptionProvider(undefined);
 
-        const subscriptionTreeItems = await testApi.getApi().resources.azureResourceTreeDataProvider.getChildren() as unknown as SubscriptionItem[];
+        const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren() as unknown as SubscriptionItem[];
         if (subscriptionTreeItems.length > 0) {
             const testContext = await createTestActionContext();
             testSubscription = subscriptionTreeItems[0] as SubscriptionItem;
             const context = { ...testContext, ...testSubscription.subscription };
-            locations = await LocationListStep.getLocations(context);
+            locations = (await testApi.testing.getLocations(context)).slice(0, 5); // limit to 5 locations for test speed
         }
 
         rgName = randomUtils.getRandomHexString(12);
@@ -47,10 +42,10 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         await runWithTestActionContext('createResourceGroup', async context => {
             const testInputs: (string | RegExp)[] = [rgName, locations[0].displayName!];
             await context.ui.runWithInputs(testInputs, async () => {
-                await createResourceGroup(context, testSubscription);
+                await getCachedTestApi().testing.createResourceGroup(context, testSubscription);
             });
 
-            assert.ok(await resourceGroupExists(context, rgName));
+            assert.ok(await getCachedTestApi().testing.resourceGroupExists(context, testSubscription, rgName));
         });
     });
 
@@ -59,22 +54,22 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
             await runWithTestActionContext('createResourceGroup', async context => {
                 const testInputs: (string | RegExp)[] = [`${rgName}-${l.name}`, l.displayName!];
                 await context.ui.runWithInputs(testInputs, async () => {
-                    await createResourceGroup(context, testSubscription);
+                    await getCachedTestApi().testing.createResourceGroup(context, testSubscription);
                 });
 
-                assert.ok(await resourceGroupExists(context, `${rgName}-${l.name}`));
+                assert.ok(await getCachedTestApi().testing.resourceGroupExists(context, testSubscription, `${rgName}-${l.name}`));
             });
         }));
     });
 
     test('Get Resources', async () => {
         const testApi = getCachedTestApi();
-        const subscriptionTreeItems = await testApi.getApi().resources.azureResourceTreeDataProvider.getChildren() as unknown as SubscriptionItem[];
+        const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren();
         assert.ok(subscriptionTreeItems.length > 0);
         for (const subscription of subscriptionTreeItems) {
-            const groupTreeItems = await testApi.getApi().resources.azureResourceTreeDataProvider.getChildren(subscription) as GroupingItem[];
+            const groupTreeItems = await testApi.compatibility.getAppResourceTree().getChildren(subscription as AzExtParentTreeItem);
             await Promise.all(groupTreeItems.map(async g => {
-                const children = await testApi.getApi().resources.azureResourceTreeDataProvider.getChildren(g);
+                const children = await testApi.compatibility.getAppResourceTree().getChildren(g as AzExtParentTreeItem);
                 console.log(children);
             }));
         }
@@ -87,12 +82,12 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         await runWithTestActionContext('Delete Resource', async context => {
             await context.ui.runWithInputs([rgName, 'rgName'], async () => {
                 try {
-                    await deleteResourceGroupV2(context);
+                    await getCachedTestApi().testing.deleteResourceGroupV2(context);
                 } catch (_) {
                     console.debug('Expected error: ', _);
                     // expected to fail here
                 }
-                assert.ok(await resourceGroupExists(context, rgName));
+                assert.ok(await getCachedTestApi().testing.resourceGroupExists(context, testSubscription, rgName));
             });
         });
     });
@@ -101,10 +96,9 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         await settingUtils.updateGlobalSetting('deleteConfirmation', 'EnterName');
         await runWithTestActionContext('Delete Resource', async context => {
             await context.ui.runWithInputs([rgName, rgName], async () => {
-                await deleteResourceGroupV2(context);
+                await getCachedTestApi().testing.deleteResourceGroupV2(context);
             });
         });
-
     });
 
     test('Delete Resource (ClickButton)', async () => {
@@ -112,20 +106,10 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         const deleteArray: string[] = Array(locations.length).fill('Delete');
         await runWithTestActionContext('Delete Resource', async context => {
             await context.ui.runWithInputs([new RegExp(`${rgName}-`), ...deleteArray], async () => {
-                await deleteResourceGroupV2(context);
+                await getCachedTestApi().testing.deleteResourceGroupV2(context);
             });
         });
 
         assert.ok(true);
     });
 });
-
-async function resourceGroupExists(context: IActionContext, rgName: string): Promise<boolean> {
-    const client = await createResourceClient([context, testSubscription.subscription]);
-    try {
-        await client.resourceGroups.get(rgName);
-        return true;
-    } catch {
-        return false;
-    }
-}
