@@ -5,10 +5,11 @@
 
 import type { Location } from '@azure/arm-resources-subscriptions';
 import { LocationListStep } from '@microsoft/vscode-azext-azureutils';
-import { AzExtParentTreeItem, createTestActionContext, IActionContext, randomUtils, runWithTestActionContext } from '@microsoft/vscode-azext-utils';
+import { createTestActionContext, IActionContext, randomUtils, runWithTestActionContext } from '@microsoft/vscode-azext-utils';
 import assert from "assert";
 import { createResourceGroup } from '../../src/commands/createResourceGroup';
 import { deleteResourceGroupV2 } from '../../src/commands/deleteResourceGroup/v2/deleteResourceGroupV2';
+import type { GroupingItem } from '../../src/tree/azure/grouping/GroupingItem';
 import { SubscriptionItem } from '../../src/tree/azure/SubscriptionItem';
 import { createResourceClient } from '../../src/utils/azureClients';
 import { settingUtils } from '../../src/utils/settingUtils';
@@ -31,7 +32,7 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         testApi.testing.setOverrideAzureServiceFactory(undefined);
         testApi.testing.setOverrideAzureSubscriptionProvider(undefined);
 
-        const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren() as unknown as SubscriptionItem[];
+        const subscriptionTreeItems = await testApi.getApi().resources.azureResourceTreeDataProvider.getChildren() as unknown as SubscriptionItem[];
         if (subscriptionTreeItems.length > 0) {
             const testContext = await createTestActionContext();
             testSubscription = subscriptionTreeItems[0] as SubscriptionItem;
@@ -68,12 +69,12 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
 
     test('Get Resources', async () => {
         const testApi = getCachedTestApi();
-        const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren();
+        const subscriptionTreeItems = await testApi.getApi().resources.azureResourceTreeDataProvider.getChildren() as unknown as SubscriptionItem[];
         assert.ok(subscriptionTreeItems.length > 0);
         for (const subscription of subscriptionTreeItems) {
-            const groupTreeItems = await testApi.compatibility.getAppResourceTree().getChildren(subscription as AzExtParentTreeItem);
+            const groupTreeItems = await testApi.getApi().resources.azureResourceTreeDataProvider.getChildren(subscription) as GroupingItem[];
             await Promise.all(groupTreeItems.map(async g => {
-                const children = await testApi.compatibility.getAppResourceTree().getChildren(g as AzExtParentTreeItem);
+                const children = await testApi.getApi().resources.azureResourceTreeDataProvider.getChildren(g);
                 console.log(children);
             }));
         }
