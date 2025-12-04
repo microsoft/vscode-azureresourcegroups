@@ -212,7 +212,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
 
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
-        async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getSubscriptions(filter); };
+        async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getAvailableSubscriptions({ filter }); };
 
     const apiFactories: AzureExtensionApiFactory[] = [
         {

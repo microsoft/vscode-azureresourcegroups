@@ -51,6 +51,7 @@ export namespace ext {
     export let azureTreeState: TreeItemStateStore;
 
     export let subscriptionProviderFactory: () => Promise<AzureSubscriptionProvider>;
+    export let clearCacheOnNextLoad: boolean | undefined;
     export let managedIdentityBranchDataProvider: ManagedIdentityBranchDataProvider;
 
     // eslint-disable-next-line @typescript-eslint/no-namespace
