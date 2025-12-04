@@ -76,8 +76,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
 
             try {
                 await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
-                // TODO: manual refresh => noCache: true
-                const subscriptions = await subscriptionProvider.getAvailableSubscriptions();
+                const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: ext.clearCacheOnNextLoad });
                 this.sendSubscriptionTelemetryIfNeeded(); // Don't send until the above call is done, to avoid cache missing
 
                 if (subscriptions.length === 0) {
@@ -207,6 +206,8 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
 
                 // TODO: Else do we throw? What did we do before?
                 return [];
+            } finally {
+                ext.clearCacheOnNextLoad = false;
             }
         }
     }

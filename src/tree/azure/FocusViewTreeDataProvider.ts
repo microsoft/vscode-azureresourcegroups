@@ -56,7 +56,7 @@ export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase
 
             const provider = await this.getAzureSubscriptionProvider();
             try {
-                const subscriptions = await provider.getAvailableSubscriptions();
+                const subscriptions = await provider.getAvailableSubscriptions({ noCache: ext.clearCacheOnNextLoad });
                 if (subscriptions.length === 0) {
                     return [];
                 }
@@ -96,6 +96,8 @@ export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase
                 } else {
                     throw error;
                 }
+            } finally {
+                ext.clearCacheOnNextLoad = false;
             }
         }
     }

@@ -8,6 +8,7 @@ import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling } fr
 import { ResourceModelBase } from 'api/src';
 import * as vscode from 'vscode';
 import { TenantResourceProviderManager } from '../../api/ResourceProviderManagers';
+import { ext } from '../../extensionVariables';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
 import { getSignInTreeItems, tryGetLoggingInTreeItems } from '../getSignInTreeItems';
@@ -51,10 +52,10 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                 const children: ResourceGroupsItem[] = [];
 
                 try {
-                    const accounts = await subscriptionProvider.getAccounts({ filter: false });
+                    const accounts = await subscriptionProvider.getAccounts({ filter: false, noCache: ext.clearCacheOnNextLoad });
                     context.telemetry.properties.accountCount = accounts.length.toString();
                     for (const account of accounts) {
-                        const allTenants = await subscriptionProvider.getTenantsForAccount(account, { filter: false });
+                        const allTenants = await subscriptionProvider.getTenantsForAccount(account, { filter: false, noCache: ext.clearCacheOnNextLoad });
                         const unauthenticatedTenants = await subscriptionProvider.getUnauthenticatedTenantsForAccount(account);
                         const tenantItems: ResourceGroupsItem[] = [];
                         for await (const tenant of allTenants) {
@@ -83,6 +84,8 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
 
                     // TODO: Else do we throw? What did we do before?
                     return [];
+                } finally {
+                    ext.clearCacheOnNextLoad = false;
                 }
             }
         });

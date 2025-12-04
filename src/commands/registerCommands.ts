@@ -41,10 +41,19 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.uploadFileCloudConsole', uploadFileToCloudShell);
 
     // Special-case refresh that ignores the selected/focused node and always refreshes the entire tree. Used by the refresh button in the tree title.
-    registerCommand('azureResourceGroups.refreshTree', () => ext.actions.refreshAzureTree());
+    registerCommand('azureResourceGroups.refreshTree', () => {
+        ext.clearCacheOnNextLoad = true;
+        ext.actions.refreshAzureTree();
+    });
     registerCommand('azureWorkspace.refreshTree', () => ext.actions.refreshWorkspaceTree());
-    registerCommand('azureFocusView.refreshTree', () => ext.actions.refreshFocusTree());
-    registerCommand('azureTenantsView.refreshTree', () => ext.actions.refreshTenantTree());
+    registerCommand('azureFocusView.refreshTree', () => {
+        ext.clearCacheOnNextLoad = true;
+        ext.actions.refreshFocusTree();
+    });
+    registerCommand('azureTenantsView.refreshTree', () => {
+        ext.clearCacheOnNextLoad = true;
+        ext.actions.refreshTenantTree();
+    });
 
     // v1.5 client extensions attach these commands to tree item context menus for refreshing their tree items
     registerCommand('azureResourceGroups.refresh', async (context, node?: ResourceGroupsItem) => {
