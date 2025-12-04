@@ -4,9 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
-import { AzExtTreeDataProvider, IAzExtLogOutputChannel } from "@microsoft/vscode-azext-utils";
+import type { AzExtLocation } from "@microsoft/vscode-azext-azureutils";
+import { AzExtTreeDataProvider, IActionContext, IAzExtLogOutputChannel, ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
+import { SubscriptionItem } from "./tree/azure/SubscriptionItem";
 
 /**
  * Test-only API for accessing internal extension state.
@@ -57,5 +59,25 @@ export interface TestApi {
          * Override the Azure subscription provider for testing
          */
         setOverrideAzureSubscriptionProvider(provider: (() => AzureSubscriptionProvider) | undefined): void;
+
+        /**
+         * Gets Azure locations
+         */
+        getLocations(context: ISubscriptionActionContext): Promise<AzExtLocation[]>;
+
+        /**
+         * Creates a resource group (inputs come from TestUserInput)
+         */
+        createResourceGroup(context: IActionContext, node: SubscriptionItem): Promise<void>;
+
+        /**
+         * Deletes a resource group (inputs come from TestUserInput)
+         */
+        deleteResourceGroupV2(context: IActionContext): Promise<void>;
+
+        /**
+         * Checks if a resource group exists
+         */
+        resourceGroupExists(context: IActionContext, node: SubscriptionItem, rgName: string): Promise<boolean>;
     };
 }
