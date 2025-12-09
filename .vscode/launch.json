@@ -69,8 +69,7 @@
             "preLaunchTask": "Watch: ESBuild",
             "env": {
                 "DEBUGTELEMETRY": "v",
-                "AzCode_EnableLongRunningTestsLocal": "",
-                "VSCODE_RUNNING_TESTS": "true",
+                "AzCode_EnableLongRunningTestsLocal": ""
             }
         },
     ]
