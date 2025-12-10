@@ -33,6 +33,7 @@ export async function reRunWithCopilot(context: IActionContext, item: ActivityIt
     // An item will always be passed in so we will only need to look at the first item in the array
     const callbackId = activityItems[0]?.callbackId;
     if (callbackId) {
+        // todo: change this as the subscription may not always be the third thing passed in
         await executeCommandWithAddedContext(callbackId, wizardContext, undefined, undefined, subscription)
     } else {
         throw new Error(vscode.l10n.t('Failed to rerun with Copilot. Activity item callback ID not found.'));
