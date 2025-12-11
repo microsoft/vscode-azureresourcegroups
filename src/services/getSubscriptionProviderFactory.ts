@@ -24,9 +24,9 @@ export function getSubscriptionProviderFactory(activateContext?: IActionContext)
 
         if (!serviceConnectionId || !domain || !clientId) {
             throw new Error(`Using Azure DevOps federated credentials, but federated service connection is not configured\n
-                                process.env.AzCodeServiceConnectionID: ${serviceConnectionId ? "✅" : "❌"}\n
-                                process.env.AzCodeServiceConnectionDomain: ${domain ? "✅" : "❌"}\n
-                                process.env.AzCodeServiceConnectionClientID: ${clientId ? "✅" : "❌"}\n
+                                process.env.AzCode_ServiceConnectionID: ${serviceConnectionId ? "✅" : "❌"}\n
+                                process.env.AzCode_ServiceConnectionDomain: ${domain ? "✅" : "❌"}\n
+                                process.env.AzCode_ServiceConnectionClientID: ${clientId ? "✅" : "❌"}\n
                             `);
         }
 
