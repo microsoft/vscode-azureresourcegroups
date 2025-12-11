@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
-import { AzExtTreeDataProvider, IAzExtLogOutputChannel, UIExtensionVariables } from "@microsoft/vscode-azext-utils";
+import { AzExtTreeDataProvider, IAzExtLogOutputChannel } from "@microsoft/vscode-azext-utils";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
 
@@ -38,11 +38,6 @@ export interface TestApi {
      * Get extension variables for tests
      */
     extensionVariables: {
-        /**
-         * Get the common extension variables used throughout the UI package
-         */
-        getUI(): UIExtensionVariables;
-
         /**
          * Get the output channel
          */
