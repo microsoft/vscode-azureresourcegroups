@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { TestApi } from '../../src/testApi';
 import { apiUtils } from '../../api/src/utils/apiUtils';
+import { TestApi } from '../../src/testApi';
 
 let cachedTestApi: TestApi | undefined;
 
