@@ -7,9 +7,13 @@ import { AppResource } from "@microsoft/vscode-azext-utils/hostapi";
 import { AzExtResourceType } from "../api/src/index";
 import { localize } from "./utils/localize";
 
+const msAzureToolsPublisher: string = 'ms-azuretools';
+
+// IMPORTANT: These are deduped and used to build the final list of allowed extensions that can access the core Azure Resources API.
 export const azureExtensions: IAzExtMetadata[] = [
     {
         name: 'vscode-azurefunctions',
+        publisher: msAzureToolsPublisher,
         label: 'Functions',
         resourceTypes: [
             AzExtResourceType.DurableTaskScheduler,
@@ -23,6 +27,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azureappservice',
+        publisher: msAzureToolsPublisher,
         label: 'App Service',
         resourceTypes: [
             AzExtResourceType.AppServices
@@ -35,6 +40,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurearcenabledmachines',
+        publisher: msAzureToolsPublisher,
         label: 'Azure Arc-enabled machines',
         resourceTypes: [
             AzExtResourceType.ArcEnabledMachines
@@ -43,6 +49,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurestaticwebapps',
+        publisher: msAzureToolsPublisher,
         label: 'Static Web Apps',
         resourceTypes: [
             AzExtResourceType.StaticWebApps
@@ -55,12 +62,14 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azureresourcegroups',
+        publisher: msAzureToolsPublisher,
         label: 'Resource Groups',
         resourceTypes: [],
         reportIssueCommandId: 'azureResourceGroups.reportIssue'
     },
     {
         name: 'vscode-azurestorage',
+        publisher: msAzureToolsPublisher,
         label: 'Storage',
         resourceTypes: [
             AzExtResourceType.StorageAccounts
@@ -69,6 +78,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurevirtualmachines',
+        publisher: msAzureToolsPublisher,
         label: 'Virtual Machines',
         resourceTypes: [
             AzExtResourceType.VirtualMachines
@@ -77,6 +87,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-cosmosdb',
+        publisher: msAzureToolsPublisher,
         label: 'Databases',
         resourceTypes: [
             AzExtResourceType.AzureCosmosDb,
@@ -87,6 +98,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-documentdb',
+        publisher: msAzureToolsPublisher,
         label: 'Databases',
         resourceTypes: [
             AzExtResourceType.AzureCosmosDbForMongoDbRu,
@@ -95,6 +107,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurecontainerapps',
+        publisher: msAzureToolsPublisher,
         label: 'Container Apps',
         resourceTypes: [
             AzExtResourceType.ContainerAppsEnvironment,
@@ -112,7 +125,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurelogicapps',
-        publisher: 'ms-azuretools',
+        publisher: msAzureToolsPublisher,
         label: 'Logic Apps',
         resourceTypes: [
             AzExtResourceType.LogicApp,
@@ -125,6 +138,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azurewebpubsub',
+        publisher: msAzureToolsPublisher,
         label: 'Web PubSub',
         resourceTypes: [
             AzExtResourceType.WebPubSub
@@ -133,6 +147,7 @@ export const azureExtensions: IAzExtMetadata[] = [
     },
     {
         name: 'vscode-azureresourcegroups',
+        publisher: msAzureToolsPublisher,
         label: 'Managed Identity',
         resourceTypes: [
             AzExtResourceType.ManagedIdentityUserAssignedIdentities
@@ -165,7 +180,7 @@ export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
 export interface IAzExtMetadata {
     name: string;
     label: string;
-    publisher?: string;
+    publisher: string;
     resourceTypes: AzExtResourceType[];
     tutorial?: IAzExtTutorial;
     reportIssueCommandId?: string;
