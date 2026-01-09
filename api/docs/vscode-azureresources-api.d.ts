@@ -124,12 +124,12 @@ export declare interface AzureAuthentication {
     /**
      * Gets a VS Code authentication session for an Azure subscription.
      *
-     * @param scopes - The scopes for which the authentication is needed. Use AuthenticationWwwAuthenticateRequest for supporting challenge requests.
-     * Note: use of AuthenticationWwwAuthenticateRequest requires VS Code v1.104
+     * @param scopeListOrRequest - The scopes for which the authentication is needed. Use AuthenticationWwwAuthenticateRequest for supporting challenge requests.
+     * Note: use of AuthenticationWwwAuthenticateRequest requires VS Code v1.105.0
      *
      * @returns A VS Code authentication session or undefined, if none could be obtained.
      */
-    getSessionWithScopes(scopes: string[] | vscode.AuthenticationWwwAuthenticateRequest): vscode.ProviderResult<vscode.AuthenticationSession>;
+    getSessionWithScopes(scopeListOrRequest: string[] | vscode.AuthenticationWwwAuthenticateRequest): vscode.ProviderResult<vscode.AuthenticationSession>;
 }
 
 export declare interface AzureExtensionApi {
@@ -174,7 +174,7 @@ export declare interface AzureResource extends ResourceBase {
     /**
      * A copy of the raw resource.
      */
-    readonly raw: {};
+    readonly raw: unknown;
 }
 
 /**
@@ -402,6 +402,13 @@ export declare interface ResourcesApi {
      */
     revealWorkspaceResource(id: string, options?: VSCodeRevealOptions): Promise<void>;
     /**
+     * Focus on a resource group in the Focused Resources view.
+     * This opens the Focused Resources view and filters it to show only resources from the specified resource group.
+     *
+     * @param resourceGroupId - The Azure Resource Group ID to focus on.
+     */
+    focusResourceGroup(resourceGroupId: string): Promise<void>;
+    /**
      * Gets a list of node IDs for nodes recently used/interacted with in the Azure tree view.
      *
      * @returns A promise that resolves to a list of node IDs.
@@ -428,14 +435,14 @@ export declare interface ViewPropertiesModelAsync {
     /**
      * Async function to get the raw data associated with the resource to populate the properties file.
      */
-    getData: () => Promise<{}>;
+    getData: () => Promise<unknown>;
 }
 
 export declare interface ViewPropertiesModelSync {
     /**
      * Raw data associated with the resource to populate the properties file.
      */
-    data: {};
+    data: unknown;
 }
 
 export declare type VSCodeRevealOptions = Parameters<vscode.TreeView<unknown>['reveal']>['1'];
@@ -495,4 +502,4 @@ export declare interface Wrapper {
     unwrap<T>(): T;
 }
 
-export { };
+export { }

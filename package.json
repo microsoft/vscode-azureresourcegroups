@@ -166,6 +166,11 @@
                 "icon": "$(zoom-in)"
             },
             {
+                "command": "azureResourceGroups.testFocusResourceGroup",
+                "title": "Test: Focus Resource Group by ID",
+                "category": "Azure"
+            },
+            {
                 "command": "azureResourceGroups.loadAllSubscriptionRoleAssignments",
                 "title": "%azureResourceGroups.loadAllSubscriptionRoleAssignments%",
                 "category": "Azure",
