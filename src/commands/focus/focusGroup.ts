@@ -20,7 +20,7 @@ function validateResourceGroupId(resourceGroupId: string): void {
     // Expected format: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}
     const match = resourceGroupId.match(/^\/subscriptions\/([^/]+)\/resourceGroups\/([^/]+)$/i);
     if (!match) {
-        throw new Error(`Invalid resource group ID format: ${resourceGroupId}`);
+        throw new Error(`Invalid resource group ID format: ${resourceGroupId}. Expected format: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}`);
     }
 }
 
