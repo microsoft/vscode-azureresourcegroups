@@ -73,7 +73,9 @@ export interface ResourcesApi {
      * Focus on a resource group in the Focused Resources view.
      * This opens the Focused Resources view and filters it to show only resources from the specified resource group.
      *
-     * @param resourceGroupId - The Azure Resource Group ID to focus on.
+     * @param resourceGroupId - The Azure Resource Group ID to focus on, in the form
+     *   `/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}`.
+     *   The promise is rejected with an error if the ID is not in the expected format.
      */
     focusResourceGroup(resourceGroupId: string): Promise<void>;
 
