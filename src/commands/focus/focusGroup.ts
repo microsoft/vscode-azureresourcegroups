@@ -28,6 +28,10 @@ export async function focusGroup(context: IActionContext, itemOrId?: GroupingIte
     if (typeof itemOrId === 'string') {
         // When called with a resource group ID string, validate it and set focus state directly
         // This works regardless of the current tree grouping mode
+        context.errorHandling.rethrow = true;
+        context.errorHandling.suppressDisplay = true;
+        context.errorHandling.suppressReportIssue = true;
+        
         validateResourceGroupId(itemOrId);
         
         ext.focusedGroup = {

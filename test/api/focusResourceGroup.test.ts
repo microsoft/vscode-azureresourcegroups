@@ -122,4 +122,31 @@ suite('focusResourceGroup API tests', () => {
             assert.strictEqual(focusedGroup.id, resourceGroupId.toLowerCase(), 'Focused group ID should be normalized to lowercase');
         }
     });
+
+    test("focusResourceGroup should reject invalid resource group IDs", async () => {
+        const invalidIds = [
+            'not-a-valid-id',
+            '/subscriptions/sub-id',
+            '/subscriptions/sub-id/resourceGroups',
+            '/subscriptions//resourceGroups/rg-name',
+            '/subscriptions/sub-id/resourceGroups/',
+            '/subscriptions/sub-id/resourcegroups/rg-name/extra',
+            'subscriptions/sub-id/resourceGroups/rg-name',
+            '',
+        ];
+
+        for (const invalidId of invalidIds) {
+            await assert.rejects(
+                async () => api().focusResourceGroup(invalidId),
+                (error: Error) => {
+                    assert.ok(error.message.includes('Invalid resource group ID format'), 
+                        `Expected error message to mention invalid format for ID: ${invalidId}`);
+                    assert.ok(error.message.includes('/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}'),
+                        `Expected error message to include expected format for ID: ${invalidId}`);
+                    return true;
+                },
+                `Should reject invalid resource group ID: ${invalidId}`
+            );
+        }
+    });
 });
