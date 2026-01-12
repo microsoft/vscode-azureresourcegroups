@@ -5,6 +5,7 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
+import { validateResourceGroupId } from "../../utils/azureUtils";
 
 export async function testFocusResourceGroup(context: IActionContext): Promise<void> {
     const resourceGroupId = await vscode.window.showInputBox({
@@ -14,10 +15,12 @@ export async function testFocusResourceGroup(context: IActionContext): Promise<v
             if (!value) {
                 return 'Resource group ID is required';
             }
-            if (!value.match(/^\/subscriptions\/[^/]+\/resourceGroups\/[^/]+$/i)) {
-                return 'Invalid resource group ID format. Expected: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}';
+            try {
+                validateResourceGroupId(value);
+                return undefined;
+            } catch (error) {
+                return error instanceof Error ? error.message : 'Invalid resource group ID format';
             }
-            return undefined;
         }
     });
 

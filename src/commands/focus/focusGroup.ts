@@ -12,17 +12,7 @@ import { GroupingItem } from "../../tree/azure/grouping/GroupingItem";
 import { isLocationGroupingItem } from "../../tree/azure/grouping/LocationGroupingItem";
 import { isResourceGroupGroupingItem } from "../../tree/azure/grouping/ResourceGroupGroupingItem";
 import { isResourceTypeGroupingItem } from "../../tree/azure/grouping/ResourceTypeGroupingItem";
-
-/**
- * Validates a resource group ID format.
- */
-function validateResourceGroupId(resourceGroupId: string): void {
-    // Expected format: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}
-    const match = resourceGroupId.match(/^\/subscriptions\/([^/]+)\/resourceGroups\/([^/]+)$/i);
-    if (!match) {
-        throw new Error(`Invalid resource group ID format: ${resourceGroupId}. Expected format: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}`);
-    }
-}
+import { validateResourceGroupId } from "../../utils/azureUtils";
 
 export async function focusGroup(context: IActionContext, itemOrId?: GroupingItem | string): Promise<void> {
     if (typeof itemOrId === 'string') {
