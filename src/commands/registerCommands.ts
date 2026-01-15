@@ -26,7 +26,6 @@ import { deleteResourceGroupV2 } from './deleteResourceGroup/v2/deleteResourceGr
 import { buildGroupByCommand } from './explorer/groupBy';
 import { showGroupOptions } from './explorer/showGroupOptions';
 import { focusGroup } from './focus/focusGroup';
-import { testFocusResourceGroup } from './focus/testFocusResourceGroup';
 import { unfocusGroup } from './focus/unfocusGroup';
 import { getStarted } from './helpAndFeedback/getStarted';
 import { reportIssue } from './helpAndFeedback/reportIssue';
@@ -84,7 +83,6 @@ export function registerCommands(): void {
     });
 
     registerCommand('azureResourceGroups.focusGroup', focusGroup);
-    registerCommand('azureResourceGroups.testFocusResourceGroup', testFocusResourceGroup);
     registerCommand('azureResourceGroups.unfocusGroup', unfocusGroup);
 
     registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context));
