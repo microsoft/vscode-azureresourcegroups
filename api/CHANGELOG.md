@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## Unreleased
 
+* Add `focusResourceGroup` function to the resources API.
+
 ## [3.0.0] - 2025-10-06
 
 * Package is now a combined CJS+ESM package.

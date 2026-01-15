@@ -70,6 +70,16 @@ export interface ResourcesApi {
     revealWorkspaceResource(id: string, options?: VSCodeRevealOptions): Promise<void>;
 
     /**
+     * Focus on a resource group in the Focused Resources view.
+     * This opens the Focused Resources view and filters it to show only resources from the specified resource group.
+     *
+     * @param resourceGroupId - The Azure Resource Group ID to focus on, in the form
+     *   `/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}`.
+     *   The promise is rejected with an error if the ID is not in the expected format.
+     */
+    focusResourceGroup(resourceGroupId: string): Promise<void>;
+
+    /**
      * Gets a list of node IDs for nodes recently used/interacted with in the Azure tree view.
      *
      * @returns A promise that resolves to a list of node IDs.

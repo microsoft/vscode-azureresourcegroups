@@ -13,6 +13,13 @@ import { IAzExtMetadata, legacyTypeMap } from '../azureExtensions';
 import { localize } from './localize';
 import { treeUtils } from './treeUtils';
 
+export function validateResourceGroupId(resourceGroupId: string): void {
+    const match = resourceGroupId.match(/^\/subscriptions\/[^/]+\/resourceGroups\/[^/]+$/i);
+    if (!match) {
+        throw new Error(`Invalid resource group ID format: ${resourceGroupId}. Expected format: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}`);
+    }
+}
+
 export function createGroupConfigFromResource(resource: AppResource, subscriptionId: string | undefined): GroupingConfig {
     const id = nonNullProp(resource, 'id');
     const unknown = localize('unknown', 'Unknown');
