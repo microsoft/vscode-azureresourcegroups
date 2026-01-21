@@ -27,6 +27,7 @@ export function createWrappedAzureResourcesExtensionApi(api: AzureResourcesApiIn
             ...wrapFunctionsInTelemetry({
                 revealAzureResource: api.resources.revealAzureResource.bind(api) as typeof api.resources.revealAzureResource,
                 revealWorkspaceResource: api.resources.revealWorkspaceResource.bind(api) as typeof api.resources.revealWorkspaceResource,
+                focusResourceGroup: api.resources.focusResourceGroup.bind(api) as typeof api.resources.focusResourceGroup,
             }, wrapOptions),
             ...wrapFunctionsInTelemetrySync({
                 registerAzureResourceBranchDataProvider: api.resources.registerAzureResourceBranchDataProvider.bind(api) as typeof api.resources.registerAzureResourceBranchDataProvider,
