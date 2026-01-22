@@ -5,7 +5,7 @@
 
 export interface AzExtCredentialManager {
     createCredential(extensionId: string): string | Promise<string>;
-    verifyCredential(credential: string, extensionId?: string): boolean | Promise<boolean>;
+    verifyCredential(credential: string, extensionId: string): boolean | Promise<boolean>;
 
     /**
      * Masks sensitive information from a given string to ensure private credential management keys from the manager are not exposed.
