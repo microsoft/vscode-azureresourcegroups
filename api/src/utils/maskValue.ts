@@ -8,8 +8,14 @@ export function maskValue(data: string, valueToMask: string | undefined): string
     if (valueToMask) {
         const formsOfValue: string[] = [valueToMask, encodeURIComponent(valueToMask)];
         for (const v of formsOfValue) {
-            data = data.replace(new RegExp(escape(v), 'gi'), '---');
+            data = data.replace(new RegExp(escapeRegExp(v), 'gi'), '---');
         }
     }
     return data;
+}
+
+function escapeRegExp(str: string): string {
+    return str
+        .replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
+        .replace(/-/g, '\\x2d');
 }
