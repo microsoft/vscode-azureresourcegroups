@@ -127,7 +127,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                         this.resourceGroupingManager,
                                         this.resourceProviderManager,
                                         subscription,
-                                        `(${nonNullValueAndProp(subscription.account, 'label')}/${subscription.tenantId})`);
+                                        `${nonNullValueAndProp(subscription.account, 'label')} (${subscription.tenantId})`);
                                 } else if (duplicates.includes(subscription)) {
                                     return new SubscriptionItem(
                                         {
@@ -138,7 +138,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                         this.resourceGroupingManager,
                                         this.resourceProviderManager,
                                         subscription,
-                                        `(${nonNullValueAndProp(subscription.account, 'label')})`);
+                                        `${nonNullValueAndProp(subscription.account, 'label')}`);
                                 }
                                 return new SubscriptionItem(
                                     {
