@@ -56,7 +56,7 @@ async function requestAzureResourcesSession(context: AzureResourcesApiRequestCon
         clientCredential = await clientCredentialManager.createCredential(context.clientExtensionId);
     } catch (err) {
         if (err instanceof Error) {
-            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.ClientFailedCreateCredential, message: clientCredentialManager.maskCredentials(err.message) })
+            void context.onApiRequestError?.({ code: AzureResourcesApiRequestErrorCode.ClientFailedCreateCredential, message: clientCredentialManager.maskCredentials(err.message) });
         }
         return;
     }
@@ -101,7 +101,7 @@ function createReceiveAzureResourcesApiSession(context: AzureResourcesApiRequest
             }
             return;
         }
-    }
+    };
 }
 
 async function getExtensionApi<T extends AzureExtensionApi>(extensionId: string, extensionVersion: string): Promise<T> {
