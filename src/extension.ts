@@ -14,6 +14,7 @@ import { AzExtResourceType } from '../api/src/AzExtResourceType';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
 import { ResourceGroupsExtensionManager } from './api/ResourceGroupsExtensionManager';
 import { ActivityLogResourceProviderManager, AzureResourceProviderManager, TenantResourceProviderManager, WorkspaceResourceProviderManager } from './api/ResourceProviderManagers';
+import { createAuthApiFactory } from './api/auth/createAuthApiFactory';
 import { InternalAzureResourceGroupsExtensionApi } from './api/compatibility/AzureResourceGroupsExtensionApi';
 import { CompatibleAzExtTreeDataProvider } from './api/compatibility/CompatibleAzExtTreeDataProvider';
 import { createCompatibilityPickAppResource } from './api/compatibility/pickAppResource';
@@ -214,7 +215,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
         async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getSubscriptions(filter); };
 
-    const apiFactories: AzureExtensionApiFactory[] = [
+    const coreApiFactories: AzureExtensionApiFactory[] = [
         {
             apiVersion: InternalAzureResourceGroupsExtensionApi.apiVersion,
             createApi: () => new InternalAzureResourceGroupsExtensionApi({
@@ -246,6 +247,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
          * Dependent extensions should rely on this API signal rather than the extension version.
          *
          * This temporary API will be removed in a future version once the migration is complete.
+         * See: https://github.com/microsoft/vscode-azureresourcegroups/pull/1223
          */
         {
             apiVersion: "3.0.0",
@@ -301,10 +303,18 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                 },
             }),
         };
-        apiFactories.push(testApiFactory);
+        coreApiFactories.push(testApiFactory);
     }
 
-    return createApiProvider(apiFactories);
+    return createApiProvider(
+        [
+            // Todo: Remove once extension clients finish migrating
+            ...coreApiFactories,
+
+            // This will eventually be the only part of the API exposed publically
+            createAuthApiFactory(createApiProvider(coreApiFactories)),
+        ]
+    );
 }
 
 export function deactivate(): void {
