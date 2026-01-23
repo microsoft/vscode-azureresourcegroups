@@ -11,7 +11,7 @@ import { maskValue } from "../../../api/src/utils/maskValue";
  * but with a public getter to inspect the UUIDs during test.
  */
 export class MockUUIDCredentialManager implements AzExtCredentialManager {
-    #uuidMap: Map<string, string> = new Map();
+    #uuidMap = new Map<string, string>();
 
     get uuidMap() {
         return this.#uuidMap;
