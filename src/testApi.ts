@@ -45,7 +45,7 @@ export interface TestApi {
          * Get the output channel
          */
         getOutputChannel(): IAzExtLogOutputChannel;
-        
+
         /**
          * Get the focused group
          */
