@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { registerOnActionStartHandler, TestUserInput } from '@microsoft/vscode-azext-utils';
+import { registerOnActionStartHandler, testGlobalSetup, TestUserInput } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { settingUtils } from '../src/utils/settingUtils';
 import { getTestApi } from './utils/testApiAccess';
@@ -20,6 +20,7 @@ suiteSetup(async function (this: Mocha.Context): Promise<void> {
 
     // Initialize test API - this caches it for use throughout tests
     await getTestApi();
+    testGlobalSetup();
 
     await vscode.commands.executeCommand('azureResourceGroups.refresh'); // activate the extension before tests begin
 
