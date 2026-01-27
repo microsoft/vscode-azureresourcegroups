@@ -43,8 +43,10 @@ suite('v4 internal API auth tests', async () => {
                 },
             };
 
+            // We need to manually inject a client api provider here since we are testing with a mocked client extension API and cannot rely on the normal VS Code extension provider for this during tests
             const authApi: AzureResourcesExtensionAuthApi = createMockAuthApi({ credentialManager, clientApiProvider: { getApi: () => mockClientExtensionApi } });
             authApi.createAzureResourcesApiSession(clientExtensionId, clientExtensionVersion, generatedClientCredential)
+                // We don't expect a session to be returned here, but we should try to store and verify just in case
                 .then(session => apiSession = session)
                 .catch(() => { clearTimeout(timeout); resolve(); });
         });

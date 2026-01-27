@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
+import { LocationListStep, registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
@@ -27,6 +27,8 @@ import { registerLMTools } from './chat/tools/registerLMTools';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerActivity } from './commands/activities/registerActivity';
 import { registerActivityLogTree } from './commands/activities/registerActivityLogTree';
+import { createResourceGroup } from './commands/createResourceGroup';
+import { deleteResourceGroupV2 } from './commands/deleteResourceGroup/v2/deleteResourceGroupV2';
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
@@ -52,6 +54,7 @@ import { registerTenantTree } from './tree/tenants/registerTenantTree';
 import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDefaultBranchDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
+import { createResourceClient } from './utils/azureClients';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
     // the entry point for vscode.dev is this activate, not main.js, so we need to instantiate perfStats here
@@ -276,6 +279,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                         };
                     },
                     getOutputChannel: () => ext.outputChannel,
+                    getFocusedGroup: () => ext.focusedGroup,
                 },
                 testing: {
                     setOverrideAzureServiceFactory: (factory) => {
@@ -284,6 +288,24 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                     setOverrideAzureSubscriptionProvider: (provider) => {
                         ext.testing.overrideAzureSubscriptionProvider = provider;
                     },
+                    getLocations: (context) => {
+                        return LocationListStep.getLocations(context);
+                    },
+                    createResourceGroup: (context, node) => {
+                        return createResourceGroup(context, node);
+                    },
+                    deleteResourceGroupV2: (context) => {
+                        return deleteResourceGroupV2(context);
+                    },
+                    resourceGroupExists: async (context, node, rgName) => {
+                        const client = await createResourceClient([context, node.subscription]);
+                        try {
+                            await client.resourceGroups.get(rgName);
+                            return true;
+                        } catch {
+                            return false;
+                        }
+                    }
                 },
             }),
         };

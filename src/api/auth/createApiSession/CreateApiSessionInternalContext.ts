@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
-import { AzExtCredentialManager } from "api/src/auth/credentialManager/AzExtCredentialManager";
-import { AzureExtensionApi } from "api/src/utils/apiUtils";
+import { AzExtCredentialManager } from "../../../../api/src/auth/credentialManager/AzExtCredentialManager";
+import { AzureExtensionApi } from "../../../../api/src/utils/apiUtils";
 
 export interface CreateApiSessionInternalContext extends IActionContext {
     credentialManager: AzExtCredentialManager;
