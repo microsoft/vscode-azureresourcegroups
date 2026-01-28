@@ -67,7 +67,24 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         if (element?.getChildren) {
             return await element.getChildren();
         } else {
+            return await this.getRootChildren();
+        }
+    }
+
+    /**
+     * Gets the root children (subscriptions) for the Azure Resources tree.
+     * Wrapped in telemetry to measure initial load performance.
+     */
+    private async getRootChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
+        return await callWithTelemetryAndErrorHandling('azureResourceGroups.loadSubscriptions', async (context) => {
+            context.errorHandling.rethrow = true;
+            context.errorHandling.suppressDisplay = true;
+
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
+
+            const isSignedIn = await subscriptionProvider.isSignedIn();
+            context.telemetry.properties.isSignedIn = String(isSignedIn);
+
             // When a user is signed in 'OnGetChildrenBase' will return no children
             const children: ResourceGroupsItem[] = await onGetAzureChildrenBase(subscriptionProvider, this);
 
@@ -90,6 +107,9 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                         })];
                     }
                 } else {
+                    // User is signed in and has subscriptions - record count
+                    context.telemetry.measurements.subscriptionCount = subscriptions.length;
+
                     //find duplicate subscriptions and change the name to include the account name. If duplicate subs are in the same account add the tenant id instead
                     const duplicates = getDuplicateSubscriptions(subscriptions);
                     let duplicatesWithSameAccount: AzureSubscription[] = [];
@@ -183,7 +203,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                 }
             }
             return children;
-        }
+        });
     }
 
     private hasSentSubscriptionTelemetry = false;
