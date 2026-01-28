@@ -18,6 +18,8 @@ import { TenantTreeItem } from './TenantTreeItem';
 import { isTenantFilteredOut } from './registerTenantTree';
 
 export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase {
+    private hasLoadedTenants: boolean = false;
+
     constructor(
         protected readonly branchDataProviderManager: TenantResourceBranchDataProviderManager,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -38,41 +40,70 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
-        return await callWithTelemetryAndErrorHandling('azureTenantsView.getChildren', async (context: IActionContext) => {
-            if (element) {
-                return await element.getChildren();
-            } else {
-                const subscriptionProvider = await this.getAzureSubscriptionProvider();
-                const children: ResourceGroupsItem[] = await onGetAzureChildrenBase(subscriptionProvider);
+        if (element) {
+            return await element.getChildren();
+        } else {
+            return await this.getRootChildren();
+        }
+    }
 
-                if (children.length === 0) {
-                    const accounts = Array.from((await vscode.authentication.getAccounts(getConfiguredAuthProviderId()))).sort((a, b) => a.label.localeCompare(b.label));
-                    context.telemetry.properties.accountCount = accounts.length.toString();
-                    for (const account of accounts) {
-                        const tenants = (await subscriptionProvider.getTenants(account))
-                            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                            .sort((a, b) => a.displayName!.localeCompare(b.displayName!));
-                        const tenantItems: ResourceGroupsItem[] = [];
-                        for await (const tenant of tenants) {
-                            const isSignedIn = await subscriptionProvider.isSignedIn(nonNullProp(tenant, 'tenantId'), account);
-                            tenantItems.push(new TenantTreeItem(tenant, account, {
-                                contextValue: isSignedIn ? 'tenantName' : 'tenantNameNotSignedIn',
-                                checkboxState: (!isSignedIn || isTenantFilteredOut(nonNullProp(tenant, 'tenantId'), account.id)) ?
-                                    vscode.TreeItemCheckboxState.Unchecked : vscode.TreeItemCheckboxState.Checked,
-                                description: tenant.tenantId
-                            }));
+    /**
+     * Gets the root children (accounts and tenants) for the Accounts & Tenants tree.
+     * Wrapped in telemetry to measure initial load performance.
+     */
+    private async getRootChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
+        return await callWithTelemetryAndErrorHandling('azureTenantsView.initialLoadTenants', async (context: IActionContext) => {
+            context.errorHandling.rethrow = true;
+            context.errorHandling.suppressDisplay = true;
+
+            const isFirstLoad = !this.hasLoadedTenants;
+            this.hasLoadedTenants = true;
+            context.telemetry.properties.isFirstLoad = String(isFirstLoad);
+
+            const subscriptionProvider = await this.getAzureSubscriptionProvider();
+
+            const isSignedIn = await subscriptionProvider.isSignedIn();
+            context.telemetry.properties.isSignedIn = String(isSignedIn);
+
+            const children: ResourceGroupsItem[] = await onGetAzureChildrenBase(subscriptionProvider);
+
+            if (children.length === 0) {
+                const accounts = Array.from((await vscode.authentication.getAccounts(getConfiguredAuthProviderId()))).sort((a, b) => a.label.localeCompare(b.label));
+                context.telemetry.measurements.accountCount = accounts.length;
+
+                let totalTenantCount = 0;
+                let tenantsNotSignedInCount = 0;
+                for (const account of accounts) {
+                    const tenants = (await subscriptionProvider.getTenants(account))
+                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                        .sort((a, b) => a.displayName!.localeCompare(b.displayName!));
+                    totalTenantCount += tenants.length;
+
+                    const tenantItems: ResourceGroupsItem[] = [];
+                    for await (const tenant of tenants) {
+                        const isTenantSignedIn = await subscriptionProvider.isSignedIn(nonNullProp(tenant, 'tenantId'), account);
+                        if (!isTenantSignedIn) {
+                            tenantsNotSignedInCount++;
                         }
-
-                        children.push(new GenericItem(nonNullValueAndProp(account, 'label'), {
-                            children: tenantItems,
-                            iconPath: new vscode.ThemeIcon('account'),
-                            contextValue: 'accountName',
-                            collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+                        tenantItems.push(new TenantTreeItem(tenant, account, {
+                            contextValue: isTenantSignedIn ? 'tenantName' : 'tenantNameNotSignedIn',
+                            checkboxState: (!isTenantSignedIn || isTenantFilteredOut(nonNullProp(tenant, 'tenantId'), account.id)) ?
+                                vscode.TreeItemCheckboxState.Unchecked : vscode.TreeItemCheckboxState.Checked,
+                            description: tenant.tenantId
                         }));
                     }
+
+                    children.push(new GenericItem(nonNullValueAndProp(account, 'label'), {
+                        children: tenantItems,
+                        iconPath: new vscode.ThemeIcon('account'),
+                        contextValue: 'accountName',
+                        collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+                    }));
                 }
-                return children;
+                context.telemetry.measurements.tenantCount = totalTenantCount;
+                context.telemetry.measurements.tenantsNotSignedInCount = tenantsNotSignedInCount;
             }
+            return children;
         });
     }
 }
