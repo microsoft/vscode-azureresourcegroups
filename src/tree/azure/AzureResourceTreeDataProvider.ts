@@ -112,9 +112,13 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
 
                     //find duplicate subscriptions and change the name to include the account name. If duplicate subs are in the same account add the tenant id instead
                     const duplicates = getDuplicateSubscriptions(subscriptions);
+                    context.telemetry.properties.hasDuplicates = String(duplicates.length > 0);
+
                     let duplicatesWithSameAccount: AzureSubscription[] = [];
                     if (duplicates.length > 0) {
                         duplicatesWithSameAccount = getDuplicateSubsInSameAccount(duplicates);
+                        context.telemetry.properties.hasDuplicatesInSameAccount = String(duplicatesWithSameAccount.length > 0);
+
                         if (duplicatesWithSameAccount.length > 0 && !this.hasShownDuplicateWarning) {
                             this.hasShownDuplicateWarning = true;
                             void callWithTelemetryAndErrorHandling('azureResourceGroups.duplicate', async (context: IActionContext) => {
