@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscription, getUnauthenticatedTenants } from '@microsoft/vscode-azext-azureauth';
+import { AzureSubscription, getConfiguredAuthProviderId, getUnauthenticatedTenants } from '@microsoft/vscode-azext-azureauth';
 import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, nonNullValueAndProp, registerEvent, TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
@@ -112,8 +112,10 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                         })];
                     }
                 } else {
-                    // User is signed in and has subscriptions - record count
+                    // User is signed in and has subscriptions - record counts
                     context.telemetry.measurements.subscriptionCount = subscriptions.length;
+                    const accounts = await vscode.authentication.getAccounts(getConfiguredAuthProviderId());
+                    context.telemetry.measurements.accountCount = accounts.length;
 
                     //find duplicate subscriptions and change the name to include the account name. If duplicate subs are in the same account add the tenant id instead
                     const duplicates = getDuplicateSubscriptions(subscriptions);
