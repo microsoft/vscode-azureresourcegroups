@@ -24,6 +24,7 @@ import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingMa
 export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProviderBase {
     private readonly groupingChangeSubscription: vscode.Disposable;
     private hasShownDuplicateWarning: boolean = false;
+    private hasLoadedSubscriptions: boolean = false;
 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -79,6 +80,10 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         return await callWithTelemetryAndErrorHandling('azureResourceGroups.loadSubscriptions', async (context) => {
             context.errorHandling.rethrow = true;
             context.errorHandling.suppressDisplay = true;
+
+            const isFirstLoad = !this.hasLoadedSubscriptions;
+            this.hasLoadedSubscriptions = true;
+            context.telemetry.properties.isFirstLoad = String(isFirstLoad);
 
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
 

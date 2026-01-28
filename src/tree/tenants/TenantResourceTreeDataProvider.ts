@@ -18,6 +18,8 @@ import { TenantTreeItem } from './TenantTreeItem';
 import { isTenantFilteredOut } from './registerTenantTree';
 
 export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase {
+    private hasLoadedTenants: boolean = false;
+
     constructor(
         protected readonly branchDataProviderManager: TenantResourceBranchDataProviderManager,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -53,6 +55,10 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
         return await callWithTelemetryAndErrorHandling('azureTenantsView.initialLoadTenants', async (context: IActionContext) => {
             context.errorHandling.rethrow = true;
             context.errorHandling.suppressDisplay = true;
+
+            const isFirstLoad = !this.hasLoadedTenants;
+            this.hasLoadedTenants = true;
+            context.telemetry.properties.isFirstLoad = String(isFirstLoad);
 
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
