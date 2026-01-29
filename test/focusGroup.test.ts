@@ -91,4 +91,68 @@ suite('focusGroup command tests', () => {
             assert.strictEqual(focusedGroup.id, rg2Id.toLowerCase(), 'Focused group should be the new group');
         }
     });
+
+    test("focusGroup should handle same-named resource groups in different subscriptions", async () => {
+        const mockResources = createMockSubscriptionWithFunctions();
+        
+        // Create a second subscription
+        const sub2 = mockResources.subscriptionsMap.get([...mockResources.subscriptionsMap.keys()][1]);
+        assert.ok(sub2, 'Second subscription should exist');
+        
+        // Create a resource group with the same name in both subscriptions
+        const rgName = 'duplicate-rg-name';
+        const rg1Id = `${mockResources.sub1.id}/resourceGroups/${rgName}`;
+        const rg2Id = `${sub2.id}/resourceGroups/${rgName}`;
+        
+        // Add resource groups to both subscriptions
+        mockResources.sub1.resourceGroups.push({
+            type: 'microsoft.resources/resourcegroups',
+            name: rgName,
+            location: 'eastus',
+            id: rg1Id,
+            resources: []
+        } as any);
+        
+        sub2.resourceGroups.push({
+            type: 'microsoft.resources/resourcegroups',
+            name: rgName,
+            location: 'westus',
+            id: rg2Id,
+            resources: []
+        } as any);
+        
+        // Set grouping mode and populate tree
+        await commands.executeCommand('azureResourceGroups.groupBy.resourceGroup');
+        const tdp = getCachedTestApi().getApi().resources.azureResourceTreeDataProvider;
+        await tdp.getChildren();
+        
+        // Focus on the first resource group
+        await commands.executeCommand('azureResourceGroups.focusGroup', rg1Id);
+        let focusedGroup = getCachedTestApi().extensionVariables.getFocusedGroup();
+        assert.ok(focusedGroup, 'Focused group should be set for first RG');
+        assert.strictEqual(focusedGroup.kind, 'resourceGroup', 'Focused group kind should be resourceGroup');
+        if (focusedGroup && focusedGroup.kind === 'resourceGroup') {
+            assert.strictEqual(focusedGroup.id, rg1Id.toLowerCase(), 'Focused group ID should match first RG');
+        }
+        
+        // Import ext to access focusViewTreeDataProvider
+        const { ext } = await import('../src/extensionVariables');
+        
+        // Get the focused tree items
+        const focusedItems1 = await ext.focusViewTreeDataProvider.getChildren();
+        assert.ok(focusedItems1 && focusedItems1.length > 0, 'Focused items should not be empty after focusing first RG');
+        
+        // Focus on the second resource group with the same name but different subscription
+        await commands.executeCommand('azureResourceGroups.focusGroup', rg2Id);
+        focusedGroup = getCachedTestApi().extensionVariables.getFocusedGroup();
+        assert.ok(focusedGroup, 'Focused group should be set for second RG');
+        assert.strictEqual(focusedGroup.kind, 'resourceGroup', 'Focused group kind should be resourceGroup');
+        if (focusedGroup && focusedGroup.kind === 'resourceGroup') {
+            assert.strictEqual(focusedGroup.id, rg2Id.toLowerCase(), 'Focused group ID should match second RG');
+        }
+        
+        // Verify that the focused list is not empty
+        const focusedItems2 = await ext.focusViewTreeDataProvider.getChildren();
+        assert.ok(focusedItems2 && focusedItems2.length > 0, 'Focused items should not be empty after focusing second RG with same name');
+    });
 });
