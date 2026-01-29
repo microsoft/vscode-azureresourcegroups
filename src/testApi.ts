@@ -9,6 +9,7 @@ import { AzExtTreeDataProvider, IActionContext, IAzExtLogOutputChannel, ISubscri
 import { GroupingKind } from "./extensionVariables";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
+import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
 import { SubscriptionItem } from "./tree/azure/SubscriptionItem";
 
 /**
@@ -50,6 +51,11 @@ export interface TestApi {
          * Get the focused group
          */
         getFocusedGroup(): GroupingKind | undefined;
+
+        /**
+         * Get the focus view tree data provider
+         */
+        getFocusViewTreeDataProvider(): FocusViewTreeDataProvider;
     };
 
     /**

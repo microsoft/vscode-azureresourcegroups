@@ -274,6 +274,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
                 extensionVariables: {
                     getOutputChannel: () => ext.outputChannel,
                     getFocusedGroup: () => ext.focusedGroup,
+                    getFocusViewTreeDataProvider: () => ext.focusViewTreeDataProvider,
                 },
                 testing: {
                     setOverrideAzureServiceFactory: (factory) => {
