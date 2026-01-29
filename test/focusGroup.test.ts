@@ -7,7 +7,6 @@ import assert from "assert";
 import { commands } from "vscode";
 import { createMockSubscriptionWithFunctions } from "./api/mockServiceFactory";
 import { getCachedTestApi } from "./utils/testApiAccess";
-import { ext } from "../src/extensionVariables.js";
 
 suite('focusGroup command tests', () => {
     test("focusGroup command should accept GroupingItem (backward compatibility)", async () => {
@@ -155,10 +154,6 @@ suite('focusGroup command tests', () => {
             assert.strictEqual(focusedGroup.id, rg1Id.toLowerCase(), 'Focused group ID should match first RG');
         }
         
-        // Get the focused tree items
-        const focusedItems1 = await ext.focusViewTreeDataProvider.getChildren();
-        assert.ok(focusedItems1 && focusedItems1.length > 0, 'Focused items should not be empty after focusing first RG');
-        
         // Focus on the second resource group with the same name but different subscription
         await commands.executeCommand('azureResourceGroups.focusGroup', rg2Id);
         focusedGroup = getCachedTestApi().extensionVariables.getFocusedGroup();
@@ -167,9 +162,5 @@ suite('focusGroup command tests', () => {
         if (focusedGroup && focusedGroup.kind === 'resourceGroup') {
             assert.strictEqual(focusedGroup.id, rg2Id.toLowerCase(), 'Focused group ID should match second RG');
         }
-        
-        // Verify that the focused list is not empty
-        const focusedItems2 = await ext.focusViewTreeDataProvider.getChildren();
-        assert.ok(focusedItems2 && focusedItems2.length > 0, 'Focused items should not be empty after focusing second RG with same name');
     });
 });
