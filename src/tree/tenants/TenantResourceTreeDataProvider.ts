@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
+import { AzureAccount, AzureSubscriptionProvider, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import { ResourceModelBase } from 'api/src';
 import * as vscode from 'vscode';
@@ -54,28 +54,14 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                 try {
                     const accounts = await subscriptionProvider.getAccounts({ filter: false, noCache: ext.clearCacheOnNextLoad });
                     context.telemetry.properties.accountCount = accounts.length.toString();
-                    for (const account of accounts) {
-                        const allTenants = await subscriptionProvider.getTenantsForAccount(account, { filter: false, noCache: ext.clearCacheOnNextLoad });
-                        const unauthenticatedTenants = await subscriptionProvider.getUnauthenticatedTenantsForAccount(account);
-                        const tenantItems: ResourceGroupsItem[] = [];
-                        for await (const tenant of allTenants) {
-                            // TODO: This is n^2 which is not great, but the number of tenants is usually quite small
-                            const isSignedIn = !unauthenticatedTenants.some(uat => uat.tenantId === tenant.tenantId);
-                            tenantItems.push(new TenantTreeItem(tenant, account, {
-                                contextValue: isSignedIn ? 'tenantName' : 'tenantNameNotSignedIn',
-                                checkboxState: (!isSignedIn || isTenantFilteredOut(tenant.tenantId, account.id)) ?
-                                    vscode.TreeItemCheckboxState.Unchecked : vscode.TreeItemCheckboxState.Checked,
-                                description: tenant.tenantId
-                            }));
-                        }
 
-                        children.push(new GenericItem(account.label, {
-                            children: tenantItems,
-                            iconPath: new vscode.ThemeIcon('account'),
-                            contextValue: 'accountName',
-                            collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
-                        }));
+                    for (const account of accounts) {
+                        const accountItem = await this.getTenantsForAccountSafe(subscriptionProvider, account);
+                        if (accountItem) {
+                            children.push(accountItem);
+                        }
                     }
+
                     return children;
                 } catch (error) {
                     if (isNotSignedInError(error)) {
@@ -89,5 +75,41 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                 }
             }
         });
+    }
+
+    /**
+     * Gets tenants for an account, handling NotSignedInError gracefully.
+     * If the account can't be accessed (e.g., session expired), returns undefined to skip it.
+     */
+    private async getTenantsForAccountSafe(subscriptionProvider: AzureSubscriptionProvider, account: AzureAccount): Promise<ResourceGroupsItem | undefined> {
+        try {
+            const allTenants = await subscriptionProvider.getTenantsForAccount(account, { filter: false, noCache: ext.clearCacheOnNextLoad });
+            const unauthenticatedTenants = await subscriptionProvider.getUnauthenticatedTenantsForAccount(account);
+            const tenantItems: ResourceGroupsItem[] = [];
+
+            for (const tenant of allTenants) {
+                // TODO: This is n^2 which is not great, but the number of tenants is usually quite small
+                const isSignedIn = !unauthenticatedTenants.some(uat => uat.tenantId === tenant.tenantId);
+                tenantItems.push(new TenantTreeItem(tenant, account, {
+                    contextValue: isSignedIn ? 'tenantName' : 'tenantNameNotSignedIn',
+                    checkboxState: (!isSignedIn || isTenantFilteredOut(tenant.tenantId, account.id)) ?
+                        vscode.TreeItemCheckboxState.Unchecked : vscode.TreeItemCheckboxState.Checked,
+                    description: tenant.tenantId
+                }));
+            }
+
+            return new GenericItem(account.label, {
+                children: tenantItems,
+                iconPath: new vscode.ThemeIcon('account'),
+                contextValue: 'accountName',
+                collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+            });
+        } catch (error) {
+            if (isNotSignedInError(error)) {
+                // Skip this account if we can't get a session for it
+                return undefined;
+            }
+            throw error;
+        }
     }
 }

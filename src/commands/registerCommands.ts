@@ -88,7 +88,9 @@ export function registerCommands(): void {
 
     registerCommand('azureTenantsView.signInToTenant', async (_context, node: TenantTreeItem) => {
         await (await ext.subscriptionProviderFactory()).signIn(node);
-        ext.actions.refreshTenantTree(node);
+        ext.clearCacheOnNextLoad = true;
+        ext.actions.refreshTenantTree();
+        ext.actions.refreshAzureTree();
     });
 
     registerCommand('azureResourceGroups.focusGroup', focusGroup);
@@ -97,7 +99,12 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context));
     registerCommand('azureTenantsView.addAccount', (context: IActionContext) => logIn(context));
     registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext, options: SelectSubscriptionOptions) => selectSubscriptions(context, options));
-    registerCommand('azureResourceGroups.signInToTenant', async () => signInToTenant(await ext.subscriptionProviderFactory()));
+    registerCommand('azureResourceGroups.signInToTenant', async () => {
+        await signInToTenant(await ext.subscriptionProviderFactory());
+        ext.clearCacheOnNextLoad = true;
+        ext.actions.refreshTenantTree();
+        ext.actions.refreshAzureTree();
+    });
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);

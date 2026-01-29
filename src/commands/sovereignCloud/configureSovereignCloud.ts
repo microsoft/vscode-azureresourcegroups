@@ -26,7 +26,9 @@ export async function configureSovereignCloud(context: ConfigureSovereignCloudCo
     await wizard.prompt();
     await wizard.execute();
 
-    // refresh resources and tenant view to accurrately reflect information for the selected sovereign cloud
+    // Clear cache and refresh views to reflect the selected sovereign cloud
+    // This ensures accounts from the previous environment are not shown
+    ext.clearCacheOnNextLoad = true;
     ext.actions.refreshAzureTree();
     ext.actions.refreshTenantTree();
 }

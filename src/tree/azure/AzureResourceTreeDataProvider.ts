@@ -67,19 +67,26 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         if (element?.getChildren) {
             return await element.getChildren();
         } else {
-            const maybeLogInItems = tryGetLoggingInTreeItems();
-            if (maybeLogInItems?.length) {
-                return maybeLogInItems;
-            }
+            // Wrap root-level getChildren in telemetry to measure subscription loading time
+            return await callWithTelemetryAndErrorHandling('azureResourcesView.loadSubscriptions', async (context: IActionContext) => {
+                context.errorHandling.suppressDisplay = true;
 
-            const subscriptionProvider = await this.getAzureSubscriptionProvider();
+                const maybeLogInItems = tryGetLoggingInTreeItems();
+                if (maybeLogInItems?.length) {
+                    context.telemetry.properties.outcome = 'loggingIn';
+                    return maybeLogInItems;
+                }
 
-            try {
-                await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
-                const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: ext.clearCacheOnNextLoad });
-                this.sendSubscriptionTelemetryIfNeeded(); // Don't send until the above call is done, to avoid cache missing
+                const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
-                if (subscriptions.length === 0) {
+                try {
+                    await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
+                    const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: ext.clearCacheOnNextLoad });
+                    this.sendSubscriptionTelemetryIfNeeded(); // Don't send until the above call is done, to avoid cache missing
+
+                    context.telemetry.measurements.subscriptionCount = subscriptions.length;
+
+                    if (subscriptions.length === 0) {
                     // No subscriptions through the filters. Decide what to show.
                     const selectSubscriptionsItem = new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
                         commandId: 'azureResourceGroups.selectSubscriptions'
@@ -200,15 +207,17 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                     }
                 }
             } catch (error) {
-                if (isNotSignedInError(error)) {
-                    return getSignInTreeItems(true);
-                }
+                    if (isNotSignedInError(error)) {
+                        context.telemetry.properties.outcome = 'notSignedIn';
+                        return getSignInTreeItems(true);
+                    }
 
-                // TODO: Else do we throw? What did we do before?
-                return [];
-            } finally {
-                ext.clearCacheOnNextLoad = false;
-            }
+                    // TODO: Else do we throw? What did we do before?
+                    return [];
+                } finally {
+                    ext.clearCacheOnNextLoad = false;
+                }
+            });
         }
     }
 
