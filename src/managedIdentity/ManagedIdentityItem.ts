@@ -40,7 +40,7 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
     }
 
     async getChildren<TreeElementBase>(): Promise<TreeElementBase[]> {
-        const result = await callWithTelemetryAndErrorHandling('managedIdentityItem.getChildren', async (context: IActionContext) => {
+        return await callWithTelemetryAndErrorHandling('managedIdentityItem.getChildren', async (context: IActionContext) => {
             context.errorHandling.rethrow = true;
             const subContext = createSubscriptionContext(this.subscription);
             const msiClient = await createManagedServiceIdentityClient([context, subContext]);
@@ -59,9 +59,7 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
 
             children.push(targetServiceItem);
             return children;
-        });
-
-        return result as TreeElementBase[] ?? [];
+        }) as TreeElementBase[];
     }
 
     getTreeItem(): TreeItem {

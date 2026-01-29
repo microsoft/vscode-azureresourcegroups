@@ -38,7 +38,7 @@ export class TargetServiceRoleAssignmentItem implements TreeElementBase {
 
             this._cachedChildren = children;
             return children;
-        }) || [];
+        }) as TreeElementBase[];
     }
 
     getTreeItem(): TreeItem {
