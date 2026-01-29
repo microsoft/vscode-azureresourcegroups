@@ -7,6 +7,7 @@ import assert from "assert";
 import { commands } from "vscode";
 import { createMockSubscriptionWithFunctions } from "./api/mockServiceFactory";
 import { getCachedTestApi } from "./utils/testApiAccess";
+import { ext } from "../src/extensionVariables.js";
 
 suite('focusGroup command tests', () => {
     test("focusGroup command should accept GroupingItem (backward compatibility)", async () => {
@@ -153,9 +154,6 @@ suite('focusGroup command tests', () => {
         if (focusedGroup && focusedGroup.kind === 'resourceGroup') {
             assert.strictEqual(focusedGroup.id, rg1Id.toLowerCase(), 'Focused group ID should match first RG');
         }
-        
-        // Import ext to access focusViewTreeDataProvider
-        const { ext } = await import('../src/extensionVariables.js');
         
         // Get the focused tree items
         const focusedItems1 = await ext.focusViewTreeDataProvider.getChildren();
