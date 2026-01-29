@@ -67,13 +67,11 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
 
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
-            const isSignedIn = await subscriptionProvider.isSignedIn();
-            context.telemetry.properties.isSignedIn = String(isSignedIn);
-
             const children: ResourceGroupsItem[] = [];
 
             try {
                 const accounts = await subscriptionProvider.getAccounts({ filter: false, noCache: ext.clearCacheOnNextLoad });
+                context.telemetry.properties.isSignedIn = 'true';
                 context.telemetry.properties.accountCount = accounts.length.toString();
 
                 for (const account of accounts) {
