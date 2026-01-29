@@ -10,6 +10,7 @@ import { AzureSubscription } from "api/src";
 import { TreeItem, TreeItemCollapsibleState } from "vscode";
 import { createAzureResource } from "../api/DefaultAzureResourceProvider";
 import { DefaultAzureResourceItem } from "../tree/azure/DefaultAzureResourceItem";
+import { getAccountAndTenantPrefix } from "../tree/azure/idPrefix";
 import { ResourceGroupsItem } from "../tree/ResourceGroupsItem";
 import { localize } from "../utils/localize";
 
@@ -40,7 +41,9 @@ export class SourceResourceIdentityItem implements ResourceGroupsItem {
             return userAssignedIdentities[msi.id] !== undefined;
         }).map((r) => {
             const sourceResource = createAzureResource(this.subscription, r);
-            return new DefaultAzureResourceItem(sourceResource, { treeItemId: `${msi.id}/${sourceResource.id}` /** Also include the msi id to ensure uniqueness */ });
+            // Use account/tenant prefix + msi context + resource id to ensure uniqueness when resource appears in multiple tree locations
+            const treeItemId = `${getAccountAndTenantPrefix(this.subscription)}${msi.id}/${sourceResource.id}`;
+            return new DefaultAzureResourceItem(sourceResource, { treeItemId });
         });
         return assignedResources;
     }
