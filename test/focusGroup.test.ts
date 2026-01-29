@@ -95,22 +95,34 @@ suite('focusGroup command tests', () => {
     test("focusGroup should handle same-named resource groups in different subscriptions", async () => {
         const mockResources = createMockSubscriptionWithFunctions();
         
-        // Create a second subscription
-        const sub2 = mockResources.subscriptionsMap.get([...mockResources.subscriptionsMap.keys()][1]);
+        // Get all subscriptions and ensure we have at least 2
+        const subscriptions = mockResources.subscriptions;
+        assert.ok(subscriptions.length >= 2, 'Should have at least 2 subscriptions');
+        
+        // Use sub1 (MockSubscriptionWithFunctions) and the second subscription
+        const sub1 = mockResources.sub1;
+        const sub2 = subscriptions.find(s => s.subscriptionId !== sub1.subscriptionId);
         assert.ok(sub2, 'Second subscription should exist');
         
         // Create a resource group with the same name in both subscriptions
         const rgName = 'duplicate-rg-name';
-        const rg1Id = `${mockResources.sub1.id}/resourceGroups/${rgName}`;
+        const rg1Id = `${sub1.id}/resourceGroups/${rgName}`;
         const rg2Id = `${sub2.id}/resourceGroups/${rgName}`;
         
-        // Add resource groups to both subscriptions
-        mockResources.sub1.resourceGroups.push({
+        // Add resource groups to both subscriptions with resources
+        sub1.resourceGroups.push({
             type: 'microsoft.resources/resourcegroups',
             name: rgName,
             location: 'eastus',
             id: rg1Id,
-            resources: []
+            resources: [
+                {
+                    name: 'test-function-sub1',
+                    type: 'microsoft.web/sites',
+                    kind: 'functionapp',
+                    id: `${rg1Id}/providers/microsoft.web/sites/test-function-sub1`
+                } as any
+            ]
         } as any);
         
         sub2.resourceGroups.push({
@@ -118,7 +130,14 @@ suite('focusGroup command tests', () => {
             name: rgName,
             location: 'westus',
             id: rg2Id,
-            resources: []
+            resources: [
+                {
+                    name: 'test-function-sub2',
+                    type: 'microsoft.web/sites',
+                    kind: 'functionapp',
+                    id: `${rg2Id}/providers/microsoft.web/sites/test-function-sub2`
+                } as any
+            ]
         } as any);
         
         // Set grouping mode and populate tree
