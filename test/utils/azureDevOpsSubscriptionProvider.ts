@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type AzureDevOpsSubscriptionProviderInitializer, createAzureDevOpsSubscriptionProviderFactory } from "@microsoft/vscode-azext-azureauth/azdo";
 import { getCachedTestApi } from "./testApiAccess";
 
 /**
@@ -30,7 +29,10 @@ export async function setupAzureDevOpsSubscriptionProvider(): Promise<void> {
                         `);
     }
 
-    const initializer: AzureDevOpsSubscriptionProviderInitializer = {
+    // Dynamic import to avoid loading AzDO dependencies unless actually needed
+    const { createAzureDevOpsSubscriptionProviderFactory } = await import("@microsoft/vscode-azext-azureauth/azdo");
+
+    const initializer = {
         serviceConnectionId,
         tenantId: domain,
         clientId,
