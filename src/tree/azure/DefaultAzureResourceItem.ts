@@ -50,6 +50,7 @@ export class DefaultAzureResourceItem implements ResourceGroupsItem {
 
         const treeItem = new vscode.TreeItem(this.resource.name ?? 'Unnamed Resource', isResourceTypeExtensionInstalled === false ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 
+        treeItem.id = this.id;
         treeItem.iconPath = getIconPath(this.resource.resourceType);
         treeItem.contextValue = createContextValue(['azureResource', 'hasPortalUrl']);
 
