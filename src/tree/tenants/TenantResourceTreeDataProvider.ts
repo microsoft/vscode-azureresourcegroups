@@ -19,6 +19,8 @@ import { TenantResourceBranchDataProviderManager } from "./TenantResourceBranchD
 import { TenantTreeItem } from './TenantTreeItem';
 
 export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase {
+    private hasLoadedTenants: boolean = false;
+
     constructor(
         protected readonly branchDataProviderManager: TenantResourceBranchDataProviderManager,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -39,40 +41,59 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
     }
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
+        if (element) {
+            return await element.getChildren();
+        } else {
+            return await this.getRootChildren();
+        }
+    }
+
+    /**
+     * Gets the root children (accounts and tenants) for the Accounts & Tenants tree.
+     * Wrapped in telemetry to measure initial load performance.
+     */
+    private async getRootChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
         return await callWithTelemetryAndErrorHandling('azureTenantsView.getChildren', async (context: IActionContext) => {
-            if (element?.getChildren) {
-                return await element.getChildren();
-            } else {
-                const maybeLogInItems = tryGetLoggingInTreeItems();
-                if (maybeLogInItems?.length) {
-                    return maybeLogInItems;
+            context.errorHandling.suppressDisplay = true;
+
+            const isFirstLoad = !this.hasLoadedTenants;
+            this.hasLoadedTenants = true;
+            context.telemetry.properties.isFirstLoad = String(isFirstLoad);
+
+            const maybeLogInItems = tryGetLoggingInTreeItems();
+            if (maybeLogInItems?.length) {
+                return maybeLogInItems;
+            }
+
+            const subscriptionProvider = await this.getAzureSubscriptionProvider();
+
+            const isSignedIn = await subscriptionProvider.isSignedIn();
+            context.telemetry.properties.isSignedIn = String(isSignedIn);
+
+            const children: ResourceGroupsItem[] = [];
+
+            try {
+                const accounts = await subscriptionProvider.getAccounts({ filter: false, noCache: ext.clearCacheOnNextLoad });
+                context.telemetry.properties.accountCount = accounts.length.toString();
+
+                for (const account of accounts) {
+                    const accountItem = await this.getTenantsForAccountSafe(subscriptionProvider, account);
+                    if (accountItem) {
+                        children.push(accountItem);
+                    }
                 }
 
-                const subscriptionProvider = await this.getAzureSubscriptionProvider();
-                const children: ResourceGroupsItem[] = [];
-
-                try {
-                    const accounts = await subscriptionProvider.getAccounts({ filter: false, noCache: ext.clearCacheOnNextLoad });
-                    context.telemetry.properties.accountCount = accounts.length.toString();
-
-                    for (const account of accounts) {
-                        const accountItem = await this.getTenantsForAccountSafe(subscriptionProvider, account);
-                        if (accountItem) {
-                            children.push(accountItem);
-                        }
-                    }
-
-                    return children;
-                } catch (error) {
-                    if (isNotSignedInError(error)) {
-                        return getSignInTreeItems(false);
-                    }
-
-                    // TODO: Else do we throw? What did we do before?
-                    return [];
-                } finally {
-                    ext.clearCacheOnNextLoad = false;
+                return children;
+            } catch (error) {
+                if (isNotSignedInError(error)) {
+                    context.telemetry.properties.outcome = 'notSignedIn';
+                    return getSignInTreeItems(false);
                 }
+
+                // TODO: Else do we throw? What did we do before?
+                return [];
+            } finally {
+                ext.clearCacheOnNextLoad = false;
             }
         });
     }

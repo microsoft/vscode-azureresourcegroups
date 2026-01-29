@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscription, AzureTenant, getMetricsForTelemetry, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
+import { AzureSubscription, AzureTenant, getConfiguredAuthProviderId, getMetricsForTelemetry, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
 import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, nonNullValueAndProp, registerEvent, TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
@@ -24,6 +24,7 @@ import { SubscriptionItem } from './SubscriptionItem';
 export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProviderBase {
     private readonly groupingChangeSubscription: vscode.Disposable;
     private hasShownDuplicateWarning: boolean = false;
+    private hasLoadedSubscriptions: boolean = false;
 
     constructor(
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -67,26 +68,41 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
         if (element?.getChildren) {
             return await element.getChildren();
         } else {
-            // Wrap root-level getChildren in telemetry to measure subscription loading time
-            return await callWithTelemetryAndErrorHandling('azureResourcesView.loadSubscriptions', async (context: IActionContext) => {
-                context.errorHandling.suppressDisplay = true;
+            return await this.getRootChildren();
+        }
+    }
 
-                const maybeLogInItems = tryGetLoggingInTreeItems();
-                if (maybeLogInItems?.length) {
-                    context.telemetry.properties.outcome = 'loggingIn';
-                    return maybeLogInItems;
-                }
+    /**
+     * Gets the root children (subscriptions) for the Azure Resources tree.
+     * Wrapped in telemetry to measure initial load performance.
+     */
+    private async getRootChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
+        return await callWithTelemetryAndErrorHandling('azureResourceGroups.loadSubscriptions', async (context: IActionContext) => {
+            context.errorHandling.suppressDisplay = true;
 
-                const subscriptionProvider = await this.getAzureSubscriptionProvider();
+            const isFirstLoad = !this.hasLoadedSubscriptions;
+            this.hasLoadedSubscriptions = true;
+            context.telemetry.properties.isFirstLoad = String(isFirstLoad);
 
-                try {
-                    await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
-                    const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: ext.clearCacheOnNextLoad });
-                    this.sendSubscriptionTelemetryIfNeeded(); // Don't send until the above call is done, to avoid cache missing
+            const maybeLogInItems = tryGetLoggingInTreeItems();
+            if (maybeLogInItems?.length) {
+                context.telemetry.properties.outcome = 'loggingIn';
+                return maybeLogInItems;
+            }
 
-                    context.telemetry.measurements.subscriptionCount = subscriptions.length;
+            const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
-                    if (subscriptions.length === 0) {
+            const isSignedIn = await subscriptionProvider.isSignedIn();
+            context.telemetry.properties.isSignedIn = String(isSignedIn);
+
+            try {
+                await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
+                const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: ext.clearCacheOnNextLoad });
+                this.sendSubscriptionTelemetryIfNeeded(); // Don't send until the above call is done, to avoid cache missing
+
+                context.telemetry.measurements.subscriptionCount = subscriptions.length;
+
+                if (subscriptions.length === 0) {
                     // No subscriptions through the filters. Decide what to show.
                     const selectSubscriptionsItem = new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
                         commandId: 'azureResourceGroups.selectSubscriptions'
@@ -115,11 +131,20 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                         return [selectSubscriptionsItem];
                     }
                 } else {
+                    // User is signed in and has subscriptions - record counts
+                    context.telemetry.measurements.subscriptionCount = subscriptions.length;
+                    const accounts = await vscode.authentication.getAccounts(getConfiguredAuthProviderId());
+                    context.telemetry.measurements.accountCount = accounts.length;
+
                     //find duplicate subscriptions and change the name to include the account name. If duplicate subs are in the same account add the tenant id instead
                     const duplicates = getDuplicateSubscriptions(subscriptions);
+                    context.telemetry.properties.hasDuplicates = String(duplicates.length > 0);
+
                     let duplicatesWithSameAccount: AzureSubscription[] = [];
                     if (duplicates.length > 0) {
                         duplicatesWithSameAccount = getDuplicateSubsInSameAccount(duplicates);
+                        context.telemetry.properties.hasDuplicatesInSameAccount = String(duplicatesWithSameAccount.length > 0);
+
                         if (duplicatesWithSameAccount.length > 0 && !this.hasShownDuplicateWarning) {
                             this.hasShownDuplicateWarning = true;
                             void callWithTelemetryAndErrorHandling('azureResourceGroups.duplicate', async (context: IActionContext) => {
@@ -152,7 +177,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                         this.resourceGroupingManager,
                                         this.resourceProviderManager,
                                         subscription,
-                                        `(${subscription.tenantId})`);
+                                        `${nonNullValueAndProp(subscription.account, 'label')} (${subscription.tenantId})`);
                                 } else if (duplicates.includes(subscription)) {
                                     return new SubscriptionItem(
                                         {
@@ -163,7 +188,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                         this.resourceGroupingManager,
                                         this.resourceProviderManager,
                                         subscription,
-                                        `(${nonNullValueAndProp(subscription.account, 'label')})`);
+                                        `${nonNullValueAndProp(subscription.account, 'label')}`);
                                 }
                                 return new SubscriptionItem(
                                     {
@@ -207,18 +232,17 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                     }
                 }
             } catch (error) {
-                    if (isNotSignedInError(error)) {
-                        context.telemetry.properties.outcome = 'notSignedIn';
-                        return getSignInTreeItems(true);
-                    }
-
-                    // TODO: Else do we throw? What did we do before?
-                    return [];
-                } finally {
-                    ext.clearCacheOnNextLoad = false;
+                if (isNotSignedInError(error)) {
+                    context.telemetry.properties.outcome = 'notSignedIn';
+                    return getSignInTreeItems(true);
                 }
-            });
-        }
+
+                // TODO: Else do we throw? What did we do before?
+                return [];
+            } finally {
+                ext.clearCacheOnNextLoad = false;
+            }
+        });
     }
 
     private hasSentSubscriptionTelemetry = false;
