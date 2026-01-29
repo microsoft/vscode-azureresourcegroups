@@ -91,7 +91,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
 
-        ext.subscriptionProviderFactory = getSubscriptionProviderFactory(activateContext);
+        ext.subscriptionProviderFactory = getSubscriptionProviderFactory();
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
