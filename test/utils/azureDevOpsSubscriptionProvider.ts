@@ -40,7 +40,10 @@ export async function setupAzureDevOpsSubscriptionProvider(): Promise<void> {
 
     const factory = createAzureDevOpsSubscriptionProviderFactory(initializer);
 
+    // Create the provider instance now so we can return it synchronously
+    const provider = await factory();
+
     // Set the override via the test API
     const testApi = getCachedTestApi();
-    testApi.testing.setOverrideAzureSubscriptionProvider(() => factory());
+    testApi.testing.setOverrideAzureSubscriptionProvider(() => provider);
 }
