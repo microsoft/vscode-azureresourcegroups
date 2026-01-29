@@ -38,7 +38,7 @@ export class DefaultAzureResourceItem implements ResourceGroupsItem {
                         commandId: 'azureResourceGroups.installExtension',
                         contextValue: 'installExtension',
                         iconPath: new vscode.ThemeIcon('extensions'),
-                        id: uuidv4(),
+                        id: `${uuidv4()}/installExtension`,
                     })
             ]);
         } else {
