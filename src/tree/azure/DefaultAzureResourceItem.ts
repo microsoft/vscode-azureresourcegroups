@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createContextValue } from '@microsoft/vscode-azext-utils';
+import { v4 as uuidv4 } from "uuid";
 import * as vscode from 'vscode';
 import { AzureResource } from '../../../api/src/index';
 import { AzExtWrapper, getAzureExtensions } from '../../AzExtWrapper';
@@ -37,7 +38,7 @@ export class DefaultAzureResourceItem implements ResourceGroupsItem {
                         commandId: 'azureResourceGroups.installExtension',
                         contextValue: 'installExtension',
                         iconPath: new vscode.ThemeIcon('extensions'),
-                        id: `${this.resource.id}/installExtension`
+                        id: `${uuidv4()}/installExtension`,
                     })
             ]);
         } else {
