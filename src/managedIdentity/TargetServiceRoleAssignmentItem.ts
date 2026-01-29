@@ -25,6 +25,7 @@ export class TargetServiceRoleAssignmentItem implements TreeElementBase {
 
     async getChildren(): Promise<TreeElementBase[]> {
         return await callWithTelemetryAndErrorHandling('TargetServiceRoleAssignmentItem.getChildren', async (context: IActionContext) => {
+            context.errorHandling.rethrow = true;
             const children = await createRoleDefinitionsItems(context, this.subscription, this.msi, this.subscription.subscriptionId);
 
             if (this._loadedAllSubscriptions) {

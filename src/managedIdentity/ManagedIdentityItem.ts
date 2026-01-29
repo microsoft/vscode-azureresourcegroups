@@ -41,6 +41,7 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
 
     async getChildren<TreeElementBase>(): Promise<TreeElementBase[]> {
         const result = await callWithTelemetryAndErrorHandling('managedIdentityItem.getChildren', async (context: IActionContext) => {
+            context.errorHandling.rethrow = true;
             const subContext = createSubscriptionContext(this.subscription);
             const msiClient = await createManagedServiceIdentityClient([context, subContext]);
             const msi: Identity = await msiClient.userAssignedIdentities.get(nonNullProp(this.resource, 'resourceGroup'), this.resource.name);
