@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscription, AzureTenant, getConfiguredAuthProviderId, getMetricsForTelemetry, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
+import { AzureSubscription, AzureTenant, getMetricsForTelemetry, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
 import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, nonNullValueAndProp, registerEvent, TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
@@ -77,6 +77,9 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
      * Wrapped in telemetry to measure initial load performance.
      */
     private async getRootChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
+        // Create cancellation token for this load operation - cancels any pending previous load
+        const cancellationToken = this.createLoadCancellationToken();
+
         return await callWithTelemetryAndErrorHandling('azureResourceGroups.loadSubscriptions', async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
 
@@ -92,9 +95,12 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
 
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
+            // Atomically consume the clear cache flag - only the first tree to load will get true
+            const shouldClearCache = ext.consumeClearCacheFlag();
+
             try {
                 await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
-                const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: ext.clearCacheOnNextLoad });
+                const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: shouldClearCache, token: cancellationToken });
                 this.sendSubscriptionTelemetryIfNeeded(); // Don't send until the above call is done, to avoid cache missing
 
                 context.telemetry.measurements.subscriptionCount = subscriptions.length;
@@ -131,7 +137,8 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                     // User is signed in and has subscriptions - record counts
                     context.telemetry.properties.isSignedIn = 'true';
                     context.telemetry.measurements.subscriptionCount = subscriptions.length;
-                    const accounts = await vscode.authentication.getAccounts(getConfiguredAuthProviderId());
+                    // Use provider's cached accounts instead of direct API call
+                    const accounts = await subscriptionProvider.getAccounts({ filter: false });
                     context.telemetry.measurements.accountCount = accounts.length;
 
                     //find duplicate subscriptions and change the name to include the account name. If duplicate subs are in the same account add the tenant id instead
@@ -237,8 +244,6 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
 
                 // TODO: Else do we throw? What did we do before?
                 return [];
-            } finally {
-                ext.clearCacheOnNextLoad = false;
             }
         });
     }

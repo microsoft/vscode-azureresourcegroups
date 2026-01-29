@@ -42,16 +42,16 @@ export function registerCommands(): void {
 
     // Special-case refresh that ignores the selected/focused node and always refreshes the entire tree. Used by the refresh button in the tree title.
     registerCommand('azureResourceGroups.refreshTree', () => {
-        ext.clearCacheOnNextLoad = true;
+        ext.setClearCacheOnNextLoad();
         ext.actions.refreshAzureTree();
     });
     registerCommand('azureWorkspace.refreshTree', () => ext.actions.refreshWorkspaceTree());
     registerCommand('azureFocusView.refreshTree', () => {
-        ext.clearCacheOnNextLoad = true;
+        ext.setClearCacheOnNextLoad();
         ext.actions.refreshFocusTree();
     });
     registerCommand('azureTenantsView.refreshTree', () => {
-        ext.clearCacheOnNextLoad = true;
+        ext.setClearCacheOnNextLoad();
         ext.actions.refreshTenantTree();
     });
 
@@ -88,7 +88,7 @@ export function registerCommands(): void {
 
     registerCommand('azureTenantsView.signInToTenant', async (_context, node: TenantTreeItem) => {
         await (await ext.subscriptionProviderFactory()).signIn(node);
-        ext.clearCacheOnNextLoad = true;
+        ext.setClearCacheOnNextLoad();
         ext.actions.refreshTenantTree();
         ext.actions.refreshAzureTree();
     });
@@ -101,7 +101,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext, options: SelectSubscriptionOptions) => selectSubscriptions(context, options));
     registerCommand('azureResourceGroups.signInToTenant', async () => {
         await signInToTenant(await ext.subscriptionProviderFactory());
-        ext.clearCacheOnNextLoad = true;
+        ext.setClearCacheOnNextLoad();
         ext.actions.refreshTenantTree();
         ext.actions.refreshAzureTree();
     });

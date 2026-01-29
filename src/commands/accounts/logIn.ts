@@ -19,7 +19,7 @@ export async function logIn(_context: IActionContext): Promise<void> {
     } finally {
         _isLoggingIn = false;
         // Clear cache to ensure fresh data is fetched after sign-in
-        ext.clearCacheOnNextLoad = true;
+        ext.setClearCacheOnNextLoad();
         ext.actions.refreshAzureTree(); // Refresh now that sign in is complete
         ext.actions.refreshTenantTree(); // Refresh now that sign in is complete
     }

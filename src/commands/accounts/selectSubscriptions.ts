@@ -35,8 +35,9 @@ export async function selectSubscriptions(context: IActionContext, options?: Sel
         let subscriptionsShownInPicker: string[] = [];
 
         const subscriptionQuickPickItems: () => Promise<IAzureQuickPickItem<AzureSubscription>[]> = async () => {
-            // If there are no tenants selected by default all subscriptions will be shown.
-            let subscriptions = await provider.getAvailableSubscriptions({ noCache: true, filter: false, });
+            // Use cached subscriptions if available - the cache is cleared on sign-in/sign-out
+            // This avoids unnecessary network requests when the user opens the subscription picker
+            let subscriptions = await provider.getAvailableSubscriptions({ filter: false });
 
             if (options?.account || options?.tenantId) {
 

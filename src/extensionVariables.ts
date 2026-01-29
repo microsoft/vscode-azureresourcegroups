@@ -51,8 +51,31 @@ export namespace ext {
     export let azureTreeState: TreeItemStateStore;
 
     export let subscriptionProviderFactory: () => Promise<AzureSubscriptionProvider>;
-    export let clearCacheOnNextLoad: boolean | undefined;
     export let managedIdentityBranchDataProvider: ManagedIdentityBranchDataProvider;
+
+    /**
+     * Cache invalidation flag. When set to true, the next call to `consumeClearCacheFlag()`
+     * will return true and atomically reset the flag to false. This prevents race conditions
+     * where multiple trees might read and reset the flag independently.
+     */
+    let clearCacheOnNextLoadFlag: boolean = false;
+
+    /**
+     * Sets the flag to clear auth caches on the next load.
+     */
+    export function setClearCacheOnNextLoad(): void {
+        clearCacheOnNextLoadFlag = true;
+    }
+
+    /**
+     * Atomically consumes the clear cache flag. Returns true if caches should be cleared,
+     * and resets the flag to false. This ensures only the first consumer gets `true`.
+     */
+    export function consumeClearCacheFlag(): boolean {
+        const shouldClear = clearCacheOnNextLoadFlag;
+        clearCacheOnNextLoadFlag = false;
+        return shouldClear;
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-namespace
     export namespace v2 {
