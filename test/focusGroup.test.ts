@@ -155,7 +155,7 @@ suite('focusGroup command tests', () => {
         }
         
         // Import ext to access focusViewTreeDataProvider
-        const { ext } = await import('../src/extensionVariables');
+        const { ext } = await import('../src/extensionVariables.js');
         
         // Get the focused tree items
         const focusedItems1 = await ext.focusViewTreeDataProvider.getChildren();
