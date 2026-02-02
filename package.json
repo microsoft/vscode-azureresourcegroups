@@ -917,7 +917,11 @@
         "@types/uuid": "^9.0.1",
         "@types/vscode": "1.105.0",
         "@types/ws": "^8.5.10",
-        "@vscode/vsce": "^3.7.1"
+        "@vscode/test-cli": "*",
+        "@vscode/test-electron": "*",
+        "@vscode/vsce": "*",
+        "esbuild": "*",
+        "esbuild-plugin-copy": "*"
     },
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
