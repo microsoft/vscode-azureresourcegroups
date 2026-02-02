@@ -53,5 +53,5 @@ export async function uploadFileToCloudShell(_context: IActionContext, uri?: Uri
         }
     })().catch((error) => {
         ext.outputChannel.error(parseError(error).message);
-    })
+    });
 }

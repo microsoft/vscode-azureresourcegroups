@@ -46,7 +46,7 @@ export class TargetServiceRoleAssignmentItem implements TreeElementBase {
             id: this.id,
             contextValue: this.contextValue,
             collapsibleState: this._cachedChildren.length < 10 ? TreeItemCollapsibleState.Expanded : TreeItemCollapsibleState.Collapsed,
-        }
+        };
     }
 
     setAllSubscriptionsLoaded() {

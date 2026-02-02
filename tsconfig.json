@@ -1,11 +1,11 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
-        "target": "es6",
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "target": "es2022",
         "outDir": "out",
         "lib": [
-            "es6",
-            "DOM"
+            "es2022"
         ],
         "sourceMap": true,
         "rootDir": ".",

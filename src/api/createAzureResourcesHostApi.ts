@@ -63,6 +63,15 @@ export function createAzureResourcesHostApi(
             });
         },
 
+        focusResourceGroup: (resourceGroupId: string) => {
+            return callWithTelemetryAndErrorHandling('internalFocusResourceGroup', context => {
+                context.errorHandling.rethrow = true;
+                context.errorHandling.suppressDisplay = true;
+                context.errorHandling.suppressReportIssue = true;
+                return vscode.commands.executeCommand('azureResourceGroups.focusGroup', resourceGroupId);
+            });
+        },
+
         getRecentlyUsedAzureNodes: () => {
             return getRecentlyUsedAzureNodes();
         },
@@ -70,5 +79,5 @@ export function createAzureResourcesHostApi(
         getSelectedAzureNode: () => {
             return getSelectedAzureNode();
         },
-    }
+    };
 }

@@ -1,6 +1,6 @@
-import assert = require("assert");
+import assert from "assert";
 import { Event, EventEmitter, TreeItem } from "vscode";
-import { WorkspaceResource, WorkspaceResourceBranchDataProvider } from "../../extension.bundle";
+import type { WorkspaceResource, WorkspaceResourceBranchDataProvider } from "../../api/src";
 
 export class TestBranchDataProvider implements WorkspaceResourceBranchDataProvider<WorkspaceResource> {
 
@@ -11,7 +11,7 @@ export class TestBranchDataProvider implements WorkspaceResourceBranchDataProvid
     private _getResourceItemCalled = false;
     private _getTreeItemCalled = false;
 
-    private _childrenMap: Map<WorkspaceResource, WorkspaceResource[]> = new Map();
+    private _childrenMap = new Map<WorkspaceResource, WorkspaceResource[]>();
 
     registerChildren(parent: WorkspaceResource, children: WorkspaceResource[]): void {
         this._childrenMap.set(parent, children);
@@ -44,7 +44,7 @@ export class TestBranchDataProvider implements WorkspaceResourceBranchDataProvid
 
     getTreeItem(element: WorkspaceResource): TreeItem {
         this._getTreeItemCalled = true;
-        return new TreeItem(element.name)
+        return new TreeItem(element.name);
     }
 }
 

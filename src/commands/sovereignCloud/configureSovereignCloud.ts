@@ -17,7 +17,7 @@ export async function configureSovereignCloud(context: ConfigureSovereignCloudCo
 
     const title: string = localize('selectSovereignCloud', 'Select Sovereign Cloud');
 
-    const wizard: AzureWizard<ConfigureSovereignCloudContext> = new AzureWizard(wizardContext, {
+    const wizard = new AzureWizard<ConfigureSovereignCloudContext>(wizardContext, {
         title,
         promptSteps: [new SovereignCloudListStep()],
         executeSteps: [new SovereignCloudSetStep()],

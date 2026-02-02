@@ -126,21 +126,21 @@ export interface AzureResource extends ResourceBase {
     /**
      * A copy of the raw resource.
      */
-    readonly raw: {};
+    readonly raw: unknown;
 }
 
 export interface ViewPropertiesModelAsync {
     /**
      * Async function to get the raw data associated with the resource to populate the properties file.
      */
-    getData: () => Promise<{}>;
+    getData: () => Promise<unknown>;
 }
 
 export interface ViewPropertiesModelSync {
     /**
      * Raw data associated with the resource to populate the properties file.
      */
-    data: {};
+    data: unknown;
 }
 
 export type ViewPropertiesModel = {

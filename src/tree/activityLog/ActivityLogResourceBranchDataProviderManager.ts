@@ -10,6 +10,6 @@ export class ActivityLogResourceBranchDataProviderManager extends ResourceBranch
     constructor(
         defaultProvider: BranchDataProvider<ResourceBase, ResourceModelBase>
     ) {
-        super(defaultProvider, () => { return 'activityLog' });
+        super(defaultProvider, () => { return 'activityLog'; });
     }
 }

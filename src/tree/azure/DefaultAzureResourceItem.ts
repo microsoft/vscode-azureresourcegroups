@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createContextValue } from '@microsoft/vscode-azext-utils';
+import { v4 as uuidv4 } from "uuid";
 import * as vscode from 'vscode';
 import { AzureResource } from '../../../api/src/index';
 import { AzExtWrapper, getAzureExtensions } from '../../AzExtWrapper';
@@ -25,7 +26,7 @@ export class DefaultAzureResourceItem implements ResourceGroupsItem {
         this.portalUrl = createPortalUrl(resource.subscription, resource.id);
     }
 
-    public readonly id: string = this.options.treeItemId ?? this.resource.id;
+    public get id(): string { return this.options.treeItemId ?? this.resource.id; }
 
     getChildren(): Promise<ResourceGroupsItem[] | undefined> {
         if (this.resourceTypeExtension && !this.resourceTypeExtension.isInstalled() && !this.resourceTypeExtension.isPrivate()) {
@@ -37,7 +38,7 @@ export class DefaultAzureResourceItem implements ResourceGroupsItem {
                         commandId: 'azureResourceGroups.installExtension',
                         contextValue: 'installExtension',
                         iconPath: new vscode.ThemeIcon('extensions'),
-                        id: `${this.resource.id}/installExtension`
+                        id: `${uuidv4()}/installExtension`,
                     })
             ]);
         } else {

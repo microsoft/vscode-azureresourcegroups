@@ -56,7 +56,7 @@ async function chatStandIn(
 async function installGitHubCopilotForAzureFromChat(context: IActionContext): Promise<void> {
     try {
         await vscode.commands.executeCommand('workbench.extensions.installExtension', GitHubCopilotForAzureExtensionId);
-    } catch (error) {
+    } catch {
         // Almost certainly the user cancelled the installation
         context.telemetry.properties.result = 'Canceled';
     }

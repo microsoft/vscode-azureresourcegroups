@@ -3,12 +3,14 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import assert = require('assert');
+import { IActionContext } from '@microsoft/vscode-azext-utils';
+import assert from 'assert';
 import { randomUUID } from 'crypto';
 import { commands, TreeItem } from 'vscode';
-import { AzExtResourceType, AzureResource, BranchDataProvider, ext, IActionContext, ResourceModelBase } from '../../../extension.bundle';
+import { AzExtResourceType, AzureResource, BranchDataProvider, ResourceModelBase } from '../../../api/src';
 import { api } from '../api';
 import { createMockSubscriptionWithFunctions } from '../mockServiceFactory';
+import { getCachedTestApi } from '../../utils/testApiAccess';
 
 suite('findItemById', () => {
 
@@ -18,7 +20,7 @@ suite('findItemById', () => {
             getResourceItem: (resource: AzureResource): ResourceModelBase => {
                 return {
                     id: resource.id,
-                }
+                };
             },
             getChildren: (_resource: AzureResource): AzureResource[] => {
                 return [];
@@ -26,11 +28,11 @@ suite('findItemById', () => {
             getTreeItem: (resource: AzureResource): TreeItem => {
                 return new TreeItem(resource.name);
             }
-        }
+        };
 
         api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, azureResourceBranchDataProvider);
 
-        const treeItem = await ext.appResourceTree.findTreeItem(mocks.functionApp1.id, {} as unknown as IActionContext);
+        const treeItem = await getCachedTestApi().compatibility.getAppResourceTree().findTreeItem(mocks.functionApp1.id, {} as unknown as IActionContext);
         assert.ok(treeItem);
         assert.strictEqual(treeItem.id, mocks.functionApp1.id);
     }
@@ -57,7 +59,7 @@ suite('findItemById', () => {
             getResourceItem: (resource: AzureResource): ResourceModelBase => {
                 return {
                     id: resource.id,
-                }
+                };
             },
             getChildren: (_resource: AzureResource): AzureResource[] => {
                 return [];
@@ -65,12 +67,12 @@ suite('findItemById', () => {
             getTreeItem: (resource: AzureResource): TreeItem => {
                 return new TreeItem(resource.name);
             }
-        }
+        };
 
         api().registerAzureResourceBranchDataProvider(AzExtResourceType.FunctionApp, azureResourceBranchDataProvider);
         await commands.executeCommand('azureResourceGroups.groupBy.resourceType');
 
-        const treeItem = await ext.appResourceTree.findTreeItem(`/subscriptions/${randomUUID()}/FunctionApps/${mocks.functionApp1.id}`, {} as unknown as IActionContext);
+        const treeItem = await getCachedTestApi().compatibility.getAppResourceTree().findTreeItem(`/subscriptions/${randomUUID()}/FunctionApps/${mocks.functionApp1.id}`, {} as unknown as IActionContext);
         assert.ok(treeItem);
         assert.strictEqual(treeItem.id, mocks.functionApp1.id);
     });

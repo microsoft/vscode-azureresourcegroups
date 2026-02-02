@@ -2,7 +2,7 @@ import { ext } from "../../../extensionVariables";
 import { HttpLogger } from "../HttpLogger";
 import { NodeFetchNormalizer } from "./NodeFetchNormalizer";
 
-export async function fetchWithLogging(url: RequestInfo, init?: RequestInit): Promise<Response> {
+export async function fetchWithLogging(url: string, init?: RequestInit): Promise<Response> {
     const nodeFetchLogger = new HttpLogger(ext.outputChannel, 'NodeFetch', new NodeFetchNormalizer());
     const request = new Request(url, init);
     const response = await fetch(request);

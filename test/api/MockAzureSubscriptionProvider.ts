@@ -54,6 +54,6 @@ export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider 
         }];
     }
 
-    public onDidSignIn: Event<void> = () => { return new Disposable(() => { }) };
-    public onDidSignOut: Event<void> = () => { return new Disposable(() => { }) };
+    public onDidSignIn: Event<void> = () => { return new Disposable(() => { /* noop */ }); };
+    public onDidSignOut: Event<void> = () => { return new Disposable(() => { /* noop */ }); };
 }

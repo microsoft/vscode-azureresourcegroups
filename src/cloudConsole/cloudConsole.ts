@@ -7,7 +7,7 @@ import { TenantIdDescription } from '@azure/arm-resources-subscriptions';
 import { AzureSubscriptionProvider, getConfiguredAzureEnv } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, IAzureQuickPickItem, IParsedError, callWithTelemetryAndErrorHandlingSync, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
 import * as cp from 'child_process';
-import * as FormData from 'form-data';
+import { default as FormData } from 'form-data';
 import { ReadStream } from 'fs';
 import { ClientRequest } from 'http';
 import { Socket } from 'net';
@@ -69,8 +69,7 @@ async function waitForConnection(this: CloudShell): Promise<boolean> {
             case 'Disconnected':
                 return false;
             default:
-                const status: never = this.status;
-                throw new Error(`Unexpected status '${status}'`);
+                throw new Error(`Unexpected status '${this.status}'`);
         }
     };
     return handleStatus();
@@ -100,7 +99,7 @@ function getUploadFile(tokens: Promise<AccessTokens>, uris: Promise<ConsoleUris>
             const uri: UrlWithStringQuery = parse(uploadUri);
             const req: ClientRequest = form.submit(
                 {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     protocol: <any>uri.protocol,
                     hostname: uri.hostname,
                     port: uri.port,
@@ -113,7 +112,7 @@ function getUploadFile(tokens: Promise<AccessTokens>, uris: Promise<ConsoleUris>
                     if (err) {
                         reject(err);
                     } if (res && res.statusCode && (res.statusCode < 200 || res.statusCode > 299)) {
-                        reject(`${res.statusMessage} (${res.statusCode})`)
+                        reject(`${res.statusMessage} (${res.statusCode})`);
                     } else {
                         resolve();
                     }
@@ -156,7 +155,7 @@ function getUploadFile(tokens: Promise<AccessTokens>, uris: Promise<ConsoleUris>
                 });
             }
         });
-    }
+    };
 }
 
 export const shells: CloudShellInternal[] = [];
@@ -191,7 +190,6 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
 
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         state.terminal?.catch(() => { }); // ignore
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
         // state.session.catch(() => { }); // ignore
         shells.push(state);
 
@@ -228,7 +226,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                         updateStatus('Disconnected');
                         return requiresNode(context);
                     }
-                } catch (err) {
+                } catch {
                     updateStatus('Disconnected');
                     return requiresNode(context);
                 }
@@ -236,15 +234,15 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const serverQueue: Queue<any> = new Queue<any>();
-            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             const server: Server = await createServer('vscode-cloud-console', async (req, res) => {
                 let dequeue: boolean = false;
                 for (const message of await readJSON(req)) {
-                    /* eslint-disable @typescript-eslint/no-unsafe-member-access */
                     if (message.type === 'poll') {
                         dequeue = true;
                     } else if (message.type === 'log') {
-                        Array.isArray(message.args) && ext.outputChannel.appendLog((<string[]>message.args).join(' '));
+                        if (Array.isArray(message.args)) {
+                            ext.outputChannel.appendLog((<string[]>message.args).join(' '));
+                        }
                     } else if (message.type === 'size') {
                         deferredInitialSize.resolve(message.size as Size);
                     } else if (message.type === 'status') {
@@ -256,7 +254,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 if (dequeue) {
                     try {
                         response = await serverQueue.dequeue(60000);
-                    } catch (err) {
+                    } catch {
                         // ignore timeout
                     }
                 }
@@ -282,6 +280,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
 
             const env: TerminalOptions['env'] = {
                 // Child process uses this ipc handle to communicate with the extension host
+                // eslint-disable-next-line @typescript-eslint/naming-convention
                 CLOUD_CONSOLE_IPC: server.ipcHandlePath
             };
 
@@ -309,7 +308,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 liveServerQueue = undefined;
                 server.dispose();
                 updateStatus('Disconnected');
-            }
+            };
 
             // Open the appropriate type of VS Code terminal depending on the entry point
             if (terminalProfileToken) {
@@ -420,7 +419,7 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
             const provisionTask: () => Promise<void> = async () => {
                 consoleUri = await provisionConsole(session.accessToken, result, OSes.Linux.id);
                 context.telemetry.properties.outcome = 'provisioned';
-            }
+            };
             try {
                 serverQueue.push({ type: 'log', args: [localize('requestingCloudConsole', "Requesting a Cloud Shell...")] });
                 await provisionTask();
@@ -464,7 +463,9 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
         })().catch(err => {
             const parsedError: IParsedError = parseError(err);
             ext.outputChannel.appendLog(parsedError.message);
-            parsedError.stack && ext.outputChannel.appendLog(parsedError.stack);
+            if (parsedError.stack) {
+                ext.outputChannel.appendLog(parsedError.stack);
+            }
             updateStatus('Disconnected');
             context.telemetry.properties.outcome = 'error';
             context.telemetry.properties.message = parsedError.message;
@@ -593,16 +594,14 @@ export async function getUserSettings(accessToken: string): Promise<UserSettings
         return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
-    return (await response.json()).properties;
+    return (await response.json() as { properties: UserSettings }).properties;
 }
 
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 export async function provisionConsole(accessToken: string, userSettings: UserSettings, osType: string): Promise<string> {
     let response = await createTerminal(accessToken, userSettings, osType, true);
     for (let i = 0; i < 10; i++, response = await createTerminal(accessToken, userSettings, osType, false)) {
         if (response.status < 200 || response.status > 299) {
-            const body = await response.json();
+            const body = await response.json() as { error?: { message?: string, code?: string }, id: string, socketUri: string };
             if (response.status === 409 && response.body && body.error && body.error.code === Errors.DeploymentOsTypeConflict) {
                 throw new Error(Errors.DeploymentOsTypeConflict);
             } else if (body && body.error && body.error.message) {
@@ -612,9 +611,8 @@ export async function provisionConsole(accessToken: string, userSettings: UserSe
             }
         }
 
-        const consoleResource = await response.json();
+        const consoleResource = await response.json() as { properties: { provisioningState: string, uri: string } };
         if (consoleResource.properties.provisioningState === 'Succeeded') {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             return consoleResource.properties.uri;
         } else if (consoleResource.properties.provisioningState === 'Failed') {
             break;
@@ -622,7 +620,6 @@ export async function provisionConsole(accessToken: string, userSettings: UserSe
     }
     throw new Error(`Sorry, your Cloud Shell failed to provision. Please retry later. Request correlation id: ${response.headers.get('x-ms-routing-request-id')}`);
 }
-/* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 
 async function createTerminal(accessToken: string, userSettings: UserSettings, osType: string, initial: boolean): Promise<Response> {
     return fetchWithLogging(getConsoleUri(getArmEndpoint()), {
@@ -641,7 +638,6 @@ async function createTerminal(accessToken: string, userSettings: UserSettings, o
     });
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export async function resetConsole(accessToken: string, armEndpoint: string) {
     const response = await fetchWithLogging(getConsoleUri(armEndpoint), {
         method: 'DELETE',
@@ -652,9 +648,7 @@ export async function resetConsole(accessToken: string, armEndpoint: string) {
         },
     });
 
-    /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-    const body = await response.json();
-    /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+    const body = await response.json() as { error?: { message?: string } };
     if (response.status < 200 || response.status > 299) {
         if (body && body.error && body.error.message) {
             throw new Error(`${body.error.message} (${response.status})`);
@@ -667,10 +661,9 @@ export async function resetConsole(accessToken: string, armEndpoint: string) {
 export async function connectTerminal(accessToken: string, consoleUri: string, shellType: string, initialSize: Size, progress: (i: number) => void): Promise<ConsoleUris> {
 
     for (let i = 0; i < 10; i++) {
-        /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
         const response = await initializeTerminal(accessToken, consoleUri, shellType, initialSize);
 
-        const body = await response.json();
+        const body = await response.json() as { error?: { message?: string }, id: string, socketUri: string };
         if (response.status < 200 || response.status > 299) {
             if (response.status !== 503 && response.status !== 504 && body && body.error) {
                 if (body && body.error && body.error.message) {
@@ -696,7 +689,6 @@ export async function connectTerminal(accessToken: string, consoleUri: string, s
 
 async function initializeTerminal(accessToken: string, consoleUri: string, shellType: string, initialSize: Size): Promise<Response> {
     const consoleUrl = new URL(consoleUri);
-    // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
     const response = fetchWithLogging(consoleUri + '/terminals?cols=' + initialSize.cols + '&rows=' + initialSize.rows + '&shell=' + shellType, {
         method: 'POST',
         headers: {

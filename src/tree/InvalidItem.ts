@@ -19,7 +19,7 @@ export class InvalidItem implements ResourceGroupsItem {
             iconPath: new ThemeIcon('warning'),
             id: this.id,
             label: this.error.message,
-        }
+        };
     }
 
     getChildren(): ProviderResult<ResourceGroupsItem[]> {

@@ -80,7 +80,6 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     notifyTreeDataChanged(data: void | ResourceModelBase | ResourceModelBase[] | null | undefined): void {
         const rgItems: TreeDataItem[] = [];
 
-        // eslint-disable-next-line no-extra-boolean-cast
         if (!!data) {
             // e was defined, either a single item or array
             // Make an array for consistency

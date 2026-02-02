@@ -1,12 +1,14 @@
-import { AzureResourceModel } from "@microsoft/vscode-azureresources-api";
+import assert from "assert";
 import { commands, TreeItem } from "vscode";
-import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, BranchDataItemWrapper, ext, hasViewProperties } from "../../extension.bundle";
+import { AzExtResourceType, AzureResource, AzureResourceBranchDataProvider, AzureResourceModel } from "../../api/src";
+import { hasViewProperties } from "../../src/commands/viewProperties";
+import { BranchDataItemWrapper } from "../../src/tree/BranchDataItemWrapper";
 import { createMockSubscriptionWithFunctions } from "./mockServiceFactory";
-import assert = require("assert");
+import { getCachedTestApi } from "../utils/testApiAccess";
 
 const api = () => {
-    return ext.v2.api.resources;
-}
+    return getCachedTestApi().getApi().resources;
+};
 
 type Mutable<T> = {
     -readonly [k in keyof T]: T[k];
@@ -36,7 +38,7 @@ class ViewPropertiesBranchDataProvider implements AzureResourceBranchDataProvide
                     foo: 'bar',
                 },
                 label: 'properties',
-            }
+            };
         }
 
         return [childModel];
@@ -47,7 +49,7 @@ class ViewPropertiesBranchDataProvider implements AzureResourceBranchDataProvide
             label: resource.name,
             id: resource.id,
             contextValue: 'validItem'
-        }
+        };
     }
 }
 

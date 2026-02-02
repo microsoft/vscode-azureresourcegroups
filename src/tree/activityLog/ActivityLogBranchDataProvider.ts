@@ -50,7 +50,7 @@ export class ActivityLogTreeDataProvider extends ResourceTreeDataProviderBase {
                         iconPath: element.iconPath,
                         contextValue: element.contextValue,
                         description: element.description
-                    }
+                    };
                 } else {
                     return await element.getTreeItem();
                 }

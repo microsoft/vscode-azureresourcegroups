@@ -86,5 +86,5 @@ function getCommonTelemetryProperties(activityItems: ConvertedActivityItem[]): T
         callbackIdsWithAttributes: new Set(),
         failedCallbackIdsWithAttributes: new Set(),
         totalFailedActivities: 0,
-    })
+    });
 }

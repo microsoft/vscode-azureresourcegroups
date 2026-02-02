@@ -11,6 +11,6 @@ export class TenantResourceBranchDataProviderManager extends ResourceBranchDataP
     constructor(
         defaultProvider: BranchDataProvider<TenantResource, ResourceModelBase>
     ) {
-        super(defaultProvider, () => { return 'tenant' });
+        super(defaultProvider, () => { return 'tenant'; });
     }
 }

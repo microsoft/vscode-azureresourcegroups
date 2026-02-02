@@ -29,3 +29,7 @@ webpack.config*
 resources/walkthrough/*.gif
 api/**
 component-detection-pip-report.json
+.vscode-test.mjs
+esbuild.mjs
+eslint.config.mjs
+.nvmrc

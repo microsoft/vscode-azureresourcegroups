@@ -6,6 +6,7 @@
 import { ConfigurationTarget, Uri, workspace, WorkspaceConfiguration } from "vscode";
 import { ext } from "../extensionVariables";
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace settingUtils {
     /**
      * Uses ext.prefix 'azureResourceGroups' unless otherwise specified

@@ -15,9 +15,7 @@ export async function readJSON<T>(req: http.IncomingMessage): Promise<any> {
         req.on('data', (d: string) => chunks.push(d));
         req.on('error', (err: Error) => reject(err));
         req.on('end', () => {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             const data = JSON.parse(chunks.join(''));
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             resolve(data);
         });
     });

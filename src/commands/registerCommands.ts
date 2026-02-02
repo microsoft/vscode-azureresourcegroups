@@ -121,7 +121,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.showGroupOptions', showGroupOptions);
     registerCommand('azureResourceGroups.openUrl', async (context: IActionContext, url: string) => {
         context.telemetry.properties.url = url;
-        await openUrl(url)
+        await openUrl(url);
     });
     registerCommand('azureResourceGroups.askAzure', askAzureInCommandPalette);
 

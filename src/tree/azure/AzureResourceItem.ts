@@ -23,13 +23,16 @@ export class AzureResourceItem<T extends AzureResource> extends BranchDataItemWr
         options?: BranchDataItemOptions) {
         super(branchItem, branchDataProvider, itemCache, options);
 
+        this._id = `${getAccountAndTenantPrefix(resource.subscription)}${resource.id}`;
+        this.tagsModel = new ResourceTags(this.resource);
         ext.tagFS.fireSoon({ type: FileChangeType.Changed, item: this.tagsModel });
-        this.portalUrl = createPortalUrl(resource.subscription, resource.id);
     }
 
-    override readonly portalUrl: Uri;
-    readonly id = `${getAccountAndTenantPrefix(this.resource.subscription)}${this.resource.id}`;
-    readonly tagsModel = new ResourceTags(this.resource);
+    override get portalUrl(): Uri {
+        return createPortalUrl(this.resource.subscription, this.resource.id);
+    }
+
+    readonly tagsModel: ResourceTags;
 
     override async getParent(): Promise<ResourceGroupsItem | undefined> {
         return this.parent;

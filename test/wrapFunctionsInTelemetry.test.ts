@@ -1,5 +1,6 @@
-import assert = require("assert");
-import { IActionContext, wrapFunctionsInTelemetry, wrapFunctionsInTelemetrySync } from "../extension.bundle";
+import { IActionContext } from "@microsoft/vscode-azext-utils";
+import assert from "assert";
+import { wrapFunctionsInTelemetry, wrapFunctionsInTelemetrySync } from "../src/utils/wrapFunctionsInTelemetry";
 
 suite('wrapFunctionsInTelemetry', () => {
     test('wrapped sync function returns a Promise', () => {
@@ -19,6 +20,7 @@ suite('wrapFunctionsInTelemetry', () => {
             }
         };
         const wrappedFunctions = wrapFunctionsInTelemetry(functions);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         assertThrowsAsync(() => wrappedFunctions.asyncFuncThatThrows());
     });
 
@@ -38,7 +40,7 @@ suite('wrapFunctionsInTelemetry', () => {
 
         try {
             await wrappedFunctions.asyncFuncThatThrows();
-        } catch (e) {
+        } catch {
             // ignore error
         }
 
@@ -74,7 +76,7 @@ suite('wrapFunctionsInTelemetrySync', () => {
 
         try {
             wrappedFunctions.funcThatThrows();
-        } catch (e) {
+        } catch {
             // ignore error
         }
 
