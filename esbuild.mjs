@@ -18,6 +18,7 @@ const finalConfig = {
             out: 'cloudConsoleLauncher',
         },
     ],
+    // Disable code splitting to avoid VS Code extension loading issues (see #1352)
     splitting: false,
     plugins: [
         ...extensionConfig.plugins,
