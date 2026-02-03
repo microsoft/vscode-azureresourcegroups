@@ -105,11 +105,11 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
         try {
             const allTenants = await subscriptionProvider.getTenantsForAccount(account, { filter: false, noCache: shouldClearCache, token });
             const unauthenticatedTenants = await subscriptionProvider.getUnauthenticatedTenantsForAccount(account, { token });
+            const unauthenticatedTenantIds = new Set(unauthenticatedTenants.map(uat => uat.tenantId));
             const tenantItems: ResourceGroupsItem[] = [];
 
             for (const tenant of allTenants) {
-                // TODO: This is n^2 which is not great, but the number of tenants is usually quite small
-                const isSignedIn = !unauthenticatedTenants.some(uat => uat.tenantId === tenant.tenantId);
+                const isSignedIn = !unauthenticatedTenantIds.has(tenant.tenantId);
                 tenantItems.push(new TenantTreeItem(tenant, account, {
                     contextValue: isSignedIn ? 'tenantName' : 'tenantNameNotSignedIn',
                     checkboxState: (!isSignedIn || isTenantFilteredOut(tenant.tenantId, account.id)) ?
