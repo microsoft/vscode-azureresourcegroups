@@ -19,6 +19,7 @@ const finalConfig = {
         },
     ],
     splitting: false,
+    format: 'cjs',
     plugins: [
         ...extensionConfig.plugins,
         copy({
