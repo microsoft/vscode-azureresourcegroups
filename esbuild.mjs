@@ -18,6 +18,7 @@ const finalConfig = {
             out: 'cloudConsoleLauncher',
         },
     ],
+    splitting: false,
     plugins: [
         ...extensionConfig.plugins,
         copy({
