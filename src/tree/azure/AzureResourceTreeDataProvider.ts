@@ -124,9 +124,9 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                             await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', true);
                             return [];
                         } else {
-                            // All tenants are authenticated but no subscriptions exist
-                            // The prior behavior was to still show the Select Subscriptions item in this case
-                            // TODO: this isn't exactly right? Should we throw a `NotSignedInError` instead?
+                            // All tenants are authenticated but no subscriptions exist.
+                            // Show "Select Subscriptions..." to preserve prior behavior and provide
+                            // a consistent UX, rather than throwing NotSignedInError.
                             return [selectSubscriptionsItem];
                         }
                     } else {
@@ -242,7 +242,10 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                     return getSignInTreeItems(true);
                 }
 
-                // TODO: Else do we throw? What did we do before?
+                // For unexpected errors, log via telemetry but return empty array
+                // to avoid disrupting the UI (preserving prior behavior).
+                context.telemetry.properties.outcome = 'error';
+                context.telemetry.properties.unhandledError = String(error);
                 return [];
             }
         });

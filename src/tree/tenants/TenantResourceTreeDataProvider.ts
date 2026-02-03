@@ -91,7 +91,10 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                     return getSignInTreeItems(false);
                 }
 
-                // TODO: Else do we throw? What did we do before?
+                // For unexpected errors, log via telemetry but return empty array
+                // to avoid disrupting the UI (preserving prior behavior).
+                context.telemetry.properties.outcome = 'error';
+                context.telemetry.properties.unhandledError = String(error);
                 return [];
             }
         });
