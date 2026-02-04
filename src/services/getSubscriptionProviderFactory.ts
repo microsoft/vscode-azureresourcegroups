@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import { AzureDevOpsSubscriptionProviderInitializer, AzureSubscriptionProvider, createAzureDevOpsSubscriptionProviderFactory } from "@microsoft/vscode-azext-azureauth";
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { createVSCodeAzureSubscriptionProviderFactory } from "./VSCodeAzureSubscriptionProvider";
