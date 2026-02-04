@@ -4,9 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## Unreleased
+## [3.1.0] - 2026-02-04
 
 * Add `focusResourceGroup` function to the resources API.
+* Add Azure Resources API v4 authentication layer for secure API retrieval by client extensions.
+* Add Azure Resources API v4 client tooling to simplify the authentication handshake process.
 
 ## [3.0.0] - 2025-10-06
 
