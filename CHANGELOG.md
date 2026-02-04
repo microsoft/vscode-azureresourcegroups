@@ -1,5 +1,22 @@
 # Change Log
 
+## 0.11.8 - 2026-02-04
+
+### Added
+* [[1343]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1343) Add performance telemetry for loading subscriptions in Azure Resources tree views
+* [[1334]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1334) Add account name + tenant name to subscription description
+* [[1330]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1330) Add `focusResourceGroup` to extension API
+* [[1284]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1284) Add an Azure Resources API (v4) authentication layer
+
+### Fixed
+* [[1342]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1342) Handle empty state when grouping by ARM tag
+* [[1351]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1351) Use a UUID for extension install tree items
+* [[1348]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1348) Use resource group ID instead of name for grouping to handle duplicates across subscriptions
+* [[1241]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1241) Ensure correct session is being used when listing resources
+
+### Engineering
+* [[1304]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1304) Use new `@microsoft/vscode-azext-eng` package
+
 ## 0.11.7 - 2025-11-18
 
 ### Changed
