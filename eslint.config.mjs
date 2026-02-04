@@ -9,6 +9,12 @@ import { defineConfig } from 'eslint/config';
 export default defineConfig([
     azExtEslintRecommended,
     {
+        ignores: [
+            'api/dist/**',
+            'api/out/**',
+        ],
+    },
+    {
         rules: {
             'no-restricted-imports': ['error', {
                 patterns: [
