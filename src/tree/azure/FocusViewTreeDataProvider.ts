@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscription } from '@microsoft/vscode-azext-azureauth';
+import { isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
 import { TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { AzExtResourceType, AzureResource, ResourceModelBase } from '../../../api/src/index';
@@ -54,15 +54,28 @@ export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase
                 return [];
             }
 
+            // Create cancellation token for this load operation - cancels any pending previous load
+            const cancellationToken = this.createLoadCancellationToken();
+
             const provider = await this.getAzureSubscriptionProvider();
-            let subscriptions: AzureSubscription[] | undefined;
-            if (await provider.isSignedIn() && (subscriptions = await provider.getSubscriptions(true)).length > 0) {
+
+            // Atomically consume the clear cache flag - only the first tree to load will get true
+            const shouldClearCache = ext.consumeClearCacheFlag();
+
+            try {
+                const subscriptions = await provider.getAvailableSubscriptions({ noCache: shouldClearCache, token: cancellationToken });
+                if (subscriptions.length === 0) {
+                    return [];
+                }
+
                 const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
 
-                let resources: AzureResource[] = [];
-                for await (const subscription of subscriptions) {
-                    resources.push(...await this.resourceProviderManager.getResources(subscription));
-                }
+                // Load resources in parallel for better performance
+                const resourceArrays = await Promise.all(
+                    subscriptions.map(subscription => this.resourceProviderManager.getResources(subscription))
+                );
+                let resources: AzureResource[] = resourceArrays.flat();
+
                 if (!showHiddenTypes) {
                     resources = resources.filter(resource => resource.azureResourceType.type === 'microsoft.resources/resourcegroups' || (resource.resourceType && supportedResourceTypes.find(type => type === resource.resourceType)));
                 }
@@ -86,8 +99,12 @@ export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase
                 }
 
                 return focusedGroupItem ? [focusedGroupItem] : [];
-            } else {
-                return [];
+            } catch (error) {
+                if (isNotSignedInError(error)) {
+                    return [];
+                } else {
+                    throw error;
+                }
             }
         }
     }
