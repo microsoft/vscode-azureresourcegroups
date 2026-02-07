@@ -31,7 +31,11 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         if (subscriptionTreeItems.length > 0) {
             const testContext = await createTestActionContext();
             testSubscription = subscriptionTreeItems[0] as SubscriptionItem;
-            const context = { ...testContext, ...testSubscription.subscription };
+            const context = {
+                ...testContext,
+                ...testSubscription.subscription,
+                environment: structuredClone(testSubscription.subscription.environment)
+            };
             locations = (await testApi.testing.getLocations(context)).slice(0, 5); // limit to 5 locations for test speed
         }
 
