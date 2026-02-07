@@ -149,7 +149,7 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
         // Ensure grouping items are created for empty resource groups
         const initialGrouping = resourceGroups.reduce(
             (previous, next) => {
-                previous[next.name.toLowerCase() ?? unknownLabel] = [];
+                previous[next.id.toLowerCase() ?? unknownLabel] = [];
 
                 return previous;
             },
@@ -157,15 +157,21 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
 
         return groupBy({
             allResources: nonResourceGroups,
-            keySelector: resource => resource.resourceGroup?.toLowerCase() ?? unknownLabel, // TODO: Is resource group ever undefined? Should resource group be normalized on creation?
+            keySelector: resource => {
+                // Construct the full resource group ID from subscription and resource group name
+                if (resource.resourceGroup) {
+                    return `/subscriptions/${resource.subscription.subscriptionId}/resourceGroups/${resource.resourceGroup}`.toLowerCase();
+                }
+                return unknownLabel;
+            },
             initialGrouping,
-            groupingItemFactory: (resourceGroupName, resources): GroupingItem => {
-                const resourceGroup = resourceGroups.find(resource => resource.name.toLowerCase() === resourceGroupName.toLowerCase());
+            groupingItemFactory: (resourceGroupId, resources): GroupingItem => {
+                const resourceGroup = resourceGroups.find(resource => resource.id.toLowerCase() === resourceGroupId.toLowerCase());
                 return this.groupingItemFactory.createResourceGroupGroupingItem(nonNullValue(resourceGroup, 'resourceGroup for grouping item'), {
                     context,
                     resources,
                     parent,
-                    label: resourceGroupName,
+                    label: resourceGroup?.name ?? unknownLabel,
                     iconPath: treeUtils.getIconPath('resourceGroup'),
                 });
             },

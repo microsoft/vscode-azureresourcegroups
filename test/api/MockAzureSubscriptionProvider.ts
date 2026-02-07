@@ -3,15 +3,54 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { AzureSubscription, AzureSubscriptionProvider, AzureTenant } from '@microsoft/vscode-azext-azureauth';
-import { Disposable, Event } from 'vscode';
-import { MockResources } from './mockServiceFactory';
+import type { AzureAccount, AzureSubscription, AzureSubscriptionProvider, AzureTenant, TenantIdAndAccount } from '@microsoft/vscode-azext-azureauth';
+import type * as vscode from 'vscode';
+import type { MockResources } from './mockServiceFactory';
 
 export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider {
 
     public constructor(private readonly resources: MockResources) { }
 
-    async getSubscriptions(_filter: boolean): Promise<AzureSubscription[]> {
+    public onRefreshSuggested(): vscode.Disposable {
+        return {
+            dispose: () => { /* no-op */ },
+        };
+    }
+
+    public async getUnauthenticatedTenantsForAccount(): Promise<AzureTenant[]> {
+        return [];
+    }
+
+    public async getAvailableSubscriptions(): Promise<AzureSubscription[]> {
+        const subscriptions: AzureSubscription[] = [];
+        for (const acc of await this.getAccounts()) {
+            for (const tenant of await this.getTenantsForAccount(acc)) {
+                subscriptions.push(...await this.getSubscriptionsForTenant(tenant));
+            }
+        }
+        return subscriptions;
+    }
+
+    public async signIn(): Promise<boolean> {
+        return true;
+    }
+
+    public async getAccounts(): Promise<AzureAccount[]> {
+        return [{
+            id: 'accountId',
+            label: 'Mock Account',
+        }];
+    }
+
+    public async getTenantsForAccount(account: AzureAccount): Promise<AzureTenant[]> {
+        return [{
+            account,
+            tenantId: 'tenantId',
+            displayName: 'Mock Tenant',
+        }];
+    }
+
+    public async getSubscriptionsForTenant(tenant: TenantIdAndAccount): Promise<AzureSubscription[]> {
         return this.resources.subscriptions.map((subscription) => ({
             authentication: {
                 getSession: () => {
@@ -23,37 +62,9 @@ export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider 
             },
             isCustomCloud: false,
             name: subscription.name,
-            tenantId: 'tenantId',
-            account: {
-                id: 'accountId',
-                label: 'accountLabel',
-            },
+            tenantId: tenant.tenantId,
+            account: tenant.account,
             subscriptionId: subscription.subscriptionId,
         } as unknown as AzureSubscription));
     }
-
-    public async isSignedIn(): Promise<boolean> {
-        return true;
-    }
-
-    public async signIn(): Promise<boolean> {
-        return true;
-    }
-
-    public async signOut(): Promise<void> {
-        throw new Error('Method not implemented.');
-    }
-
-    public async getTenants(): Promise<AzureTenant[]> {
-        return [{
-            tenantId: 'tenantId',
-            account: {
-                id: 'accountId',
-                label: 'accountLabel',
-            }
-        }];
-    }
-
-    public onDidSignIn: Event<void> = () => { return new Disposable(() => { /* noop */ }); };
-    public onDidSignOut: Event<void> = () => { return new Disposable(() => { /* noop */ }); };
 }

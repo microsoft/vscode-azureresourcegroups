@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { TenantIdDescription } from '@azure/arm-resources-subscriptions';
-import { AzureSubscriptionProvider, getConfiguredAzureEnv } from '@microsoft/vscode-azext-azureauth';
+import { AzureSubscriptionProvider, AzureTenant, getConfiguredAzureEnv } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, IAzureQuickPickItem, IParsedError, callWithTelemetryAndErrorHandlingSync, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
 import * as cp from 'child_process';
 import { default as FormData } from 'form-data';
@@ -262,20 +262,18 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
                 res.end();
             });
 
-            if (!await subscriptionProvider.isSignedIn()) {
-                serverQueue.push({ type: 'log', args: [localize('loggingIn', "Signing in...")] });
-                try {
-                    if (await subscriptionProvider.signIn()) {
-                        serverQueue.push({ type: 'log', args: [localize('loggingIn', "Signed in successful.")] });
-                    }
-                } catch (e) {
-                    serverQueue.push({ type: 'log', args: [localize('loggingIn', parseError(e).message)] });
-                    // We used to delay for a second then exit here, but then the user can't read or copy the error message
-                    // await delay(1000);
-                    // serverQueue.push({ type: 'exit' });
-                    updateStatus('Disconnected');
-                    return;
+            serverQueue.push({ type: 'log', args: [localize('loggingIn', "Signing in...")] });
+            try {
+                if (await subscriptionProvider.signIn()) {
+                    serverQueue.push({ type: 'log', args: [localize('loggingIn', "Signed in successful.")] });
                 }
+            } catch (e) {
+                serverQueue.push({ type: 'log', args: [localize('loggingIn', parseError(e).message)] });
+                // We used to delay for a second then exit here, but then the user can't read or copy the error message
+                // await delay(1000);
+                // serverQueue.push({ type: 'exit' });
+                updateStatus('Disconnected');
+                return;
             }
 
             const env: TerminalOptions['env'] = {
@@ -336,10 +334,13 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
 
             liveServerQueue = serverQueue;
 
-            const tenants = await subscriptionProvider.getTenants();
+            const tenants: AzureTenant[] = [];
+            for (const account of await subscriptionProvider.getAccounts({ filter: false })) {
+                tenants.push(...await subscriptionProvider.getTenantsForAccount(account, { filter: false }));
+            }
             let selectedTenant: TenantIdDescription | undefined = undefined;
 
-            const subscriptions = await subscriptionProvider.getSubscriptions(false);
+            const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ filter: false });
             if (tenants.length <= 1) {
                 serverQueue.push({ type: 'log', args: [localize('foundOneTenant', `Found 1 tenant.`)] });
                 // if they have only one tenant, use it
