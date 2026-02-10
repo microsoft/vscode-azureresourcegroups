@@ -926,7 +926,7 @@
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
-        "@microsoft/vscode-azext-azureauth": "^6.0.0-alpha.1",
+        "@microsoft/vscode-azext-azureauth": "^6.0.0-alpha.2",
         "@microsoft/vscode-azext-azureutils": "^4.0.0",
         "@microsoft/vscode-azext-utils": "^4.0.4",
         "form-data": "^4.0.4",
