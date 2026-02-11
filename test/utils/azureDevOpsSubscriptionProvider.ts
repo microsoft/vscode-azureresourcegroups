@@ -43,6 +43,9 @@ export async function setupAzureDevOpsSubscriptionProvider(): Promise<void> {
     // Create the provider instance now so we can return it synchronously
     const provider = await factory();
 
+    // Sign in to initialize the token credential
+    await provider.signIn();
+
     // Set the override via the test API
     const testApi = getCachedTestApi();
     testApi.testing.setOverrideAzureSubscriptionProvider(() => provider);
