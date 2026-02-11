@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.12.0 - 2026-02-11
+
+### Changed
+* [[1350]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1350) Improve extension performance by upgrading to the v6 authentication package
+
 ## 0.11.8 - 2026-02-04
 
 ### Added
