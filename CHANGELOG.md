@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.12.0 - 2026-02-11
+
+### Changed
+* [[1350]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1350) Upgrade to auth v6 and improve extension performance
+
 ## 0.11.8 - 2026-02-04
 
 ### Added
