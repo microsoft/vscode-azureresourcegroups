@@ -25,7 +25,6 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
 
         const testApi = getCachedTestApi();
         testApi.testing.setOverrideAzureServiceFactory(undefined);
-        testApi.testing.setOverrideAzureSubscriptionProvider(undefined);
 
         const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren() as unknown as SubscriptionItem[];
         if (subscriptionTreeItems.length > 0) {
