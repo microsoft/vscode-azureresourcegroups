@@ -9,7 +9,10 @@ import assert from "assert";
 import { SubscriptionItem } from '../../src/tree/azure/SubscriptionItem';
 import { settingUtils } from '../../src/utils/settingUtils';
 import { longRunningTestsEnabled } from "../global.test";
+import { setupAzureDevOpsSubscriptionProvider } from "../utils/azureDevOpsSubscriptionProvider";
 import { getCachedTestApi } from "../utils/testApiAccess";
+
+const useAzureFederatedCredentials: boolean = !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '');
 
 let rgName: string;
 let locations: Location[];
@@ -24,7 +27,15 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         }
 
         const testApi = getCachedTestApi();
+        // Clear mock overrides that may have been set by other test suites
         testApi.testing.setOverrideAzureServiceFactory(undefined);
+        testApi.testing.setOverrideAzureSubscriptionProvider(undefined);
+
+        // Re-establish the AzDO federated credential provider if running in a pipeline,
+        // since other test suites may have overwritten it with a mock provider.
+        if (useAzureFederatedCredentials) {
+            await setupAzureDevOpsSubscriptionProvider();
+        }
 
         const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren() as unknown as SubscriptionItem[];
         if (subscriptionTreeItems.length === 0) {
