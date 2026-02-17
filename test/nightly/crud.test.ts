@@ -28,19 +28,29 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         testApi.testing.setOverrideAzureSubscriptionProvider(undefined);
 
         const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren() as unknown as SubscriptionItem[];
-        if (subscriptionTreeItems.length > 0) {
-            const testContext = await createTestActionContext();
-            testSubscription = subscriptionTreeItems[0] as SubscriptionItem;
-            console.log(`Using subscription for CRUD tests`);
-            console.log(testSubscription);
-
-            const context = {
-                ...testContext,
-                ...testSubscription.subscription,
-                environment: structuredClone(testSubscription.subscription.environment)
-            };
-            locations = (await testApi.testing.getLocations(context)).slice(0, 5); // limit to 5 locations for test speed
+        if (subscriptionTreeItems.length === 0) {
+            console.log('No subscriptions found, skipping CRUD tests');
+            this.skip();
+            return;
         }
+
+        const testContext = await createTestActionContext();
+        testSubscription = subscriptionTreeItems[0] as SubscriptionItem;
+        console.log(`Using subscription for CRUD tests`);
+        console.log(testSubscription);
+
+        if (!testSubscription?.subscription) {
+            console.log('Subscription item does not have a valid subscription property, skipping CRUD tests');
+            this.skip();
+            return;
+        }
+
+        const context = {
+            ...testContext,
+            ...testSubscription.subscription,
+            environment: structuredClone(testSubscription.subscription.environment)
+        };
+        locations = (await testApi.testing.getLocations(context)).slice(0, 5); // limit to 5 locations for test speed
 
         rgName = randomUtils.getRandomHexString(12);
     });
