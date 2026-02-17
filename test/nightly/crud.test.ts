@@ -34,9 +34,11 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
             return;
         }
 
+        console.log(subscriptionTreeItems);
+
         for (const subscription of subscriptionTreeItems) {
             console.log('*****************************');
-            console.log(subscription);
+            console.log(JSON.stringify(subscription));
         }
 
         const testContext = await createTestActionContext();
