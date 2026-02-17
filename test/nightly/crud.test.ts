@@ -31,6 +31,9 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         if (subscriptionTreeItems.length > 0) {
             const testContext = await createTestActionContext();
             testSubscription = subscriptionTreeItems[0] as SubscriptionItem;
+            console.log(`Using subscription for CRUD tests`);
+            console.log(testSubscription);
+
             const context = {
                 ...testContext,
                 ...testSubscription.subscription,
