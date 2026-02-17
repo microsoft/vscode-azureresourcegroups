@@ -6,6 +6,7 @@
 import type { Location } from '@azure/arm-resources-subscriptions';
 import { AzExtParentTreeItem, createTestActionContext, randomUtils, runWithTestActionContext } from '@microsoft/vscode-azext-utils';
 import assert from "assert";
+import * as vscode from 'vscode';
 import { SubscriptionItem } from '../../src/tree/azure/SubscriptionItem';
 import { settingUtils } from '../../src/utils/settingUtils';
 import { longRunningTestsEnabled } from "../global.test";
@@ -37,6 +38,13 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
             await setupAzureDevOpsSubscriptionProvider();
         }
 
+        // Refresh the tree and wait for any pending tree operations to settle.
+        // This avoids a race condition where a background tree refresh (triggered by
+        // the logIn command in global.nightly.test.ts) cancels our getChildren() call
+        // via the shared cancellation token in AzureResourceTreeDataProvider.
+        await vscode.commands.executeCommand('azureResourceGroups.refresh');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
         const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren() as unknown as SubscriptionItem[];
 
         console.log(`Found ${subscriptionTreeItems.length} tree items`);
@@ -49,9 +57,11 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
             }
         }
 
-        // Filter to actual SubscriptionItems (exclude sign-in/placeholder items)
+        // Filter to actual SubscriptionItems (exclude sign-in/placeholder items).
+        // Cannot use `instanceof` here because the test imports SubscriptionItem from source
+        // while the running extension uses the esbuild-bundled version (different class identity).
         const actualSubscriptions = subscriptionTreeItems.filter(
-            (item): item is SubscriptionItem => item instanceof SubscriptionItem
+            (item): item is SubscriptionItem => !!(item as SubscriptionItem).subscription?.subscriptionId
         );
         console.log(`Found ${actualSubscriptions.length} actual subscriptions out of ${subscriptionTreeItems.length} tree items`);
 
