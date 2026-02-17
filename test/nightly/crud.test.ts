@@ -38,29 +38,32 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         }
 
         const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren() as unknown as SubscriptionItem[];
-        if (subscriptionTreeItems.length === 0) {
+
+        console.log(`Found ${subscriptionTreeItems.length} tree items`);
+        for (const item of subscriptionTreeItems) {
+            console.log('*****************************');
+            try {
+                console.log(JSON.stringify(item));
+            } catch {
+                console.log(item);
+            }
+        }
+
+        // Filter to actual SubscriptionItems (exclude sign-in/placeholder items)
+        const actualSubscriptions = subscriptionTreeItems.filter(
+            (item): item is SubscriptionItem => item instanceof SubscriptionItem
+        );
+        console.log(`Found ${actualSubscriptions.length} actual subscriptions out of ${subscriptionTreeItems.length} tree items`);
+
+        if (actualSubscriptions.length === 0) {
             console.log('No subscriptions found, skipping CRUD tests');
             this.skip();
             return;
         }
 
-        console.log(subscriptionTreeItems);
-
-        for (const subscription of subscriptionTreeItems) {
-            console.log('*****************************');
-            console.log(JSON.stringify(subscription));
-        }
-
         const testContext = await createTestActionContext();
-        testSubscription = subscriptionTreeItems[0] as SubscriptionItem;
-        console.log(`Using subscription for CRUD tests`);
-        console.log(testSubscription);
-
-        if (!testSubscription?.subscription) {
-            console.log('Subscription item does not have a valid subscription property, skipping CRUD tests');
-            this.skip();
-            return;
-        }
+        testSubscription = actualSubscriptions[0];
+        console.log(`Using subscription '${testSubscription.subscription.name}' (${testSubscription.subscription.subscriptionId}) for CRUD tests`);
 
         const context = {
             ...testContext,
