@@ -99,12 +99,12 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
     test('Create Resource Groups (all locations)', async () => {
         await Promise.all(locations.map(async l => {
             await runWithTestActionContext('createResourceGroup', async context => {
-                const testInputs: (string | RegExp)[] = [`${rgName} -${l.name} `, l.displayName!];
+                const testInputs: (string | RegExp)[] = [`${rgName}-${l.name}`, l.displayName!];
                 await context.ui.runWithInputs(testInputs, async () => {
                     await getCachedTestApi().testing.createResourceGroup(context, testSubscription);
                 });
 
-                assert.ok(await getCachedTestApi().testing.resourceGroupExists(context, testSubscription, `${rgName} -${l.name} `));
+                assert.ok(await getCachedTestApi().testing.resourceGroupExists(context, testSubscription, `${rgName}-${l.name}`));
             });
         }));
     });
@@ -152,7 +152,7 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         await settingUtils.updateGlobalSetting('deleteConfirmation', 'ClickButton');
         const deleteArray: string[] = Array(locations.length).fill('Delete');
         await runWithTestActionContext('Delete Resource', async context => {
-            await context.ui.runWithInputs([new RegExp(`${rgName} -`), ...deleteArray], async () => {
+            await context.ui.runWithInputs([new RegExp(`${rgName}-`), ...deleteArray], async () => {
                 await getCachedTestApi().testing.deleteResourceGroupV2(context);
             });
         });
