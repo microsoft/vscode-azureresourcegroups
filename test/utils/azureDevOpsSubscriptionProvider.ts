@@ -45,9 +45,7 @@ export async function setupAzureDevOpsSubscriptionProvider(): Promise<void> {
 
     // Sign in to establish the token credential.
     // This must be done before the provider can return subscriptions.
-    console.log('Signing in with AzDO federated credentials...');
     const signedIn = await provider.signIn();
-    console.log(`AzDO federated sign-in result: ${signedIn}`);
 
     if (!signedIn) {
         throw new Error('Failed to sign in with Azure DevOps federated credentials');

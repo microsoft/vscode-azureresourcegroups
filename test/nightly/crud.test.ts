@@ -47,33 +47,20 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
 
         const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren() as unknown as SubscriptionItem[];
 
-        console.log(`Found ${subscriptionTreeItems.length} tree items`);
-        for (const item of subscriptionTreeItems) {
-            console.log('*****************************');
-            try {
-                console.log(JSON.stringify(item));
-            } catch {
-                console.log(item);
-            }
-        }
-
         // Filter to actual SubscriptionItems (exclude sign-in/placeholder items).
         // Cannot use `instanceof` here because the test imports SubscriptionItem from source
         // while the running extension uses the esbuild-bundled version (different class identity).
         const actualSubscriptions = subscriptionTreeItems.filter(
             (item): item is SubscriptionItem => !!(item as SubscriptionItem).subscription?.subscriptionId
         );
-        console.log(`Found ${actualSubscriptions.length} actual subscriptions out of ${subscriptionTreeItems.length} tree items`);
 
         if (actualSubscriptions.length === 0) {
-            console.log('No subscriptions found, skipping CRUD tests');
             this.skip();
             return;
         }
 
         const testContext = await createTestActionContext();
         testSubscription = actualSubscriptions[0];
-        console.log(`Using subscription '${testSubscription.subscription.name}' (${testSubscription.subscription.subscriptionId}) for CRUD tests`);
 
         const context = {
             ...testContext,
