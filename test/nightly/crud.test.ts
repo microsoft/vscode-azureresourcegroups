@@ -48,12 +48,11 @@ suite('Resource CRUD Operations', function (this: Mocha.Suite): void {
         const subscriptionTreeItems = await testApi.compatibility.getAppResourceTree().getChildren() as unknown as SubscriptionItem[];
 
         // Filter to actual SubscriptionItems (exclude sign-in/placeholder items).
-        // Cannot use `instanceof` here because the test imports SubscriptionItem from source
-        // while the running extension uses the esbuild-bundled version (different class identity).
         const actualSubscriptions = subscriptionTreeItems.filter(
             (item): item is SubscriptionItem => !!(item as SubscriptionItem).subscription?.subscriptionId
         );
 
+        // if we can't find any subscriptions, then something is wrong with the test setup (e.g. auth failure), so skip the tests rather than fail them
         if (actualSubscriptions.length === 0) {
             this.skip();
             return;
