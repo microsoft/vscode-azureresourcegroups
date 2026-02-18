@@ -43,6 +43,14 @@ export async function setupAzureDevOpsSubscriptionProvider(): Promise<void> {
     // Create the provider instance now so we can return it synchronously
     const provider = await factory();
 
+    // Sign in to establish the token credential.
+    // This must be done before the provider can return subscriptions.
+    const signedIn = await provider.signIn();
+
+    if (!signedIn) {
+        throw new Error('Failed to sign in with Azure DevOps federated credentials');
+    }
+
     // Set the override via the test API
     const testApi = getCachedTestApi();
     testApi.testing.setOverrideAzureSubscriptionProvider(() => provider);
