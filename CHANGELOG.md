@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.12.1 - 2026-02-18
+
+### Engineering
+* [[1372]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1372) Fix using federated credentials during pipeline runs for testing
+
 ## 0.12.0 - 2026-02-11
 
 ### Changed
