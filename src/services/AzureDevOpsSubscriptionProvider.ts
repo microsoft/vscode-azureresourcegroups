@@ -45,7 +45,10 @@ export function createAzureDevOpsSubscriptionProviderFactory(): () => Promise<Az
             // is only loaded when federated credentials are actually in use.
             const { AzureDevOpsSubscriptionProvider } = await import("@microsoft/vscode-azext-azureauth/azdo");
             const provider = new AzureDevOpsSubscriptionProvider(initializer);
-            await provider.signIn();
+            const signedIn = await provider.signIn();
+            if (!signedIn) {
+                throw new Error("Azure DevOps sign-in failed during subscription provider initialization.");
+            }
             return provider;
         })();
         return providerPromise;
