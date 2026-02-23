@@ -98,6 +98,11 @@
                 ]
             }
         ],
+        "chatAgents": [
+            {
+                "path": "resources/agents/azcode.agent.md"
+            }
+        ],
         "languageModelTools": [
             {
                 "displayName": "Azure Resources: Get Azure Activity Log",
