@@ -19,9 +19,17 @@ import type { AzureDevOpsSubscriptionProviderInitializer } from "@microsoft/vsco
  * ready to use immediately.
  */
 export function createAzureDevOpsSubscriptionProviderFactory(): () => Promise<AzureSubscriptionProvider> {
-    const serviceConnectionId = process.env['AzCode_ServiceConnectionID'] ?? '';
-    const tenantId = process.env['AzCode_ServiceConnectionDomain'] ?? '';
-    const clientId = process.env['AzCode_ServiceConnectionClientID'] ?? '';
+    const serviceConnectionId: string | undefined = process.env['AzCode_ServiceConnectionID'];
+    const tenantId: string | undefined = process.env['AzCode_ServiceConnectionDomain'];
+    const clientId: string | undefined = process.env['AzCode_ServiceConnectionClientID'];
+
+    if (!serviceConnectionId || !tenantId || !clientId) {
+        throw new Error(`Using Azure DevOps federated credentials, but federated service connection is not configured\n
+                            process.env.AzCode_ServiceConnectionID: ${serviceConnectionId ? "✅" : "❌"}\n
+                            process.env.AzCode_ServiceConnectionDomain: ${tenantId ? "✅" : "❌"}\n
+                            process.env.AzCode_ServiceConnectionClientID: ${clientId ? "✅" : "❌"}\n
+                        `);
+    }
 
     const initializer: AzureDevOpsSubscriptionProviderInitializer = {
         serviceConnectionId,
