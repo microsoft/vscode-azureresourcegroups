@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.12.2 - 2026-02-24
+
+### Fixed
+* [[1380]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1380) Fix authentication regression introduced in 0.12.0
+
+### Engineering
+* [[1378]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1378) Setup Azure federated credential provider in extension code for client testing
+
 ## 0.12.1 - 2026-02-18
 
 ### Engineering
