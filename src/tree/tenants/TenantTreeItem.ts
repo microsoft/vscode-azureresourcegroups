@@ -4,6 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { TenantIdDescription } from '@azure/arm-resources-subscriptions';
+import { AzureAccount } from '@microsoft/vscode-azext-azureauth';
 import { nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { GenericItemOptions } from "../GenericItem";
@@ -16,7 +17,7 @@ export interface TenantItemOptions extends GenericItemOptions {
 export class TenantTreeItem implements ResourceGroupsItem {
     public label: string;
     public tenantId: string;
-    constructor(public readonly tenant: TenantIdDescription, public readonly account: vscode.AuthenticationSessionAccountInformation, private readonly options?: TenantItemOptions) {
+    constructor(public readonly tenant: TenantIdDescription, public readonly account: AzureAccount, private readonly options?: TenantItemOptions) {
         this.label = nonNullValue(this.tenant.displayName);
         this.tenantId = nonNullValue(this.tenant.tenantId);
     }
