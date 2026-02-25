@@ -28,6 +28,7 @@
         ".vscode-test",
         "gulpfile.ts",
         "**/dist",
-        "**/out"
+        "**/out",
+        "src/chat/mcpApps/languagePickerServer.ts"
     ]
 }
