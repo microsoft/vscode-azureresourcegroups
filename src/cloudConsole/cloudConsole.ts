@@ -335,8 +335,12 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
             liveServerQueue = serverQueue;
 
             const tenants: AzureTenant[] = [];
-            for (const account of await subscriptionProvider.getAccounts({ filter: false })) {
-                tenants.push(...await subscriptionProvider.getTenantsForAccount(account, { filter: false }));
+            const accounts = await subscriptionProvider.getAccounts({ filter: false });
+            const tenantResults = await Promise.all(accounts.map(account =>
+                subscriptionProvider.getTenantsForAccount(account, { filter: false })
+            ));
+            for (const result of tenantResults) {
+                tenants.push(...result);
             }
             let selectedTenant: TenantIdDescription | undefined = undefined;
 

@@ -43,9 +43,12 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
         const result = await callWithTelemetryAndErrorHandling('managedIdentityItem.getChildren', async (context: IActionContext) => {
             const subContext = createSubscriptionContext(this.subscription);
             const msiClient = await createManagedServiceIdentityClient([context, subContext]);
-            const msi: Identity = await msiClient.userAssignedIdentities.get(nonNullProp(this.resource, 'resourceGroup'), this.resource.name);
 
-            const resources = await getAzureResourcesService().listResources(context, this.subscription);
+            // Parallelize the MSI identity fetch and resource listing since they are independent
+            const [msi, resources] = await Promise.all([
+                msiClient.userAssignedIdentities.get(nonNullProp(this.resource, 'resourceGroup'), this.resource.name),
+                getAzureResourcesService().listResources(context, this.subscription),
+            ]);
             const sourceResourceItem = new SourceResourceIdentityItem(this.subscription, msi, resources);
             const targetServiceItem = new TargetServiceRoleAssignmentItem(this.subscription, msi);
 

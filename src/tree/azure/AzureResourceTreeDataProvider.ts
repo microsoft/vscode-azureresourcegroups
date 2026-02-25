@@ -166,12 +166,13 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
 
                     const tenantFilteredSubcriptions = getTenantFilteredSubscriptions(subscriptions);
                     if (tenantFilteredSubcriptions) {
+                        // batch telemetry into a single event instead of one per subscription
+                        void callWithTelemetryAndErrorHandling('azureResourceGroups.getTenantFilteredSubscriptions', async (telemetryContext: IActionContext) => {
+                            telemetryContext.telemetry.measurements.subscriptionCount = tenantFilteredSubcriptions.length;
+                            telemetryContext.telemetry.properties.subscriptionIds = tenantFilteredSubcriptions.map(s => s.subscriptionId).join(',');
+                        });
                         return tenantFilteredSubcriptions.map(
                             subscription => {
-                                // for telemetry purposes, do not wait
-                                void callWithTelemetryAndErrorHandling('azureResourceGroups.getTenantFiltedSubcription', async (context: IActionContext) => {
-                                    context.telemetry.properties.subscriptionId = subscription.subscriptionId;
-                                });
                                 if (duplicatesWithSameAccount.includes(subscription)) {
                                     return new SubscriptionItem(
                                         {
@@ -206,12 +207,13 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                     subscription);
                             });
                     } else {
+                        // batch telemetry into a single event instead of one per subscription
+                        void callWithTelemetryAndErrorHandling('azureResourceGroups.getSubscriptions', async (telemetryContext: IActionContext) => {
+                            telemetryContext.telemetry.measurements.subscriptionCount = subscriptions.length;
+                            telemetryContext.telemetry.properties.subscriptionIds = subscriptions.map(s => s.subscriptionId).join(',');
+                        });
                         return subscriptions.map(
                             subscription => {
-                                // for telemetry purposes, do not wait
-                                void callWithTelemetryAndErrorHandling('azureResourceGroups.getSubscription', async (context: IActionContext) => {
-                                    context.telemetry.properties.subscriptionId = subscription.subscriptionId;
-                                });
                                 if (duplicates.includes(subscription)) {
                                     return new SubscriptionItem(
                                         {

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
-import { callWithTelemetryAndErrorHandling, parseError, TreeElementBase } from '@microsoft/vscode-azext-utils';
+import { parseError, TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceBase, ResourceModelBase } from '../../api/src/index';
 import { ext } from '../extensionVariables';
@@ -119,11 +119,11 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
 
     async getTreeItem(element: TreeDataItem): Promise<vscode.TreeItem> {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            return (await callWithTelemetryAndErrorHandling('getTreeItem', async (context) => {
-                context.errorHandling.rethrow = true;
-                return await element.getTreeItem();
-            }))!;
+            // Branch data provider items already have telemetry wrapping via
+            // wrapFunctionsInTelemetry ('branchDataProvider.getTreeItem'), so we skip
+            // the extra callWithTelemetryAndErrorHandling layer here to avoid
+            // double-wrapping overhead (~5-10ms per call x hundreds of items).
+            return await element.getTreeItem();
         } catch (e) {
             const invalidItem = new InvalidItem(parseError(e));
             return invalidItem.getTreeItem();

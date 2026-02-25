@@ -12,6 +12,7 @@ import { askAzureInCommandPalette } from '../chat/askAzure';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
 import { TargetServiceRoleAssignmentItem } from '../managedIdentity/TargetServiceRoleAssignmentItem';
+import { invalidateResourceListCache } from '../services/AzureResourcesService';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { ActivityItem } from '../tree/activityLog/ActivityItem';
@@ -43,15 +44,18 @@ export function registerCommands(): void {
     // Special-case refresh that ignores the selected/focused node and always refreshes the entire tree. Used by the refresh button in the tree title.
     registerCommand('azureResourceGroups.refreshTree', () => {
         ext.setClearCacheOnNextLoad();
+        invalidateResourceListCache();
         ext.actions.refreshAzureTree();
     });
     registerCommand('azureWorkspace.refreshTree', () => ext.actions.refreshWorkspaceTree());
     registerCommand('azureFocusView.refreshTree', () => {
         ext.setClearCacheOnNextLoad();
+        invalidateResourceListCache();
         ext.actions.refreshFocusTree();
     });
     registerCommand('azureTenantsView.refreshTree', () => {
         ext.setClearCacheOnNextLoad();
+        invalidateResourceListCache();
         ext.actions.refreshTenantTree();
     });
 
@@ -89,6 +93,7 @@ export function registerCommands(): void {
     registerCommand('azureTenantsView.signInToTenant', async (_context, node: TenantTreeItem) => {
         await (await ext.subscriptionProviderFactory()).signIn(node);
         ext.setClearCacheOnNextLoad();
+        invalidateResourceListCache();
         ext.actions.refreshTenantTree();
         ext.actions.refreshAzureTree();
     });
@@ -102,6 +107,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.signInToTenant', async () => {
         await signInToTenant(await ext.subscriptionProviderFactory());
         ext.setClearCacheOnNextLoad();
+        invalidateResourceListCache();
         ext.actions.refreshTenantTree();
         ext.actions.refreshAzureTree();
     });
