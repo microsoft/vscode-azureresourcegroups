@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzureAccount, AzureSubscriptionProvider, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
+import { AzureAccount, AzureSubscriptionProvider, isNotSignedInError, type RefreshSuggestedEvent } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, TreeElementBase, callWithTelemetryAndErrorHandling } from '@microsoft/vscode-azext-utils';
 import { ResourceModelBase } from 'api/src';
 import * as vscode from 'vscode';
@@ -39,6 +39,32 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
                 callOnDispose?.();
             });
     }
+
+    /**
+     * Override to only react to session changes (sign-in/sign-out), not
+     * subscription filter changes.  Changing which subscriptions are selected
+     * does not affect the tenant list, so there's no reason to reload the
+     * Accounts & Tenants tree on every `subscriptionFilterChange` event.
+     */
+    protected override async getAzureSubscriptionProvider(): Promise<AzureSubscriptionProvider> {
+        const provider = await super.getAzureSubscriptionProvider();
+
+        // The base class subscribes to *all* onRefreshSuggested events in its
+        // initial call.  Replace that subscription with one that filters by reason.
+        if (this.statusSubscription && !this._filteredStatusSubscription) {
+            this.statusSubscription.dispose();
+            this._filteredStatusSubscription = provider.onRefreshSuggested((evt: RefreshSuggestedEvent) => {
+                if (evt.reason === 'sessionChange') {
+                    this.notifyTreeDataChanged();
+                }
+                // Ignore 'subscriptionFilterChange' — tenant list is unaffected.
+            });
+            this.statusSubscription = this._filteredStatusSubscription;
+        }
+
+        return provider;
+    }
+    private _filteredStatusSubscription: vscode.Disposable | undefined;
 
     async onGetChildren(element?: ResourceGroupsItem | undefined): Promise<ResourceGroupsItem[] | null | undefined> {
         if (element) {

@@ -338,6 +338,26 @@
                 "icon": "$(chat-sparkle)"
             },
             {
+                "command": "azureResourceGroups.startTelemetryProfiling",
+                "title": "%azureResourceGroups.startTelemetryProfiling%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.stopTelemetryProfiling",
+                "title": "%azureResourceGroups.stopTelemetryProfiling%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.runExtensionBenchmark",
+                "title": "%azureResourceGroups.runExtensionBenchmark%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.runTreeBenchmark",
+                "title": "%azureResourceGroups.runTreeBenchmark%",
+                "category": "Azure"
+            },
+            {
                 "command": "azureTenantsView.refresh",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
