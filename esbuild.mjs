@@ -6,20 +6,23 @@
 import { autoEsbuildOrWatch, autoSelectEsbuildConfig } from '@microsoft/vscode-azext-eng/esbuild';
 import { copy } from 'esbuild-plugin-copy';
 
-const baseConfig = autoSelectEsbuildConfig();
+const { extensionConfig, telemetryConfig } = autoSelectEsbuildConfig();
 
 /** @type {import('esbuild').BuildOptions} */
 const finalConfig = {
-    ...baseConfig,
+    ...extensionConfig,
     entryPoints: [
-        ...baseConfig.entryPoints,
+        ...extensionConfig.entryPoints,
         {
             in: './src/cloudConsole/cloudShellChildProcess/cloudConsoleLauncher.ts',
             out: 'cloudConsoleLauncher',
         },
     ],
+    // Disable code splitting to avoid VS Code extension loading issues (see #1352)
+    splitting: false,
+    format: 'cjs',
     plugins: [
-        ...baseConfig.plugins,
+        ...extensionConfig.plugins,
         copy({
             assets: [
                 {
@@ -31,4 +34,4 @@ const finalConfig = {
     ],
 };
 
-await autoEsbuildOrWatch(finalConfig);
+await autoEsbuildOrWatch({ extensionConfig: finalConfig, telemetryConfig });

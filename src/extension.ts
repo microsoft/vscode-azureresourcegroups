@@ -91,7 +91,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
 
-        ext.subscriptionProviderFactory = getSubscriptionProviderFactory(activateContext);
+        ext.subscriptionProviderFactory = getSubscriptionProviderFactory();
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
         context.subscriptions.push(vscode.workspace.registerFileSystemProvider(TagFileSystem.scheme, ext.tagFS));
@@ -213,7 +213,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     ext.workspaceTree = new CompatibleAzExtTreeDataProvider(workspaceResourceTreeDataProvider);
 
     const getSubscriptions: (filter: boolean) => Promise<AzureSubscription[]> =
-        async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getSubscriptions(filter); };
+        async (filter: boolean) => { return await (await ext.subscriptionProviderFactory()).getAvailableSubscriptions({ filter }); };
 
     const coreApiFactories: AzureExtensionApiFactory[] = [
         {

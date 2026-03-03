@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
-import { createSubscriptionContext, IActionContext, nonNullProp, subscriptionExperience } from "@microsoft/vscode-azext-utils";
+import { createSubscriptionContext, IActionContext, NoResourceFoundError, nonNullProp, subscriptionExperience } from "@microsoft/vscode-azext-utils";
 import { QuickPickItem } from "vscode";
 import { AzureSubscription } from "../../../api/src/index";
 import { ext } from "../../extensionVariables";
@@ -32,6 +32,12 @@ async function groupBy(context: IActionContext, setting: string): Promise<void> 
 async function getQuickPicks(context: IActionContext, subscription: AzureSubscription): Promise<QuickPickItem[]> {
     const client = await createResourceClient([context, createSubscriptionContext(subscription)]);
     const tags = await uiUtils.listAllIterator(client.tagsOperations.list());
+    
+    if (tags.length === 0) {
+        (context as { noItemFoundErrorMessage?: string }).noItemFoundErrorMessage = localize('noTagKeysFound', 'No tag keys found. Please add tags to your resources to use this grouping option.');
+        throw new NoResourceFoundError(context);
+    }
+    
     return tags.map(tag => ({
         label: nonNullProp(tag, 'tagName'),
     }));

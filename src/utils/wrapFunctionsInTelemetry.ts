@@ -16,7 +16,7 @@ function stringifyError(e: unknown): string {
 }
 
 function handleError(e: unknown, functionName: string): never {
-    ext.outputChannel.appendLog(`Internal error: '${functionName}' threw an exception\n\t${stringifyError(e)}`);
+    ext.outputChannel?.appendLog(`Internal error: '${functionName}' threw an exception\n\t${stringifyError(e)}`);
     if (e instanceof Error) {
         e.message = functionName === 'branchDataProvider.getResourceItem' ?
             // shortened message for anything displayed on the tree

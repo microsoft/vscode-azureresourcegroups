@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscription } from "@microsoft/vscode-azext-azureauth";
+import { AzureSubscription, isNotSignedInError } from "@microsoft/vscode-azext-azureauth";
 import { IActionContext, IAzureQuickPickItem, nonNullValue } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
@@ -28,16 +28,16 @@ export interface SelectSubscriptionOptions {
 
 export async function selectSubscriptions(context: IActionContext, options?: SelectSubscriptionOptions): Promise<void> {
     const provider = await ext.subscriptionProviderFactory();
-    if (await provider.isSignedIn()) {
-
+    try {
         const selectedSubscriptionsWithFullId = await getSelectedTenantAndSubscriptionIds();
         const selectedSubscriptionIds = selectedSubscriptionsWithFullId.map(id => id.split('/')[1]);
 
         let subscriptionsShownInPicker: string[] = [];
 
         const subscriptionQuickPickItems: () => Promise<IAzureQuickPickItem<AzureSubscription>[]> = async () => {
-            // If there are no tenants selected by default all subscriptions will be shown.
-            let subscriptions = await provider.getSubscriptions(false);
+            // Use cached subscriptions if available - the cache is cleared on sign-in/sign-out
+            // This avoids unnecessary network requests when the user opens the subscription picker
+            let subscriptions = await provider.getAvailableSubscriptions({ filter: false });
 
             if (options?.account || options?.tenantId) {
 
@@ -89,13 +89,17 @@ export async function selectSubscriptions(context: IActionContext, options?: Sel
         }
 
         ext.actions.refreshAzureTree();
-    } else {
-        const signIn: vscode.MessageItem = { title: localize('signIn', 'Sign In') };
-        void vscode.window.showInformationMessage(localize('notSignedIn', 'You are not signed in. Sign in to continue.'), signIn).then((input) => {
-            if (input === signIn) {
-                void provider.signIn();
-            }
-        });
+    } catch (error) {
+        if (isNotSignedInError(error)) {
+            const signIn: vscode.MessageItem = { title: localize('signIn', 'Sign In') };
+            void vscode.window.showInformationMessage(localize('notSignedIn', 'You are not signed in. Sign in to continue.'), signIn).then((input) => {
+                if (input === signIn) {
+                    void provider.signIn();
+                }
+            });
+        } else {
+            throw error;
+        }
     }
 }
 

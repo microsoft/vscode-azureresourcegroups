@@ -21,6 +21,10 @@ export async function rerunAzureActivityWithCopilot(context: IActionContext, ite
     };
 
     const activityItems: ConvertedActivityItem[] = await convertActivityTreeToSimpleObjectArray(activityContext);
+    if (activityItems.length === 0) {
+        throw new Error(vscode.l10n.t('Failed to rerun with Copilot. No matching activity item found.'));
+    }
+
     markAsCopilotUserInput(context, JSON.stringify(activityItems));
 
     let wizardContext = context as IActionContext & { azureSubscription?: AzureSubscription };

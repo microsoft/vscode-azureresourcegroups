@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 import { GenericResource, ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { getSessionFromVSCode } from "@microsoft/vscode-azext-azureauth";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";

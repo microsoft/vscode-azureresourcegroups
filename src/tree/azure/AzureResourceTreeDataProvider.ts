@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureSubscription, getConfiguredAuthProviderId, getUnauthenticatedTenants } from '@microsoft/vscode-azext-azureauth';
+import { AzureSubscription, AzureTenant, getMetricsForTelemetry, isNotSignedInError } from '@microsoft/vscode-azext-azureauth';
 import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, nonNullValueAndProp, registerEvent, TreeElementBase } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ResourceModelBase } from '../../../api/src/index';
@@ -14,12 +14,12 @@ import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { GenericItem } from '../GenericItem';
+import { getSignInTreeItems, tryGetLoggingInTreeItems } from '../getSignInTreeItems';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { TreeItemStateStore } from '../TreeItemState';
-import { onGetAzureChildrenBase } from '../onGetAzureChildrenBase';
 import { AzureResourceTreeDataProviderBase } from './AzureResourceTreeDataProviderBase';
-import { SubscriptionItem } from './SubscriptionItem';
 import { AzureResourceGroupingManager } from './grouping/AzureResourceGroupingManager';
+import { SubscriptionItem } from './SubscriptionItem';
 
 export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProviderBase {
     private readonly groupingChangeSubscription: vscode.Disposable;
@@ -77,44 +77,68 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
      * Wrapped in telemetry to measure initial load performance.
      */
     private async getRootChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
-        return await callWithTelemetryAndErrorHandling('azureResourceGroups.loadSubscriptions', async (context) => {
-            context.errorHandling.rethrow = true;
+        // Create cancellation token for this load operation - cancels any pending previous load
+        const cancellationToken = this.createLoadCancellationToken();
+
+        return await callWithTelemetryAndErrorHandling('azureResourceGroups.loadSubscriptions', async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
 
             const isFirstLoad = !this.hasLoadedSubscriptions;
             this.hasLoadedSubscriptions = true;
             context.telemetry.properties.isFirstLoad = String(isFirstLoad);
 
+            const maybeLogInItems = tryGetLoggingInTreeItems();
+            if (maybeLogInItems?.length) {
+                context.telemetry.properties.outcome = 'loggingIn';
+                return maybeLogInItems;
+            }
+
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
-            const isSignedIn = await subscriptionProvider.isSignedIn();
-            context.telemetry.properties.isSignedIn = String(isSignedIn);
+            // Atomically consume the clear cache flag - only the first tree to load will get true
+            const shouldClearCache = ext.consumeClearCacheFlag();
 
-            // When a user is signed in 'OnGetChildrenBase' will return no children
-            const children: ResourceGroupsItem[] = await onGetAzureChildrenBase(subscriptionProvider, this);
-
-            if (children.length === 0) {
-                this.sendSubscriptionTelemetryIfNeeded();
-                let subscriptions: AzureSubscription[];
+            try {
                 await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
-                if ((subscriptions = await subscriptionProvider.getSubscriptions(true)).length === 0) {
-                    if (
-                        // If there are no subscriptions at all (ignoring filters) AND if unauthenicated tenants exist
-                        (await subscriptionProvider.getSubscriptions(false)).length === 0 &&
-                        (await getUnauthenticatedTenants(subscriptionProvider)).length > 0
-                    ) {
-                        // Subscriptions might exist in an unauthenticated tenant. Show welcome view.
-                        await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', true);
-                        return [];
+                const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: shouldClearCache, token: cancellationToken });
+                this.sendSubscriptionTelemetryIfNeeded(); // Don't send until the above call is done, to avoid cache missing
+
+                context.telemetry.measurements.subscriptionCount = subscriptions.length;
+
+                if (subscriptions.length === 0) {
+                    // No subscriptions through the filters. Decide what to show.
+                    const selectSubscriptionsItem = new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
+                        commandId: 'azureResourceGroups.selectSubscriptions'
+                    });
+
+                    const allSubscriptions = await subscriptionProvider.getAvailableSubscriptions({ filter: false });
+                    if (allSubscriptions.length === 0) {
+                        // No subscriptions at all (ignoring filters)
+                        const allUnauthenticatedTenants: AzureTenant[] = [];
+                        for (const account of await subscriptionProvider.getAccounts({ filter: false })) {
+                            allUnauthenticatedTenants.push(...await subscriptionProvider.getUnauthenticatedTenantsForAccount(account));
+                        }
+
+                        if (allUnauthenticatedTenants.length > 0) {
+                            // Subscriptions might exist in an unauthenticated tenant. Show welcome view.
+                            await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', true);
+                            return [];
+                        } else {
+                            // All tenants are authenticated but no subscriptions exist.
+                            // Show "Select Subscriptions..." to preserve prior behavior and provide
+                            // a consistent UX, rather than throwing NotSignedInError.
+                            return [selectSubscriptionsItem];
+                        }
                     } else {
-                        return [new GenericItem(localize('noSubscriptions', 'Select Subscriptions...'), {
-                            commandId: 'azureResourceGroups.selectSubscriptions'
-                        })];
+                        // Subscriptions exist but are all filtered out, show the Select Subscriptions item
+                        return [selectSubscriptionsItem];
                     }
                 } else {
                     // User is signed in and has subscriptions - record counts
+                    context.telemetry.properties.isSignedIn = 'true';
                     context.telemetry.measurements.subscriptionCount = subscriptions.length;
-                    const accounts = await vscode.authentication.getAccounts(getConfiguredAuthProviderId());
+                    // Use provider's cached accounts instead of direct API call
+                    const accounts = await subscriptionProvider.getAccounts({ filter: false });
                     context.telemetry.measurements.accountCount = accounts.length;
 
                     //find duplicate subscriptions and change the name to include the account name. If duplicate subs are in the same account add the tenant id instead
@@ -212,8 +236,18 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                             });
                     }
                 }
+            } catch (error) {
+                if (isNotSignedInError(error)) {
+                    context.telemetry.properties.outcome = 'notSignedIn';
+                    return getSignInTreeItems(true);
+                }
+
+                // For unexpected errors, log via telemetry but return empty array
+                // to avoid disrupting the UI (preserving prior behavior).
+                context.telemetry.properties.outcome = 'error';
+                context.telemetry.properties.unhandledError = String(error);
+                return [];
             }
-            return children;
         });
     }
 
@@ -229,21 +263,21 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
             context.telemetry.properties.isActivationEvent = 'true';
             context.errorHandling.suppressDisplay = true;
 
-            const subscriptionProvider = await this.getAzureSubscriptionProvider();
-            const subscriptions = await subscriptionProvider.getSubscriptions(false);
+            const {
+                totalAccounts,
+                visibleTenants,
+                visibleSubscriptions,
+                subscriptionIdList,
+                subscriptionIdListIsIncomplete,
+            } = await getMetricsForTelemetry(await this.getAzureSubscriptionProvider());
 
-            const tenantSet = new Set<string>();
-            const subscriptionSet = new Set<string>();
-            subscriptions.forEach(sub => {
-                tenantSet.add(sub.tenantId);
-                subscriptionSet.add(sub.subscriptionId);
-            });
-
-            // Number of tenants and subscriptions really belong in Measurements but for backwards compatibility
+            // These counts really belong in Measurements but for backwards compatibility
             // they will be put into Properties instead.
-            context.telemetry.properties.numtenants = tenantSet.size.toString();
-            context.telemetry.properties.numsubscriptions = subscriptionSet.size.toString();
-            context.telemetry.properties.subscriptions = JSON.stringify(Array.from(subscriptionSet));
+            context.telemetry.properties.numaccounts = totalAccounts.toString();
+            context.telemetry.properties.numtenants = visibleTenants.toString();
+            context.telemetry.properties.numsubscriptions = visibleSubscriptions.toString();
+            context.telemetry.properties.subscriptions = subscriptionIdList;
+            context.telemetry.properties.subscriptionidlistisincomplete = subscriptionIdListIsIncomplete.toString();
         });
     }
 }

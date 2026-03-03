@@ -12,6 +12,8 @@ export const resourceGroupsToDelete: string[] = [];
 suiteSetup(async function (this: Mocha.Context): Promise<void> {
     if (longRunningTestsEnabled) {
         this.timeout(2 * 60 * 1000);
+
+
         await vscode.commands.executeCommand('azureResourceGroups.logIn');
     }
 });

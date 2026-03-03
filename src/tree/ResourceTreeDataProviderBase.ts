@@ -21,6 +21,12 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     private readonly resourceProviderManagerListener: vscode.Disposable;
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<void | TreeElementBase | TreeElementBase[] | null | undefined>();
 
+    /**
+     * Cancellation token source for the current tree load operation.
+     * When a new refresh is triggered, the previous operation is cancelled.
+     */
+    private loadCancellationTokenSource: vscode.CancellationTokenSource | undefined;
+
     constructor(
         protected readonly itemCache: BranchDataItemCache,
         onDidChangeBranchTreeData: vscode.Event<void | ResourceModelBase | ResourceModelBase[] | null | undefined>,
@@ -32,6 +38,8 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
             () => {
                 callOnDispose?.();
 
+                this.loadCancellationTokenSource?.cancel();
+                this.loadCancellationTokenSource?.dispose();
                 this.branchTreeDataChangeSubscription.dispose();
                 this.refreshSubscription.dispose();
                 this.resourceProviderManagerListener.dispose();
@@ -48,6 +56,20 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
     protected statusSubscription: vscode.Disposable | undefined;
     private subscriptionProvider?: AzureSubscriptionProvider;
 
+    /**
+     * Creates a new cancellation token for the current load operation.
+     * Cancels any previous pending operation before creating the new token.
+     */
+    protected createLoadCancellationToken(): vscode.CancellationToken {
+        // Cancel any previous pending operation
+        this.loadCancellationTokenSource?.cancel();
+        this.loadCancellationTokenSource?.dispose();
+
+        // Create new token source for this operation
+        this.loadCancellationTokenSource = new vscode.CancellationTokenSource();
+        return this.loadCancellationTokenSource.token;
+    }
+
     protected async getAzureSubscriptionProvider(): Promise<AzureSubscriptionProvider> {
         // override for testing
         if (ext.testing.overrideAzureSubscriptionProvider) {
@@ -59,15 +81,9 @@ export abstract class ResourceTreeDataProviderBase extends vscode.Disposable imp
                 if (!inCloudShell()) {
                     // Only outside of Cloud Shell will we monitor for ongoing session changes
                     // Inside we must avoid due to https://github.com/microsoft/vscode-dev/issues/1334
-                    const one = this.subscriptionProvider.onDidSignIn(() => {
+                    this.statusSubscription = this.subscriptionProvider.onRefreshSuggested(() => {
                         this.notifyTreeDataChanged();
                     });
-
-                    const two = this.subscriptionProvider.onDidSignOut(() => {
-                        this.notifyTreeDataChanged();
-                    });
-
-                    this.statusSubscription = vscode.Disposable.from(one, two);
                 }
             }
 
