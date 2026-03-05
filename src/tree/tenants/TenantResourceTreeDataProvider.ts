@@ -53,9 +53,6 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
      * Wrapped in telemetry to measure initial load performance.
      */
     private async getRootChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
-        // Create cancellation token for this load operation - cancels any pending previous load
-        const cancellationToken = this.createLoadCancellationToken();
-
         return await callWithTelemetryAndErrorHandling('azureTenantsView.getChildren', async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
 
@@ -74,13 +71,13 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
             const shouldClearCache = ext.consumeClearCacheFlag();
 
             try {
-                const accounts = await subscriptionProvider.getAccounts({ filter: false, noCache: shouldClearCache, token: cancellationToken });
+                const accounts = await subscriptionProvider.getAccounts({ filter: false, noCache: shouldClearCache });
                 context.telemetry.properties.isSignedIn = 'true';
                 context.telemetry.properties.accountCount = accounts.length.toString();
 
                 // Process accounts in parallel for better performance with multiple accounts
                 const accountItems = await Promise.all(
-                    accounts.map(account => this.getTenantsForAccountSafe(subscriptionProvider, account, shouldClearCache, cancellationToken))
+                    accounts.map(account => this.getTenantsForAccountSafe(subscriptionProvider, account, shouldClearCache))
                 );
 
                 // Filter out undefined items (accounts that failed to load)
@@ -104,10 +101,10 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
      * Gets tenants for an account, handling NotSignedInError gracefully.
      * If the account can't be accessed (e.g., session expired), returns undefined to skip it.
      */
-    private async getTenantsForAccountSafe(subscriptionProvider: AzureSubscriptionProvider, account: AzureAccount, shouldClearCache: boolean, token?: vscode.CancellationToken): Promise<ResourceGroupsItem | undefined> {
+    private async getTenantsForAccountSafe(subscriptionProvider: AzureSubscriptionProvider, account: AzureAccount, shouldClearCache: boolean): Promise<ResourceGroupsItem | undefined> {
         try {
-            const allTenants = await subscriptionProvider.getTenantsForAccount(account, { filter: false, noCache: shouldClearCache, token });
-            const unauthenticatedTenants = await subscriptionProvider.getUnauthenticatedTenantsForAccount(account, { token });
+            const allTenants = await subscriptionProvider.getTenantsForAccount(account, { filter: false, noCache: shouldClearCache });
+            const unauthenticatedTenants = await subscriptionProvider.getUnauthenticatedTenantsForAccount(account);
             const unauthenticatedTenantIds = new Set(unauthenticatedTenants.map(uat => uat.tenantId));
             const tenantItems: ResourceGroupsItem[] = [];
 
