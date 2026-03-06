@@ -156,6 +156,7 @@ export function registerCommands(): void {
     registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityItem) => await askAgentAboutActivityLog(context));
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
+
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
