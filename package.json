@@ -29,7 +29,8 @@
     ],
     "preview": true,
     "activationEvents": [
-        "onFileSystem:azureResourceGroups"
+        "onFileSystem:azureResourceGroups",
+        "onMcpServerDefinitionProvider:azureCodeAssistantMcp"
     ],
     "main": "./main.js",
     "contributes": {
@@ -96,6 +97,17 @@
                         ]
                     }
                 ]
+            }
+        ],
+        "chatAgents": [
+            {
+                "path": "resources/agents/azcode.agent.md"
+            }
+        ],
+        "mcpServerDefinitionProviders": [
+            {
+                "id": "azureCodeAssistantMcp",
+                "label": "Azure Code Assistant"
             }
         ],
         "languageModelTools": [
@@ -364,6 +376,12 @@
             {
                 "command": "azureResourceGroups.askAgentAboutResource",
                 "title": "%azureResourceGroups.askAzure%"
+            },
+            {
+                "command": "azureResourceGroups.openAzureCodeAgent",
+                "title": "%azureResourceGroups.openAzureCodeAgent%",
+                "category": "Azure",
+                "icon": "$(chat-sparkle)"
             }
         ],
         "viewsContainers": {
@@ -929,6 +947,8 @@
         "@microsoft/vscode-azext-azureauth": "^6.0.0-alpha.4",
         "@microsoft/vscode-azext-azureutils": "^4.0.0",
         "@microsoft/vscode-azext-utils": "^4.0.4",
+        "@modelcontextprotocol/ext-apps": "^1.1.0",
+        "@modelcontextprotocol/sdk": "^1.26.0",
         "form-data": "^4.0.4",
         "fs-extra": "^11.3.0",
         "jsonc-parser": "^2.2.1",
