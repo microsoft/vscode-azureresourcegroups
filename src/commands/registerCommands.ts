@@ -34,11 +34,8 @@ import { reviewIssues } from './helpAndFeedback/reviewIssues';
 import { installExtension } from './installExtension';
 import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
-import { runExtensionBenchmark } from './runExtensionBenchmark';
-import { runTreeBenchmark } from './runTreeBenchmark';
 import { configureSovereignCloud } from './sovereignCloud/configureSovereignCloud';
 import { editTags } from './tags/editTags';
-import { startTelemetryProfiling, stopTelemetryProfiling } from './telemetryProfiling';
 import { viewProperties } from './viewProperties';
 
 export function registerCommands(): void {
@@ -159,11 +156,6 @@ export function registerCommands(): void {
     registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityItem) => await askAgentAboutActivityLog(context));
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
-
-    registerCommand('azureResourceGroups.startTelemetryProfiling', startTelemetryProfiling);
-    registerCommand('azureResourceGroups.stopTelemetryProfiling', stopTelemetryProfiling);
-    registerCommand('azureResourceGroups.runExtensionBenchmark', runExtensionBenchmark);
-    registerCommand('azureResourceGroups.runTreeBenchmark', runTreeBenchmark);
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
