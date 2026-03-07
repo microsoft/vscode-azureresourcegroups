@@ -74,6 +74,14 @@ export class GroupingItem implements ResourceGroupsItem {
         return resources;
     }
 
+    /**
+     * Get generic items to display when there are no resources.
+     * Can be overridden by subclasses to provide custom items.
+     */
+    getGenericItemsForEmptyGroup(): ResourceGroupsItem[] | undefined {
+        return undefined;
+    }
+
     async getChildren(): Promise<ResourceGroupsItem[] | undefined> {
 
         const sortedResources = this.getResourcesToDisplay(this.resources).sort((a, b) => {
@@ -84,6 +92,11 @@ export class GroupingItem implements ResourceGroupsItem {
 
             return a.name.localeCompare(b.name);
         });
+
+        // If there are no resources, check if there are generic items to display
+        if (sortedResources.length === 0) {
+            return this.getGenericItemsForEmptyGroup();
+        }
 
         const subscriptionGroupingMap = new Map<AzureSubscription, AzureResource[]>();
 
