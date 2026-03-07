@@ -54,16 +54,13 @@ export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase
                 return [];
             }
 
-            // Create cancellation token for this load operation - cancels any pending previous load
-            const cancellationToken = this.createLoadCancellationToken();
-
             const provider = await this.getAzureSubscriptionProvider();
 
             // Atomically consume the clear cache flag - only the first tree to load will get true
             const shouldClearCache = ext.consumeClearCacheFlag();
 
             try {
-                const subscriptions = await provider.getAvailableSubscriptions({ noCache: shouldClearCache, token: cancellationToken });
+                const subscriptions = await provider.getAvailableSubscriptions({ noCache: shouldClearCache });
                 if (subscriptions.length === 0) {
                     return [];
                 }

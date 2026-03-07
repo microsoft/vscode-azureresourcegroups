@@ -77,9 +77,6 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
      * Wrapped in telemetry to measure initial load performance.
      */
     private async getRootChildren(): Promise<ResourceGroupsItem[] | null | undefined> {
-        // Create cancellation token for this load operation - cancels any pending previous load
-        const cancellationToken = this.createLoadCancellationToken();
-
         return await callWithTelemetryAndErrorHandling('azureResourceGroups.loadSubscriptions', async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
 
@@ -100,7 +97,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
 
             try {
                 await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
-                const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: shouldClearCache, token: cancellationToken });
+                const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: shouldClearCache });
                 this.sendSubscriptionTelemetryIfNeeded(); // Don't send until the above call is done, to avoid cache missing
 
                 context.telemetry.measurements.subscriptionCount = subscriptions.length;
