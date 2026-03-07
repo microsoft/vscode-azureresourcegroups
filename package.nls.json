@@ -49,10 +49,6 @@
     "azureResourceGroups.loadAllSubscriptionRoleAssignments": "Load all role assignments across subscriptions...",
     "azureResourceGroups.askAgentAboutActivityLog": "Ask Copilot about the Azure Activity Log",
     "azureResourceGroups.askAgentAboutActivityLogItem": "Ask Copilot about this activity",
-    "azureResourceGroups.startTelemetryProfiling": "Start Telemetry Profiling",
-    "azureResourceGroups.stopTelemetryProfiling": "Stop Telemetry Profiling",
-    "azureResourceGroups.runExtensionBenchmark": "Run Extension Benchmark",
-    "azureResourceGroups.runTreeBenchmark": "Run Tree Benchmark",
     "azureResourceGroups.askAzure": {
         "message": "Ask @azure",
         "comment": [

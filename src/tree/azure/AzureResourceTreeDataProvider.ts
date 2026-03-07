@@ -206,11 +206,6 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
                                     subscription);
                             });
                     } else {
-                        // batch telemetry into a single event instead of one per subscription
-                        void callWithTelemetryAndErrorHandling('azureResourceGroups.getSubscriptions', async (telemetryContext: IActionContext) => {
-                            telemetryContext.telemetry.measurements.subscriptionCount = subscriptions.length;
-                            telemetryContext.telemetry.properties.subscriptionIds = subscriptions.map(s => s.subscriptionId).join(',');
-                        });
                         return subscriptions.map(
                             subscription => {
                                 // for telemetry purposes, do not wait
