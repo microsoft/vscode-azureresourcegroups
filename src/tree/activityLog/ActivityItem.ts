@@ -24,7 +24,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
      * fire in rapid succession; debouncing avoids flooding VS Code with
      * redundant tree-data-change notifications.
      */
-    private static readonly REFRESH_DEBOUNCE_MS = 500;
+    private static readonly refreshDebounceMs = 500;
 
     public readonly id: string;
     private _activityAttributes?: ActivityAttributes;
@@ -130,7 +130,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
     /**
      * Schedules a debounced partial refresh of this item in the ActivityLog tree.
      * Coalesces rapid-fire lifecycle events (start → progress → progress → success)
-     * into at most one refresh per {@link REFRESH_DEBOUNCE_MS}.
+     * into at most one refresh per {@link refreshDebounceMs}.
      */
     private scheduleRefresh(): void {
         if (this._refreshTimer) {
@@ -140,7 +140,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
         this._refreshTimer = setTimeout(() => {
             this._refreshTimer = undefined;
             ext.actions.refreshActivityLogTree(this);
-        }, ActivityItem.REFRESH_DEBOUNCE_MS);
+        }, ActivityItem.refreshDebounceMs);
     }
 
     private onProgress(data: OnProgressActivityData): void {
