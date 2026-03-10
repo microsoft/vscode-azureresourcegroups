@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
-import { SignInOptions } from '@microsoft/vscode-azext-azureauth';
+import type { SignInOptions } from '@microsoft/vscode-azext-azureauth';
 import { ext } from '../../extensionVariables';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
