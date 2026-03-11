@@ -12,7 +12,6 @@
 
 ### Engineering
 * [[1398]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1398) Upgrade @microsoft/vscode-azext-azureauth to 6.0.0-alpha.5
-* [[1389]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1389) Upgrade @microsoft/vscode-azext-azureauth to 6.0.0-alpha.4
 * [[1386]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1386) Bump minimatch from 3.1.2 to 3.1.5
 
 ## 0.12.2 - 2026-02-24
