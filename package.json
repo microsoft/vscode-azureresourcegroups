@@ -338,6 +338,12 @@
                 "icon": "$(chat-sparkle)"
             },
             {
+                "command": "azureResourceGroups.rerunAzureActivityWithCopilot",
+                "title": "%azureResourceGroups.rerunAzureActivityWithCopilot%",
+                "category": "Azure",
+                "icon": "$(refresh)"
+            },
+            {
                 "command": "azureTenantsView.refresh",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
@@ -624,6 +630,11 @@
                     "command": "azureResourceGroups.askAgentAboutActivityLogItem",
                     "when": "view == azureActivityLog && viewItem =~ /activityItem/i",
                     "group": "inline"
+                },
+                {
+                    "command": "azureResourceGroups.rerunAzureActivityWithCopilot",
+                    "when": "view == azureActivityLog && viewItem =~ /activityItem/i",
+                    "group": "inline"
                 }
             ],
             "commandPalette": [
@@ -677,6 +688,10 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.rerunAzureActivityWithCopilot",
                     "when": "never"
                 }
             ],
@@ -928,7 +943,7 @@
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
         "@microsoft/vscode-azext-azureauth": "^6.0.0-alpha.5",
         "@microsoft/vscode-azext-azureutils": "^4.0.0",
-        "@microsoft/vscode-azext-utils": "^4.0.4",
+        "@microsoft/vscode-azext-utils": "file:../vscode-azuretools/utils/microsoft-vscode-azext-utils-4.0.4.tgz",
         "form-data": "^4.0.4",
         "fs-extra": "^11.3.0",
         "jsonc-parser": "^2.2.1",
