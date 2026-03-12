@@ -49,6 +49,7 @@
     "azureResourceGroups.loadAllSubscriptionRoleAssignments": "Load all role assignments across subscriptions...",
     "azureResourceGroups.askAgentAboutActivityLog": "Ask Copilot about the Azure Activity Log",
     "azureResourceGroups.askAgentAboutActivityLogItem": "Ask Copilot about this activity",
+    "azureResourceGroups.openAzureCodeAgent": "Open Azure Code Assistant",
     "azureResourceGroups.askAzure": {
         "message": "Ask @azure",
         "comment": [

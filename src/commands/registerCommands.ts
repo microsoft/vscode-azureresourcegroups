@@ -11,6 +11,7 @@ import { askAgentAboutResource } from '../chat/askAgentAboutResource';
 import { askAzureInCommandPalette } from '../chat/askAzure';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
+import { openAzureCodeAgent } from './openAzureCodeAgent';
 import { TargetServiceRoleAssignmentItem } from '../managedIdentity/TargetServiceRoleAssignmentItem';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
@@ -150,6 +151,7 @@ export function registerCommands(): void {
     registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityItem) => await askAgentAboutActivityLog(context));
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
+    registerCommand('azureResourceGroups.openAzureCodeAgent', openAzureCodeAgent);
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
