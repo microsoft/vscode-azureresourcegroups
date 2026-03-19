@@ -7,7 +7,7 @@ import { AzureSubscription, isNotSignedInError } from "@microsoft/vscode-azext-a
 import { IActionContext, IAzureQuickPickItem, nonNullValue } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
-import { isTenantFilteredOut } from "../../tree/tenants/registerTenantTree";
+import { isTenantFilteredOut } from "../../utils/tenantSelection";
 import { localize } from "../../utils/localize";
 import { settingUtils } from "../../utils/settingUtils";
 

@@ -6,7 +6,7 @@
 import { AzureAccount, AzureTenant, GetTenantsForAccountOptions, VSCodeAzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import { getSelectedTenantAndSubscriptionIds } from '../commands/accounts/selectSubscriptions';
 import { ext } from '../extensionVariables';
-import { isTenantFilteredOut } from '../tree/tenants/registerTenantTree';
+import { isTenantFilteredOut } from '../utils/tenantSelection';
 
 /**
  * Extends {@link VSCodeAzureSubscriptionProvider} to additionally filter tenants based on the
@@ -33,16 +33,16 @@ class ResourceGroupsSubscriptionProvider extends VSCodeAzureSubscriptionProvider
     }
 }
 
-let vscodeAzureSubscriptionProvider: ResourceGroupsSubscriptionProvider | undefined;
+let vscodeAzureSubscriptionProvider: VSCodeAzureSubscriptionProvider | undefined;
 
-export function createVSCodeAzureSubscriptionProviderFactory(): () => Promise<ResourceGroupsSubscriptionProvider> {
-    return async (): Promise<ResourceGroupsSubscriptionProvider> => {
+export function createVSCodeAzureSubscriptionProviderFactory(): () => Promise<VSCodeAzureSubscriptionProvider> {
+    return async (): Promise<VSCodeAzureSubscriptionProvider> => {
         vscodeAzureSubscriptionProvider ??= await createVSCodeAzureSubscriptionProvider();
         return vscodeAzureSubscriptionProvider;
     };
 }
 
-async function createVSCodeAzureSubscriptionProvider(): Promise<ResourceGroupsSubscriptionProvider> {
+async function createVSCodeAzureSubscriptionProvider(): Promise<VSCodeAzureSubscriptionProvider> {
     // This will update the selected subscription IDs to ensure the filters are in the form of `${tenantId}/${subscriptionId}`
     await getSelectedTenantAndSubscriptionIds();
 
