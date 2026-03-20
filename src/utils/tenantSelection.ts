@@ -22,24 +22,18 @@ export function getUnselectedTenants(): string[] {
     return Array.from(new Set(value));
 }
 
-export async function setUnselectedTenants(tenantIds: string[]): Promise<void> {
-    const deduplicated = Array.from(new Set(tenantIds));
+export async function setUnselectedTenants(tenantAccountKeys: string[]): Promise<void> {
+    const deduplicated = Array.from(new Set(tenantAccountKeys));
 
-    let str = 'Unselected tenants:\n';
-    for (const tenant of deduplicated) {
-        str += `- ${tenant}\n`;
+    const lines: string[] = ['Unselected tenants:'];
+    for (const tenantAccountKey of deduplicated) {
+        lines.push(`- ${tenantAccountKey}`);
     }
-    ext.outputChannel.appendLine(str);
+    ext.outputChannel.appendLine(lines.join('\n'));
 
     await ext.context.globalState.update(UnselectedTenantsKey, deduplicated);
 }
 
 export function isTenantFilteredOut(tenantId: string, accountId: string): boolean {
-    const settings = ext.context.globalState.get<string[]>(UnselectedTenantsKey);
-    if (settings) {
-        if (settings.includes(getKeyForTenant(tenantId, accountId))) {
-            return true;
-        }
-    }
-    return false;
+    return getUnselectedTenants().includes(getKeyForTenant(tenantId, accountId));
 }
