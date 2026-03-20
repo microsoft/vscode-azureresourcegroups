@@ -28,11 +28,20 @@ class TagVisitor implements jsonc.JSONVisitor {
     private readonly _arrayOpenBracketPositions: Position[] = [];
     private _tagCount: number = 0;
     private readonly _existingTags: string[] = [];
+    /**
+     * Whether the top-level JSON value is an object (`true`), an array (`false`), or not yet determined (`undefined`).
+     * When the top-level value is an array the entire document is structurally invalid for tags, so we show only the
+     * single top-level array error and suppress every other diagnostic that would otherwise be a false positive.
+     */
+    private _topLevelIsObject: boolean | undefined = undefined;
 
     /**
      * Invoked when an open brace is encountered and an object is started. The offset and length represent the location of the open brace.
      */
     public onObjectBegin = (_offset: number, _length: number, startLine: number, startCharacter: number) => {
+        if (this._topLevelIsObject === undefined && this._objectOpenBracketPositions.length === 0 && this._arrayOpenBracketPositions.length === 0) {
+            this._topLevelIsObject = true;
+        }
         this._objectOpenBracketPositions.push(new Position(startLine, startCharacter));
     };
 
@@ -41,7 +50,7 @@ class TagVisitor implements jsonc.JSONVisitor {
      */
     public onObjectEnd = (_offset: number, _length: number, closeBracketLine: number, closeBracketChar: number) => {
         const openBracketPosition: Position = nonNullValue(this._objectOpenBracketPositions.pop());
-        if (this._objectOpenBracketPositions.length === 1) { // only show the error for an outer-most invalid object
+        if (this._objectOpenBracketPositions.length === 1 && this._topLevelIsObject) { // only show the error for an outer-most invalid object
             const range: Range = new Range(openBracketPosition, new Position(closeBracketLine, closeBracketChar + 1));
             this.addTagValueTypeError(range, 'object');
         }
@@ -51,6 +60,9 @@ class TagVisitor implements jsonc.JSONVisitor {
      * Invoked when an open bracket is encountered. The offset and length represent the location of the open bracket.
      */
     public onArrayBegin = (_offset: number, _length: number, startLine: number, startCharacter: number) => {
+        if (this._topLevelIsObject === undefined && this._objectOpenBracketPositions.length === 0 && this._arrayOpenBracketPositions.length === 0) {
+            this._topLevelIsObject = false;
+        }
         this._arrayOpenBracketPositions.push(new Position(startLine, startCharacter));
     };
 
@@ -64,7 +76,7 @@ class TagVisitor implements jsonc.JSONVisitor {
             const actualType: string = 'array';
             if (this._objectOpenBracketPositions.length === 0) {
                 this.addTagsTypeError(range, actualType);
-            } else if (this._objectOpenBracketPositions.length === 1) {
+            } else if (this._objectOpenBracketPositions.length === 1 && this._topLevelIsObject) {
                 this.addTagValueTypeError(range, actualType);
             }
         }
@@ -74,7 +86,7 @@ class TagVisitor implements jsonc.JSONVisitor {
      * Invoked when a property is encountered. The offset and length represent the location of the property name.
      */
     public onObjectProperty = (property: string, _offset: number, length: number, startLine: number, startCharacter: number) => {
-        if (this._objectOpenBracketPositions.length === 1) {
+        if (this._objectOpenBracketPositions.length === 1 && this._topLevelIsObject) {
             this._tagCount += 1;
 
             const range: Range = new Range(startLine, startCharacter, startLine, startCharacter + length);
@@ -115,16 +127,23 @@ class TagVisitor implements jsonc.JSONVisitor {
     public onLiteralValue = (value: unknown, _offset: number, length: number, startLine: number, startChar: number) => {
         const range: Range = new Range(startLine, startChar, startLine, startChar + length);
         const actualType: string = typeof value;
-        if (this._objectOpenBracketPositions.length === 0) {
+        if (this._objectOpenBracketPositions.length === 0 && this._arrayOpenBracketPositions.length === 0) {
+            // Literal is the entire top-level value (e.g. the file is just `3` or `true`)
             this.addTagsTypeError(range, actualType);
-        } else if (typeof value !== 'string') {
-            this.addTagValueTypeError(range, actualType);
-        } else {
-            const max: number = 256;
-            if (value.length > max) {
-                this.addError(range, localize('tagValueTooLong', 'Tag value must be {0} characters or less.', max));
+        } else if (this._objectOpenBracketPositions.length > 0 && this._topLevelIsObject) {
+            // Literal is a tag value inside the top-level tags object
+            if (typeof value !== 'string') {
+                this.addTagValueTypeError(range, actualType);
+            } else {
+                const max: number = 256;
+                if (value.length > max) {
+                    this.addError(range, localize('tagValueTooLong', 'Tag value must be {0} characters or less.', max));
+                }
             }
         }
+        // else: literal is inside a top-level array (or a nested array not inside any object) —
+        // the array itself will already report a single "Tags must be an object" error, so we
+        // suppress individual errors here to avoid misleading duplicate diagnostics.
     };
 
     private addTagsTypeError(range: Range, actualType: string): void {

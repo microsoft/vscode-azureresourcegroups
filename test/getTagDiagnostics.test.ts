@@ -62,6 +62,34 @@ suite('getTagDiagnostics', () => {
                 { range: [0, 0, 2, 1], error: invalidTagsType }
             ]
         },
+        {
+            // Top-level array containing literal values — should produce exactly ONE error
+            // (for the array itself), not an additional error for each literal value inside it.
+            name: 'arrayTagsWithLiterals',
+            text: [1, 2, 3],
+            diagnostics: [
+                { range: [0, 0, 4, 1], error: invalidTagsType }
+            ]
+        },
+        {
+            // Top-level array containing objects (e.g. a proxy.json) — should produce exactly ONE
+            // error for the array, not false-positive errors for the object properties inside it.
+            name: 'arrayTagsWithObjects',
+            text: [{ context: '/api', target: 'http://localhost:3000' }],
+            diagnostics: [
+                { range: [0, 0, 5, 1], error: invalidTagsType }
+            ]
+        },
+        {
+            // Top-level array whose inner objects have property names that would be invalid tag names.
+            // These properties are NOT tag names, so no "invalid character" errors should appear —
+            // only the single top-level array error.
+            name: 'arrayTagsWithObjectsHavingInvalidPropertyNames',
+            text: [{ 'url/path': '/api' }],
+            diagnostics: [
+                { range: [0, 0, 4, 1], error: invalidTagsType }
+            ]
+        },
         //#endregion
         //#region Invalid prop type
         {
