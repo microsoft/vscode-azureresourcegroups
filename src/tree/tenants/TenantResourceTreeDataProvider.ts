@@ -14,7 +14,7 @@ import { GenericItem } from '../GenericItem';
 import { getSignInTreeItems, tryGetLoggingInTreeItems } from '../getSignInTreeItems';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { ResourceTreeDataProviderBase } from "../ResourceTreeDataProviderBase";
-import { isTenantFilteredOut } from './registerTenantTree';
+import { isTenantFilteredOut } from '../../utils/tenantSelection';
 import { TenantResourceBranchDataProviderManager } from "./TenantResourceBranchDataProviderManager";
 import { TenantTreeItem } from './TenantTreeItem';
 
