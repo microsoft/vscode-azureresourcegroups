@@ -1,5 +1,15 @@
 # Change Log
 
+## 0.12.4 - 2026-03-25
+
+### Fixed
+* [[1406]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1406) Filter unselected tenants before hitting maximumTenants limit
+
+### Engineering
+* [[1404]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1404) Update locker and info-needed-closer workflows to use reusable templates
+* [[1408]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1408) Bump flatted from 3.3.3 to 3.4.2
+* [[1403]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1403) Bump undici from 7.20.0 to 7.24.1
+
 ## 0.12.3 - 2026-03-09
 
 ### Fixed
