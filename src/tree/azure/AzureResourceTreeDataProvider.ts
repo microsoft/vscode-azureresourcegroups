@@ -92,8 +92,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
 
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
-            // Atomically consume the clear cache flag - only the first tree to load will get true
-            const shouldClearCache = ext.consumeClearCacheFlag();
+            const shouldClearCache = ext.consumeClearCacheFlag('azure');
 
             try {
                 await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);

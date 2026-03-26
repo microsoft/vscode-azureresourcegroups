@@ -84,12 +84,12 @@ export async function selectSubscriptions(context: IActionContext, options?: Sel
             // add any that were selected in the picker
             picks.forEach(pick => previouslySelectedSubscriptionsSettingValue.add(`${pick.data.tenantId}/${pick.data.subscriptionId}`));
 
+            // Set the cache-clear flag before updating the setting so that
+            // the provider-triggered refresh (via onDidChangeConfiguration)
+            // already sees noCache: true.
+            ext.setClearCacheOnNextLoad('azure');
+
             // update the setting
-            // This triggers VSCodeAzureSubscriptionProvider.onRefreshSuggested (via
-            // onDidChangeConfiguration for selectedSubscriptions), which fires
-            // notifyTreeDataChanged on the Azure tree automatically. No need
-            // to call ext.actions.refreshAzureTree() explicitly — doing so would
-            // cause a redundant second full-tree reload.
             await setSelectedTenantAndSubscriptionIds(Array.from(previouslySelectedSubscriptionsSettingValue));
         }
     } catch (error) {

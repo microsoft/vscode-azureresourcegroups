@@ -20,9 +20,12 @@ export async function logIn(_context: IActionContext, options?: SignInOptions): 
     } finally {
         _isLoggingIn = false;
         // Clear cache to ensure fresh data is fetched after sign-in
-        ext.setClearCacheOnNextLoad();
+        ext.setClearCacheOnNextLoad('azure');
         ext.actions.refreshAzureTree(); // Refresh now that sign in is complete
+        ext.setClearCacheOnNextLoad('tenant');
         ext.actions.refreshTenantTree(); // Refresh now that sign in is complete
+        ext.setClearCacheOnNextLoad('focus');
+        ext.actions.refreshFocusTree(); // Refresh Focus view with fresh subscriptions
     }
 }
 

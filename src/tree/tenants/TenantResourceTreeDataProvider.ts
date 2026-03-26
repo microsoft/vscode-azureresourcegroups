@@ -54,10 +54,9 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
         if (this.statusSubscription && !this._filteredStatusSubscription) {
             this.statusSubscription.dispose();
             this._filteredStatusSubscription = provider.onRefreshSuggested((evt: RefreshSuggestedEvent) => {
-                if (evt.reason === 'sessionChange') {
+                if (evt.reason !== 'subscriptionFilterChange') {
                     this.notifyTreeDataChanged();
                 }
-                // Ignore 'subscriptionFilterChange' — tenant list is unaffected.
             });
             this.statusSubscription = this._filteredStatusSubscription;
         }
@@ -93,8 +92,7 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
 
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
-            // Atomically consume the clear cache flag - only the first tree to load will get true
-            const shouldClearCache = ext.consumeClearCacheFlag();
+            const shouldClearCache = ext.consumeClearCacheFlag('tenant');
 
             try {
                 const accounts = await subscriptionProvider.getAccounts({ filter: false, noCache: shouldClearCache });
