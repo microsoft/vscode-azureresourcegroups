@@ -53,27 +53,32 @@ export namespace ext {
     export let subscriptionProviderFactory: () => Promise<AzureSubscriptionProvider>;
     export let managedIdentityBranchDataProvider: ManagedIdentityBranchDataProvider;
 
-    /**
-     * Cache invalidation flag. When set to true, the next call to `consumeClearCacheFlag()`
-     * will return true and atomically reset the flag to false. This prevents race conditions
-     * where multiple trees might read and reset the flag independently.
-     */
-    let clearCacheOnNextLoadFlag: boolean = false;
+    export type TreeViewId = 'azure' | 'tenant' | 'focus';
 
     /**
-     * Sets the flag to clear auth caches on the next load.
+     * Per-tree cache invalidation flags. Each tree view has its own flag so that
+     * clearing the cache for one tree doesn't affect (or get consumed by) another.
      */
-    export function setClearCacheOnNextLoad(): void {
-        clearCacheOnNextLoadFlag = true;
+    const clearCacheFlags: Record<TreeViewId, boolean> = {
+        azure: false,
+        tenant: false,
+        focus: false,
+    };
+
+    /**
+     * Marks the given tree's cache as needing a clear on its next load.
+     */
+    export function setClearCacheOnNextLoad(tree: TreeViewId): void {
+        clearCacheFlags[tree] = true;
     }
 
     /**
-     * Atomically consumes the clear cache flag. Returns true if caches should be cleared,
-     * and resets the flag to false. This ensures only the first consumer gets `true`.
+     * Atomically consumes the cache-clear flag for the given tree.
+     * Returns true if the tree should clear its caches, then resets the flag.
      */
-    export function consumeClearCacheFlag(): boolean {
-        const shouldClear = clearCacheOnNextLoadFlag;
-        clearCacheOnNextLoadFlag = false;
+    export function consumeClearCacheFlag(tree: TreeViewId): boolean {
+        const shouldClear = clearCacheFlags[tree];
+        clearCacheFlags[tree] = false;
         return shouldClear;
     }
 

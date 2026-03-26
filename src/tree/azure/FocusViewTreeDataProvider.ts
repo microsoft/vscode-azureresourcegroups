@@ -56,8 +56,7 @@ export class FocusViewTreeDataProvider extends AzureResourceTreeDataProviderBase
 
             const provider = await this.getAzureSubscriptionProvider();
 
-            // Atomically consume the clear cache flag - only the first tree to load will get true
-            const shouldClearCache = ext.consumeClearCacheFlag();
+            const shouldClearCache = ext.consumeClearCacheFlag('focus');
 
             try {
                 const subscriptions = await provider.getAvailableSubscriptions({ noCache: shouldClearCache });
