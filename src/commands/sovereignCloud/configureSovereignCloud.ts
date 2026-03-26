@@ -30,5 +30,6 @@ export async function configureSovereignCloud(context: ConfigureSovereignCloudCo
     // This ensures accounts from the previous environment are not shown
     ext.setClearCacheOnNextLoad();
     ext.actions.refreshAzureTree();
+    ext.setClearCacheOnNextLoad();
     ext.actions.refreshTenantTree();
 }

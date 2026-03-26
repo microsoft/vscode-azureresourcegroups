@@ -90,6 +90,7 @@ export function registerCommands(): void {
         await (await ext.subscriptionProviderFactory()).signIn(node);
         ext.setClearCacheOnNextLoad();
         ext.actions.refreshTenantTree();
+        ext.setClearCacheOnNextLoad();
         ext.actions.refreshAzureTree();
     });
 
@@ -103,6 +104,7 @@ export function registerCommands(): void {
         await signInToTenant(await ext.subscriptionProviderFactory());
         ext.setClearCacheOnNextLoad();
         ext.actions.refreshTenantTree();
+        ext.setClearCacheOnNextLoad();
         ext.actions.refreshAzureTree();
     });
 

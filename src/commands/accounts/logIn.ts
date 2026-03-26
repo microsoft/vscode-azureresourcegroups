@@ -19,9 +19,10 @@ export async function logIn(_context: IActionContext, options?: SignInOptions): 
         await provider.signIn(undefined, options);
     } finally {
         _isLoggingIn = false;
-        // Clear cache to ensure fresh data is fetched after sign-in
+        // Clear cache for each tree to ensure fresh data is fetched after sign-in
         ext.setClearCacheOnNextLoad();
         ext.actions.refreshAzureTree(); // Refresh now that sign in is complete
+        ext.setClearCacheOnNextLoad();
         ext.actions.refreshTenantTree(); // Refresh now that sign in is complete
     }
 }

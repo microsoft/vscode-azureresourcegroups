@@ -54,27 +54,31 @@ export namespace ext {
     export let managedIdentityBranchDataProvider: ManagedIdentityBranchDataProvider;
 
     /**
-     * Cache invalidation flag. When set to true, the next call to `consumeClearCacheFlag()`
-     * will return true and atomically reset the flag to false. This prevents race conditions
-     * where multiple trees might read and reset the flag independently.
+     * Cache invalidation counter. Each call to `setClearCacheOnNextLoad()` increments
+     * the counter by one. Each call to `consumeClearCacheFlag()` decrements it (if > 0)
+     * and returns true. This allows multiple trees to each consume a cache-clear signal
+     * independently (e.g. after sign-in, both the Azure and Tenant trees need fresh data).
      */
-    let clearCacheOnNextLoadFlag: boolean = false;
+    let clearCacheOnNextLoadCount: number = 0;
 
     /**
-     * Sets the flag to clear auth caches on the next load.
+     * Requests a cache clear on the next tree load. Call once per tree that should
+     * receive a cache-clear signal.
      */
     export function setClearCacheOnNextLoad(): void {
-        clearCacheOnNextLoadFlag = true;
+        clearCacheOnNextLoadCount++;
     }
 
     /**
-     * Atomically consumes the clear cache flag. Returns true if caches should be cleared,
-     * and resets the flag to false. This ensures only the first consumer gets `true`.
+     * Atomically consumes one cache-clear token. Returns true if caches should be
+     * cleared, and decrements the counter so other trees can still consume theirs.
      */
     export function consumeClearCacheFlag(): boolean {
-        const shouldClear = clearCacheOnNextLoadFlag;
-        clearCacheOnNextLoadFlag = false;
-        return shouldClear;
+        if (clearCacheOnNextLoadCount > 0) {
+            clearCacheOnNextLoadCount--;
+            return true;
+        }
+        return false;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-namespace

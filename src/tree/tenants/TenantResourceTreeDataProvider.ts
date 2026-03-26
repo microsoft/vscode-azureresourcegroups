@@ -93,7 +93,7 @@ export class TenantResourceTreeDataProvider extends ResourceTreeDataProviderBase
 
             const subscriptionProvider = await this.getAzureSubscriptionProvider();
 
-            // Atomically consume the clear cache flag - only the first tree to load will get true
+            // Consume a cache-clear token if one is available for this tree
             const shouldClearCache = ext.consumeClearCacheFlag();
 
             try {
