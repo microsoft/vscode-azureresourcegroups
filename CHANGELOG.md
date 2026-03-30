@@ -1,6 +1,6 @@
 # Change Log
 
-## 0.12.4 - 2026-03-25
+## 0.12.4 - 2026-03-30
 
 ### Fixed
 * [[1406]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1406) Filter unselected tenants before hitting maximumTenants limit
