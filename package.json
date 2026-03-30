@@ -138,6 +138,31 @@
         },
         "commands": [
             {
+                "command": "azureProjectCreation.show",
+                "title": "Show Project Creation View",
+                "category": "Azure"
+            },
+            {
+                "command": "azureProjectCreation.hide",
+                "title": "Hide Project Creation View",
+                "category": "Azure"
+            },
+            {
+                "command": "azureProjectCreation.focus",
+                "title": "Focus Project Creation View",
+                "category": "Azure"
+            },
+            {
+                "command": "azureProjectCreation.openPlan",
+                "title": "Open Plan...",
+                "category": "Azure"
+            },
+            {
+                "command": "azureProjectCreation.completeStep",
+                "title": "Complete Step",
+                "category": "Azure"
+            },
+            {
                 "command": "azureResourceGroups.uploadFileCloudConsole",
                 "title": "%azureResourceGroups.uploadToCloudShell%",
                 "category": "Azure"
@@ -409,6 +434,12 @@
                     "id": "ms-azuretools.helpAndFeedback",
                     "name": "%ms-azuretools.helpAndFeedback%",
                     "visibility": "collapsed"
+                },
+                {
+                    "id": "azureProjectCreation",
+                    "name": "Project Creation",
+                    "visibility": "visible",
+                    "when": "ms-azuretools.vscode-azureresourcegroups.showProjectCreation == true"
                 }
             ],
             "azurePanel": [
@@ -440,6 +471,11 @@
                 "view": "azureResourceGroups",
                 "contents": "Please sign in to a specific tenant (directory) to continue. \n [Sign in to Tenant (Directory)...](command:azureResourceGroups.signInToTenant)\n[View Accounts & Tenants](command:azureTenantsView.focus)",
                 "when": "azureResourceGroups.needsTenantAuth == true"
+            },
+            {
+                "view": "azureProjectCreation",
+                "contents": "Follow the guided workflow below to plan, develop, and deploy your Azure project.\n\nEach phase contains actionable steps to help you go from idea to production.\n[Create an Azure resource](command:azureResourceGroups.createResource)",
+                "when": "azureProjectCreation.isEmpty == true"
             }
         ],
         "menus": {
@@ -520,6 +556,11 @@
                 }
             ],
             "view/item/context": [
+                {
+                    "command": "azureProjectCreation.openPlan",
+                    "when": "view == azureProjectCreation && viewItem == projectCreationPlanStep",
+                    "group": "1@1"
+                },
                 {
                     "command": "azureResourceGroups.loadAllSubscriptionRoleAssignments",
                     "when": "view == azureResourceGroups && viewItem =~ /targetServiceRoleAssignmentItem(?!allLoaded)/",

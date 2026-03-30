@@ -54,6 +54,7 @@ import { registerTenantTree } from './tree/tenants/registerTenantTree';
 import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDefaultBranchDataProvider';
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
+import { registerProjectCreationTree } from './tree/projectCreation/registerProjectCreationTree';
 import { createResourceClient } from './utils/azureClients';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
@@ -178,6 +179,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         activityLogResourceBranchDataProviderManager,
         refreshEvent: refreshActivityLogTreeEmitter.event
     });
+
+    registerProjectCreationTree(context);
 
     const v2ApiFactory: AzureExtensionApiFactory<AzureResourcesApiInternal> = {
         apiVersion: '2.0.0',
