@@ -923,6 +923,10 @@
         "esbuild": "*",
         "esbuild-plugin-copy": "*"
     },
+    "overrides": {
+        "diff": ">=8.0.3",
+        "serialize-javascript": ">=7.0.5"
+    },
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
