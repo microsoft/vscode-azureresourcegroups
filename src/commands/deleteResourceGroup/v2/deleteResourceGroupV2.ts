@@ -29,7 +29,7 @@ export async function deleteResourceGroupV2(context: IActionContext, primaryNode
     const selectedResourceGroupNodes = getSelectedNodes(primaryNode, selectedNodes);
 
     let subscription: AzureSubscription;
-    let resourceGroupsToDelete: AzureResource[] = [];
+    let resourceGroupsToDelete: AzureResource[];
 
     if (selectedResourceGroupNodes) {
         subscription = selectedResourceGroupNodes[0].subscription;
