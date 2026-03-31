@@ -38,6 +38,7 @@ export async function createApiSessionInternal(context: CreateApiSessionInternal
         const perrMessage: string = context.credentialManager.maskCredentials(perr.message);
         context.telemetry.properties.createResourcesApiSessionError = maskUserInfo(perrMessage, []);
         ext.outputChannel.error(perrMessage);
-        throw new Error(failed, { cause: err });
+        // eslint-disable-next-line preserve-caught-error -- Masking the error so shouldn't be reattached
+        throw new Error(failed);
     }
 }
