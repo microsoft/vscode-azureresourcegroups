@@ -3,7 +3,8 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { createSubscriptionContext, executeCommandWithAddedContext, markAsCopilotUserInput, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { createSubscriptionContext, executeCommandWithAddedContext, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { markAsCopilotUserInput } from "@microsoft/vscode-azext-utils/copilot";
 import * as vscode from "vscode";
 import { AzureSubscription } from "../../api/src/index";
 import { ActivitySelectedCache } from "../chat/askAgentAboutActivityLog/ActivitySelectedCache";
