@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { DeploymentItem } from './DeploymentItem';
 import { GenericItem } from '../GenericItem';
 import { ResourceGroupsItem } from '../ResourceGroupsItem';
 import { LocalDevelopmentItem } from './LocalDevelopmentItem';
@@ -13,10 +14,12 @@ export class ProjectCreationTreeDataProvider implements vscode.TreeDataProvider<
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
     private readonly phases: ResourceGroupsItem[];
+    private readonly deploymentItem: DeploymentItem;
     private readonly parentMap = new Map<ResourceGroupsItem, ResourceGroupsItem>();
     private readonly completedSteps = new Set<string>();
 
     constructor() {
+        this.deploymentItem = new DeploymentItem();
         this.phases = [
             new GenericItem('Plan', {
                 id: 'projectCreation/plan',
@@ -64,38 +67,7 @@ export class ProjectCreationTreeDataProvider implements vscode.TreeDataProvider<
                     }),
                 ],
             }),
-            new GenericItem('Deployment', {
-                id: 'projectCreation/deployment',
-                contextValue: 'projectCreationPhase',
-                iconPath: new vscode.ThemeIcon('cloud-upload', new vscode.ThemeColor('charts.green')),
-                description: 'Phase 4 \u2014 Deploy to Azure',
-                tooltip: this.createPhaseTooltip(
-                    'Deploy to Azure',
-                    'Provision your Azure resources, set up CI/CD pipelines, and ship your application to the cloud.',
-                    ['Provision Resources', 'Configure CI/CD', 'Deploy Application'],
-                ),
-                collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-                children: [
-                    new GenericItem('Provision Resources', {
-                        id: 'projectCreation/deployment/provision',
-                        contextValue: 'projectCreationStep',
-                        iconPath: new vscode.ThemeIcon('azure', new vscode.ThemeColor('charts.green')),
-                        tooltip: this.createStepTooltip('Provision Resources', 'Create and configure the Azure resources defined in your infrastructure-as-code templates.'),
-                    }),
-                    new GenericItem('Configure CI/CD', {
-                        id: 'projectCreation/deployment/configureCiCd',
-                        contextValue: 'projectCreationStep',
-                        iconPath: new vscode.ThemeIcon('rocket', new vscode.ThemeColor('charts.green')),
-                        tooltip: this.createStepTooltip('Configure CI/CD', 'Set up GitHub Actions or Azure Pipelines for automated build, test, and deployment workflows.'),
-                    }),
-                    new GenericItem('Deploy Application', {
-                        id: 'projectCreation/deployment/deploy',
-                        contextValue: 'projectCreationStep',
-                        iconPath: new vscode.ThemeIcon('cloud-upload', new vscode.ThemeColor('charts.green')),
-                        tooltip: this.createStepTooltip('Deploy Application', 'Deploy your application to Azure using `azd up` or your configured CI/CD pipeline.'),
-                    }),
-                ],
-            }),
+            this.deploymentItem,
         ];
 
         this.buildParentMap(this.phases);
@@ -154,6 +126,11 @@ export class ProjectCreationTreeDataProvider implements vscode.TreeDataProvider<
 
     refresh(): void {
         this._onDidChangeTreeData.fire();
+    }
+
+    refreshDeployment(): void {
+        this.deploymentItem.clearCache();
+        this._onDidChangeTreeData.fire(this.deploymentItem);
     }
 
     getTreeItem(element: ResourceGroupsItem): vscode.TreeItem | Thenable<vscode.TreeItem> {

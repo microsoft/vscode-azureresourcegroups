@@ -30,7 +30,7 @@ export function registerProjectCreationTree(context: vscode.ExtensionContext): P
     context.subscriptions.push(planWatcher);
     planWatcher.onDidCreate(() => void checkPlanFileStatus());
     planWatcher.onDidChange(() => void checkPlanFileStatus());
-    planWatcher.onDidDelete(() => void hideView());
+    planWatcher.onDidDelete(() => { treeDataProvider.refreshDeployment(); void hideView(); });
 
     async function checkPlanFileStatus(): Promise<void> {
         const files = await vscode.workspace.findFiles(`${planFileDir}/${planFileName}`, null, 1);
@@ -54,6 +54,9 @@ export function registerProjectCreationTree(context: vscode.ExtensionContext): P
         } else {
             treeDataProvider.uncompleteStep('projectCreation/plan/scaffold');
         }
+
+        // Refresh deployment tree to show/hide "Configure Project for Azure" based on plan status
+        treeDataProvider.refreshDeployment();
     }
 
     async function hideView(): Promise<void> {
@@ -113,6 +116,11 @@ export function registerProjectCreationTree(context: vscode.ExtensionContext): P
     registerCommand('azureProjectCreation.setupLocalDev', async () => {
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand('workbench.action.chat.open', { query: '/azure-localdev' });
+    });
+
+    registerCommand('azureProjectCreation.setupDeployment', async () => {
+        await vscode.commands.executeCommand('workbench.action.chat.newChat');
+        await vscode.commands.executeCommand('workbench.action.chat.open', { query: '/azure-prepare' });
     });
 
     registerCommand('azureProjectCreation.completeStep', async (_context, stepId?: string) => {
