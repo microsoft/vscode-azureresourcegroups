@@ -4,24 +4,28 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
+import type { SignInOptions } from '@microsoft/vscode-azext-azureauth';
 import { ext } from '../../extensionVariables';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 let _isLoggingIn: boolean = false;
 
-export async function logIn(_context: IActionContext): Promise<void> {
+export async function logIn(_context: IActionContext, options?: SignInOptions): Promise<void> {
     try {
         const provider = await ext.subscriptionProviderFactory();
         _isLoggingIn = true;
         ext.actions.refreshAzureTree(); // Refresh to cause the "logging in" spinner to show
         ext.actions.refreshTenantTree(); // Refresh to cause the "logging in" spinner to show
-        await provider.signIn();
+        await provider.signIn(undefined, options);
     } finally {
         _isLoggingIn = false;
         // Clear cache to ensure fresh data is fetched after sign-in
-        ext.setClearCacheOnNextLoad();
+        ext.setClearCacheOnNextLoad('azure');
         ext.actions.refreshAzureTree(); // Refresh now that sign in is complete
+        ext.setClearCacheOnNextLoad('tenant');
         ext.actions.refreshTenantTree(); // Refresh now that sign in is complete
+        ext.setClearCacheOnNextLoad('focus');
+        ext.actions.refreshFocusTree(); // Refresh Focus view with fresh subscriptions
     }
 }
 

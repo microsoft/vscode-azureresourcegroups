@@ -7,7 +7,7 @@ import { AzureSubscription, isNotSignedInError } from "@microsoft/vscode-azext-a
 import { IActionContext, IAzureQuickPickItem, nonNullValue } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
-import { isTenantFilteredOut } from "../../tree/tenants/registerTenantTree";
+import { isTenantFilteredOut } from "../../utils/tenantSelection";
 import { localize } from "../../utils/localize";
 import { settingUtils } from "../../utils/settingUtils";
 
@@ -84,11 +84,14 @@ export async function selectSubscriptions(context: IActionContext, options?: Sel
             // add any that were selected in the picker
             picks.forEach(pick => previouslySelectedSubscriptionsSettingValue.add(`${pick.data.tenantId}/${pick.data.subscriptionId}`));
 
+            // Set the cache-clear flag before updating the setting so that
+            // the provider-triggered refresh (via onDidChangeConfiguration)
+            // already sees noCache: true.
+            ext.setClearCacheOnNextLoad('azure');
+
             // update the setting
             await setSelectedTenantAndSubscriptionIds(Array.from(previouslySelectedSubscriptionsSettingValue));
         }
-
-        ext.actions.refreshAzureTree();
     } catch (error) {
         if (isNotSignedInError(error)) {
             const signIn: vscode.MessageItem = { title: localize('signIn', 'Sign In') };

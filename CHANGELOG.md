@@ -1,5 +1,29 @@
 # Change Log
 
+## 0.12.4 - 2026-03-30
+
+### Fixed
+* [[1406]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1406) Filter unselected tenants before hitting maximumTenants limit
+
+### Engineering
+* [[1404]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1404) Update locker and info-needed-closer workflows to use reusable templates
+* [[1408]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1408) Bump flatted from 3.3.3 to 3.4.2
+* [[1403]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1403) Bump undici from 7.20.0 to 7.24.1
+
+## 0.12.3 - 2026-03-09
+
+### Fixed
+* [[1388]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1388) Remove createLoadCancellationToken to fix concurrent subscription load race condition
+* [[1397]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1397) Fix "Add Account" not showing account picker when a session already exists
+* [[1401]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1401) Fix subscription expansion for sovereign clouds in duplicate subscription mode
+
+### Changed
+* [[1383]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1383) Performance improvements for resource tree loading
+
+### Engineering
+* [[1398]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1398) Upgrade @microsoft/vscode-azext-azureauth to 6.0.0-alpha.5
+* [[1386]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1386) Bump minimatch from 3.1.2 to 3.1.5
+
 ## 0.12.2 - 2026-02-24
 
 ### Fixed

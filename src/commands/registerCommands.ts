@@ -43,16 +43,16 @@ export function registerCommands(): void {
 
     // Special-case refresh that ignores the selected/focused node and always refreshes the entire tree. Used by the refresh button in the tree title.
     registerCommand('azureResourceGroups.refreshTree', () => {
-        ext.setClearCacheOnNextLoad();
+        ext.setClearCacheOnNextLoad('azure');
         ext.actions.refreshAzureTree();
     });
     registerCommand('azureWorkspace.refreshTree', () => ext.actions.refreshWorkspaceTree());
     registerCommand('azureFocusView.refreshTree', () => {
-        ext.setClearCacheOnNextLoad();
+        ext.setClearCacheOnNextLoad('focus');
         ext.actions.refreshFocusTree();
     });
     registerCommand('azureTenantsView.refreshTree', () => {
-        ext.setClearCacheOnNextLoad();
+        ext.setClearCacheOnNextLoad('tenant');
         ext.actions.refreshTenantTree();
     });
 
@@ -89,22 +89,28 @@ export function registerCommands(): void {
 
     registerCommand('azureTenantsView.signInToTenant', async (_context, node: TenantTreeItem) => {
         await (await ext.subscriptionProviderFactory()).signIn(node);
-        ext.setClearCacheOnNextLoad();
+        ext.setClearCacheOnNextLoad('tenant');
         ext.actions.refreshTenantTree();
+        ext.setClearCacheOnNextLoad('azure');
         ext.actions.refreshAzureTree();
+        ext.setClearCacheOnNextLoad('focus');
+        ext.actions.refreshFocusTree();
     });
 
     registerCommand('azureResourceGroups.focusGroup', focusGroup);
     registerCommand('azureResourceGroups.unfocusGroup', unfocusGroup);
 
-    registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context));
-    registerCommand('azureTenantsView.addAccount', (context: IActionContext) => logIn(context));
+    registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context, { clearSessionPreference: true }));
+    registerCommand('azureTenantsView.addAccount', (context: IActionContext) => logIn(context, { clearSessionPreference: true }));
     registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext, options: SelectSubscriptionOptions) => selectSubscriptions(context, options));
     registerCommand('azureResourceGroups.signInToTenant', async () => {
         await signInToTenant(await ext.subscriptionProviderFactory());
-        ext.setClearCacheOnNextLoad();
+        ext.setClearCacheOnNextLoad('tenant');
         ext.actions.refreshTenantTree();
+        ext.setClearCacheOnNextLoad('azure');
         ext.actions.refreshAzureTree();
+        ext.setClearCacheOnNextLoad('focus');
+        ext.actions.refreshFocusTree();
     });
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
