@@ -47,26 +47,6 @@ export class ProjectCreationTreeDataProvider implements vscode.TreeDataProvider<
                 ],
             }),
             new LocalDevelopmentItem(),
-            new GenericItem('Testing', {
-                id: 'projectCreation/testing',
-                contextValue: 'projectCreationPhase',
-                iconPath: new vscode.ThemeIcon('beaker', new vscode.ThemeColor('charts.yellow')),
-                description: 'Phase 3 \u2014 Create and run tests',
-                tooltip: this.createPhaseTooltip(
-                    'Testing',
-                    'Write and run tests to ensure your application works correctly before deploying.',
-                    ['Create Tests'],
-                ),
-                collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-                children: [
-                    new GenericItem('Create Tests', {
-                        id: 'projectCreation/testing/createTests',
-                        contextValue: 'projectCreationStep',
-                        iconPath: new vscode.ThemeIcon('test-view-icon', new vscode.ThemeColor('charts.yellow')),
-                        tooltip: this.createStepTooltip('Create Tests', 'Write unit, integration, and end-to-end tests to validate your application behavior.'),
-                    }),
-                ],
-            }),
             this.deploymentItem,
         ];
 

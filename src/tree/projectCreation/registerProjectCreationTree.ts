@@ -32,6 +32,13 @@ export function registerProjectCreationTree(context: vscode.ExtensionContext): P
     planWatcher.onDidChange(() => void checkPlanFileStatus());
     planWatcher.onDidDelete(() => { treeDataProvider.refreshDeployment(); void hideView(); });
 
+    // Watch for .azure/plan.md to refresh the deployment tree
+    const deployPlanWatcher = vscode.workspace.createFileSystemWatcher(`**/${planFileDir}/plan.md`);
+    context.subscriptions.push(deployPlanWatcher);
+    deployPlanWatcher.onDidCreate(() => treeDataProvider.refreshDeployment());
+    deployPlanWatcher.onDidChange(() => treeDataProvider.refreshDeployment());
+    deployPlanWatcher.onDidDelete(() => treeDataProvider.refreshDeployment());
+
     async function checkPlanFileStatus(): Promise<void> {
         const files = await vscode.workspace.findFiles(`${planFileDir}/${planFileName}`, null, 1);
         if (files.length === 0) { return; }
