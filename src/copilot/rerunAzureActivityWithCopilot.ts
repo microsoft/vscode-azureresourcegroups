@@ -1,0 +1,45 @@
+/*---------------------------------------------------------------------------------------------
+*  Copyright (c) Microsoft Corporation. All rights reserved.
+*  Licensed under the MIT License. See License.md in the project root for license information.
+*--------------------------------------------------------------------------------------------*/
+
+import { createSubscriptionContext, executeCommandWithAddedContext, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { markAsCopilotUserInput } from "@microsoft/vscode-azext-utils/copilot";
+import * as vscode from "vscode";
+import { AzureSubscription } from "../../api/src/index";
+import { ActivitySelectedCache } from "../chat/askAgentAboutActivityLog/ActivitySelectedCache";
+import { convertActivityTreeToSimpleObjectArray, ConvertedActivityItem } from "../chat/tools/GetAzureActivityLog/convertActivityTree";
+import { GetAzureActivityLogContext } from "../chat/tools/GetAzureActivityLog/GetAzureActivityLogContext";
+import { ActivityItem } from "../tree/activityLog/ActivityItem";
+
+export async function rerunAzureActivityWithCopilot(context: IActionContext, item: ActivityItem): Promise<void> {
+    const activitySelectedCache = ActivitySelectedCache.getInstance();
+    activitySelectedCache.addActivity(item.id);
+
+    const activityContext: GetAzureActivityLogContext = {
+        ...context,
+        activitySelectedCache: activitySelectedCache
+    };
+
+    const activityItems: ConvertedActivityItem[] = await convertActivityTreeToSimpleObjectArray(activityContext);
+    if (activityItems.length === 0) {
+        throw new Error(vscode.l10n.t('Failed to rerun with Copilot. No matching activity item found.'));
+    }
+
+    markAsCopilotUserInput(context, JSON.stringify(activityItems));
+
+    let wizardContext = context as IActionContext & { azureSubscription?: AzureSubscription };
+    const subscription = activityItems[0].activityAttributes?.subscription;
+    if (subscription) {
+        const subscriptionContext = createSubscriptionContext(subscription);
+        wizardContext = { ...context, ...subscriptionContext, azureSubscription: subscription };
+    }
+
+    // An item will always be passed in so we will only need to look at the first item in the array
+    const callbackId = activityItems[0]?.callbackId;
+    if (callbackId) {
+        await executeCommandWithAddedContext(callbackId, wizardContext);
+    } else {
+        throw new Error(vscode.l10n.t('Failed to rerun with Copilot. Activity item callback ID not found.'));
+    }
+}
