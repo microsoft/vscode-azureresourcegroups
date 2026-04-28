@@ -10,6 +10,15 @@ import { AzExtResourceType } from '../../api/src/AzExtResourceType';
 import { ext } from '../extensionVariables';
 import { ContributedIconPath, getResourceContributions } from './getResourceContributions';
 
+function warn(message: string): void {
+    // `ext.outputChannel` is not initialized in unit tests; fall back to console.
+    if (ext?.outputChannel?.warn) {
+        ext.outputChannel.warn(message);
+    } else {
+        console.warn(message);
+    }
+}
+
 /**
  * Static, contribution-driven overrides for the display of a resource-type
  * group node. Resolved from contributing extensions' `package.json` without
@@ -88,7 +97,7 @@ export function buildOverrideMapFromExtensions(extensions: readonly vscode.Exten
                 }
 
                 if (map.has(branch.type)) {
-                    ext.outputChannel.warn(`Multiple extensions declare a display override for resource type "${branch.type}". Using the first by extension id; ignoring "${extension.id}".`);
+                    warn(`Multiple extensions declare a display override for resource type "${branch.type}". Using the first by extension id; ignoring "${extension.id}".`);
                     continue;
                 }
 
@@ -96,9 +105,9 @@ export function buildOverrideMapFromExtensions(extensions: readonly vscode.Exten
                 if (branch.icon !== undefined) {
                     const rawIcon: unknown = branch.icon;
                     if (typeof rawIcon === 'string' && themeIconPattern.test(rawIcon)) {
-                        ext.outputChannel.warn(`Extension "${extension.id}" contributed a theme icon ("${rawIcon}") for resource type "${branch.type}". Theme icons are not supported for resource-type group nodes; the icon will be ignored.`);
+                        warn(`Extension "${extension.id}" contributed a theme icon ("${rawIcon}") for resource type "${branch.type}". Theme icons are not supported for resource-type group nodes; the icon will be ignored.`);
                     } else if (!isValidIconPath(rawIcon)) {
-                        ext.outputChannel.warn(`Extension "${extension.id}" contributed an invalid icon for resource type "${branch.type}"; the icon will be ignored.`);
+                        warn(`Extension "${extension.id}" contributed an invalid icon for resource type "${branch.type}"; the icon will be ignored.`);
                     } else {
                         iconPath = resolveIconPath(extension.extensionUri, rawIcon);
                     }
@@ -109,7 +118,7 @@ export function buildOverrideMapFromExtensions(extensions: readonly vscode.Exten
                     iconPath,
                 });
             } catch (e) {
-                ext.outputChannel.warn(`Failed to process display override from extension "${extension.id}" for resource type "${branch.type ?? '(unknown)'}": ${String(e)}`);
+                warn(`Failed to process display override from extension "${extension.id}" for resource type "${branch.type ?? '(unknown)'}": ${String(e)}`);
             }
         }
     }
