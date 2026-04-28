@@ -5,6 +5,7 @@
 
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, nonNullValue, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
+import { createProjectWithCopilot, openDeploymentPlanViewFromWorkspace, openLocalPlanViewFromWorkspace, openPlanViewFromWorkspace } from '@microsoft/vscode-azext-webview';
 import { commands } from 'vscode';
 import { askAgentAboutActivityLog } from '../chat/askAgentAboutActivityLog/askAgentAboutActivityLog';
 import { askAgentAboutResource } from '../chat/askAgentAboutResource';
@@ -20,6 +21,7 @@ import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
+import { openChatWithAgent } from './copilotOnRails/openChatWithAgent';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroupV2 } from './deleteResourceGroup/v2/deleteResourceGroupV2';
@@ -156,6 +158,20 @@ export function registerCommands(): void {
     registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityItem) => await askAgentAboutActivityLog(context));
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
+
+    // Copilot on Rails
+    registerCommand('azureResourceGroups.createProjectWithCopilot', createProjectWithCopilot);
+    registerCommand('azureResourceGroups.openPlanView', () => openPlanViewFromWorkspace());
+    registerCommand('azureResourceGroups.openLocalPlanView', () => openLocalPlanViewFromWorkspace());
+    registerCommand('azureResourceGroups.openDeployPlanView', () => openDeploymentPlanViewFromWorkspace());
+
+    // Hand-off commands
+    registerCommand('azureResourceGroups.startProjectScaffold', (_context: IActionContext, prompt?: string) =>
+        openChatWithAgent('azure-project-scaffold', prompt ?? 'The project plan has been approved. Execute it now — scaffold the frontend preview, backend services, database, and API routes following `.azure/project-plan.md`.'));
+    registerCommand('azureResourceGroups.startProjectTest', (_context: IActionContext, prompt?: string) =>
+        openChatWithAgent('azure-project-test', prompt ?? 'Scaffolding is complete. Add test coverage and runtime validation to the scaffolded project.'));
+    registerCommand('azureResourceGroups.startLocalDevelopment', (_context: IActionContext, prompt?: string) =>
+        openChatWithAgent('azure-local-development', prompt ?? 'The project has been scaffolded. Now set up the local development environment so the user can start building and testing.'));
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {

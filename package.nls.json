@@ -63,5 +63,9 @@
             "Do not translate '@azure'; it is the syntax for addressing the Azure agent.",
             "Do not translate any of the words in the command URL."
         ]
-    }
+    },
+    "azureResourceGroups.createProjectWithCopilot": "Create Project with Copilot",
+    "azureResourceGroups.openPlanView": "Open Scaffold Plan View",
+    "azureResourceGroups.openLocalPlanView": "Open Local Plan View",
+    "azureResourceGroups.openDeployPlanView": "Open Deploy Plan View"
 }
