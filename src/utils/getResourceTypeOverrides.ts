@@ -31,6 +31,30 @@ function ensureSubscribed(): void {
     }
 }
 
+const themeIconPattern = /^\$\(.+\)$/;
+
+/**
+ * Returns true if `value` is a structurally valid contributed icon path: a
+ * non-empty string or an object with non-empty string `light` and `dark`
+ * properties. Invalid values (numbers, arrays, nested objects, empty strings,
+ * etc.) are rejected so that a misconfigured partner extension cannot crash
+ * tree construction.
+ *
+ * Note: theme-icon strings (`$(id)`) pass this check intentionally — callers
+ * are expected to test for theme icons separately before calling this function.
+ */
+function isValidIconPath(value: unknown): value is ContributedIconPath {
+    if (typeof value === 'string') {
+        return value.length > 0;
+    }
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        const obj = value as Record<string, unknown>;
+        return typeof obj['light'] === 'string' && obj['light'].length > 0
+            && typeof obj['dark'] === 'string' && obj['dark'].length > 0;
+    }
+    return false;
+}
+
 function resolveIconPath(extensionUri: vscode.Uri, icon: ContributedIconPath): TreeItemIconPath {
     if (typeof icon === 'string') {
         return Utils.joinPath(extensionUri, icon);
@@ -54,19 +78,35 @@ function buildCache(): Map<string, ResourceTypeOverride> {
         }
 
         for (const branch of branches) {
-            if (!branch.type || (branch.displayName === undefined && branch.icon === undefined)) {
-                continue;
-            }
+            try {
+                if (!branch.type || (branch.displayName === undefined && branch.icon === undefined)) {
+                    continue;
+                }
 
-            if (map.has(branch.type)) {
-                ext.outputChannel.warn(`Multiple extensions declare a display override for resource type "${branch.type}". Using the first by extension id; ignoring "${extension.id}".`);
-                continue;
-            }
+                if (map.has(branch.type)) {
+                    ext.outputChannel.warn(`Multiple extensions declare a display override for resource type "${branch.type}". Using the first by extension id; ignoring "${extension.id}".`);
+                    continue;
+                }
 
-            map.set(branch.type, {
-                label: branch.displayName,
-                iconPath: branch.icon !== undefined ? resolveIconPath(extension.extensionUri, branch.icon) : undefined,
-            });
+                let iconPath: TreeItemIconPath | undefined;
+                if (branch.icon !== undefined) {
+                    const rawIcon: unknown = branch.icon;
+                    if (typeof rawIcon === 'string' && themeIconPattern.test(rawIcon)) {
+                        ext.outputChannel.warn(`Extension "${extension.id}" contributed a theme icon ("${rawIcon}") for resource type "${branch.type}". Theme icons are not supported for resource-type group nodes; the icon will be ignored.`);
+                    } else if (!isValidIconPath(rawIcon)) {
+                        ext.outputChannel.warn(`Extension "${extension.id}" contributed an invalid icon for resource type "${branch.type}"; the icon will be ignored.`);
+                    } else {
+                        iconPath = resolveIconPath(extension.extensionUri, rawIcon);
+                    }
+                }
+
+                map.set(branch.type, {
+                    label: branch.displayName,
+                    iconPath,
+                });
+            } catch (e) {
+                ext.outputChannel.warn(`Failed to process display override from extension "${extension.id}" for resource type "${branch.type ?? '(unknown)'}": ${String(e)}`);
+            }
         }
     }
 
