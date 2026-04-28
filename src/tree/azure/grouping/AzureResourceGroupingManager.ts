@@ -11,6 +11,7 @@ import { GroupBySettings } from '../../../commands/explorer/groupBy';
 import { showHiddenTypesSettingKey } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { getIconPath, getName } from '../../../utils/azureUtils';
+import { getResourceTypeOverride } from '../../../utils/getResourceTypeOverrides';
 import { localize } from "../../../utils/localize";
 import { settingUtils } from '../../../utils/settingUtils';
 import { treeUtils } from '../../../utils/treeUtils';
@@ -130,13 +131,18 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
             allResources,
             keySelector: resource => resource.resourceType ?? unknownLabel, // TODO: Is resource type ever undefined?
             initialGrouping,
-            groupingItemFactory: (resourceType, resources) => this.groupingItemFactory.createResourceTypeGroupingItem(resourceType as AzExtResourceType, {
-                resources,
-                context,
-                parent,
-                label: getName(resourceType as AzExtResourceType) ?? resourceType,
-                iconPath: getIconPath(resourceType as AzExtResourceType),
-            })
+            groupingItemFactory: (resourceType, resources) => {
+                const override = getResourceTypeOverride(resourceType);
+                return this.groupingItemFactory.createResourceTypeGroupingItem(resourceType as AzExtResourceType, {
+                    resources,
+                    context,
+                    parent,
+                    label: override?.label ?? getName(resourceType as AzExtResourceType) ?? resourceType,
+                    iconPath: override?.iconPath ?? getIconPath(resourceType as AzExtResourceType),
+                    // Keep `id` stable even if the label is overridden by a contribution.
+                    idKey: resourceType,
+                });
+            }
         });
     }
 

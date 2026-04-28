@@ -58,11 +58,14 @@ export class GroupingItem implements ResourceGroupsItem {
             ...this.context.subscription,
         } : undefined;
 
+        // The id stays stable even if the label is overridden by a contribution,
+        // so VS Code's tree expansion/focus state is preserved.
+        const idKey = options.idKey ?? options.label;
         if (this.context?.subscription) {
-            this.id = `${getAccountAndTenantPrefix(this.context?.subscription)}/subscriptions/${this.context?.subscriptionContext.subscriptionId}/groupings/${this.label}`;
+            this.id = `${getAccountAndTenantPrefix(this.context?.subscription)}/subscriptions/${this.context?.subscriptionContext.subscriptionId}/groupings/${idKey}`;
         } else {
             // favorites groups don't always have a subscription
-            this.id = `/groupings/${this.label}`;
+            this.id = `/groupings/${idKey}`;
         }
     }
 
@@ -171,14 +174,20 @@ export interface GroupingItemOptions {
     iconPath?: TreeItemIconPath,
     parent?: ResourceGroupsItem,
     displayOptions?: GroupingItemDisplayOptions,
+    /**
+     * Optional. Stable key used in the grouping item's `id`. Defaults to
+     * `label`. Set this when the label may be overridden (e.g. by an
+     * extension-contributed display name) so identity remains stable.
+     */
+    idKey?: string,
 }
 
 export type GroupingItemFactory = (options: GroupingItemOptions) => GroupingItem;
 
 export function createGroupingItemFactory(resourceItemFactory: ResourceItemFactory<AzureResource>, branchDataProviderFactory: BranchDataProviderFactory, onDidChangeBranchDataProviders: vscode.Event<AzExtResourceType>, defaultOptions?: GroupingItemDisplayOptions): GroupingItemFactory {
-    return ({ context, contextValues, iconPath, label, resources, parent, displayOptions }) =>
+    return ({ context, contextValues, iconPath, label, resources, parent, displayOptions, idKey }) =>
         new GroupingItem(
-            { context, contextValues, iconPath, label, resources, parent, displayOptions: { ...defaultOptions, ...displayOptions } },
+            { context, contextValues, iconPath, label, resources, parent, idKey, displayOptions: { ...defaultOptions, ...displayOptions } },
             { resourceItemFactory, branchDataProviderFactory, onDidChangeBranchDataProviders, }
         );
 }
