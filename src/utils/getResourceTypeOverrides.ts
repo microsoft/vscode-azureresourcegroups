@@ -65,13 +65,17 @@ function resolveIconPath(extensionUri: vscode.Uri, icon: ContributedIconPath): T
     };
 }
 
-function buildCache(): Map<string, ResourceTypeOverride> {
+/**
+ * @internal Exported for testing only. Builds a resource-type → override map
+ * from the supplied extension list without touching `vscode.extensions.all`.
+ */
+export function buildOverrideMapFromExtensions(extensions: readonly vscode.Extension<unknown>[]): Map<string, ResourceTypeOverride> {
     const map = new Map<string, ResourceTypeOverride>();
 
     // Sort by extension id to make conflict resolution deterministic.
-    const extensions = [...vscode.extensions.all].sort((a, b) => a.id.localeCompare(b.id));
+    const sorted = [...extensions].sort((a, b) => a.id.localeCompare(b.id));
 
-    for (const extension of extensions) {
+    for (const extension of sorted) {
         const branches = getResourceContributions(extension)?.azure?.branches;
         if (!branches) {
             continue;
@@ -121,7 +125,7 @@ function buildCache(): Map<string, ResourceTypeOverride> {
 export function getResourceTypeOverride(resourceType: AzExtResourceType | string): ResourceTypeOverride | undefined {
     ensureSubscribed();
     if (!cache) {
-        cache = buildCache();
+        cache = buildOverrideMapFromExtensions(vscode.extensions.all);
     }
     return cache.get(resourceType);
 }
