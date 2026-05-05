@@ -98,6 +98,17 @@
                 ]
             }
         ],
+        "chatAgents": [
+            {
+                "path": "resources/agents/azure-project-scaffold.agent.md"
+            },
+            {
+                "path": "resources/agents/azure-local-development.agent.md"
+            },
+            {
+                "path": "resources/agents/azure-deploy.agent.md"
+            }
+        ],
         "languageModelTools": [
             {
                 "displayName": "Azure Resources: Get Azure Activity Log",
@@ -364,6 +375,26 @@
             {
                 "command": "azureResourceGroups.askAgentAboutResource",
                 "title": "%azureResourceGroups.askAzure%"
+            },
+            {
+                "command": "azureResourceGroups.createProjectWithCopilot",
+                "title": "%azureResourceGroups.createProjectWithCopilot%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openPlanView",
+                "title": "%azureResourceGroups.openPlanView%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openLocalPlanView",
+                "title": "%azureResourceGroups.openLocalPlanView%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openDeployPlanView",
+                "title": "%azureResourceGroups.openDeployPlanView%",
+                "category": "Azure"
             }
         ],
         "viewsContainers": {
@@ -926,9 +957,11 @@
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
+        "@microsoft/applicationinsights-common": "^3.0.0",
         "@microsoft/vscode-azext-azureauth": "^6.0.0-alpha.8",
         "@microsoft/vscode-azext-azureutils": "^4.1.0",
-        "@microsoft/vscode-azext-utils": "^4.0.4",
+        "@microsoft/vscode-azext-utils": "file:../vscode-azuretools/utils/microsoft-vscode-azext-utils-4.0.7.tgz",
+        "@microsoft/vscode-azext-webview": "file:../vscode-azuretools/webview/microsoft-vscode-azext-webview-1.0.0.tgz",
         "form-data": "^4.0.4",
         "fs-extra": "^11.3.0",
         "jsonc-parser": "^2.2.1",
