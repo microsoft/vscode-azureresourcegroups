@@ -100,13 +100,13 @@
         ],
         "chatAgents": [
             {
-                "path": "resources/agents/azure-project-plan.agent.md"
-            },
-            {
                 "path": "resources/agents/azure-project-scaffold.agent.md"
             },
             {
                 "path": "resources/agents/azure-local-development.agent.md"
+            },
+            {
+                "path": "resources/agents/azure-deploy.agent.md"
             }
         ],
         "languageModelTools": [

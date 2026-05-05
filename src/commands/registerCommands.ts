@@ -167,11 +167,13 @@ export function registerCommands(): void {
 
     // Hand-off commands
     registerCommand('azureResourceGroups.startProjectScaffold', (_context: IActionContext, prompt?: string) =>
-        openChatWithAgent('azure-project-scaffold', prompt ?? 'The project plan has been approved. Execute it now — scaffold the frontend preview, backend services, database, and API routes following `.azure/project-plan.md`.'));
+        openChatWithAgent('azure-project-scaffold', prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.'));
     registerCommand('azureResourceGroups.startProjectTest', (_context: IActionContext, prompt?: string) =>
         openChatWithAgent('azure-project-test', prompt ?? 'Scaffolding is complete. Add test coverage and runtime validation to the scaffolded project.'));
     registerCommand('azureResourceGroups.startLocalDevelopment', (_context: IActionContext, prompt?: string) =>
         openChatWithAgent('azure-local-development', prompt ?? 'The project has been scaffolded. Now set up the local development environment so the user can start building and testing.'));
+    registerCommand('azureResourceGroups.startDeployment', (_context: IActionContext, prompt?: string) =>
+        openChatWithAgent('azure-deploy', prompt ?? 'The local development environment is set up and verified. Now prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`.'));
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
