@@ -49,6 +49,10 @@
     "azureResourceGroups.loadAllSubscriptionRoleAssignments": "Load all role assignments across subscriptions...",
     "azureResourceGroups.askAgentAboutActivityLog": "Ask Copilot about the Azure Activity Log",
     "azureResourceGroups.askAgentAboutActivityLogItem": "Ask Copilot about this activity",
+    "azureResourceGroups.createProjectWithCopilot": "Create Project with Copilot",
+    "azureResourceGroups.openPlanView": "Open Project Plan",
+    "azureResourceGroups.openLocalPlanView": "Open Local Development Plan",
+    "azureResourceGroups.openDeployPlanView": "Open Deployment Plan",
     "azureResourceGroups.askAzure": {
         "message": "Ask @azure",
         "comment": [

@@ -160,6 +160,11 @@ export function registerCommands(): void {
     registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityItem) => await askAgentAboutActivityLog(context));
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
+
+    registerCommand('azureResourceGroups.createProjectWithCopilot', createProjectWithCopilot);
+    registerCommand('azureResourceGroups.openPlanView', openPlanViewFromWorkspace);
+    registerCommand('azureResourceGroups.openLocalPlanView', openLocalPlanViewFromWorkspace);
+    registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
