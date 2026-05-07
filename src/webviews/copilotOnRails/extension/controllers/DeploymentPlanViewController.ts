@@ -23,14 +23,7 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                     void this.panel.webview.postMessage({ command: 'setDeploymentPlanData', data: planData });
                     break;
                 case 'approve':
-                    void vscode.window.showInformationMessage(vscode.l10n.t('Deployment plan approved.'));
                     this.panel.dispose();
-                    break;
-                case 'subscriptionChanged':
-                    void vscode.window.showInformationMessage(vscode.l10n.t('Subscription changed to: {0}', message.data as string));
-                    break;
-                case 'locationChanged':
-                    void vscode.window.showInformationMessage(vscode.l10n.t('Location changed to: {0}', message.data as string));
                     break;
                 case 'submitPlanFeedback': {
                     const query = message.prompt?.trim();

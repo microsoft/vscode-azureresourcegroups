@@ -917,7 +917,7 @@
         ]
     },
     "scripts": {
-        "build": "npm run build:esbuild & npm run build:webviews & npm run build:check",
+        "build": "npm run build:esbuild && npm run build:webviews && npm run build:check",
         "build:esbuild": "node esbuild.mjs",
         "build:webviews": "node esbuild.copilotOnRailsViews.mjs",
         "build:check": "tsc --noEmit",
