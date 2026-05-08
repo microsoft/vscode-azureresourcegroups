@@ -7,7 +7,6 @@
 
 import { LocationListStep, registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
-import { registerWebviewExtensionVariables } from '@microsoft/vscode-azext-webview';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
@@ -69,7 +68,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
-    registerWebviewExtensionVariables(context);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);
