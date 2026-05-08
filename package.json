@@ -953,6 +953,7 @@
         "@microsoft/vscode-azext-azureauth": "^6.0.0-alpha.8",
         "@microsoft/vscode-azext-azureutils": "^4.1.0",
         "@microsoft/vscode-azext-utils": "^4.0.4",
+        "@microsoft/applicationinsights-common": "^3.0.0",
         "@microsoft/vscode-azext-webview": "file:../vscode-azuretools/webview/microsoft-vscode-azext-webview-1.0.0.tgz",
         "form-data": "^4.0.4",
         "fs-extra": "^11.3.0",
