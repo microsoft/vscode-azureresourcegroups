@@ -3,9 +3,9 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import { ext } from "../../../../extensionVariables";
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
@@ -23,12 +23,6 @@ export class CreateProjectViewController extends WebviewController<CreateProject
                         this.panel.dispose();
                         if (message.prompt) {
                             void this.openChatWithQuery(message.prompt);
-                        }
-                        break;
-                    case 'build':
-                        this.panel.dispose();
-                        if (message.prompt) {
-                            void this.openChatWithQuery(message.prompt); // TODO: Change to build agent when implemented
                         }
                         break;
                 }

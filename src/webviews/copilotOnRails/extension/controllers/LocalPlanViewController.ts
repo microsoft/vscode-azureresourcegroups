@@ -32,8 +32,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                     if (!query) {
                         return;
                     }
-                    // Hand off to Copilot agent to revise local-development-plan.md. Keep the
-                    // webview open; it will refresh in place when the file is rewritten.
                     void vscode.commands.executeCommand('workbench.action.chat.open', {
                         mode: 'agent',
                         query,
@@ -41,10 +39,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                     void this.panel.webview.postMessage({ command: 'revisionInProgress' });
                     break;
                 }
-                case 'editArchitecture':
-                    // TODO: Hook in Copilot command to edit architecture
-                    void vscode.window.showInformationMessage('Edit Architecture with Copilot — not yet implemented.');
-                    break;
             }
         });
     }

@@ -30,8 +30,6 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                     if (!query) {
                         return;
                     }
-                    // Hand off to Copilot agent to revise plan.md. Keep the webview
-                    // open; it will refresh in place when the file is rewritten.
                     void vscode.commands.executeCommand('workbench.action.chat.open', {
                         mode: 'agent',
                         query,

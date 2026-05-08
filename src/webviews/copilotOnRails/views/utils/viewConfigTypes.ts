@@ -10,7 +10,6 @@ export type CreateProjectViewControllerType = {
     promptPlaceholder: string;
     hint: string;
     planButtonLabel: string;
-    buildButtonLabel: string;
 }
 
 export type DeploymentPlanViewStrings = {

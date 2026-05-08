@@ -4,13 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Button, Textarea } from '@fluentui/react-components';
-import { ClipboardTaskListLtrRegular, RocketRegular } from '@fluentui/react-icons';
+import { ClipboardTaskListLtrRegular } from '@fluentui/react-icons';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import * as React from 'react';
 import { useContext, useState, type JSX } from 'react';
 import './styles/createProjectView.scss';
 import { type CreateProjectViewControllerType } from './utils/viewConfigTypes';
-import { CreateProjectViewCommands } from './webviewConstants';
 
 export const CreateProjectView = (): JSX.Element => {
     const [prompt, setPrompt] = useState('');
@@ -22,24 +21,14 @@ export const CreateProjectView = (): JSX.Element => {
             return;
         }
         vscodeApi.postMessage({
-            command: CreateProjectViewCommands.Plan,
-            prompt: prompt.trim(),
-        });
-    };
-
-    const buildClicked = () => {
-        if (!prompt.trim()) {
-            return;
-        }
-        vscodeApi.postMessage({
-            command: CreateProjectViewCommands.Build,
+            command: 'plan',
             prompt: prompt.trim(),
         });
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            buildClicked();
+            planClicked();
         }
     };
 
@@ -70,20 +59,12 @@ export const CreateProjectView = (): JSX.Element => {
                         <span className='hint'>{config.hint}</span>
                         <div className='buttonGroup'>
                             <Button
-                                appearance='secondary'
+                                appearance='primary'
                                 onClick={planClicked}
                                 disabled={!prompt.trim()}
                                 icon={<ClipboardTaskListLtrRegular />}
                             >
                                 {config.planButtonLabel}
-                            </Button>
-                            <Button
-                                appearance='primary'
-                                onClick={buildClicked}
-                                disabled={!prompt.trim()}
-                                icon={<RocketRegular />}
-                            >
-                                {config.buildButtonLabel}
                             </Button>
                         </div>
                     </div>
