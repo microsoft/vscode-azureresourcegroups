@@ -944,7 +944,7 @@
         "@vscode/vsce": "*",
         "esbuild": "*",
         "esbuild-plugin-copy": "*",
-        "mermaid": "^11.14.0",
+        "mermaid": "^11.15.0",
         "sass": "~1.79.6"
     },
     "dependencies": {
