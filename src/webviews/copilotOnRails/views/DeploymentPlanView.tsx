@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea } from '@fluentui/react-components';
-import { CheckmarkRegular, CommentEditRegular, DismissRegular, SendRegular } from '@fluentui/react-icons';
+import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import mermaid from 'mermaid';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
@@ -250,6 +250,30 @@ export const DeploymentPlanView = (): JSX.Element => {
         return <div className='deploymentPlanView'><p>{strings.loading}</p></div>;
     }
 
+    if (plan.parseError) {
+        return (
+            <div className='deploymentPlanView'>
+                <div className='parseFailureWarning' role='alert'>
+                    <div className='parseFailureIcon'><WarningRegular /></div>
+                    <div className='parseFailureBody'>
+                        <h2>{strings.parseFailureTitle}</h2>
+                        <p>{plan.parseError.message || strings.parseFailureFallbackMessage}</p>
+                        {plan.parseError.fileLabel && (
+                            <p className='parseFailureFile'><strong>{strings.parseFailureFileLabel}:</strong> {plan.parseError.fileLabel}</p>
+                        )}
+                        <Button
+                            appearance='primary'
+                            icon={<DocumentRegular />}
+                            onClick={() => vscodeApi.postMessage({ command: 'openSourceFile' })}
+                        >
+                            {strings.openPlanFileButton}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={`deploymentPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
             <div className='planMain'>
@@ -258,8 +282,8 @@ export const DeploymentPlanView = (): JSX.Element => {
                         <div>
                             <h1>{strings.title}</h1>
                             <div className='metadataBadges'>
-                                <span className='badge status'>{plan.status}</span>
-                                <span className='badge mode'>{plan.mode}</span>
+                                {plan.status && plan.status !== 'Unknown' && <span className='badge status'>{plan.status}</span>}
+                                {plan.mode && plan.mode !== 'Unknown' && <span className='badge mode'>{plan.mode}</span>}
                             </div>
                         </div>
                         <div className='headerActions'>

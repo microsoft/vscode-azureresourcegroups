@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import type { DeploymentPlanData } from "../views/utils/deploymentPlanTypes";
 import { parseDeploymentPlanMarkdown } from "../views/utils/parseDeploymentPlanMarkdown";
 import { DeploymentPlanViewController, type DeploymentPlanViewStrings } from "./controllers/DeploymentPlanViewController";
 
@@ -41,6 +42,10 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         cancelButton: vscode.l10n.t('Cancel'),
         submitEditsButton: vscode.l10n.t('Submit'),
         noDiagramAvailable: vscode.l10n.t('No diagram available'),
+        parseFailureTitle: vscode.l10n.t("We couldn't render this plan"),
+        parseFailureFallbackMessage: vscode.l10n.t("The deployment plan couldn't be rendered as a structured view. The generated markdown didn't match the expected layout."),
+        parseFailureFileLabel: vscode.l10n.t('Plan file'),
+        openPlanFileButton: vscode.l10n.t('Open plan file'),
     };
 }
 
@@ -52,22 +57,58 @@ export function openDeploymentPlanView(uri: vscode.Uri): void {
     void openDeploymentPlanViewAsync(uri);
 }
 
-export function openDeploymentPlanViewWithContent(content: string): void {
-    const planData = parseDeploymentPlanMarkdown(content);
+export function openDeploymentPlanViewWithContent(content: string, sourceFileUri?: vscode.Uri): void {
+    const planData = tryParseDeploymentPlan(content, sourceFileUri);
 
     if (currentDeploymentPlanViewController) {
-        currentDeploymentPlanViewController.updateDeploymentPlanData(planData);
+        currentDeploymentPlanViewController.updateDeploymentPlanData(planData, sourceFileUri);
         currentDeploymentPlanViewController.revealToForeground(vscode.ViewColumn.Active);
         return;
     }
 
-    currentDeploymentPlanViewController = new DeploymentPlanViewController(planData, getDeploymentPlanViewStrings());
+    currentDeploymentPlanViewController = new DeploymentPlanViewController(planData, getDeploymentPlanViewStrings(), sourceFileUri);
     currentDeploymentPlanViewController.revealToForeground(vscode.ViewColumn.Active);
     currentDeploymentPlanViewController.panel.onDidDispose(() => {
         currentDeploymentPlanViewController = undefined;
         currentDeploymentPlanWatcher?.dispose();
         currentDeploymentPlanWatcher = undefined;
     });
+}
+
+function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | undefined): DeploymentPlanData {
+    let parsed: DeploymentPlanData | undefined;
+    let errorMessage: string | undefined;
+    try {
+        parsed = parseDeploymentPlanMarkdown(content);
+    } catch (err) {
+        errorMessage = err instanceof Error ? err.message : String(err);
+    }
+
+    if (errorMessage
+        || !parsed
+        || (parsed.resources.rows.length === 0
+            && parsed.decisions.rows.length === 0
+            && parsed.workspaceScan.rows.length === 0
+            && !parsed.mermaidDiagram)) {
+        return {
+            status: parsed?.status ?? 'Unknown',
+            mode: parsed?.mode ?? 'Unknown',
+            subscription: parsed?.subscription ?? '',
+            availableSubscriptions: parsed?.availableSubscriptions,
+            location: parsed?.location ?? '',
+            locationCode: parsed?.locationCode ?? '',
+            availableLocations: parsed?.availableLocations,
+            mermaidDiagram: parsed?.mermaidDiagram ?? '',
+            workspaceScan: parsed?.workspaceScan ?? { headers: [], rows: [] },
+            decisions: parsed?.decisions ?? { headers: [], rows: [] },
+            resources: parsed?.resources ?? { headers: [], rows: [] },
+            parseError: {
+                message: errorMessage ?? vscode.l10n.t("The deployment plan couldn't be rendered as a structured view. The generated markdown didn't match the expected layout."),
+                fileLabel: sourceFileUri ? vscode.workspace.asRelativePath(sourceFileUri) : undefined,
+            },
+        };
+    }
+    return parsed;
 }
 
 export async function openDeploymentPlanViewFromWorkspace(): Promise<void> {
@@ -96,7 +137,7 @@ export async function openDeploymentPlanViewFromWorkspace(): Promise<void> {
 
 async function openDeploymentPlanViewAsync(uri: vscode.Uri): Promise<void> {
     const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
-    openDeploymentPlanViewWithContent(content);
+    openDeploymentPlanViewWithContent(content, uri);
     watchDeploymentPlanFile(uri);
 }
 
@@ -115,7 +156,7 @@ function watchDeploymentPlanFile(uri: vscode.Uri): void {
     const reload = async () => {
         try {
             const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
-            openDeploymentPlanViewWithContent(content);
+            openDeploymentPlanViewWithContent(content, uri);
         } catch {
             // File may have been deleted or be momentarily unavailable; ignore.
         }

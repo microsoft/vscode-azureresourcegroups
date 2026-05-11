@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { parseScaffoldPlanMarkdown } from "../views/utils/parseScaffoldPlanMarkdown";
+import { type PlanData, parseScaffoldPlanMarkdown } from "../views/utils/parseScaffoldPlanMarkdown";
 import { ScaffoldPlanViewController } from "./controllers/ScaffoldPlanViewController";
 
 let currentPlanViewController: ScaffoldPlanViewController | undefined;
@@ -18,22 +18,51 @@ export function openPlanView(uri: vscode.Uri): void {
     void openPlanViewAsync(uri);
 }
 
-export function openPlanViewWithContent(content: string): void {
-    const planData = parseScaffoldPlanMarkdown(content);
+export function openPlanViewWithContent(content: string, sourceFileUri?: vscode.Uri): void {
+    const planData = tryParseScaffoldPlan(content, sourceFileUri);
 
     if (currentPlanViewController) {
-        currentPlanViewController.updatePlanData(planData);
+        currentPlanViewController.updatePlanData(planData, sourceFileUri);
         currentPlanViewController.revealToForeground(vscode.ViewColumn.Active);
         return;
     }
 
-    currentPlanViewController = new ScaffoldPlanViewController(planData);
+    currentPlanViewController = new ScaffoldPlanViewController(planData, sourceFileUri);
     currentPlanViewController.revealToForeground(vscode.ViewColumn.Active);
     currentPlanViewController.panel.onDidDispose(() => {
         currentPlanViewController = undefined;
         currentPlanWatcher?.dispose();
         currentPlanWatcher = undefined;
     });
+}
+
+/**
+ * Parse the plan markdown, returning a placeholder PlanData with a parseError
+ * flag if parsing fails or yields no usable content. The view uses the flag to
+ * render a warning banner with an "Open file" button.
+ */
+function tryParseScaffoldPlan(content: string, sourceFileUri: vscode.Uri | undefined): PlanData {
+    let parsed: PlanData | undefined;
+    let errorMessage: string | undefined;
+    try {
+        parsed = parseScaffoldPlanMarkdown(content);
+    } catch (err) {
+        errorMessage = err instanceof Error ? err.message : String(err);
+    }
+
+    if (errorMessage || !parsed || parsed.sections.length === 0) {
+        return {
+            status: parsed?.status ?? 'Unknown',
+            created: parsed?.created ?? 'Unknown',
+            mode: parsed?.mode ?? 'Unknown',
+            sections: parsed?.sections ?? [],
+            parseError: {
+                message: errorMessage ?? vscode.l10n.t("The plan file couldn't be rendered as a structured view. The generated markdown didn't match the expected layout."),
+                fileLabel: sourceFileUri ? vscode.workspace.asRelativePath(sourceFileUri) : undefined,
+            },
+        };
+    }
+    return parsed;
 }
 
 export async function openPlanViewFromWorkspace(): Promise<void> {
@@ -62,7 +91,7 @@ export async function openPlanViewFromWorkspace(): Promise<void> {
 
 async function openPlanViewAsync(uri: vscode.Uri): Promise<void> {
     const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
-    openPlanViewWithContent(content);
+    openPlanViewWithContent(content, uri);
     watchPlanFile(uri);
 }
 
@@ -82,7 +111,7 @@ function watchPlanFile(uri: vscode.Uri): void {
     const reload = async () => {
         try {
             const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
-            openPlanViewWithContent(content);
+            openPlanViewWithContent(content, uri);
         } catch {
             // File may have been deleted or be momentarily unavailable; ignore.
         }

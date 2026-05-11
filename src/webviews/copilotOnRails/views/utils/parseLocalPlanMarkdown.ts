@@ -8,6 +8,12 @@ export interface LocalPlanData {
     status: string;
     headerNote: string;
     sections: LocalPlanSection[];
+    parseError?: LocalPlanParseError;
+}
+
+export interface LocalPlanParseError {
+    message: string;
+    fileLabel?: string;
 }
 
 export interface LocalPlanSection {

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { parseLocalPlanMarkdown } from "../views/utils/parseLocalPlanMarkdown";
+import { type LocalPlanData, parseLocalPlanMarkdown } from "../views/utils/parseLocalPlanMarkdown";
 import { LocalPlanViewController } from "./controllers/LocalPlanViewController";
 
 let currentLocalPlanViewController: LocalPlanViewController | undefined;
@@ -18,22 +18,46 @@ export function openLocalPlanView(uri: vscode.Uri): void {
     void openLocalPlanViewAsync(uri);
 }
 
-export function openLocalPlanViewWithContent(content: string): void {
-    const planData = parseLocalPlanMarkdown(content);
+export function openLocalPlanViewWithContent(content: string, sourceFileUri?: vscode.Uri): void {
+    const planData = tryParseLocalPlan(content, sourceFileUri);
 
     if (currentLocalPlanViewController) {
-        currentLocalPlanViewController.updatePlanData(planData);
+        currentLocalPlanViewController.updatePlanData(planData, sourceFileUri);
         currentLocalPlanViewController.revealToForeground(vscode.ViewColumn.Active);
         return;
     }
 
-    currentLocalPlanViewController = new LocalPlanViewController(planData);
+    currentLocalPlanViewController = new LocalPlanViewController(planData, sourceFileUri);
     currentLocalPlanViewController.revealToForeground(vscode.ViewColumn.Active);
     currentLocalPlanViewController.panel.onDidDispose(() => {
         currentLocalPlanViewController = undefined;
         currentLocalPlanWatcher?.dispose();
         currentLocalPlanWatcher = undefined;
     });
+}
+
+function tryParseLocalPlan(content: string, sourceFileUri: vscode.Uri | undefined): LocalPlanData {
+    let parsed: LocalPlanData | undefined;
+    let errorMessage: string | undefined;
+    try {
+        parsed = parseLocalPlanMarkdown(content);
+    } catch (err) {
+        errorMessage = err instanceof Error ? err.message : String(err);
+    }
+
+    if (errorMessage || !parsed || parsed.sections.length === 0) {
+        return {
+            title: parsed?.title ?? 'Local Development Plan',
+            status: parsed?.status ?? 'Unknown',
+            headerNote: parsed?.headerNote ?? '',
+            sections: parsed?.sections ?? [],
+            parseError: {
+                message: errorMessage ?? vscode.l10n.t("The plan file couldn't be rendered as a structured view. The generated markdown didn't match the expected layout."),
+                fileLabel: sourceFileUri ? vscode.workspace.asRelativePath(sourceFileUri) : undefined,
+            },
+        };
+    }
+    return parsed;
 }
 
 export async function openLocalPlanViewFromWorkspace(): Promise<void> {
@@ -62,7 +86,7 @@ export async function openLocalPlanViewFromWorkspace(): Promise<void> {
 
 async function openLocalPlanViewAsync(uri: vscode.Uri): Promise<void> {
     const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
-    openLocalPlanViewWithContent(content);
+    openLocalPlanViewWithContent(content, uri);
     watchLocalPlanFile(uri);
 }
 
@@ -81,7 +105,7 @@ function watchLocalPlanFile(uri: vscode.Uri): void {
     const reload = async () => {
         try {
             const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
-            openLocalPlanViewWithContent(content);
+            openLocalPlanViewWithContent(content, uri);
         } catch {
             // File may have been deleted or be momentarily unavailable; ignore.
         }

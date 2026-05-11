@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea } from '@fluentui/react-components';
-import { CheckmarkRegular, CommentEditRegular, DismissRegular, SendRegular } from '@fluentui/react-icons';
+import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import mermaid from 'mermaid';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
@@ -134,6 +134,30 @@ export const LocalPlanView = (): JSX.Element => {
         return <div className='localPlanView'><p>Loading local dev plan...</p></div>;
     }
 
+    if (plan.parseError) {
+        return (
+            <div className='localPlanView'>
+                <div className='parseFailureWarning' role='alert'>
+                    <div className='parseFailureIcon'><WarningRegular /></div>
+                    <div className='parseFailureBody'>
+                        <h2>We couldn't render this plan</h2>
+                        <p>{plan.parseError.message}</p>
+                        {plan.parseError.fileLabel && (
+                            <p className='parseFailureFile'><strong>Plan file:</strong> {plan.parseError.fileLabel}</p>
+                        )}
+                        <Button
+                            appearance='primary'
+                            icon={<DocumentRegular />}
+                            onClick={() => vscodeApi.postMessage({ command: 'openSourceFile' })}
+                        >
+                            Open plan file
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={`localPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
             <div className='planMain'>
@@ -142,7 +166,7 @@ export const LocalPlanView = (): JSX.Element => {
                         <div>
                             <h1>{plan.title}</h1>
                             <div className='metadataBadges'>
-                                <span className='badge'>{plan.status}</span>
+                                {plan.status && plan.status !== 'Unknown' && <span className='badge'>{plan.status}</span>}
                             </div>
                             {plan.headerNote && (
                                 <p className='headerNote' dangerouslySetInnerHTML={{ __html: formatInline(plan.headerNote) }} />

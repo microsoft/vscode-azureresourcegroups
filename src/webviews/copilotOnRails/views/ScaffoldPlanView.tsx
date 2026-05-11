@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea } from '@fluentui/react-components';
-import { CheckmarkRegular, CommentEditRegular, DismissRegular, SendRegular } from '@fluentui/react-icons';
+import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import './styles/scaffoldPlanView.scss';
@@ -234,6 +234,30 @@ export const ScaffoldPlanView = (): JSX.Element => {
         return <div className='scaffoldPlanView'><p>Loading plan...</p></div>;
     }
 
+    if (plan.parseError) {
+        return (
+            <div className='scaffoldPlanView'>
+                <div className='parseFailureWarning' role='alert'>
+                    <div className='parseFailureIcon'><WarningRegular /></div>
+                    <div className='parseFailureBody'>
+                        <h2>We couldn't render this plan</h2>
+                        <p>{plan.parseError.message}</p>
+                        {plan.parseError.fileLabel && (
+                            <p className='parseFailureFile'><strong>Plan file:</strong> {plan.parseError.fileLabel}</p>
+                        )}
+                        <Button
+                            appearance='primary'
+                            icon={<DocumentRegular />}
+                            onClick={() => vscodeApi.postMessage({ command: 'openSourceFile' })}
+                        >
+                            Open plan file
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     const sections = plan.sections ?? [];
     const overviewSection = sections.find(s => s.number === 1);
     const detailSections = sections.filter(s => s.number === 2 || s.number === 3);
@@ -247,8 +271,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
                         <div>
                             <h1>Project Plan</h1>
                             <div className='metadataBadges'>
-                                <span className='badge'>{plan.status}</span>
-                                <span className='badge subtle'>{plan.mode}</span>
+                                {plan.status && plan.status !== 'Unknown' && <span className='badge'>{plan.status}</span>}
+                                {plan.mode && plan.mode !== 'Unknown' && <span className='badge subtle'>{plan.mode}</span>}
                             </div>
                         </div>
                         <div className='headerActions'>
@@ -290,7 +314,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                     </div>
                 )}
 
-                {overviewSection && <OverviewCard section={overviewSection} created={plan.created} />}
+                {overviewSection && <OverviewCard section={overviewSection} created={plan.created && plan.created !== 'Unknown' ? plan.created : undefined} />}
 
                 <div className='sectionsRow'>
                     {detailSections.map((section) => {

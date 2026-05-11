@@ -20,4 +20,10 @@ export interface DeploymentPlanData {
     workspaceScan: DeploymentPlanTable;
     decisions: DeploymentPlanTable;
     resources: DeploymentPlanTable;
+    parseError?: DeploymentPlanParseError;
+}
+
+export interface DeploymentPlanParseError {
+    message: string;
+    fileLabel?: string;
 }

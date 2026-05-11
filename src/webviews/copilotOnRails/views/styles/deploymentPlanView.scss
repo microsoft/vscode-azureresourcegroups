@@ -435,3 +435,47 @@
         max-width: none;
     }
 }
+
+.parseFailureWarning {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin: 32px auto;
+    max-width: 720px;
+    padding: 20px 24px;
+    background-color: var(--vscode-inputValidation-warningBackground, var(--vscode-editorWidget-background));
+    border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground, #cca700));
+    border-radius: 6px;
+    color: var(--vscode-foreground);
+
+    .parseFailureIcon {
+        font-size: 24px;
+        line-height: 1;
+        color: var(--vscode-editorWarning-foreground, #cca700);
+        flex-shrink: 0;
+        padding-top: 2px;
+    }
+
+    .parseFailureBody {
+        flex: 1;
+        min-width: 0;
+
+        h2 {
+            margin: 0 0 8px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        p {
+            margin: 0 0 12px;
+            line-height: 1.5;
+        }
+
+        .parseFailureFile {
+            font-family: var(--vscode-editor-font-family, monospace);
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+            word-break: break-all;
+        }
+    }
+}

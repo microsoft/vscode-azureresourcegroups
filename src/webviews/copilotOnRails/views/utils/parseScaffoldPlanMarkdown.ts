@@ -8,6 +8,12 @@ export interface PlanData {
     created: string;
     mode: string;
     sections: PlanSection[];
+    parseError?: PlanParseError;
+}
+
+export interface PlanParseError {
+    message: string;
+    fileLabel?: string;
 }
 
 export interface PlanSection {
