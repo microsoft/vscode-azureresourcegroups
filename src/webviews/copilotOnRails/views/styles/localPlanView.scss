@@ -3,6 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+// Fluent UI's default DialogSurface background matches the VS Code editor
+// background, which makes the Submit Edits confirmation dialog blend into the
+// plan view. Lift it visually with the widget background, a border, and a
+// stronger shadow so the user can see and act on it.
+.fui-DialogSurface {
+    background-color: var(--vscode-editorWidget-background) !important;
+    color: var(--vscode-editorWidget-foreground, var(--vscode-foreground)) !important;
+    border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border)) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+}
+
+.fui-DialogSurface__backdrop,
+.fui-Dialog__backdrop {
+    background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+.fui-DialogActions .fui-Button {
+    border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-focusBorder))) !important;
+}
+
+.fui-DialogActions .fui-Button[data-appearance='primary'],
+.fui-DialogActions .fui-Button.fui-Button--primary {
+    border-color: var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-button-foreground))) !important;
+}
+
 .localPlanView {
     display: flex;
     flex-direction: column;
@@ -374,6 +399,10 @@
         align-items: center;
         flex-shrink: 0;
 
+        >* {
+            flex-shrink: 0;
+        }
+
         .feedbackIconWrapper {
             position: relative;
             display: inline-flex;
@@ -513,5 +542,49 @@
         left: 10px;
         width: auto;
         max-width: none;
+    }
+}
+
+.parseFailureWarning {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin: 32px auto;
+    max-width: 720px;
+    padding: 20px 24px;
+    background-color: var(--vscode-inputValidation-warningBackground, var(--vscode-editorWidget-background));
+    border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground, #cca700));
+    border-radius: 6px;
+    color: var(--vscode-foreground);
+
+    .parseFailureIcon {
+        font-size: 24px;
+        line-height: 1;
+        color: var(--vscode-editorWarning-foreground, #cca700);
+        flex-shrink: 0;
+        padding-top: 2px;
+    }
+
+    .parseFailureBody {
+        flex: 1;
+        min-width: 0;
+
+        h2 {
+            margin: 0 0 8px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        p {
+            margin: 0 0 12px;
+            line-height: 1.5;
+        }
+
+        .parseFailureFile {
+            font-family: var(--vscode-editor-font-family, monospace);
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+            word-break: break-all;
+        }
     }
 }

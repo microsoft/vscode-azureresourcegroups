@@ -14,8 +14,12 @@ import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation
 export type { DeploymentPlanViewConfiguration, DeploymentPlanViewStrings };
 
 export class DeploymentPlanViewController extends WebviewController<DeploymentPlanViewConfiguration> {
-    constructor(planData: DeploymentPlanData, strings: DeploymentPlanViewStrings) {
+    private sourceFileUri: vscode.Uri | undefined;
+
+    constructor(planData: DeploymentPlanData, strings: DeploymentPlanViewStrings, sourceFileUri?: vscode.Uri) {
         super(ext.context, strings.title, 'deploymentPlanView', { strings }, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
+
+        this.sourceFileUri = sourceFileUri;
 
         this.panel.webview.onDidReceiveMessage((message: { command: string; data?: unknown; prompt?: string }) => {
             switch (message.command) {
@@ -37,12 +41,28 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                     void this.panel.webview.postMessage({ command: 'revisionInProgress' });
                     break;
                 }
+                case 'openSourceFile':
+                    this.openSourceFile();
+                    break;
             }
         });
     }
 
-    updateDeploymentPlanData(planData: DeploymentPlanData): void {
+    updateDeploymentPlanData(planData: DeploymentPlanData, sourceFileUri?: vscode.Uri): void {
+        if (sourceFileUri) {
+            this.sourceFileUri = sourceFileUri;
+        }
         void this.panel.webview.postMessage({ command: 'setDeploymentPlanData', data: planData });
         void this.panel.webview.postMessage({ command: 'revisionComplete' });
+    }
+
+    private openSourceFile(): void {
+        if (!this.sourceFileUri) {
+            void vscode.window.showWarningMessage(
+                vscode.l10n.t('The plan file location is unknown. Locate it manually in the workspace.'),
+            );
+            return;
+        }
+        void vscode.commands.executeCommand('vscode.open', this.sourceFileUri);
     }
 }

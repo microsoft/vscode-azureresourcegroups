@@ -49,6 +49,10 @@ export type DeploymentPlanViewStrings = {
     cancelButton: string;
     submitEditsButton: string;
     noDiagramAvailable: string;
+    parseFailureTitle: string;
+    parseFailureFallbackMessage: string;
+    parseFailureFileLabel: string;
+    openPlanFileButton: string;
 };
 
 export type DeploymentPlanViewConfiguration = {

@@ -98,6 +98,17 @@
                 ]
             }
         ],
+        "chatAgents": [
+            {
+                "path": "resources/agents/azure-project-scaffold.agent.md"
+            },
+            {
+                "path": "resources/agents/azure-local-debug.agent.md"
+            },
+            {
+                "path": "resources/agents/azure-deploy.agent.md"
+            }
+        ],
         "languageModelTools": [
             {
                 "displayName": "Azure Resources: Get Azure Activity Log",

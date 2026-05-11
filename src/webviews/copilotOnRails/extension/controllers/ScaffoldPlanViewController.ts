@@ -11,8 +11,12 @@ import { type PlanData } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 
 export class ScaffoldPlanViewController extends WebviewController<Record<string, never>> {
-    constructor(planData: PlanData) {
+    private sourceFileUri: vscode.Uri | undefined;
+
+    constructor(planData: PlanData, sourceFileUri?: vscode.Uri) {
         super(ext.context, 'Project Plan', 'scaffoldPlanView', {}, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
+
+        this.sourceFileUri = sourceFileUri;
 
         this.panel.webview.onDidReceiveMessage((message: { command: string; data?: PlanData; prompt?: string }) => {
             switch (message.command) {
@@ -39,12 +43,28 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     void this.panel.webview.postMessage({ command: 'revisionInProgress' });
                     break;
                 }
+                case 'openSourceFile':
+                    this.openSourceFile();
+                    break;
             }
         });
     }
 
-    updatePlanData(planData: PlanData): void {
+    updatePlanData(planData: PlanData, sourceFileUri?: vscode.Uri): void {
+        if (sourceFileUri) {
+            this.sourceFileUri = sourceFileUri;
+        }
         void this.panel.webview.postMessage({ command: 'setPlanData', data: planData });
         void this.panel.webview.postMessage({ command: 'revisionComplete' });
+    }
+
+    private openSourceFile(): void {
+        if (!this.sourceFileUri) {
+            void vscode.window.showWarningMessage(
+                vscode.l10n.t('The plan file location is unknown. Locate it manually in the workspace.'),
+            );
+            return;
+        }
+        void vscode.commands.executeCommand('vscode.open', this.sourceFileUri);
     }
 }
