@@ -21,13 +21,14 @@
                 "*"
             ],
         },
-        "skipLibCheck": false
+        "skipLibCheck": true
     },
     "exclude": [
         "**/node_modules",
         ".vscode-test",
         "gulpfile.ts",
         "**/dist",
-        "**/out"
+        "**/out",
+        "src/webviews/copilotOnRails/views"
     ]
 }
