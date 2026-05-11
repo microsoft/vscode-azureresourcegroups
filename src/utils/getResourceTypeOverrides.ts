@@ -27,6 +27,7 @@ function warn(message: string): void {
 export interface ResourceTypeOverride {
     readonly label?: string;
     readonly iconPath?: TreeItemIconPath;
+    readonly hideWhenGroupedByType?: boolean;
 }
 
 let cache: Map<string, ResourceTypeOverride> | undefined;
@@ -92,7 +93,7 @@ export function buildOverrideMapFromExtensions(extensions: readonly vscode.Exten
 
         for (const branch of branches) {
             try {
-                if (!branch.type || (branch.displayName === undefined && branch.icon === undefined)) {
+                if (!branch.type || (branch.displayName === undefined && branch.icon === undefined && branch.hideWhenGroupedByType === undefined)) {
                     continue;
                 }
 
@@ -113,9 +114,19 @@ export function buildOverrideMapFromExtensions(extensions: readonly vscode.Exten
                     }
                 }
 
+                let hideWhenGroupedByType: boolean | undefined;
+                if (branch.hideWhenGroupedByType !== undefined) {
+                    if (typeof branch.hideWhenGroupedByType !== 'boolean') {
+                        warn(`Extension "${extension.id}" contributed a non-boolean "hideWhenGroupedByType" for resource type "${branch.type}"; the value will be ignored.`);
+                    } else {
+                        hideWhenGroupedByType = branch.hideWhenGroupedByType;
+                    }
+                }
+
                 map.set(branch.type, {
                     label: branch.displayName,
                     iconPath,
+                    hideWhenGroupedByType,
                 });
             } catch (e) {
                 warn(`Failed to process display override from extension "${extension.id}" for resource type "${branch.type ?? '(unknown)'}": ${String(e)}`);

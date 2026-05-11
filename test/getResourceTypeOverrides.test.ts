@@ -21,7 +21,7 @@ function mockExtension(id: string, packageJson: object): vscode.Extension<unknow
     };
 }
 
-function contributingExt(id: string, type: string, overrides: { displayName?: string; icon?: unknown }): vscode.Extension<unknown> {
+function contributingExt(id: string, type: string, overrides: { displayName?: string; icon?: unknown; hideWhenGroupedByType?: unknown }): vscode.Extension<unknown> {
     return mockExtension(id, {
         contributes: {
             'x-azResources': {
@@ -121,5 +121,42 @@ suite('getResourceTypeOverrides', () => {
             mockExtension('ext.no-contrib', { contributes: {} })
         ]);
         assert.strictEqual(map.size, 0);
+    });
+
+    test('returns hideWhenGroupedByType=true when contributed', () => {
+        const map = buildOverrideMapFromExtensions([
+            contributingExt('ext.a', AzExtResourceType.ContainerApps, { hideWhenGroupedByType: true })
+        ]);
+        const override = map.get(AzExtResourceType.ContainerApps);
+        assert.ok(override, 'Expected an override entry (hideWhenGroupedByType should produce one)');
+        assert.strictEqual(override.hideWhenGroupedByType, true);
+    });
+
+    test('hideWhenGroupedByType is preserved alongside displayName', () => {
+        const map = buildOverrideMapFromExtensions([
+            contributingExt('ext.a', AzExtResourceType.ContainerApps, { displayName: 'Container Apps', hideWhenGroupedByType: true })
+        ]);
+        const override = map.get(AzExtResourceType.ContainerApps);
+        assert.ok(override);
+        assert.strictEqual(override.label, 'Container Apps');
+        assert.strictEqual(override.hideWhenGroupedByType, true);
+    });
+
+    test('hideWhenGroupedByType=false is preserved', () => {
+        const map = buildOverrideMapFromExtensions([
+            contributingExt('ext.a', AzExtResourceType.ContainerApps, { displayName: 'Container Apps', hideWhenGroupedByType: false })
+        ]);
+        const override = map.get(AzExtResourceType.ContainerApps);
+        assert.ok(override);
+        assert.strictEqual(override.hideWhenGroupedByType, false);
+    });
+
+    test('non-boolean hideWhenGroupedByType is ignored', () => {
+        const map = buildOverrideMapFromExtensions([
+            contributingExt('ext.a', AzExtResourceType.ContainerApps, { displayName: 'Container Apps', hideWhenGroupedByType: 'yes' as unknown as boolean })
+        ]);
+        const override = map.get(AzExtResourceType.ContainerApps);
+        assert.ok(override);
+        assert.strictEqual(override.hideWhenGroupedByType, undefined, 'Non-boolean value should be ignored');
     });
 });

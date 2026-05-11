@@ -111,12 +111,18 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
         // so they show up in the tree even if there are no resources of that type
         azureExtensions.forEach(extension => {
             extension.resourceTypes.forEach(resourceType => {
-                initialGrouping[resourceType] = [];
+                if (!getResourceTypeOverride(resourceType)?.hideWhenGroupedByType) {
+                    initialGrouping[resourceType] = [];
+                }
             });
         });
 
         // Don't show resource groups when grouped by resource type
         allResources = allResources.filter(resource => resource.azureResourceType.type !== 'microsoft.resources/resourcegroups');
+
+        // Drop resources whose type is contribution-marked as hidden in the by-type view
+        // (e.g. types that are semantically children of another resource).
+        allResources = allResources.filter(resource => !resource.resourceType || !getResourceTypeOverride(resource.resourceType)?.hideWhenGroupedByType);
 
         const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
         if (!showHiddenTypes) {
