@@ -69,8 +69,7 @@ async function openPlanViewAsync(uri: vscode.Uri): Promise<void> {
 /**
  * Watch the plan markdown file for changes (e.g. Copilot finishes revising it)
  * and push the updated content to the webview so the user doesn't get stuck on
- * a stale view. Re-watching the same URI is a no-op; switching files disposes
- * the previous watcher.
+ * a stale view.
  */
 function watchPlanFile(uri: vscode.Uri): void {
     currentPlanWatcher?.dispose();

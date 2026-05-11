@@ -33,9 +33,6 @@ export class CreateProjectViewController extends WebviewController<CreateProject
     }
 
     private async openChatWithQuery(query: string): Promise<void> {
-        // Wait for GitHub Copilot Chat to be ready before disposing the panel and
-        // executing the chat command. Otherwise, if Copilot Chat hasn't activated
-        // yet, the chat command silently no-ops and the user is left with nothing.
         if (!(await ensureCopilotChatReady())) {
             return;
         }
