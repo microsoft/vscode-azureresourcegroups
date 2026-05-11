@@ -364,6 +364,26 @@
             {
                 "command": "azureResourceGroups.askAgentAboutResource",
                 "title": "%azureResourceGroups.askAzure%"
+            },
+            {
+                "command": "azureResourceGroups.createProjectWithCopilot",
+                "title": "%azureResourceGroups.createProjectWithCopilot%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openPlanView",
+                "title": "%azureResourceGroups.openPlanView%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openLocalPlanView",
+                "title": "%azureResourceGroups.openLocalPlanView%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openDeployPlanView",
+                "title": "%azureResourceGroups.openDeployPlanView%",
+                "category": "Azure"
             }
         ],
         "viewsContainers": {
@@ -897,8 +917,9 @@
         ]
     },
     "scripts": {
-        "build": "npm run build:esbuild & npm run build:check",
+        "build": "npm run build:esbuild && npm run build:webviews && npm run build:check",
         "build:esbuild": "node esbuild.mjs",
+        "build:webviews": "node esbuild.copilotOnRailsViews.mjs",
         "build:check": "tsc --noEmit",
         "package": "vsce package --githubBranch main",
         "lint": "eslint --max-warnings 0",
@@ -916,19 +937,24 @@
         "@types/semver": "^7.7.1",
         "@types/uuid": "^9.0.1",
         "@types/vscode": "1.105.0",
+        "@types/vscode-webview": "^1.57.5",
         "@types/ws": "^8.5.10",
         "@vscode/test-cli": "*",
         "@vscode/test-electron": "*",
         "@vscode/vsce": "*",
         "esbuild": "*",
-        "esbuild-plugin-copy": "*"
+        "esbuild-plugin-copy": "*",
+        "mermaid": "^11.14.0",
+        "sass": "~1.79.6"
     },
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
+        "@microsoft/applicationinsights-common": "^3.0.0",
         "@microsoft/vscode-azext-azureauth": "^6.0.0-alpha.8",
         "@microsoft/vscode-azext-azureutils": "^4.1.0",
-        "@microsoft/vscode-azext-utils": "^4.0.4",
+        "@microsoft/vscode-azext-utils": "^4.0.7",
+        "@microsoft/vscode-azext-webview": "^1.0.2",
         "form-data": "^4.0.4",
         "fs-extra": "^11.3.0",
         "jsonc-parser": "^2.2.1",

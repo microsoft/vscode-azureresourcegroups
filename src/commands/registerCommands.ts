@@ -17,6 +17,10 @@ import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { ActivityItem } from '../tree/activityLog/ActivityItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
+import { createProjectWithCopilot } from '../webviews/copilotOnRails/extension/createProjectWithCopilot';
+import { openDeploymentPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openDeploymentPlanView';
+import { openLocalPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openLocalPlanView';
+import { openPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openScaffoldPlanView';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
@@ -156,6 +160,11 @@ export function registerCommands(): void {
     registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityItem) => await askAgentAboutActivityLog(context));
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
+
+    registerCommand('azureResourceGroups.createProjectWithCopilot', createProjectWithCopilot);
+    registerCommand('azureResourceGroups.openPlanView', openPlanViewFromWorkspace);
+    registerCommand('azureResourceGroups.openLocalPlanView', openLocalPlanViewFromWorkspace);
+    registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
