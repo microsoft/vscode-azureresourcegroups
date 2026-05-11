@@ -954,7 +954,7 @@
         "@microsoft/vscode-azext-azureauth": "^6.0.0-alpha.8",
         "@microsoft/vscode-azext-azureutils": "^4.1.0",
         "@microsoft/vscode-azext-utils": "^4.0.7",
-        "@microsoft/vscode-azext-webview": "^1.0.1",
+        "@microsoft/vscode-azext-webview": "^1.0.2",
         "form-data": "^4.0.4",
         "fs-extra": "^11.3.0",
         "jsonc-parser": "^2.2.1",
