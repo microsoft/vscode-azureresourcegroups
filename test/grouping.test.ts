@@ -32,6 +32,31 @@ suite('Azure resource grouping tests', async () => {
         assert.ok(functionGroup);
     });
 
+    test('Resource type group id is stable (uses raw type key, not display label)', async () => {
+        createMockSubscriptionWithFunctions();
+
+        await commands.executeCommand('azureResourceGroups.groupBy.resourceType');
+
+        const tdp = api().azureResourceTreeDataProvider;
+        const subscriptions = await tdp.getChildren();
+
+        const groups = await tdp.getChildren(subscriptions![0]) as GroupingItem[];
+        const functionGroup = groups.find(group => (group as ResourceTypeGroupingItem).resourceType === AzExtResourceType.FunctionApp) as ResourceTypeGroupingItem;
+        assert.ok(functionGroup, 'FunctionApp grouping item should exist');
+
+        // The id must contain the raw AzExtResourceType enum value ('FunctionApp'),
+        // not the localized display label ('Function App'). This ensures VS Code's
+        // tree expansion/focus state survives a label change via a contributed override.
+        assert.ok(
+            functionGroup.id.includes(AzExtResourceType.FunctionApp),
+            `Expected id to contain '${AzExtResourceType.FunctionApp}', got: ${functionGroup.id}`
+        );
+        assert.ok(
+            !functionGroup.id.includes('Function App'),
+            `Expected id to use the raw type key, not the display label. Got: ${functionGroup.id}`
+        );
+    });
+
     test('Group by resource group', async () => {
         const mocks = createMockSubscriptionWithFunctions();
 
