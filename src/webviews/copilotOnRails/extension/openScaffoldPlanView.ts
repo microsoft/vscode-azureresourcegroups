@@ -8,6 +8,7 @@ import { parseScaffoldPlanMarkdown } from "../views/utils/parseScaffoldPlanMarkd
 import { ScaffoldPlanViewController } from "./controllers/ScaffoldPlanViewController";
 
 let currentPlanViewController: ScaffoldPlanViewController | undefined;
+let currentPlanWatcher: vscode.Disposable | undefined;
 
 export function isPlanViewOpen(): boolean {
     return currentPlanViewController !== undefined;
@@ -30,6 +31,8 @@ export function openPlanViewWithContent(content: string): void {
     currentPlanViewController.revealToForeground(vscode.ViewColumn.Active);
     currentPlanViewController.panel.onDidDispose(() => {
         currentPlanViewController = undefined;
+        currentPlanWatcher?.dispose();
+        currentPlanWatcher = undefined;
     });
 }
 
@@ -60,4 +63,32 @@ export async function openPlanViewFromWorkspace(): Promise<void> {
 async function openPlanViewAsync(uri: vscode.Uri): Promise<void> {
     const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
     openPlanViewWithContent(content);
+    watchPlanFile(uri);
+}
+
+/**
+ * Watch the plan markdown file for changes (e.g. Copilot finishes revising it)
+ * and push the updated content to the webview so the user doesn't get stuck on
+ * a stale view. Re-watching the same URI is a no-op; switching files disposes
+ * the previous watcher.
+ */
+function watchPlanFile(uri: vscode.Uri): void {
+    currentPlanWatcher?.dispose();
+
+    const pattern = new vscode.RelativePattern(
+        vscode.Uri.file(uri.fsPath.replace(/[/\\][^/\\]+$/, '')),
+        uri.fsPath.replace(/^.*[/\\]/, ''),
+    );
+    const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+    const reload = async () => {
+        try {
+            const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
+            openPlanViewWithContent(content);
+        } catch {
+            // File may have been deleted or be momentarily unavailable; ignore.
+        }
+    };
+    watcher.onDidChange(() => void reload());
+    watcher.onDidCreate(() => void reload());
+    currentPlanWatcher = watcher;
 }

@@ -8,6 +8,7 @@ import { parseDeploymentPlanMarkdown } from "../views/utils/parseDeploymentPlanM
 import { DeploymentPlanViewController, type DeploymentPlanViewStrings } from "./controllers/DeploymentPlanViewController";
 
 let currentDeploymentPlanViewController: DeploymentPlanViewController | undefined;
+let currentDeploymentPlanWatcher: vscode.Disposable | undefined;
 
 function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
     return {
@@ -38,7 +39,7 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         pendingEditsPluralMessage: vscode.l10n.t('You have {0} pending edits. Would you like to submit them to Copilot to revise the plan?'),
         editsMadeFallbackMessage: vscode.l10n.t('Edits were made. Would you like to submit those edits to Copilot?'),
         cancelButton: vscode.l10n.t('Cancel'),
-        submitEditsButton: vscode.l10n.t('Submit edits'),
+        submitEditsButton: vscode.l10n.t('Submit'),
         noDiagramAvailable: vscode.l10n.t('No diagram available'),
     };
 }
@@ -64,6 +65,8 @@ export function openDeploymentPlanViewWithContent(content: string): void {
     currentDeploymentPlanViewController.revealToForeground(vscode.ViewColumn.Active);
     currentDeploymentPlanViewController.panel.onDidDispose(() => {
         currentDeploymentPlanViewController = undefined;
+        currentDeploymentPlanWatcher?.dispose();
+        currentDeploymentPlanWatcher = undefined;
     });
 }
 
@@ -94,4 +97,30 @@ export async function openDeploymentPlanViewFromWorkspace(): Promise<void> {
 async function openDeploymentPlanViewAsync(uri: vscode.Uri): Promise<void> {
     const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
     openDeploymentPlanViewWithContent(content);
+    watchDeploymentPlanFile(uri);
+}
+
+/**
+ * Watch the deployment plan markdown file so the webview auto-refreshes when
+ * Copilot finishes revising it on disk.
+ */
+function watchDeploymentPlanFile(uri: vscode.Uri): void {
+    currentDeploymentPlanWatcher?.dispose();
+
+    const pattern = new vscode.RelativePattern(
+        vscode.Uri.file(uri.fsPath.replace(/[/\\][^/\\]+$/, '')),
+        uri.fsPath.replace(/^.*[/\\]/, ''),
+    );
+    const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+    const reload = async () => {
+        try {
+            const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
+            openDeploymentPlanViewWithContent(content);
+        } catch {
+            // File may have been deleted or be momentarily unavailable; ignore.
+        }
+    };
+    watcher.onDidChange(() => void reload());
+    watcher.onDidCreate(() => void reload());
+    currentDeploymentPlanWatcher = watcher;
 }

@@ -452,7 +452,7 @@ const SubmitEditsDialog = ({ open, editCount, onCancel, onSubmit }: SubmitEditsD
                 </DialogContent>
                 <DialogActions>
                     <Button appearance='secondary' onClick={onCancel}>Cancel</Button>
-                    <Button appearance='primary' icon={<SendRegular />} onClick={onSubmit}>Submit edits</Button>
+                    <Button appearance='primary' icon={<SendRegular />} onClick={onSubmit}>Submit</Button>
                 </DialogActions>
             </DialogBody>
         </DialogSurface>

@@ -16,7 +16,7 @@ The **moment** you finish writing `local-development-plan.md` — before you say
 { "commandId": "azureResourceGroups.openLocalPlanView", "name": "Open Local Development Plan View" }
 ```
 
-`run_vscode_command` is a deferred tool. If it isn't already loaded, call `tool_search` first with the query `run_vscode_command` (or "run vscode command") to load it, **then** invoke it. Both `tool_search` and `run_vscode_command` are listed in this agent's `tools:` frontmatter — they are available in this session. Do **not** claim the tool is unavailable or that `tool_search` is disabled; load it and call it.
+`run_vscode_command` is a deferred tool. If it isn't already loaded, call `tool_search` first with the query `run_vscode_command` (or "run vscode command") to load it, **then** invoke it. Both `tool_search` and `run_vscode_command` are listed in this agent's `tools:` frontmatter — they are available in this session. Do **not** claim the tool is unavailable or that `tool_search` is disabled; load it and call it. There is no file-watcher fallback — if you skip this call, the user will not see the plan preview.
 
 This is a hard requirement of this agent. The user cannot review the local-dev plan without it. If you skip this step, the workflow is broken. Do not ask the user whether to do it — just do it as the very next tool call after the file write completes.
 

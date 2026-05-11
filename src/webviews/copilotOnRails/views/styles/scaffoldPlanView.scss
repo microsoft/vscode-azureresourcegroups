@@ -3,6 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+.fui-DialogSurface {
+    background-color: var(--vscode-editorWidget-background) !important;
+    color: var(--vscode-editorWidget-foreground, var(--vscode-foreground)) !important;
+    border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border)) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+}
+
+.fui-DialogSurface__backdrop,
+.fui-Dialog__backdrop {
+    background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+.fui-DialogActions .fui-Button {
+    border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-focusBorder))) !important;
+}
+
+.fui-DialogActions .fui-Button[data-appearance='primary'],
+.fui-DialogActions .fui-Button.fui-Button--primary {
+    border-color: var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-button-foreground))) !important;
+}
+
 .scaffoldPlanView {
     display: flex;
     flex-direction: column;
@@ -38,6 +59,11 @@
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-shrink: 0;
+
+            >* {
+                flex-shrink: 0;
+            }
 
             .feedbackIconWrapper {
                 position: relative;

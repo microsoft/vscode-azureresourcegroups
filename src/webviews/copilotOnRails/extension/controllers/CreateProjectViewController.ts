@@ -6,6 +6,7 @@
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
+import { ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { ext } from "../../../../extensionVariables";
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
@@ -20,9 +21,10 @@ export class CreateProjectViewController extends WebviewController<CreateProject
             (message: { command: string; prompt?: string }) => {
                 switch (message.command) {
                     case 'plan':
-                        this.panel.dispose();
                         if (message.prompt) {
                             void this.openChatWithQuery(message.prompt);
+                        } else {
+                            this.panel.dispose();
                         }
                         break;
                 }
@@ -31,6 +33,13 @@ export class CreateProjectViewController extends WebviewController<CreateProject
     }
 
     private async openChatWithQuery(query: string): Promise<void> {
+        // Wait for GitHub Copilot Chat to be ready before disposing the panel and
+        // executing the chat command. Otherwise, if Copilot Chat hasn't activated
+        // yet, the chat command silently no-ops and the user is left with nothing.
+        if (!(await ensureCopilotChatReady())) {
+            return;
+        }
+        this.panel.dispose();
         await vscode.commands.executeCommand("workbench.action.chat.open", {
             mode: 'azure-project-scaffold',
             query,

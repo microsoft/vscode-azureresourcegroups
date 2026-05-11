@@ -26,7 +26,7 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 { "commandId": "azureResourceGroups.openPlanView", "name": "Open Plan View" }
 ```
 
-`run_vscode_command` is a deferred tool. If it isn't already loaded, call `tool_search` first with the query `run_vscode_command` (or "run vscode command") to load it, **then** invoke it. Both `tool_search` and `run_vscode_command` are listed in this agent's `tools:` frontmatter — they are available in this session. Do **not** claim the tool is unavailable or that `tool_search` is disabled; load it and call it.
+`run_vscode_command` is a deferred tool. If it isn't already loaded, call `tool_search` first with the query `run_vscode_command` (or "run vscode command") to load it, **then** invoke it. Both `tool_search` and `run_vscode_command` are listed in this agent's `tools:` frontmatter — they are available in this session. Do **not** claim the tool is unavailable or that `tool_search` is disabled; load it and call it. There is no file-watcher fallback — if you skip this call, the user will not see the plan preview.
 
 This is not optional and not conditional. Do not summarize the plan, do not ask the user a question, do not begin scaffolding, and do not move on until this command has been called. The skill's Step P4 ("Present plan" / "Ask explicitly") only runs **after** this command. If `run_vscode_command` returns an error, report it verbatim — but still attempt the call first.
 

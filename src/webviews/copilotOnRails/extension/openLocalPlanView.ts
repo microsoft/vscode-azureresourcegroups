@@ -8,6 +8,7 @@ import { parseLocalPlanMarkdown } from "../views/utils/parseLocalPlanMarkdown";
 import { LocalPlanViewController } from "./controllers/LocalPlanViewController";
 
 let currentLocalPlanViewController: LocalPlanViewController | undefined;
+let currentLocalPlanWatcher: vscode.Disposable | undefined;
 
 export function isLocalPlanViewOpen(): boolean {
     return currentLocalPlanViewController !== undefined;
@@ -30,6 +31,8 @@ export function openLocalPlanViewWithContent(content: string): void {
     currentLocalPlanViewController.revealToForeground(vscode.ViewColumn.Active);
     currentLocalPlanViewController.panel.onDidDispose(() => {
         currentLocalPlanViewController = undefined;
+        currentLocalPlanWatcher?.dispose();
+        currentLocalPlanWatcher = undefined;
     });
 }
 
@@ -60,4 +63,30 @@ export async function openLocalPlanViewFromWorkspace(): Promise<void> {
 async function openLocalPlanViewAsync(uri: vscode.Uri): Promise<void> {
     const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
     openLocalPlanViewWithContent(content);
+    watchLocalPlanFile(uri);
+}
+
+/**
+ * Watch the local plan markdown file so the webview auto-refreshes whenever
+ * Copilot (or anyone else) edits it on disk.
+ */
+function watchLocalPlanFile(uri: vscode.Uri): void {
+    currentLocalPlanWatcher?.dispose();
+
+    const pattern = new vscode.RelativePattern(
+        vscode.Uri.file(uri.fsPath.replace(/[/\\][^/\\]+$/, '')),
+        uri.fsPath.replace(/^.*[/\\]/, ''),
+    );
+    const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+    const reload = async () => {
+        try {
+            const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
+            openLocalPlanViewWithContent(content);
+        } catch {
+            // File may have been deleted or be momentarily unavailable; ignore.
+        }
+    };
+    watcher.onDidChange(() => void reload());
+    watcher.onDidCreate(() => void reload());
+    currentLocalPlanWatcher = watcher;
 }

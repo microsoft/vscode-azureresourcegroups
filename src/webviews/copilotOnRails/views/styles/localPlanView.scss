@@ -3,6 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+// Fluent UI's default DialogSurface background matches the VS Code editor
+// background, which makes the Submit Edits confirmation dialog blend into the
+// plan view. Lift it visually with the widget background, a border, and a
+// stronger shadow so the user can see and act on it.
+.fui-DialogSurface {
+    background-color: var(--vscode-editorWidget-background) !important;
+    color: var(--vscode-editorWidget-foreground, var(--vscode-foreground)) !important;
+    border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border)) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+}
+
+.fui-DialogSurface__backdrop,
+.fui-Dialog__backdrop {
+    background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+.fui-DialogActions .fui-Button {
+    border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-focusBorder))) !important;
+}
+
+.fui-DialogActions .fui-Button[data-appearance='primary'],
+.fui-DialogActions .fui-Button.fui-Button--primary {
+    border-color: var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-button-foreground))) !important;
+}
+
 .localPlanView {
     display: flex;
     flex-direction: column;
@@ -373,6 +398,10 @@
         gap: 8px;
         align-items: center;
         flex-shrink: 0;
+
+        >* {
+            flex-shrink: 0;
+        }
 
         .feedbackIconWrapper {
             position: relative;
