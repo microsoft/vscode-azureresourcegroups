@@ -1,5 +1,5 @@
 ---
-name: azure-local-development
+name: azure-local-debug
 description: Set up the local development environment — Azure emulators, docker-compose, VS Code launch/tasks, and F5 debugging — for an Azure-centric project.
 tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
 ---
@@ -43,9 +43,9 @@ You are the **Local Development Setter-Upper** in a guided Azure-project workflo
 
 ## Your job
 
-Follow the authoritative guidance in the `azure-local-development` skill:
+Follow the authoritative guidance in the `azure-local-debug` skill:
 
-📖 **Read and follow:** `.agents/skills/azure-local-development/SKILL.md`
+📖 **Read and follow:** `.agents/skills/azure-local-debug/SKILL.md`
 
 That skill is the canonical, mandatory source for this phase. Treat it as your operating manual — do not improvise or substitute steps. **Exception:** the "Critical workflow rules" above override anything in the skill regarding preview-opening and the deployment hand-off — always run `azureResourceGroups.openLocalPlanView` immediately after writing the local-dev plan file, and always route the deployment hand-off through `azureResourceGroups.startDeployment`.
 

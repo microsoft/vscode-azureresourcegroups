@@ -59,4 +59,4 @@ A workspace ready to deploy to Azure:
 
 ## Prerequisites
 
-A scaffolded project with a working local development environment. If the workspace has not yet been scaffolded, stop and direct the user to run the `azure-project-scaffold` agent first. If the local development environment has not yet been set up, stop and direct the user to run the `azure-local-development` agent first.
+A scaffolded project with a working local development environment. If the workspace has not yet been scaffolded, stop and direct the user to run the `azure-project-scaffold` agent first. If the local development environment has not yet been set up, stop and direct the user to run the `azure-local-debug` agent first.
