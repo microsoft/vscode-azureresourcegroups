@@ -29,6 +29,18 @@ export interface AzureBranchContribution {
      * when the tree is grouped by resource type.
      */
     readonly icon?: ContributedIconPath;
+    /**
+     * Optional. When `true`, the resource-type group node for this type is
+     * omitted from the tree when grouped by resource type. Resources of this
+     * type continue to appear in other groupings (by resource group, location,
+     * or tag), where they exist independently of any parent resource.
+     *
+     * Intended for resource types that are semantically children of another
+     * resource (e.g. a Container App is a child of a Container Apps Managed
+     * Environment) and so are redundant or confusing as a peer top-level
+     * group alongside their parent type.
+     */
+    readonly hideWhenGroupedByType?: boolean;
 }
 
 interface ResourceGroupsContribution {
