@@ -93,12 +93,12 @@ export function buildOverrideMapFromExtensions(extensions: readonly vscode.Exten
 
         for (const branch of branches) {
             try {
-                if (!branch.type || (branch.displayName === undefined && branch.icon === undefined && branch.hideWhenGroupedByType === undefined)) {
+                if (!branch.type || (branch.displayName === undefined && branch.icon === undefined && branch.hideWhenGroupedByType !== true)) {
                     continue;
                 }
 
                 if (map.has(branch.type)) {
-                    warn(`Multiple extensions declare a display override for resource type "${branch.type}". Using the first by extension id; ignoring "${extension.id}".`);
+                    warn(`Multiple extensions declare a resource type override for resource type "${branch.type}". Using the first by extension id; ignoring "${extension.id}".`);
                     continue;
                 }
 
@@ -114,22 +114,13 @@ export function buildOverrideMapFromExtensions(extensions: readonly vscode.Exten
                     }
                 }
 
-                let hideWhenGroupedByType: boolean | undefined;
-                if (branch.hideWhenGroupedByType !== undefined) {
-                    if (typeof branch.hideWhenGroupedByType !== 'boolean') {
-                        warn(`Extension "${extension.id}" contributed a non-boolean "hideWhenGroupedByType" for resource type "${branch.type}"; the value will be ignored.`);
-                    } else {
-                        hideWhenGroupedByType = branch.hideWhenGroupedByType;
-                    }
-                }
-
                 map.set(branch.type, {
                     label: branch.displayName,
                     iconPath,
-                    hideWhenGroupedByType,
+                    hideWhenGroupedByType: branch.hideWhenGroupedByType === true ? true : undefined,
                 });
             } catch (e) {
-                warn(`Failed to process display override from extension "${extension.id}" for resource type "${branch.type ?? '(unknown)'}": ${String(e)}`);
+                warn(`Failed to process resource type override from extension "${extension.id}" for resource type "${branch.type ?? '(unknown)'}": ${String(e)}`);
             }
         }
     }

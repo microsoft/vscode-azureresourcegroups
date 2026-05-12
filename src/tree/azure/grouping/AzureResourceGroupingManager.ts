@@ -107,11 +107,24 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
     private groupByResourceType(parent: ResourceGroupsItem | undefined, context: ResourceGroupsTreeContext | undefined, allResources: AzureResource[]): GroupingItem[] {
         const initialGrouping: { [key: string]: AzureResource[] } = {};
 
+        // Compute the set of resource types contribution-marked as hidden in
+        // the by-type view (e.g. types that are semantically children of
+        // another resource). Done once per invocation to avoid repeated
+        // override lookups while seeding and filtering.
+        const hiddenTypes = new Set<string>();
+        azureExtensions.forEach(extension => {
+            extension.resourceTypes.forEach(resourceType => {
+                if (getResourceTypeOverride(resourceType)?.hideWhenGroupedByType) {
+                    hiddenTypes.add(resourceType);
+                }
+            });
+        });
+
         // Pre-populate the initial grouping with the supported resource types
         // so they show up in the tree even if there are no resources of that type
         azureExtensions.forEach(extension => {
             extension.resourceTypes.forEach(resourceType => {
-                if (!getResourceTypeOverride(resourceType)?.hideWhenGroupedByType) {
+                if (!hiddenTypes.has(resourceType)) {
                     initialGrouping[resourceType] = [];
                 }
             });
@@ -120,9 +133,8 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
         // Don't show resource groups when grouped by resource type
         allResources = allResources.filter(resource => resource.azureResourceType.type !== 'microsoft.resources/resourcegroups');
 
-        // Drop resources whose type is contribution-marked as hidden in the by-type view
-        // (e.g. types that are semantically children of another resource).
-        allResources = allResources.filter(resource => !resource.resourceType || !getResourceTypeOverride(resource.resourceType)?.hideWhenGroupedByType);
+        // Drop resources whose type is contribution-marked as hidden in the by-type view.
+        allResources = allResources.filter(resource => !resource.resourceType || !hiddenTypes.has(resource.resourceType));
 
         const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
         if (!showHiddenTypes) {

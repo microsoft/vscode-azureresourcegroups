@@ -23,7 +23,7 @@
             "request": "launch",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}",
-                "--extensionDevelopmentPath=${workspaceFolder}/../vscode-azurestorage",
+                "--extensionDevelopmentPath=/Users/phoff/Source/microsoft/vscode-azurecontainerapps",
             ],
             "outFiles": [
                 "${workspaceFolder}/dist/**/*.{js,mjs,cjs}",

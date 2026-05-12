@@ -142,21 +142,43 @@ suite('getResourceTypeOverrides', () => {
         assert.strictEqual(override.hideWhenGroupedByType, true);
     });
 
-    test('hideWhenGroupedByType=false is preserved', () => {
+    test('hideWhenGroupedByType=false produces no override (treated as default)', () => {
+        // false is the default behavior, so on its own it should not create an entry.
+        const map = buildOverrideMapFromExtensions([
+            contributingExt('ext.a', AzExtResourceType.ContainerApps, { hideWhenGroupedByType: false })
+        ]);
+        assert.strictEqual(map.get(AzExtResourceType.ContainerApps), undefined);
+    });
+
+    test('hideWhenGroupedByType=false alongside displayName still produces a label-only override', () => {
         const map = buildOverrideMapFromExtensions([
             contributingExt('ext.a', AzExtResourceType.ContainerApps, { displayName: 'Container Apps', hideWhenGroupedByType: false })
         ]);
         const override = map.get(AzExtResourceType.ContainerApps);
         assert.ok(override);
-        assert.strictEqual(override.hideWhenGroupedByType, false);
+        assert.strictEqual(override.label, 'Container Apps');
+        assert.strictEqual(override.hideWhenGroupedByType, undefined);
     });
 
-    test('non-boolean hideWhenGroupedByType is ignored', () => {
+    test('non-boolean hideWhenGroupedByType is treated as not set', () => {
         const map = buildOverrideMapFromExtensions([
             contributingExt('ext.a', AzExtResourceType.ContainerApps, { displayName: 'Container Apps', hideWhenGroupedByType: 'yes' as unknown as boolean })
         ]);
         const override = map.get(AzExtResourceType.ContainerApps);
         assert.ok(override);
         assert.strictEqual(override.hideWhenGroupedByType, undefined, 'Non-boolean value should be ignored');
+    });
+
+    test('non-boolean hideWhenGroupedByType alone does not produce an override (and does not block other extensions)', () => {
+        // 'aaa.ext' contributes an invalid hideWhenGroupedByType with no other fields.
+        // 'zzz.ext' contributes a valid displayName for the same type.
+        // The invalid contribution must not insert a no-op entry that blocks the valid one.
+        const map = buildOverrideMapFromExtensions([
+            contributingExt('aaa.ext', AzExtResourceType.ContainerApps, { hideWhenGroupedByType: 'yes' as unknown as boolean }),
+            contributingExt('zzz.ext', AzExtResourceType.ContainerApps, { displayName: 'Container Apps' }),
+        ]);
+        const override = map.get(AzExtResourceType.ContainerApps);
+        assert.ok(override, 'The valid contribution from zzz.ext should win');
+        assert.strictEqual(override.label, 'Container Apps');
     });
 });
