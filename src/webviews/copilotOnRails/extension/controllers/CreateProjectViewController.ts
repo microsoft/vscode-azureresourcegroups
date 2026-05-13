@@ -37,6 +37,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
             return;
         }
         this.panel.dispose();
+        await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand("workbench.action.chat.open", {
             mode: 'azure-project-scaffold',
             query,

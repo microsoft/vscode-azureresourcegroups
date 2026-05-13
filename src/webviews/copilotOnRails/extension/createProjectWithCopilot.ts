@@ -11,7 +11,7 @@ export function createProjectWithCopilot(_context: IActionContext): void {
     const controller = new CreateProjectViewController({
         title: vscode.l10n.t('Create with Copilot'),
         heading: vscode.l10n.t('What would you like to build?'),
-        subtitle: vscode.l10n.t('Describe your project and Copilot will help you build and deploy it to Azure Container Apps.'),
+        subtitle: vscode.l10n.t('Describe your project and Copilot will help you build and deploy it to Azure.'),
         promptPlaceholder: vscode.l10n.t('Describe your project...'),
         hint: vscode.l10n.t('Ctrl+Enter to plan'),
         planButtonLabel: vscode.l10n.t('Plan'),
