@@ -173,7 +173,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.startLocalDevelopment', (_context: IActionContext, prompt?: string) =>
         openChatWithAgent('azure-local-debug', prompt ?? 'The project has been scaffolded. Now set up the local development environment so the user can start building and testing.'));
     registerCommand('azureResourceGroups.startDeployment', (_context: IActionContext, prompt?: string) =>
-        openChatWithAgent('azure-deploy', prompt ?? 'The local development environment is set up and verified. Now prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`.'));
+        openChatWithAgent('azure-deploy', prompt ?? 'Prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`.'));
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {

@@ -29,7 +29,7 @@ Once local development setup is finished and verified (emulators running, F5 deb
   "commandId": "azureResourceGroups.startDeployment",
   "name": "Start Deployment",
   "skipCheck": true,
-  "args": ["The local development environment is set up and verified. Now prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`."]
+  "args": ["Prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`."]
 }
 ```
 
