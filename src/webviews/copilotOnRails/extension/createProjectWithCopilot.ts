@@ -9,7 +9,6 @@ import { CreateProjectViewController } from "./controllers/CreateProjectViewCont
 
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
-const cancel = vscode.l10n.t('Cancel');
 
 export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
     switch (true) {
@@ -19,7 +18,6 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
                 vscode.l10n.t('A previous Copilot project creation was detected. How would you like to continue?'),
                 { modal: true },
                 deploy,
-                cancel,
             );
 
             if (choice === deploy) {
@@ -35,7 +33,6 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
                 { modal: true },
                 localDev,
                 deploy,
-                cancel,
             );
 
             if (choice === localDev) {
@@ -67,5 +64,5 @@ async function hasCompletedPhase(filePath: string, expectedStatus: string): Prom
     }
 
     const content = Buffer.from(await vscode.workspace.fs.readFile(files[0])).toString('utf-8');
-    return new RegExp(`status:\\s*${expectedStatus}`, 'i').test(content);
+    return new RegExp(`status.*:.*${expectedStatus}`, 'i').test(content);
 }
