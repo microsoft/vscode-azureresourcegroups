@@ -64,5 +64,5 @@ async function hasCompletedPhase(filePath: string, expectedStatus: string): Prom
     }
 
     const content = Buffer.from(await vscode.workspace.fs.readFile(files[0])).toString('utf-8');
-    return new RegExp(`status.*:.*${expectedStatus}`, 'i').test(content);
+    return new RegExp(`status.*:\\s*${expectedStatus}`, 'i').test(content);
 }
