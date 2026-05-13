@@ -13,7 +13,7 @@ const deploy = vscode.l10n.t('Deploy');
 export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
     switch (true) {
         // Local Development => Deploy
-        case await hasCompletedPhase('.azure/local-development-plan.md', 'implemented'): {
+        case await hasCompletedPhase('**/local-development-plan.md', 'implemented'): {
             const choice = await vscode.window.showInformationMessage(
                 vscode.l10n.t('A previous Copilot project session was detected. Local development has been completed (found .azure/local-development-plan.md). How would you like to proceed?'),
                 { modal: true },
@@ -27,7 +27,7 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
         }
 
         // Create => Debug | Deploy
-        case await hasCompletedPhase('.azure/project-plan.md', 'scaffolded'): {
+        case await hasCompletedPhase('**/project-plan.md', 'scaffolded'): {
             const choice = await vscode.window.showInformationMessage(
                 vscode.l10n.t('A previous Copilot project session was detected. Project scaffolding is complete (found .azure/project-plan.md). How would you like to proceed?'),
                 { modal: true },
@@ -64,5 +64,6 @@ async function hasCompletedPhase(filePath: string, expectedStatus: string): Prom
     }
 
     const content = Buffer.from(await vscode.workspace.fs.readFile(files[0])).toString('utf-8');
-    return new RegExp(`status.*:\\s*${expectedStatus}`, 'i').test(content);
+    // [*_~]* allows markdown formatting (bold, italic, strikethrough) around "status"
+    return new RegExp(`status[*_~]*\\s*:\\s*${expectedStatus}`, 'i').test(content);
 }
