@@ -7,14 +7,65 @@ import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 
-export function createProjectWithCopilot(_context: IActionContext): void {
-    const controller = new CreateProjectViewController({
-        title: vscode.l10n.t('Create with Copilot'),
-        heading: vscode.l10n.t('What would you like to build?'),
-        subtitle: vscode.l10n.t('Describe your project and Copilot will help you build and deploy it to Azure.'),
-        promptPlaceholder: vscode.l10n.t('Describe your project...'),
-        hint: vscode.l10n.t('Ctrl+Enter to plan'),
-        planButtonLabel: vscode.l10n.t('Plan'),
-    });
-    controller.revealToForeground();
+const localDev = vscode.l10n.t('Local Development');
+const deploy = vscode.l10n.t('Deploy');
+const cancel = vscode.l10n.t('Cancel');
+
+export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
+    switch (true) {
+        // Local Development => Deploy
+        case await hasCompletedPhase('.azure/local-development-plan.md', 'implemented'): {
+            const choice = await vscode.window.showInformationMessage(
+                vscode.l10n.t('A previous Copilot project creation was detected. How would you like to continue?'),
+                { modal: true },
+                deploy,
+                cancel,
+            );
+
+            if (choice === deploy) {
+                await vscode.commands.executeCommand('azureResourceGroups.startDeployment');
+            }
+            break;
+        }
+
+        // Create => Debug | Deploy
+        case await hasCompletedPhase('.azure/project-plan.md', 'scaffolded'): {
+            const choice = await vscode.window.showInformationMessage(
+                vscode.l10n.t('A previous Copilot project creation was detected. How would you like to continue?'),
+                { modal: true },
+                localDev,
+                deploy,
+                cancel,
+            );
+
+            if (choice === localDev) {
+                await vscode.commands.executeCommand('azureResourceGroups.startLocalDevelopment');
+            } else if (choice === deploy) {
+                await vscode.commands.executeCommand('azureResourceGroups.startDeployment');
+            }
+            break;
+        }
+
+        default: {
+            const controller = new CreateProjectViewController({
+                title: vscode.l10n.t('Create with Copilot'),
+                heading: vscode.l10n.t('What would you like to build?'),
+                subtitle: vscode.l10n.t('Describe your project and Copilot will help you build and deploy it to Azure.'),
+                promptPlaceholder: vscode.l10n.t('Describe your project...'),
+                hint: vscode.l10n.t('Ctrl+Enter to plan'),
+                planButtonLabel: vscode.l10n.t('Plan'),
+            });
+            controller.revealToForeground();
+        }
+    }
+}
+
+async function hasCompletedPhase(filePath: string, expectedStatus: string): Promise<boolean> {
+    const files = await vscode.workspace.findFiles(filePath);
+    if (!files.length) {
+        return false;
+    }
+
+    const content = Buffer.from(await vscode.workspace.fs.readFile(files[0])).toString('utf-8');
+    return new RegExp(`status:\\s*${expectedStatus}`, 'i').test(content);
 }
