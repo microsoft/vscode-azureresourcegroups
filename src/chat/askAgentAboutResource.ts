@@ -5,6 +5,7 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
+import { ensureCopilotChatReady } from "../commands/copilotOnRails/openChatWithAgent";
 
 const agentName = "azure";
 
@@ -18,6 +19,10 @@ export const askAgentAboutResourcePrompt = vscode.l10n.t(`I'd like to ask you ab
 export async function askAgentAboutResource(_actionContext: IActionContext, node?: { id?: string, value?: { armId: string }, resource?: { kind?: string } }) {
     const resourceId = node?.id ?? node?.value?.armId;
     if (resourceId !== undefined) {
+        if (!(await ensureCopilotChatReady())) {
+            return;
+        }
+
         const prompt = `@${agentName} ${askAgentAboutResourcePrompt}`;
 
         await vscode.commands.executeCommand("workbench.action.chat.newChat");
