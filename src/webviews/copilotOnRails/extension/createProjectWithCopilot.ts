@@ -15,7 +15,7 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
         // Local Development => Deploy
         case await hasCompletedPhase('.azure/local-development-plan.md', 'implemented'): {
             const choice = await vscode.window.showInformationMessage(
-                vscode.l10n.t('A previous Copilot project creation was detected. How would you like to continue?'),
+                vscode.l10n.t('A previous Copilot project session was detected. Local development has been completed (found .azure/local-development-plan.md). How would you like to proceed?'),
                 { modal: true },
                 deploy,
             );
@@ -29,7 +29,7 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
         // Create => Debug | Deploy
         case await hasCompletedPhase('.azure/project-plan.md', 'scaffolded'): {
             const choice = await vscode.window.showInformationMessage(
-                vscode.l10n.t('A previous Copilot project creation was detected. How would you like to continue?'),
+                vscode.l10n.t('A previous Copilot project session was detected. Project scaffolding is complete (found .azure/project-plan.md). How would you like to proceed?'),
                 { modal: true },
                 localDev,
                 deploy,
