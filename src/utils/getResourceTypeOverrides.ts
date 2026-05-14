@@ -27,6 +27,7 @@ function warn(message: string): void {
 export interface ResourceTypeOverride {
     readonly label?: string;
     readonly iconPath?: TreeItemIconPath;
+    readonly hideWhenGroupedByType?: boolean;
 }
 
 let cache: Map<string, ResourceTypeOverride> | undefined;
@@ -92,12 +93,12 @@ export function buildOverrideMapFromExtensions(extensions: readonly vscode.Exten
 
         for (const branch of branches) {
             try {
-                if (!branch.type || (branch.displayName === undefined && branch.icon === undefined)) {
+                if (!branch.type || (branch.displayName === undefined && branch.icon === undefined && branch.hideWhenGroupedByType !== true)) {
                     continue;
                 }
 
                 if (map.has(branch.type)) {
-                    warn(`Multiple extensions declare a display override for resource type "${branch.type}". Using the first by extension id; ignoring "${extension.id}".`);
+                    warn(`Multiple extensions declare a resource type override for resource type "${branch.type}". Using the first by extension id; ignoring "${extension.id}".`);
                     continue;
                 }
 
@@ -116,9 +117,10 @@ export function buildOverrideMapFromExtensions(extensions: readonly vscode.Exten
                 map.set(branch.type, {
                     label: branch.displayName,
                     iconPath,
+                    hideWhenGroupedByType: branch.hideWhenGroupedByType === true ? true : undefined,
                 });
             } catch (e) {
-                warn(`Failed to process display override from extension "${extension.id}" for resource type "${branch.type ?? '(unknown)'}": ${String(e)}`);
+                warn(`Failed to process resource type override from extension "${extension.id}" for resource type "${branch.type ?? '(unknown)'}": ${String(e)}`);
             }
         }
     }

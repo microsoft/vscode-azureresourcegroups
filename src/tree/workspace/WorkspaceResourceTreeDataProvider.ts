@@ -46,6 +46,12 @@ export class WorkspaceResourceTreeDataProvider extends ResourceTreeDataProviderB
                 }
             }
 
+            children.push(new GenericItem(localize('createProjectWithCopilot', 'Create Project with Copilot...'), {
+                id: 'azureResourceGroups.createProjectWithCopilot',
+                iconPath: new vscode.ThemeIcon('sparkle'),
+                commandId: 'azureResourceGroups.createProjectWithCopilot'
+            }));
+
             // NOTE: Returning zero children indicates to VS Code that is should display a "welcome view".
             //       The one chosen for display depends on the context set above.
             return children.sort((a, b) => a.id.localeCompare(b.id));
