@@ -49,10 +49,6 @@
     "azureResourceGroups.loadAllSubscriptionRoleAssignments": "Load all role assignments across subscriptions...",
     "azureResourceGroups.askAgentAboutActivityLog": "Ask Copilot about the Azure Activity Log",
     "azureResourceGroups.askAgentAboutActivityLogItem": "Ask Copilot about this activity",
-    "azureResourceGroups.createProjectWithCopilot": "Create Project with Copilot",
-    "azureResourceGroups.openPlanView": "Open Project Plan",
-    "azureResourceGroups.openLocalPlanView": "Open Local Development Plan",
-    "azureResourceGroups.openDeployPlanView": "Open Deployment Plan",
     "azureResourceGroups.askAzure": {
         "message": "Ask @azure",
         "comment": [
@@ -71,5 +67,7 @@
     "azureResourceGroups.createProjectWithCopilot": "Create Project with Copilot",
     "azureResourceGroups.openPlanView": "Open Scaffold Plan View",
     "azureResourceGroups.openLocalPlanView": "Open Local Plan View",
-    "azureResourceGroups.openDeployPlanView": "Open Deploy Plan View"
+    "azureResourceGroups.openDeployPlanView": "Open Deploy Plan View",
+    "azureProject.viewName": "Azure Project",
+    "azureProject.welcomeContent": "Use Copilot to plan and create a complete application that's configured for Azure services and setup for local development.\n[Create New Project With Copilot](command:azureResourceGroups.createProjectWithCopilot)"
 }
