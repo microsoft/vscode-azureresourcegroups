@@ -432,6 +432,11 @@
                     "visibility": "visible"
                 },
                 {
+                    "id": "azureProject",
+                    "name": "%azureProject.viewName%",
+                    "visibility": "visible"
+                },
+                {
                     "id": "azureTenantsView",
                     "name": "Accounts & Tenants",
                     "visibility": "collapsed"
@@ -466,6 +471,10 @@
                 "view": "azureWorkspace",
                 "contents": "No local workspace resource providers exist.",
                 "when": "azureWorkspace.state == 'noWorkspaceResourceProviders'"
+            },
+            {
+                "view": "azureProject",
+                "contents": "%azureProject.welcomeContent%"
             },
             {
                 "view": "azureResourceGroups",
