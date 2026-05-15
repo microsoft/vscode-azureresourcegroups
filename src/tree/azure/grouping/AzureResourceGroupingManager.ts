@@ -11,6 +11,7 @@ import { GroupBySettings } from '../../../commands/explorer/groupBy';
 import { showHiddenTypesSettingKey } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 import { getIconPath, getName } from '../../../utils/azureUtils';
+import { getResourceTypeOverride } from '../../../utils/getResourceTypeOverrides';
 import { localize } from "../../../utils/localize";
 import { settingUtils } from '../../../utils/settingUtils';
 import { treeUtils } from '../../../utils/treeUtils';
@@ -106,16 +107,34 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
     private groupByResourceType(parent: ResourceGroupsItem | undefined, context: ResourceGroupsTreeContext | undefined, allResources: AzureResource[]): GroupingItem[] {
         const initialGrouping: { [key: string]: AzureResource[] } = {};
 
+        // Compute the set of resource types contribution-marked as hidden in
+        // the by-type view (e.g. types that are semantically children of
+        // another resource). Done once per invocation to avoid repeated
+        // override lookups while seeding and filtering.
+        const hiddenTypes = new Set<string>();
+        azureExtensions.forEach(extension => {
+            extension.resourceTypes.forEach(resourceType => {
+                if (getResourceTypeOverride(resourceType)?.hideWhenGroupedByType) {
+                    hiddenTypes.add(resourceType);
+                }
+            });
+        });
+
         // Pre-populate the initial grouping with the supported resource types
         // so they show up in the tree even if there are no resources of that type
         azureExtensions.forEach(extension => {
             extension.resourceTypes.forEach(resourceType => {
-                initialGrouping[resourceType] = [];
+                if (!hiddenTypes.has(resourceType)) {
+                    initialGrouping[resourceType] = [];
+                }
             });
         });
 
         // Don't show resource groups when grouped by resource type
         allResources = allResources.filter(resource => resource.azureResourceType.type !== 'microsoft.resources/resourcegroups');
+
+        // Drop resources whose type is contribution-marked as hidden in the by-type view.
+        allResources = allResources.filter(resource => !resource.resourceType || !hiddenTypes.has(resource.resourceType));
 
         const showHiddenTypes = settingUtils.getWorkspaceSetting<boolean>(showHiddenTypesSettingKey);
         if (!showHiddenTypes) {
@@ -130,13 +149,18 @@ export class AzureResourceGroupingManager extends vscode.Disposable {
             allResources,
             keySelector: resource => resource.resourceType ?? unknownLabel, // TODO: Is resource type ever undefined?
             initialGrouping,
-            groupingItemFactory: (resourceType, resources) => this.groupingItemFactory.createResourceTypeGroupingItem(resourceType as AzExtResourceType, {
-                resources,
-                context,
-                parent,
-                label: getName(resourceType as AzExtResourceType) ?? resourceType,
-                iconPath: getIconPath(resourceType as AzExtResourceType),
-            })
+            groupingItemFactory: (resourceType, resources) => {
+                const override = getResourceTypeOverride(resourceType);
+                return this.groupingItemFactory.createResourceTypeGroupingItem(resourceType as AzExtResourceType, {
+                    resources,
+                    context,
+                    parent,
+                    label: override?.label ?? getName(resourceType as AzExtResourceType) ?? resourceType,
+                    iconPath: override?.iconPath ?? getIconPath(resourceType as AzExtResourceType),
+                    // Keep `id` stable even if the label is overridden by a contribution.
+                    idKey: resourceType,
+                });
+            }
         });
     }
 

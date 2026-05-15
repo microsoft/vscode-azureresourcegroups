@@ -5,6 +5,20 @@
     "tasks": [
         {
             "label": "Watch: ESBuild",
+            "dependsOn": [
+                "Watch: ESBuild (extension)",
+                "Watch: ESBuild (webviews)"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "silent"
+            },
+            "group": {
+                "kind": "build"
+            }
+        },
+        {
+            "label": "Watch: ESBuild (extension)",
             "type": "shell",
             "command": "npm",
             "args": [
@@ -17,8 +31,21 @@
             "presentation": {
                 "reveal": "silent",
             },
-            "group": {
-                "kind": "build",
+            "isBackground": true,
+        },
+        {
+            "label": "Watch: ESBuild (webviews)",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "build:webviews",
+                "--",
+                "--watch",
+            ],
+            "problemMatcher": "$esbuild-watch",
+            "presentation": {
+                "reveal": "silent",
             },
             "isBackground": true,
         },
