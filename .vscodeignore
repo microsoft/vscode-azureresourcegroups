@@ -1,4 +1,4 @@
-.azure-pipelines/**
+.config/**
 .eslintignore
 .eslintrc.js
 .github/**

@@ -10,14 +10,14 @@ import { createVSCodeAzureSubscriptionProviderFactory } from "./VSCodeAzureSubsc
 /**
  * Returns a factory function that creates a subscription provider, satisfying the `AzureSubscriptionProvider` interface.
  *
- * When running in an Azure DevOps pipeline with federated credentials enabled
- * (via the `AzCode_UseAzureFederatedCredentials` environment variable), this returns an
- * {@link AzureDevOpsSubscriptionProvider}-based factory so that client extensions that depend
- * on the Resources extension API also get the correct subscription provider without needing
- * to set it up themselves.
+ * When running in an Azure DevOps pipeline with federated credentials enabled,
+ * this returns an {@link AzureDevOpsSubscriptionProvider}-based factory so that
+ * client extensions that depend on the Resources extension API also get the
+ * correct subscription provider without needing to set it up themselves.
  */
 export function getSubscriptionProviderFactory(): () => Promise<AzureSubscriptionProvider> {
-    const useAzureFederatedCredentials = !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '');
+    const useAzureFederatedCredentials = !!process.env['FC_SERVICE_CONNECTION_NAME']
+        || !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '');
     if (useAzureFederatedCredentials) {
         return createAzureDevOpsSubscriptionProviderFactory();
     }
