@@ -38,3 +38,4 @@ extends:
     dryRun: ${{ parameters.dryRun }}
     releaseServiceConnection: ${{ variables.extensionReleaseServiceConnection }}
     releaseApprovalEnvironment: ${{ variables.extensionReleaseApprovalEnvironment }}
+    npmFeed: ${{ variables.npmFeed }}
