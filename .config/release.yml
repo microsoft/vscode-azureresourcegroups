@@ -29,8 +29,6 @@ resources:
 variables:
   # Pick up shared AZCode variables
   - template: azdo-pipelines/azcode.variables.yml@azExtTemplates
-  - name: TeamName
-    value: "Azure Tools for VS Code" # Required for MicroBuild signing and telemetry
 
 extends:
   template: azdo-pipelines/1es-mb-release-extension.yml@azExtTemplates # Use the extension release template
@@ -39,4 +37,4 @@ extends:
     publishVersion: ${{ parameters.publishVersion }}
     dryRun: ${{ parameters.dryRun }}
     releaseServiceConnection: ${{ variables.extensionReleaseServiceConnection }}
-    releaseApprovalEnvironment: AzCodeDeploy
+    releaseApprovalEnvironment: ${{ variables.extensionReleaseApprovalEnvironment }}
