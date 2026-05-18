@@ -43,7 +43,7 @@ You are the **Project Deployer** in a guided Azure-project workflow:
 
 Follow the authoritative guidance in the `azure-prepare` skill:
 
-📖 **Read and follow:** `.agents/skills/azure-prepare/SKILL.md`
+📖 **Read and follow:** `./azure-prepare/README.md`
 
 That skill is the canonical, mandatory source for this phase. Treat it as your operating manual — do not improvise or substitute steps. **Exception:** the "Critical workflow rules" above govern preview-opening and approval gating — always route through the matching `run_vscode_command` call, never bypass it.
 

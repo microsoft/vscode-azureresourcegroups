@@ -168,8 +168,10 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
 
     // Hand-off commands
+    registerCommand('azureResourceGroups.startProjectPlan', (_context: IActionContext, prompt?: string) =>
+        openChatWithAgent('azure-project-plan', prompt ?? 'Plan a new Azure project: gather requirements, produce `.azure/project-plan.md`, then wait for explicit user approval before handing off to the scaffold agent.'));
     registerCommand('azureResourceGroups.startProjectScaffold', (_context: IActionContext, prompt?: string) =>
-        openChatWithAgent('azure-project-scaffold', prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.'));
+        openChatWithAgent('azure-project-scaffold', prompt ?? 'Execute the approved `.azure/project-plan.md` — scaffold the frontend preview, backend services, database, and API routes.'));
     registerCommand('azureResourceGroups.startLocalDevelopment', (_context: IActionContext, prompt?: string) =>
         openChatWithAgent('azure-local-debug', prompt ?? 'The project has been scaffolded. Now set up the local development environment so the user can start building and testing.'));
     registerCommand('azureResourceGroups.startDeployment', (_context: IActionContext, prompt?: string) =>
