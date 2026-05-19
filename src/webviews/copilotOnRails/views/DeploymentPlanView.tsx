@@ -374,21 +374,6 @@ export const DeploymentPlanView = (): JSX.Element => {
                     </div>
                 </div>
 
-                <details className='sectionCard'>
-                    <summary><h2>{strings.architectureDiagramHeading}</h2></summary>
-                    <MermaidDiagram definition={plan.mermaidDiagram} noDiagramAvailableLabel={strings.noDiagramAvailable} />
-                </details>
-
-                <details className='sectionCard'>
-                    <summary><h2>{strings.workspaceScanHeading}</h2></summary>
-                    <PlanTable table={plan.workspaceScan} />
-                </details>
-
-                <details className='sectionCard'>
-                    <summary><h2>{strings.decisionsHeading}</h2></summary>
-                    <PlanTable table={plan.decisions} />
-                </details>
-
                 <div className='sectionCard'>
                     <h2>{strings.azureResourcesHeading}</h2>
                     <ResourcesTable
@@ -398,6 +383,16 @@ export const DeploymentPlanView = (): JSX.Element => {
                         onSkuChange={handleResourceSkuChange}
                     />
                 </div>
+
+                <details className='sectionCard' open>
+                    <summary><h2>{strings.architectureDiagramHeading}</h2></summary>
+                    <MermaidDiagram definition={plan.mermaidDiagram} noDiagramAvailableLabel={strings.noDiagramAvailable} />
+                </details>
+
+                <details className='sectionCard'>
+                    <summary><h2>{strings.workspaceScanHeading}</h2></summary>
+                    <PlanTable table={plan.workspaceScan} />
+                </details>
             </div>
 
             {drawerOpen && !isAwaitingRevision && (

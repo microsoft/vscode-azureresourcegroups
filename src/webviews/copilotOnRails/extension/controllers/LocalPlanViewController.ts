@@ -18,7 +18,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
 
         this.sourceFileUri = sourceFileUri;
 
-        this.panel.webview.onDidReceiveMessage((message: { command: string; data?: LocalPlanData; prompt?: string }) => {
+        this.panel.webview.onDidReceiveMessage((message: { command: string; data?: LocalPlanData; prompt?: string; originalCode?: string; newCode?: string; language?: string }) => {
             switch (message.command) {
                 case 'ready':
                     void this.panel.webview.postMessage({ command: 'setLocalPlanData', data: planData });
@@ -46,6 +46,9 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 case 'openSourceFile':
                     this.openSourceFile();
                     break;
+                case 'updateCodeBlock':
+                    void this.updateCodeBlock(message.originalCode, message.newCode);
+                    break;
             }
         });
     }
@@ -66,5 +69,45 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             return;
         }
         void vscode.commands.executeCommand('vscode.open', this.sourceFileUri);
+    }
+
+    private async updateCodeBlock(originalCode: string | undefined, newCode: string | undefined): Promise<void> {
+        if (typeof originalCode !== 'string' || typeof newCode !== 'string') {
+            void this.panel.webview.postMessage({ command: 'codeBlockUpdateError', error: vscode.l10n.t('Invalid edit payload.') });
+            return;
+        }
+        if (originalCode === newCode) {
+            return;
+        }
+        if (!this.sourceFileUri) {
+            void this.panel.webview.postMessage({ command: 'codeBlockUpdateError', error: vscode.l10n.t('The plan file location is unknown, so the change could not be saved.') });
+            return;
+        }
+
+        try {
+            const raw = Buffer.from(await vscode.workspace.fs.readFile(this.sourceFileUri)).toString('utf-8');
+            const usesCRLF = raw.includes('\r\n');
+            const normalized = raw.replace(/\r\n/g, '\n');
+
+            const firstIdx = normalized.indexOf(originalCode);
+            if (firstIdx === -1) {
+                void this.panel.webview.postMessage({ command: 'codeBlockUpdateError', error: vscode.l10n.t("Couldn't locate the original block in the plan file. It may have changed.") });
+                return;
+            }
+            if (normalized.indexOf(originalCode, firstIdx + 1) !== -1) {
+                void this.panel.webview.postMessage({ command: 'codeBlockUpdateError', error: vscode.l10n.t('The original block appears more than once in the plan file. Edit the file directly to resolve the ambiguity.') });
+                return;
+            }
+
+            const updated = normalized.slice(0, firstIdx) + newCode + normalized.slice(firstIdx + originalCode.length);
+            const finalContent = usesCRLF ? updated.replace(/\n/g, '\r\n') : updated;
+            await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(finalContent, 'utf-8'));
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            void this.panel.webview.postMessage({
+                command: 'codeBlockUpdateError',
+                error: vscode.l10n.t('Saving the change failed: {0}', errorMessage),
+            });
+        }
     }
 }
