@@ -5,6 +5,7 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
+import { ensureCopilotChatReady } from "../../commands/copilotOnRails/openChatWithAgent";
 import { ext } from "../../extensionVariables";
 import { ActivityItem } from "../../tree/activityLog/ActivityItem";
 import { TreeDataItem } from "../../tree/ResourceGroupsItem";
@@ -43,6 +44,10 @@ export async function askAgentAboutActivityLog(context: IActionContext, item?: A
                 }
             }
         }
+    }
+
+    if (!(await ensureCopilotChatReady())) {
+        return;
     }
 
     await vscode.commands.executeCommand("workbench.action.chat.newChat");
