@@ -13,7 +13,8 @@ import { longRunningTestsEnabled } from "../global.test";
 import { setupAzureDevOpsSubscriptionProvider } from "../utils/azureDevOpsSubscriptionProvider";
 import { getCachedTestApi } from "../utils/testApiAccess";
 
-const useAzureFederatedCredentials: boolean = !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '');
+const useAzureFederatedCredentials: boolean = !!process.env['FC_SERVICE_CONNECTION_NAME']
+    || !/^(false|0)?$/i.test(process.env['AzCode_UseAzureFederatedCredentials'] || '');
 
 let rgName: string;
 let locations: Location[];
