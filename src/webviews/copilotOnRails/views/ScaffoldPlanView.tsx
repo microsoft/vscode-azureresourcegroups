@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea } from '@fluentui/react-components';
+import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea, Tooltip } from '@fluentui/react-components';
 import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
@@ -276,25 +276,27 @@ export const ScaffoldPlanView = (): JSX.Element => {
                             </div>
                         </div>
                         <div className='headerActions'>
-                            <Button
-                                appearance='subtle'
-                                aria-label='Feedback'
-                                icon={
-                                    <span className='feedbackIconWrapper'>
-                                        <CommentEditRegular />
-                                        {hasEdits && (
-                                            <CounterBadge
-                                                className='feedbackBadge'
-                                                count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
-                                                size='small'
-                                                color='danger'
-                                            />
-                                        )}
-                                    </span>
-                                }
-                                disabled={isAwaitingRevision}
-                                onClick={() => setDrawerOpen(v => !v)}
-                            />
+                            <Tooltip content='Request changes to the plan before approving' relationship='label'>
+                                <Button
+                                    appearance='subtle'
+                                    aria-label='Feedback'
+                                    icon={
+                                        <span className='feedbackIconWrapper'>
+                                            <CommentEditRegular />
+                                            {hasEdits && (
+                                                <CounterBadge
+                                                    className='feedbackBadge'
+                                                    count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
+                                                    size='small'
+                                                    color='danger'
+                                                />
+                                            )}
+                                        </span>
+                                    }
+                                    disabled={isAwaitingRevision}
+                                    onClick={() => setDrawerOpen(v => !v)}
+                                />
+                            </Tooltip>
                             <Button
                                 appearance='primary'
                                 icon={<CheckmarkRegular />}
@@ -382,14 +384,9 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
                     onClick={onClose}
                 />
             </div>
+            <p className='drawerInfo'>Your feedback will be sent to Copilot as a prompt. Copilot will revise the plan and update the file. The updated plan will reload here for your final approval.</p>
 
             <div className='drawerBody'>
-                {items.length === 0 && (
-                    <p className='drawerHint'>
-                        Change any dropdown in the plan to capture a suggested edit here, or add a free-form note below.
-                    </p>
-                )}
-
                 {items.length > 0 && (
                     <ul className='feedbackList'>
                         {items.map(item => (

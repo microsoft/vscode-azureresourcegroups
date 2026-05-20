@@ -14,17 +14,21 @@ import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation
 export type { DeploymentPlanViewConfiguration, DeploymentPlanViewStrings };
 
 export class DeploymentPlanViewController extends WebviewController<DeploymentPlanViewConfiguration> {
+    private latestPlanData: DeploymentPlanData;
     private sourceFileUri: vscode.Uri | undefined;
 
     constructor(planData: DeploymentPlanData, strings: DeploymentPlanViewStrings, sourceFileUri?: vscode.Uri) {
         super(ext.context, strings.title, 'deploymentPlanView', { strings }, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
 
+        this.latestPlanData = planData;
         this.sourceFileUri = sourceFileUri;
+
+        void this.postDeploymentPlanData();
 
         this.panel.webview.onDidReceiveMessage((message: { command: string; data?: unknown; prompt?: string }) => {
             switch (message.command) {
                 case 'ready':
-                    void this.panel.webview.postMessage({ command: 'setDeploymentPlanData', data: planData });
+                    void this.postDeploymentPlanData();
                     break;
                 case 'approve':
                     this.panel.dispose();
@@ -49,11 +53,16 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
     }
 
     updateDeploymentPlanData(planData: DeploymentPlanData, sourceFileUri?: vscode.Uri): void {
+        this.latestPlanData = planData;
         if (sourceFileUri) {
             this.sourceFileUri = sourceFileUri;
         }
-        void this.panel.webview.postMessage({ command: 'setDeploymentPlanData', data: planData });
+        void this.postDeploymentPlanData();
         void this.panel.webview.postMessage({ command: 'revisionComplete' });
+    }
+
+    private async postDeploymentPlanData(): Promise<void> {
+        await this.panel.webview.postMessage({ command: 'setDeploymentPlanData', data: this.latestPlanData });
     }
 
     private openSourceFile(): void {

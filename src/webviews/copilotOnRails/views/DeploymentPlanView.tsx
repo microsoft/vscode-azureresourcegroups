@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea } from '@fluentui/react-components';
+import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea, Tooltip } from '@fluentui/react-components';
 import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import mermaid from 'mermaid';
@@ -287,25 +287,27 @@ export const DeploymentPlanView = (): JSX.Element => {
                             </div>
                         </div>
                         <div className='headerActions'>
-                            <Button
-                                appearance='subtle'
-                                aria-label={strings.feedbackButtonAriaLabel}
-                                icon={
-                                    <span className='feedbackIconWrapper'>
-                                        <CommentEditRegular />
-                                        {hasEdits && (
-                                            <CounterBadge
-                                                className='feedbackBadge'
-                                                count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
-                                                size='small'
-                                                color='danger'
-                                            />
-                                        )}
-                                    </span>
-                                }
-                                disabled={isAwaitingRevision}
-                                onClick={() => setDrawerOpen(v => !v)}
-                            />
+                            <Tooltip content={strings.feedbackButtonTooltip} relationship='label'>
+                                <Button
+                                    appearance='subtle'
+                                    aria-label={strings.feedbackButtonAriaLabel}
+                                    icon={
+                                        <span className='feedbackIconWrapper'>
+                                            <CommentEditRegular />
+                                            {hasEdits && (
+                                                <CounterBadge
+                                                    className='feedbackBadge'
+                                                    count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
+                                                    size='small'
+                                                    color='danger'
+                                                />
+                                            )}
+                                        </span>
+                                    }
+                                    disabled={isAwaitingRevision}
+                                    onClick={() => setDrawerOpen(v => !v)}
+                                />
+                            </Tooltip>
                             <Button
                                 appearance='primary'
                                 icon={<CheckmarkRegular />}
@@ -374,21 +376,6 @@ export const DeploymentPlanView = (): JSX.Element => {
                     </div>
                 </div>
 
-                <details className='sectionCard'>
-                    <summary><h2>{strings.architectureDiagramHeading}</h2></summary>
-                    <MermaidDiagram definition={plan.mermaidDiagram} noDiagramAvailableLabel={strings.noDiagramAvailable} />
-                </details>
-
-                <details className='sectionCard'>
-                    <summary><h2>{strings.workspaceScanHeading}</h2></summary>
-                    <PlanTable table={plan.workspaceScan} />
-                </details>
-
-                <details className='sectionCard'>
-                    <summary><h2>{strings.decisionsHeading}</h2></summary>
-                    <PlanTable table={plan.decisions} />
-                </details>
-
                 <div className='sectionCard'>
                     <h2>{strings.azureResourcesHeading}</h2>
                     <ResourcesTable
@@ -398,6 +385,16 @@ export const DeploymentPlanView = (): JSX.Element => {
                         onSkuChange={handleResourceSkuChange}
                     />
                 </div>
+
+                <details className='sectionCard' open>
+                    <summary><h2>{strings.architectureDiagramHeading}</h2></summary>
+                    <MermaidDiagram definition={plan.mermaidDiagram} noDiagramAvailableLabel={strings.noDiagramAvailable} />
+                </details>
+
+                <details className='sectionCard'>
+                    <summary><h2>{strings.workspaceScanHeading}</h2></summary>
+                    <PlanTable table={plan.workspaceScan} />
+                </details>
             </div>
 
             {drawerOpen && !isAwaitingRevision && (
@@ -450,14 +447,9 @@ const FeedbackDrawer = ({ strings, items, freeformDraft, onFreeformChange, onAdd
                     onClick={onClose}
                 />
             </div>
+            <p className='drawerInfo'>{strings.feedbackDrawerInfoTooltip}</p>
 
             <div className='drawerBody'>
-                {items.length === 0 && (
-                    <p className='drawerHint'>
-                        {strings.drawerHint}
-                    </p>
-                )}
-
                 {items.length > 0 && (
                     <ul className='feedbackList'>
                         {items.map(item => (

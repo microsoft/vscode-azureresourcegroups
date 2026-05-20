@@ -118,6 +118,13 @@ function parseContent(lines: string[], start: number, end: number): LocalPlanCon
             continue;
         }
 
+        // Skip raw HTML wrappers (e.g. <details>/<summary>) — they're presentation hints
+        // for the source markdown, not content the structured view should render.
+        if (/^<\/?(details|summary)\b/i.test(trimmed)) {
+            i++;
+            continue;
+        }
+
         // Sub-section heading (###)
         const subMatch = trimmed.match(/^###\s+(.+)$/);
         if (subMatch) {

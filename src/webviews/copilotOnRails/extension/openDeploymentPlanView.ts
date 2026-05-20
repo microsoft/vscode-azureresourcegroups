@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import { ext } from "../../../extensionVariables";
 import type { DeploymentPlanData } from "../views/utils/deploymentPlanTypes";
 import { parseDeploymentPlanMarkdown } from "../views/utils/parseDeploymentPlanMarkdown";
 import { DeploymentPlanViewController, type DeploymentPlanViewStrings } from "./controllers/DeploymentPlanViewController";
@@ -25,6 +26,8 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         azureResourcesHeading: vscode.l10n.t('Azure Resources'),
         approveButton: vscode.l10n.t('Approve'),
         feedbackButtonAriaLabel: vscode.l10n.t('Feedback'),
+        feedbackButtonTooltip: vscode.l10n.t('Request changes to the plan before approving'),
+        feedbackDrawerInfoTooltip: vscode.l10n.t('Your feedback will be sent to Copilot as a prompt. Copilot will revise the plan and update the file. The updated plan will reload here for your final approval.'),
         revisingBanner: vscode.l10n.t('Copilot is revising the plan…'),
         requestChangesHeading: vscode.l10n.t('Request changes'),
         feedbackDrawerAriaLabel: vscode.l10n.t('Plan feedback'),
@@ -42,8 +45,8 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         cancelButton: vscode.l10n.t('Cancel'),
         submitEditsButton: vscode.l10n.t('Submit'),
         noDiagramAvailable: vscode.l10n.t('No diagram available'),
-        parseFailureTitle: vscode.l10n.t("We couldn't render this plan"),
-        parseFailureFallbackMessage: vscode.l10n.t("The deployment plan couldn't be rendered as a structured view. The generated markdown didn't match the expected layout."),
+        parseFailureTitle: vscode.l10n.t('We couldn\u2019t render this plan'),
+        parseFailureFallbackMessage: vscode.l10n.t('The deployment plan couldn\u2019t be rendered as a structured view. The generated markdown didn\u2019t match the expected layout.'),
         parseFailureFileLabel: vscode.l10n.t('Plan file'),
         openPlanFileButton: vscode.l10n.t('Open plan file'),
     };
@@ -58,7 +61,18 @@ export function openDeploymentPlanView(uri: vscode.Uri): void {
 }
 
 export function openDeploymentPlanViewWithContent(content: string, sourceFileUri?: vscode.Uri): void {
+    void openDeploymentPlanViewWithContentAsync(content, sourceFileUri);
+}
+
+async function openDeploymentPlanViewWithContentAsync(content: string, sourceFileUri?: vscode.Uri): Promise<void> {
     const planData = tryParseDeploymentPlan(content, sourceFileUri);
+    const liveSubscriptions = await getAvailableAzureSubscriptions();
+    if (liveSubscriptions) {
+        planData.availableSubscriptions = liveSubscriptions;
+        if (planData.subscription && !liveSubscriptions.includes(planData.subscription)) {
+            planData.subscription = '';
+        }
+    }
 
     if (currentDeploymentPlanViewController) {
         currentDeploymentPlanViewController.updateDeploymentPlanData(planData, sourceFileUri);
@@ -73,6 +87,19 @@ export function openDeploymentPlanViewWithContent(content: string, sourceFileUri
         currentDeploymentPlanWatcher?.dispose();
         currentDeploymentPlanWatcher = undefined;
     });
+}
+
+async function getAvailableAzureSubscriptions(): Promise<string[] | undefined> {
+    try {
+        const provider = await ext.subscriptionProviderFactory();
+        const subs = await provider.getAvailableSubscriptions({ filter: false });
+        if (subs.length === 0) {
+            return undefined;
+        }
+        return Array.from(new Set(subs.map(s => s.name))).sort((a, b) => a.localeCompare(b));
+    } catch {
+        return undefined;
+    }
 }
 
 function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | undefined): DeploymentPlanData {
@@ -103,7 +130,7 @@ function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | und
             decisions: parsed?.decisions ?? { headers: [], rows: [] },
             resources: parsed?.resources ?? { headers: [], rows: [] },
             parseError: {
-                message: errorMessage ?? vscode.l10n.t("The deployment plan couldn't be rendered as a structured view. The generated markdown didn't match the expected layout."),
+                message: errorMessage ?? vscode.l10n.t('The deployment plan couldn\u2019t be rendered as a structured view. The generated markdown didn\u2019t match the expected layout.'),
                 fileLabel: sourceFileUri ? vscode.workspace.asRelativePath(sourceFileUri) : undefined,
             },
         };
@@ -112,7 +139,7 @@ function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | und
 }
 
 export async function openDeploymentPlanViewFromWorkspace(): Promise<void> {
-    const files = await vscode.workspace.findFiles('**/.azure/plan.md', '**/node_modules/**', 10);
+    const files = await vscode.workspace.findFiles('**/.azure/deployment-plan.md', '**/node_modules/**', 10);
     if (files.length === 0) {
         void vscode.window.showInformationMessage(vscode.l10n.t('No deployment plan markdown files found in the workspace.'));
         return;
