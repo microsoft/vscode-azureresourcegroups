@@ -90,6 +90,15 @@ function extractSections(lines: string[]): PlanSection[] {
             continue;
         }
 
+        // Skip ### (and deeper) subheadings — these are organizational labels
+        // within a numbered section (e.g. "### Color Palette", "### 8a. Mapping")
+        // that the view doesn't need to render; without this they fall through
+        // to the paragraph fallback and pollute content with a literal '### …'.
+        if (/^#{3,6}\s+/.test(line)) {
+            i++;
+            continue;
+        }
+
         // Handle fenced code blocks. If the fence wraps a tree, parse the inside
         // as a tree; otherwise skip the fence content.
         if (line.trim() === '```' || line.trim().startsWith('```')) {

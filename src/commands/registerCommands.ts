@@ -19,6 +19,7 @@ import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { createProjectWithCopilot } from '../webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { openDeploymentPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openDeploymentPlanView';
+import { openDesignPreviewFromCommand } from '../webviews/copilotOnRails/extension/openDesignPreviewCommand';
 import { openLocalPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openLocalPlanView';
 import { openPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openScaffoldPlanView';
 import { logIn } from './accounts/logIn';
@@ -166,10 +167,13 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.openPlanView', openPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openLocalPlanView', openLocalPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
+    registerCommand('azureResourceGroups.openDesignPreview', openDesignPreviewFromCommand);
 
     // Hand-off commands
+    registerCommand('azureResourceGroups.startProjectPlan', (_context: IActionContext, prompt?: string) =>
+        openChatWithAgent('azure-project-plan', prompt ?? 'Plan a new Azure project: gather requirements, produce `.azure/project-plan.md`, then wait for explicit user approval before handing off to the scaffold agent.'));
     registerCommand('azureResourceGroups.startProjectScaffold', (_context: IActionContext, prompt?: string) =>
-        openChatWithAgent('azure-project-scaffold', prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.'));
+        openChatWithAgent('azure-project-scaffold', prompt ?? 'Execute the approved `.azure/project-plan.md` — scaffold the frontend preview, backend services, database, and API routes.'));
     registerCommand('azureResourceGroups.startLocalDevelopment', (_context: IActionContext, prompt?: string) =>
         openChatWithAgent('azure-local-debug', prompt ?? 'The project has been scaffolded. Now set up the local development environment so the user can start building and testing.'));
     registerCommand('azureResourceGroups.startDeployment', (_context: IActionContext, prompt?: string) =>

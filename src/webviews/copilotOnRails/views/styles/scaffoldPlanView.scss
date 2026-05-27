@@ -43,15 +43,28 @@
         top: 0;
         z-index: 10;
         background: var(--vscode-editor-background);
-        padding-bottom: 14px;
+        // Stretch the sticky banner edge-to-edge across the webview, even
+        // though the rest of the plan view stays in a narrow text column.
+        // -28px cancels .scaffoldPlanView's horizontal padding so the band
+        // starts at the viewport's left edge; the same padding is reapplied
+        // inside the header so the title/buttons stay in their column.
+        width: 100vw;
+        margin-left: -28px;
+        margin-top: -20px;
+        box-sizing: border-box;
+        padding: 20px 28px 14px 28px;
+        // Extra breathing room on the right so the Approve button doesn't
+        // sit flush against the window edge.
+        padding-right: 40px;
         margin-bottom: -14px;
+        // Move the divider from .headerTop onto the band so the line spans
+        // the full window width.
+        border-bottom: 1px solid var(--vscode-widget-border);
 
         .headerTop {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 14px;
-            border-bottom: 1px solid var(--vscode-widget-border);
             gap: 12px;
         }
 
@@ -512,6 +525,124 @@
             gap: 8px;
             padding: 10px 14px;
             border-top: 1px solid var(--vscode-widget-border);
+        }
+    }
+
+    .designSystemCard {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+
+        // The plan view is intentionally narrow (640px) for readability of
+        // text cards, but the design preview is a visual prototype that
+        // benefits from more horizontal room. Let this card extend up to
+        // ~1100px (or the viewport, whichever is smaller) while staying
+        // anchored to the left edge of the column above it.
+        width: min(1100px, calc(100vw - 56px));
+        max-width: none;
+        align-self: flex-start;
+        box-sizing: border-box;
+
+        .designHeader {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+
+            h2 {
+                margin: 0;
+            }
+        }
+
+        .designMeta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+        }
+
+        .designMetaItem {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 120px;
+        }
+
+        .designMetaLabel {
+            font-size: 0.7em;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .designMetaValue {
+            font-size: 0.9em;
+            color: var(--vscode-foreground);
+        }
+
+        .designStyleDirection {
+            margin: 0;
+            font-size: 0.85em;
+            line-height: 1.45;
+            color: var(--vscode-descriptionForeground);
+            font-style: italic;
+        }
+
+        .designPreviewSection {
+            margin-top: 4px;
+            border-top: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.2)));
+            padding-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .designPreviewToggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            align-self: flex-start;
+            padding: 6px 10px;
+            font: inherit;
+            font-size: 0.85em;
+            color: var(--vscode-foreground);
+            background: transparent;
+            border: 1px solid var(--vscode-button-border, transparent);
+            border-radius: 4px;
+            cursor: pointer;
+
+            &:hover {
+                background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.15));
+            }
+
+            &:focus-visible {
+                outline: 1px solid var(--vscode-focusBorder);
+                outline-offset: 1px;
+            }
+        }
+
+        .designPreviewCaret {
+            display: inline-block;
+            font-size: 0.7em;
+            line-height: 1;
+            transition: transform 120ms ease;
+            color: var(--vscode-descriptionForeground);
+
+            &.open {
+                transform: rotate(90deg);
+            }
+        }
+
+        .designPreviewBody {
+            border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.2)));
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+
+            // The injected fragment's root carries the scoped CSS vars and
+            // sets its own padding/font/background; we just give it room.
+            >.dpEmbed {
+                padding: 18px;
+            }
         }
     }
 }

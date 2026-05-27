@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea } from '@fluentui/react-components';
-import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, EyeRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { generateEmbeddedDesignPreviewHtml } from '../extension/generateDesignPreviewHtml';
 import './styles/scaffoldPlanView.scss';
 import { type PlanContent, type PlanData, type PlanSection, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 
@@ -81,6 +82,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
         }
         return set;
     }, [feedbackItems]);
+
     useEffect(() => {
         const handler = (event: MessageEvent) => {
             const message = event.data;
@@ -261,100 +263,102 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const sections = plan.sections ?? [];
     const overviewSection = sections.find(s => s.number === 1);
     const detailSections = sections.filter(s => s.number === 2 || s.number === 3);
+    const designSection = sections.find(s => s.title.toLowerCase().includes('design system'));
     const structureSection = sections.find(s => s.title.toLowerCase().includes('project structure'));
 
-    return (
-        <div className={`scaffoldPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
-            <div className='planMain'>
-                <div className='planHeader'>
-                    <div className='headerTop'>
-                        <div>
-                            <h1>Project Plan</h1>
-                            <div className='metadataBadges'>
-                                {plan.status && plan.status !== 'Unknown' && <span className='badge'>{plan.status}</span>}
-                                {plan.mode && plan.mode !== 'Unknown' && <span className='badge subtle'>{plan.mode}</span>}
-                            </div>
-                        </div>
-                        <div className='headerActions'>
-                            <Button
-                                appearance='subtle'
-                                aria-label='Feedback'
-                                icon={
-                                    <span className='feedbackIconWrapper'>
-                                        <CommentEditRegular />
-                                        {hasEdits && (
-                                            <CounterBadge
-                                                className='feedbackBadge'
-                                                count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
-                                                size='small'
-                                                color='danger'
-                                            />
-                                        )}
-                                    </span>
-                                }
-                                disabled={isAwaitingRevision}
-                                onClick={() => setDrawerOpen(v => !v)}
-                            />
-                            <Button
-                                appearance='primary'
-                                icon={<CheckmarkRegular />}
-                                disabled={isAwaitingRevision}
-                                onClick={handleApprove}
-                            >
-                                Approve Plan
-                            </Button>
+    return (<div className={`scaffoldPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
+        <div className='planMain'>
+            <div className='planHeader'>
+                <div className='headerTop'>
+                    <div>
+                        <h1>Project Plan</h1>
+                        <div className='metadataBadges'>
+                            {plan.status && plan.status !== 'Unknown' && <span className='badge'>{plan.status}</span>}
+                            {plan.mode && plan.mode !== 'Unknown' && <span className='badge subtle'>{plan.mode}</span>}
                         </div>
                     </div>
-                </div>
-
-                {isAwaitingRevision && (
-                    <div className='revisionBanner' role='status' aria-live='polite'>
-                        <Spinner size='tiny' />
-                        <span>Copilot is revising the plan…</span>
+                    <div className='headerActions'>
+                        <Button
+                            appearance='subtle'
+                            aria-label='Feedback'
+                            icon={
+                                <span className='feedbackIconWrapper'>
+                                    <CommentEditRegular />
+                                    {hasEdits && (
+                                        <CounterBadge
+                                            className='feedbackBadge'
+                                            count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
+                                            size='small'
+                                            color='danger'
+                                        />
+                                    )}
+                                </span>
+                            }
+                            disabled={isAwaitingRevision}
+                            onClick={() => setDrawerOpen(v => !v)}
+                        />
+                        <Button
+                            appearance='primary'
+                            icon={<CheckmarkRegular />}
+                            disabled={isAwaitingRevision}
+                            onClick={handleApprove}
+                        >
+                            Approve Plan
+                        </Button>
                     </div>
-                )}
-
-                {overviewSection && <OverviewCard section={overviewSection} created={plan.created && plan.created !== 'Unknown' ? plan.created : undefined} />}
-
-                <div className='sectionsRow'>
-                    {detailSections.map((section) => {
-                        const sectionIdx = sections.indexOf(section);
-                        return (
-                            <SectionCard
-                                key={section.number}
-                                section={section}
-                                sectionIdx={sectionIdx}
-                                disabled={isAwaitingRevision}
-                                editedCells={editedCells}
-                                onTableCellChange={handleTableCellChange}
-                            />
-                        );
-                    })}
                 </div>
-
-                {structureSection && <ProjectStructureCard section={structureSection} />}
             </div>
 
-            {drawerOpen && !isAwaitingRevision && (
-                <FeedbackDrawer
-                    items={feedbackItems}
-                    freeformDraft={freeformDraft}
-                    onFreeformChange={setFreeformDraft}
-                    onAddNote={handleAddNote}
-                    onRemoveItem={handleRemoveFeedback}
-                    onSubmit={handleSubmitFeedback}
-                    onDiscardAll={handleDiscardAll}
-                    onClose={() => setDrawerOpen(false)}
-                />
+            {isAwaitingRevision && (
+                <div className='revisionBanner' role='status' aria-live='polite'>
+                    <Spinner size='tiny' />
+                    <span>Copilot is revising the plan…</span>
+                </div>
             )}
 
-            <SubmitEditsDialog
-                open={confirmSubmitOpen}
-                editCount={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
-                onCancel={() => setConfirmSubmitOpen(false)}
-                onSubmit={handleSubmitFeedback}
-            />
+            {overviewSection && <OverviewCard section={overviewSection} created={plan.created && plan.created !== 'Unknown' ? plan.created : undefined} />}
+
+            <div className='sectionsRow'>
+                {detailSections.map((section) => {
+                    const sectionIdx = sections.indexOf(section);
+                    return (
+                        <SectionCard
+                            key={section.number}
+                            section={section}
+                            sectionIdx={sectionIdx}
+                            disabled={isAwaitingRevision}
+                            editedCells={editedCells}
+                            onTableCellChange={handleTableCellChange}
+                        />
+                    );
+                })}
+            </div>
+
+            {designSection && <DesignSystemCard section={designSection} plan={plan} />}
+
+            {structureSection && <ProjectStructureCard section={structureSection} />}
         </div>
+
+        {drawerOpen && !isAwaitingRevision && (
+            <FeedbackDrawer
+                items={feedbackItems}
+                freeformDraft={freeformDraft}
+                onFreeformChange={setFreeformDraft}
+                onAddNote={handleAddNote}
+                onRemoveItem={handleRemoveFeedback}
+                onSubmit={handleSubmitFeedback}
+                onDiscardAll={handleDiscardAll}
+                onClose={() => setDrawerOpen(false)}
+            />
+        )}
+
+        <SubmitEditsDialog
+            open={confirmSubmitOpen}
+            editCount={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
+            onCancel={() => setConfirmSubmitOpen(false)}
+            onSubmit={handleSubmitFeedback}
+        />
+    </div>
     );
 };
 
@@ -667,4 +671,182 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, onT
         case 'tree':
             return <div />;
     }
+};
+
+const DesignSystemCard = ({ section, plan }: { section: PlanSection; plan: PlanData }): JSX.Element | null => {
+    const [previewOpen, setPreviewOpen] = useState(false);
+    const previewRef = useRef<HTMLDivElement>(null);
+    const { vscodeApi } = useContext(WebviewContext);
+
+    const kvFor = (key: string): string | undefined => {
+        const found = section.content?.find(c => c.type === 'keyValue' && c.key.toLowerCase() === key.toLowerCase());
+        return found?.type === 'keyValue' ? found.value : undefined;
+    };
+
+    const componentLibrary = kvFor('Component Library');
+    const typography = kvFor('Typography');
+    const styleDirection = kvFor('Style Direction');
+
+    // Regenerate when the plan reference changes (local edits via
+    // structuredClone, file watcher reloads, Copilot revisions).
+    const previewHtml = useMemo(() => generateEmbeddedDesignPreviewHtml(plan), [plan]);
+
+    // Inject the preview HTML and wire up its interactivity. The host webview's
+    // CSP (`script-src cspSource 'nonce-${nonce}'`) blocks inline <script> tags
+    // — even ones cloned from the injected markup — so the page-tab switcher
+    // and the live color picker are implemented here in the trusted bundle
+    // instead of being shipped as JS in the embedded fragment.
+    // Re-injecting on every plan-reference change is intentional: it keeps the
+    // prototype in step with file/revision updates even when the generated
+    // HTML happens to be byte-identical.
+    useEffect(() => {
+        if (!previewOpen || !previewRef.current || !previewHtml) {
+            return;
+        }
+        const container = previewRef.current;
+        container.innerHTML = previewHtml;
+        const root = container.querySelector<HTMLElement>('.dpEmbed');
+        if (!root) {
+            return;
+        }
+
+        const cleanups: Array<() => void> = [];
+
+        // Page tabs: clicking a tab activates the matching .pageFrame.
+        const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('.pageTab'));
+        const frames = Array.from(root.querySelectorAll<HTMLElement>('.pageFrame'));
+        for (const tab of tabs) {
+            const onClick = () => {
+                const target = tab.getAttribute('data-page');
+                for (const t of tabs) {
+                    t.setAttribute('aria-selected', t === tab ? 'true' : 'false');
+                }
+                for (const f of frames) {
+                    f.classList.toggle('active', f.getAttribute('data-page') === target);
+                }
+            };
+            tab.addEventListener('click', onClick);
+            cleanups.push(() => tab.removeEventListener('click', onClick));
+        }
+
+        // Color picker: <input type="color"> writes its value to a CSS custom
+        // property on the scope root, and updates the hex label next to it.
+        // On commit (`change`), persist the new palette to preview/index.html
+        // via the controller. We deliberately don't post on every `input`
+        // event because color pickers fire continuously while dragging.
+        const inputs = Array.from(root.querySelectorAll<HTMLInputElement>('.paletteSwatch input[type="color"]'));
+        const resetBtn = root.querySelector<HTMLButtonElement>('.paletteReset');
+
+        const syncResetVisibility = (): void => {
+            if (!resetBtn) {
+                return;
+            }
+            const dirty = inputs.some(i => i.value.toLowerCase() !== (i.getAttribute('data-initial') ?? '').toLowerCase());
+            resetBtn.hidden = !dirty;
+        };
+        const applyColor = (input: HTMLInputElement): void => {
+            const token = input.getAttribute('data-token');
+            if (!token) {
+                return;
+            }
+            root.style.setProperty('--color-' + token, input.value);
+            const hexEl = root.querySelector<HTMLElement>(`.paletteHex[data-token="${CSS.escape(token)}"]`);
+            if (hexEl) {
+                hexEl.textContent = input.value.toUpperCase();
+            }
+        };
+        const postPaletteUpdate = (): void => {
+            const palette = inputs
+                .map(i => ({ slug: i.getAttribute('data-token') ?? '', hex: i.value }))
+                .filter(p => p.slug);
+            vscodeApi.postMessage({ command: 'paletteChanged', palette });
+        };
+
+        for (const input of inputs) {
+            const onInput = (): void => { applyColor(input); syncResetVisibility(); };
+            const onChange = (): void => { applyColor(input); syncResetVisibility(); postPaletteUpdate(); };
+            input.addEventListener('input', onInput);
+            input.addEventListener('change', onChange);
+            cleanups.push(() => {
+                input.removeEventListener('input', onInput);
+                input.removeEventListener('change', onChange);
+            });
+        }
+
+        if (resetBtn) {
+            const onReset = (): void => {
+                for (const input of inputs) {
+                    const initial = input.getAttribute('data-initial');
+                    if (initial) {
+                        input.value = initial;
+                        applyColor(input);
+                    }
+                }
+                syncResetVisibility();
+                postPaletteUpdate();
+            };
+            resetBtn.addEventListener('click', onReset);
+            cleanups.push(() => resetBtn.removeEventListener('click', onReset));
+        }
+
+        return () => {
+            for (const fn of cleanups) {
+                fn();
+            }
+        };
+    }, [previewOpen, plan, previewHtml, vscodeApi]);
+
+    // If no Component Library is set, the section has no meaningful design
+    // content (API-only / Background-worker plans). Hide the card entirely.
+    if (!componentLibrary || componentLibrary.trim().length === 0 || componentLibrary.trim() === '—') {
+        return null;
+    }
+
+    return (
+        <div className='sectionCard designSystemCard'>
+            <div className='designHeader'>
+                <h2>Design System &amp; UI</h2>
+            </div>
+
+            <div className='designMeta'>
+                <div className='designMetaItem'>
+                    <span className='designMetaLabel'>Component Library</span>
+                    <span className='designMetaValue'>{componentLibrary}</span>
+                </div>
+                {typography && (
+                    <div className='designMetaItem'>
+                        <span className='designMetaLabel'>Typography</span>
+                        <span className='designMetaValue'>{typography}</span>
+                    </div>
+                )}
+            </div>
+
+            {styleDirection && (
+                <p className='designStyleDirection'>{styleDirection}</p>
+            )}
+
+            {previewHtml && (
+                <div className='designPreviewSection'>
+                    <button
+                        type='button'
+                        className='designPreviewToggle'
+                        aria-expanded={previewOpen}
+                        aria-controls='designPreviewBody'
+                        onClick={() => setPreviewOpen(open => !open)}
+                    >
+                        <span className={`designPreviewCaret ${previewOpen ? 'open' : ''}`} aria-hidden='true'>▸</span>
+                        <EyeRegular />
+                        <span>{previewOpen ? 'Hide preview' : 'Show preview'}</span>
+                    </button>
+                    {previewOpen && (
+                        <div
+                            id='designPreviewBody'
+                            className='designPreviewBody'
+                            ref={previewRef}
+                        />
+                    )}
+                </div>
+            )}
+        </div>
+    );
 };
