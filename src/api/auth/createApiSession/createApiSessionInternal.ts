@@ -38,6 +38,6 @@ export async function createApiSessionInternal(context: CreateApiSessionInternal
         const perrMessage: string = context.credentialManager.maskCredentials(perr.message);
         context.telemetry.properties.createResourcesApiSessionError = maskUserInfo(perrMessage, []);
         ext.outputChannel.error(perrMessage);
-        throw new Error(failed);
+        throw new Error(failed, { cause: err });
     }
 }
