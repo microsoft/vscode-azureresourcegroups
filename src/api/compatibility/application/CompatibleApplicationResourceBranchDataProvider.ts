@@ -26,7 +26,7 @@ export class CompatibleApplicationResourceBranchDataProvider<TResource extends A
             kind: element.azureResourceType.kinds?.join(';'),
         };
         const subscriptionContext: ISubscriptionContext = createSubscriptionContext(element.subscription);
-        let resolved = undefined;
+        let resolved;
         try {
             resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
         } catch (error) {

@@ -18,9 +18,18 @@ export enum ActivityStatus {
 export class ActivityItem implements TreeElementBase, Disposable {
     public static readonly contextValue: string = 'activityItem';
 
+    /**
+     * Minimum interval (ms) between ActivityLog tree refreshes per item.
+     * Activity lifecycle events (onStart, onProgress, onSuccess, onError) can
+     * fire in rapid succession; debouncing avoids flooding VS Code with
+     * redundant tree-data-change notifications.
+     */
+    private static readonly refreshDebounceMs = 500;
+
     public readonly id: string;
     private _activityAttributes?: ActivityAttributes;
     private _callbackId?: string;
+    private _refreshTimer?: ReturnType<typeof setTimeout>;
 
     public get activityAttributes(): ActivityAttributes | undefined {
         return this._activityAttributes;
@@ -103,6 +112,9 @@ export class ActivityItem implements TreeElementBase, Disposable {
     }
 
     public dispose(): void {
+        if (this._refreshTimer) {
+            clearTimeout(this._refreshTimer);
+        }
         this.disposables.forEach(d => { d.dispose(); });
     }
 
@@ -115,12 +127,28 @@ export class ActivityItem implements TreeElementBase, Disposable {
         return [];
     }
 
+    /**
+     * Schedules a debounced partial refresh of this item in the ActivityLog tree.
+     * Coalesces rapid-fire lifecycle events (start → progress → progress → success)
+     * into at most one refresh per {@link refreshDebounceMs}.
+     */
+    private scheduleRefresh(): void {
+        if (this._refreshTimer) {
+            // A refresh is already pending — it will pick up the latest state.
+            return;
+        }
+        this._refreshTimer = setTimeout(() => {
+            this._refreshTimer = undefined;
+            ext.actions.refreshActivityLogTree(this);
+        }, ActivityItem.refreshDebounceMs);
+    }
+
     private onProgress(data: OnProgressActivityData): void {
         void callWithTelemetryAndErrorHandling('activityOnProgress', async (context) => {
             context.telemetry.suppressIfSuccessful = true;
             this.latestProgress = data.message ? { message: data?.message } : this.latestProgress;
             this.state = data;
-            ext.actions.refreshActivityLogTree(this);
+            this.scheduleRefresh();
         });
     }
 
@@ -128,6 +156,7 @@ export class ActivityItem implements TreeElementBase, Disposable {
         void callWithTelemetryAndErrorHandling('activityOnStart', async (_context) => {
             this.status = ActivityStatus.Running;
             this.state = data;
+            // Start events are shown immediately so the user sees feedback right away.
             ext.actions.refreshActivityLogTree(this);
         });
     }
@@ -139,6 +168,11 @@ export class ActivityItem implements TreeElementBase, Disposable {
             if (!this.state.getChildren) {
                 this.initialCollapsibleState = TreeItemCollapsibleState.None;
             }
+            // Final-state events flush immediately so the result is visible without delay.
+            if (this._refreshTimer) {
+                clearTimeout(this._refreshTimer);
+                this._refreshTimer = undefined;
+            }
             ext.actions.refreshActivityLogTree(this);
         });
     }
@@ -149,6 +183,11 @@ export class ActivityItem implements TreeElementBase, Disposable {
             this.status = ActivityStatus.Done;
             this.error = data.error;
             this.initialCollapsibleState = TreeItemCollapsibleState.Expanded;
+            // Final-state events flush immediately so the result is visible without delay.
+            if (this._refreshTimer) {
+                clearTimeout(this._refreshTimer);
+                this._refreshTimer = undefined;
+            }
             ext.actions.refreshActivityLogTree(this);
         });
     }

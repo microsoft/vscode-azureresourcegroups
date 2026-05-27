@@ -112,7 +112,32 @@ azure?: {
         /**
          * The resource type the BranchDataProvider is registered for.
          */
-        type: AzExtResourceType
+        type: AzExtResourceType;
+        /**
+         * Optional. Overrides the default localized label of the resource-type
+         * group node when the tree is grouped by resource type. Supports
+         * `%key%` NLS substitution against the contributing extension's
+         * `package.nls.json`.
+         */
+        displayName?: string;
+        /**
+         * Optional. Overrides the default icon of the resource-type group
+         * node when the tree is grouped by resource type. Either a single
+         * path (used for both themes) or `{ light, dark }` paths, relative to
+         * the extension root. Theme icons (`$(id)`) are not supported.
+         */
+        icon?: string | { light: string; dark: string };
+        /**
+         * Optional. When `true`, the resource-type group node for this type
+         * is omitted from the tree when grouped by resource type. Resources
+         * of this type continue to appear under other groupings (by resource
+         * group, location, or tag) where they exist independently of any
+         * parent resource. Intended for resource types that are semantically
+         * children of another resource (e.g. a Container App is a child of a
+         * Container Apps Managed Environment) and so are redundant or
+         * confusing as a peer top-level group alongside their parent type.
+         */
+        hideWhenGroupedByType?: boolean;
     }[];
 };
 

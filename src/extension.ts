@@ -179,6 +179,11 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         refreshEvent: refreshWorkspaceTreeEmitter.event,
     });
 
+    context.subscriptions.push(vscode.window.registerTreeDataProvider('azureProject', {
+        getChildren: () => [],
+        getTreeItem: () => { throw new Error('azureProject view has no tree items.'); },
+    }));
+
     const tenantResourcesBranchDataItemCache = new BranchDataItemCache();
     registerTenantTree(context, {
         tenantResourceProviderManager,

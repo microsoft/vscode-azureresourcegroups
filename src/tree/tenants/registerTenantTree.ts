@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import { TenantResourceProviderManager } from "../../api/ResourceProviderManagers";
 import { ext } from '../../extensionVariables';
 import { localize } from '../../utils/localize';
+import { getKeyForTenant, getUnselectedTenants, setUnselectedTenants } from '../../utils/tenantSelection';
 import { BranchDataItemCache } from '../BranchDataItemCache';
 import { TreeDataItem } from '../ResourceGroupsItem';
 import { createTreeView } from '../createTreeView';
@@ -70,47 +71,4 @@ async function updateTenantsSetting(context: IActionContext, tenants: vscode.Tre
     }
 
     await setUnselectedTenants(Array.from(unselectedTenantsSet));
-}
-
-function removeDuplicates(arr: string[]): string[] {
-    return Array.from(new Set(arr));
-}
-
-export async function setUnselectedTenants(tenantIds: string[]): Promise<void> {
-    printTenants(tenantIds);
-    await ext.context.globalState.update('unselectedTenants', removeDuplicates(tenantIds));
-}
-
-export function getUnselectedTenants(): string[] {
-    const value = ext.context.globalState.get<string[]>('unselectedTenants');
-
-    if (!value || !Array.isArray(value)) {
-        return [];
-    }
-
-    // remove any duplicates
-    return removeDuplicates(value);
-}
-
-export function isTenantFilteredOut(tenantId: string, accountId: string): boolean {
-    const settings = ext.context.globalState.get<string[]>('unselectedTenants');
-    if (settings) {
-        if (settings.includes(getKeyForTenant(tenantId, accountId))) {
-            return true;
-        }
-    }
-    return false;
-}
-
-export function getKeyForTenant(tenantId: string, accountId: string): string {
-    return `${tenantId}/${accountId}`;
-}
-
-function printTenants(unselectedTenants: string[]): void {
-    let str = '';
-    str += 'Unselected tenants:\n';
-    for (const tenant of unselectedTenants) {
-        str += `- ${tenant}\n`;
-    }
-    ext.outputChannel.appendLine(str);
 }

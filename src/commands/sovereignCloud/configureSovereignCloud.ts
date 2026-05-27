@@ -28,7 +28,10 @@ export async function configureSovereignCloud(context: ConfigureSovereignCloudCo
 
     // Clear cache and refresh views to reflect the selected sovereign cloud
     // This ensures accounts from the previous environment are not shown
-    ext.setClearCacheOnNextLoad();
+    ext.setClearCacheOnNextLoad('azure');
     ext.actions.refreshAzureTree();
+    ext.setClearCacheOnNextLoad('tenant');
     ext.actions.refreshTenantTree();
+    ext.setClearCacheOnNextLoad('focus');
+    ext.actions.refreshFocusTree();
 }

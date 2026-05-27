@@ -3,7 +3,6 @@
 *  Licensed under the MIT License. See License.txt in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { Identity } from "@azure/arm-msi";
 import { createManagedServiceIdentityClient } from "@microsoft/vscode-azext-azureutils";
 import { callWithTelemetryAndErrorHandling, createContextValue, createSubscriptionContext, nonNullProp, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { type AzureResource, type AzureSubscription, type ViewPropertiesModel } from "@microsoft/vscode-azureresources-api";
@@ -43,9 +42,12 @@ export class ManagedIdentityItem implements ResourceGroupsItem {
         const result = await callWithTelemetryAndErrorHandling('managedIdentityItem.getChildren', async (context: IActionContext) => {
             const subContext = createSubscriptionContext(this.subscription);
             const msiClient = await createManagedServiceIdentityClient([context, subContext]);
-            const msi: Identity = await msiClient.userAssignedIdentities.get(nonNullProp(this.resource, 'resourceGroup'), this.resource.name);
 
-            const resources = await getAzureResourcesService().listResources(context, this.subscription);
+            // Parallelize the MSI identity fetch and resource listing since they are independent
+            const [msi, resources] = await Promise.all([
+                msiClient.userAssignedIdentities.get(nonNullProp(this.resource, 'resourceGroup'), this.resource.name),
+                getAzureResourcesService().listResources(context, this.subscription),
+            ]);
             const sourceResourceItem = new SourceResourceIdentityItem(this.subscription, msi, resources);
             const targetServiceItem = new TargetServiceRoleAssignmentItem(this.subscription, msi);
 

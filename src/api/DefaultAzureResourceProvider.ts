@@ -18,8 +18,10 @@ export class DefaultAzureResourceProvider implements AzureResourceProvider {
         return callWithTelemetryAndErrorHandling(
             'defaultAzureResourceProvider.getResources',
             async (context: IActionContext) => {
-                const azureResources = await this.listResources(context, subscription);
-                const resourceGroups = await this.listResourceGroups(context, subscription);
+                const [azureResources, resourceGroups] = await Promise.all([
+                    this.listResources(context, subscription),
+                    this.listResourceGroups(context, subscription),
+                ]);
                 return [...azureResources, ...resourceGroups];
             });
     }

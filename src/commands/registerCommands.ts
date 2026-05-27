@@ -11,16 +11,20 @@ import { askAgentAboutResource } from '../chat/askAgentAboutResource';
 import { askAzureInCommandPalette } from '../chat/askAzure';
 import { uploadFileToCloudShell } from '../cloudConsole/uploadFileToCloudShell';
 import { ext } from '../extensionVariables';
-import { openAzureCodeAgent } from './openAzureCodeAgent';
 import { TargetServiceRoleAssignmentItem } from '../managedIdentity/TargetServiceRoleAssignmentItem';
 import { BranchDataItemWrapper } from '../tree/BranchDataItemWrapper';
 import { ResourceGroupsItem } from '../tree/ResourceGroupsItem';
 import { ActivityItem } from '../tree/activityLog/ActivityItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
+import { createProjectWithCopilot } from '../webviews/copilotOnRails/extension/createProjectWithCopilot';
+import { openDeploymentPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openDeploymentPlanView';
+import { openLocalPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openLocalPlanView';
+import { openPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openScaffoldPlanView';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
+import { openChatWithAgent } from './copilotOnRails/openChatWithAgent';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
 import { deleteResourceGroupV2 } from './deleteResourceGroup/v2/deleteResourceGroupV2';
@@ -32,6 +36,7 @@ import { getStarted } from './helpAndFeedback/getStarted';
 import { reportIssue } from './helpAndFeedback/reportIssue';
 import { reviewIssues } from './helpAndFeedback/reviewIssues';
 import { installExtension } from './installExtension';
+import { openAzureCodeAgent } from './openAzureCodeAgent';
 import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
 import { configureSovereignCloud } from './sovereignCloud/configureSovereignCloud';
@@ -43,16 +48,16 @@ export function registerCommands(): void {
 
     // Special-case refresh that ignores the selected/focused node and always refreshes the entire tree. Used by the refresh button in the tree title.
     registerCommand('azureResourceGroups.refreshTree', () => {
-        ext.setClearCacheOnNextLoad();
+        ext.setClearCacheOnNextLoad('azure');
         ext.actions.refreshAzureTree();
     });
     registerCommand('azureWorkspace.refreshTree', () => ext.actions.refreshWorkspaceTree());
     registerCommand('azureFocusView.refreshTree', () => {
-        ext.setClearCacheOnNextLoad();
+        ext.setClearCacheOnNextLoad('focus');
         ext.actions.refreshFocusTree();
     });
     registerCommand('azureTenantsView.refreshTree', () => {
-        ext.setClearCacheOnNextLoad();
+        ext.setClearCacheOnNextLoad('tenant');
         ext.actions.refreshTenantTree();
     });
 
@@ -89,22 +94,28 @@ export function registerCommands(): void {
 
     registerCommand('azureTenantsView.signInToTenant', async (_context, node: TenantTreeItem) => {
         await (await ext.subscriptionProviderFactory()).signIn(node);
-        ext.setClearCacheOnNextLoad();
+        ext.setClearCacheOnNextLoad('tenant');
         ext.actions.refreshTenantTree();
+        ext.setClearCacheOnNextLoad('azure');
         ext.actions.refreshAzureTree();
+        ext.setClearCacheOnNextLoad('focus');
+        ext.actions.refreshFocusTree();
     });
 
     registerCommand('azureResourceGroups.focusGroup', focusGroup);
     registerCommand('azureResourceGroups.unfocusGroup', unfocusGroup);
 
-    registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context));
-    registerCommand('azureTenantsView.addAccount', (context: IActionContext) => logIn(context));
+    registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context, { clearSessionPreference: true }));
+    registerCommand('azureTenantsView.addAccount', (context: IActionContext) => logIn(context, { clearSessionPreference: true }));
     registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext, options: SelectSubscriptionOptions) => selectSubscriptions(context, options));
     registerCommand('azureResourceGroups.signInToTenant', async () => {
         await signInToTenant(await ext.subscriptionProviderFactory());
-        ext.setClearCacheOnNextLoad();
+        ext.setClearCacheOnNextLoad('tenant');
         ext.actions.refreshTenantTree();
+        ext.setClearCacheOnNextLoad('azure');
         ext.actions.refreshAzureTree();
+        ext.setClearCacheOnNextLoad('focus');
+        ext.actions.refreshFocusTree();
     });
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
@@ -152,6 +163,19 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
     registerCommand('azureResourceGroups.openAzureCodeAgent', openAzureCodeAgent);
+
+    registerCommand('azureResourceGroups.createProjectWithCopilot', createProjectWithCopilot);
+    registerCommand('azureResourceGroups.openPlanView', openPlanViewFromWorkspace);
+    registerCommand('azureResourceGroups.openLocalPlanView', openLocalPlanViewFromWorkspace);
+    registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
+
+    // Hand-off commands
+    registerCommand('azureResourceGroups.startProjectScaffold', (_context: IActionContext, prompt?: string) =>
+        openChatWithAgent('azure-project-scaffold', prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.'));
+    registerCommand('azureResourceGroups.startLocalDevelopment', (_context: IActionContext, prompt?: string) =>
+        openChatWithAgent('azure-local-debug', prompt ?? 'The project has been scaffolded. Now set up the local development environment so the user can start building and testing.'));
+    registerCommand('azureResourceGroups.startDeployment', (_context: IActionContext, prompt?: string) =>
+        openChatWithAgent('azure-deploy', prompt ?? 'Prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`.'));
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {

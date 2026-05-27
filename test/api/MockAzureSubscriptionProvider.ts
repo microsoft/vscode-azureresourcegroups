@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { AzureAccount, AzureSubscription, AzureSubscriptionProvider, AzureTenant, TenantIdAndAccount } from '@microsoft/vscode-azext-azureauth';
+import { getConfiguredAzureEnv } from '@microsoft/vscode-azext-azureauth';
 import type * as vscode from 'vscode';
 import type { MockResources } from './mockServiceFactory';
 
@@ -39,6 +40,7 @@ export class MockAzureSubscriptionProvider implements AzureSubscriptionProvider 
         return [{
             id: 'accountId',
             label: 'Mock Account',
+            environment: getConfiguredAzureEnv(),
         }];
     }
 

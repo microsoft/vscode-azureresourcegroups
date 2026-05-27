@@ -154,11 +154,11 @@ export const azureExtensions: IAzExtMetadata[] = [
         ]
     },
     {
-        name: 'vscode-ai-foundry',
-        publisher: 'TeamsDevApp',
-        label: 'Microsoft Foundry',
+        name: 'windows-ai-studio',
+        publisher: 'ms-windows-ai-studio',
+        label: 'Foundry Toolkit for VS Code',
         resourceTypes: [AzExtResourceType.AiFoundry],
-        reportIssueCommandId: 'azure-ai-foundry.reportIssue'
+        reportIssueCommandId: 'ai-mlstudio.reportIssue'
     },
 ];
 

@@ -21,7 +21,7 @@
                 "*"
             ],
         },
-        "skipLibCheck": false
+        "skipLibCheck": true
     },
     "exclude": [
         "**/node_modules",
@@ -29,6 +29,7 @@
         "gulpfile.ts",
         "**/dist",
         "**/out",
-        "src/chat/mcpApps/languagePickerServer.ts"
+        "src/chat/mcpApps/languagePickerServer.ts",
+        "src/webviews/copilotOnRails/views"
     ]
 }

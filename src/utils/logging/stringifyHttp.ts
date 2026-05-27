@@ -18,7 +18,7 @@ export interface HttpStringifier {
  */
 function stringifyRequest(request: NormalizedHttpRequest, source: string, verbose?: boolean): string {
     let message = `[${source} Request]`;
-    message = `\n┌────── ${source} Request ${request.method} ${request.url}`;
+    message += `\n┌────── ${source} Request ${request.method} ${request.url}`;
     if (verbose) {
         message += stringifyRecord(request.headers ?? {}, 'Headers');
         message += stringifyRecord(request.query ?? {}, 'Query parameters');
@@ -29,7 +29,7 @@ function stringifyRequest(request: NormalizedHttpRequest, source: string, verbos
 }
 
 /**
- * 
+ *
  * @param response Response to log
  * @param source Source of the response, ex: Axios
  * @param hideBody Hides the body and prints the string instead
