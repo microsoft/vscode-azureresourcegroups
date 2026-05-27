@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Next Steps</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+            font-size: var(--vscode-font-size, 13px);
+            color: var(--vscode-foreground, #cccccc);
+            background: transparent;
+            padding: 8px;
+        }
+
+        .deploy-card {
+            border: 1px solid var(--vscode-panel-border, rgba(255, 255, 255, 0.1));
+            border-radius: 6px;
+            padding: 14px;
+            max-width: 360px;
+            background: var(--vscode-editor-background, #1e1e1e);
+        }
+
+        .deploy-card h3 {
+            margin-bottom: 6px;
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .deploy-card p {
+            margin-bottom: 12px;
+            color: var(--vscode-descriptionForeground, #999);
+            font-size: 0.92em;
+            line-height: 1.4;
+        }
+
+        .deploy-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-family: inherit;
+            font-weight: 600;
+            transition: background 0.15s;
+        }
+
+        .deploy-btn.primary {
+            background: var(--vscode-button-background, #0e639c);
+            color: var(--vscode-button-foreground, #ffffff);
+        }
+
+        .deploy-btn.primary:hover:not(:disabled) {
+            background: var(--vscode-button-hoverBackground, #1177bb);
+        }
+
+        .deploy-btn.secondary {
+            background: var(--vscode-button-secondaryBackground, #3a3d41);
+            color: var(--vscode-button-secondaryForeground, #cccccc);
+        }
+
+        .deploy-btn.secondary:hover:not(:disabled) {
+            background: var(--vscode-button-secondaryHoverBackground, #45494e);
+        }
+
+        .deploy-btn:focus-visible {
+            outline: 2px solid var(--vscode-focusBorder, #007fd4);
+            outline-offset: 1px;
+        }
+
+        .deploy-btn:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .button-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .status-msg {
+            margin-top: 10px;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .status-msg.info {
+            color: var(--vscode-descriptionForeground, #999);
+            font-style: italic;
+        }
+
+        .status-msg.success {
+            color: var(--vscode-testing-iconPassed, #73c991);
+        }
+
+        .status-msg.error {
+            color: var(--vscode-testing-iconFailed, #f14c4c);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="deploy-card">
+        <h3>What would you like to do next?</h3>
+        <p>Your project has been scaffolded. Choose a next step:</p>
+        <div class="button-row">
+            <button class="deploy-btn primary" id="deployBtn">Deploy to Azure</button>
+            <button class="deploy-btn secondary" id="debugBtn">Debug locally</button>
+        </div>
+        <p class="status-msg" id="status" hidden></p>
+    </div>
+
+    <script>
+        class McpApp {
+            constructor(appInfo) {
+                this._appInfo = appInfo;
+                this._nextId = 0;
+                this._pending = new Map();
+            }
+
+            async connect() {
+                window.addEventListener("message", (e) => {
+                    const msg = e.data;
+                    if (!msg || msg.jsonrpc !== "2.0") return;
+                    if ("id" in msg && ("result" in msg || "error" in msg)) {
+                        const p = this._pending.get(msg.id);
+                        if (!p) return;
+                        this._pending.delete(msg.id);
+                        msg.error ? p.reject(new Error(msg.error.message)) : p.resolve(msg.result);
+                    }
+                });
+
+                await this._request("ui/initialize", {
+                    appInfo: this._appInfo,
+                    appCapabilities: {},
+                    protocolVersion: "2026-01-26",
+                });
+                this._notify("ui/notifications/initialized", {});
+                this._autoResize();
+            }
+
+            callServerTool(params) { return this._request("tools/call", params); }
+
+            _request(method, params) {
+                return new Promise((resolve, reject) => {
+                    const id = ++this._nextId;
+                    this._pending.set(id, { resolve, reject });
+                    window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+                });
+            }
+
+            _notify(method, params) {
+                window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
+            }
+
+            _autoResize() {
+                let busy = false, lw = 0, lh = 0;
+                const update = () => {
+                    if (busy) return;
+                    busy = true;
+                    requestAnimationFrame(() => {
+                        busy = false;
+                        const el = document.documentElement;
+                        const sw = el.style.width, sh = el.style.height;
+                        el.style.width = "fit-content"; el.style.height = "fit-content";
+                        const r = el.getBoundingClientRect();
+                        el.style.width = sw; el.style.height = sh;
+                        const pad = window.innerWidth - el.clientWidth;
+                        const w = Math.ceil(r.width + pad), h = Math.ceil(r.height);
+                        if (w !== lw || h !== lh) { lw = w; lh = h; this._notify("ui/notifications/size-changed", { width: w, height: h }); }
+                    });
+                };
+                update();
+                const obs = new ResizeObserver(update);
+                obs.observe(document.documentElement);
+                obs.observe(document.body);
+            }
+        }
+
+        const deployBtn = document.getElementById("deployBtn");
+        const debugBtn = document.getElementById("debugBtn");
+        const status = document.getElementById("status");
+        const app = new McpApp({ name: "Next Steps", version: "1.0.0" });
+
+        function disableButtons() {
+            deployBtn.disabled = true;
+            debugBtn.disabled = true;
+        }
+
+        deployBtn.addEventListener("click", async () => {
+            disableButtons();
+            status.hidden = false;
+            status.className = "status-msg info";
+            status.textContent = "Starting deployment…";
+            await app.callServerTool({
+                name: "report_next_step_choice",
+                arguments: { choice: "deploy" },
+            });
+        });
+
+        debugBtn.addEventListener("click", async () => {
+            disableButtons();
+            status.hidden = false;
+            status.className = "status-msg info";
+            status.textContent = "Setting up local debug…";
+            await app.callServerTool({
+                name: "report_next_step_choice",
+                arguments: { choice: "debug" },
+            });
+        });
+
+        app.connect();
+    </script>
+</body>
+
+</html>

@@ -29,7 +29,8 @@
     ],
     "preview": true,
     "activationEvents": [
-        "onFileSystem:azureResourceGroups"
+        "onFileSystem:azureResourceGroups",
+        "onMcpServerDefinitionProvider:azureCodeAssistantMcp"
     ],
     "main": "./main.js",
     "contributes": {
@@ -100,6 +101,9 @@
         ],
         "chatAgents": [
             {
+                "path": "resources/agents/azcode.agent.md"
+            },
+            {
                 "path": "resources/agents/azure-project-plan.agent.md"
             },
             {
@@ -110,6 +114,12 @@
             },
             {
                 "path": "resources/agents/azure-deploy.agent.md"
+            }
+        ],
+        "mcpServerDefinitionProviders": [
+            {
+                "id": "azureCodeAssistantMcp",
+                "label": "Azure Code Assistant"
             }
         ],
         "languageModelTools": [
@@ -378,6 +388,12 @@
             {
                 "command": "azureResourceGroups.askAgentAboutResource",
                 "title": "%azureResourceGroups.askAzure%"
+            },
+            {
+                "command": "azureResourceGroups.openAzureCodeAgent",
+                "title": "%azureResourceGroups.openAzureCodeAgent%",
+                "category": "Azure",
+                "icon": "$(chat-sparkle)"
             },
             {
                 "command": "azureResourceGroups.createProjectWithCopilot",
@@ -977,6 +993,8 @@
         "@microsoft/vscode-azext-azureutils": "^4.1.0",
         "@microsoft/vscode-azext-utils": "^4.0.7",
         "@microsoft/vscode-azext-webview": "^1.0.2",
+        "@modelcontextprotocol/ext-apps": "^1.1.0",
+        "@modelcontextprotocol/sdk": "^1.26.0",
         "form-data": "^4.0.4",
         "fs-extra": "^11.3.0",
         "jsonc-parser": "^2.2.1",
@@ -984,6 +1002,6 @@
         "uuid": "^14.0.0",
         "vscode-nls": "^5.0.1",
         "vscode-uri": "^3.0.7",
-        "ws": "^8.17.1"
+        "ws": "^8.20.1"
     }
 }

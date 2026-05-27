@@ -37,6 +37,7 @@ import { getStarted } from './helpAndFeedback/getStarted';
 import { reportIssue } from './helpAndFeedback/reportIssue';
 import { reviewIssues } from './helpAndFeedback/reviewIssues';
 import { installExtension } from './installExtension';
+import { openAzureCodeAgent } from './openAzureCodeAgent';
 import { openInPortal } from './openInPortal';
 import { revealResource } from './revealResource';
 import { configureSovereignCloud } from './sovereignCloud/configureSovereignCloud';
@@ -162,6 +163,7 @@ export function registerCommands(): void {
     registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityItem) => await askAgentAboutActivityLog(context));
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
+    registerCommand('azureResourceGroups.openAzureCodeAgent', openAzureCodeAgent);
 
     registerCommand('azureResourceGroups.createProjectWithCopilot', createProjectWithCopilot);
     registerCommand('azureResourceGroups.openPlanView', openPlanViewFromWorkspace);

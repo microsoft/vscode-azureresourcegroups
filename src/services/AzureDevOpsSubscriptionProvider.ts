@@ -11,23 +11,23 @@ import type { AzureDevOpsSubscriptionProviderInitializer } from "@microsoft/vsco
  * and returns a factory that creates an {@link AzureDevOpsSubscriptionProvider}.
  *
  * Expected environment variables (set by the shared pipeline template in `vscode-azuretools`):
- * - `AzCode_ServiceConnectionID` — the resource ID of the ADO federated service connection
- * - `AzCode_ServiceConnectionDomain` — the tenant ID of the service connection
- * - `AzCode_ServiceConnectionClientID` — the service principal (application client) ID
+ * - `FC_SERVICE_CONNECTION_ID` — the resource ID of the ADO federated service connection
+ * - `FC_SERVICE_CONNECTION_TENANT_ID` — the tenant ID of the service connection
+ * - `FC_SERVICE_CONNECTION_CLIENT_ID` — the service principal (application client) ID
  *
  * The factory also calls `signIn()` on the first invocation so the provider is
  * ready to use immediately.
  */
 export function createAzureDevOpsSubscriptionProviderFactory(): () => Promise<AzureSubscriptionProvider> {
-    const serviceConnectionId: string | undefined = process.env['AzCode_ServiceConnectionID'];
-    const tenantId: string | undefined = process.env['AzCode_ServiceConnectionDomain'];
-    const clientId: string | undefined = process.env['AzCode_ServiceConnectionClientID'];
+    const serviceConnectionId: string | undefined = process.env['FC_SERVICE_CONNECTION_ID'] ?? process.env['AzCode_ServiceConnectionID'];
+    const tenantId: string | undefined = process.env['FC_SERVICE_CONNECTION_TENANT_ID'] ?? process.env['AzCode_ServiceConnectionDomain'];
+    const clientId: string | undefined = process.env['FC_SERVICE_CONNECTION_CLIENT_ID'] ?? process.env['AzCode_ServiceConnectionClientID'];
 
     if (!serviceConnectionId || !tenantId || !clientId) {
         throw new Error(`Using Azure DevOps federated credentials, but federated service connection is not configured\n
-                            process.env.AzCode_ServiceConnectionID: ${serviceConnectionId ? "✅" : "❌"}\n
-                            process.env.AzCode_ServiceConnectionDomain: ${tenantId ? "✅" : "❌"}\n
-                            process.env.AzCode_ServiceConnectionClientID: ${clientId ? "✅" : "❌"}\n
+                            process.env.FC_SERVICE_CONNECTION_ID: ${serviceConnectionId ? "✅" : "❌"}\n
+                            process.env.FC_SERVICE_CONNECTION_TENANT_ID: ${tenantId ? "✅" : "❌"}\n
+                            process.env.FC_SERVICE_CONNECTION_CLIENT_ID: ${clientId ? "✅" : "❌"}\n
                         `);
     }
 

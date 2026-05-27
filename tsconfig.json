@@ -29,6 +29,7 @@
         "gulpfile.ts",
         "**/dist",
         "**/out",
+        "src/chat/mcpApps/languagePickerServer.ts",
         "src/webviews/copilotOnRails/views"
     ]
 }

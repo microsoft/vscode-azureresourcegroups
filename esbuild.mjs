@@ -17,6 +17,10 @@ const finalConfig = {
             in: './src/cloudConsole/cloudShellChildProcess/cloudConsoleLauncher.ts',
             out: 'cloudConsoleLauncher',
         },
+        {
+            in: './src/chat/mcpApps/languagePickerServer.ts',
+            out: 'languagePickerServer',
+        },
     ],
     // Disable code splitting to avoid VS Code extension loading issues (see #1352)
     splitting: false,
@@ -28,6 +32,14 @@ const finalConfig = {
                 {
                     from: './node_modules/@microsoft/vscode-azext-azureutils/resources/azureIcons/*.svg',
                     to: './node_modules/@microsoft/vscode-azext-azureutils/resources/azureIcons',
+                },
+                {
+                    from: './src/chat/mcpApps/languagePickerApp.html',
+                    to: '.',
+                },
+                {
+                    from: './src/chat/mcpApps/nextStepsApp.html',
+                    to: '.',
                 },
             ],
         }),

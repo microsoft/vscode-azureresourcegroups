@@ -9,6 +9,7 @@ import { LocationListStep, registerAzureUtilsExtensionVariables, setupAzureLogge
 import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { AzExtResourceType } from '../api/src/AzExtResourceType';
 import { DefaultAzureResourceProvider } from './api/DefaultAzureResourceProvider';
@@ -119,6 +120,19 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
         registerChatStandInParticipantIfNeeded(context);
         registerLMTools();
+
+        context.subscriptions.push(
+            vscode.lm.registerMcpServerDefinitionProvider('azureCodeAssistantMcp', {
+                provideMcpServerDefinitions: () => [
+                    new vscode.McpStdioServerDefinition(
+                        'Azure Code Assistant',
+                        'node',
+                        [path.join(context.extensionPath, 'dist', 'languagePickerServer.js')],
+                    ),
+                ],
+                resolveMcpServerDefinition: (server) => server,
+            }),
+        );
     });
 
     const extensionManager = new ResourceGroupsExtensionManager();

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Select a Language</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+            font-size: var(--vscode-font-size, 13px);
+            color: var(--vscode-foreground, #cccccc);
+            background: transparent;
+            padding: 8px;
+        }
+
+        .picker-card {
+            border: 1px solid var(--vscode-panel-border, rgba(255, 255, 255, 0.1));
+            border-radius: 6px;
+            padding: 14px;
+            max-width: 250px;
+            background: var(--vscode-editor-background, #1e1e1e);
+        }
+
+        .picker-card h3 {
+            margin-bottom: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .language-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .language-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 6px 14px;
+            min-width: 200px;
+            max-width: 200px;
+            border: 1px solid var(--vscode-button-border, rgba(255, 255, 255, 0.1));
+            border-radius: 4px;
+            background: var(--vscode-button-secondaryBackground, #3a3d41);
+            color: var(--vscode-button-secondaryForeground, #cccccc);
+            cursor: pointer;
+            font-size: 0.95em;
+            font-family: inherit;
+            transition: background 0.15s;
+        }
+
+        .language-btn:hover:not(.selected) {
+            background: var(--vscode-button-secondaryHoverBackground, #45494e);
+        }
+
+        .language-btn:focus-visible {
+            outline: 2px solid var(--vscode-focusBorder, #007fd4);
+            outline-offset: 1px;
+        }
+
+        .language-btn.selected {
+            background: var(--vscode-button-background, #0e639c);
+            color: var(--vscode-button-foreground, #ffffff);
+            border-color: var(--vscode-button-background, #0e639c);
+            cursor: default;
+        }
+
+        .selected-msg {
+            margin-top: 10px;
+            font-style: italic;
+            text-align: center;
+            color: var(--vscode-descriptionForeground, #999);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="picker-card">
+        <h3>Select a language for your project:</h3>
+        <div class="language-grid" id="grid"></div>
+        <p class="selected-msg" id="status" hidden></p>
+    </div>
+    <script>
+        class McpApp {
+            constructor(appInfo) {
+                this._appInfo = appInfo;
+                this._nextId = 0;
+                this._pending = new Map();
+            }
+
+            async connect() {
+                window.addEventListener("message", (e) => {
+                    const msg = e.data;
+                    if (!msg || msg.jsonrpc !== "2.0") return;
+                    if ("id" in msg && ("result" in msg || "error" in msg)) {
+                        const p = this._pending.get(msg.id);
+                        if (!p) return;
+                        this._pending.delete(msg.id);
+                        msg.error ? p.reject(new Error(msg.error.message)) : p.resolve(msg.result);
+                    }
+                });
+
+                await this._request("ui/initialize", {
+                    appInfo: this._appInfo,
+                    appCapabilities: {},
+                    protocolVersion: "2026-01-26",
+                });
+                this._notify("ui/notifications/initialized", {});
+                this._autoResize();
+            }
+
+            updateModelContext(params) { return this._request("ui/update-model-context", params); }
+            sendMessage(params) { return this._request("ui/message", params); }
+            callServerTool(params) { return this._request("tools/call", params); }
+
+            _request(method, params) {
+                return new Promise((resolve, reject) => {
+                    const id = ++this._nextId;
+                    this._pending.set(id, { resolve, reject });
+                    window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+                });
+            }
+
+            _notify(method, params) {
+                window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
+            }
+
+            _autoResize() {
+                let busy = false, lw = 0, lh = 0;
+                const update = () => {
+                    if (busy) return;
+                    busy = true;
+                    requestAnimationFrame(() => {
+                        busy = false;
+                        const el = document.documentElement;
+                        const sw = el.style.width, sh = el.style.height;
+                        el.style.width = "fit-content"; el.style.height = "fit-content";
+                        const r = el.getBoundingClientRect();
+                        el.style.width = sw; el.style.height = sh;
+                        const pad = window.innerWidth - el.clientWidth;
+                        const w = Math.ceil(r.width + pad), h = Math.ceil(r.height);
+                        if (w !== lw || h !== lh) { lw = w; lh = h; this._notify("ui/notifications/size-changed", { width: w, height: h }); }
+                    });
+                };
+                update();
+                const obs = new ResizeObserver(update);
+                obs.observe(document.documentElement);
+                obs.observe(document.body);
+            }
+        }
+
+        const languages = [
+            { label: ".NET / C#", value: "dotnet-csharp" },
+            { label: "TypeScript", value: "nodejs-typescript" },
+            { label: "JavaScript", value: "nodejs-javascript" },
+            { label: "Python", value: "python" },
+            { label: "Java", value: "java" },
+            { label: "Go", value: "go" },
+        ];
+
+        const grid = document.getElementById("grid");
+        const status = document.getElementById("status");
+
+        for (const lang of languages) {
+            const btn = document.createElement("button");
+            btn.className = "language-btn";
+            btn.textContent = lang.label;
+            btn.addEventListener("click", () => selectLanguage(lang));
+            grid.appendChild(btn);
+        }
+
+        const app = new McpApp({ name: "Language Picker", version: "1.0.0" });
+
+        async function selectLanguage(lang) {
+            for (const b of grid.querySelectorAll("button")) {
+                b.disabled = true;
+                b.classList.remove("selected");
+            }
+            const selectedBtn = [...grid.querySelectorAll("button")].find(b => b.textContent === lang.label);
+            if (selectedBtn) selectedBtn.classList.add("selected");
+            status.textContent = "Selected: " + lang.label;
+            status.hidden = false;
+
+            await app.callServerTool({
+                name: "report_language_selection",
+                arguments: { language: lang.label },
+            });
+        }
+
+        app.connect();
+    </script>
+</body>
+
+</html>
