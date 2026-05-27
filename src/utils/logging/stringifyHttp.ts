@@ -17,7 +17,8 @@ export interface HttpStringifier {
  * @returns stringified request
  */
 function stringifyRequest(request: NormalizedHttpRequest, source: string, verbose?: boolean): string {
-    let message = `\n┌────── ${source} Request ${request.method} ${request.url}`;
+    let message = `[${source} Request]`;
+    message += `\n┌────── ${source} Request ${request.method} ${request.url}`;
     if (verbose) {
         message += stringifyRecord(request.headers ?? {}, 'Headers');
         message += stringifyRecord(request.query ?? {}, 'Query parameters');

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AzExtTreeItem, createSubscriptionContext, ISubscriptionContext, parseError } from '@microsoft/vscode-azext-utils';
-import type { AppResource, AppResourceResolver, ResolvedAppResourceBase } from '@microsoft/vscode-azext-utils/hostapi';
+import type { AppResource, AppResourceResolver } from '@microsoft/vscode-azext-utils/hostapi';
 import { l10n } from 'vscode';
 import type { AzureResource, ResourceModelBase } from '../../../../api/src/index';
 import { ext } from '../../../extensionVariables';
@@ -26,7 +26,7 @@ export class CompatibleApplicationResourceBranchDataProvider<TResource extends A
             kind: element.azureResourceType.kinds?.join(';'),
         };
         const subscriptionContext: ISubscriptionContext = createSubscriptionContext(element.subscription);
-        let resolved: ResolvedAppResourceBase | null | undefined;
+        let resolved;
         try {
             resolved = await this.resolver.resolveResource(subscriptionContext, oldAppResource);
         } catch (error) {
