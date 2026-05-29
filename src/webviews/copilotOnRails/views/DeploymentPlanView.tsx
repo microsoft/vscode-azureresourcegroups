@@ -8,6 +8,7 @@ import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, 
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import mermaid from 'mermaid';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { StageProgress } from './components/StageProgress';
 import './styles/deploymentPlanView.scss';
 import { type DeploymentPlanData, type DeploymentPlanTable } from './utils/deploymentPlanTypes';
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from './utils/viewConfigTypes';
@@ -276,6 +277,7 @@ export const DeploymentPlanView = (): JSX.Element => {
 
     return (
         <div className={`deploymentPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
+            <StageProgress currentStage={2} />
             <div className='planMain'>
                 <div className='planHeader'>
                     <div className='headerTop'>

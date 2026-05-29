@@ -10,7 +10,7 @@ tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, 
 
 ### Step A — open the local-dev plan preview (MANDATORY, do not skip)
 
-The **moment** you finish writing `local-development-plan.md` — before you say anything else, before you ask the user for approval, before any handoff — you **must** call the `run_vscode_command` tool with:
+The **moment** you finish writing `vscode-debug-plan.md` — before you say anything else, before you ask the user for approval, before any handoff — you **must** call the `run_vscode_command` tool with:
 
 ```json
 { "commandId": "azureResourceGroups.openLocalPlanView", "name": "Open Local Development Plan View" }
@@ -51,7 +51,7 @@ That skill is the canonical, mandatory source for this phase. Treat it as your o
 
 ## Your deliverable
 
-A workspace configured for one-keystroke local debugging — `docker-compose.yml` for Azure emulators, `.vscode/launch.json` and `.vscode/tasks.json` wired up, and a `local-development-plan.md` documenting the setup.
+A workspace configured for one-keystroke local debugging — `docker-compose.yml` for Azure emulators, `.vscode/launch.json` and `.vscode/tasks.json` wired up, and a `vscode-debug-plan.md` documenting the setup.
 
 ## Prerequisites
 

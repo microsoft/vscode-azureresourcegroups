@@ -21,13 +21,20 @@ export interface LocalPlanSection {
     content: LocalPlanContent[];
 }
 
+export interface SourceRange {
+    /** 0-indexed inclusive line in the source markdown that this block starts at. */
+    lineStart: number;
+    /** 0-indexed inclusive line in the source markdown that this block ends at. */
+    lineEnd: number;
+}
+
 export type LocalPlanContent =
-    | { type: 'table'; headers: string[]; rows: string[][] }
-    | { type: 'blockquote'; text: string }
-    | { type: 'paragraph'; text: string }
-    | { type: 'codeBlock'; language: string; code: string }
-    | { type: 'bulletList'; items: string[] }
-    | { type: 'subsection'; title: string; content: LocalPlanContent[] };
+    | ({ type: 'table'; headers: string[]; rows: string[][]; rowLines: number[] } & SourceRange)
+    | ({ type: 'blockquote'; text: string } & SourceRange)
+    | ({ type: 'paragraph'; text: string } & SourceRange)
+    | ({ type: 'codeBlock'; language: string; code: string } & SourceRange)
+    | ({ type: 'bulletList'; items: string[] } & SourceRange)
+    | ({ type: 'subsection'; title: string; content: LocalPlanContent[] } & SourceRange);
 
 export function parseLocalPlanMarkdown(markdown: string): LocalPlanData {
     const lines = markdown.replace(/\r\n/g, '\n').split('\n');
@@ -125,6 +132,8 @@ function parseContent(lines: string[], start: number, end: number): LocalPlanCon
             continue;
         }
 
+        const blockStart = i;
+
         // Sub-section heading (###)
         const subMatch = trimmed.match(/^###\s+(.+)$/);
         if (subMatch) {
@@ -135,7 +144,7 @@ function parseContent(lines: string[], start: number, end: number): LocalPlanCon
                 subEnd++;
             }
             const subContent = parseContent(lines, i, subEnd);
-            content.push({ type: 'subsection', title: subTitle, content: subContent });
+            content.push({ type: 'subsection', title: subTitle, content: subContent, lineStart: blockStart, lineEnd: subEnd - 1 });
             i = subEnd;
             continue;
         }
@@ -150,13 +159,14 @@ function parseContent(lines: string[], start: number, end: number): LocalPlanCon
                 i++;
             }
             if (i < end) { i++; }
-            content.push({ type: 'codeBlock', language: lang, code: codeLines.join('\n') });
+            content.push({ type: 'codeBlock', language: lang, code: codeLines.join('\n'), lineStart: blockStart, lineEnd: i - 1 });
             continue;
         }
 
         // Table
         if (trimmed.startsWith('|')) {
             const headers = parseTableRow(trimmed);
+            const rowLines: number[] = [];
             i++;
             if (i < end && lines[i].trim().match(/^\|[-\s|:]+$/)) {
                 i++;
@@ -164,9 +174,10 @@ function parseContent(lines: string[], start: number, end: number): LocalPlanCon
             const rows: string[][] = [];
             while (i < end && lines[i].trim().startsWith('|')) {
                 rows.push(parseTableRow(lines[i].trim()));
+                rowLines.push(i);
                 i++;
             }
-            content.push({ type: 'table', headers, rows });
+            content.push({ type: 'table', headers, rows, rowLines, lineStart: blockStart, lineEnd: i - 1 });
             continue;
         }
 
@@ -177,7 +188,7 @@ function parseContent(lines: string[], start: number, end: number): LocalPlanCon
                 items.push(lines[i].trim().substring(2).trim());
                 i++;
             }
-            content.push({ type: 'bulletList', items });
+            content.push({ type: 'bulletList', items, lineStart: blockStart, lineEnd: i - 1 });
             continue;
         }
 
@@ -188,12 +199,12 @@ function parseContent(lines: string[], start: number, end: number): LocalPlanCon
                 quoteLines.push(lines[i].trim().replace(/^>\s?/, ''));
                 i++;
             }
-            content.push({ type: 'blockquote', text: quoteLines.join(' ').trim() });
+            content.push({ type: 'blockquote', text: quoteLines.join(' ').trim(), lineStart: blockStart, lineEnd: i - 1 });
             continue;
         }
 
         // Paragraph
-        content.push({ type: 'paragraph', text: trimmed });
+        content.push({ type: 'paragraph', text: trimmed, lineStart: blockStart, lineEnd: blockStart });
         i++;
     }
 
@@ -201,8 +212,12 @@ function parseContent(lines: string[], start: number, end: number): LocalPlanCon
 }
 
 function parseTableRow(line: string): string[] {
-    return line
-        .split('|')
-        .slice(1, -1)
-        .map((cell) => cell.trim());
+    let parts = line.split('|');
+    if (parts.length > 0 && parts[0].trim() === '') {
+        parts = parts.slice(1);
+    }
+    if (parts.length > 0 && parts[parts.length - 1].trim() === '') {
+        parts = parts.slice(0, -1);
+    }
+    return parts.map((cell) => cell.trim());
 }

@@ -18,7 +18,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
 
         this.sourceFileUri = sourceFileUri;
 
-        this.panel.webview.onDidReceiveMessage((message: { command: string; data?: LocalPlanData; prompt?: string; originalCode?: string; newCode?: string; language?: string }) => {
+        this.panel.webview.onDidReceiveMessage((message: { command: string; data?: LocalPlanData; prompt?: string; originalCode?: string; newCode?: string; language?: string; requestId?: string; lineStart?: number; lineEnd?: number; newText?: string }) => {
             switch (message.command) {
                 case 'ready':
                     void this.panel.webview.postMessage({ command: 'setLocalPlanData', data: planData });
@@ -47,7 +47,10 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                     this.openSourceFile();
                     break;
                 case 'updateCodeBlock':
-                    void this.updateCodeBlock(message.originalCode, message.newCode);
+                    void this.updateCodeBlock(message.requestId, message.originalCode, message.newCode);
+                    break;
+                case 'updatePlanLines':
+                    void this.updatePlanLines(message.requestId, message.lineStart, message.lineEnd, message.newText);
                     break;
             }
         });
@@ -71,16 +74,17 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         void vscode.commands.executeCommand('vscode.open', this.sourceFileUri);
     }
 
-    private async updateCodeBlock(originalCode: string | undefined, newCode: string | undefined): Promise<void> {
+    private async updateCodeBlock(requestId: string | undefined, originalCode: string | undefined, newCode: string | undefined): Promise<void> {
         if (typeof originalCode !== 'string' || typeof newCode !== 'string') {
-            void this.panel.webview.postMessage({ command: 'codeBlockUpdateError', error: vscode.l10n.t('Invalid edit payload.') });
+            void this.panel.webview.postMessage({ command: 'codeBlockUpdateError', requestId, error: vscode.l10n.t('Invalid edit payload.') });
             return;
         }
         if (originalCode === newCode) {
+            void this.panel.webview.postMessage({ command: 'codeBlockUpdated', requestId });
             return;
         }
         if (!this.sourceFileUri) {
-            void this.panel.webview.postMessage({ command: 'codeBlockUpdateError', error: vscode.l10n.t('The plan file location is unknown, so the change could not be saved.') });
+            void this.panel.webview.postMessage({ command: 'codeBlockUpdateError', requestId, error: vscode.l10n.t('The plan file location is unknown, so the change could not be saved.') });
             return;
         }
 
@@ -91,21 +95,61 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
 
             const firstIdx = normalized.indexOf(originalCode);
             if (firstIdx === -1) {
-                void this.panel.webview.postMessage({ command: 'codeBlockUpdateError', error: vscode.l10n.t("Couldn't locate the original block in the plan file. It may have changed.") });
+                void this.panel.webview.postMessage({ command: 'codeBlockUpdateError', requestId, error: vscode.l10n.t("Couldn't locate the original block in the plan file. It may have changed.") });
                 return;
             }
             if (normalized.indexOf(originalCode, firstIdx + 1) !== -1) {
-                void this.panel.webview.postMessage({ command: 'codeBlockUpdateError', error: vscode.l10n.t('The original block appears more than once in the plan file. Edit the file directly to resolve the ambiguity.') });
+                void this.panel.webview.postMessage({ command: 'codeBlockUpdateError', requestId, error: vscode.l10n.t('The original block appears more than once in the plan file. Edit the file directly to resolve the ambiguity.') });
                 return;
             }
 
             const updated = normalized.slice(0, firstIdx) + newCode + normalized.slice(firstIdx + originalCode.length);
             const finalContent = usesCRLF ? updated.replace(/\n/g, '\r\n') : updated;
             await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(finalContent, 'utf-8'));
+            void this.panel.webview.postMessage({ command: 'codeBlockUpdated', requestId });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : String(err);
             void this.panel.webview.postMessage({
                 command: 'codeBlockUpdateError',
+                requestId,
+                error: vscode.l10n.t('Saving the change failed: {0}', errorMessage),
+            });
+        }
+    }
+
+    private async updatePlanLines(requestId: string | undefined, lineStart: number | undefined, lineEnd: number | undefined, newText: string | undefined): Promise<void> {
+        if (typeof lineStart !== 'number' || typeof lineEnd !== 'number' || typeof newText !== 'string' || lineStart < 0 || lineEnd < lineStart) {
+            void this.panel.webview.postMessage({ command: 'planLinesUpdateError', requestId, error: vscode.l10n.t('Invalid edit payload.') });
+            return;
+        }
+        if (!this.sourceFileUri) {
+            void this.panel.webview.postMessage({ command: 'planLinesUpdateError', requestId, error: vscode.l10n.t('The plan file location is unknown, so the change could not be saved.') });
+            return;
+        }
+
+        try {
+            const raw = Buffer.from(await vscode.workspace.fs.readFile(this.sourceFileUri)).toString('utf-8');
+            const usesCRLF = raw.includes('\r\n');
+            const lines = raw.replace(/\r\n/g, '\n').split('\n');
+
+            if (lineEnd >= lines.length) {
+                void this.panel.webview.postMessage({ command: 'planLinesUpdateError', requestId, error: vscode.l10n.t('The plan file has changed since it was loaded. Reload the plan and try again.') });
+                return;
+            }
+
+            const replacement = newText.split('\n');
+            const updatedLines = [...lines.slice(0, lineStart), ...replacement, ...lines.slice(lineEnd + 1)];
+            let updated = updatedLines.join('\n');
+            if (usesCRLF) {
+                updated = updated.replace(/\n/g, '\r\n');
+            }
+            await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(updated, 'utf-8'));
+            void this.panel.webview.postMessage({ command: 'planLinesUpdated', requestId });
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            void this.panel.webview.postMessage({
+                command: 'planLinesUpdateError',
+                requestId,
                 error: vscode.l10n.t('Saving the change failed: {0}', errorMessage),
             });
         }

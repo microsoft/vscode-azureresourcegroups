@@ -32,6 +32,7 @@ import { deleteResourceGroupV2 } from './commands/deleteResourceGroup/v2/deleteR
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
+import { hasProjectPlanFilesContextKey, isEmptyWorkspaceContextKey } from './constants';
 import { registerExportAuthRecordOnSessionChange } from './exportAuthRecord';
 import { ext } from './extensionVariables';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
@@ -48,6 +49,8 @@ import { AzureResourceBranchDataProviderManager } from './tree/azure/AzureResour
 import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzureResourceBranchDataProvider';
 import { registerAzureTree } from './tree/azure/registerAzureTree';
 import { registerFocusTree } from './tree/azure/registerFocusTree';
+import { AzureProjectProgressTreeDataProvider } from './tree/project/AzureProjectProgressTreeDataProvider';
+import { getProjectPlanFiles } from './tree/project/projectPlanFiles';
 import { TenantDefaultBranchDataProvider } from './tree/tenants/TenantDefaultBranchDataProvider';
 import { TenantResourceBranchDataProviderManager } from './tree/tenants/TenantResourceBranchDataProviderManager';
 import { registerTenantTree } from './tree/tenants/registerTenantTree';
@@ -68,6 +71,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
+    await registerProjectPlanFilesContext(context);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);
@@ -165,10 +169,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         refreshEvent: refreshWorkspaceTreeEmitter.event,
     });
 
-    context.subscriptions.push(vscode.window.registerTreeDataProvider('azureProject', {
-        getChildren: () => [],
-        getTreeItem: () => { throw new Error('azureProject view has no tree items.'); },
-    }));
+    const azureProjectProgressTreeDataProvider = new AzureProjectProgressTreeDataProvider(context);
+    context.subscriptions.push(vscode.window.registerTreeDataProvider('azureProject', azureProjectProgressTreeDataProvider));
 
     const tenantResourcesBranchDataItemCache = new BranchDataItemCache();
     registerTenantTree(context, {
@@ -325,4 +327,71 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
 export function deactivate(): void {
     ext.diagnosticWatcher?.dispose();
+}
+
+async function registerProjectPlanFilesContext(context: vscode.ExtensionContext): Promise<void> {
+    const update = async (): Promise<void> => {
+        const files = await getProjectPlanFiles();
+
+        await vscode.commands.executeCommand('setContext', hasProjectPlanFilesContextKey, files.hasProjectPlan || files.hasLocalDevelopmentPlan || files.hasDeploymentPlan);
+        await vscode.commands.executeCommand('setContext', isEmptyWorkspaceContextKey, await isWorkspaceEmpty());
+    };
+
+    context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
+        void update();
+    }));
+    context.subscriptions.push(vscode.workspace.onDidCreateFiles(() => {
+        void update();
+    }));
+    context.subscriptions.push(vscode.workspace.onDidDeleteFiles(() => {
+        void update();
+    }));
+    context.subscriptions.push(vscode.workspace.onDidRenameFiles(() => {
+        void update();
+    }));
+
+    const watchers = [
+        vscode.workspace.createFileSystemWatcher('**/project-plan.md'),
+        vscode.workspace.createFileSystemWatcher('**/vscode-debug-plan.md'),
+        vscode.workspace.createFileSystemWatcher('**/.azure/deployment-plan.md'),
+    ];
+
+    for (const watcher of watchers) {
+        watcher.onDidCreate(() => {
+            void update();
+        });
+        watcher.onDidDelete(() => {
+            void update();
+        });
+        watcher.onDidChange(() => {
+            void update();
+        });
+        context.subscriptions.push(watcher);
+    }
+
+    await update();
+}
+
+async function isWorkspaceEmpty(): Promise<boolean> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) {
+        return false;
+    }
+
+    // Entries that don't count as "real" project content.
+    const ignored = new Set(['.git', '.vscode', '.azure', '.github']);
+
+    for (const folder of folders) {
+        try {
+            const entries = await vscode.workspace.fs.readDirectory(folder.uri);
+            const meaningful = entries.filter(([name]) => !ignored.has(name));
+            if (meaningful.length === 0) {
+                return true;
+            }
+        } catch {
+            // Ignore unreadable folders (e.g. permission errors) and keep checking the rest.
+        }
+    }
+
+    return false;
 }

@@ -432,11 +432,6 @@
                     "visibility": "visible"
                 },
                 {
-                    "id": "azureProject",
-                    "name": "%azureProject.viewName%",
-                    "visibility": "visible"
-                },
-                {
                     "id": "azureTenantsView",
                     "name": "Accounts & Tenants",
                     "visibility": "collapsed"
@@ -454,6 +449,14 @@
                     "visibility": "collapsed",
                     "icon": "$(azure)",
                     "type": "tree"
+                }
+            ],
+            "explorer": [
+                {
+                    "id": "azureProject",
+                    "name": "%azureProject.viewName%",
+                    "visibility": "visible",
+                    "when": "ms-azuretools.vscode-azureresourcegroups.hasProjectPlanFiles == true || ms-azuretools.vscode-azureresourcegroups.isEmptyWorkspace == true"
                 }
             ]
         },

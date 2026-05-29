@@ -7,6 +7,7 @@ import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent,
 import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { StageProgress } from './components/StageProgress';
 import './styles/scaffoldPlanView.scss';
 import { type PlanContent, type PlanData, type PlanSection, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 
@@ -265,6 +266,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
 
     return (
         <div className={`scaffoldPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
+            <StageProgress currentStage={0} />
             <div className='planMain'>
                 <div className='planHeader'>
                     <div className='headerTop'>
