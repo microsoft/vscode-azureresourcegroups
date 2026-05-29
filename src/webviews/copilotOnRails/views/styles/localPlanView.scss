@@ -460,18 +460,22 @@
 
         .dataTableInputCell {
             min-width: 180px;
+            max-width: 260px;
 
             .fui-Input {
                 width: 100%;
+                max-width: 240px;
             }
         }
 
         .dataTableDropdownCell {
             min-width: 120px;
+            max-width: 180px;
 
             .fui-Dropdown {
                 min-width: 100px;
                 width: 100%;
+                max-width: 160px;
             }
         }
 
@@ -572,8 +576,9 @@
         }
 
         .fui-Input {
-            min-width: 220px;
-            flex: 1 1 220px;
+            min-width: 180px;
+            flex: 0 0 240px;
+            max-width: 240px;
         }
     }
 
@@ -609,8 +614,9 @@
             }
 
             .editableValueInput {
-                flex: 1 1 160px;
-                min-width: 120px;
+                flex: 0 0 220px;
+                width: 220px;
+                max-width: 220px;
             }
         }
     }
