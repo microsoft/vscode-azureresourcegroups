@@ -395,6 +395,11 @@
                 "command": "azureResourceGroups.openDeployPlanView",
                 "title": "%azureResourceGroups.openDeployPlanView%",
                 "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openRequirementsView",
+                "title": "%azureResourceGroups.openRequirementsView%",
+                "category": "Azure"
             }
         ],
         "viewsContainers": {

@@ -58,6 +58,7 @@ import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDe
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
+import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
     // the entry point for vscode.dev is this activate, not main.js, so we need to instantiate perfStats here
@@ -72,6 +73,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
     await registerProjectPlanFilesContext(context);
+    registerRequirementsAutoOpen(context);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);
