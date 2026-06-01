@@ -299,14 +299,16 @@ export const ScaffoldPlanView = (): JSX.Element => {
                                     onClick={() => setDrawerOpen(v => !v)}
                                 />
                             </Tooltip>
-                            <Button
-                                appearance='primary'
-                                icon={<CheckmarkRegular />}
-                                disabled={isAwaitingRevision}
-                                onClick={handleApprove}
-                            >
-                                Approve Plan
-                            </Button>
+                            <Tooltip content='Approve the plan and continue with Copilot' relationship='label'>
+                                <Button
+                                    appearance='primary'
+                                    icon={<CheckmarkRegular />}
+                                    disabled={isAwaitingRevision}
+                                    onClick={handleApprove}
+                                >
+                                    Approve Plan
+                                </Button>
+                            </Tooltip>
                         </div>
                     </div>
                 </div>

@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, Checkbox, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Dropdown, Input, Option, Spinner, Textarea, Tooltip } from '@fluentui/react-components';
+import { Button, Checkbox, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea, Tooltip } from '@fluentui/react-components';
 import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
-import * as jsoncParser from 'jsonc-parser';
 import mermaid from 'mermaid';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
@@ -27,105 +26,76 @@ mermaid.initialize({
 });
 let mermaidIdCounter = 0;
 
-const alwaysExpandedSections = new Set(['project analysis', 'prerequisites', 'scan results']);
-const defaultOpenSections = new Set(['architecture diagram']);
-const editableCodeSections = new Set(['launch configuration']);
+// Sections expected in the new vscode-debug-plan format. Anything else is hidden.
+const ALLOWED_SECTIONS = new Set([
+    'prerequisites',
+    'debug configurations',
+    'orchestrator',
+    'emulators',
+    'architecture diagram',
+    'migrations',
+    'api test collections',
+    'convenience scripts',
+]);
 
-const COMPOUND_LAUNCH_NAME_REGEX = /^Compound Launch Config Name:\s*✏️\s*\*\*([^*]+?)\*\*\s*$/u;
-const GENERATE_TOGGLE_REGEX = /^\*\*Generate:\*\*\s*\[([ x])\]\s*$/u;
+// Section order shown in the UI.
+const SECTION_ORDER: string[] = [
+    'prerequisites',
+    'debug configurations',
+    'orchestrator',
+    'emulators',
+    'architecture diagram',
+    'migrations',
+    'api test collections',
+    'convenience scripts',
+];
+
+// Sections that are always rendered open; the rest get a clickable header
+// that toggles open/closed. (Architecture Diagram opens by default but stays
+// collapsible since the mermaid diagram is large.)
+const ALWAYS_EXPANDED_SECTIONS = new Set(['prerequisites']);
+const DEFAULT_OPEN_SECTIONS = new Set([
+    'prerequisites',
+    'debug configurations',
+    'architecture diagram',
+]);
+
 const GENERATE_HEADER = 'generate';
 
-function isDatabaseConfigSection(title: string | undefined): boolean {
-    return (title ?? '').toLowerCase().trim() === 'database configuration';
-}
-
-function isPortRegistrySection(title: string | undefined): boolean {
-    return (title ?? '').toLowerCase().trim() === 'port registry';
-}
-
-function isGenerationOptionsSection(title: string | undefined): boolean {
-    return (title ?? '').toLowerCase().trim() === 'generation options';
-}
-
-function isServicesSection(title: string | undefined): boolean {
-    return (title ?? '').toLowerCase().trim() === 'services';
-}
-
-function isEmulatorsSection(title: string | undefined): boolean {
-    return (title ?? '').toLowerCase().trim() === 'emulators';
-}
-
-function isConnectionStringsSection(title: string | undefined): boolean {
-    const lower = (title ?? '').toLowerCase().trim();
-    return lower === 'connection strings' || lower === 'connection string';
-}
-
-function isExistingConfigurationSection(title: string | undefined): boolean {
-    const lower = (title ?? '').toLowerCase().trim();
-    return lower === 'existing configuration' || lower === 'existing config';
-}
-
 function findGenerateColumnIdx(headers: string[]): number {
-    return headers.findIndex(h => h.toLowerCase().trim() === GENERATE_HEADER);
+    return headers.findIndex((h) => h.toLowerCase().trim() === GENERATE_HEADER);
 }
 
-function findLaunchConfigNameColumnIdx(headers: string[]): number {
-    return headers.findIndex(h => h.toLowerCase().trim() === 'launch config name');
+function sectionSortOrder(title: string): number {
+    const lower = title.toLowerCase().trim();
+    const idx = SECTION_ORDER.indexOf(lower);
+    return idx === -1 ? SECTION_ORDER.length : idx;
 }
 
-function buildTableRowMarkdown(cells: string[]): string {
-    return `| ${cells.map(c => c.trim()).join(' | ')} |`;
+function shouldHideSection(section: LocalPlanSection): boolean {
+    return !ALLOWED_SECTIONS.has(section.title.toLowerCase().trim());
 }
 
-interface PlanSectionContextValue {
+interface ToggleEntry {
     sectionTitle: string;
-    subsectionTitle?: string;
+    rowLabel: string;
+    generate: boolean;
 }
-const PlanSectionContext = createContext<PlanSectionContextValue>({ sectionTitle: '' });
 
-interface PlanLineEditContextValue {
-    submitPlanEdit: (lineStart: number, lineEnd: number, newText: string) => Promise<void>;
-    showEditError: (message: string) => void;
-    setSourceFeedback: (sourceKey: string, text: string | null) => void;
+interface PlanToggleContextValue {
+    getToggle: (key: string) => ToggleEntry | undefined;
+    setToggle: (key: string, entry: ToggleEntry | null) => void;
 }
-const PlanLineEditContext = createContext<PlanLineEditContextValue>({
-    submitPlanEdit: async () => { /* no-op */ },
-    showEditError: () => { /* no-op */ },
-    setSourceFeedback: () => { /* no-op */ },
+const PlanToggleContext = createContext<PlanToggleContextValue>({
+    getToggle: () => undefined,
+    setToggle: () => { /* no-op */ },
 });
 
-type ParagraphBlock = Extract<LocalPlanContent, { type: 'paragraph' }>;
 type TableBlock = Extract<LocalPlanContent, { type: 'table' }>;
-
-interface CodeEditNoteContextValue {
-    addCodeEditNote: (language: string, oldCode: string, newCode: string) => void;
-    updateCodeBlock: (originalCode: string, newCode: string, language: string) => Promise<void>;
-    showCodeEditError: (message: string) => void;
-}
-const CodeEditNoteContext = createContext<CodeEditNoteContextValue>({
-    addCodeEditNote: () => { /* no-op */ },
-    updateCodeBlock: async () => { /* no-op */ },
-    showCodeEditError: () => { /* no-op */ },
-});
-
-function buildCodeEditNote(language: string, _oldCode: string, newCode: string): string {
-    const langLabel = language?.trim() ? language.trim() : 'code';
-    const fence = `\`\`\`${language?.trim() ?? ''}`;
-    return [
-        `I directly edited the ${langLabel} block in the Launch Configuration section. The plan file now contains:`,
-        '',
-        fence,
-        newCode,
-        '```',
-        '',
-        'Please make sure any generated files (.vscode/launch.json, .vscode/tasks.json, etc.) and any related plan content stay consistent with this updated block.',
-    ].join('\n');
-}
 
 interface FeedbackItem {
     id: string;
     text: string;
-    sourceKey?: string;
 }
 
 let feedbackIdCounter = 0;
@@ -133,8 +103,8 @@ const nextId = (): string => `fb-${++feedbackIdCounter}`;
 
 function buildFeedbackPrompt(items: FeedbackItem[]): string {
     const notes = items
-        .map(i => `- ${i.text.trim()}`)
-        .filter(t => t.length > 2);
+        .map((i) => `- ${i.text.trim()}`)
+        .filter((t) => t.length > 2);
 
     const lines: string[] = [
         'Please revise the local development plan based on my feedback and update vscode-debug-plan.md.',
@@ -147,21 +117,33 @@ function buildFeedbackPrompt(items: FeedbackItem[]): string {
     return lines.join('\n').trimEnd();
 }
 
+function toggleFeedbackText(entry: ToggleEntry): string {
+    return `In **${entry.sectionTitle}**, set **Generate** to **${entry.generate ? 'Yes' : 'No'}** for **${entry.rowLabel}**.`;
+}
+
 export const LocalPlanView = (): JSX.Element => {
     const [plan, setPlan] = useState<LocalPlanData | null>(null);
-    const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
+    const [freeformItems, setFreeformItems] = useState<FeedbackItem[]>([]);
     const [freeformDraft, setFreeformDraft] = useState('');
+    const [pendingToggles, setPendingToggles] = useState<Map<string, ToggleEntry>>(new Map());
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
-    const [codeEditError, setCodeEditError] = useState<string | null>(null);
     const { vscodeApi } = useContext(WebviewContext);
-    const pendingCodeBlockUpdatesRef = useRef<Map<string, { resolve: () => void; reject: (message: string) => void }>>(new Map());
-    const pendingPlanLineEditsRef = useRef<Map<string, { resolve: () => void; reject: (message: string) => void }>>(new Map());
+
+    const toggleItems = useMemo<FeedbackItem[]>(
+        () => Array.from(pendingToggles.entries()).map(([key, entry]) => ({
+            id: `toggle-${key}`,
+            text: toggleFeedbackText(entry),
+        })),
+        [pendingToggles],
+    );
+
+    const allItems = useMemo(() => [...toggleItems, ...freeformItems], [toggleItems, freeformItems]);
 
     const hasEdits = useMemo(
-        () => feedbackItems.length > 0 || freeformDraft.trim().length > 0,
-        [feedbackItems, freeformDraft],
+        () => allItems.length > 0 || freeformDraft.trim().length > 0,
+        [allItems, freeformDraft],
     );
 
     useEffect(() => {
@@ -169,73 +151,22 @@ export const LocalPlanView = (): JSX.Element => {
             const message = event.data;
             if (message?.command === 'setLocalPlanData') {
                 setPlan(message.data as LocalPlanData);
-                // New plan data from the controller — either the initial load or a
-                // post-revision refresh. Either way, clear pending feedback state.
-                setFeedbackItems([]);
+                setFreeformItems([]);
                 setFreeformDraft('');
+                setPendingToggles(new Map());
             } else if (message?.command === 'revisionInProgress') {
                 setIsAwaitingRevision(true);
                 setDrawerOpen(false);
             } else if (message?.command === 'revisionComplete') {
                 setIsAwaitingRevision(false);
-            } else if (message?.command === 'codeBlockUpdated') {
-                const requestId = typeof message.requestId === 'string' ? message.requestId : undefined;
-                if (!requestId) {
-                    return;
-                }
-                const pending = pendingCodeBlockUpdatesRef.current.get(requestId);
-                if (!pending) {
-                    return;
-                }
-                pendingCodeBlockUpdatesRef.current.delete(requestId);
-                pending.resolve();
-            } else if (message?.command === 'codeBlockUpdateError') {
-                const errorMessage = typeof message.error === 'string' ? message.error : 'Failed to save changes to the plan file.';
-                const requestId = typeof message.requestId === 'string' ? message.requestId : undefined;
-                if (requestId) {
-                    const pending = pendingCodeBlockUpdatesRef.current.get(requestId);
-                    if (pending) {
-                        pendingCodeBlockUpdatesRef.current.delete(requestId);
-                        pending.reject(errorMessage);
-                        return;
-                    }
-                }
-                setCodeEditError(errorMessage);
-            } else if (message?.command === 'planLinesUpdated') {
-                const requestId = typeof message.requestId === 'string' ? message.requestId : undefined;
-                if (!requestId) {
-                    return;
-                }
-                const pending = pendingPlanLineEditsRef.current.get(requestId);
-                if (!pending) {
-                    return;
-                }
-                pendingPlanLineEditsRef.current.delete(requestId);
-                pending.resolve();
-            } else if (message?.command === 'planLinesUpdateError') {
-                const errorMessage = typeof message.error === 'string' ? message.error : 'Failed to save changes to the plan file.';
-                const requestId = typeof message.requestId === 'string' ? message.requestId : undefined;
-                if (requestId) {
-                    const pending = pendingPlanLineEditsRef.current.get(requestId);
-                    if (pending) {
-                        pendingPlanLineEditsRef.current.delete(requestId);
-                        pending.reject(errorMessage);
-                        return;
-                    }
-                }
-                setCodeEditError(errorMessage);
             }
         };
         window.addEventListener('message', handler);
         vscodeApi.postMessage({ command: 'ready' });
         return () => {
             window.removeEventListener('message', handler);
-            pendingCodeBlockUpdatesRef.current.forEach((pending) => pending.reject('The edit request was cancelled before completion.'));
-            pendingCodeBlockUpdatesRef.current.clear();
-            pendingPlanLineEditsRef.current.forEach((pending) => pending.reject('The edit request was cancelled before completion.'));
-            pendingPlanLineEditsRef.current.clear();
         };
-    }, []);
+    }, [vscodeApi]);
 
     const handleApprove = useCallback(() => {
         if (!plan) {
@@ -249,68 +180,39 @@ export const LocalPlanView = (): JSX.Element => {
     }, [plan, hasEdits, vscodeApi]);
 
     const handleRemoveFeedback = useCallback((id: string) => {
-        setFeedbackItems(prev => prev.filter(i => i.id !== id));
-    }, []);
-
-    const addCodeEditNote = useCallback((language: string, oldCode: string, newCode: string) => {
-        const text = buildCodeEditNote(language, oldCode, newCode);
-        setFeedbackItems(prev => [...prev, { id: nextId(), text }]);
-        setDrawerOpen(true);
-    }, []);
-
-    const showCodeEditError = useCallback((message: string) => {
-        setCodeEditError(message);
-    }, []);
-
-    const updateCodeBlock = useCallback((originalCode: string, newCode: string, language: string): Promise<void> => {
-        const requestId = `code-update-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        return new Promise<void>((resolve, reject) => {
-            pendingCodeBlockUpdatesRef.current.set(requestId, { resolve, reject });
-            vscodeApi.postMessage({
-                command: 'updateCodeBlock',
-                requestId,
-                originalCode,
-                language,
-                newCode,
+        if (id.startsWith('toggle-')) {
+            const key = id.slice('toggle-'.length);
+            setPendingToggles((prev) => {
+                if (!prev.has(key)) {
+                    return prev;
+                }
+                const next = new Map(prev);
+                next.delete(key);
+                return next;
             });
-        });
-    }, [vscodeApi]);
-
-    const codeEditContextValue = useMemo<CodeEditNoteContextValue>(
-        () => ({ addCodeEditNote, updateCodeBlock, showCodeEditError }),
-        [addCodeEditNote, updateCodeBlock, showCodeEditError],
-    );
-
-    const submitPlanEdit = useCallback((lineStart: number, lineEnd: number, newText: string): Promise<void> => {
-        const requestId = `plan-edit-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        return new Promise<void>((resolve, reject) => {
-            pendingPlanLineEditsRef.current.set(requestId, { resolve, reject });
-            vscodeApi.postMessage({
-                command: 'updatePlanLines',
-                requestId,
-                lineStart,
-                lineEnd,
-                newText,
-            });
-        });
-    }, [vscodeApi]);
-
-    const setSourceFeedback = useCallback((sourceKey: string, text: string | null) => {
-        setFeedbackItems(prev => {
-            const filtered = prev.filter(i => i.sourceKey !== sourceKey);
-            if (text === null) {
-                return filtered;
-            }
-            return [...filtered, { id: nextId(), sourceKey, text }];
-        });
-        if (text !== null) {
-            setDrawerOpen(true);
+            return;
         }
+        setFreeformItems((prev) => prev.filter((i) => i.id !== id));
     }, []);
 
-    const planLineEditContextValue = useMemo<PlanLineEditContextValue>(
-        () => ({ submitPlanEdit, showEditError: showCodeEditError, setSourceFeedback }),
-        [submitPlanEdit, showCodeEditError, setSourceFeedback],
+    const getToggle = useCallback((key: string) => pendingToggles.get(key), [pendingToggles]);
+    const setToggle = useCallback((key: string, entry: ToggleEntry | null) => {
+        setPendingToggles((prev) => {
+            const next = new Map(prev);
+            if (entry === null) {
+                if (!next.delete(key)) {
+                    return prev;
+                }
+            } else {
+                next.set(key, entry);
+            }
+            return next;
+        });
+    }, []);
+
+    const planToggleContextValue = useMemo<PlanToggleContextValue>(
+        () => ({ getToggle, setToggle }),
+        [getToggle, setToggle],
     );
 
     const handleAddNote = useCallback(() => {
@@ -318,13 +220,14 @@ export const LocalPlanView = (): JSX.Element => {
         if (!text) {
             return;
         }
-        setFeedbackItems(prev => [...prev, { id: nextId(), text }]);
+        setFreeformItems((prev) => [...prev, { id: nextId(), text }]);
         setFreeformDraft('');
     }, [freeformDraft]);
 
     const handleDiscardAll = useCallback(() => {
-        setFeedbackItems([]);
+        setFreeformItems([]);
         setFreeformDraft('');
+        setPendingToggles(new Map());
     }, []);
 
     const handleSubmitFeedback = useCallback(() => {
@@ -333,14 +236,14 @@ export const LocalPlanView = (): JSX.Element => {
         }
         const draftTrimmed = freeformDraft.trim();
         const items = draftTrimmed.length > 0
-            ? [...feedbackItems, { id: nextId(), text: draftTrimmed }]
-            : feedbackItems;
+            ? [...allItems, { id: nextId(), text: draftTrimmed }]
+            : allItems;
         const prompt = buildFeedbackPrompt(items);
         vscodeApi.postMessage({ command: 'submitPlanFeedback', prompt, data: plan });
         setIsAwaitingRevision(true);
         setDrawerOpen(false);
         setConfirmSubmitOpen(false);
-    }, [plan, hasEdits, feedbackItems, freeformDraft, vscodeApi]);
+    }, [plan, hasEdits, allItems, freeformDraft, vscodeApi]);
 
     if (!plan) {
         return <div className='localPlanView'><p>Loading local dev plan...</p></div>;
@@ -393,7 +296,7 @@ export const LocalPlanView = (): JSX.Element => {
                                             {hasEdits && (
                                                 <CounterBadge
                                                     className='feedbackBadge'
-                                                    count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
+                                                    count={allItems.length + (freeformDraft.trim() ? 1 : 0)}
                                                     size='small'
                                                     color='danger'
                                                 />
@@ -401,17 +304,19 @@ export const LocalPlanView = (): JSX.Element => {
                                         </span>
                                     }
                                     disabled={isAwaitingRevision}
-                                    onClick={() => setDrawerOpen(v => !v)}
+                                    onClick={() => setDrawerOpen((v) => !v)}
                                 />
                             </Tooltip>
-                            <Button
-                                appearance='primary'
-                                icon={<CheckmarkRegular />}
-                                disabled={isAwaitingRevision}
-                                onClick={handleApprove}
-                            >
-                                Approve Plan
-                            </Button>
+                            <Tooltip content='Approve the plan and continue with Copilot' relationship='label'>
+                                <Button
+                                    appearance='primary'
+                                    icon={<CheckmarkRegular />}
+                                    disabled={isAwaitingRevision}
+                                    onClick={handleApprove}
+                                >
+                                    Approve Plan
+                                </Button>
+                            </Tooltip>
                         </div>
                     </div>
                 </div>
@@ -423,34 +328,29 @@ export const LocalPlanView = (): JSX.Element => {
                     </div>
                 )}
 
-                {plan.sections
-                    .filter((s) => !shouldHideSection(s))
-                    .sort((a, b) => sectionSortOrder(a.title) - sectionSortOrder(b.title))
-                    .map((section, i) => {
-                        const lower = section.title.toLowerCase();
-                        const collapsible = !alwaysExpandedSections.has(lower);
-                        const defaultOpen = !collapsible || defaultOpenSections.has(lower);
-                        const codeEditable = editableCodeSections.has(lower);
-                        return (
-                            <CodeEditNoteContext.Provider key={i} value={codeEditContextValue}>
-                                <PlanLineEditContext.Provider value={planLineEditContextValue}>
-                                    <PlanSectionContext.Provider value={{ sectionTitle: section.title }}>
-                                        <SectionCard
-                                            section={section}
-                                            collapsible={collapsible}
-                                            defaultOpen={defaultOpen}
-                                            codeEditable={codeEditable}
-                                        />
-                                    </PlanSectionContext.Provider>
-                                </PlanLineEditContext.Provider>
-                            </CodeEditNoteContext.Provider>
-                        );
-                    })}
+                <PlanToggleContext.Provider value={planToggleContextValue}>
+                    {plan.sections
+                        .filter((s) => !shouldHideSection(s))
+                        .sort((a, b) => sectionSortOrder(a.title) - sectionSortOrder(b.title))
+                        .map((section, i) => {
+                            const lower = section.title.toLowerCase().trim();
+                            const collapsible = !ALWAYS_EXPANDED_SECTIONS.has(lower);
+                            const defaultOpen = !collapsible || DEFAULT_OPEN_SECTIONS.has(lower);
+                            return (
+                                <SectionCard
+                                    key={i}
+                                    section={section}
+                                    collapsible={collapsible}
+                                    defaultOpen={defaultOpen}
+                                />
+                            );
+                        })}
+                </PlanToggleContext.Provider>
             </div>
 
             {drawerOpen && !isAwaitingRevision && (
                 <FeedbackDrawer
-                    items={feedbackItems}
+                    items={allItems}
                     freeformDraft={freeformDraft}
                     onFreeformChange={setFreeformDraft}
                     onAddNote={handleAddNote}
@@ -463,15 +363,9 @@ export const LocalPlanView = (): JSX.Element => {
 
             <SubmitEditsDialog
                 open={confirmSubmitOpen}
-                editCount={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
+                editCount={allItems.length + (freeformDraft.trim() ? 1 : 0)}
                 onCancel={() => setConfirmSubmitOpen(false)}
                 onSubmit={handleSubmitFeedback}
-            />
-
-            <CodeEditErrorDialog
-                open={codeEditError !== null}
-                message={codeEditError ?? ''}
-                onClose={() => setCodeEditError(null)}
             />
         </div>
     );
@@ -506,7 +400,7 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
             <div className='drawerBody'>
                 {items.length > 0 && (
                     <ul className='feedbackList'>
-                        {items.map(item => (
+                        {items.map((item) => (
                             <li key={item.id} className='feedbackItem freeform'>
                                 <span className='feedbackFreeformText'>{item.text}</span>
                                 <Button
@@ -589,7 +483,7 @@ const SubmitEditsDialog = ({ open, editCount, onCancel, onSubmit }: SubmitEditsD
     </Dialog>
 );
 
-const SectionCard = ({ section, collapsible, defaultOpen, codeEditable }: { section: LocalPlanSection; collapsible: boolean; defaultOpen: boolean; codeEditable: boolean }): JSX.Element => {
+const SectionCard = ({ section, collapsible, defaultOpen }: { section: LocalPlanSection; collapsible: boolean; defaultOpen: boolean }): JSX.Element => {
     const [open, setOpen] = useState(defaultOpen);
 
     return (
@@ -603,10 +497,8 @@ const SectionCard = ({ section, collapsible, defaultOpen, codeEditable }: { sect
             </div>
             {open && (
                 <div className='sectionContent'>
-                    {isEmulatorsSection(section.title) ? (
-                        <EmulatorsTable section={section} codeEditable={codeEditable} />
-                    ) : section.content.map((item, i) => (
-                        <ContentBlock key={i} item={item} codeEditable={codeEditable} />
+                    {section.content.map((item, i) => (
+                        <ContentBlock key={i} item={item} sectionTitle={section.title} />
                     ))}
                 </div>
             )}
@@ -614,138 +506,28 @@ const SectionCard = ({ section, collapsible, defaultOpen, codeEditable }: { sect
     );
 };
 
-function isHiddenSection(title: string): boolean {
-    const lower = title.toLowerCase();
-    return lower === 'execution checklist'
-        || lower === 'manual tests'
-        || lower === 'table of contents'
-        || lower === 'debug configuration checklist'
-        || lower === 'convenience scripts'
-        || lower === 'api test collections'
-        || lower === 'migrations';
-}
-
-function hasDetectedFeatures(content: LocalPlanContent[]): boolean {
-    for (const item of content) {
-        if (item.type === 'bulletList' && item.items.length > 0) { return true; }
-        if (item.type === 'table' && item.rows.length > 0) { return true; }
-        if (item.type === 'subsection' && hasDetectedFeatures(item.content)) { return true; }
-    }
-    return false;
-}
-
-function shouldHideSection(section: LocalPlanSection): boolean {
-    if (isHiddenSection(section.title)) { return true; }
-    if (section.title.toLowerCase().trim() === 'limited support') {
-        return !hasDetectedFeatures(section.content);
-    }
-    return false;
-}
-
-function isHiddenSubsection(title: string): boolean {
-    const lower = title.toLowerCase();
-    return lower === 'task configuration'
-        || lower === 'build configuration'
-        || lower === 'task/build configuration'
-        || lower === 'task / build configuration'
-        || lower === 'tasks configuration'
-        || lower === 'build task'
-        || lower === 'build tasks';
-}
-
-function isFlattenedSubsection(title: string): boolean {
-    const lower = title.toLowerCase();
-    return lower === 'debug configuration'
-        || lower === 'launch configuration'
-        || lower === 'launch configurations'
-        || lower === 'debug/launch configuration'
-        || lower === 'debug / launch configuration'
-        || lower === 'debug configurations';
-}
-
-function sectionSortOrder(title: string): number {
-    const lower = title.toLowerCase();
-    if (lower === 'prerequisites') { return 0; }
-    if (lower === 'architecture diagram') { return 1; }
-    return 2;
-}
-
-const ContentBlock = ({ item, codeEditable }: { item: LocalPlanContent; codeEditable: boolean }): JSX.Element | null => {
-    const sectionCtx = useContext(PlanSectionContext);
+const ContentBlock = ({ item, sectionTitle }: { item: LocalPlanContent; sectionTitle: string }): JSX.Element | null => {
     switch (item.type) {
         case 'table':
-            if (isDatabaseConfigSection(sectionCtx.sectionTitle)) {
-                return <EditableValueTable table={item} valueColumnIdx={1} />;
+            if (findGenerateColumnIdx(item.headers) >= 0) {
+                return <GenerateCheckboxTable table={item} sectionTitle={sectionTitle} />;
             }
-            if (isPortRegistrySection(sectionCtx.sectionTitle)) {
-                return <EditableValueTable table={item} valueColumnIdx={0} />;
-            }
-            if (isGenerationOptionsSection(sectionCtx.sectionTitle) && findGenerateColumnIdx(item.headers) >= 0) {
-                return <EditableGenerateTable table={item} />;
-            }
-            if (isServicesSection(sectionCtx.sectionTitle)) {
-                if (findGenerateColumnIdx(item.headers) >= 0) {
-                    return <ServicesTable table={item} />;
-                }
-                return <DataTable headers={item.headers} rows={item.rows} />;
-            }
-            if (isConnectionStringsSection(sectionCtx.sectionTitle)) {
-                return <ConnectionStringsTable table={item} />;
-            }
-            if (isExistingConfigurationSection(sectionCtx.sectionTitle)) {
-                return <ExistingConfigurationTable table={item} />;
-            }
-            return <TableAsList rows={item.rows} />;
+            return <DataTable headers={item.headers} rows={item.rows} />;
         case 'codeBlock':
             if (item.language?.toLowerCase() === 'mermaid') {
                 return <MermaidBlock code={item.code} />;
-            }
-            if (codeEditable) {
-                return <EditableCodeBlock language={item.language} code={item.code} />;
             }
             return <CodeBlock language={item.language} code={item.code} />;
         case 'bulletList':
             return <BulletListBlock items={item.items} />;
         case 'blockquote':
             return <BlockquoteBlock text={item.text} />;
-        case 'paragraph': {
-            const compoundMatch = item.text.match(COMPOUND_LAUNCH_NAME_REGEX);
-            if (compoundMatch) {
-                return <EditableLaunchName paragraph={item} currentName={compoundMatch[1]} />;
-            }
-            const generateMatch = item.text.match(GENERATE_TOGGLE_REGEX);
-            if (generateMatch && isGenerationOptionsSection(sectionCtx.sectionTitle)) {
-                return <EditableGenerateToggleParagraph paragraph={item} checked={generateMatch[1] === 'x'} />;
-            }
+        case 'paragraph':
             return <p className='paragraph' dangerouslySetInnerHTML={{ __html: formatInline(item.text) }} />;
-        }
         case 'subsection':
-            if (isHiddenSubsection(item.title)) { return null; }
-            if (isFlattenedSubsection(item.title)) {
-                return (
-                    <>
-                        {item.content.map((child, i) => (
-                            <ContentBlock key={i} item={child} codeEditable={codeEditable} />
-                        ))}
-                    </>
-                );
-            }
-            return <SubsectionBlock title={item.title} content={item.content} codeEditable={codeEditable} />;
+            return <SubsectionBlock title={item.title} content={item.content} sectionTitle={sectionTitle} />;
     }
 };
-
-const TableAsList = ({ rows }: { rows: string[][] }): JSX.Element => (
-    <ul className='bulletList'>
-        {rows.map((row, ri) => {
-            const [label, ...rest] = row;
-            const value = rest.join(' — ').trim();
-            const html = value
-                ? `<strong>${formatInline(label)}</strong>: ${formatInline(value)}`
-                : formatInline(label);
-            return <li key={ri} dangerouslySetInnerHTML={{ __html: html }} />;
-        })}
-    </ul>
-);
 
 const DataTable = ({ headers, rows }: { headers: string[]; rows: string[][] }): JSX.Element => (
     <div className='dataTableWrapper'>
@@ -770,927 +552,73 @@ const DataTable = ({ headers, rows }: { headers: string[]; rows: string[][] }): 
     </div>
 );
 
-const ServicesTable = ({ table }: { table: TableBlock }): JSX.Element => {
-    const { setSourceFeedback, submitPlanEdit, showEditError } = useContext(PlanLineEditContext);
+/**
+ * Renders a table whose Generate column contains `[x]`/`[ ]` markdown
+ * checkboxes. Toggling a checkbox stages a feedback note in the drawer
+ * (keyed by row); the plan file is left untouched until Copilot revises it.
+ */
+const GenerateCheckboxTable = ({ table, sectionTitle }: { table: TableBlock; sectionTitle: string }): JSX.Element => {
+    const { getToggle, setToggle } = useContext(PlanToggleContext);
     const generateIdx = findGenerateColumnIdx(table.headers);
-    const launchNameIdx = findLaunchConfigNameColumnIdx(table.headers);
+
     const originalStates = useMemo(
-        () => table.rows.map(r => /^yes$/i.test((r[generateIdx] ?? '').trim())),
+        () => table.rows.map((r) => /\[\s*x\s*\]/i.test(r[generateIdx] ?? '')),
         [table.rows, generateIdx],
     );
-    const [states, setStates] = useState<boolean[]>(originalStates);
-    const originalLaunchNames = useMemo(
-        () => table.rows.map(r => (r[launchNameIdx] ?? '').trim()),
-        [table.rows, launchNameIdx],
-    );
-    const [launchNameDrafts, setLaunchNameDrafts] = useState<string[]>(originalLaunchNames);
-    const [savingRow, setSavingRow] = useState<number | null>(null);
-    const focusedRowRef = useRef<number | null>(null);
 
-    useEffect(() => {
-        setStates(originalStates);
-    }, [originalStates]);
-
-    useEffect(() => {
-        if (focusedRowRef.current === null) {
-            setLaunchNameDrafts(originalLaunchNames);
-        }
-    }, [originalLaunchNames]);
-
-    const toggleRow = useCallback((rowIdx: number) => {
-        const next = !states[rowIdx];
-        setStates(prev => { const arr = prev.slice(); arr[rowIdx] = next; return arr; });
-        const rowLabel = (table.rows[rowIdx][launchNameIdx >= 0 ? launchNameIdx : 0] ?? '').trim() || `row ${rowIdx + 1}`;
-        const sourceKey = `services-generate-${table.lineStart}-${rowIdx}`;
-        if (next === originalStates[rowIdx]) {
-            setSourceFeedback(sourceKey, null);
-            return;
-        }
-        const desired = next ? 'Yes' : 'No';
-        const text = `In the **Services** table, set **Generate** to **${desired}** for **${rowLabel}**.`;
-        setSourceFeedback(sourceKey, text);
-    }, [states, table, launchNameIdx, originalStates, setSourceFeedback]);
-
-    const commitLaunchName = useCallback((rowIdx: number, next: string) => {
-        const trimmed = next.trim();
-        const original = originalLaunchNames[rowIdx];
-        if (!trimmed) {
-            setLaunchNameDrafts(prev => {
-                const arr = prev.slice();
-                arr[rowIdx] = original;
-                return arr;
-            });
-            return;
-        }
-        if (trimmed === original) {
-            return;
-        }
-        const newRow = table.rows[rowIdx].slice();
-        newRow[launchNameIdx] = trimmed;
-        const newLine = buildTableRowMarkdown(newRow);
-        const lineIdx = table.rowLines[rowIdx];
-        setSavingRow(rowIdx);
-        submitPlanEdit(lineIdx, lineIdx, newLine)
-            .catch((err: unknown) => {
-                setLaunchNameDrafts(prev => {
-                    const arr = prev.slice();
-                    arr[rowIdx] = original;
-                    return arr;
-                });
-                const message = err instanceof Error ? err.message : String(err);
-                showEditError(message);
-            })
-            .finally(() => setSavingRow(null));
-    }, [originalLaunchNames, table, launchNameIdx, submitPlanEdit, showEditError]);
-
-    return (
-        <div className='dataTableWrapper'>
-            <table className='dataTable'>
-                <thead>
-                    <tr>
-                        {table.headers.map((h, hi) => (
-                            <th key={hi} dangerouslySetInnerHTML={{ __html: formatInline(h) }} />
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {table.rows.map((row, ri) => (
-                        <tr key={ri}>
-                            {row.map((cell, ci) => {
-                                if (ci === generateIdx) {
-                                    return (
-                                        <td key={ci} className='dataTableCheckboxCell'>
-                                            <Checkbox
-                                                checked={states[ri]}
-                                                onChange={() => toggleRow(ri)}
-                                            />
-                                        </td>
-                                    );
-                                }
-                                if (ci === launchNameIdx) {
-                                    return (
-                                        <td key={ci} className='dataTableInputCell'>
-                                            <Input
-                                                size='small'
-                                                value={launchNameDrafts[ri]}
-                                                disabled={savingRow === ri}
-                                                onChange={(_, data) => {
-                                                    setLaunchNameDrafts(prev => {
-                                                        const arr = prev.slice();
-                                                        arr[ri] = data.value;
-                                                        return arr;
-                                                    });
-                                                }}
-                                                onFocus={() => { focusedRowRef.current = ri; }}
-                                                onBlur={(e) => {
-                                                    focusedRowRef.current = null;
-                                                    commitLaunchName(ri, e.target.value);
-                                                }}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        (e.target as HTMLInputElement).blur();
-                                                    } else if (e.key === 'Escape') {
-                                                        e.preventDefault();
-                                                        setLaunchNameDrafts(prev => {
-                                                            const arr = prev.slice();
-                                                            arr[ri] = originalLaunchNames[ri];
-                                                            return arr;
-                                                        });
-                                                        (e.target as HTMLInputElement).blur();
-                                                    }
-                                                }}
-                                            />
-                                        </td>
-                                    );
-                                }
-                                return <td key={ci} dangerouslySetInnerHTML={{ __html: formatInline(cell) }} />;
-                            })}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-};
-
-interface EmulatorInfo {
-    subsectionTitle: string;
-    port?: string;
-    connection?: string;
-    image?: { absoluteLine: number; prefix: string; value: string };
-    dataDir?: { absoluteLine: number; prefix: string; suffix: string; value: string };
-}
-
-function parseEmulators(content: LocalPlanContent[]): EmulatorInfo[] {
-    const emulators: EmulatorInfo[] = [];
-    for (const item of content) {
-        if (item.type !== 'subsection') { continue; }
-        const info: EmulatorInfo = { subsectionTitle: item.title };
-        for (const child of item.content) {
-            if (child.type === 'bulletList') {
-                for (const bullet of child.items) {
-                    const portMatch = bullet.match(/^\*\*Port:\*\*\s*`?([^`]+?)`?\s*$/i);
-                    if (portMatch) { info.port = portMatch[1].trim(); continue; }
-                    const connMatch = bullet.match(/^\*\*Connection:\*\*\s*`?(.+?)`?\s*$/i);
-                    if (connMatch) { info.connection = connMatch[1].trim(); }
-                }
-            } else if (child.type === 'codeBlock' && /^ya?ml$/i.test(child.language ?? '')) {
-                const codeLines = child.code.split('\n');
-                const codeStartLine = child.lineStart + 1;
-                for (let li = 0; li < codeLines.length; li++) {
-                    const ln = codeLines[li];
-                    if (!info.image) {
-                        const imgMatch = ln.match(/^(\s*image:\s*)(\S.*)$/);
-                        if (imgMatch) {
-                            info.image = {
-                                absoluteLine: codeStartLine + li,
-                                prefix: imgMatch[1],
-                                value: imgMatch[2].trim(),
-                            };
-                            continue;
-                        }
-                    }
-                    if (!info.dataDir) {
-                        const volMatch = ln.match(/^(\s*-\s+)(\.{1,2}\/[^:\s]+)(:.+)$/);
-                        if (volMatch) {
-                            info.dataDir = {
-                                absoluteLine: codeStartLine + li,
-                                prefix: volMatch[1],
-                                value: volMatch[2],
-                                suffix: volMatch[3],
-                            };
-                        }
-                    }
-                }
-            }
-        }
-        emulators.push(info);
-    }
-    return emulators;
-}
-
-function findEmulatorImageColumnIdx(headers: string[]): number {
-    const lower = headers.map(h => h.toLowerCase().trim());
-    const exact = ['image', 'image (version tag)', 'docker image', 'container image'];
-    for (const name of exact) {
-        const idx = lower.indexOf(name);
-        if (idx >= 0) { return idx; }
-    }
-    return lower.findIndex(h => h.startsWith('image'));
-}
-
-function findEmulatorDataDirColumnIdx(headers: string[]): number {
-    const lower = headers.map(h => h.toLowerCase().trim());
-    const exact = ['data directory', 'data dir', 'data-directory', 'volume', 'data path'];
-    for (const name of exact) {
-        const idx = lower.indexOf(name);
-        if (idx >= 0) { return idx; }
-    }
-    return lower.findIndex(h => h.includes('data') && (h.includes('dir') || h.includes('path')));
-}
-
-function findVariableNameColumnIdx(headers: string[]): number {
-    const lower = headers.map(h => h.toLowerCase().trim());
-    const exact = ['variable name', 'env var', 'environment variable', 'var name', 'variable'];
-    for (const name of exact) {
-        const idx = lower.indexOf(name);
-        if (idx >= 0) { return idx; }
-    }
-    return lower.findIndex(h => h.includes('variable') || h.includes('env'));
-}
-
-const ConnectionStringsTable = ({ table }: { table: TableBlock }): JSX.Element => {
-    const { submitPlanEdit, showEditError } = useContext(PlanLineEditContext);
-    const varNameIdx = findVariableNameColumnIdx(table.headers);
-    const originalNames = useMemo(
-        () => table.rows.map(r => (varNameIdx >= 0 ? (r[varNameIdx] ?? '').trim() : '')),
-        [table.rows, varNameIdx],
-    );
-    const [drafts, setDrafts] = useState<string[]>(originalNames);
-    const [savingRow, setSavingRow] = useState<number | null>(null);
-    const focusedRowRef = useRef<number | null>(null);
-
-    useEffect(() => {
-        if (focusedRowRef.current === null) { setDrafts(originalNames); }
-    }, [originalNames]);
-
-    const commitName = useCallback((rowIdx: number, next: string) => {
-        const trimmed = next.trim();
-        const original = originalNames[rowIdx];
-        if (varNameIdx < 0) { return; }
-        if (!trimmed) {
-            setDrafts(prev => { const arr = prev.slice(); arr[rowIdx] = original; return arr; });
-            return;
-        }
-        if (trimmed === original) { return; }
-        const newRow = table.rows[rowIdx].slice();
-        newRow[varNameIdx] = trimmed;
-        const newLine = buildTableRowMarkdown(newRow);
-        const lineIdx = table.rowLines[rowIdx];
-        setSavingRow(rowIdx);
-        submitPlanEdit(lineIdx, lineIdx, newLine)
-            .catch((err: unknown) => {
-                setDrafts(prev => { const arr = prev.slice(); arr[rowIdx] = original; return arr; });
-                showEditError(err instanceof Error ? err.message : String(err));
-            })
-            .finally(() => setSavingRow(null));
-    }, [originalNames, table, varNameIdx, submitPlanEdit, showEditError]);
-
-    if (varNameIdx < 0) {
-        return <DataTable headers={table.headers} rows={table.rows} />;
-    }
-
-    return (
-        <div className='dataTableWrapper'>
-            <table className='dataTable'>
-                <thead>
-                    <tr>
-                        {table.headers.map((h, hi) => (
-                            <th key={hi} dangerouslySetInnerHTML={{ __html: formatInline(h) }} />
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {table.rows.map((row, ri) => (
-                        <tr key={ri}>
-                            {row.map((cell, ci) => {
-                                if (ci === varNameIdx) {
-                                    return (
-                                        <td key={ci} className='dataTableInputCell'>
-                                            <Input
-                                                size='small'
-                                                value={drafts[ri] ?? ''}
-                                                disabled={savingRow === ri}
-                                                onChange={(_, data) => setDrafts(prev => { const arr = prev.slice(); arr[ri] = data.value; return arr; })}
-                                                onFocus={() => { focusedRowRef.current = ri; }}
-                                                onBlur={(e) => {
-                                                    focusedRowRef.current = null;
-                                                    commitName(ri, e.target.value);
-                                                }}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        (e.target as HTMLInputElement).blur();
-                                                    } else if (e.key === 'Escape') {
-                                                        e.preventDefault();
-                                                        setDrafts(prev => { const arr = prev.slice(); arr[ri] = originalNames[ri]; return arr; });
-                                                        (e.target as HTMLInputElement).blur();
-                                                    }
-                                                }}
-                                            />
-                                        </td>
-                                    );
-                                }
-                                return <td key={ci} dangerouslySetInnerHTML={{ __html: formatInline(cell) }} />;
-                            })}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-};
-
-const EXISTING_CONFIG_ACTIONS = ['Merge', 'Create', 'Skip'] as const;
-
-function findActionColumnIdx(headers: string[]): number {
-    const lower = headers.map(h => h.toLowerCase().trim());
-    return lower.indexOf('action');
-}
-
-function normalizeAction(value: string): string {
-    const trimmed = value.trim();
-    const match = EXISTING_CONFIG_ACTIONS.find(o => o.toLowerCase() === trimmed.toLowerCase());
-    return match ?? trimmed;
-}
-
-const ExistingConfigurationTable = ({ table }: { table: TableBlock }): JSX.Element => {
-    const { submitPlanEdit, showEditError } = useContext(PlanLineEditContext);
-    const actionIdx = findActionColumnIdx(table.headers);
-    const originalActions = useMemo(
-        () => table.rows.map(r => (actionIdx >= 0 ? normalizeAction(r[actionIdx] ?? '') : '')),
-        [table.rows, actionIdx],
-    );
-    const [actions, setActions] = useState<string[]>(originalActions);
-    const [savingRow, setSavingRow] = useState<number | null>(null);
-
-    useEffect(() => {
-        setActions(originalActions);
-    }, [originalActions]);
-
-    const commitAction = useCallback((rowIdx: number, next: string) => {
-        const original = originalActions[rowIdx];
-        if (next === original) { return; }
-        setActions(prev => { const arr = prev.slice(); arr[rowIdx] = next; return arr; });
-        const newRow = table.rows[rowIdx].slice();
-        newRow[actionIdx] = next;
-        const newLine = buildTableRowMarkdown(newRow);
-        const lineIdx = table.rowLines[rowIdx];
-        setSavingRow(rowIdx);
-        submitPlanEdit(lineIdx, lineIdx, newLine)
-            .catch((err: unknown) => {
-                setActions(prev => { const arr = prev.slice(); arr[rowIdx] = original; return arr; });
-                showEditError(err instanceof Error ? err.message : String(err));
-            })
-            .finally(() => setSavingRow(null));
-    }, [originalActions, table, actionIdx, submitPlanEdit, showEditError]);
-
-    if (actionIdx < 0) {
-        return <DataTable headers={table.headers} rows={table.rows} />;
-    }
-
-    return (
-        <div className='dataTableWrapper'>
-            <table className='dataTable'>
-                <thead>
-                    <tr>
-                        {table.headers.map((h, hi) => (
-                            <th key={hi} dangerouslySetInnerHTML={{ __html: formatInline(h) }} />
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {table.rows.map((row, ri) => (
-                        <tr key={ri}>
-                            {row.map((cell, ci) => {
-                                if (ci === actionIdx) {
-                                    const current = actions[ri] ?? '';
-                                    return (
-                                        <td key={ci} className='dataTableDropdownCell'>
-                                            <Dropdown
-                                                size='small'
-                                                value={current}
-                                                selectedOptions={[current]}
-                                                disabled={savingRow === ri}
-                                                onOptionSelect={(_, data) => {
-                                                    const picked = data.optionValue;
-                                                    if (picked) { commitAction(ri, picked); }
-                                                }}
-                                            >
-                                                {EXISTING_CONFIG_ACTIONS.map(opt => (
-                                                    <Option key={opt} value={opt}>{opt}</Option>
-                                                ))}
-                                            </Dropdown>
-                                        </td>
-                                    );
-                                }
-                                return <td key={ci} dangerouslySetInnerHTML={{ __html: formatInline(cell) }} />;
-                            })}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-};
-
-const EmulatorsTable = ({ section, codeEditable }: { section: LocalPlanSection; codeEditable: boolean }): JSX.Element => {
-    const tableBlock = section.content.find((c): c is TableBlock => c.type === 'table');
-    if (tableBlock) {
-        return <EmulatorsMarkdownTable table={tableBlock} />;
-    }
-    return <EmulatorsSubsectionTable section={section} codeEditable={codeEditable} />;
-};
-
-const EmulatorsMarkdownTable = ({ table }: { table: TableBlock }): JSX.Element => {
-    const { submitPlanEdit, showEditError } = useContext(PlanLineEditContext);
-    const imageIdx = findEmulatorImageColumnIdx(table.headers);
-    const dataDirIdx = findEmulatorDataDirColumnIdx(table.headers);
-    const originalImages = useMemo(
-        () => table.rows.map(r => (imageIdx >= 0 ? (r[imageIdx] ?? '').trim() : '')),
-        [table.rows, imageIdx],
-    );
-    const originalDataDirs = useMemo(
-        () => table.rows.map(r => (dataDirIdx >= 0 ? (r[dataDirIdx] ?? '').trim() : '')),
-        [table.rows, dataDirIdx],
-    );
-    const [imageDrafts, setImageDrafts] = useState<string[]>(originalImages);
-    const [dataDirDrafts, setDataDirDrafts] = useState<string[]>(originalDataDirs);
-    const [savingRow, setSavingRow] = useState<number | null>(null);
-    const focusedImageRef = useRef<number | null>(null);
-    const focusedDataDirRef = useRef<number | null>(null);
-
-    useEffect(() => {
-        if (focusedImageRef.current === null) { setImageDrafts(originalImages); }
-    }, [originalImages]);
-    useEffect(() => {
-        if (focusedDataDirRef.current === null) { setDataDirDrafts(originalDataDirs); }
-    }, [originalDataDirs]);
-
-    const commitColumn = useCallback((rowIdx: number, columnIdx: number, next: string, originals: string[], revert: (rowIdx: number, value: string) => void) => {
-        const trimmed = next.trim();
-        const original = originals[rowIdx];
-        if (!trimmed) {
-            revert(rowIdx, original);
-            return;
-        }
-        if (trimmed === original) { return; }
-        const newRow = table.rows[rowIdx].slice();
-        newRow[columnIdx] = trimmed;
-        const newLine = buildTableRowMarkdown(newRow);
-        const lineIdx = table.rowLines[rowIdx];
-        setSavingRow(rowIdx);
-        submitPlanEdit(lineIdx, lineIdx, newLine)
-            .catch((err: unknown) => {
-                revert(rowIdx, original);
-                showEditError(err instanceof Error ? err.message : String(err));
-            })
-            .finally(() => setSavingRow(null));
-    }, [table, submitPlanEdit, showEditError]);
-
-    const revertImage = useCallback((rowIdx: number, value: string) => {
-        setImageDrafts(prev => { const arr = prev.slice(); arr[rowIdx] = value; return arr; });
-    }, []);
-    const revertDataDir = useCallback((rowIdx: number, value: string) => {
-        setDataDirDrafts(prev => { const arr = prev.slice(); arr[rowIdx] = value; return arr; });
-    }, []);
-
-    return (
-        <div className='dataTableWrapper'>
-            <table className='dataTable'>
-                <thead>
-                    <tr>
-                        {table.headers.map((h, hi) => (
-                            <th key={hi} dangerouslySetInnerHTML={{ __html: formatInline(h) }} />
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {table.rows.map((row, ri) => (
-                        <tr key={ri}>
-                            {row.map((cell, ci) => {
-                                if (ci === imageIdx) {
-                                    return (
-                                        <td key={ci} className='dataTableInputCell'>
-                                            <Input
-                                                size='small'
-                                                value={imageDrafts[ri] ?? ''}
-                                                disabled={savingRow === ri}
-                                                onChange={(_, data) => setImageDrafts(prev => { const arr = prev.slice(); arr[ri] = data.value; return arr; })}
-                                                onFocus={() => { focusedImageRef.current = ri; }}
-                                                onBlur={(e) => {
-                                                    focusedImageRef.current = null;
-                                                    commitColumn(ri, imageIdx, e.target.value, originalImages, revertImage);
-                                                }}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        (e.target as HTMLInputElement).blur();
-                                                    } else if (e.key === 'Escape') {
-                                                        e.preventDefault();
-                                                        revertImage(ri, originalImages[ri]);
-                                                        (e.target as HTMLInputElement).blur();
-                                                    }
-                                                }}
-                                            />
-                                        </td>
-                                    );
-                                }
-                                if (ci === dataDirIdx) {
-                                    return (
-                                        <td key={ci} className='dataTableInputCell'>
-                                            <Input
-                                                size='small'
-                                                value={dataDirDrafts[ri] ?? ''}
-                                                disabled={savingRow === ri}
-                                                onChange={(_, data) => setDataDirDrafts(prev => { const arr = prev.slice(); arr[ri] = data.value; return arr; })}
-                                                onFocus={() => { focusedDataDirRef.current = ri; }}
-                                                onBlur={(e) => {
-                                                    focusedDataDirRef.current = null;
-                                                    commitColumn(ri, dataDirIdx, e.target.value, originalDataDirs, revertDataDir);
-                                                }}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        (e.target as HTMLInputElement).blur();
-                                                    } else if (e.key === 'Escape') {
-                                                        e.preventDefault();
-                                                        revertDataDir(ri, originalDataDirs[ri]);
-                                                        (e.target as HTMLInputElement).blur();
-                                                    }
-                                                }}
-                                            />
-                                        </td>
-                                    );
-                                }
-                                return <td key={ci} dangerouslySetInnerHTML={{ __html: formatInline(cell) }} />;
-                            })}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-};
-
-const EmulatorsSubsectionTable = ({ section, codeEditable }: { section: LocalPlanSection; codeEditable: boolean }): JSX.Element => {
-    const { submitPlanEdit, showEditError } = useContext(PlanLineEditContext);
-    const emulators = useMemo(() => parseEmulators(section.content), [section.content]);
-    const originalImages = useMemo(() => emulators.map(e => e.image?.value ?? ''), [emulators]);
-    const originalDataDirs = useMemo(() => emulators.map(e => e.dataDir?.value ?? ''), [emulators]);
-    const [imageDrafts, setImageDrafts] = useState<string[]>(originalImages);
-    const [dataDirDrafts, setDataDirDrafts] = useState<string[]>(originalDataDirs);
-    const [savingImageRow, setSavingImageRow] = useState<number | null>(null);
-    const [savingDataDirRow, setSavingDataDirRow] = useState<number | null>(null);
-    const focusedImageRef = useRef<number | null>(null);
-    const focusedDataDirRef = useRef<number | null>(null);
-
-    useEffect(() => {
-        if (focusedImageRef.current === null) { setImageDrafts(originalImages); }
-    }, [originalImages]);
-    useEffect(() => {
-        if (focusedDataDirRef.current === null) { setDataDirDrafts(originalDataDirs); }
-    }, [originalDataDirs]);
-
-    const commitImage = useCallback((rowIdx: number, next: string) => {
-        const trimmed = next.trim();
-        const original = originalImages[rowIdx];
-        const target = emulators[rowIdx]?.image;
-        if (!target) { return; }
-        if (!trimmed) {
-            setImageDrafts(prev => { const arr = prev.slice(); arr[rowIdx] = original; return arr; });
-            return;
-        }
-        if (trimmed === original) { return; }
-        const newLine = `${target.prefix}${trimmed}`;
-        setSavingImageRow(rowIdx);
-        submitPlanEdit(target.absoluteLine, target.absoluteLine, newLine)
-            .catch((err: unknown) => {
-                setImageDrafts(prev => { const arr = prev.slice(); arr[rowIdx] = original; return arr; });
-                showEditError(err instanceof Error ? err.message : String(err));
-            })
-            .finally(() => setSavingImageRow(null));
-    }, [originalImages, emulators, submitPlanEdit, showEditError]);
-
-    const commitDataDir = useCallback((rowIdx: number, next: string) => {
-        const trimmed = next.trim();
-        const original = originalDataDirs[rowIdx];
-        const target = emulators[rowIdx]?.dataDir;
-        if (!target) { return; }
-        if (!trimmed) {
-            setDataDirDrafts(prev => { const arr = prev.slice(); arr[rowIdx] = original; return arr; });
-            return;
-        }
-        if (trimmed === original) { return; }
-        const newLine = `${target.prefix}${trimmed}${target.suffix}`;
-        setSavingDataDirRow(rowIdx);
-        submitPlanEdit(target.absoluteLine, target.absoluteLine, newLine)
-            .catch((err: unknown) => {
-                setDataDirDrafts(prev => { const arr = prev.slice(); arr[rowIdx] = original; return arr; });
-                showEditError(err instanceof Error ? err.message : String(err));
-            })
-            .finally(() => setSavingDataDirRow(null));
-    }, [originalDataDirs, emulators, submitPlanEdit, showEditError]);
-
-    if (emulators.length === 0) {
-        return (
-            <>
-                {section.content.map((item, i) => (
-                    <ContentBlock key={i} item={item} codeEditable={codeEditable} />
-                ))}
-            </>
-        );
-    }
-
-    return (
-        <div className='dataTableWrapper'>
-            <table className='dataTable'>
-                <thead>
-                    <tr>
-                        <th>Emulator</th>
-                        <th>Image</th>
-                        <th>Data Directory</th>
-                        <th>Port</th>
-                        <th>Connection</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {emulators.map((emu, ri) => (
-                        <tr key={ri}>
-                            <td dangerouslySetInnerHTML={{ __html: formatInline(emu.subsectionTitle) }} />
-                            <td className='dataTableInputCell'>
-                                {emu.image ? (
-                                    <Input
-                                        size='small'
-                                        value={imageDrafts[ri] ?? ''}
-                                        disabled={savingImageRow === ri}
-                                        onChange={(_, data) => setImageDrafts(prev => { const arr = prev.slice(); arr[ri] = data.value; return arr; })}
-                                        onFocus={() => { focusedImageRef.current = ri; }}
-                                        onBlur={(e) => {
-                                            focusedImageRef.current = null;
-                                            commitImage(ri, e.target.value);
-                                        }}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                (e.target as HTMLInputElement).blur();
-                                            } else if (e.key === 'Escape') {
-                                                e.preventDefault();
-                                                setImageDrafts(prev => { const arr = prev.slice(); arr[ri] = originalImages[ri]; return arr; });
-                                                (e.target as HTMLInputElement).blur();
-                                            }
-                                        }}
-                                    />
-                                ) : <span className='dataTableMuted'>—</span>}
-                            </td>
-                            <td className='dataTableInputCell'>
-                                {emu.dataDir ? (
-                                    <Input
-                                        size='small'
-                                        value={dataDirDrafts[ri] ?? ''}
-                                        disabled={savingDataDirRow === ri}
-                                        onChange={(_, data) => setDataDirDrafts(prev => { const arr = prev.slice(); arr[ri] = data.value; return arr; })}
-                                        onFocus={() => { focusedDataDirRef.current = ri; }}
-                                        onBlur={(e) => {
-                                            focusedDataDirRef.current = null;
-                                            commitDataDir(ri, e.target.value);
-                                        }}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                (e.target as HTMLInputElement).blur();
-                                            } else if (e.key === 'Escape') {
-                                                e.preventDefault();
-                                                setDataDirDrafts(prev => { const arr = prev.slice(); arr[ri] = originalDataDirs[ri]; return arr; });
-                                                (e.target as HTMLInputElement).blur();
-                                            }
-                                        }}
-                                    />
-                                ) : <span className='dataTableMuted'>—</span>}
-                            </td>
-                            <td>{emu.port ? <code>{emu.port}</code> : <span className='dataTableMuted'>—</span>}</td>
-                            <td>{emu.connection ? <code>{emu.connection}</code> : <span className='dataTableMuted'>—</span>}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-};
-
-const EditableLaunchName = ({ paragraph, currentName }: { paragraph: ParagraphBlock; currentName: string }): JSX.Element => {
-    const { submitPlanEdit, showEditError } = useContext(PlanLineEditContext);
-    const [draft, setDraft] = useState(currentName);
-    const [isSaving, setIsSaving] = useState(false);
-    const focusedRef = useRef(false);
-
-    useEffect(() => {
-        if (!focusedRef.current) {
-            setDraft(currentName);
-        }
-    }, [currentName]);
-
-    const commit = useCallback((next: string) => {
-        const trimmed = next.trim();
-        if (!trimmed) {
-            setDraft(currentName);
-            return;
-        }
-        if (trimmed === currentName) {
-            return;
-        }
-        const newLine = `Compound Launch Config Name: ✏️ **${trimmed}**`;
-        setIsSaving(true);
-        submitPlanEdit(paragraph.lineStart, paragraph.lineEnd, newLine)
-            .catch((err: unknown) => {
-                setDraft(currentName);
-                const message = err instanceof Error ? err.message : String(err);
-                showEditError(message);
-            })
-            .finally(() => setIsSaving(false));
-    }, [paragraph.lineStart, paragraph.lineEnd, currentName, submitPlanEdit, showEditError]);
-
-    return (
-        <p className='paragraph editableLaunchName'>
-            <strong>Compound Launch Config Name</strong>
-            <Input
-                size='small'
-                value={draft}
-                disabled={isSaving}
-                onChange={(_, data) => setDraft(data.value)}
-                onFocus={() => { focusedRef.current = true; }}
-                onBlur={(e) => {
-                    focusedRef.current = false;
-                    commit(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        (e.target as HTMLInputElement).blur();
-                    } else if (e.key === 'Escape') {
-                        e.preventDefault();
-                        setDraft(currentName);
-                        (e.target as HTMLInputElement).blur();
-                    }
-                }}
-            />
-        </p>
-    );
-};
-
-const EditableGenerateToggleParagraph = ({ paragraph, checked }: { paragraph: ParagraphBlock; checked: boolean }): JSX.Element => {
-    const { submitPlanEdit, showEditError } = useContext(PlanLineEditContext);
-    const [current, setCurrent] = useState(checked);
-    const [isSaving, setIsSaving] = useState(false);
-
-    useEffect(() => { setCurrent(checked); }, [checked]);
-
-    const toggle = useCallback(() => {
-        const next = !current;
-        const newLine = `**Generate:** [${next ? 'x' : ' '}]`;
-        setCurrent(next);
-        setIsSaving(true);
-        submitPlanEdit(paragraph.lineStart, paragraph.lineEnd, newLine)
-            .catch((err: unknown) => {
-                setCurrent(!next);
-                const message = err instanceof Error ? err.message : String(err);
-                showEditError(message);
-            })
-            .finally(() => setIsSaving(false));
-    }, [current, paragraph.lineStart, paragraph.lineEnd, submitPlanEdit, showEditError]);
-
-    return (
-        <div className='editableGenerateToggle'>
-            <Checkbox
-                checked={current}
-                disabled={isSaving}
-                onChange={() => toggle()}
-                label='Generate'
-            />
-        </div>
-    );
-};
-
-const EditableValueTable = ({ table, valueColumnIdx }: { table: TableBlock; valueColumnIdx: number }): JSX.Element => {
-    const { submitPlanEdit, showEditError } = useContext(PlanLineEditContext);
-    const [drafts, setDrafts] = useState<string[]>(() => table.rows.map(r => (r[valueColumnIdx] ?? '').trim()));
-    const [savingRow, setSavingRow] = useState<number | null>(null);
-    const focusedRowRef = useRef<number | null>(null);
-
-    useEffect(() => {
-        if (focusedRowRef.current === null) {
-            setDrafts(table.rows.map(r => (r[valueColumnIdx] ?? '').trim()));
-        }
-    }, [table.rows, valueColumnIdx]);
-
-    const commitRow = useCallback((rowIdx: number, next: string) => {
-        const trimmed = next.trim();
-        const original = (table.rows[rowIdx][valueColumnIdx] ?? '').trim();
-        if (trimmed === original) {
-            return;
-        }
-        const newRow = table.rows[rowIdx].slice();
-        newRow[valueColumnIdx] = trimmed;
-        const newLine = buildTableRowMarkdown(newRow);
-        const lineIdx = table.rowLines[rowIdx];
-        setSavingRow(rowIdx);
-        submitPlanEdit(lineIdx, lineIdx, newLine)
-            .catch((err: unknown) => {
-                setDrafts(prev => {
-                    const arr = prev.slice();
-                    arr[rowIdx] = original;
-                    return arr;
-                });
-                const message = err instanceof Error ? err.message : String(err);
-                showEditError(message);
-            })
-            .finally(() => setSavingRow(null));
-    }, [table, valueColumnIdx, submitPlanEdit, showEditError]);
-
-    return (
-        <ul className='bulletList editableValueList'>
-            {table.rows.map((row, ri) => {
-                const otherColumns = row.filter((_, idx) => idx !== valueColumnIdx).join(' — ').trim();
-                const labelHtml = otherColumns ? `<strong>${formatInline(otherColumns)}</strong>` : '';
-                return (
-                    <li key={ri} className='editableValueRow'>
-                        {labelHtml && <span className='editableValueLabel' dangerouslySetInnerHTML={{ __html: labelHtml }} />}
-                        <Input
-                            size='small'
-                            value={drafts[ri]}
-                            disabled={savingRow === ri}
-                            onChange={(_, data) => {
-                                setDrafts(prev => {
-                                    const arr = prev.slice();
-                                    arr[ri] = data.value;
-                                    return arr;
-                                });
-                            }}
-                            onFocus={() => { focusedRowRef.current = ri; }}
-                            onBlur={(e) => {
-                                focusedRowRef.current = null;
-                                commitRow(ri, e.target.value);
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    (e.target as HTMLInputElement).blur();
-                                } else if (e.key === 'Escape') {
-                                    e.preventDefault();
-                                    setDrafts(prev => {
-                                        const arr = prev.slice();
-                                        arr[ri] = (table.rows[ri][valueColumnIdx] ?? '').trim();
-                                        return arr;
-                                    });
-                                    (e.target as HTMLInputElement).blur();
-                                }
-                            }}
-                            className='editableValueInput'
-                        />
-                    </li>
-                );
-            })}
-        </ul>
-    );
-};
-
-const EditableGenerateTable = ({ table }: { table: TableBlock }): JSX.Element => {
-    const { submitPlanEdit, showEditError } = useContext(PlanLineEditContext);
-    const generateIdx = findGenerateColumnIdx(table.headers);
-    const [states, setStates] = useState<boolean[]>(() => table.rows.map(r => /\[\s*x\s*\]/i.test(r[generateIdx] ?? '')));
-    const [savingRow, setSavingRow] = useState<number | null>(null);
-
-    useEffect(() => {
-        setStates(table.rows.map(r => /\[\s*x\s*\]/i.test(r[generateIdx] ?? '')));
+    const rowLabel = useCallback((rowIdx: number): string => {
+        const row = table.rows[rowIdx];
+        const labelIdx = generateIdx + 1 < row.length ? generateIdx + 1 : row.findIndex((_, i) => i !== generateIdx);
+        const raw = labelIdx >= 0 ? (row[labelIdx] ?? '').trim() : '';
+        const cleaned = raw.replace(/[*`]/g, '').trim();
+        return cleaned || `row ${rowIdx + 1}`;
     }, [table.rows, generateIdx]);
 
     const toggleRow = useCallback((rowIdx: number) => {
-        const next = !states[rowIdx];
-        const newRow = table.rows[rowIdx].slice();
-        newRow[generateIdx] = next ? '[x]' : '[ ]';
-        const newLine = buildTableRowMarkdown(newRow);
-        const lineIdx = table.rowLines[rowIdx];
-        setStates(prev => { const arr = prev.slice(); arr[rowIdx] = next; return arr; });
-        setSavingRow(rowIdx);
-        submitPlanEdit(lineIdx, lineIdx, newLine)
-            .catch((err: unknown) => {
-                setStates(prev => { const arr = prev.slice(); arr[rowIdx] = !next; return arr; });
-                const message = err instanceof Error ? err.message : String(err);
-                showEditError(message);
-            })
-            .finally(() => setSavingRow(null));
-    }, [states, table, generateIdx, submitPlanEdit, showEditError]);
+        const next = !(getToggle(`${sectionTitle}::${table.lineStart}::${rowIdx}`)?.generate ?? originalStates[rowIdx]);
+        const key = `${sectionTitle}::${table.lineStart}::${rowIdx}`;
+        if (next === originalStates[rowIdx]) {
+            setToggle(key, null);
+            return;
+        }
+        setToggle(key, { sectionTitle, rowLabel: rowLabel(rowIdx), generate: next });
+    }, [getToggle, setToggle, sectionTitle, table.lineStart, originalStates, rowLabel]);
 
     return (
-        <ul className='bulletList editableGenerateList'>
-            {table.rows.map((row, ri) => {
-                const labelParts = row.filter((_, idx) => idx !== generateIdx);
-                const head = formatInline(labelParts[0] ?? '');
-                const tail = labelParts.slice(1).map(p => formatInline(p)).join(' — ');
-                const html = tail ? `<strong>${head}</strong>: ${tail}` : `<strong>${head}</strong>`;
-                return (
-                    <li key={ri} className='editableGenerateRow'>
-                        <Checkbox
-                            checked={states[ri]}
-                            disabled={savingRow === ri}
-                            onChange={() => toggleRow(ri)}
-                        />
-                        <span className='editableGenerateLabel' dangerouslySetInnerHTML={{ __html: html }} />
-                    </li>
-                );
-            })}
-        </ul>
+        <div className='dataTableWrapper'>
+            <table className='dataTable'>
+                <thead>
+                    <tr>
+                        {table.headers.map((h, hi) => (
+                            <th key={hi} dangerouslySetInnerHTML={{ __html: formatInline(h) }} />
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {table.rows.map((row, ri) => {
+                        const key = `${sectionTitle}::${table.lineStart}::${ri}`;
+                        const checked = getToggle(key)?.generate ?? originalStates[ri];
+                        return (
+                            <tr key={ri}>
+                                {row.map((cell, ci) => {
+                                    if (ci === generateIdx) {
+                                        return (
+                                            <td key={ci} className='dataTableCheckboxCell'>
+                                                <Checkbox
+                                                    checked={checked}
+                                                    onChange={() => toggleRow(ri)}
+                                                />
+                                            </td>
+                                        );
+                                    }
+                                    return <td key={ci} dangerouslySetInnerHTML={{ __html: formatInline(cell) }} />;
+                                })}
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
     );
 };
 
@@ -1699,299 +627,6 @@ const CodeBlock = ({ language, code }: { language: string; code: string }): JSX.
         {language && <span className='codeBlockLang'>{language}</span>}
         <pre><code>{code}</code></pre>
     </div>
-);
-
-const EditableCodeBlock = ({ language, code }: { language: string; code: string }): JSX.Element => {
-    const [currentCode, setCurrentCode] = useState(code);
-    const [isSaving, setIsSaving] = useState(false);
-    const { addCodeEditNote, updateCodeBlock, showCodeEditError } = useContext(CodeEditNoteContext);
-
-    useEffect(() => {
-        setCurrentCode(code);
-        setIsSaving(false);
-    }, [code]);
-
-    const parsed = useMemo(() => safeParseJson(currentCode), [currentCode]);
-    const entries = useMemo<LaunchEntry[]>(() => extractLaunchEntries(parsed), [parsed]);
-
-    const commitEntryName = useCallback(async (entry: LaunchEntry, currentName: string, nextName: string): Promise<'applied' | 'reset'> => {
-        const trimmed = nextName.trim();
-        if (!trimmed || trimmed === currentName) {
-            return 'reset';
-        }
-
-        const nameKey = entry.kind === 'task' ? 'label' : 'name';
-        const arrayKey = entry.kind === 'task' ? 'tasks' : entry.kind === 'compound' ? 'compounds' : 'configurations';
-
-        let newCode: string;
-        try {
-            const edits = jsoncParser.modify(currentCode, [arrayKey, entry.index, nameKey], trimmed, {
-                formattingOptions: { insertSpaces: true, tabSize: 4, eol: '\n' },
-            });
-            newCode = jsoncParser.applyEdits(currentCode, edits);
-        } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            showCodeEditError(`Couldn't update this launch configuration: ${message}`);
-            return 'reset';
-        }
-
-        if (!newCode || newCode === currentCode) {
-            return 'reset';
-        }
-
-        setIsSaving(true);
-        try {
-            await updateCodeBlock(currentCode, newCode, language);
-            setCurrentCode(newCode);
-            addCodeEditNote(language, currentCode, newCode);
-            return 'applied';
-        } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            showCodeEditError(message);
-            return 'reset';
-        } finally {
-            setIsSaving(false);
-        }
-    }, [currentCode, language, updateCodeBlock, addCodeEditNote, showCodeEditError]);
-
-    if (entries.length === 0) {
-        return <CodeBlock language={language} code={currentCode} />;
-    }
-
-    return (
-        <div className='launchConfigSummary'>
-            <ul className='launchConfigList'>
-                {entries.map((entry) => (
-                    <LaunchConfigItem
-                        key={`${entry.kind}-${entry.index}`}
-                        entry={entry}
-                        onCommitName={commitEntryName}
-                        disabled={isSaving}
-                    />
-                ))}
-            </ul>
-        </div>
-    );
-};
-
-interface LaunchEntry {
-    kind: 'configuration' | 'compound' | 'task';
-    index: number;
-    raw: Record<string, unknown>;
-}
-
-function safeParseJson(code: string): unknown {
-    try {
-        return JSON.parse(code);
-    } catch {
-        try {
-            const errors: jsoncParser.ParseError[] = [];
-            const result = jsoncParser.parse(code, errors, { allowTrailingComma: true, disallowComments: false });
-            if (errors.length > 0) {
-                return undefined;
-            }
-            return result;
-        } catch {
-            return undefined;
-        }
-    }
-}
-
-function extractLaunchEntries(parsed: unknown): LaunchEntry[] {
-    if (!parsed || typeof parsed !== 'object') { return []; }
-    const obj = parsed as Record<string, unknown>;
-    const entries: LaunchEntry[] = [];
-    if (Array.isArray(obj.configurations)) {
-        (obj.configurations as unknown[]).forEach((raw, index) => {
-            if (raw && typeof raw === 'object') {
-                entries.push({ kind: 'configuration', index, raw: raw as Record<string, unknown> });
-            }
-        });
-    }
-    if (Array.isArray(obj.compounds)) {
-        (obj.compounds as unknown[]).forEach((raw, index) => {
-            if (raw && typeof raw === 'object') {
-                entries.push({ kind: 'compound', index, raw: raw as Record<string, unknown> });
-            }
-        });
-    }
-    if (entries.length === 0 && Array.isArray(obj.tasks)) {
-        (obj.tasks as unknown[]).forEach((raw, index) => {
-            if (raw && typeof raw === 'object') {
-                entries.push({ kind: 'task', index, raw: raw as Record<string, unknown> });
-            }
-        });
-    }
-    return entries;
-}
-
-const LaunchConfigItem = ({ entry, onCommitName, disabled }: {
-    entry: LaunchEntry;
-    onCommitName: (entry: LaunchEntry, currentName: string, nextName: string) => Promise<'applied' | 'reset'>;
-    disabled: boolean;
-}): JSX.Element => {
-    const nameKey = entry.kind === 'task' ? 'label' : 'name';
-    const currentName = String(entry.raw?.[nameKey] ?? '');
-    const description = entry.kind === 'task'
-        ? describeTask(entry.raw)
-        : entry.kind === 'compound'
-            ? describeCompound(entry.raw)
-            : describeConfig(entry.raw);
-
-    const [draft, setDraft] = useState(currentName);
-    const focusedRef = useRef(false);
-
-    useEffect(() => {
-        if (!focusedRef.current) {
-            setDraft(currentName);
-        }
-    }, [currentName]);
-
-    const commit = useCallback((next: string) => {
-        void onCommitName(entry, currentName, next).then((result) => {
-            if (result !== 'applied') {
-                setDraft(currentName);
-            }
-        }).catch(() => {
-            setDraft(currentName);
-        });
-    }, [entry, currentName, onCommitName]);
-
-    const inputId = `launchConfigName-${entry.kind}-${entry.index}`;
-
-    return (
-        <li className='launchConfigItem'>
-            <div className='launchConfigNameRow'>
-                <label className='launchConfigNameLabel' htmlFor={inputId}>Name</label>
-                <Input
-                    id={inputId}
-                    size='small'
-                    value={draft}
-                    disabled={disabled}
-                    onChange={(_, data) => setDraft(data.value)}
-                    onFocus={() => { focusedRef.current = true; }}
-                    onBlur={(e) => {
-                        focusedRef.current = false;
-                        commit(e.target.value);
-                    }}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            (e.target as HTMLInputElement).blur();
-                        } else if (e.key === 'Escape') {
-                            e.preventDefault();
-                            setDraft(currentName);
-                            (e.target as HTMLInputElement).blur();
-                        }
-                    }}
-                    className='launchConfigNameInput'
-                />
-            </div>
-            <p className='launchConfigDescription'>{description}</p>
-        </li>
-    );
-};
-
-function describeConfig(c: Record<string, unknown>): string {
-    const type = typeof c.type === 'string' ? c.type.toLowerCase() : '';
-    const request = typeof c.request === 'string' ? c.request.toLowerCase() : '';
-    const parts: string[] = [];
-
-    if (type === 'chrome' || type === 'msedge' || type === 'pwa-chrome' || type === 'pwa-msedge') {
-        const browser = type.includes('msedge') ? 'Edge' : 'Chrome';
-        const url = typeof c.url === 'string' ? c.url : undefined;
-        parts.push(url ? `Opens ${browser} at ${url} with the debugger attached.` : `Launches ${browser} with the debugger attached.`);
-    } else if (type === 'node' || type === 'pwa-node') {
-        if (request === 'attach') {
-            parts.push(`Attaches the Node.js debugger${typeof c.port === 'number' ? ` on port ${c.port}` : ''}.`);
-        } else {
-            const program = typeof c.program === 'string' ? c.program : '';
-            parts.push(`Launches and debugs Node.js${program ? ` (${program})` : ''}.`);
-        }
-    } else if (type === 'coreclr' || type === 'clr') {
-        parts.push('Attaches the .NET debugger to the running process.');
-    } else if (type === 'python' || type === 'debugpy') {
-        parts.push(`Attaches the Python debugger${typeof c.port === 'number' ? ` on port ${c.port}` : ''}.`);
-    } else if (type === 'java') {
-        parts.push(`Attaches the Java debugger${typeof c.port === 'number' ? ` on port ${c.port}` : ''}.`);
-    } else if (type === 'go') {
-        parts.push('Attaches the Delve (Go) debugger.');
-    } else if (type) {
-        parts.push(`Runs a "${type}" debug session${request ? ` (${request})` : ''}.`);
-    } else {
-        parts.push('Debug configuration.');
-    }
-
-    if (typeof c.preLaunchTask === 'string' && c.preLaunchTask) {
-        parts.push(`Triggers task "${c.preLaunchTask}" before launching.`);
-    }
-    return parts.join(' ');
-}
-
-function describeTask(t: Record<string, unknown>): string {
-    const parts: string[] = [];
-    const cmd = typeof t.command === 'string' ? t.command : '';
-    const type = typeof t.type === 'string' ? t.type : '';
-
-    if (cmd.startsWith('docker compose') || cmd.startsWith('docker-compose')) {
-        parts.push('Starts the local emulators via Docker Compose.');
-    } else if (type === 'shell' && cmd) {
-        const preview = cmd.length > 80 ? `${cmd.slice(0, 77)}\u2026` : cmd;
-        parts.push(`Shell task: \`${preview}\``);
-    } else if (type === 'npm' && typeof t.script === 'string') {
-        parts.push(`Runs npm script: \`${t.script}\`.`);
-    } else if (type) {
-        parts.push(`Runs a "${type}" task.`);
-    } else {
-        parts.push('Build task.');
-    }
-
-    if (Array.isArray(t.dependsOn) && t.dependsOn.length > 0) {
-        parts.push(`Depends on: ${t.dependsOn.map((d) => `"${String(d)}"`).join(', ')}.`);
-    } else if (typeof t.dependsOn === 'string' && t.dependsOn) {
-        parts.push(`Depends on: "${t.dependsOn}".`);
-    }
-    return parts.join(' ');
-}
-
-function describeCompound(c: Record<string, unknown>): string {
-    const parts: string[] = ['Compound launch configuration.'];
-    if (Array.isArray(c.configurations) && c.configurations.length > 0) {
-        const names = c.configurations
-            .map((entry) => {
-                if (typeof entry === 'string') { return entry; }
-                if (entry && typeof entry === 'object') {
-                    const name = (entry as Record<string, unknown>).name;
-                    if (typeof name === 'string') { return name; }
-                }
-                return undefined;
-            })
-            .filter((n): n is string => !!n);
-        if (names.length > 0) {
-            parts.push(`Launches ${names.map((n) => `"${n}"`).join(', ')} together.`);
-        }
-    }
-    if (typeof c.preLaunchTask === 'string' && c.preLaunchTask) {
-        parts.push(`Triggers task "${c.preLaunchTask}" before launching.`);
-    }
-    if (c.stopAll === true) {
-        parts.push('Stopping one stops all of them.');
-    }
-    return parts.join(' ');
-}
-
-const CodeEditErrorDialog = ({ open, message, onClose }: { open: boolean; message: string; onClose: () => void }): JSX.Element => (
-    <Dialog open={open} onOpenChange={(_, data) => { if (!data.open) { onClose(); } }}>
-        <DialogSurface>
-            <DialogBody>
-                <DialogTitle>Couldn't save changes</DialogTitle>
-                <DialogContent>{message}</DialogContent>
-                <DialogActions>
-                    <Button appearance='primary' onClick={onClose}>OK</Button>
-                </DialogActions>
-            </DialogBody>
-        </DialogSurface>
-    </Dialog>
 );
 
 const MermaidBlock = ({ code }: { code: string }): JSX.Element => {
@@ -2038,10 +673,8 @@ const BlockquoteBlock = ({ text }: { text: string }): JSX.Element => (
     <div className='blockquote' dangerouslySetInnerHTML={{ __html: formatInline(text) }} />
 );
 
-const SubsectionBlock = ({ title, content, codeEditable }: { title: string; content: LocalPlanContent[]; codeEditable: boolean }): JSX.Element => {
+const SubsectionBlock = ({ title, content, sectionTitle }: { title: string; content: LocalPlanContent[]; sectionTitle: string }): JSX.Element => {
     const [open, setOpen] = useState(false);
-    const parentSection = useContext(PlanSectionContext);
-
     return (
         <div className='subsection'>
             <div className='subsectionHeading clickable' onClick={() => setOpen(!open)}>
@@ -2049,29 +682,28 @@ const SubsectionBlock = ({ title, content, codeEditable }: { title: string; cont
                 <h3>{title}</h3>
             </div>
             {open && (
-                <PlanSectionContext.Provider value={{ sectionTitle: parentSection.sectionTitle, subsectionTitle: title }}>
-                    <div className='subsectionContent'>
-                        {content.map((item, i) => (
-                            <ContentBlock key={i} item={item} codeEditable={codeEditable} />
-                        ))}
-                    </div>
-                </PlanSectionContext.Provider>
+                <div className='subsectionContent'>
+                    {content.map((item, i) => (
+                        <ContentBlock key={i} item={item} sectionTitle={sectionTitle} />
+                    ))}
+                </div>
             )}
         </div>
     );
 };
 
 function formatInline(text: string): string {
-    return escapeHtml(stripPencilIcons(text))
+    return escapeHtml(text.trim())
         .replace(/`([^`]+)`/g, '<code>$1</code>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<span class="link" title="$2">$1</span>');
-}
-
-function stripPencilIcons(text: string): string {
-    // Remove the pencil emoji (with or without VS16 variation selector) and any
-    // surrounding whitespace so the rendered view stays clean.
-    return text.replace(/\s*\u270F\uFE0F?\s*/gu, ' ').replace(/\s{2,}/g, ' ').trim();
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
+        // Auto-link bare URLs (e.g. install columns in the Prerequisites table)
+        // — skipped when the URL already follows the `"` of an existing href.
+        .replace(/(^|[^"'>])(https?:\/\/[^\s<]+[^\s<.,;:!?)\]])/g, '$1<a href="$2" target="_blank" rel="noreferrer">$2</a>')
+        // Restore a small whitelist of presentational HTML tags that the agent
+        // emits inside table cells (collapsible endpoint lists, line breaks).
+        .replace(/&lt;(\/?(?:details|summary|br))(\s[^&]*?)?\s*\/?&gt;/gi, '<$1$2>');
 }
 
 function escapeHtml(text: string): string {

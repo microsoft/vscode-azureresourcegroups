@@ -26,6 +26,7 @@ export type DeploymentPlanViewStrings = {
     approveButton: string;
     feedbackButtonAriaLabel: string;
     feedbackButtonTooltip: string;
+    approveButtonTooltip: string;
     feedbackDrawerInfoTooltip: string;
     revisingBanner: string;
     requestChangesHeading: string;

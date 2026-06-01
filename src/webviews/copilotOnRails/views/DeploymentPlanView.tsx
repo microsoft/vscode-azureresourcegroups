@@ -310,14 +310,16 @@ export const DeploymentPlanView = (): JSX.Element => {
                                     onClick={() => setDrawerOpen(v => !v)}
                                 />
                             </Tooltip>
-                            <Button
-                                appearance='primary'
-                                icon={<CheckmarkRegular />}
-                                disabled={isAwaitingRevision}
-                                onClick={handleApprove}
-                            >
-                                {strings.approveButton}
-                            </Button>
+                            <Tooltip content={strings.approveButtonTooltip} relationship='label'>
+                                <Button
+                                    appearance='primary'
+                                    icon={<CheckmarkRegular />}
+                                    disabled={isAwaitingRevision}
+                                    onClick={handleApprove}
+                                >
+                                    {strings.approveButton}
+                                </Button>
+                            </Tooltip>
                         </div>
                     </div>
                 </div>

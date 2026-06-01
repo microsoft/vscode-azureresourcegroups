@@ -28,6 +28,16 @@
     border-color: var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-button-foreground))) !important;
 }
 
+// Fluent UI's Tooltip is portal-mounted on document.body and inherits no VS
+// Code tokens, so its surface blends into the dark editor background. Give it
+// the hover-widget palette so the label is legible against the page.
+.fui-Tooltip__content {
+    background-color: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background)) !important;
+    color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground)) !important;
+    border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-editorWidget-border, var(--vscode-widget-border))) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+}
+
 // Fluent UI's Dropdown listbox is portal-mounted on document.body and renders
 // without VS Code theme tokens, so its surface appears transparent over the
 // page. Give it an opaque background, border, and elevated z-index so the
@@ -68,6 +78,7 @@
         top: 0;
         z-index: 10;
         background: var(--vscode-editor-background);
+        padding-top: 8px;
         padding-bottom: 14px;
         margin-bottom: -14px;
 
@@ -170,6 +181,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            margin-top: 14px;
         }
     }
 
@@ -317,78 +329,6 @@
                 white-space: pre;
             }
         }
-
-        &.editableCodeBlock {
-            .codeBlockEditButton {
-                position: absolute;
-                top: 4px;
-                right: 6px;
-                z-index: 1;
-            }
-        }
-    }
-
-    .launchConfigSummary {
-        background: var(--vscode-editor-background);
-        border: 1px solid var(--vscode-widget-border);
-        border-radius: 4px;
-        overflow: hidden;
-    }
-
-    .launchConfigList {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-    }
-
-    .launchConfigItem {
-        padding: 12px 14px;
-        border-bottom: 1px solid var(--vscode-widget-border);
-
-        &:last-child {
-            border-bottom: none;
-        }
-
-        .launchConfigNameRow {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .launchConfigNameLabel {
-            flex: 0 0 auto;
-            font-weight: 600;
-            font-size: 0.9em;
-            color: var(--vscode-foreground);
-        }
-
-        .launchConfigNameInput {
-            flex: 0 1 auto;
-            width: auto;
-            min-width: 0;
-            max-width: 320px;
-
-            input {
-                font-size: 0.9em;
-                padding-top: 2px;
-                padding-bottom: 2px;
-            }
-        }
-
-        .launchConfigDescription {
-            margin: 6px 0 0;
-            font-size: 0.85em;
-            color: var(--vscode-descriptionForeground);
-            line-height: 1.4;
-
-            code {
-                font-family: var(--vscode-editor-font-family), monospace;
-                font-size: 0.92em;
-                padding: 0 4px;
-                background: var(--vscode-textCodeBlock-background);
-                border-radius: 3px;
-            }
-        }
     }
 
     .mermaidDiagram {
@@ -458,30 +398,25 @@
             white-space: nowrap;
         }
 
-        .dataTableInputCell {
-            min-width: 180px;
-            max-width: 260px;
+        details {
+            white-space: normal;
 
-            .fui-Input {
-                width: 100%;
-                max-width: 240px;
+            summary {
+                cursor: pointer;
+                color: var(--vscode-textLink-foreground);
+            }
+
+            br {
+                content: '';
             }
         }
 
-        .dataTableDropdownCell {
-            min-width: 120px;
-            max-width: 180px;
+        a {
+            color: var(--vscode-textLink-foreground);
 
-            .fui-Dropdown {
-                min-width: 100px;
-                width: 100%;
-                max-width: 160px;
+            &:hover {
+                color: var(--vscode-textLink-activeForeground);
             }
-        }
-
-        .dataTableMuted {
-            color: var(--vscode-descriptionForeground);
-            opacity: 0.7;
         }
 
         code {
@@ -564,63 +499,6 @@
         }
     }
 
-    .editableLaunchName {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-
-        .editablePencil {
-            font-size: 0.85em;
-            opacity: 0.85;
-        }
-
-        .fui-Input {
-            min-width: 180px;
-            flex: 0 0 240px;
-            max-width: 240px;
-        }
-    }
-
-    .editableGenerateToggle {
-        margin: 0;
-        padding: 0;
-        font-size: 0.85em;
-    }
-
-    .editableValueList,
-    .editableGenerateList {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-
-        li {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 4px 0;
-
-            .editableValueLabel,
-            .editableGenerateLabel {
-                color: var(--vscode-descriptionForeground);
-                font-size: 0.8em;
-                flex: 0 0 auto;
-            }
-
-            .editableValueLabel strong,
-            .editableGenerateLabel strong {
-                color: var(--vscode-foreground);
-                font-weight: 600;
-            }
-
-            .editableValueInput {
-                flex: 0 0 220px;
-                width: 220px;
-                max-width: 220px;
-            }
-        }
-    }
-
     .link {
         color: var(--vscode-textLink-foreground);
         cursor: default;
@@ -642,11 +520,19 @@
             flex-shrink: 0;
         }
 
+        // Let the feedback CounterBadge render outside the Button's bounds;
+        // Fluent UI Button sets overflow: hidden on the root which otherwise
+        // clips the top-right corner of the badge.
+        .fui-Button {
+            overflow: visible;
+        }
+
         .feedbackIconWrapper {
             position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            overflow: visible;
         }
 
         .feedbackBadge {

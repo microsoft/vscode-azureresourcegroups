@@ -26,6 +26,13 @@
     border-color: var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-button-foreground))) !important;
 }
 
+.fui-Tooltip__content {
+    background-color: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background)) !important;
+    color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground)) !important;
+    border: 1px solid var(--vscode-editorHoverWidget-border, var(--vscode-editorWidget-border, var(--vscode-widget-border))) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+}
+
 .deploymentPlanView {
     display: flex;
     flex-direction: column;
@@ -38,6 +45,7 @@
         top: 0;
         z-index: 10;
         background: var(--vscode-editor-background);
+        padding-top: 8px;
         padding-bottom: 14px;
         margin-bottom: -14px;
 
@@ -94,11 +102,16 @@
                 flex-shrink: 0;
             }
 
+            .fui-Button {
+                overflow: visible;
+            }
+
             .feedbackIconWrapper {
                 position: relative;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
+                overflow: visible;
             }
 
             .feedbackBadge {
