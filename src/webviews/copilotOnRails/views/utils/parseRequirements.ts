@@ -110,7 +110,9 @@ export function parseRequirementsJson(content: string): RequirementsData {
             const question = typeof obj.question === 'string' ? obj.question : '';
             const header = typeof obj.header === 'string' ? obj.header : undefined;
             const status = typeof obj.status === 'string' ? obj.status : 'needs_input';
-            const rationale = typeof obj.rationale === 'string' ? obj.rationale : undefined;
+            const rationale = typeof obj.rationale === 'string'
+                ? obj.rationale
+                : (typeof obj.reason === 'string' ? obj.reason : undefined);
             const multiSelect = typeof obj.multiSelect === 'boolean' ? obj.multiSelect : undefined;
             const allowFreeformInput = typeof obj.allowFreeformInput === 'boolean' ? obj.allowFreeformInput : undefined;
 

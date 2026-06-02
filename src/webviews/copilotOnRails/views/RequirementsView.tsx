@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Badge, Button, Input, Textarea, Tooltip } from '@fluentui/react-components';
-import { CheckboxCheckedFilled, CheckboxUncheckedRegular, CheckmarkCircleRegular, CheckmarkRegular, DismissRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { CheckboxUncheckedRegular, CheckmarkCircleRegular, CheckmarkRegular, DismissRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useState, type JSX } from 'react';
 import './styles/requirementsView.scss';
@@ -513,7 +513,7 @@ const OptionsList = ({
                         <span className='optionsList__indicator' aria-hidden='true'>
                             {multiSelect
                                 ? (isSelected
-                                    ? <CheckboxCheckedFilled className='optionsList__checkboxIcon optionsList__checkboxIcon--checked' />
+                                    ? <CheckmarkRegular className='optionsList__checkboxIcon optionsList__checkboxIcon--checked' />
                                     : <CheckboxUncheckedRegular className='optionsList__checkboxIcon' />)
                                 : (isSelected
                                     ? <CheckmarkRegular className='optionsList__radioIcon optionsList__radioIcon--checked' />

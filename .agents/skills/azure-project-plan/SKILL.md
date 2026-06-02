@@ -158,7 +158,7 @@ Each option is an object with a `label` (the value the user picks) and an option
 | 3 | `dataStores`    | `data`      | Data Stores           | Which data stores does your app need?                   | **yes**      | no              | `Blob Storage` (Store files and images), `Queue Storage` (Async message queue), `PostgreSQL` (Relational database), `CosmosDB` (NoSQL document database), `Redis` (In-memory cache), `Azure SQL` (Managed SQL Server)                                                                                                                                                                                                                                                                                                                                                          | Best-guess subset (e.g. `["PostgreSQL"]`)                                     |
 | 4 | `frontend`      | `frontend`  | Frontend Framework    | Which frontend framework?                               | no           | no              | `React` (React + Vite), `Vue` (Vue + Vite), `Angular` (Angular CLI), `Svelte` (Svelte + Vite), `None` (No frontend)                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `React`                                                                       |
 | 5 | `features`      | `app`       | Features              | Describe the features or API routes your app needs.    | no           | n/a             | *(omit `options` — free-text question, no choices)*                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Short description distilled from the user's prompt                            |
-| 6 | `auth`          | `auth`      | Authentication        | Does your app need authentication?                      | no           | **yes**         | `No auth` (Public app, no login required), `Mock auth middleware` (HMAC-signed test tokens — testable without an IdP)                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `Mock auth middleware` if the app exposes user data, else `No auth`           |
+| 6 | `auth`          | `auth`      | Authentication        | Does your app need authentication?                      | no           | **yes (always)** | `No auth` (Public app, no login required), `Mock auth middleware` (HMAC-signed test tokens — testable without an IdP), `Microsoft Entra ID` (Workforce identity — formerly Azure AD; sign in with org/Microsoft accounts), `Microsoft Entra External ID` (Customer identity — formerly Azure AD B2C; sign-up + social logins), `Auth0` (Third-party IdP — social + enterprise connections), `Clerk` (Drop-in user management with prebuilt UI)                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `Mock auth middleware` if the app exposes user data, else `No auth`           |
 
 **About `recommendedChoice` — always provide one, even for `inferred`.**
 
@@ -279,12 +279,16 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
       "allowFreeformInput": true,
       "options": [
         { "label": "No auth", "description": "Public app, no login required" },
-        { "label": "Mock auth middleware", "description": "HMAC-signed test tokens — testable without an IdP" }
+        { "label": "Mock auth middleware", "description": "HMAC-signed test tokens — testable without an IdP" },
+        { "label": "Microsoft Entra ID", "description": "Workforce identity — sign in with org or Microsoft accounts (formerly Azure AD)" },
+        { "label": "Microsoft Entra External ID", "description": "Customer identity — sign-up plus social logins (formerly Azure AD B2C)" },
+        { "label": "Auth0", "description": "Third-party IdP — social and enterprise connections" },
+        { "label": "Clerk", "description": "Drop-in user management with prebuilt UI" }
       ],
       "recommendedChoice": "Mock auth middleware",
       "status": "needs_input",
       "answer": null,
-      "rationale": "App handles user data — keep it testable without an external IdP. User can also describe a custom identity provider."
+      "rationale": "App handles user data — start with mock auth so every protected route is testable without an external IdP; pick a real IdP (Entra ID, External ID, Auth0, Clerk) or type your own when you're ready."
     }
   ]
 }
@@ -295,7 +299,14 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 - Always emit all six questions in `id` order: `appType`, `runtime`, `dataStores`, `frontend`, `features`, `auth`. Never omit one.
 - Always include a short `header` (column heading style — "App Type", "Data Stores") plus the full `question` text.
 - Always include `multiSelect` (boolean). Only Q3 (`dataStores`) is `true`; the rest are `false`.
-- Always include `allowFreeformInput` (boolean) for questions that have `options`. Use `false` for closed choice lists (runtime, frontend, data stores) and `true` when the user might reasonably type their own value — Q1 `appType` and Q6 `auth` are both `true` (auth needs a custom row so users can describe a real IdP like Entra ID, Auth0, Clerk, etc.). For Q5 `features` (free text, no `options`), omit `allowFreeformInput` entirely.
+- Always include `allowFreeformInput` (boolean) for questions that have `options`. The value per question is fixed — do not change it based on the user's prompt:
+  - `appType` → `true`
+  - `runtime` → `false`
+  - `dataStores` → `false`
+  - `frontend` → `false`
+  - `auth` → **`true`** (users frequently want a real IdP like Entra ID, Auth0, Clerk, Firebase Auth, etc. — never emit `false` here, even when one of the listed options seems to fit; if you find yourself writing `"allowFreeformInput": false` for `auth`, stop and re-read this rule)
+  For Q5 `features` (free text, no `options`), omit `allowFreeformInput` entirely.
+- Use the field name **`rationale`** (not `reason`, not `why`, not `explanation`). The webview parser falls back to `reason` for resilience, but `rationale` is canonical — always write `rationale`.
 - Always include `options` (array of `{ label, description }`), except for Q5 `features`, which omits `options` so the webview renders a textarea.
 - Every option object must have a `label` (the value the user picks) and a short `description` (one phrase, displayed in muted text under the label).
 - Always include `recommendedChoice`. For single-select questions it's a string; for `dataStores` it's a `string[]`. The webview pre-selects it so the user just reviews and submits.
