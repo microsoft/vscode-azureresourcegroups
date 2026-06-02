@@ -160,7 +160,7 @@
 
             .questionInput {
                 display: flex;
-                align-items: center;
+                align-items: flex-start;
                 gap: 6px;
 
                 .answerInput {
@@ -178,6 +178,179 @@
                     flex: 0 0 140px;
                     max-width: 140px;
                 }
+
+                .optionsList {
+                    flex: 1 1 auto;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0;
+                    border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.25));
+                    border-radius: 4px;
+                    overflow: hidden;
+                    background: var(--vscode-editor-background, transparent);
+
+                    &__row {
+                        all: unset;
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 10px;
+                        padding: 8px 12px;
+                        cursor: pointer;
+                        font-size: 0.9em;
+                        color: var(--vscode-foreground);
+                        border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.12));
+                        transition: background-color 0.08s ease-in-out;
+
+                        &:last-child {
+                            border-bottom: none;
+                        }
+
+                        &:hover {
+                            background: var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.1));
+                        }
+
+                        &:focus-visible {
+                            outline: 1px solid var(--vscode-focusBorder, #007acc);
+                            outline-offset: -1px;
+                        }
+
+                        &--selected {
+                            background: var(--vscode-list-activeSelectionBackground, rgba(0, 122, 204, 0.2));
+                            color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+
+                            &:hover {
+                                background: var(--vscode-list-activeSelectionBackground, rgba(0, 122, 204, 0.28));
+                            }
+
+                            .optionsList__index,
+                            .optionsList__description {
+                                color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+                                opacity: 0.85;
+                            }
+                        }
+
+                        &--custom {
+                            cursor: default;
+                            padding: 4px 12px;
+                            align-items: center;
+
+                            &:hover {
+                                background: transparent;
+                            }
+                        }
+                    }
+
+                    &__indicator {
+                        flex: 0 0 auto;
+                        width: 18px;
+                        height: 18px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-top: 1px;
+                        color: var(--vscode-descriptionForeground);
+
+                        &--blank {
+                            visibility: hidden;
+                        }
+                    }
+
+                    &__checkboxIcon {
+                        font-size: 16px;
+
+                        &--checked {
+                            color: var(--vscode-checkbox-selectBackground, var(--vscode-focusBorder, #007acc));
+                        }
+                    }
+
+                    &__radioIcon {
+                        font-size: 16px;
+
+                        &--checked {
+                            color: var(--vscode-list-activeSelectionIconForeground, var(--vscode-foreground));
+                        }
+                    }
+
+                    &__radioDot {
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 50%;
+                        border: 1px solid var(--vscode-descriptionForeground);
+                        opacity: 0.6;
+                    }
+
+                    &__index {
+                        flex: 0 0 auto;
+                        min-width: 16px;
+                        text-align: right;
+                        font-variant-numeric: tabular-nums;
+                        color: var(--vscode-descriptionForeground);
+                        font-size: 0.85em;
+                        line-height: 1.4;
+                    }
+
+                    &__labelGroup {
+                        flex: 1 1 auto;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 2px;
+                        text-align: left;
+                        min-width: 0;
+                    }
+
+                    &__label {
+                        line-height: 1.4;
+                    }
+
+                    &__description {
+                        font-size: 0.8em;
+                        color: var(--vscode-descriptionForeground);
+                        line-height: 1.35;
+                    }
+
+                    &__recommended {
+                        flex: 0 0 auto;
+                        align-self: center;
+                        font-size: 0.72em;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        font-weight: 600;
+                        padding: 2px 6px;
+                        border-radius: 3px;
+                        color: var(--vscode-charts-blue, var(--vscode-textLink-foreground, #4fc1ff));
+                        border: 1px solid currentColor;
+                        opacity: 0.9;
+                        white-space: nowrap;
+                    }
+
+                    &__customInput {
+                        flex: 1 1 auto;
+
+                        > .fui-Input,
+                        &.fui-Input {
+                            background: transparent;
+                            border: none;
+                            box-shadow: none;
+                            min-height: 24px;
+
+                            input {
+                                background: transparent;
+                                padding: 2px 0;
+                            }
+
+                            &::after {
+                                display: none !important;
+                            }
+                        }
+                    }
+                }
+            }
+
+            .questionSubtext {
+                margin: -2px 0 4px;
+                font-size: 0.85em;
+                color: var(--vscode-descriptionForeground);
+                line-height: 1.4;
             }
 
             .rationale {

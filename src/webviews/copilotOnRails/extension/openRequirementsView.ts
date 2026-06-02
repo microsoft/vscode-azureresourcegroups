@@ -12,6 +12,27 @@ export const REQUIREMENTS_FILE_GLOB = '**/.azure/requirements.json';
 let currentController: RequirementsViewController | undefined;
 let currentWatcher: vscode.Disposable | undefined;
 
+// Paths whose write was caused by the webview submit. We mark them so the file
+// watchers don't immediately reopen the view we just closed.
+const recentlySubmittedPaths = new Map<string, number>();
+const SUBMIT_SUPPRESSION_MS = 5000;
+
+export function markRequirementsSubmitted(uri: vscode.Uri): void {
+    recentlySubmittedPaths.set(uri.fsPath, Date.now());
+}
+
+function wasRecentlySubmitted(uri: vscode.Uri): boolean {
+    const ts = recentlySubmittedPaths.get(uri.fsPath);
+    if (ts === undefined) {
+        return false;
+    }
+    if (Date.now() - ts > SUBMIT_SUPPRESSION_MS) {
+        recentlySubmittedPaths.delete(uri.fsPath);
+        return false;
+    }
+    return true;
+}
+
 export function isRequirementsViewOpen(): boolean {
     return currentController !== undefined;
 }
@@ -94,6 +115,9 @@ function watchRequirementsFile(uri: vscode.Uri): void {
 
     const watcher = vscode.workspace.createFileSystemWatcher(pattern);
     const reload = async () => {
+        if (wasRecentlySubmitted(uri)) {
+            return;
+        }
         try {
             const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
             openRequirementsViewWithContent(content, uri);
@@ -113,6 +137,10 @@ function watchRequirementsFile(uri: vscode.Uri): void {
 export function registerRequirementsAutoOpen(context: vscode.ExtensionContext): void {
     const watcher = vscode.workspace.createFileSystemWatcher(REQUIREMENTS_FILE_GLOB);
     const handle = (uri: vscode.Uri) => {
+        if (wasRecentlySubmitted(uri)) {
+            // The user just submitted this file; don't reopen the view we just closed.
+            return;
+        }
         if (isRequirementsViewOpen()) {
             // Already open — `watchRequirementsFile` handles content reload.
             return;

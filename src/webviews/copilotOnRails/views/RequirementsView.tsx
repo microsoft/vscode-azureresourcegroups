@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Badge, Button, Input, Textarea, Tooltip } from '@fluentui/react-components';
-import { CheckmarkCircleRegular, DismissRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { CheckboxCheckedFilled, CheckboxUncheckedRegular, CheckmarkCircleRegular, CheckmarkRegular, DismissRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useState, type JSX } from 'react';
 import './styles/requirementsView.scss';
-import { inferInputType, isAnswerEmpty, type RequirementsAnswer, type RequirementsData, type RequirementsQuestion } from './utils/parseRequirements';
+import { inferInputType, isAnswerEmpty, type RequirementsAnswer, type RequirementsData, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice } from './utils/parseRequirements';
 
 interface DraftMap {
     [questionId: string]: RequirementsAnswer;
@@ -67,6 +67,23 @@ function categorySortValue(category: string): number {
     return idx === -1 ? CATEGORY_ORDER.length : idx;
 }
 
+function defaultDraftFor(question: RequirementsQuestion): RequirementsAnswer {
+    if (!isAnswerEmpty(question.answer)) {
+        return question.answer;
+    }
+    const rec = question.recommendedChoice;
+    if (rec === undefined) {
+        return question.answer;
+    }
+    // Multi-select question (answer typed as array): always return an array,
+    // wrapping a string recommendation if needed.
+    if (Array.isArray(question.answer)) {
+        return Array.isArray(rec) ? rec.slice() : [rec];
+    }
+    // Single-value question: take the first if recommendation is an array.
+    return Array.isArray(rec) ? (rec[0] ?? null) : rec;
+}
+
 export const RequirementsView = (): JSX.Element => {
     const [data, setData] = useState<RequirementsData | null>(null);
     const [drafts, setDrafts] = useState<DraftMap>({});
@@ -81,11 +98,13 @@ export const RequirementsView = (): JSX.Element => {
             if (message?.command === 'setRequirementsData') {
                 const incoming = message.data as RequirementsData;
                 setData(incoming);
-                // Reset drafts to whatever's in the file. Don't preserve in-flight
-                // edits, since the file is the source of truth on reload.
+                // Seed drafts from the file. When a question is missing an answer
+                // but has a recommendedChoice, pre-select the recommendation so
+                // the user just has to review-and-submit rather than fill from
+                // scratch.
                 const nextDrafts: DraftMap = {};
                 for (const q of incoming.questions) {
-                    nextDrafts[q.id] = q.answer;
+                    nextDrafts[q.id] = defaultDraftFor(q);
                 }
                 setDrafts(nextDrafts);
                 setEdited({});
@@ -114,9 +133,6 @@ export const RequirementsView = (): JSX.Element => {
         }
         const map = new Map<string, RequirementsQuestion[]>();
         for (const q of data.questions) {
-            if (q.status === 'inferred') {
-                continue;
-            }
             const list = map.get(q.category) ?? [];
             list.push(q);
             map.set(q.category, list);
@@ -133,7 +149,7 @@ export const RequirementsView = (): JSX.Element => {
         return data.questions.filter(q => {
             const draftAnswer = drafts[q.id];
             const effective = draftAnswer === undefined ? q.answer : draftAnswer;
-            return q.status === 'needs_input' && isAnswerEmpty(effective);
+            return isAnswerEmpty(effective);
         });
     }, [data, drafts]);
 
@@ -144,17 +160,11 @@ export const RequirementsView = (): JSX.Element => {
             return;
         }
         const updatedQuestions = data.questions.map(q => {
-            const userEdited = edited[q.id] === true;
             const draftAnswer = drafts[q.id];
             const effective = draftAnswer === undefined ? q.answer : draftAnswer;
-
-            let nextStatus = q.status;
-            if (q.status === 'needs_input' && !isAnswerEmpty(effective)) {
-                nextStatus = 'confirmed';
-            } else if (q.status === 'inferred' && userEdited) {
-                nextStatus = 'confirmed';
-            }
-
+            // Every visible answer that has a value at submit time counts as
+            // confirmed by the user — they reviewed the form and clicked submit.
+            const nextStatus = isAnswerEmpty(effective) ? q.status : 'confirmed';
             return {
                 ...q,
                 answer: effective,
@@ -171,7 +181,7 @@ export const RequirementsView = (): JSX.Element => {
                 questions: updatedQuestions,
             },
         });
-    }, [data, canSubmit, drafts, edited, vscodeApi]);
+    }, [data, canSubmit, drafts, vscodeApi]);
 
     if (!data) {
         return (
@@ -197,25 +207,34 @@ export const RequirementsView = (): JSX.Element => {
     }
 
     const needsInputCount = data.questions.filter(q => q.status === 'needs_input').length;
-    const answeredNeedsInputCount = needsInputCount - missingRequired.length;
+    const totalCount = data.questions.length;
+    const filledCount = data.questions.filter(q => {
+        const draftAnswer = drafts[q.id];
+        const effective = draftAnswer === undefined ? q.answer : draftAnswer;
+        return !isAnswerEmpty(effective);
+    }).length;
 
     return (
         <div className='requirementsView'>
             <header className='requirementsHeader'>
                 <div className='headerText'>
                     <h1>Project requirements</h1>
-                    <p className='summary'>All fields below are required. Fill out every input, then submit to Copilot to continue.</p>
+                    <p className='summary'>
+                        {needsInputCount === 0
+                            ? 'Review the pre-filled answers below. Adjust anything that doesn\'t fit, then submit.'
+                            : `Review the pre-filled answers and complete the ${needsInputCount} item${needsInputCount === 1 ? '' : 's'} that still need input.`}
+                    </p>
                 </div>
                 <div className='headerActions'>
                     <div className='progress'>
-                        <span>{answeredNeedsInputCount}/{needsInputCount} inputs filled</span>
+                        <span>{filledCount}/{totalCount} answered</span>
                     </div>
                     <Tooltip
                         relationship='label'
                         content={
                             missingRequired.length === 0
                                 ? 'Save answers and generate the scaffold plan.'
-                                : `Please answer ${missingRequired.length} remaining required question${missingRequired.length === 1 ? '' : 's'}.`
+                                : `Please answer ${missingRequired.length} remaining question${missingRequired.length === 1 ? '' : 's'}.`
                         }
                     >
                         <Button
@@ -273,22 +292,38 @@ const QuestionRow = ({
     edited: boolean;
     onChange: (value: RequirementsAnswer) => void;
 }): JSX.Element => {
-    const inputType = inferInputType(question.answer ?? draft);
-    const isMissing = question.status === 'needs_input' && isAnswerEmpty(draft);
-    const isConfirmed = question.status === 'confirmed' || edited;
+    const inputType = inferInputType(draft ?? question.answer, question.options, question.multiSelect);
+    const isMissing = isAnswerEmpty(draft);
+    const showInferredBadge = question.status === 'inferred' && !edited;
+    const showConfirmedBadge = (question.status === 'confirmed' || edited) && !isMissing;
+    const heading = question.header ?? question.question;
+    const showSubtext = question.header !== undefined && question.question && question.question !== question.header;
 
     return (
         <li className={`questionRow ${isMissing ? 'questionRow--missing' : ''}`}>
             <div className='questionMeta'>
-                <span className='questionText'>{question.question}</span>
+                <span className='questionText'>{heading}</span>
                 <span className='statusBadges'>
-                    {!isMissing && isConfirmed && (
+                    {showInferredBadge && (
+                        <Badge appearance='outline' color='informative' size='small'>Inferred — review</Badge>
+                    )}
+                    {showConfirmedBadge && (
                         <Badge appearance='tint' color='success' size='small' icon={<CheckmarkCircleRegular />}>Confirmed</Badge>
                     )}
                 </span>
             </div>
+            {showSubtext && (
+                <p className='questionSubtext'>{question.question}</p>
+            )}
             <div className='questionInput'>
-                <AnswerInput inputType={inputType} value={draft} onChange={onChange} />
+                <AnswerInput
+                    inputType={inputType}
+                    options={question.options}
+                    recommendedChoice={question.recommendedChoice}
+                    allowFreeformInput={question.allowFreeformInput}
+                    value={draft}
+                    onChange={onChange}
+                />
                 {edited && draft !== question.answer && (
                     <Tooltip relationship='label' content='Reset to original value'>
                         <Button
@@ -310,13 +345,32 @@ const QuestionRow = ({
 
 const AnswerInput = ({
     inputType,
+    options,
+    recommendedChoice,
+    allowFreeformInput,
     value,
     onChange,
 }: {
     inputType: ReturnType<typeof inferInputType>;
+    options: RequirementsOption[] | undefined;
+    recommendedChoice: RequirementsRecommendedChoice | undefined;
+    allowFreeformInput: boolean | undefined;
     value: RequirementsAnswer;
     onChange: (next: RequirementsAnswer) => void;
 }): JSX.Element => {
+    if ((inputType === 'select' || inputType === 'multiselect') && options && options.length > 0) {
+        return (
+            <OptionsList
+                multiSelect={inputType === 'multiselect'}
+                options={options}
+                recommendedChoice={recommendedChoice}
+                allowFreeformInput={allowFreeformInput}
+                value={value}
+                onChange={onChange}
+            />
+        );
+    }
+
     if (inputType === 'tags') {
         const text = Array.isArray(value) ? value.join(', ') : (value == null ? '' : String(value));
         return (
@@ -376,5 +430,122 @@ const AnswerInput = ({
             onChange={(_, data) => onChange(data.value)}
             className='answerInput answerInput--text'
         />
+    );
+};
+
+const OptionsList = ({
+    multiSelect,
+    options,
+    recommendedChoice,
+    allowFreeformInput,
+    value,
+    onChange,
+}: {
+    multiSelect: boolean;
+    options: RequirementsOption[];
+    recommendedChoice: RequirementsRecommendedChoice | undefined;
+    allowFreeformInput: boolean | undefined;
+    value: RequirementsAnswer;
+    onChange: (next: RequirementsAnswer) => void;
+}): JSX.Element => {
+    const optionLabels = useMemo(() => options.map(o => o.label), [options]);
+
+    const selected = useMemo<string[]>(() => {
+        if (multiSelect) {
+            return Array.isArray(value) ? value : [];
+        }
+        return typeof value === 'string' && value.length > 0 ? [value] : [];
+    }, [multiSelect, value]);
+
+    const recommendedSet = useMemo<Set<string>>(() => {
+        if (recommendedChoice === undefined) {
+            return new Set();
+        }
+        return new Set(Array.isArray(recommendedChoice) ? recommendedChoice : [recommendedChoice]);
+    }, [recommendedChoice]);
+
+    const customAnswer = useMemo(() => {
+        if (multiSelect) {
+            return selected.filter(v => !optionLabels.includes(v)).join(', ');
+        }
+        return selected.length === 1 && !optionLabels.includes(selected[0]) ? selected[0] : '';
+    }, [multiSelect, optionLabels, selected]);
+
+    const handleOptionClick = (label: string) => {
+        if (multiSelect) {
+            const optionsSelected = selected.filter(v => optionLabels.includes(v));
+            const customExtras = selected.filter(v => !optionLabels.includes(v));
+            const nextOptionsSelected = optionsSelected.includes(label)
+                ? optionsSelected.filter(v => v !== label)
+                : [...optionsSelected, label];
+            onChange([...nextOptionsSelected, ...customExtras]);
+        } else {
+            onChange(label);
+        }
+    };
+
+    const handleCustomChange = (text: string) => {
+        if (multiSelect) {
+            const optionsSelected = selected.filter(v => optionLabels.includes(v));
+            const customValues = text.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            onChange([...optionsSelected, ...customValues]);
+        } else {
+            onChange(text);
+        }
+    };
+
+    const showFreeform = allowFreeformInput !== false;
+
+    return (
+        <div className={`optionsList ${multiSelect ? 'optionsList--multi' : 'optionsList--single'}`} role={multiSelect ? 'group' : 'radiogroup'}>
+            {options.map((option, idx) => {
+                const isSelected = selected.includes(option.label);
+                const isRecommended = recommendedSet.has(option.label);
+                return (
+                    <button
+                        key={option.label}
+                        type='button'
+                        role={multiSelect ? 'checkbox' : 'radio'}
+                        aria-checked={isSelected}
+                        className={`optionsList__row ${isSelected ? 'optionsList__row--selected' : ''}`}
+                        onClick={() => handleOptionClick(option.label)}
+                    >
+                        <span className='optionsList__indicator' aria-hidden='true'>
+                            {multiSelect
+                                ? (isSelected
+                                    ? <CheckboxCheckedFilled className='optionsList__checkboxIcon optionsList__checkboxIcon--checked' />
+                                    : <CheckboxUncheckedRegular className='optionsList__checkboxIcon' />)
+                                : (isSelected
+                                    ? <CheckmarkRegular className='optionsList__radioIcon optionsList__radioIcon--checked' />
+                                    : <span className='optionsList__radioDot' />)
+                            }
+                        </span>
+                        <span className='optionsList__index'>{idx + 1}</span>
+                        <span className='optionsList__labelGroup'>
+                            <span className='optionsList__label'>{option.label}</span>
+                            {option.description && (
+                                <span className='optionsList__description'>{option.description}</span>
+                            )}
+                        </span>
+                        {isRecommended && (
+                            <span className='optionsList__recommended'>Recommended</span>
+                        )}
+                    </button>
+                );
+            })}
+            {showFreeform && (
+                <div className='optionsList__row optionsList__row--custom'>
+                    <span className='optionsList__indicator optionsList__indicator--blank' aria-hidden='true' />
+                    <span className='optionsList__index'>{options.length + 1}</span>
+                    <Input
+                        size='small'
+                        value={customAnswer}
+                        placeholder={multiSelect ? 'Add custom values (comma-separated)' : 'Enter custom answer'}
+                        onChange={(_, data) => handleCustomChange(data.value)}
+                        className='optionsList__customInput'
+                    />
+                </div>
+            )}
+        </div>
     );
 };
