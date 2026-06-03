@@ -9,6 +9,7 @@ import { ViewColumn } from "vscode";
 import { ext } from "../../../../extensionVariables";
 import { type RequirementsData } from "../../views/utils/parseRequirements";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { markRequirementsSubmitted } from "../openRequirementsView";
 
 interface SubmitMessage {
     command: 'submitRequirements';
@@ -60,6 +61,7 @@ export class RequirementsViewController extends WebviewController<Record<string,
         try {
             const { parseError: _ignored, ...rest } = data;
             const serialized = JSON.stringify(rest, null, 2) + '\n';
+            markRequirementsSubmitted(this.sourceFileUri);
             await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(serialized, 'utf-8'));
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
@@ -71,8 +73,8 @@ export class RequirementsViewController extends WebviewController<Record<string,
 
         try {
             await vscode.commands.executeCommand('workbench.action.chat.open', {
-                mode: 'azure-project-scaffold',
-                query: 'Inputs collected.',
+                mode: 'azure-project-plan',
+                query: 'Requirements submitted at .azure/requirements.json — read the file and continue generating .azure/project-plan.md.',
             });
         } catch {
             // Chat may not be available; saving still succeeded.

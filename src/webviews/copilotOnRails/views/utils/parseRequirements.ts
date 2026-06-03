@@ -7,13 +7,25 @@ export type RequirementsAnswer = string | number | boolean | string[] | null;
 
 export type RequirementsStatus = 'inferred' | 'needs_input' | 'confirmed' | string;
 
+export type RequirementsRecommendedChoice = string | string[];
+
+export interface RequirementsOption {
+    label: string;
+    description?: string;
+}
+
 export interface RequirementsQuestion {
     id: string;
     category: string;
     question: string;
+    header?: string;
     answer: RequirementsAnswer;
     status: RequirementsStatus;
     rationale?: string;
+    options?: RequirementsOption[];
+    recommendedChoice?: RequirementsRecommendedChoice;
+    multiSelect?: boolean;
+    allowFreeformInput?: boolean;
 }
 
 export interface RequirementsWorkspaceSignals {
@@ -38,9 +50,23 @@ export interface RequirementsData {
     };
 }
 
-export type RequirementsInputType = 'text' | 'number' | 'boolean' | 'tags';
+export type RequirementsInputType = 'text' | 'number' | 'boolean' | 'tags' | 'select' | 'multiselect';
 
-export function inferInputType(answer: RequirementsAnswer): RequirementsInputType {
+export function inferInputType(
+    answer: RequirementsAnswer,
+    options?: RequirementsOption[],
+    explicitMultiSelect?: boolean,
+): RequirementsInputType {
+    const hasOptions = Array.isArray(options) && options.length > 0;
+    if (hasOptions) {
+        if (explicitMultiSelect === true) {
+            return 'multiselect';
+        }
+        if (explicitMultiSelect === false) {
+            return 'select';
+        }
+        return Array.isArray(answer) ? 'multiselect' : 'select';
+    }
     if (Array.isArray(answer)) {
         return 'tags';
     }
@@ -51,6 +77,22 @@ export function inferInputType(answer: RequirementsAnswer): RequirementsInputTyp
         return 'boolean';
     }
     return 'text';
+}
+
+function parseOption(raw: unknown): RequirementsOption | undefined {
+    if (typeof raw === 'string' && raw.trim().length > 0) {
+        return { label: raw };
+    }
+    if (raw && typeof raw === 'object') {
+        const obj = raw as Record<string, unknown>;
+        const label = typeof obj.label === 'string' ? obj.label : undefined;
+        if (!label) {
+            return undefined;
+        }
+        const description = typeof obj.description === 'string' ? obj.description : undefined;
+        return { label, description };
+    }
+    return undefined;
 }
 
 export function parseRequirementsJson(content: string): RequirementsData {
@@ -66,8 +108,13 @@ export function parseRequirementsJson(content: string): RequirementsData {
             const id = typeof obj.id === 'string' && obj.id.trim() ? obj.id : `question-${idx}`;
             const category = typeof obj.category === 'string' && obj.category.trim() ? obj.category : 'general';
             const question = typeof obj.question === 'string' ? obj.question : '';
+            const header = typeof obj.header === 'string' ? obj.header : undefined;
             const status = typeof obj.status === 'string' ? obj.status : 'needs_input';
-            const rationale = typeof obj.rationale === 'string' ? obj.rationale : undefined;
+            const rationale = typeof obj.rationale === 'string'
+                ? obj.rationale
+                : (typeof obj.reason === 'string' ? obj.reason : undefined);
+            const multiSelect = typeof obj.multiSelect === 'boolean' ? obj.multiSelect : undefined;
+            const allowFreeformInput = typeof obj.allowFreeformInput === 'boolean' ? obj.allowFreeformInput : undefined;
 
             let answer: RequirementsAnswer;
             if (obj.answer === null || obj.answer === undefined) {
@@ -80,7 +127,30 @@ export function parseRequirementsJson(content: string): RequirementsData {
                 answer = String(obj.answer);
             }
 
-            return { id, category, question, answer, status, rationale };
+            const options = Array.isArray(obj.options)
+                ? obj.options.map(parseOption).filter((o): o is RequirementsOption => o !== undefined)
+                : undefined;
+
+            let recommendedChoice: RequirementsRecommendedChoice | undefined;
+            if (Array.isArray(obj.recommendedChoice)) {
+                recommendedChoice = obj.recommendedChoice.filter((x): x is string => typeof x === 'string');
+            } else if (typeof obj.recommendedChoice === 'string') {
+                recommendedChoice = obj.recommendedChoice;
+            }
+
+            return {
+                id,
+                category,
+                question,
+                header,
+                answer,
+                status,
+                rationale,
+                options,
+                recommendedChoice,
+                multiSelect,
+                allowFreeformInput,
+            };
         })
         .filter((q): q is RequirementsQuestion => q !== undefined);
 
