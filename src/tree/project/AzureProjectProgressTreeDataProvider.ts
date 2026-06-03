@@ -4,9 +4,22 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { getProjectPlanFiles } from './projectPlanFiles';
+import { getDebugConfigurations, getProjectPlanFiles } from './projectPlanFiles';
 
 type ProgressState = 'completed' | 'current' | 'notStarted';
+
+const notStartedDecorationScheme = 'azure-project-progress-notstarted';
+
+class NotStartedDecorationProvider implements vscode.FileDecorationProvider {
+    provideFileDecoration(uri: vscode.Uri): vscode.FileDecoration | undefined {
+        if (uri.scheme !== notStartedDecorationScheme) {
+            return undefined;
+        }
+        return {
+            color: new vscode.ThemeColor('disabledForeground'),
+        };
+    }
+}
 
 interface StageNode {
     readonly kind: 'stage';
@@ -17,6 +30,7 @@ interface StageNode {
     readonly hasPlanFile: boolean;
     readonly openPlanCommandId: string;
     readonly startCommandId: string;
+    readonly stageKind: 'projectCreation' | 'localDevelopment' | 'deployment';
 }
 
 interface ActionNode {
@@ -26,6 +40,7 @@ interface ActionNode {
     readonly description?: string;
     readonly iconName: string;
     readonly commandId?: string;
+    readonly commandArguments?: unknown[];
 }
 
 type ProgressNode = StageNode | ActionNode;
@@ -55,6 +70,14 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
             this.disposables.push(watcher);
         }
 
+        this.disposables.push(vscode.workspace.onDidChangeConfiguration((e) => {
+            if (e.affectsConfiguration('launch')) {
+                this.refresh();
+            }
+        }));
+
+        this.disposables.push(vscode.window.registerFileDecorationProvider(new NotStartedDecorationProvider()));
+
         context.subscriptions.push(this);
     }
 
@@ -73,22 +96,30 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
         if (element.kind === 'stage') {
             const item = new vscode.TreeItem(
                 vscode.l10n.t('{0}. {1}', element.stepNumber.toString(), element.label),
-                vscode.TreeItemCollapsibleState.Expanded,
+                element.state === 'current'
+                    ? vscode.TreeItemCollapsibleState.Expanded
+                    : vscode.TreeItemCollapsibleState.Collapsed,
             );
-            item.id = element.id;
+            item.id = `${element.id}.${element.state}`;
             item.description = toStageDescription(element.state, element.hasPlanFile);
-            item.iconPath = new vscode.ThemeIcon(toStageIconName(element.id));
+            item.tooltip = new vscode.MarkdownString(`**${element.label}** — ${toStateText(element.state)}`);
+            item.iconPath = toStageIcon(element.state, element.id);
+            if (element.state === 'notStarted') {
+                item.resourceUri = vscode.Uri.from({ scheme: notStartedDecorationScheme, path: `/${element.id}` });
+            }
             return item;
         }
 
         const actionItem = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
         actionItem.id = element.id;
         actionItem.iconPath = new vscode.ThemeIcon(element.iconName);
+        actionItem.tooltip = element.description ?? element.label;
 
         if (element.commandId) {
             actionItem.command = {
                 command: element.commandId,
                 title: '',
+                arguments: element.commandArguments,
             };
         }
 
@@ -128,6 +159,7 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
                 hasPlanFile: files.hasProjectPlan,
                 openPlanCommandId: 'azureResourceGroups.openPlanView',
                 startCommandId: 'azureResourceGroups.createProjectWithCopilot',
+                stageKind: 'projectCreation',
             },
             {
                 kind: 'stage',
@@ -138,6 +170,7 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
                 hasPlanFile: files.hasLocalDevelopmentPlan,
                 openPlanCommandId: 'azureResourceGroups.openLocalPlanView',
                 startCommandId: 'azureResourceGroups.startLocalDevelopment',
+                stageKind: 'localDevelopment',
             },
             {
                 kind: 'stage',
@@ -148,6 +181,7 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
                 hasPlanFile: files.hasDeploymentPlan,
                 openPlanCommandId: 'azureResourceGroups.openDeployPlanView',
                 startCommandId: 'azureResourceGroups.startDeployment',
+                stageKind: 'deployment',
             },
         ];
     }
@@ -155,12 +189,16 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
     private getActionNodes(stage: StageNode): ActionNode[] {
         const actions: ActionNode[] = [];
 
-        if (stage.hasPlanFile) {
+        const debugConfigs = stage.stageKind === 'localDevelopment' && stage.hasPlanFile
+            ? getDebugConfigurations()
+            : [];
+
+        if (stage.hasPlanFile && debugConfigs.length === 0) {
             actions.push({
                 kind: 'action',
                 id: `${stage.id}.openPlan`,
                 label: vscode.l10n.t('Open plan'),
-                iconName: 'go-to-file',
+                iconName: 'preview',
                 commandId: stage.openPlanCommandId,
             });
         }
@@ -169,19 +207,21 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
             actions.push({
                 kind: 'action',
                 id: `${stage.id}.start`,
-                label: vscode.l10n.t('Run this stage'),
-                iconName: 'run',
+                label: vscode.l10n.t('Start'),
+                iconName: 'play-circle',
                 commandId: stage.startCommandId,
             });
         }
 
-        if (stage.hasPlanFile && stage.state === 'current') {
+        for (const config of debugConfigs) {
             actions.push({
                 kind: 'action',
-                id: `${stage.id}.continue`,
-                label: vscode.l10n.t('Continue stage'),
-                iconName: 'run',
-                commandId: stage.startCommandId,
+                id: `${stage.id}.debug.${config.folder.uri.toString()}.${config.name}`,
+                label: vscode.l10n.t('Debug: {0}', config.name),
+                description: vscode.l10n.t('Start debugging "{0}"', config.name),
+                iconName: 'debug-alt',
+                commandId: 'workbench.action.debug.selectandstart',
+                commandArguments: [config.name],
             });
         }
 
@@ -222,6 +262,17 @@ function toStateText(state: ProgressState): string {
             return vscode.l10n.t('Current');
         default:
             return vscode.l10n.t('Not started');
+    }
+}
+
+function toStageIcon(state: ProgressState, stageId: string): vscode.ThemeIcon {
+    switch (state) {
+        case 'completed':
+            return new vscode.ThemeIcon('pass-filled');
+        case 'current':
+            return new vscode.ThemeIcon(toStageIconName(stageId));
+        default:
+            return new vscode.ThemeIcon(toStageIconName(stageId), new vscode.ThemeColor('disabledForeground'));
     }
 }
 
