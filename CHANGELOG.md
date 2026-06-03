@@ -5,6 +5,11 @@
 ### Added
 * Add an optional `options` parameter to `AzureAuthentication.getSessionWithScopes`. Passing `{ createIfNone: true }` allows an interactive consent prompt when a session for the requested scopes has not yet been granted. See [microsoft/vscode-azurefunctions#5073](https://github.com/microsoft/vscode-azurefunctions/issues/5073)
 
+## 0.12.6 - 2026-06-03
+
+### Added
+* [[1465]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1465) Add registration for SQL Server resources in the resource explorer tree to enable integration from [vscode-mssql](https://github.com/microsoft/vscode-mssql)
+
 ## 0.12.5 - 2026-05-28
 
 ### Changed
