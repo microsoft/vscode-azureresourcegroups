@@ -41,7 +41,7 @@ function buildFeedbackPrompt(items: FeedbackItem[]): string {
         .filter(t => t.length > 2);
 
     const lines: string[] = [
-        'Please revise the local development plan based on my feedback and update local-development-plan.md.',
+        'Please revise the local development plan based on my feedback and update .azure/vscode-debug-plan.md.',
         'Keep existing sections unchanged unless a change below implies otherwise. Wait for my approval after updating the file.',
         '',
     ];

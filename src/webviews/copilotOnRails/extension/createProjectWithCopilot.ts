@@ -13,7 +13,7 @@ const deploy = vscode.l10n.t('Deploy');
 export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
     switch (true) {
         // Local Development => Deploy
-        case await hasCompletedPhase('**/local-development-plan.md', 'implemented'): {
+        case await hasCompletedPhase('**/.azure/vscode-debug-plan.md', 'implemented'): {
             const choice = await vscode.window.showInformationMessage(
                 vscode.l10n.t('We detected a previous Copilot session with a completed local debug configuration. Would you like to deploy this project?'),
                 { modal: true },
