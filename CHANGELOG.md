@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+### Added
+* Add an optional `options` parameter to `AzureAuthentication.getSessionWithScopes`. Passing `{ createIfNone: true }` allows an interactive consent prompt when a session for the requested scopes has not yet been granted. See [microsoft/vscode-azurefunctions#5073](https://github.com/microsoft/vscode-azurefunctions/issues/5073)
+
 ## 0.12.5 - 2026-05-28
 
 ### Changed
