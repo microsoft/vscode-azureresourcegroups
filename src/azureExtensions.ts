@@ -160,6 +160,16 @@ export const azureExtensions: IAzExtMetadata[] = [
         resourceTypes: [AzExtResourceType.AiFoundry],
         reportIssueCommandId: 'ai-mlstudio.reportIssue'
     },
+    {
+        name: 'mssql',
+        publisher: 'ms-mssql',
+        label: 'SQL Server',
+        resourceTypes: [
+            AzExtResourceType.SqlServers,
+            AzExtResourceType.SqlDatabases,
+        ],
+        reportIssueCommandId: 'mssql.reportIssue'
+    },
 ];
 
 export const legacyTypeMap: Partial<Record<AzExtResourceType, string>> = {
