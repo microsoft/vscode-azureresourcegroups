@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Badge, Button, Input, Textarea, Tooltip } from '@fluentui/react-components';
-import { CheckboxUncheckedRegular, CheckmarkCircleRegular, CheckmarkRegular, DismissRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { Button, Input, Textarea, Tooltip } from '@fluentui/react-components';
+import { CheckboxUncheckedRegular, CheckmarkRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useState, type JSX } from 'react';
 import './styles/requirementsView.scss';
@@ -206,13 +206,9 @@ export const RequirementsView = (): JSX.Element => {
         );
     }
 
-    const needsInputCount = data.questions.filter(q => q.status === 'needs_input').length;
+    const needsInputCount = missingRequired.length;
     const totalCount = data.questions.length;
-    const filledCount = data.questions.filter(q => {
-        const draftAnswer = drafts[q.id];
-        const effective = draftAnswer === undefined ? q.answer : draftAnswer;
-        return !isAnswerEmpty(effective);
-    }).length;
+    const filledCount = totalCount - needsInputCount;
 
     return (
         <div className='requirementsView'>
@@ -226,9 +222,6 @@ export const RequirementsView = (): JSX.Element => {
                     </p>
                 </div>
                 <div className='headerActions'>
-                    <div className='progress'>
-                        <span>{filledCount}/{totalCount} answered</span>
-                    </div>
                     <Tooltip
                         relationship='label'
                         content={
@@ -246,6 +239,9 @@ export const RequirementsView = (): JSX.Element => {
                             {isSaving ? 'Submitting…' : 'Submit'}
                         </Button>
                     </Tooltip>
+                    <div className='progress'>
+                        <span>{filledCount}/{totalCount} answered</span>
+                    </div>
                 </div>
             </header>
 
@@ -259,24 +255,30 @@ export const RequirementsView = (): JSX.Element => {
                 </div>
             )}
 
-            {grouped.map(group => (
-                <section className='categoryCard' key={group.category}>
-                    <header className='categoryHeader'>
-                        <h2>{categoryLabel(group.category)}</h2>
-                    </header>
-                    <ul className='questionList'>
-                        {group.questions.map(q => (
-                            <QuestionRow
-                                key={q.id}
-                                question={q}
-                                draft={drafts[q.id] === undefined ? q.answer : drafts[q.id]}
-                                edited={edited[q.id] === true}
-                                onChange={(value) => updateDraft(q.id, value)}
-                            />
-                        ))}
-                    </ul>
-                </section>
-            ))}
+            {grouped.map(group => {
+                const label = categoryLabel(group.category);
+                return (
+                    <section className='categoryCard' key={group.category}>
+                        <header className='categoryHeader'>
+                            <h2>{label}</h2>
+                        </header>
+                        <ul className='questionList'>
+                            {group.questions.map(q => {
+                                const hideHeader = group.questions.length === 1;
+                                return (
+                                    <QuestionRow
+                                        key={q.id}
+                                        question={q}
+                                        draft={drafts[q.id] === undefined ? q.answer : drafts[q.id]}
+                                        hideHeader={hideHeader}
+                                        onChange={(value) => updateDraft(q.id, value)}
+                                    />
+                                );
+                            })}
+                        </ul>
+                    </section>
+                );
+            })}
         </div>
     );
 };
@@ -284,34 +286,26 @@ export const RequirementsView = (): JSX.Element => {
 const QuestionRow = ({
     question,
     draft,
-    edited,
+    hideHeader,
     onChange,
 }: {
     question: RequirementsQuestion;
     draft: RequirementsAnswer;
-    edited: boolean;
+    hideHeader: boolean;
     onChange: (value: RequirementsAnswer) => void;
 }): JSX.Element => {
     const inputType = inferInputType(draft ?? question.answer, question.options, question.multiSelect);
     const isMissing = isAnswerEmpty(draft);
-    const showInferredBadge = question.status === 'inferred' && !edited;
-    const showConfirmedBadge = (question.status === 'confirmed' || edited) && !isMissing;
     const heading = question.header ?? question.question;
     const showSubtext = question.header !== undefined && question.question && question.question !== question.header;
 
     return (
         <li className={`questionRow ${isMissing ? 'questionRow--missing' : ''}`}>
-            <div className='questionMeta'>
-                <span className='questionText'>{heading}</span>
-                <span className='statusBadges'>
-                    {showInferredBadge && (
-                        <Badge appearance='outline' color='informative' size='small'>Inferred — review</Badge>
-                    )}
-                    {showConfirmedBadge && (
-                        <Badge appearance='tint' color='success' size='small' icon={<CheckmarkCircleRegular />}>Confirmed</Badge>
-                    )}
-                </span>
-            </div>
+            {!hideHeader && (
+                <div className='questionMeta'>
+                    <span className='questionText'>{heading}</span>
+                </div>
+            )}
             {showSubtext && (
                 <p className='questionSubtext'>{question.question}</p>
             )}
@@ -324,21 +318,7 @@ const QuestionRow = ({
                     value={draft}
                     onChange={onChange}
                 />
-                {edited && draft !== question.answer && (
-                    <Tooltip relationship='label' content='Reset to original value'>
-                        <Button
-                            appearance='subtle'
-                            size='small'
-                            icon={<DismissRegular />}
-                            onClick={() => onChange(question.answer)}
-                            aria-label='Reset'
-                        />
-                    </Tooltip>
-                )}
             </div>
-            {question.rationale && (
-                <p className='rationale'>{question.rationale}</p>
-            )}
         </li>
     );
 };
