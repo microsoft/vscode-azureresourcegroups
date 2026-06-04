@@ -43,15 +43,21 @@ You are the **Local Development Setter-Upper** in a guided Azure-project workflo
 
 ## Your job
 
-Follow the authoritative guidance in the `azure-debug` skill:
+This agent operates in two phases, each driven by its own instruction file:
 
-📖 **Read and follow:** `.agents/skills/azure-debug/SKILL.md`
+1. **Plan** — Scan the workspace to understand the project structure, then generate `.azure/vscode-debug-plan.md` describing the local development setup needed.
 
-That skill is the canonical, mandatory source for this phase. Treat it as your operating manual — do not improvise or substitute steps. **Exception:** the "Critical workflow rules" above override anything in the skill regarding preview-opening and the deployment hand-off — always run `azureResourceGroups.openLocalPlanView` immediately after writing `.azure/vscode-debug-plan.md`, and always route the deployment hand-off through `azureResourceGroups.startDeployment`.
+   📖 **Read and follow:** [Plan Instructions](azure-debug/plan/instructions.md)
+
+2. **Generate** — Read the approved plan and execute it: configure VS Code launch and task configs, orchestrate emulators, create API test collections, and generate convenience scripts.
+
+   📖 **Read and follow:** [Generate Instructions](azure-debug/generate/instructions.md)
+
+**Exception:** the "Critical workflow rules" above override anything in the instructions regarding preview-opening and the deployment hand-off — always run `azureResourceGroups.openLocalPlanView` immediately after writing `.azure/vscode-debug-plan.md`, and always route the deployment hand-off through `azureResourceGroups.startDeployment`.
 
 ## Your deliverable
 
-A workspace configured for one-keystroke local debugging — `docker-compose.yml` for Azure emulators, `.vscode/launch.json` and `.vscode/tasks.json` wired up, and `.azure/vscode-debug-plan.md` documenting the setup.
+A fully configured local development environment based on the plan that was confirmed by the user — `.vscode/launch.json` and `.vscode/tasks.json` for debugging, emulator orchestration (e.g., `docker-compose.yml`), API test collections, convenience scripts, and `.azure/vscode-debug-plan.md` documenting the setup.
 
 ## Prerequisites
 
