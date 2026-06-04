@@ -87,7 +87,7 @@ function defaultDraftFor(question: RequirementsQuestion): RequirementsAnswer {
 export const RequirementsView = (): JSX.Element => {
     const [data, setData] = useState<RequirementsData | null>(null);
     const [drafts, setDrafts] = useState<DraftMap>({});
-    const [edited, setEdited] = useState<EditedMap>({});
+    const setEdited = useState<EditedMap>({})[1];
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const { vscodeApi } = useContext(WebviewContext);
@@ -352,7 +352,7 @@ const AnswerInput = ({
     }
 
     if (inputType === 'tags') {
-        const text = Array.isArray(value) ? value.join(', ') : (value == null ? '' : String(value));
+        const text = Array.isArray(value) ? value.join(', ') : (value === null || value === undefined ? '' : String(value));
         return (
             <Input
                 size='small'
@@ -368,7 +368,7 @@ const AnswerInput = ({
     }
 
     if (inputType === 'number') {
-        const text = value == null ? '' : String(value);
+        const text = value === null || value === undefined ? '' : String(value);
         return (
             <Input
                 size='small'
@@ -387,7 +387,7 @@ const AnswerInput = ({
         );
     }
 
-    const text = value == null ? '' : String(value);
+    const text = value === null || value === undefined ? '' : String(value);
     const useTextarea = text.length > 60;
 
     if (useTextarea) {

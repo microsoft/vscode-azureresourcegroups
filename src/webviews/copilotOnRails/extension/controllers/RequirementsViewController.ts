@@ -59,7 +59,8 @@ export class RequirementsViewController extends WebviewController<Record<string,
         }
 
         try {
-            const { parseError: _ignored, ...rest } = data;
+            const { parseError, ...rest } = data;
+            void parseError;
             const serialized = JSON.stringify(rest, null, 2) + '\n';
             markRequirementsSubmitted(this.sourceFileUri);
             await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(serialized, 'utf-8'));
