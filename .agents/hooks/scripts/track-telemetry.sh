@@ -1,6 +1,3 @@
------BEGIN PGP SIGNED MESSAGE-----
-Hash: SHA256
-
 #!/bin/bash
 
 # Telemetry tracking hook for Azure Copilot Skills
