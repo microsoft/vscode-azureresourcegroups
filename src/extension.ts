@@ -381,7 +381,7 @@ async function isWorkspaceEmpty(): Promise<boolean> {
     }
 
     // Entries that don't count as "real" project content.
-    const ignored = new Set(['.git', '.vscode', '.azure', '.github']);
+    const ignored = new Set(['.git', '.vscode', '.azure', '.github', '.agents']);
 
     let readableFolderCount = 0;
 

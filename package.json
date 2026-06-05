@@ -380,11 +380,6 @@
                 "title": "%azureResourceGroups.askAzure%"
             },
             {
-                "command": "azureResourceGroups.createProjectWithCopilot",
-                "title": "%azureResourceGroups.createProjectWithCopilot%",
-                "category": "Azure"
-            },
-            {
                 "command": "azureResourceGroups.openPlanView",
                 "title": "%azureResourceGroups.openPlanView%",
                 "category": "Azure"
