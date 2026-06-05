@@ -1,5 +1,5 @@
 ---
-name: Azure Debug Generate
+name: azure-debug-generate
 description: Execute an approved local development plan — generate docker-compose, VS Code launch/tasks configs, and emulator orchestration for F5 debugging.
 tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
 ---

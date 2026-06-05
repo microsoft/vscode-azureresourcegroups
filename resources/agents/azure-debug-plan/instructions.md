@@ -1,4 +1,4 @@
-# Azure VS Code Debug — Plan
+# Azure Debug Plan
 
 > **AUTHORITATIVE GUIDANCE — MANDATORY COMPLIANCE**
 >

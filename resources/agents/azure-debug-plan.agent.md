@@ -1,5 +1,5 @@
 ---
-name: Azure Debug Plan
+name: azure-debug-plan
 description: Scan an Azure-centric workspace project. Classify its services and dependencies, and produce a local debugging plan covering automated emulator startup, VS Code launch/task configs, and API tests.
 tools: [vscode, run_vscode_command, tool_search, execute, read, browser, edit, search, web, azure-mcp/search, todo]
 model:
