@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [3.1.1] - 2026-06-03
+
+* Add an optional `options` parameter to `AzureAuthentication.getSessionWithScopes`. Passing `{ createIfNone: true }` allows an interactive consent prompt when a session for the requested scopes has not yet been granted.
+
 ## [3.1.0] - 2026-02-04
 
 * Add `focusResourceGroup` function to the resources API.
