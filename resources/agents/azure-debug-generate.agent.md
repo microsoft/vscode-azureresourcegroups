@@ -1,6 +1,6 @@
 ---
 name: azure-debug-generate
-description: Execute an approved local development plan — generate docker-compose, VS Code launch/tasks configs, and emulator orchestration for F5 debugging.
+description: Generate artifacts for an approved VS Code debugging plan. Responsible for generating docker-compose, VS Code launch/tasks, and emulator orchestration for streamlined project debugging.
 tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
 ---
 
@@ -124,3 +124,9 @@ Call `run_vscode_command` to hand off to the deployment agent:
 `run_vscode_command` is a deferred tool. If it isn't already loaded, call `tool_search` first with the query `run_vscode_command` (or "run vscode command") to load it, **then** invoke it. Both `tool_search` and `run_vscode_command` are listed in this agent's `tools:` frontmatter — they are available in this session. Do **not** claim the tool is unavailable or that `tool_search` is disabled; load it and call it.
 
 Then **STOP** — do not do anything else after this call.
+
+---
+
+#### Handling Follow-Up Requests
+
+If the user returns later in the conversation and asks to do something that matches one of the three options above (e.g., "now I want to run API tests" or "let's deploy"), recognize the request and execute the corresponding option handler directly. Do **not** re-present the opening guidance or the option menu — just proceed with the requested path.
