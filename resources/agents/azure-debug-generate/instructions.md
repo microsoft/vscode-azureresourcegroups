@@ -70,22 +70,6 @@ Follow the generation steps in [generate.md](references/generate.md) in order.
 
 ---
 
-## Next Steps — MANDATORY CLOSING MESSAGE
+## Post-Generation
 
-After validation, end your response with the following:
-
-| # | Item | What to say |
-|---|------|-------------|
-| 1 | **Start Debugging** | Tell the user: "Press **F5** in VS Code and select the compound launch configuration (e.g., 'Start All')." |
-| 2 | **Offer API Testing** | Offer to run any API test collection scripts on the user's behalf. Caveat - the user must start the app first; the scripts often target `localhost` endpoints that require the app to be running. |
-| 3 | **Azure Cloud Deployment** | Mention that for subsequent Azure cloud deployment, hand off to: `azure-prepare` → `azure-validate` → `azure-deploy`. |
-
-Example closing message:
-
-> ## Next Steps
->
-> Press **F5** in VS Code and select **Start All** to launch the full application with debugging.
->
-> Once the app is running, you can ask me to run the API test collection scripts to verify your endpoints.
->
-> When you're ready to deploy to Azure, I can help with that too.
+After validation completes with status `Implemented`, **stop**. Do not present next steps or a closing message — the `azure-debug-generate` agent handles post-generation guidance and interactive next steps.
