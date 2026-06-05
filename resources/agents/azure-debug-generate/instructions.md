@@ -1,4 +1,4 @@
-# Azure VS Code Debug — Generate
+# Azure Debug Generate
 
 > **AUTHORITATIVE GUIDANCE — MANDATORY COMPLIANCE**
 >
