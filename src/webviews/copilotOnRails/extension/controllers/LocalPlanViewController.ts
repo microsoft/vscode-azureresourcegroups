@@ -6,6 +6,7 @@
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
+import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
@@ -26,6 +27,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 case 'approvePlan':
                     void vscode.commands.executeCommand('azureProjectCreation.completeStep', 'projectCreation/localDevelopment/defineLocalPlan');
                     void vscode.commands.executeCommand('workbench.action.chat.open', {
+                        mode: azureDebugPlanAgent,
                         query: 'I approve the debug setup plan.',
                     });
                     this.panel.dispose();
@@ -36,6 +38,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                         return;
                     }
                     void vscode.commands.executeCommand('workbench.action.chat.open', {
+                        mode: azureDebugPlanAgent,
                         query,
                     });
                     void this.panel.webview.postMessage({ command: 'revisionInProgress' });
