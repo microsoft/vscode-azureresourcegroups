@@ -383,17 +383,20 @@ async function isWorkspaceEmpty(): Promise<boolean> {
     // Entries that don't count as "real" project content.
     const ignored = new Set(['.git', '.vscode', '.azure', '.github']);
 
+    let readableFolderCount = 0;
+
     for (const folder of folders) {
         try {
             const entries = await vscode.workspace.fs.readDirectory(folder.uri);
+            readableFolderCount += 1;
             const meaningful = entries.filter(([name]) => !ignored.has(name));
-            if (meaningful.length === 0) {
-                return true;
+            if (meaningful.length > 0) {
+                return false;
             }
         } catch {
-            // Ignore unreadable folders (e.g. permission errors) and keep checking the rest.
+            // Ignore unreadable folders (e.g. permission errors)
         }
     }
 
-    return false;
+    return readableFolderCount > 0;
 }
