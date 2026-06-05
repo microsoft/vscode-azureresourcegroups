@@ -55,4 +55,4 @@ Scan dependencies, detect configuration, and generate the plan directly. The use
 
 ---
 
-> **❌ STOP HERE** — Do NOT proceed to artifact generation. Do NOT generate docker-compose.yml, launch.json, tasks.json, or any other configuration files. Present the plan to the user and wait for approval. After approval, the custom agent wrapper will invoke `azure-vscode-debug-generate` to handle generation.
+> **❌ STOP HERE** — Do NOT proceed to artifact generation. Do NOT generate docker-compose.yml, launch.json, tasks.json, or any other configuration files. Present the plan to the user and wait for approval. After approval, the custom agent wrapper will invoke `azure-debug-generate` to handle generation.

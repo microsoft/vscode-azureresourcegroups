@@ -1,7 +1,11 @@
 ---
 name: Azure Debug Plan
-description: Scan an Azure-centric workspace, classify its services and dependencies, and produce a local debugging plan covering emulators, Docker Compose, VS Code launch/task configs, and API tests.
-tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
+description: Scan an Azure-centric workspace project. Classify its services and dependencies, and produce a local debugging plan covering automated emulator startup, VS Code launch/task configs, and API tests.
+tools: [vscode, run_vscode_command, tool_search, execute, read, browser, edit, search, web, azure-mcp/search, todo]
+model:
+  - Claude Opus 4.6 (copilot)
+  - Claude Opus 4.7 (copilot)
+target: vscode
 ---
 
 # Azure Debug Plan
@@ -25,7 +29,7 @@ The steps below are **strictly ordered**. You **must not** start a later step un
 1. Step 1: Scan the project and generate a plan.
 2. Step 2: Preview the generated plan.
 3. Step 3: Iterate and wait for approval.
-4. Step 4: Hand off to `azure-debug-generate`.
+4. Step 4: Invoke the generation command via `run_vscode_command`.
 
 ### Step 1: Scan the project and generate a plan
 
@@ -53,23 +57,17 @@ After step 2, **STOP AND WAIT** for explicit user approval of the plan. Do **not
 
 If the user requests changes to the plan, revise `.azure/vscode-debug-plan.md` and re-run step 2 so the preview reloads with updates. Only once the user explicitly approves the entire plan should you proceed to step 4.
 
-### Step 4: Hand off to `azure-debug-generate`
+### Step 4: Invoke the generation command
 
-Once the user has explicitly approved the plan, mark the plan status as **Approved**. **DO NOT** begin generating configuration files inline and **DO NOT** print plain-text suggestions.
+Once the user has explicitly approved the plan, mark the plan status as **Approved**.
 
-To complete the handoff, you must now call `run_vscode_command` with:
+Then you MUST call `run_vscode_command` with the following arguments and then **STOP**. Do not do anything else after this call — no summaries, no file reads, no searching for other agents, just call the command that follows and do nothing else.
 
 ```json
 {
-  "commandId": "azureResourceGroups.startLocalDebugGenerate",
-  "name": "Start Local Debug Generate",
+  "commandId": "azureResourceGroups.startAzureDebugGenerate",
+  "name": "Start Azure Debug Generate",
   "skipCheck": true,
-  "args": ["The local development plan has been approved. Execute the approved `.azure/vscode-debug-plan.md` — generate docker-compose.yml, .vscode/launch.json, .vscode/tasks.json, and the rest of the local debug setup."]
+  "args": ["The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`."]
 }
 ```
-
-This command exists — do not say it isn't registered. If `run_vscode_command` returns an error, report it to the user verbatim, but still attempt the call first. Do not skip the call.
-
-## Final Deliverable
-
-An approved `.azure/vscode-debug-plan.md` with workspace classified, prerequisites detected, Azure dependencies mapped to emulators, and a complete debug setup plan.

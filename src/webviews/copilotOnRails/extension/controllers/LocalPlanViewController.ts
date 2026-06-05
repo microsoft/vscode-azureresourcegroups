@@ -26,8 +26,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 case 'approvePlan':
                     void vscode.commands.executeCommand('azureProjectCreation.completeStep', 'projectCreation/localDevelopment/defineLocalPlan');
                     void vscode.commands.executeCommand('workbench.action.chat.open', {
-                        mode: 'agent',
-                        query: 'I approve the local dev plan.',
+                        query: 'I approve the debug setup plan.',
                     });
                     this.panel.dispose();
                     break;
@@ -37,7 +36,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                         return;
                     }
                     void vscode.commands.executeCommand('workbench.action.chat.open', {
-                        mode: 'agent',
                         query,
                     });
                     void this.panel.webview.postMessage({ command: 'revisionInProgress' });
