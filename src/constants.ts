@@ -12,3 +12,5 @@ export const hasFocusedGroupContextKey = 'ms-azuretools.vscode-azureresourcegrou
 export const hasProjectPlanFilesContextKey = 'ms-azuretools.vscode-azureresourcegroups.hasProjectPlanFiles';
 export const isEmptyWorkspaceContextKey = 'ms-azuretools.vscode-azureresourcegroups.isEmptyWorkspace';
 export const canFocusContextValue = 'canFocus';
+
+export const azureDebugPlanAgent = 'azure-debug-plan';

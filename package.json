@@ -106,7 +106,10 @@
                 "path": "resources/agents/azure-project-scaffold.agent.md"
             },
             {
-                "path": "resources/agents/azure-local-debug.agent.md"
+                "path": "resources/agents/azure-debug-plan.agent.md"
+            },
+            {
+                "path": "resources/agents/azure-debug-generate.agent.md"
             },
             {
                 "path": "resources/agents/azure-deploy.agent.md"
@@ -151,6 +154,11 @@
             ]
         },
         "commands": [
+            {
+                "command": "azureResourceGroups.startAzureDebugGenerate",
+                "title": "Start Azure Debug Generate",
+                "category": "Azure"
+            },
             {
                 "command": "azureResourceGroups.uploadFileCloudConsole",
                 "title": "%azureResourceGroups.uploadToCloudShell%",
@@ -676,6 +684,10 @@
                 {
                     "command": "azureResourceGroups.uploadFileCloudConsole",
                     "when": "isWorkspaceTrusted"
+                },
+                {
+                    "command": "azureResourceGroups.startAzureDebugGenerate",
+                    "when": "never"
                 },
                 {
                     "command": "azureResourceGroups.showGroupOptions",
