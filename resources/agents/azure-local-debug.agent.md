@@ -2,6 +2,7 @@
 name: azure-local-debug
 description: Set up the local development environment — Azure emulators, docker-compose, VS Code launch/tasks, and F5 debugging — for an Azure-centric project.
 tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
+model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---
 
 # Azure Local Development Agent
