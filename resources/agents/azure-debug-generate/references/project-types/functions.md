@@ -246,7 +246,9 @@ Used by [validation.md](../validation.md) during Phase 3 to verify the generated
 
 | Top-Level Task | Ready Signal (stdout) |
 |----------------|----------------------|
-| `func: host start` | `"Host lock lease acquired"` or `"Functions host started"` |
+| `{service-id}: func host start` | `"Host lock lease acquired"` or `"Functions host started"` |
+
+> The `Top-Level Task` column uses the canonical `{service-id}:`-prefixed label — see [generate.md § Service ID Derivation](../generate.md). Resolve `{service-id}` to the same value used during generation before matching against `tasks.json`.
 
 ### HTTP Verification
 
@@ -260,8 +262,8 @@ Used by [validation.md](../validation.md) during Phase 3 to verify the generated
 
 After generating `launch.json`, `tasks.json`, and `extensions.json`, verify the following were produced correctly:
 
-1. ✅ `func: host start` task exists in `tasks.json` with `"type": "func"`
-2. ✅ `launch.json` `preLaunchTask` points to `func: host start`
+1. ✅ `{service-id}: func host start` task exists in `tasks.json` with `"type": "func"`
+2. ✅ `launch.json` `preLaunchTask` points to `{service-id}: func host start`
 3. ✅ `.vscode/extensions.json` includes `ms-azuretools.vscode-azurefunctions`
 4. ✅ `local.settings.json` contains all required connection string keys (e.g., `AzureWebJobsStorage`)
 5. ✅ `dependsOn` chain includes the runtime build/watch task and `Start Emulators` (when emulators are required)

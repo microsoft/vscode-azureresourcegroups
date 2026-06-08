@@ -40,9 +40,11 @@ For any TypeScript Node.js project, the `launch.json` attach configuration **mus
   "port": 9229,
   "restart": true,
   "outFiles": ["${workspaceFolder}/src/functions/dist/**/*.js"],
-  "preLaunchTask": "func: host start"
+  "preLaunchTask": "{service-id}: func host start"
 }
 ```
+
+> `preLaunchTask` uses the canonical `{service-id}:`-prefixed task label — see [generate.md § Service ID Derivation](../generate.md). The example above corresponds to a `functions-api` service, so the resolved value is `functions-api: func host start`.
 
 > **Verify:** `tsconfig.json` must have `"sourceMap": true` (or not explicitly `false`) so `.js.map` files are generated alongside `.js` files. The build/watch task must run **before** the startup task so compiled output exists when the debugger attaches.
 
@@ -170,4 +172,4 @@ After generating VS Code configuration, verify the following were produced corre
 4. ✅ For TypeScript: watch task exists in `tasks.json` with `$tsc-watch` problem matcher
 5. ✅ For TypeScript: build chain follows install → clean → watch dependency order
 
-> Project-type-specific checks (e.g., `func: host start` task, connection strings) are defined in `project-types/{type}.md`.
+> Project-type-specific checks (e.g., `{service-id}: func host start` task, connection strings) are defined in `project-types/{type}.md`.
