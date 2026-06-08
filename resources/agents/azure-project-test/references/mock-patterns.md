@@ -37,13 +37,13 @@ export function createMockItem(overrides?: Partial<Item>): Item {
 }
 ```
 
-> For Python (pytest) and C# (xUnit) fixture patterns, see runtime-specific references in [../../shared-references/runtimes/](../../shared-references/runtimes/).
+> For Python (pytest) and C# (xUnit) fixture patterns, see runtime-specific references in [../../shared-references/runtimes/](.github/agents/shared-references/runtimes//).
 
 ---
 
 ## Service Mocking Patterns
 
-> Full mock database implementation (class-based, findAll/findById/findOne/create/update/delete/count/transaction) documented in [../../shared-references/examples/service-abstraction-examples.md](../../shared-references/examples/service-abstraction-examples.md). Use class-based `MockDatabaseService` — not inline function pattern — for consistency.
+> Full mock database implementation (class-based, findAll/findById/findOne/create/update/delete/count/transaction) documented in [../../shared-references/examples/service-abstraction-examples.md](.github/agents/shared-references/examples/service-abstraction-examples.md). Use class-based `MockDatabaseService` — not inline function pattern — for consistency.
 
 ### Mock Patterns (TypeScript)
 

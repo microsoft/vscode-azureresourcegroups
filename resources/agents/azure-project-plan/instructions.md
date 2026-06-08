@@ -468,7 +468,7 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 > | `SQL_CONNECTION_STRING` | `ConnectionStrings:Sql` |
 > | `AZURE_OPENAI_ENDPOINT` / `_API_KEY` | `OpenAI:Endpoint` / `OpenAI:ApiKey` (typed `IOptions<T>`) |
 >
-> In production, the `ConnectionStrings:*` values should be **resource URIs** (e.g., `https://<account>.blob.core.windows.net`) authenticated via `DefaultAzureCredential` (Managed Identity) — never raw account keys. See [runtimes/dotnet.md](../shared-references/runtimes/dotnet.md#managed-identity--quick-reference) for the full mapping.
+> In production, the `ConnectionStrings:*` values should be **resource URIs** (e.g., `https://<account>.blob.core.windows.net`) authenticated via `DefaultAzureCredential` (Managed Identity) — never raw account keys. See [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md#managed-identity--quick-reference) for the full mapping.
 
 ### Essential vs Enhancement Classification
 

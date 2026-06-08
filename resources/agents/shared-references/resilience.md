@@ -139,7 +139,7 @@ try {
 }
 ```
 
-For Python and C# try/fallback patterns, see [runtimes/python.md](runtimes/python.md) and [runtimes/dotnet.md](runtimes/dotnet.md).
+For Python and C# try/fallback patterns, see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md) and [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ---
 
@@ -168,7 +168,7 @@ const caption = await withTimeout(
 );
 ```
 
-For Python and C# timeout patterns, see [runtimes/python.md](runtimes/python.md) and [runtimes/dotnet.md](runtimes/dotnet.md).
+For Python and C# timeout patterns, see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md) and [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ---
 
@@ -209,7 +209,7 @@ async function withRetry<T>(
 }
 ```
 
-For Python and C# retry patterns, see [runtimes/python.md](runtimes/python.md) and [runtimes/dotnet.md](runtimes/dotnet.md).
+For Python and C# retry patterns, see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md) and [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ---
 
@@ -235,13 +235,13 @@ const [blobUrl, caption] = await Promise.all([
 ]);
 ```
 
-For Python and C# parallel call patterns, see [runtimes/python.md](runtimes/python.md) and [runtimes/dotnet.md](runtimes/dotnet.md).
+For Python and C# parallel call patterns, see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md) and [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ---
 
 ## Testing Resilience
 
-> ⚠️ **MANDATORY for every handler using Enhancement service.** Absence consistently flagged during scaffold benchmarking. See [mandatory-test-patterns.md](../azure-project-test/references/mandatory-test-patterns.md) → "Mandatory Test Patterns → Pattern 2" for complete typed test pattern.
+> ⚠️ **MANDATORY for every handler using Enhancement service.** Absence consistently flagged during scaffold benchmarking. See [mandatory-test-patterns.md](.github/agents/azure-project-test/references/mandatory-test-patterns.md) → "Mandatory Test Patterns → Pattern 2" for complete typed test pattern.
 
 Every Enhancement service wrapper must have tests verifying graceful degradation:
 

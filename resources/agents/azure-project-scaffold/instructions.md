@@ -37,22 +37,22 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 
 > **16 core rules** govern every scaffold. Rule 0 is the load-bearing UX rule — visible feedback first. Rules 1–15 govern correctness. Details in referenced docs, consumed at relevant step.
 
-0. **Frontend-first feedback (load-bearing UX rule)** — If the plan includes a frontend, the preview from Step 1 MUST appear in the user's browser **before** any backend scaffolding sub-agent runs. Visible feedback is the user's signal that work has started; without it the user sees only a quiet terminal. Backend Phase A/B runs concurrently with preview review — not sequentially after it. If the plan has no frontend, this rule is satisfied trivially. See [sub-agent-strategy.md](references/sub-agent-strategy.md).
+0. **Frontend-first feedback (load-bearing UX rule)** — If the plan includes a frontend, the preview from Step 1 MUST appear in the user's browser **before** any backend scaffolding sub-agent runs. Visible feedback is the user's signal that work has started; without it the user sees only a quiet terminal. Backend Phase A/B runs concurrently with preview review — not sequentially after it. If the plan has no frontend, this rule is satisfied trivially. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md).
 1. **Plan is source of truth** — Read `.azure/project-plan.md` at start. Follow route definitions, service list, types, architecture exactly. Do NOT re-ask user for plan requirements.
 2. **Track progress** — Copy Section 8 (Execution Checklist) from plan into `.azure/execution-checklist.md`. Mark `[ ]` → `[x]` as each step completes — do NOT defer. Plan stays clean as reference; checklist is live tracker. Update plan status: Approved → In Progress → Scaffolded → Ready. Step 13 MUST verify all items checked. If >50% unchecked despite completion, finalization NOT complete.
 3. **Build-gate enforcement** — Every phase ends with build check (`tsc` / `npm run build`). If fails, iterate until clean. **Do NOT proceed until code compiles.** Most important rule.
 4. **Azure Functions v4** — Always v4 programming model (Node.js v4, Python v2, .NET isolated). Prioritize Azure services. Runtimes: TypeScript, Python, C#.
-5. **Service abstraction & DI** — All Azure SDK calls behind injectable interfaces. Handlers NEVER import SDKs directly. **CRITICAL: Step 4 MUST produce interface AND concrete implementation per service.** Interface-only = #1 cause of runtime crashes. Concrete impl is what `func start` uses. See [service-abstraction.md](../shared-references/service-abstraction.md).
-6. **Modular, one function per file** — Each Function own file. Each service own module. Extract shared utilities to `src/utils/` — no duplication, no unused stubs. Prefix unused params with `_`. **DRY**: Same helper in 2+ files → extract to `src/functions/src/utils/` and import. **Proactive**: Before writing handlers, identify common patterns (password hashing, entity sanitization, response formatting) and pre-create shared utils. See [architecture.md](../shared-references/architecture.md).
-7. **Environment-driven config** — Connection strings switch local/Azure via env vars. Validate required vars on startup, fail fast. See [service-abstraction.md](../shared-references/service-abstraction.md).
-8. **Input validation & standardized errors** — Every endpoint has validation schema (Zod/Pydantic/FluentValidation). Every route returns `{ error: { code, message, details? } }`. Error codes typed union, not strings. See [error-handling.md](../shared-references/error-handling.md).
-9. **Resilience classification** — Follow plan's Essential/Enhancement classification. Enhancement services wrapped in try/catch with fallback. **Enhancement constructors MUST NOT throw** — defer config validation to method calls or wrap in try/catch in registry. Constructor throws crash ALL handlers via `getServices()`. See [resilience.md](../shared-references/resilience.md).
-10. **Database integrity** — Migrations MUST include UNIQUE, FK (ON DELETE), CHECK, INDEX constraints. Multi-table writes MUST use transactions. Collection-to-table mappings documented and verified. See [database-integrity.md](../shared-references/database-integrity.md).
+5. **Service abstraction & DI** — All Azure SDK calls behind injectable interfaces. Handlers NEVER import SDKs directly. **CRITICAL: Step 4 MUST produce interface AND concrete implementation per service.** Interface-only = #1 cause of runtime crashes. Concrete impl is what `func start` uses. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
+6. **Modular, one function per file** — Each Function own file. Each service own module. Extract shared utilities to `src/utils/` — no duplication, no unused stubs. Prefix unused params with `_`. **DRY**: Same helper in 2+ files → extract to `src/functions/src/utils/` and import. **Proactive**: Before writing handlers, identify common patterns (password hashing, entity sanitization, response formatting) and pre-create shared utils. See [architecture.md](.github/agents/shared-references/architecture.md).
+7. **Environment-driven config** — Connection strings switch local/Azure via env vars. Validate required vars on startup, fail fast. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
+8. **Input validation & standardized errors** — Every endpoint has validation schema (Zod/Pydantic/FluentValidation). Every route returns `{ error: { code, message, details? } }`. Error codes typed union, not strings. See [error-handling.md](.github/agents/shared-references/error-handling.md).
+9. **Resilience classification** — Follow plan's Essential/Enhancement classification. Enhancement services wrapped in try/catch with fallback. **Enhancement constructors MUST NOT throw** — defer config validation to method calls or wrap in try/catch in registry. Constructor throws crash ALL handlers via `getServices()`. See [resilience.md](.github/agents/shared-references/resilience.md).
+10. **Database integrity** — Migrations MUST include UNIQUE, FK (ON DELETE), CHECK, INDEX constraints. Multi-table writes MUST use transactions. Collection-to-table mappings documented and verified. See [database-integrity.md](.github/agents/shared-references/database-integrity.md).
 11. **Wire frontend to real types** — If frontend preview generated, replace mock types with shared package imports, replace mock API client with real typed client, verify frontend builds. No `any` types.
-12. **Mandatory `func start` smoke test** — After all handlers implemented, execute `func start`, verify all functions register, stop. Catches blocking runtime errors (broken imports, constructor crashes) that mocked tests miss. **Do NOT skip.** See [architecture.md](../shared-references/architecture.md).
-13. **Auto-initialization** — Registry `getServices()` MUST auto-initialize with concrete implementations when nothing pre-registered. Verified by `func start`. See [service-abstraction.md](../shared-references/service-abstraction.md).
-14. **Cross-workspace build safety** — When Functions imports `../shared/`, set `rootDir` to `".."` and **compute `main` field from actual `dist/` output after `tsc`** — never hardcode. With `rootDir: ".."`, handlers compile to `dist/functions/src/functions/X.js`. After build, list `dist/`, verify `main` matches. Run `func start` to confirm. **#1 cause of "build passes but app won't start"**. See [architecture.md](../shared-references/architecture.md).
-15. **Frontend quality contract** — If the plan has a frontend, **Section 5 (Design System & UI) of the plan is load-bearing**. Treat each region token in Section 5's Pages table (`header`, `hero`, `grid`, `form`, ...) as layout **intent** — render it using real primitives from the library named in `Component Library:`, themed by the Color Palette. **Never produce raw `<div className="card">` placeholders that just mimic the wireframe.** See [frontend-quality-bar.md](references/frontend-quality-bar.md) for the per-library region-token → primitive mapping, theming contract, icon contract, and state-coverage contract. If Section 5 is missing or `Component Library:` is blank, STOP — re-run `azure-project-plan`.
+12. **Mandatory `func start` smoke test** — After all handlers implemented, execute `func start`, verify all functions register, stop. Catches blocking runtime errors (broken imports, constructor crashes) that mocked tests miss. **Do NOT skip.** See [architecture.md](.github/agents/shared-references/architecture.md).
+13. **Auto-initialization** — Registry `getServices()` MUST auto-initialize with concrete implementations when nothing pre-registered. Verified by `func start`. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
+14. **Cross-workspace build safety** — When Functions imports `../shared/`, set `rootDir` to `".."` and **compute `main` field from actual `dist/` output after `tsc`** — never hardcode. With `rootDir: ".."`, handlers compile to `dist/functions/src/functions/X.js`. After build, list `dist/`, verify `main` matches. Run `func start` to confirm. **#1 cause of "build passes but app won't start"**. See [architecture.md](.github/agents/shared-references/architecture.md).
+15. **Frontend quality contract** — If the plan has a frontend, **Section 5 (Design System & UI) of the plan is load-bearing**. Treat each region token in Section 5's Pages table (`header`, `hero`, `grid`, `form`, ...) as layout **intent** — render it using real primitives from the library named in `Component Library:`, themed by the Color Palette. **Never produce raw `<div className="card">` placeholders that just mimic the wireframe.** See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the per-library region-token → primitive mapping, theming contract, icon contract, and state-coverage contract. If Section 5 is missing or `Component Library:` is blank, STOP — re-run `azure-project-plan`.
 
 ---
 
@@ -131,12 +131,12 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 
 **Goal**: Standalone frontend with mock data for user to see/interact with before backend work. **Preview MUST be auto-authenticated** — if app has auth, seed mock auth state so user lands on main view (dashboard, feed), NOT login page. **Auto-open in browser** — do NOT prompt.
 
-> ⚠️ **WORKING DIRECTORY (most-common scaffold failure)**: Every frontend command — `npm install`, `npx vite build`, `npx vite --host`, `npm run dev` — MUST be invoked with `cwd` set to the **frontend folder** (typically `src/web/`), passed on the same terminal call as the command. Running from the workspace root produces a blank white page even though the dev server still binds to a port and prints `ready in N ms`. **Never claim the preview is live until you have fetched the page and confirmed it serves your app** — see the verification gate in [frontend-preview-steps.md F4](references/frontend-preview-steps.md).
+> ⚠️ **WORKING DIRECTORY (most-common scaffold failure)**: Every frontend command — `npm install`, `npx vite build`, `npx vite --host`, `npm run dev` — MUST be invoked with `cwd` set to the **frontend folder** (typically `src/web/`), passed on the same terminal call as the command. Running from the workspace root produces a blank white page even though the dev server still binds to a port and prints `ready in N ms`. **Never claim the preview is live until you have fetched the page and confirmed it serves your app** — see the verification gate in [frontend-preview-steps.md F4](.github/agents/azure-project-scaffold/references/frontend-preview-steps.md).
 
 **References**:
-- [frontend-quality-bar.md](references/frontend-quality-bar.md) for the per-library region-token → primitive mapping, theming contract, icon contract, and state-coverage contract. **READ THIS FIRST — it is the contract between the plan's Section 5 and the JSX you ship.**
-- [frontend-patterns.md](references/frontend-patterns.md) for patterns and quality bar.
-- [frontend-preview-steps.md](references/frontend-preview-steps.md) for sub-steps (F1–F4), working directory rules, approval loop.
+- [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the per-library region-token → primitive mapping, theming contract, icon contract, and state-coverage contract. **READ THIS FIRST — it is the contract between the plan's Section 5 and the JSX you ship.**
+- [frontend-patterns.md](.github/agents/azure-project-scaffold/references/frontend-patterns.md) for patterns and quality bar.
+- [frontend-preview-steps.md](.github/agents/azure-project-scaffold/references/frontend-preview-steps.md) for sub-steps (F1–F4), working directory rules, approval loop.
 
 > **✅ Checkpoint**:
 > 1. Frontend builds zero errors (`npx vite build` with `cwd: src/web/` — **never** from workspace root)
@@ -144,13 +144,13 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 > 3. Auto-authenticated — user lands on main content on first load
 > 4. Dev server started (with `cwd: src/web/`) **and verified to serve actual app content** (not just "ready in N ms" — page must render). Preview opened in VS Code Simple Browser.
 > 5. User approval obtained (or iterating)
-> 6. **Quality bar (Rule 15)**: Every page imports primitives from the library named in plan Section 5's `Component Library:`; the app shell is wrapped in that library's theme provider with a brand ramp derived from Section 5's palette; every icon is a real library icon (no emoji, no SVG placeholders); every `form` region has a visible validation state; every data-bearing page exposes all four states (loading / error / empty / data) via a dev-only toggle. See [frontend-quality-bar.md](references/frontend-quality-bar.md).
+> 6. **Quality bar (Rule 15)**: Every page imports primitives from the library named in plan Section 5's `Component Library:`; the app shell is wrapped in that library's theme provider with a brand ramp derived from Section 5's palette; every icon is a real library icon (no emoji, no SVG placeholders); every `form` region has a visible validation state; every data-bearing page exposes all four states (loading / error / empty / data) via a dev-only toggle. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md).
 
 ---
 
 ### Sub-Agent Strategy for Backend Scaffolding
 
-**Reference**: Read [sub-agent-strategy.md](references/sub-agent-strategy.md) for execution model, Phase A/B details, coordination rules.
+**Reference**: Read [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md) for execution model, Phase A/B details, coordination rules.
 
 > Sub-agents parallelize backend work. Phase A (Contracts) starts after Step 0. Phase B (Backend) launches when Phase A completes. Both run concurrently with Step 1.
 
@@ -167,7 +167,7 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 | Create `.gitignore` | Runtime-appropriate ignores (node_modules, .env, data/, etc.) |
 | Create directory structure | `src/functions/`, `src/functions/src/utils/`, `src/shared/` (do NOT create `src/web/` — may exist from frontend preview) |
 
-**Reference**: [architecture.md](../shared-references/architecture.md)
+**Reference**: [architecture.md](.github/agents/shared-references/architecture.md)
 
 > **✅ Checkpoint**: 
 > 1. **Build gate**: `npm run build` / `python -m py_compile` / `dotnet build`. Zero errors.
@@ -191,7 +191,7 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 | Create `local.settings.json` | Azure Functions local settings with emulator defaults |
 | Implement env validation | On startup, check required vars set. Fail fast with clear error listing missing. |
 
-**Reference**: [service-abstraction.md](../shared-references/service-abstraction.md)
+**Reference**: [service-abstraction.md](.github/agents/shared-references/service-abstraction.md)
 
 > **✅ Checkpoint**: Config module loads env vars. `.env.example` documents all variables.
 
@@ -211,7 +211,7 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 | Create concrete implementation | Implements interface with Azure SDK. **MUST strip auto-managed fields** from caller data in `update()` and `create()` before building queries. **Transaction MUST use BEGIN/COMMIT/ROLLBACK.** |
 | Create service factory/registry | Factory/DI that returns real impl from config. **`getServices()` MUST auto-initialize with concrete implementations when nothing pre-registered** — calling without prior `registerServices()` MUST construct instances from config, NOT throw. **MUST use correct import style** — ESM uses static imports or `await import()`, NOT `require()`. **Enhancement construction wrapped in try/catch** (Rule 9). |
 
-**Reference**: [service-abstraction.md](../shared-references/service-abstraction.md)
+**Reference**: [service-abstraction.md](.github/agents/shared-references/service-abstraction.md)
 
 > **📋 File Verification** — Before checkpoint, verify on disk:
 >
@@ -273,7 +273,7 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 | Define error code enum | Typed union of all valid error codes (not plain `string`) |
 | Wire validation into handlers | Validate request body/params before processing |
 
-**Reference**: [error-handling.md](../shared-references/error-handling.md)
+**Reference**: [error-handling.md](.github/agents/shared-references/error-handling.md)
 
 > ⚠️ **Schema Completeness Check** (MANDATORY)
 >
@@ -301,14 +301,14 @@ For **each** route in plan:
 |------|---------|  
 | Create function handler | One file per function. **All async calls MUST include `await`**. **`handleError` calls MUST match standardized signature**. |
 | Use transactions for multi-table writes | Any handler writing 2+ tables MUST use `database.transaction()` |
-| Wrap Enhancement services | External services classified Enhancement MUST have try/catch with fallback (see [resilience.md](../shared-references/resilience.md)) |
+| Wrap Enhancement services | External services classified Enhancement MUST have try/catch with fallback (see [resilience.md](.github/agents/shared-references/resilience.md)) |
 | Validate file uploads server-side | Check file size and MIME type before processing |
 | Validate path params before DB queries | When auth middleware extracts userId from token, **validate format** (e.g., UUID) before DB query. Malformed ID on typed column causes 500 instead of 401. Most common runtime error mocked tests miss. |
 | Verify response shape | `jsonBody` must match Route Definitions |
 | Verify collection names | Must map to migration tables (Rule 10) |
 | Extract shared utilities | Duplicated helpers → `src/functions/src/utils/` (Rule 6). **After each handler**, grep for helpers in 2+ files, extract immediately. Consider handler wrapper if >8 handlers share try/catch boilerplate. Prefix unused params with `_`. |
 
-**Reference**: [service-abstraction.md](../shared-references/service-abstraction.md), [resilience.md](../shared-references/resilience.md)
+**Reference**: [service-abstraction.md](.github/agents/shared-references/service-abstraction.md), [resilience.md](.github/agents/shared-references/resilience.md)
 
 > **✅ Checkpoint (per feature)**: Handler compiles. Response shape matches plan contract.
 
@@ -335,7 +335,7 @@ For **each** route in plan:
 | Create error middleware | Catches errors, maps to standardized response |
 | Create error response shape | `{ error: { code: string, message: string, details?: any } }` |
 
-**Reference**: [error-handling.md](../shared-references/error-handling.md)
+**Reference**: [error-handling.md](.github/agents/shared-references/error-handling.md)
 
 > **✅ Checkpoint**: Error types and middleware exist. Response shape consistent. `tsc` zero errors.
 
@@ -388,7 +388,7 @@ For **each** route in plan:
 | Add request logging | Log method, path, status, duration per request |
 | Add operation logging | Log key operations (create, update, delete) |
 
-**Reference**: [runtimes/](../shared-references/runtimes/)
+**Reference**: [runtimes/](.github/agents/shared-references/runtimes//)
 
 > **✅ Checkpoint**: Logger configured, wired into handlers. Request logging in place. `tsc` zero errors.
 
@@ -476,7 +476,7 @@ For **each** route in plan:
 | Python | docker-compose | `func init --python --model V2` | Functions v2 | pip / poetry |
 | C# (.NET) | docker-compose | `func init --dotnet --isolated` | Functions isolated worker | dotnet |
 
-For runtime-specific implementation patterns, see [runtimes/](../shared-references/runtimes/).
+For runtime-specific implementation patterns, see [runtimes/](.github/agents/shared-references/runtimes//).
 
 ---
 

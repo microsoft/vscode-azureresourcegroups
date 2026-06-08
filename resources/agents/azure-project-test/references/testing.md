@@ -117,8 +117,8 @@ DO NOT set hard coverage thresholds. Instead ensure:
 - Every validation schema has valid/invalid input tests
 - Every error type tested for correct HTTP status mapping
 - Edge cases covered (empty arrays, null values, boundary numbers, special characters)
-- **Auto-initialization path tested** (Rule 13) — see [mandatory-test-patterns.md](mandatory-test-patterns.md)
-- **Enhancement service resilience tested** — see [mandatory-test-patterns.md](mandatory-test-patterns.md)
+- **Auto-initialization path tested** (Rule 13) — see [mandatory-test-patterns.md](.github/agents/azure-project-test/references/mandatory-test-patterns.md)
+- **Enhancement service resilience tested** — see [mandatory-test-patterns.md](.github/agents/azure-project-test/references/mandatory-test-patterns.md)
 
 Goal: **meaningful coverage**, not percentage target.
 
@@ -130,9 +130,9 @@ Detailed patterns and examples in step-specific reference files:
 
 | Topic | Reference File | Used By |
 |-------|---------------|---------|
-| Test runner setup (vitest/jest/pytest/xUnit configs) | [test-runners.md](test-runners.md) | Step V1 |
-| Mock data & service mocking patterns | [mock-patterns.md](mock-patterns.md) | Step V2 |
-| Auto-init & resilience test patterns (MANDATORY) | [mandatory-test-patterns.md](mandatory-test-patterns.md) | Steps V4, V6 |
-| Handler test boilerplate & test matrix | [handler-test-patterns.md](handler-test-patterns.md) | Step V6 |
-| Frontend component test setup & patterns | [frontend-test-patterns.md](frontend-test-patterns.md) | Step V6b |
-| Codebase scanning & test generation strategy | [verification-patterns.md](verification-patterns.md) | Step V0 |
+| Test runner setup (vitest/jest/pytest/xUnit configs) | [test-runners.md](.github/agents/azure-project-test/references/test-runners.md) | Step V1 |
+| Mock data & service mocking patterns | [mock-patterns.md](.github/agents/azure-project-test/references/mock-patterns.md) | Step V2 |
+| Auto-init & resilience test patterns (MANDATORY) | [mandatory-test-patterns.md](.github/agents/azure-project-test/references/mandatory-test-patterns.md) | Steps V4, V6 |
+| Handler test boilerplate & test matrix | [handler-test-patterns.md](.github/agents/azure-project-test/references/handler-test-patterns.md) | Step V6 |
+| Frontend component test setup & patterns | [frontend-test-patterns.md](.github/agents/azure-project-test/references/frontend-test-patterns.md) | Step V6b |
+| Codebase scanning & test generation strategy | [verification-patterns.md](.github/agents/azure-project-test/references/verification-patterns.md) | Step V0 |

@@ -66,7 +66,7 @@
 
 ## 5. Design System & UI
 
-> **MANDATORY when the plan includes a frontend.** Skip this section only for `API only` / `Background worker` app types. The plan-preview webview parses this section by title (it looks for "Design System") and the scaffold quality contract reads `Component Library:` to decide which real library primitives to render. See [frontend-quality-bar.md](frontend-quality-bar.md).
+> **MANDATORY when the plan includes a frontend.** Skip this section only for `API only` / `Background worker` app types. The plan-preview webview parses this section by title (it looks for "Design System") and the scaffold quality contract reads `Component Library:` to decide which real library primitives to render. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md).
 
 **Component Library**: {Fluent UI v9 / Vuetify 3 / Skeleton UI / Angular Material / Pico.css — pick the default for the chosen frontend framework, see the plan skill's "Component Library Defaults" table}
 **Style Direction**: {1–2 sentence design intent, e.g. "Modern data-dense console with subtle elevations, rounded 4px corners, and an emphasis on scannable lists over hero imagery."}
@@ -92,7 +92,7 @@
 | {Dashboard} | `/` | {Overview of recent activity} | `header + hero + grid + footer` |
 | {Page name} | `{/route}` | {one-line purpose} | `{region tokens, e.g. header + sidebar + main + footer}` |
 
-> **Layout tokens are layout INTENT, not implementation.** The scaffold agent renders each token using `Component Library` primitives per [frontend-quality-bar.md](frontend-quality-bar.md) — never as raw `<div>` placeholders. Recognized tokens: `header, nav, sidebar, hero, main, list, card-list, grid, form, table, actions, action-bar, tabs, modal, footer`. Compound tokens: `split(a|b)` (1:2 columns), `two-column(a+b)` (1:1 columns).
+> **Layout tokens are layout INTENT, not implementation.** The scaffold agent renders each token using `Component Library` primitives per [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) — never as raw `<div>` placeholders. Recognized tokens: `header, nav, sidebar, hero, main, list, card-list, grid, form, table, actions, action-bar, tabs, modal, footer`. Compound tokens: `split(a|b)` (1:2 columns), `two-column(a+b)` (1:1 columns).
 
 ---
 

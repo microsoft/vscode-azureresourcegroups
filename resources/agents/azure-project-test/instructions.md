@@ -65,14 +65,14 @@ If no plan exists, scans codebase to detect:
 
 | Step | Read ONLY these files |
 |------|----------------------|
-| V0 (Read Plan) | `.azure/project-plan.md`, scan `src/` structure, [verification-patterns.md](references/verification-patterns.md) |
-| V1 (Test Infrastructure) | [test-runners.md](references/test-runners.md) |
-| V2 (Mock Implementations) | [mock-patterns.md](references/mock-patterns.md), source: `src/functions/src/services/interfaces/*.ts` and `src/functions/src/services/*.ts` |
+| V0 (Read Plan) | `.azure/project-plan.md`, scan `src/` structure, [verification-patterns.md](.github/agents/azure-project-test/references/verification-patterns.md) |
+| V1 (Test Infrastructure) | [test-runners.md](.github/agents/azure-project-test/references/test-runners.md) |
+| V2 (Mock Implementations) | [mock-patterns.md](.github/agents/azure-project-test/references/mock-patterns.md), source: `src/functions/src/services/interfaces/*.ts` and `src/functions/src/services/*.ts` |
 | V3 (Test Fixtures) | Source: `src/shared/types/entities.ts`, `seeds/fixtures/seed-data.json` |
-| V4 (Service Tests) | [mandatory-test-patterns.md](references/mandatory-test-patterns.md) |
+| V4 (Service Tests) | [mandatory-test-patterns.md](.github/agents/azure-project-test/references/mandatory-test-patterns.md) |
 | V5 (Validation Tests) | Source: schema files |
-| V6 (Handler Tests) | [handler-test-patterns.md](references/handler-test-patterns.md), [mandatory-test-patterns.md](references/mandatory-test-patterns.md) |
-| V6b (Frontend Tests) | [frontend-test-patterns.md](references/frontend-test-patterns.md) |
+| V6 (Handler Tests) | [handler-test-patterns.md](.github/agents/azure-project-test/references/handler-test-patterns.md), [mandatory-test-patterns.md](.github/agents/azure-project-test/references/mandatory-test-patterns.md) |
+| V6b (Frontend Tests) | [frontend-test-patterns.md](.github/agents/azure-project-test/references/frontend-test-patterns.md) |
 | V7 (Lint) | Source: all `.ts`/`.tsx` files |
 | V8 (Build & Full Test Gate) | — |
 | V9 (Finalize) | `.azure/execution-checklist.md` |
@@ -108,7 +108,7 @@ If no plan exists, scans codebase to detect:
 
 **Goal**: Set up test runner and shared utilities.
 
-**Reference**: [test-runners.md](references/test-runners.md) for runner configs and vitest resolve alias patterns.
+**Reference**: [test-runners.md](.github/agents/azure-project-test/references/test-runners.md) for runner configs and vitest resolve alias patterns.
 
 | Task | Details |
 |------|---------|  
@@ -125,7 +125,7 @@ If no plan exists, scans codebase to detect:
 
 **Goal**: In-memory mock implementations for each service interface.
 
-**Reference**: [mock-patterns.md](references/mock-patterns.md) for mock implementation patterns.
+**Reference**: [mock-patterns.md](.github/agents/azure-project-test/references/mock-patterns.md) for mock implementation patterns.
 
 For EACH interface in `src/functions/src/services/interfaces/`:
 
@@ -193,7 +193,7 @@ After all complete, proceed to V7 (Lint) and V8 (Build & Test).
 
 **Goal**: Test service registry and contracts.
 
-**Reference**: [mandatory-test-patterns.md](references/mandatory-test-patterns.md) for auto-init test (MANDATORY) and Enhancement resilience pattern.
+**Reference**: [mandatory-test-patterns.md](.github/agents/azure-project-test/references/mandatory-test-patterns.md) for auto-init test (MANDATORY) and Enhancement resilience pattern.
 
 | Test File | Tests |
 |-----------|-------|
@@ -225,7 +225,7 @@ For EACH schema in `src/shared/schemas/validation.ts`:
 
 **Goal**: Test each route handler with mock services.
 
-**Reference**: [handler-test-patterns.md](references/handler-test-patterns.md) for typed handler test template, required-tests-per-handler matrix, naming conventions. [mandatory-test-patterns.md](references/mandatory-test-patterns.md) for Enhancement resilience pattern.
+**Reference**: [handler-test-patterns.md](.github/agents/azure-project-test/references/handler-test-patterns.md) for typed handler test template, required-tests-per-handler matrix, naming conventions. [mandatory-test-patterns.md](.github/agents/azure-project-test/references/mandatory-test-patterns.md) for Enhancement resilience pattern.
 
 #### Pre-Step: Route Coverage Audit
 
@@ -249,7 +249,7 @@ Before generating tests:
 
 **Goal**: React component tests for auth flow, protected routes, data display, error states.
 
-**Reference**: [frontend-test-patterns.md](references/frontend-test-patterns.md) for prerequisites, vitest config, coverage matrix, patterns.
+**Reference**: [frontend-test-patterns.md](.github/agents/azure-project-test/references/frontend-test-patterns.md) for prerequisites, vitest config, coverage matrix, patterns.
 
 > **🧪 Test Gate**: All frontend tests pass. `npx vitest run` in `src/web/` clean.
 

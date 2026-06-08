@@ -59,6 +59,6 @@ Once contracts exist on disk, launch backend sub-agent:
 
 ## Key Contract Rules
 
-- Agent MUST use same `AppConfig` shape (flat structure — see [../../shared-references/service-abstraction.md](../../shared-references/service-abstraction.md))
+- Agent MUST use same `AppConfig` shape (flat structure — see [../../shared-references/service-abstraction.md](.github/agents/shared-references/service-abstraction.md))
 - Agent MUST use same collection names (`'user'`, `'couple'`, etc.) mapping to SQL table names
 - Agent MUST use same validation schema names exported from `src/shared/schemas/validation.ts`

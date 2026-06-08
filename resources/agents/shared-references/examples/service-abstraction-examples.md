@@ -1,6 +1,6 @@
 # Service Abstraction — Full Code Examples
 
-> Complete implementation examples referenced by [service-abstraction.md](../service-abstraction.md). Read this file ONLY during Step 3 (Service Abstraction Layer).
+> Complete implementation examples referenced by [service-abstraction.md](.github/agents/shared-references/service-abstraction.md). Read this file ONLY during Step 3 (Service Abstraction Layer).
 
 ---
 
