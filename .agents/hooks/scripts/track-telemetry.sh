@@ -1,6 +1,3 @@
------BEGIN PGP SIGNED MESSAGE-----
-Hash: SHA256
-
 #!/bin/bash
 
 # Telemetry tracking hook for Azure Copilot Skills
@@ -275,14 +272,3 @@ fi
 # Output success to stdout (required by hooks)
 return_success
 
-
------BEGIN PGP SIGNATURE-----
-Version: BSN Pgp v1.0.0.0
-
-iQEcBAEBCAAGBQJpz+PsAAoJEOs+lK2+EinPcM4H/RxNNCUY2gSZrFnG/fIwD5SO
-OYmCVzL8AwcBHOQdbX65SsMIVL65/FhbrYJKzqwfwvffZp12xTZlQ5xtrTGnKb0s
-xc5FmEhwNOJOvnLGvbKVN1ODLa75u82DxZUuD2jD1kAFG2Y/VEyYwjaely9lHmSd
-JqWjmE/946qENd9VVbDE+tznmriu4hK6nD/jChStTCnOHduo37nCPG4jsgtG9bf/
-VUdWQI1mgUdG26Nzqs7X8YsR1JntocjDajcrPkLEmy7qB0NDrZRUzt0leKiYjcpA
-t8UTMzinyWhDBuzjdQFNH9xxMy4lAXLJAHn1PnxFmytYkxyKo+xl70w0i7vFLa4=
------END PGP SIGNATURE-----

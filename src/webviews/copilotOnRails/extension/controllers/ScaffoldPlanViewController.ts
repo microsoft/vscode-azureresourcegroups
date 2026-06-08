@@ -9,6 +9,8 @@ import { ViewColumn } from "vscode";
 import { ext } from "../../../../extensionVariables";
 import { type PlanData } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { copilotOnRailsCommandIds } from "../copilotOnRailsCommands";
+import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class ScaffoldPlanViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
@@ -24,7 +26,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     void this.panel.webview.postMessage({ command: 'setPlanData', data: planData });
                     break;
                 case 'approvePlan':
-                    void vscode.commands.executeCommand('azureProjectCreation.completeStep', 'projectCreation/plan/definePlan');
+                    void vscode.commands.executeCommand(copilotOnRailsCommandIds.completeStep, 'projectCreation/plan/definePlan');
                     void vscode.commands.executeCommand('workbench.action.chat.open', {
                         mode: 'azure-project-scaffold',
                         query: 'I approve the plan.',
@@ -44,7 +46,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     break;
                 }
                 case 'openSourceFile':
-                    this.openSourceFile();
+                    openSourceFileOrWarn(this.sourceFileUri);
                     break;
             }
         });
@@ -56,15 +58,5 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
         void this.panel.webview.postMessage({ command: 'setPlanData', data: planData });
         void this.panel.webview.postMessage({ command: 'revisionComplete' });
-    }
-
-    private openSourceFile(): void {
-        if (!this.sourceFileUri) {
-            void vscode.window.showWarningMessage(
-                vscode.l10n.t('The plan file location is unknown. Locate it manually in the workspace.'),
-            );
-            return;
-        }
-        void vscode.commands.executeCommand('vscode.open', this.sourceFileUri);
     }
 }

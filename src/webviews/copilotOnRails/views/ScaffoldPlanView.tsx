@@ -8,6 +8,7 @@ import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, 
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
+import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
 import { type PlanContent, type PlanData, type PlanSection, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 
@@ -24,14 +25,18 @@ const cellKey = (s: number, c: number, r: number, col: number): CellKey => `${s}
 
 type FeedbackItem =
     | { id: string; kind: 'dropdown'; cell: CellKey; sectionIdx: number; contentIdx: number; rowIdx: number; colIdx: number; field: string; from: string; to: string }
+    | { id: string; kind: 'designToken'; target: string; field: string; from: string; to: string }
     | { id: string; kind: 'freeform'; text: string };
 
 let feedbackIdCounter = 0;
 const nextId = (): string => `fb-${++feedbackIdCounter}`;
 
-function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
+function buildFeedbackPrompt(items: FeedbackItem[], freeform: string, uiNote: string): string {
     const changes = items
         .filter((i): i is Extract<FeedbackItem, { kind: 'dropdown' }> => i.kind === 'dropdown')
+        .map(i => `- Change ${i.field} from ${i.from} to ${i.to}`);
+    const designChanges = items
+        .filter((i): i is Extract<FeedbackItem, { kind: 'designToken' }> => i.kind === 'designToken')
         .map(i => `- Change ${i.field} from ${i.from} to ${i.to}`);
     const notes = items
         .filter((i): i is Extract<FeedbackItem, { kind: 'freeform' }> => i.kind === 'freeform')
@@ -46,11 +51,25 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
     if (changes.length > 0) {
         lines.push('Changes:', ...changes, '');
     }
+    if (designChanges.length > 0) {
+        lines.push(
+            'Design changes (update Section 5 "Design System & UI" in project-plan.md):',
+            ...designChanges,
+            '',
+        );
+    }
     if (notes.length > 0) {
         lines.push('Additional notes:', ...notes, '');
     }
     if (freeform.trim().length > 0) {
         lines.push('Additional notes:', `- ${freeform.trim()}`, '');
+    }
+    if (uiNote.trim().length > 0) {
+        lines.push(
+            'UI changes (apply to Section 5 "Design System & UI" — pages, layout regions, or visual treatments):',
+            `- ${uiNote.trim()}`,
+            '',
+        );
     }
     return lines.join('\n').trimEnd();
 }
@@ -59,6 +78,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const [plan, setPlan] = useState<PlanData | null>(null);
     const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
     const [freeformDraft, setFreeformDraft] = useState('');
+    const [uiNote, setUiNote] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
@@ -66,11 +86,14 @@ export const ScaffoldPlanView = (): JSX.Element => {
     // Used to revert cells when a dropdown feedback item is discarded or the
     // user selects the same value again.
     const originalCellValues = useRef<Map<CellKey, string>>(new Map());
+    // Same idea for design tokens (palette swatches + typography), keyed by
+    // synthetic target like `palette:Primary` or `typography`.
+    const originalDesignValues = useRef<Map<string, string>>(new Map());
     const { vscodeApi } = useContext(WebviewContext);
 
     const hasEdits = useMemo(
-        () => feedbackItems.length > 0 || freeformDraft.trim().length > 0,
-        [feedbackItems, freeformDraft],
+        () => feedbackItems.length > 0 || freeformDraft.trim().length > 0 || uiNote.trim().length > 0,
+        [feedbackItems, freeformDraft, uiNote],
     );
 
     const editedCells = useMemo(() => {
@@ -91,7 +114,9 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 // post-revision refresh. Either way, clear pending feedback state.
                 setFeedbackItems([]);
                 setFreeformDraft('');
+                setUiNote('');
                 originalCellValues.current.clear();
+                originalDesignValues.current.clear();
             } else if (message?.command === 'revisionInProgress') {
                 setIsAwaitingRevision(true);
                 setDrawerOpen(false);
@@ -124,6 +149,43 @@ export const ScaffoldPlanView = (): JSX.Element => {
             const content = updated.sections[sectionIdx]?.content[contentIdx];
             if (content?.type === 'table') {
                 content.rows[rowIdx][colIdx] = value;
+            }
+            return updated;
+        });
+    }, []);
+
+    const mutatePaletteEntry = useCallback((token: string, newHex: string) => {
+        setPlan(prev => {
+            if (!prev) {
+                return prev;
+            }
+            const updated = structuredClone(prev);
+            for (const section of updated.sections) {
+                for (const content of section.content) {
+                    if (content.type === 'colorPalette') {
+                        const entry = content.entries.find(e => e.token === token);
+                        if (entry) {
+                            entry.hex = newHex;
+                        }
+                    }
+                }
+            }
+            return updated;
+        });
+    }, []);
+
+    const mutateTypography = useCallback((value: string) => {
+        setPlan(prev => {
+            if (!prev) {
+                return prev;
+            }
+            const updated = structuredClone(prev);
+            for (const section of updated.sections) {
+                for (const content of section.content) {
+                    if (content.type === 'keyValue' && content.key === 'Typography') {
+                        content.value = value;
+                    }
+                }
             }
             return updated;
         });
@@ -188,10 +250,17 @@ export const ScaffoldPlanView = (): JSX.Element => {
             if (item?.kind === 'dropdown') {
                 mutateCell(item.sectionIdx, item.contentIdx, item.rowIdx, item.colIdx, item.from);
                 originalCellValues.current.delete(item.cell);
+            } else if (item?.kind === 'designToken') {
+                if (item.target === 'typography') {
+                    mutateTypography(item.from);
+                } else if (item.target.startsWith('palette:')) {
+                    mutatePaletteEntry(item.target.slice('palette:'.length), item.from);
+                }
+                originalDesignValues.current.delete(item.target);
             }
             return prev.filter(i => i.id !== id);
         });
-    }, [mutateCell]);
+    }, [mutateCell, mutatePaletteEntry, mutateTypography]);
 
     const handleAddNote = useCallback(() => {
         const text = freeformDraft.trim();
@@ -202,19 +271,83 @@ export const ScaffoldPlanView = (): JSX.Element => {
         setFreeformDraft('');
     }, [freeformDraft]);
 
+    const syncDesignTokenFeedback = useCallback((target: string, field: string, original: string, value: string) => {
+        setFeedbackItems(prev => {
+            const existingIdx = prev.findIndex(i => i.kind === 'designToken' && i.target === target);
+            // Back to original → drop the feedback item (and forget the original).
+            if (value === original) {
+                originalDesignValues.current.delete(target);
+                if (existingIdx >= 0) {
+                    const next = prev.slice();
+                    next.splice(existingIdx, 1);
+                    return next;
+                }
+                return prev;
+            }
+            if (existingIdx >= 0) {
+                const next = prev.slice();
+                const existing = next[existingIdx];
+                if (existing.kind === 'designToken') {
+                    next[existingIdx] = { ...existing, to: value };
+                }
+                return next;
+            }
+            return [
+                ...prev,
+                {
+                    id: nextId(),
+                    kind: 'designToken',
+                    target,
+                    field,
+                    from: original,
+                    to: value,
+                },
+            ];
+        });
+    }, []);
+
+    const handlePaletteChange = useCallback((token: string, originalHex: string, newHex: string) => {
+        const target = `palette:${token}`;
+        if (!originalDesignValues.current.has(target)) {
+            originalDesignValues.current.set(target, originalHex);
+        }
+        const original = originalDesignValues.current.get(target) ?? originalHex;
+        mutatePaletteEntry(token, newHex);
+        syncDesignTokenFeedback(target, `Color: ${token}`, original, newHex);
+    }, [mutatePaletteEntry, syncDesignTokenFeedback]);
+
+    const handleTypographyChange = useCallback((originalValue: string, newValue: string) => {
+        const target = 'typography';
+        if (!originalDesignValues.current.has(target)) {
+            originalDesignValues.current.set(target, originalValue);
+        }
+        const original = originalDesignValues.current.get(target) ?? originalValue;
+        mutateTypography(newValue);
+        syncDesignTokenFeedback(target, 'Typography', original, newValue);
+    }, [mutateTypography, syncDesignTokenFeedback]);
+
     const handleDiscardAll = useCallback(() => {
-        // Revert any cells touched by dropdown feedback items.
+        // Revert any cells touched by dropdown feedback items, plus any palette /
+        // typography edits captured by designToken items.
         setFeedbackItems(prev => {
             for (const item of prev) {
                 if (item.kind === 'dropdown') {
                     mutateCell(item.sectionIdx, item.contentIdx, item.rowIdx, item.colIdx, item.from);
+                } else if (item.kind === 'designToken') {
+                    if (item.target === 'typography') {
+                        mutateTypography(item.from);
+                    } else if (item.target.startsWith('palette:')) {
+                        mutatePaletteEntry(item.target.slice('palette:'.length), item.from);
+                    }
                 }
             }
             return [];
         });
         originalCellValues.current.clear();
+        originalDesignValues.current.clear();
         setFreeformDraft('');
-    }, [mutateCell]);
+        setUiNote('');
+    }, [mutateCell, mutatePaletteEntry, mutateTypography]);
 
     const handleSubmitFeedback = useCallback(() => {
         if (!plan || !hasEdits) {
@@ -224,12 +357,12 @@ export const ScaffoldPlanView = (): JSX.Element => {
         const items = draftTrimmed.length > 0
             ? [...feedbackItems, { id: nextId(), kind: 'freeform' as const, text: draftTrimmed }]
             : feedbackItems;
-        const prompt = buildFeedbackPrompt(items, '');
+        const prompt = buildFeedbackPrompt(items, '', uiNote);
         vscodeApi.postMessage({ command: 'submitPlanFeedback', prompt, data: plan });
         setIsAwaitingRevision(true);
         setDrawerOpen(false);
         setConfirmSubmitOpen(false);
-    }, [plan, hasEdits, feedbackItems, freeformDraft, vscodeApi]);
+    }, [plan, hasEdits, feedbackItems, freeformDraft, uiNote, vscodeApi]);
 
     if (!plan) {
         return <div className='scaffoldPlanView'><p>Loading plan...</p></div>;
@@ -263,6 +396,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const overviewSection = sections.find(s => s.number === 1);
     const detailSections = sections.filter(s => s.number === 2 || s.number === 3);
     const structureSection = sections.find(s => s.title.toLowerCase().includes('project structure'));
+    const designSection = sections.find(s => s.title.toLowerCase().includes('design system'));
+    const draftCount = (freeformDraft.trim() ? 1 : 0) + (uiNote.trim() ? 1 : 0);
 
     return (
         <div className={`scaffoldPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
@@ -288,7 +423,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                                             {hasEdits && (
                                                 <CounterBadge
                                                     className='feedbackBadge'
-                                                    count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
+                                                    count={feedbackItems.length + draftCount}
                                                     size='small'
                                                     color='danger'
                                                 />
@@ -338,6 +473,17 @@ export const ScaffoldPlanView = (): JSX.Element => {
                     })}
                 </div>
 
+                {designSection && (
+                    <UiPreviewCard
+                        section={designSection}
+                        uiNote={uiNote}
+                        disabled={isAwaitingRevision}
+                        onPaletteChange={handlePaletteChange}
+                        onTypographyChange={handleTypographyChange}
+                        onUiNoteChange={setUiNote}
+                    />
+                )}
+
                 {structureSection && <ProjectStructureCard section={structureSection} />}
             </div>
 
@@ -356,7 +502,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
 
             <SubmitEditsDialog
                 open={confirmSubmitOpen}
-                editCount={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
+                editCount={feedbackItems.length + draftCount}
                 onCancel={() => setConfirmSubmitOpen(false)}
                 onSubmit={handleSubmitFeedback}
             />
@@ -395,7 +541,7 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
                     <ul className='feedbackList'>
                         {items.map(item => (
                             <li key={item.id} className={`feedbackItem ${item.kind}`}>
-                                {item.kind === 'dropdown' ? (
+                                {(item.kind === 'dropdown' || item.kind === 'designToken') ? (
                                     <span className='feedbackChipText'>
                                         <strong>{item.field}:</strong> {item.from}
                                         <span className='arrow'> → </span>
@@ -666,6 +812,10 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, onT
         case 'paragraph':
             return <p className='paragraph'>{item.text}</p>;
         case 'tree':
+            return <div />;
+        case 'colorPalette':
+        case 'pages':
+            // Rendered by UiPreviewCard; ContentBlock is only used for sections 2/3.
             return <div />;
     }
 };

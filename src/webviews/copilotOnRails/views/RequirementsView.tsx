@@ -14,10 +14,6 @@ interface DraftMap {
     [questionId: string]: RequirementsAnswer;
 }
 
-interface EditedMap {
-    [questionId: string]: boolean;
-}
-
 const CATEGORY_LABELS: Record<string, string> = {
     project: 'Project',
     app: 'Application',
@@ -87,7 +83,6 @@ function defaultDraftFor(question: RequirementsQuestion): RequirementsAnswer {
 export const RequirementsView = (): JSX.Element => {
     const [data, setData] = useState<RequirementsData | null>(null);
     const [drafts, setDrafts] = useState<DraftMap>({});
-    const [edited, setEdited] = useState<EditedMap>({});
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const { vscodeApi } = useContext(WebviewContext);
@@ -107,7 +102,6 @@ export const RequirementsView = (): JSX.Element => {
                     nextDrafts[q.id] = defaultDraftFor(q);
                 }
                 setDrafts(nextDrafts);
-                setEdited({});
             } else if (message?.command === 'submitError') {
                 setSaveError(typeof message.error === 'string' ? message.error : 'Failed to save requirements.');
                 setIsSaving(false);
@@ -123,7 +117,6 @@ export const RequirementsView = (): JSX.Element => {
 
     const updateDraft = useCallback((id: string, value: RequirementsAnswer) => {
         setDrafts(prev => ({ ...prev, [id]: value }));
-        setEdited(prev => ({ ...prev, [id]: true }));
         setSaveError(null);
     }, []);
 
@@ -352,7 +345,7 @@ const AnswerInput = ({
     }
 
     if (inputType === 'tags') {
-        const text = Array.isArray(value) ? value.join(', ') : (value == null ? '' : String(value));
+        const text = Array.isArray(value) ? value.join(', ') : String(value ?? '');
         return (
             <Input
                 size='small'
@@ -368,7 +361,7 @@ const AnswerInput = ({
     }
 
     if (inputType === 'number') {
-        const text = value == null ? '' : String(value);
+        const text = String(value ?? '');
         return (
             <Input
                 size='small'
@@ -387,7 +380,7 @@ const AnswerInput = ({
         );
     }
 
-    const text = value == null ? '' : String(value);
+    const text = String(value ?? '');
     const useTextarea = text.length > 60;
 
     if (useTextarea) {

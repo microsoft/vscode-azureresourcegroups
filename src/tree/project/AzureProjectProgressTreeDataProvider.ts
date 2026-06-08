@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { getProjectPlanFiles } from './projectPlanFiles';
+import { copilotOnRailsCommandIds } from '../../webviews/copilotOnRails/extension/copilotOnRailsCommands';
+import { getProjectPlanFiles, type ProjectPlanFilesWatcher } from './projectPlanFiles';
 
 type ProgressState = 'completed' | 'current' | 'notStarted';
 
@@ -36,24 +37,8 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
 
     private readonly disposables: vscode.Disposable[] = [];
 
-    constructor(context: vscode.ExtensionContext) {
-        this.disposables.push(vscode.workspace.onDidChangeWorkspaceFolders(() => this.refresh()));
-        this.disposables.push(vscode.workspace.onDidCreateFiles(() => this.refresh()));
-        this.disposables.push(vscode.workspace.onDidDeleteFiles(() => this.refresh()));
-        this.disposables.push(vscode.workspace.onDidRenameFiles(() => this.refresh()));
-
-        const watchers = [
-            vscode.workspace.createFileSystemWatcher('**/project-plan.md'),
-            vscode.workspace.createFileSystemWatcher('**/vscode-debug-plan.md'),
-            vscode.workspace.createFileSystemWatcher('**/.azure/deployment-plan.md'),
-        ];
-
-        for (const watcher of watchers) {
-            watcher.onDidCreate(() => this.refresh());
-            watcher.onDidDelete(() => this.refresh());
-            watcher.onDidChange(() => this.refresh());
-            this.disposables.push(watcher);
-        }
+    constructor(context: vscode.ExtensionContext, planFilesWatcher: ProjectPlanFilesWatcher) {
+        this.disposables.push(planFilesWatcher.onDidChange(() => this.refresh()));
 
         context.subscriptions.push(this);
     }
@@ -76,7 +61,7 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
                 vscode.TreeItemCollapsibleState.Expanded,
             );
             item.id = element.id;
-            item.description = toStageDescription(element.state, element.hasPlanFile);
+            item.description = toStageDescription(element.state);
             item.iconPath = new vscode.ThemeIcon(toStageIconName(element.id));
             return item;
         }
@@ -112,11 +97,11 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
 
         // When no plan files exist, return no nodes so VS Code renders the
         // configured viewsWelcome content (the "Create New Project With Copilot" button).
-        if (!files.hasProjectPlan && !files.hasLocalDevelopmentPlan && !files.hasDeploymentPlan) {
+        if (!files.hasAny) {
             return [];
         }
 
-        const currentStep = files.hasDeploymentPlan ? 2 : files.hasLocalDevelopmentPlan ? 1 : 0;
+        const currentStep = files.currentStage;
 
         return [
             {
@@ -126,8 +111,8 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
                 stepNumber: 1,
                 state: getState(0, currentStep),
                 hasPlanFile: files.hasProjectPlan,
-                openPlanCommandId: 'azureResourceGroups.openPlanView',
-                startCommandId: 'azureResourceGroups.createProjectWithCopilot',
+                openPlanCommandId: copilotOnRailsCommandIds.openScaffoldPlanView,
+                startCommandId: copilotOnRailsCommandIds.createProjectWithCopilot,
             },
             {
                 kind: 'stage',
@@ -136,8 +121,8 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
                 stepNumber: 2,
                 state: getState(1, currentStep),
                 hasPlanFile: files.hasLocalDevelopmentPlan,
-                openPlanCommandId: 'azureResourceGroups.openLocalPlanView',
-                startCommandId: 'azureResourceGroups.startLocalDevelopment',
+                openPlanCommandId: copilotOnRailsCommandIds.openLocalPlanView,
+                startCommandId: copilotOnRailsCommandIds.startLocalDevelopment,
             },
             {
                 kind: 'stage',
@@ -146,8 +131,8 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
                 stepNumber: 3,
                 state: getState(2, currentStep),
                 hasPlanFile: files.hasDeploymentPlan,
-                openPlanCommandId: 'azureResourceGroups.openDeployPlanView',
-                startCommandId: 'azureResourceGroups.startDeployment',
+                openPlanCommandId: copilotOnRailsCommandIds.openDeploymentPlanView,
+                startCommandId: copilotOnRailsCommandIds.startDeployment,
             },
         ];
     }
@@ -210,7 +195,7 @@ function getState(stepIndex: number, currentStep: number): ProgressState {
     return 'notStarted';
 }
 
-function toStageDescription(state: ProgressState, _hasPlanFile: boolean): string {
+function toStageDescription(state: ProgressState): string {
     return toStateText(state);
 }
 

@@ -50,7 +50,7 @@ import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzur
 import { registerAzureTree } from './tree/azure/registerAzureTree';
 import { registerFocusTree } from './tree/azure/registerFocusTree';
 import { AzureProjectProgressTreeDataProvider } from './tree/project/AzureProjectProgressTreeDataProvider';
-import { getProjectPlanFiles } from './tree/project/projectPlanFiles';
+import { getProjectPlanFiles, ProjectPlanFilesWatcher } from './tree/project/projectPlanFiles';
 import { TenantDefaultBranchDataProvider } from './tree/tenants/TenantDefaultBranchDataProvider';
 import { TenantResourceBranchDataProviderManager } from './tree/tenants/TenantResourceBranchDataProviderManager';
 import { registerTenantTree } from './tree/tenants/registerTenantTree';
@@ -72,7 +72,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
-    await registerProjectPlanFilesContext(context);
+    const projectPlanFilesWatcher = new ProjectPlanFilesWatcher();
+    context.subscriptions.push(projectPlanFilesWatcher);
+    await registerProjectPlanFilesContext(context, projectPlanFilesWatcher);
     registerRequirementsAutoOpen(context);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
@@ -171,7 +173,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         refreshEvent: refreshWorkspaceTreeEmitter.event,
     });
 
-    const azureProjectProgressTreeDataProvider = new AzureProjectProgressTreeDataProvider(context);
+    const azureProjectProgressTreeDataProvider = new AzureProjectProgressTreeDataProvider(context, projectPlanFilesWatcher);
     context.subscriptions.push(vscode.window.registerTreeDataProvider('azureProject', azureProjectProgressTreeDataProvider));
 
     const tenantResourcesBranchDataItemCache = new BranchDataItemCache();
@@ -331,45 +333,15 @@ export function deactivate(): void {
     ext.diagnosticWatcher?.dispose();
 }
 
-async function registerProjectPlanFilesContext(context: vscode.ExtensionContext): Promise<void> {
+async function registerProjectPlanFilesContext(context: vscode.ExtensionContext, planFilesWatcher: ProjectPlanFilesWatcher): Promise<void> {
     const update = async (): Promise<void> => {
         const files = await getProjectPlanFiles();
 
-        await vscode.commands.executeCommand('setContext', hasProjectPlanFilesContextKey, files.hasProjectPlan || files.hasLocalDevelopmentPlan || files.hasDeploymentPlan);
+        await vscode.commands.executeCommand('setContext', hasProjectPlanFilesContextKey, files.hasAny);
         await vscode.commands.executeCommand('setContext', isEmptyWorkspaceContextKey, await isWorkspaceEmpty());
     };
 
-    context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
-        void update();
-    }));
-    context.subscriptions.push(vscode.workspace.onDidCreateFiles(() => {
-        void update();
-    }));
-    context.subscriptions.push(vscode.workspace.onDidDeleteFiles(() => {
-        void update();
-    }));
-    context.subscriptions.push(vscode.workspace.onDidRenameFiles(() => {
-        void update();
-    }));
-
-    const watchers = [
-        vscode.workspace.createFileSystemWatcher('**/project-plan.md'),
-        vscode.workspace.createFileSystemWatcher('**/vscode-debug-plan.md'),
-        vscode.workspace.createFileSystemWatcher('**/.azure/deployment-plan.md'),
-    ];
-
-    for (const watcher of watchers) {
-        watcher.onDidCreate(() => {
-            void update();
-        });
-        watcher.onDidDelete(() => {
-            void update();
-        });
-        watcher.onDidChange(() => {
-            void update();
-        });
-        context.subscriptions.push(watcher);
-    }
+    context.subscriptions.push(planFilesWatcher.onDidChange(() => void update()));
 
     await update();
 }

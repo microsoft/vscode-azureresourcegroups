@@ -1,6 +1,8 @@
 # Frontend Preview Steps
 
-> Detailed sub-steps for standalone frontend preview. Read during **Step 0.5** (Frontend Preview).
+> Detailed sub-steps for standalone frontend preview. Read during **Step 1** (Frontend Preview).
+
+> **Companion contract**: Before writing any JSX, also read [frontend-quality-bar.md](frontend-quality-bar.md). It defines the load-bearing contract between the plan's Section 5 (Design System & UI) and the JSX you ship — per-library region-token → primitive mapping, theming via the library's brand ramp, real icons, and the four-state coverage gate. The sub-steps below cover *how* to stand up the preview (working directory, build, verify, approval loop); the quality bar covers *what* the preview must contain.
 
 ---
 
@@ -59,13 +61,13 @@
 
 ## Sub-step F4: Build, Auto-Open & Approval Loop
 
-> ⚠️ **PARALLEL STEP**: Step 0.5 runs **concurrently** with Phase A (Contracts) and Phase B (Backend). Backend derives from **plan's route definitions and entity types**, not frontend preview — independent work streams. Phase A and Phase B may begin immediately after Step 0 (plan validation) while frontend preview is generated and reviewed.
+> ⚠️ **PARALLEL STEP**: Step 1 runs **concurrently** with Phase A (Contracts) and Phase B (Backend). Backend derives from **plan's route definitions and entity types**, not frontend preview — independent work streams. Phase A and Phase B may begin immediately after Step 0 (plan validation) while frontend preview is generated and reviewed.
 >
-> **Step 11 (Wire Frontend) is synchronization gate** — requires BOTH:
+> **Step 12 (Wire Frontend) is synchronization gate** — requires BOTH:
 > - (a) Frontend preview approved by user
 > - (b) Phase B backend agent completed
 >
-> **Why safe**: Entity types, route definitions, service interfaces all come from approved plan. Frontend preview uses standalone mock types (`src/web/src/types/`) independent of `src/shared/`. Frontend UI changes (layout, styling, components) don't affect backend contracts. Only Step 11 merges both streams by replacing mock types with shared imports.
+> **Why safe**: Entity types, route definitions, service interfaces all come from approved plan. Frontend preview uses standalone mock types (`src/web/src/types/`) independent of `src/shared/`. Frontend UI changes (layout, styling, components) don't affect backend contracts. Only Step 12 merges both streams by replacing mock types with shared imports.
 
 > ⚠️ ️ **WORKING DIRECTORY** (see also the top of this file): every `npx vite build`, `npx vite`, `npm run dev`, `npm install`, etc. **MUST be invoked with `cwd` set to the frontend folder** (e.g. `src/web/`), passed on the same terminal call as the command. Do **not** assume a previous `cd` carried over. Running from the workspace root produces a blank white page (Vite can't find `index.html`) and the dev server will still bind to the port — so it *looks* live but serves nothing useful.
 
@@ -85,7 +87,7 @@
    - Opens embedded browser tab inside VS Code — no external browser needed.
 7. **Ask user for approval** (use `ask_user`): _"Your frontend preview is live in your browser. Do you approve this UI, or would you like changes?"_ Only ask this **after** the verification gate in step 5 passes.
 8. If user requests changes → make changes, rebuild, re-verify, ask again (loop)
-9. If user approves → stop dev server, proceed to Step 11 (Wire Frontend) once Phase B also completes
+9. If user approves → stop dev server, proceed to Step 12 (Wire Frontend) once Phase B also completes
 
 > **CRITICAL**: Do NOT prompt "Would you like to preview?" — always auto-open in VS Code's Simple Browser via `simpleBrowser.show`. User explicitly opted into this workflow by approving a plan with frontend. Frontend preview is user's first chance to validate app direction — but backend builds in parallel since it depends only on plan.
 >
@@ -95,10 +97,14 @@
 
 ## Frontend Quality Bar
 
-Even in preview mode, frontend MUST meet these standards:
+Even in preview mode, frontend MUST meet these standards. The full per-library contract lives in [frontend-quality-bar.md](frontend-quality-bar.md) — read it before writing any JSX. Baseline rules enforced here:
+
 - No `any` types (use local type definitions in `src/web/src/types/`)
 - Hooks catch errors and handle loading/error states
 - Destructive actions (delete, etc.) require `window.confirm()` before executing
 - `.tsx` for files containing JSX, `.ts` for pure TypeScript
-- All 4 data states handled: loading, error, empty, data
+- All 4 data states handled: loading, error, empty, data (see quality-bar's State Coverage Contract for per-library primitives — `<Skeleton>` / `<MessageBar intent="error">` / empty illustration + CTA / real data)
 - **Auto-authenticated preview**: If app has auth, preview MUST auto-login on first load so user sees main content immediately (not login page)
+- **Render layout tokens with real library primitives** — never raw `<div className="card">` placeholders. See [frontend-quality-bar.md](frontend-quality-bar.md) for the region-token → primitive mapping per library.
+- **Wrap the app shell in the library's theme provider** with a brand ramp derived from plan Section 5's `primary` color. See [frontend-quality-bar.md](frontend-quality-bar.md) → Theming contract.
+- **Use real icons** from the library's icon set (Fluent: `@fluentui/react-icons` Regular variants; Vuetify: `mdi-*`; Material: `<mat-icon>` real names; Skeleton/Pico: Lucide/Tabler). No emoji, no SVG placeholders.

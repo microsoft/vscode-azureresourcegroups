@@ -59,9 +59,8 @@ export class RequirementsViewController extends WebviewController<Record<string,
         }
 
         try {
-            const { parseError: _ignored, ...rest } = data;
-            const serialized = JSON.stringify(rest, null, 2) + '\n';
-            markRequirementsSubmitted(this.sourceFileUri);
+            const serialized = JSON.stringify({ ...data, parseError: undefined }, null, 2) + '\n';
+            markRequirementsSubmitted(this.sourceFileUri, serialized);
             await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(serialized, 'utf-8'));
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
@@ -71,10 +70,11 @@ export class RequirementsViewController extends WebviewController<Record<string,
 
         void this.panel.webview.postMessage({ command: 'submitComplete' });
 
+        const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
         try {
             await vscode.commands.executeCommand('workbench.action.chat.open', {
                 mode: 'azure-project-plan',
-                query: 'Requirements submitted at .azure/requirements.json — read the file and continue generating .azure/project-plan.md.',
+                query: vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath),
             });
         } catch {
             // Chat may not be available; saving still succeeded.

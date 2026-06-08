@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+@import './uiPreviewCard.scss';
+
 .fui-DialogSurface {
     background-color: var(--vscode-editorWidget-background) !important;
     color: var(--vscode-editorWidget-foreground, var(--vscode-foreground)) !important;

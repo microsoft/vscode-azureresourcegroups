@@ -530,7 +530,7 @@ Use descriptive test names that document behavior:
 
 ## Frontend Testing
 
-> The frontend has its own test gate at Step 11. These patterns ensure the frontend is tested as rigorously as the backend.
+> The frontend has its own test gate at Step 12. These patterns ensure the frontend is tested as rigorously as the backend.
 
 ### Minimum Test Coverage
 

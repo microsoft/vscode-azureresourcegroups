@@ -2,11 +2,13 @@
 
 > Frontend has same quality bar as backend: typed, tested, structured.
 
+> **Companion contract**: For the **visual** quality bar — how to render Section 5's layout tokens with real library primitives, how to theme the app from the plan's palette, and the four-state coverage gate — read [frontend-quality-bar.md](frontend-quality-bar.md). This file covers structural patterns (types, hooks, services, error handling); the quality bar covers what each region must actually render.
+
 ---
 
 ## Core Principle
 
-**Frontend is not second-class.** Consumes shared types package, has own test gate, follows consistent patterns for data fetching, error handling, component structure.
+**Frontend is not second-class.** Consumes shared types package, has own test gate, follows consistent patterns for data fetching, error handling, component structure. **Layout tokens from the plan are intent, not literal `<div>`s** — see [frontend-quality-bar.md](frontend-quality-bar.md).
 
 ---
 
@@ -319,7 +321,7 @@ Choose ONE styling approach and use it consistently. Do not mix inline styles wi
 
 ## Frontend Test Requirements
 
-The frontend test gate (Step 11) requires the following minimum tests:
+The frontend test gate (Step 12) requires the following minimum tests:
 
 ### Minimum Test Coverage
 

@@ -6,35 +6,44 @@
 import * as vscode from "vscode";
 import { parseRequirementsJson, type RequirementsData } from "../views/utils/parseRequirements";
 import { RequirementsViewController } from "./controllers/RequirementsViewController";
+import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 export const REQUIREMENTS_FILE_GLOB = '**/.azure/requirements.json';
 
-let currentController: RequirementsViewController | undefined;
-let currentWatcher: vscode.Disposable | undefined;
+const host = new SingletonViewHost<RequirementsData, RequirementsViewController>({
+    createController: (data, uri) => new RequirementsViewController(data, uri),
+    updateController: (controller, data, uri) => controller.updateData(data, uri),
+});
 
-// Paths whose write was caused by the webview submit. We mark them so the file
-// watchers don't immediately reopen the view we just closed.
-const recentlySubmittedPaths = new Map<string, number>();
-const SUBMIT_SUPPRESSION_MS = 5000;
+// The exact content the webview last wrote for a given file. When a watcher
+// fires for that same content we know it's our own write and skip reopening the
+// view we just closed. The marker is kept until the file content differs (an
+// external edit), so duplicate create+change events are both suppressed.
+const ownWrites = new Map<string, string>();
 
-export function markRequirementsSubmitted(uri: vscode.Uri): void {
-    recentlySubmittedPaths.set(uri.fsPath, Date.now());
+export function markRequirementsSubmitted(uri: vscode.Uri, serializedContent: string): void {
+    ownWrites.set(uri.fsPath, serializedContent);
 }
 
-function wasRecentlySubmitted(uri: vscode.Uri): boolean {
-    const ts = recentlySubmittedPaths.get(uri.fsPath);
-    if (ts === undefined) {
+/**
+ * Returns true if `content` matches the content the webview last wrote for
+ * `uri` (i.e. this change was self-inflicted). When the content differs, the
+ * marker is cleared so future external edits flow through normally.
+ */
+function isOwnWrite(uri: vscode.Uri, content: string): boolean {
+    const marker = ownWrites.get(uri.fsPath);
+    if (marker === undefined) {
         return false;
     }
-    if (Date.now() - ts > SUBMIT_SUPPRESSION_MS) {
-        recentlySubmittedPaths.delete(uri.fsPath);
-        return false;
+    if (marker === content) {
+        return true;
     }
-    return true;
+    ownWrites.delete(uri.fsPath);
+    return false;
 }
 
 export function isRequirementsViewOpen(): boolean {
-    return currentController !== undefined;
+    return host.isOpen;
 }
 
 export function openRequirementsView(uri: vscode.Uri): void {
@@ -42,21 +51,7 @@ export function openRequirementsView(uri: vscode.Uri): void {
 }
 
 export function openRequirementsViewWithContent(content: string, sourceFileUri?: vscode.Uri): void {
-    const data = tryParse(content, sourceFileUri);
-
-    if (currentController) {
-        currentController.updateData(data, sourceFileUri);
-        currentController.revealToForeground(vscode.ViewColumn.Active);
-        return;
-    }
-
-    currentController = new RequirementsViewController(data, sourceFileUri);
-    currentController.revealToForeground(vscode.ViewColumn.Active);
-    currentController.panel.onDidDispose(() => {
-        currentController = undefined;
-        currentWatcher?.dispose();
-        currentWatcher = undefined;
-    });
+    host.show(tryParse(content, sourceFileUri), sourceFileUri);
 }
 
 function tryParse(content: string, sourceFileUri: vscode.Uri | undefined): RequirementsData {
@@ -66,88 +61,65 @@ function tryParse(content: string, sourceFileUri: vscode.Uri | undefined): Requi
         const errorMessage = err instanceof Error ? err.message : String(err);
         return {
             questions: [],
-            parseError: {
-                message: errorMessage,
-                fileLabel: sourceFileUri ? vscode.workspace.asRelativePath(sourceFileUri) : undefined,
-            },
+            parseError: buildParseError(errorMessage, sourceFileUri),
         };
     }
 }
 
 export async function openRequirementsViewFromWorkspace(): Promise<void> {
-    const files = await vscode.workspace.findFiles(REQUIREMENTS_FILE_GLOB, '**/node_modules/**', 10);
-    if (files.length === 0) {
-        void vscode.window.showInformationMessage(
-            vscode.l10n.t('No requirements file found. Expected `.azure/requirements.json` in the workspace.'),
-        );
-        return;
+    const selected = await pickWorkspaceFile(
+        REQUIREMENTS_FILE_GLOB,
+        vscode.l10n.t('No requirements file found. Expected `.azure/requirements.json` in the workspace.'),
+        vscode.l10n.t('Select a requirements file to open'),
+    );
+    if (selected) {
+        await openRequirementsViewAsync(selected);
     }
-
-    let selected: vscode.Uri;
-    if (files.length === 1) {
-        selected = files[0];
-    } else {
-        const picked = await vscode.window.showQuickPick(
-            files.map((f) => ({ label: vscode.workspace.asRelativePath(f), uri: f })),
-            { placeHolder: vscode.l10n.t('Select a requirements file to open') },
-        );
-        if (!picked) {
-            return;
-        }
-        selected = picked.uri;
-    }
-
-    await openRequirementsViewAsync(selected);
 }
 
 async function openRequirementsViewAsync(uri: vscode.Uri): Promise<void> {
-    const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
-    openRequirementsViewWithContent(content, uri);
-    watchRequirementsFile(uri);
+    openRequirementsViewWithContent(await readFileText(uri), uri);
+    host.setWatcher(watchSingleFile(uri, () => void reloadRequirements(uri)));
 }
 
-function watchRequirementsFile(uri: vscode.Uri): void {
-    currentWatcher?.dispose();
-
-    const folder = vscode.Uri.file(uri.fsPath.replace(/[/\\][^/\\]+$/, ''));
-    const fileName = uri.fsPath.replace(/^.*[/\\]/, '');
-    const pattern = new vscode.RelativePattern(folder, fileName);
-
-    const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-    const reload = async () => {
-        if (wasRecentlySubmitted(uri)) {
-            return;
-        }
-        try {
-            const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
-            openRequirementsViewWithContent(content, uri);
-        } catch {
-            // File may have been deleted or be momentarily unavailable; ignore.
-        }
-    };
-    watcher.onDidChange(() => void reload());
-    watcher.onDidCreate(() => void reload());
-    currentWatcher = watcher;
+async function reloadRequirements(uri: vscode.Uri): Promise<void> {
+    let content: string;
+    try {
+        content = await readFileText(uri);
+    } catch {
+        // File may have been deleted or be momentarily unavailable; ignore.
+        return;
+    }
+    if (isOwnWrite(uri, content)) {
+        return;
+    }
+    openRequirementsViewWithContent(content, uri);
 }
 
 /**
  * Auto-open the requirements view whenever `.azure/requirements.json` appears
- * or changes in the workspace. Returns the disposable that owns the watcher.
+ * or changes in the workspace.
  */
 export function registerRequirementsAutoOpen(context: vscode.ExtensionContext): void {
     const watcher = vscode.workspace.createFileSystemWatcher(REQUIREMENTS_FILE_GLOB);
-    const handle = (uri: vscode.Uri) => {
-        if (wasRecentlySubmitted(uri)) {
-            // The user just submitted this file; don't reopen the view we just closed.
+    const handle = async (uri: vscode.Uri) => {
+        if (isRequirementsViewOpen()) {
+            // Already open — the per-file watcher handles content reload.
             return;
         }
-        if (isRequirementsViewOpen()) {
-            // Already open — `watchRequirementsFile` handles content reload.
+        let content: string;
+        try {
+            content = await readFileText(uri);
+        } catch {
+            return;
+        }
+        if (isOwnWrite(uri, content)) {
+            // The user just submitted this file; don't reopen the view we just closed.
             return;
         }
         openRequirementsView(uri);
     };
-    watcher.onDidCreate(handle);
-    watcher.onDidChange(handle);
+    watcher.onDidCreate((uri) => void handle(uri));
+    watcher.onDidChange((uri) => void handle(uri));
     context.subscriptions.push(watcher);
 }

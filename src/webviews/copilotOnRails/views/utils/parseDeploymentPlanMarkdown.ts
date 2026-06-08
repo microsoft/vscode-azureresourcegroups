@@ -6,6 +6,21 @@
 import { type DeploymentPlanData, type DeploymentPlanTable } from "./deploymentPlanTypes";
 
 /**
+ * Canonical section heading (first entry) and tolerated aliases for each part
+ * of the deployment plan. These MUST stay in sync with the `## …` headings
+ * emitted by the deployment-plan template in the azure-deploy skill — keep this
+ * as the single source of truth so the parser and the skill template don't drift
+ * apart. Aliases exist only to tolerate older or user-authored plans.
+ */
+const DEPLOYMENT_SECTION_ALIASES = {
+    requirements: ['Requirements'],
+    architectureDiagram: ['Architecture Diagram', 'Architecture'],
+    workspaceScan: ['Workspace Scan', 'Components Detected'],
+    decisions: ['Decisions', 'Recipe Selection'],
+    resources: ['Service Mapping', 'Azure Resources', 'Provisioning Limit Checklist'],
+} as const;
+
+/**
  * Parses a deployment plan markdown file into DeploymentPlanData.
  *
  * Expected format:
@@ -39,7 +54,7 @@ import { type DeploymentPlanData, type DeploymentPlanTable } from "./deploymentP
  */
 export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanData {
     const lines = markdown.replace(/\r\n/g, '\n').split('\n');
-    const requirements = extractAttributeValueTable(findSectionByName(extractNamedSections(lines), ['Requirements']));
+    const requirements = extractAttributeValueTable(findSectionByName(extractNamedSections(lines), DEPLOYMENT_SECTION_ALIASES.requirements));
 
     const status = extractMetadata(lines, 'Status') ?? 'Unknown';
     const mode = extractMetadata(lines, 'Mode') ?? 'Unknown';
@@ -54,13 +69,13 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
     const sections = extractNamedSections(lines);
 
     // Support alternate section headings for compatibility with user-authored plans
-    const mermaidDiagram = extractMermaidBlock(findSectionByName(sections, ['Architecture Diagram', 'Architecture']));
+    const mermaidDiagram = extractMermaidBlock(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.architectureDiagram));
 
-    const workspaceScan = extractTable(findSectionByName(sections, ['Workspace Scan', 'Components Detected']));
+    const workspaceScan = extractTable(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.workspaceScan));
 
-    const decisions = extractTable(findSectionByName(sections, ['Decisions', 'Recipe Selection']));
+    const decisions = extractTable(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.decisions));
 
-    const resources = extractTable(findSectionByName(sections, ['Service Mapping', 'Azure Resources', 'Provisioning Limit Checklist']));
+    const resources = extractTable(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.resources));
 
     // Provide placeholder dropdown options when values are unknown
     const availableSubscriptions = subscription === 'Unknown'
@@ -106,7 +121,7 @@ function extractMetadata(lines: string[], key: string): string | undefined {
     return undefined;
 }
 
-function findSectionByName(sections: Record<string, string[]>, names: string[]): string[] {
+function findSectionByName(sections: Record<string, string[]>, names: readonly string[]): string[] {
     const normalized = new Map(Object.entries(sections).map(([name, value]) => [normalizeSectionName(name), value]));
     for (const name of names) {
         const match = normalized.get(normalizeSectionName(name));
