@@ -2,6 +2,7 @@
 name: azure-deploy
 description: Prepare an Azure-centric project for deployment — generate Bicep/Terraform infrastructure, `azure.yaml`, Dockerfiles, and any other artifacts required by `azd up` / `terraform apply`. Run after the local development environment is set up. WHEN: "deploy to Azure", "prepare for deployment", "generate infra", "generate Bicep", "generate Terraform", "create azure.yaml", "ship to Azure", "host on Azure", "create and deploy".
 tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
+model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---
 
 # Azure Deploy Agent

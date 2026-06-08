@@ -73,6 +73,11 @@ export const DeploymentPlanView = (): JSX.Element => {
         [feedbackItems, freeformDraft],
     );
 
+    const isAlreadyApproved = useMemo(() => {
+        const s = plan?.status?.trim().toLowerCase();
+        return !!s && s !== 'planning' && s !== 'unknown';
+    }, [plan?.status]);
+
     const editedRows = useMemo(() => {
         const set = new Set<number>();
         for (const item of feedbackItems) {
@@ -106,7 +111,7 @@ export const DeploymentPlanView = (): JSX.Element => {
     }, []);
 
     const handleApprove = useCallback(() => {
-        if (!plan) {
+        if (!plan || isAlreadyApproved) {
             return;
         }
         if (hasEdits) {
@@ -114,7 +119,7 @@ export const DeploymentPlanView = (): JSX.Element => {
             return;
         }
         vscodeApi.postMessage({ command: 'approve', data: plan });
-    }, [vscodeApi, plan, hasEdits]);
+    }, [vscodeApi, plan, hasEdits, isAlreadyApproved]);
 
     const handleSubscriptionChange = useCallback((value: string) => {
         setPlan(prev => {
@@ -310,11 +315,14 @@ export const DeploymentPlanView = (): JSX.Element => {
                                     onClick={() => setDrawerOpen(v => !v)}
                                 />
                             </Tooltip>
-                            <Tooltip content={strings.approveButtonTooltip} relationship='label'>
+                            <Tooltip
+                                content={isAlreadyApproved ? strings.approveButtonAlreadyApprovedTooltip : strings.approveButtonTooltip}
+                                relationship='label'
+                            >
                                 <Button
                                     appearance='primary'
                                     icon={<CheckmarkRegular />}
-                                    disabled={isAwaitingRevision}
+                                    disabled={isAwaitingRevision || isAlreadyApproved}
                                     onClick={handleApprove}
                                 >
                                     {strings.approveButton}

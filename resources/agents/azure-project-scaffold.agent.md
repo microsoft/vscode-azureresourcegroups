@@ -2,6 +2,7 @@
 name: azure-project-scaffold
 description: Plan and scaffold a NEW Azure-centric project end-to-end — gather requirements, produce an approved `.azure/project-plan.md`, then scaffold the frontend preview, backend services, database, and API routes.
 tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
+model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---
 
 # Azure Project Scaffold Agent

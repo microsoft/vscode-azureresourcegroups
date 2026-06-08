@@ -126,10 +126,13 @@ export declare interface AzureAuthentication {
      *
      * @param scopeListOrRequest - The scopes for which the authentication is needed. Use AuthenticationWwwAuthenticateRequest for supporting challenge requests.
      * Note: use of AuthenticationWwwAuthenticateRequest requires VS Code v1.105.0
+     * @param options - (Optional) Options controlling how the session is acquired. By default a plain
+     * scope list is acquired silently; set `createIfNone` to allow an interactive consent prompt when
+     * no session for the requested scopes has been granted yet. Challenge requests always allow prompting.
      *
      * @returns A VS Code authentication session or undefined, if none could be obtained.
      */
-    getSessionWithScopes(scopeListOrRequest: string[] | vscode.AuthenticationWwwAuthenticateRequest): vscode.ProviderResult<vscode.AuthenticationSession>;
+    getSessionWithScopes(scopeListOrRequest: string[] | vscode.AuthenticationWwwAuthenticateRequest, options?: GetSessionWithScopesOptions): vscode.ProviderResult<vscode.AuthenticationSession>;
 }
 
 export declare interface AzureExtensionApi {
@@ -395,6 +398,17 @@ export declare function getAzExtResourceType(resource: {
  * See: https://github.com/microsoft/vscode-azureresourcegroups/blob/main/api/src/auth/README.md
  * */
 export declare function getAzureResourcesExtensionApi(extensionContext: vscode.ExtensionContext, apiVersionRange: '2.0.0', options?: GetApiOptions): Promise<AzureResourcesExtensionApi>;
+
+/**
+ * Options for {@link AzureAuthentication.getSessionWithScopes}.
+ */
+export declare interface GetSessionWithScopesOptions {
+    /**
+     * Whether to allow an interactive prompt (sign in / consent) if no session for the requested
+     * scopes is already available. Defaults to `false`, in which case the session is acquired silently.
+     */
+    createIfNone?: boolean;
+}
 
 export declare function isWrapper(maybeWrapper: unknown): maybeWrapper is Wrapper;
 

@@ -1,5 +1,26 @@
 # Change Log
 
+## Unreleased
+
+### Added
+* Add an optional `options` parameter to `AzureAuthentication.getSessionWithScopes`. Passing `{ createIfNone: true }` allows an interactive consent prompt when a session for the requested scopes has not yet been granted. See [microsoft/vscode-azurefunctions#5073](https://github.com/microsoft/vscode-azurefunctions/issues/5073)
+
+## 0.12.6 - 2026-06-03
+
+### Added
+* [[1465]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1465) Add registration for SQL Server resources in the resource explorer tree to enable integration from [vscode-mssql](https://github.com/microsoft/vscode-mssql)
+
+## 0.12.5 - 2026-05-28
+
+### Changed
+* [[1446]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1446) Use a reasonably sized Foundry icon
+* [[1448]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1448) Update Foundry extension metadata
+
+### Engineering
+* [[1430]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1430) Remove Shields.io badges from README
+* [[1447]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1447) Migrate Azure DevOps CI/release pipelines to azdo-pipelines v2
+* [[1454]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1454) `npm audit fix` and version bump for rel/0.12.5
+
 ## 0.12.4 - 2026-03-30
 
 ### Fixed

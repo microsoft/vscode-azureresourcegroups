@@ -2,6 +2,7 @@
 name: azure-project-plan
 description: Plan and design a NEW Azure-centric project — gather requirements interactively, produce an approved `.azure/project-plan.md`, then hand off to the `azure-project-scaffold` agent for execution. WHEN "plan project", "design app", "new project", "project requirements", "create project plan", "plan my app", "what should I build", "new Azure app", "create testable app", "new API project", "full-stack Azure app", "bootstrap project", "new fullstack project", "create functions project".
 tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
+model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---
 
 # Azure Project Plan Agent

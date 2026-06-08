@@ -31,6 +31,7 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         feedbackButtonAriaLabel: vscode.l10n.t('Feedback'),
         feedbackButtonTooltip: vscode.l10n.t('Request changes to the plan before approving'),
         approveButtonTooltip: vscode.l10n.t('Approve the plan and continue with Copilot'),
+        approveButtonAlreadyApprovedTooltip: vscode.l10n.t('Plan already approved'),
         feedbackDrawerInfoTooltip: vscode.l10n.t('Your feedback will be sent to Copilot as a prompt. Copilot will revise the plan and update the file. The updated plan will reload here for your final approval.'),
         revisingBanner: vscode.l10n.t('Copilot is revising the plan…'),
         requestChangesHeading: vscode.l10n.t('Request changes'),

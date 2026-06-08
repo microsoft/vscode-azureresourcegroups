@@ -1,6 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 import { type JSX } from 'react';
@@ -18,7 +18,7 @@ export const StageProgress = ({ currentStage }: StageProgressProps): JSX.Element
 
     return (
         <div className='stageProgressTop'>
-            <div className='stageProgress' aria-label='Project stages progress'>
+            <div className='stageProgress' role='group' aria-label='Project stages progress'>
                 <div className='stageProgressTrack'>
                     <div
                         className='stageProgressFill'
