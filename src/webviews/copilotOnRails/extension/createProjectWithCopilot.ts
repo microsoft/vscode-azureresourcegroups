@@ -6,55 +6,53 @@
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
+import { copilotOnRailsCommandIds } from "./copilotOnRailsCommands";
 
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
 
 export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
-    switch (true) {
-        // Local Development => Deploy
-        case await hasCompletedPhase('**/local-development-plan.md', 'implemented'): {
-            const choice = await vscode.window.showInformationMessage(
-                vscode.l10n.t('We detected a previous Copilot session with a completed local debug configuration. Would you like to deploy this project?'),
-                { modal: true },
-                deploy,
-            );
+    // Local Development => Deploy
+    if (await hasCompletedPhase('.azure/vscode-debug-plan.md', 'implemented')) {
+        const choice = await vscode.window.showInformationMessage(
+            vscode.l10n.t('We detected a previous Copilot session with a completed local debug configuration. Would you like to deploy this project?'),
+            { modal: true },
+            deploy,
+        );
 
-            if (choice === deploy) {
-                await vscode.commands.executeCommand('azureResourceGroups.startDeployment');
-            }
-            break;
+        if (choice === deploy) {
+            await vscode.commands.executeCommand(copilotOnRailsCommandIds.startDeployment);
         }
-
-        // Create => Debug | Deploy
-        case await hasCompletedPhase('**/project-plan.md', 'scaffolded'): {
-            const choice = await vscode.window.showInformationMessage(
-                vscode.l10n.t('We detected a previous Copilot session with a fully scaffolded project. How would you like to proceed?'),
-                { modal: true },
-                localDev,
-                deploy,
-            );
-
-            if (choice === localDev) {
-                await vscode.commands.executeCommand('azureResourceGroups.startLocalDevelopment');
-            } else if (choice === deploy) {
-                await vscode.commands.executeCommand('azureResourceGroups.startDeployment');
-            }
-            break;
-        }
-
-        default: {
-            const controller = new CreateProjectViewController({
-                title: vscode.l10n.t('Create with Copilot'),
-                heading: vscode.l10n.t('What would you like to build?'),
-                subtitle: vscode.l10n.t('Describe your project and Copilot will help you build and deploy it to Azure.'),
-                promptPlaceholder: vscode.l10n.t('Describe your project...'),
-                hint: vscode.l10n.t('Ctrl+Enter to plan'),
-                planButtonLabel: vscode.l10n.t('Plan'),
-            });
-            controller.revealToForeground();
-        }
+        return;
     }
+
+    // Create => Debug | Deploy
+    if (await hasCompletedPhase('.azure/project-plan.md', 'scaffolded')) {
+        const choice = await vscode.window.showInformationMessage(
+            vscode.l10n.t('We detected a previous Copilot session with a fully scaffolded project. How would you like to proceed?'),
+            { modal: true },
+            localDev,
+            deploy,
+        );
+
+        if (choice === localDev) {
+            await vscode.commands.executeCommand(copilotOnRailsCommandIds.startLocalDevelopment);
+        } else if (choice === deploy) {
+            await vscode.commands.executeCommand(copilotOnRailsCommandIds.startDeployment);
+        }
+        return;
+    }
+
+    // Nothing detected => start from scratch.
+    const controller = new CreateProjectViewController({
+        title: vscode.l10n.t('Create with Copilot'),
+        heading: vscode.l10n.t('What would you like to build?'),
+        subtitle: vscode.l10n.t('Describe your project and Copilot will help you build and deploy it to Azure.'),
+        promptPlaceholder: vscode.l10n.t('Describe your project...'),
+        hint: vscode.l10n.t('Ctrl+Enter to plan'),
+        planButtonLabel: vscode.l10n.t('Plan'),
+    });
+    controller.revealToForeground();
 }
 
 async function hasCompletedPhase(filePath: string, expectedStatus: string): Promise<boolean> {

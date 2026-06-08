@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea } from '@fluentui/react-components';
+import { Button, Checkbox, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea, Tooltip } from '@fluentui/react-components';
 import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import mermaid from 'mermaid';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { StageProgress } from './components/StageProgress';
 import './styles/localPlanView.scss';
 import { type LocalPlanContent, type LocalPlanData, type LocalPlanSection } from './utils/parseLocalPlanMarkdown';
 
@@ -25,7 +26,72 @@ mermaid.initialize({
 });
 let mermaidIdCounter = 0;
 
-const alwaysExpandedSections = new Set(['project analysis', 'prerequisites', 'scan results']);
+// Sections expected in the new vscode-debug-plan format. Anything else is hidden.
+const ALLOWED_SECTIONS = new Set([
+    'prerequisites',
+    'debug configurations',
+    'orchestrator',
+    'emulators',
+    'architecture diagram',
+    'migrations',
+    'api test collections',
+    'convenience scripts',
+]);
+
+// Section order shown in the UI.
+const SECTION_ORDER: string[] = [
+    'prerequisites',
+    'debug configurations',
+    'orchestrator',
+    'emulators',
+    'architecture diagram',
+    'migrations',
+    'api test collections',
+    'convenience scripts',
+];
+
+// Sections that are always rendered open; the rest get a clickable header
+// that toggles open/closed. (Architecture Diagram opens by default but stays
+// collapsible since the mermaid diagram is large.)
+const ALWAYS_EXPANDED_SECTIONS = new Set(['prerequisites']);
+const DEFAULT_OPEN_SECTIONS = new Set([
+    'prerequisites',
+    'debug configurations',
+    'architecture diagram',
+]);
+
+const GENERATE_HEADER = 'generate';
+
+function findGenerateColumnIdx(headers: string[]): number {
+    return headers.findIndex((h) => h.toLowerCase().trim() === GENERATE_HEADER);
+}
+
+function sectionSortOrder(title: string): number {
+    const lower = title.toLowerCase().trim();
+    const idx = SECTION_ORDER.indexOf(lower);
+    return idx === -1 ? SECTION_ORDER.length : idx;
+}
+
+function shouldHideSection(section: LocalPlanSection): boolean {
+    return !ALLOWED_SECTIONS.has(section.title.toLowerCase().trim());
+}
+
+interface ToggleEntry {
+    sectionTitle: string;
+    rowLabel: string;
+    generate: boolean;
+}
+
+interface PlanToggleContextValue {
+    getToggle: (key: string) => ToggleEntry | undefined;
+    setToggle: (key: string, entry: ToggleEntry | null) => void;
+}
+const PlanToggleContext = createContext<PlanToggleContextValue>({
+    getToggle: () => undefined,
+    setToggle: () => { /* no-op */ },
+});
+
+type TableBlock = Extract<LocalPlanContent, { type: 'table' }>;
 
 interface FeedbackItem {
     id: string;
@@ -37,11 +103,11 @@ const nextId = (): string => `fb-${++feedbackIdCounter}`;
 
 function buildFeedbackPrompt(items: FeedbackItem[]): string {
     const notes = items
-        .map(i => `- ${i.text.trim()}`)
-        .filter(t => t.length > 2);
+        .map((i) => `- ${i.text.trim()}`)
+        .filter((t) => t.length > 2);
 
     const lines: string[] = [
-        'Please revise the local development plan based on my feedback and update local-development-plan.md.',
+        'Please revise the local development plan based on my feedback and update vscode-debug-plan.md.',
         'Keep existing sections unchanged unless a change below implies otherwise. Wait for my approval after updating the file.',
         '',
     ];
@@ -51,29 +117,48 @@ function buildFeedbackPrompt(items: FeedbackItem[]): string {
     return lines.join('\n').trimEnd();
 }
 
+function toggleFeedbackText(entry: ToggleEntry): string {
+    return `In **${entry.sectionTitle}**, set **Generate** to **${entry.generate ? 'Yes' : 'No'}** for **${entry.rowLabel}**.`;
+}
+
 export const LocalPlanView = (): JSX.Element => {
     const [plan, setPlan] = useState<LocalPlanData | null>(null);
-    const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
+    const [freeformItems, setFreeformItems] = useState<FeedbackItem[]>([]);
     const [freeformDraft, setFreeformDraft] = useState('');
+    const [pendingToggles, setPendingToggles] = useState<Map<string, ToggleEntry>>(new Map());
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
     const { vscodeApi } = useContext(WebviewContext);
 
-    const hasEdits = useMemo(
-        () => feedbackItems.length > 0 || freeformDraft.trim().length > 0,
-        [feedbackItems, freeformDraft],
+    const toggleItems = useMemo<FeedbackItem[]>(
+        () => Array.from(pendingToggles.entries()).map(([key, entry]) => ({
+            id: `toggle-${key}`,
+            text: toggleFeedbackText(entry),
+        })),
+        [pendingToggles],
     );
+
+    const allItems = useMemo(() => [...toggleItems, ...freeformItems], [toggleItems, freeformItems]);
+
+    const hasEdits = useMemo(
+        () => allItems.length > 0 || freeformDraft.trim().length > 0,
+        [allItems, freeformDraft],
+    );
+
+    const isAlreadyApproved = useMemo(() => {
+        const s = plan?.status?.trim().toLowerCase();
+        return !!s && s !== 'planning' && s !== 'unknown';
+    }, [plan?.status]);
 
     useEffect(() => {
         const handler = (event: MessageEvent) => {
             const message = event.data;
             if (message?.command === 'setLocalPlanData') {
                 setPlan(message.data as LocalPlanData);
-                // New plan data from the controller — either the initial load or a
-                // post-revision refresh. Either way, clear pending feedback state.
-                setFeedbackItems([]);
+                setFreeformItems([]);
                 setFreeformDraft('');
+                setPendingToggles(new Map());
             } else if (message?.command === 'revisionInProgress') {
                 setIsAwaitingRevision(true);
                 setDrawerOpen(false);
@@ -83,11 +168,13 @@ export const LocalPlanView = (): JSX.Element => {
         };
         window.addEventListener('message', handler);
         vscodeApi.postMessage({ command: 'ready' });
-        return () => window.removeEventListener('message', handler);
-    }, []);
+        return () => {
+            window.removeEventListener('message', handler);
+        };
+    }, [vscodeApi]);
 
     const handleApprove = useCallback(() => {
-        if (!plan) {
+        if (!plan || isAlreadyApproved) {
             return;
         }
         if (hasEdits) {
@@ -95,24 +182,57 @@ export const LocalPlanView = (): JSX.Element => {
             return;
         }
         vscodeApi.postMessage({ command: 'approvePlan', data: plan });
-    }, [plan, hasEdits, vscodeApi]);
+    }, [plan, hasEdits, isAlreadyApproved, vscodeApi]);
 
     const handleRemoveFeedback = useCallback((id: string) => {
-        setFeedbackItems(prev => prev.filter(i => i.id !== id));
+        if (id.startsWith('toggle-')) {
+            const key = id.slice('toggle-'.length);
+            setPendingToggles((prev) => {
+                if (!prev.has(key)) {
+                    return prev;
+                }
+                const next = new Map(prev);
+                next.delete(key);
+                return next;
+            });
+            return;
+        }
+        setFreeformItems((prev) => prev.filter((i) => i.id !== id));
     }, []);
+
+    const getToggle = useCallback((key: string) => pendingToggles.get(key), [pendingToggles]);
+    const setToggle = useCallback((key: string, entry: ToggleEntry | null) => {
+        setPendingToggles((prev) => {
+            const next = new Map(prev);
+            if (entry === null) {
+                if (!next.delete(key)) {
+                    return prev;
+                }
+            } else {
+                next.set(key, entry);
+            }
+            return next;
+        });
+    }, []);
+
+    const planToggleContextValue = useMemo<PlanToggleContextValue>(
+        () => ({ getToggle, setToggle }),
+        [getToggle, setToggle],
+    );
 
     const handleAddNote = useCallback(() => {
         const text = freeformDraft.trim();
         if (!text) {
             return;
         }
-        setFeedbackItems(prev => [...prev, { id: nextId(), text }]);
+        setFreeformItems((prev) => [...prev, { id: nextId(), text }]);
         setFreeformDraft('');
     }, [freeformDraft]);
 
     const handleDiscardAll = useCallback(() => {
-        setFeedbackItems([]);
+        setFreeformItems([]);
         setFreeformDraft('');
+        setPendingToggles(new Map());
     }, []);
 
     const handleSubmitFeedback = useCallback(() => {
@@ -121,14 +241,14 @@ export const LocalPlanView = (): JSX.Element => {
         }
         const draftTrimmed = freeformDraft.trim();
         const items = draftTrimmed.length > 0
-            ? [...feedbackItems, { id: nextId(), text: draftTrimmed }]
-            : feedbackItems;
+            ? [...allItems, { id: nextId(), text: draftTrimmed }]
+            : allItems;
         const prompt = buildFeedbackPrompt(items);
         vscodeApi.postMessage({ command: 'submitPlanFeedback', prompt, data: plan });
         setIsAwaitingRevision(true);
         setDrawerOpen(false);
         setConfirmSubmitOpen(false);
-    }, [plan, hasEdits, feedbackItems, freeformDraft, vscodeApi]);
+    }, [plan, hasEdits, allItems, freeformDraft, vscodeApi]);
 
     if (!plan) {
         return <div className='localPlanView'><p>Loading local dev plan...</p></div>;
@@ -160,6 +280,7 @@ export const LocalPlanView = (): JSX.Element => {
 
     return (
         <div className={`localPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
+            <StageProgress currentStage={1} />
             <div className='planMain'>
                 <div className='planHeader'>
                     <div className='headerTop'>
@@ -168,38 +289,42 @@ export const LocalPlanView = (): JSX.Element => {
                             <div className='metadataBadges'>
                                 {plan.status && plan.status !== 'Unknown' && <span className='badge'>{plan.status}</span>}
                             </div>
-                            {plan.headerNote && (
-                                <p className='headerNote' dangerouslySetInnerHTML={{ __html: formatInline(plan.headerNote) }} />
-                            )}
                         </div>
                         <div className='headerActions'>
-                            <Button
-                                appearance='subtle'
-                                aria-label='Feedback'
-                                icon={
-                                    <span className='feedbackIconWrapper'>
-                                        <CommentEditRegular />
-                                        {hasEdits && (
-                                            <CounterBadge
-                                                className='feedbackBadge'
-                                                count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
-                                                size='small'
-                                                color='danger'
-                                            />
-                                        )}
-                                    </span>
-                                }
-                                disabled={isAwaitingRevision}
-                                onClick={() => setDrawerOpen(v => !v)}
-                            />
-                            <Button
-                                appearance='primary'
-                                icon={<CheckmarkRegular />}
-                                disabled={isAwaitingRevision}
-                                onClick={handleApprove}
+                            <Tooltip content='Request changes to the plan before approving' relationship='label'>
+                                <Button
+                                    appearance='subtle'
+                                    aria-label='Feedback'
+                                    icon={
+                                        <span className='feedbackIconWrapper'>
+                                            <CommentEditRegular />
+                                            {hasEdits && (
+                                                <CounterBadge
+                                                    className='feedbackBadge'
+                                                    count={allItems.length + (freeformDraft.trim() ? 1 : 0)}
+                                                    size='small'
+                                                    color='danger'
+                                                />
+                                            )}
+                                        </span>
+                                    }
+                                    disabled={isAwaitingRevision}
+                                    onClick={() => setDrawerOpen((v) => !v)}
+                                />
+                            </Tooltip>
+                            <Tooltip
+                                content={isAlreadyApproved ? 'Plan already approved' : 'Approve the plan and continue with Copilot'}
+                                relationship='label'
                             >
-                                Approve Plan
-                            </Button>
+                                <Button
+                                    appearance='primary'
+                                    icon={<CheckmarkRegular />}
+                                    disabled={isAwaitingRevision || isAlreadyApproved}
+                                    onClick={handleApprove}
+                                >
+                                    Approve Plan
+                                </Button>
+                            </Tooltip>
                         </div>
                     </div>
                 </div>
@@ -211,25 +336,29 @@ export const LocalPlanView = (): JSX.Element => {
                     </div>
                 )}
 
-                {plan.sections
-                    .filter((s) => !isHiddenSection(s.title))
-                    .sort((a, b) => {
-                        const aIsPrereq = a.title.toLowerCase() === 'prerequisites' ? 0 : 1;
-                        const bIsPrereq = b.title.toLowerCase() === 'prerequisites' ? 0 : 1;
-                        return aIsPrereq - bIsPrereq;
-                    })
-                    .map((section, i) => (
-                        <SectionCard
-                            key={i}
-                            section={section}
-                            collapsible={!alwaysExpandedSections.has(section.title.toLowerCase())}
-                        />
-                    ))}
+                <PlanToggleContext.Provider value={planToggleContextValue}>
+                    {plan.sections
+                        .filter((s) => !shouldHideSection(s))
+                        .sort((a, b) => sectionSortOrder(a.title) - sectionSortOrder(b.title))
+                        .map((section, i) => {
+                            const lower = section.title.toLowerCase().trim();
+                            const collapsible = !ALWAYS_EXPANDED_SECTIONS.has(lower);
+                            const defaultOpen = !collapsible || DEFAULT_OPEN_SECTIONS.has(lower);
+                            return (
+                                <SectionCard
+                                    key={i}
+                                    section={section}
+                                    collapsible={collapsible}
+                                    defaultOpen={defaultOpen}
+                                />
+                            );
+                        })}
+                </PlanToggleContext.Provider>
             </div>
 
             {drawerOpen && !isAwaitingRevision && (
                 <FeedbackDrawer
-                    items={feedbackItems}
+                    items={allItems}
                     freeformDraft={freeformDraft}
                     onFreeformChange={setFreeformDraft}
                     onAddNote={handleAddNote}
@@ -242,7 +371,7 @@ export const LocalPlanView = (): JSX.Element => {
 
             <SubmitEditsDialog
                 open={confirmSubmitOpen}
-                editCount={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
+                editCount={allItems.length + (freeformDraft.trim() ? 1 : 0)}
                 onCancel={() => setConfirmSubmitOpen(false)}
                 onSubmit={handleSubmitFeedback}
             />
@@ -274,17 +403,12 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
                     onClick={onClose}
                 />
             </div>
+            <p className='drawerInfo'>Your feedback will be sent to Copilot as a prompt. Copilot will revise the plan and update the file. The updated plan will reload here for your final approval.</p>
 
             <div className='drawerBody'>
-                {items.length === 0 && (
-                    <p className='drawerHint'>
-                        Add a free-form note for Copilot describing the changes you'd like to see in this plan.
-                    </p>
-                )}
-
                 {items.length > 0 && (
                     <ul className='feedbackList'>
-                        {items.map(item => (
+                        {items.map((item) => (
                             <li key={item.id} className='feedbackItem freeform'>
                                 <span className='feedbackFreeformText'>{item.text}</span>
                                 <Button
@@ -367,8 +491,8 @@ const SubmitEditsDialog = ({ open, editCount, onCancel, onSubmit }: SubmitEditsD
     </Dialog>
 );
 
-const SectionCard = ({ section, collapsible }: { section: LocalPlanSection; collapsible: boolean }): JSX.Element => {
-    const [open, setOpen] = useState(!collapsible);
+const SectionCard = ({ section, collapsible, defaultOpen }: { section: LocalPlanSection; collapsible: boolean; defaultOpen: boolean }): JSX.Element => {
+    const [open, setOpen] = useState(defaultOpen);
 
     return (
         <div className='sectionCard'>
@@ -382,7 +506,7 @@ const SectionCard = ({ section, collapsible }: { section: LocalPlanSection; coll
             {open && (
                 <div className='sectionContent'>
                     {section.content.map((item, i) => (
-                        <ContentBlock key={i} item={item} />
+                        <ContentBlock key={i} item={item} sectionTitle={section.title} />
                     ))}
                 </div>
             )}
@@ -390,15 +514,13 @@ const SectionCard = ({ section, collapsible }: { section: LocalPlanSection; coll
     );
 };
 
-function isHiddenSection(title: string): boolean {
-    const lower = title.toLowerCase();
-    return lower === 'execution checklist' || lower === 'manual tests';
-}
-
-const ContentBlock = ({ item }: { item: LocalPlanContent }): JSX.Element | null => {
+const ContentBlock = ({ item, sectionTitle }: { item: LocalPlanContent; sectionTitle: string }): JSX.Element | null => {
     switch (item.type) {
         case 'table':
-            return <TableAsList rows={item.rows} />;
+            if (findGenerateColumnIdx(item.headers) >= 0) {
+                return <GenerateCheckboxTable table={item} sectionTitle={sectionTitle} />;
+            }
+            return <DataTable headers={item.headers} rows={item.rows} />;
         case 'codeBlock':
             if (item.language?.toLowerCase() === 'mermaid') {
                 return <MermaidBlock code={item.code} />;
@@ -411,22 +533,102 @@ const ContentBlock = ({ item }: { item: LocalPlanContent }): JSX.Element | null 
         case 'paragraph':
             return <p className='paragraph' dangerouslySetInnerHTML={{ __html: formatInline(item.text) }} />;
         case 'subsection':
-            return <SubsectionBlock title={item.title} content={item.content} />;
+            return <SubsectionBlock title={item.title} content={item.content} sectionTitle={sectionTitle} />;
     }
 };
 
-const TableAsList = ({ rows }: { rows: string[][] }): JSX.Element => (
-    <ul className='bulletList'>
-        {rows.map((row, ri) => {
-            const [label, ...rest] = row;
-            const value = rest.join(' — ').trim();
-            const html = value
-                ? `<strong>${formatInline(label)}</strong>: ${formatInline(value)}`
-                : formatInline(label);
-            return <li key={ri} dangerouslySetInnerHTML={{ __html: html }} />;
-        })}
-    </ul>
+const DataTable = ({ headers, rows }: { headers: string[]; rows: string[][] }): JSX.Element => (
+    <div className='dataTableWrapper'>
+        <table className='dataTable'>
+            <thead>
+                <tr>
+                    {headers.map((h, hi) => (
+                        <th key={hi} dangerouslySetInnerHTML={{ __html: formatInline(h) }} />
+                    ))}
+                </tr>
+            </thead>
+            <tbody>
+                {rows.map((row, ri) => (
+                    <tr key={ri}>
+                        {row.map((cell, ci) => (
+                            <td key={ci} dangerouslySetInnerHTML={{ __html: formatInline(cell) }} />
+                        ))}
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    </div>
 );
+
+/**
+ * Renders a table whose Generate column contains `[x]`/`[ ]` markdown
+ * checkboxes. Toggling a checkbox stages a feedback note in the drawer
+ * (keyed by row); the plan file is left untouched until Copilot revises it.
+ */
+const GenerateCheckboxTable = ({ table, sectionTitle }: { table: TableBlock; sectionTitle: string }): JSX.Element => {
+    const { getToggle, setToggle } = useContext(PlanToggleContext);
+    const generateIdx = findGenerateColumnIdx(table.headers);
+
+    const originalStates = useMemo(
+        () => table.rows.map((r) => /\[\s*x\s*\]/i.test(r[generateIdx] ?? '')),
+        [table.rows, generateIdx],
+    );
+
+    const rowLabel = useCallback((rowIdx: number): string => {
+        const row = table.rows[rowIdx];
+        const labelIdx = generateIdx + 1 < row.length ? generateIdx + 1 : row.findIndex((_, i) => i !== generateIdx);
+        const raw = labelIdx >= 0 ? (row[labelIdx] ?? '').trim() : '';
+        const cleaned = raw.replace(/[*`]/g, '').trim();
+        return cleaned || `row ${rowIdx + 1}`;
+    }, [table.rows, generateIdx]);
+
+    const toggleRow = useCallback((rowIdx: number) => {
+        const next = !(getToggle(`${sectionTitle}::${table.lineStart}::${rowIdx}`)?.generate ?? originalStates[rowIdx]);
+        const key = `${sectionTitle}::${table.lineStart}::${rowIdx}`;
+        if (next === originalStates[rowIdx]) {
+            setToggle(key, null);
+            return;
+        }
+        setToggle(key, { sectionTitle, rowLabel: rowLabel(rowIdx), generate: next });
+    }, [getToggle, setToggle, sectionTitle, table.lineStart, originalStates, rowLabel]);
+
+    return (
+        <div className='dataTableWrapper'>
+            <table className='dataTable'>
+                <thead>
+                    <tr>
+                        {table.headers.map((h, hi) => (
+                            <th key={hi} dangerouslySetInnerHTML={{ __html: formatInline(h) }} />
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {table.rows.map((row, ri) => {
+                        const key = `${sectionTitle}::${table.lineStart}::${ri}`;
+                        const checked = getToggle(key)?.generate ?? originalStates[ri];
+                        return (
+                            <tr key={ri}>
+                                {row.map((cell, ci) => {
+                                    if (ci === generateIdx) {
+                                        return (
+                                            <td key={ci} className='dataTableCheckboxCell'>
+                                                <Checkbox
+                                                    checked={checked}
+                                                    onChange={() => toggleRow(ri)}
+                                                />
+                                            </td>
+                                        );
+                                    }
+                                    return <td key={ci} dangerouslySetInnerHTML={{ __html: formatInline(cell) }} />;
+                                })}
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
+};
 
 const CodeBlock = ({ language, code }: { language: string; code: string }): JSX.Element => (
     <div className='codeBlock'>
@@ -479,9 +681,8 @@ const BlockquoteBlock = ({ text }: { text: string }): JSX.Element => (
     <div className='blockquote' dangerouslySetInnerHTML={{ __html: formatInline(text) }} />
 );
 
-const SubsectionBlock = ({ title, content }: { title: string; content: LocalPlanContent[] }): JSX.Element => {
+const SubsectionBlock = ({ title, content, sectionTitle }: { title: string; content: LocalPlanContent[]; sectionTitle: string }): JSX.Element => {
     const [open, setOpen] = useState(false);
-
     return (
         <div className='subsection'>
             <div className='subsectionHeading clickable' onClick={() => setOpen(!open)}>
@@ -491,7 +692,7 @@ const SubsectionBlock = ({ title, content }: { title: string; content: LocalPlan
             {open && (
                 <div className='subsectionContent'>
                     {content.map((item, i) => (
-                        <ContentBlock key={i} item={item} />
+                        <ContentBlock key={i} item={item} sectionTitle={sectionTitle} />
                     ))}
                 </div>
             )}
@@ -500,10 +701,17 @@ const SubsectionBlock = ({ title, content }: { title: string; content: LocalPlan
 };
 
 function formatInline(text: string): string {
-    return escapeHtml(text)
+    return escapeHtml(text.trim())
         .replace(/`([^`]+)`/g, '<code>$1</code>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<span class="link" title="$2">$1</span>');
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
+        // Auto-link bare URLs (e.g. install columns in the Prerequisites table)
+        // — skipped when the URL already follows the `"` of an existing href.
+        .replace(/(^|[^"'>])(https?:\/\/[^\s<]+[^\s<.,;:!?)\]])/g, '$1<a href="$2" target="_blank" rel="noreferrer">$2</a>')
+        // Restore a small whitelist of presentational HTML tags that the agent
+        // emits inside table cells (collapsible endpoint lists, line breaks).
+        .replace(/&lt;(\/?(?:details|summary|br))(\s[^&]*?)?\s*\/?&gt;/gi, '<$1$2>');
 }
 
 function escapeHtml(text: string): string {

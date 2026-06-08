@@ -6,6 +6,21 @@
 import { type DeploymentPlanData, type DeploymentPlanTable } from "./deploymentPlanTypes";
 
 /**
+ * Canonical section heading (first entry) and tolerated aliases for each part
+ * of the deployment plan. These MUST stay in sync with the `## …` headings
+ * emitted by the deployment-plan template in the azure-deploy skill — keep this
+ * as the single source of truth so the parser and the skill template don't drift
+ * apart. Aliases exist only to tolerate older or user-authored plans.
+ */
+const DEPLOYMENT_SECTION_ALIASES = {
+    requirements: ['Requirements'],
+    architectureDiagram: ['Architecture Diagram', 'Architecture'],
+    workspaceScan: ['Workspace Scan', 'Components Detected'],
+    decisions: ['Decisions', 'Recipe Selection'],
+    resources: ['Service Mapping', 'Azure Resources', 'Provisioning Limit Checklist'],
+} as const;
+
+/**
  * Parses a deployment plan markdown file into DeploymentPlanData.
  *
  * Expected format:
@@ -39,23 +54,28 @@ import { type DeploymentPlanData, type DeploymentPlanTable } from "./deploymentP
  */
 export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanData {
     const lines = markdown.replace(/\r\n/g, '\n').split('\n');
+    const requirements = extractAttributeValueTable(findSectionByName(extractNamedSections(lines), DEPLOYMENT_SECTION_ALIASES.requirements));
 
     const status = extractMetadata(lines, 'Status') ?? 'Unknown';
     const mode = extractMetadata(lines, 'Mode') ?? 'Unknown';
-    const subscription = extractMetadata(lines, 'Subscription') ?? 'Unknown';
-    const rawLocation = extractMetadata(lines, 'Location') ?? 'Unknown';
+    const subscription = extractMetadata(lines, 'Subscription') ?? requirements['Subscription'] ?? 'Unknown';
+    const rawLocation = extractMetadata(lines, 'Location') ?? requirements['Location'] ?? 'Unknown';
 
     // Parse location: "East US (`eastus`)" → name="East US", code="eastus"
-    const locationMatch = rawLocation.match(/^(.+?)\s*\(`?([^`)]+)`?\)\s*$/);
+    const locationMatch = rawLocation.match(/^(.+?)\s*\(`?([a-z0-9]+)`?\)\s*$/i);
     const location = locationMatch ? locationMatch[1].trim() : rawLocation;
     const locationCode = locationMatch ? locationMatch[2].trim() : extractMetadata(lines, 'LocationCode') ?? 'unknown';
 
     const sections = extractNamedSections(lines);
 
-    const mermaidDiagram = extractMermaidBlock(sections['Architecture Diagram'] ?? []);
-    const workspaceScan = extractTable(sections['Workspace Scan'] ?? []);
-    const decisions = extractTable(sections['Decisions'] ?? []);
-    const resources = extractTable(sections['Azure Resources'] ?? []);
+    // Support alternate section headings for compatibility with user-authored plans
+    const mermaidDiagram = extractMermaidBlock(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.architectureDiagram));
+
+    const workspaceScan = extractTable(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.workspaceScan));
+
+    const decisions = extractTable(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.decisions));
+
+    const resources = extractTable(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.resources));
 
     // Provide placeholder dropdown options when values are unknown
     const availableSubscriptions = subscription === 'Unknown'
@@ -92,8 +112,8 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
 
 function extractMetadata(lines: string[], key: string): string | undefined {
     for (const line of lines) {
-        // Match both **Key**: value and **Key:** value
-        const match = line.match(new RegExp(`^\\*\\*${key}:?\\*\\*:?\\s*(.+)$`));
+        // Match both **Key**: value and **Key:** value, optionally inside a markdown blockquote.
+        const match = line.match(new RegExp(`^>?\\s*\\*\\*${key}:?\\*\\*:?\\s*(.+)$`));
         if (match) {
             return match[1].trim();
         }
@@ -101,20 +121,67 @@ function extractMetadata(lines: string[], key: string): string | undefined {
     return undefined;
 }
 
+function findSectionByName(sections: Record<string, string[]>, names: readonly string[]): string[] {
+    const normalized = new Map(Object.entries(sections).map(([name, value]) => [normalizeSectionName(name), value]));
+    for (const name of names) {
+        const match = normalized.get(normalizeSectionName(name));
+        if (match) {
+            return match;
+        }
+    }
+    return [];
+}
+
+function normalizeSectionName(name: string): string {
+    return name.replace(/^\d+\.\s+/, '').trim().toLowerCase();
+}
+
+function extractAttributeValueTable(lines: string[]): Record<string, string> {
+    const table = extractTable(lines);
+    if (table.headers.length < 2) {
+        return {};
+    }
+
+    const values: Record<string, string> = {};
+    for (const row of table.rows) {
+        const key = row[0]?.trim();
+        const value = row[1]?.trim();
+        if (key && value) {
+            values[key] = value;
+        }
+    }
+    return values;
+}
+
 function extractNamedSections(lines: string[]): Record<string, string[]> {
     const sections: Record<string, string[]> = {};
-    let currentTitle: string | undefined;
+    let currentH2: string | undefined;
+    let currentH3: string | undefined;
 
     for (const line of lines) {
-        const sectionMatch = line.match(/^##\s+(?:\d+\.\s+)?(.+)$/);
-        if (sectionMatch) {
-            currentTitle = sectionMatch[1].trim();
-            sections[currentTitle] = [];
+        const h2Match = line.match(/^##\s+(?:\d+\.\s+)?(.+)$/);
+        if (h2Match) {
+            currentH2 = h2Match[1].trim();
+            currentH3 = undefined;
+            sections[currentH2] = [];
             continue;
         }
 
-        if (currentTitle) {
-            sections[currentTitle].push(line);
+        const h3Match = line.match(/^###\s+(?:\d+\.\s+)?(.+)$/);
+        if (h3Match) {
+            currentH3 = h3Match[1].trim();
+            sections[currentH3] = [];
+            if (currentH2) {
+                sections[currentH2].push(line);
+            }
+            continue;
+        }
+
+        if (currentH3) {
+            sections[currentH3].push(line);
+        }
+        if (currentH2) {
+            sections[currentH2].push(line);
         }
     }
 

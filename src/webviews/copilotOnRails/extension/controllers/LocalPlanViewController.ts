@@ -9,6 +9,7 @@ import { ViewColumn } from "vscode";
 import { ext } from "../../../../extensionVariables";
 import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
@@ -24,7 +25,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                     void this.panel.webview.postMessage({ command: 'setLocalPlanData', data: planData });
                     break;
                 case 'approvePlan':
-                    void vscode.commands.executeCommand('azureProjectCreation.completeStep', 'projectCreation/localDevelopment/defineLocalPlan');
                     void vscode.commands.executeCommand('workbench.action.chat.open', {
                         mode: 'agent',
                         query: 'I approve the local dev plan.',
@@ -44,7 +44,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                     break;
                 }
                 case 'openSourceFile':
-                    this.openSourceFile();
+                    openSourceFileOrWarn(this.sourceFileUri);
                     break;
             }
         });
@@ -56,15 +56,5 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         }
         void this.panel.webview.postMessage({ command: 'setLocalPlanData', data: planData });
         void this.panel.webview.postMessage({ command: 'revisionComplete' });
-    }
-
-    private openSourceFile(): void {
-        if (!this.sourceFileUri) {
-            void vscode.window.showWarningMessage(
-                vscode.l10n.t('The plan file location is unknown. Locate it manually in the workspace.'),
-            );
-            return;
-        }
-        void vscode.commands.executeCommand('vscode.open', this.sourceFileUri);
     }
 }

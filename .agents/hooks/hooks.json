@@ -1,0 +1,13 @@
+{
+    "hooks": {
+        "PostToolUse": [
+            {
+                "type": "command",
+                "command": "bash --noprofile --norc -c 'cd \"$HOME/.agents/hooks\" && chmod +x ./scripts/track-telemetry.sh && ./scripts/track-telemetry.sh'",
+                "windows": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& { Set-Location (Join-Path $env:USERPROFILE '.agents\\hooks'); & '.\\scripts\\track-telemetry.ps1' }\"",
+                "linux": "bash --noprofile --norc -c 'cd \"$HOME/.agents/hooks\" && chmod +x ./scripts/track-telemetry.sh && ./scripts/track-telemetry.sh'",
+                "osx": "bash --noprofile --norc -c 'cd \"$HOME/.agents/hooks\" && chmod +x ./scripts/track-telemetry.sh && ./scripts/track-telemetry.sh'"
+            }
+        ]
+    }
+}

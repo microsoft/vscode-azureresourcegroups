@@ -100,6 +100,9 @@
         ],
         "chatAgents": [
             {
+                "path": "resources/agents/azure-project-plan.agent.md"
+            },
+            {
                 "path": "resources/agents/azure-project-scaffold.agent.md"
             },
             {
@@ -377,11 +380,6 @@
                 "title": "%azureResourceGroups.askAzure%"
             },
             {
-                "command": "azureResourceGroups.createProjectWithCopilot",
-                "title": "%azureResourceGroups.createProjectWithCopilot%",
-                "category": "Azure"
-            },
-            {
                 "command": "azureResourceGroups.openPlanView",
                 "title": "%azureResourceGroups.openPlanView%",
                 "category": "Azure"
@@ -394,6 +392,11 @@
             {
                 "command": "azureResourceGroups.openDeployPlanView",
                 "title": "%azureResourceGroups.openDeployPlanView%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openRequirementsView",
+                "title": "%azureResourceGroups.openRequirementsView%",
                 "category": "Azure"
             }
         ],
@@ -432,11 +435,6 @@
                     "visibility": "visible"
                 },
                 {
-                    "id": "azureProject",
-                    "name": "%azureProject.viewName%",
-                    "visibility": "visible"
-                },
-                {
                     "id": "azureTenantsView",
                     "name": "Accounts & Tenants",
                     "visibility": "collapsed"
@@ -454,6 +452,14 @@
                     "visibility": "collapsed",
                     "icon": "$(azure)",
                     "type": "tree"
+                }
+            ],
+            "explorer": [
+                {
+                    "id": "azureProject",
+                    "name": "%azureProject.viewName%",
+                    "visibility": "visible",
+                    "when": "ms-azuretools.vscode-azureresourcegroups.hasProjectPlanFiles == true || ms-azuretools.vscode-azureresourcegroups.isEmptyWorkspace == true"
                 }
             ]
         },
