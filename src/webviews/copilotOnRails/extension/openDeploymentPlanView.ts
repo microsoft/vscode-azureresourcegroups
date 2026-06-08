@@ -91,9 +91,8 @@ function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | und
 
 export async function openDeploymentPlanViewFromWorkspace(): Promise<void> {
     const selected = await pickWorkspaceFile(
-        '**/.azure/deployment-plan.md',
+        '.azure/deployment-plan.md',
         vscode.l10n.t('No deployment plan markdown files found in the workspace.'),
-        vscode.l10n.t('Select a deployment plan file to open'),
     );
     if (selected) {
         await openDeploymentPlanViewAsync(selected);

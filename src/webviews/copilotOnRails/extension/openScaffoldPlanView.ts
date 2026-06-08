@@ -56,9 +56,8 @@ function tryParseScaffoldPlan(content: string, sourceFileUri: vscode.Uri | undef
 
 export async function openPlanViewFromWorkspace(): Promise<void> {
     const selected = await pickWorkspaceFile(
-        '**/.azure/project-plan.md',
+        '.azure/project-plan.md',
         vscode.l10n.t('No plan markdown files found in the workspace.'),
-        vscode.l10n.t('Select a plan file to open'),
     );
     if (selected) {
         await openPlanViewAsync(selected);

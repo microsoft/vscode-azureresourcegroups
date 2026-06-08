@@ -57,25 +57,17 @@ export function watchSingleFile(uri: vscode.Uri, reload: () => void): vscode.Dis
 }
 
 /**
- * Find files matching `glob` in the workspace and resolve to a single selection:
- * - no matches → show `noFilesMessage`, resolve `undefined`
- * - one match → resolve it
- * - many matches → prompt with a quick pick (resolve `undefined` if dismissed)
+ * Find a workspace file matching `glob` (a workspace-root-relative path).
+ * Resolves to the file's URI, or `undefined` after showing `noFilesMessage`
+ * when nothing matches.
  */
-export async function pickWorkspaceFile(glob: string, noFilesMessage: string, placeHolder: string): Promise<vscode.Uri | undefined> {
-    const files = await vscode.workspace.findFiles(glob, '**/node_modules/**', 10);
-    if (files.length === 0) {
+export async function pickWorkspaceFile(glob: string, noFilesMessage: string): Promise<vscode.Uri | undefined> {
+    const [file] = await vscode.workspace.findFiles(glob, undefined, 1);
+    if (!file) {
         void vscode.window.showInformationMessage(noFilesMessage);
         return undefined;
     }
-    if (files.length === 1) {
-        return files[0];
-    }
-    const picked = await vscode.window.showQuickPick(
-        files.map((f) => ({ label: vscode.workspace.asRelativePath(f), uri: f })),
-        { placeHolder },
-    );
-    return picked?.uri;
+    return file;
 }
 
 /**

@@ -9,7 +9,6 @@ import { ViewColumn } from "vscode";
 import { ext } from "../../../../extensionVariables";
 import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
-import { copilotOnRailsCommandIds } from "../copilotOnRailsCommands";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
@@ -26,7 +25,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                     void this.panel.webview.postMessage({ command: 'setLocalPlanData', data: planData });
                     break;
                 case 'approvePlan':
-                    void vscode.commands.executeCommand(copilotOnRailsCommandIds.completeStep, 'projectCreation/localDevelopment/defineLocalPlan');
                     void vscode.commands.executeCommand('workbench.action.chat.open', {
                         mode: 'agent',
                         query: 'I approve the local dev plan.',

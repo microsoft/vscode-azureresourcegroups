@@ -16,5 +16,4 @@ export const copilotOnRailsCommandIds = {
     openLocalPlanView: 'azureResourceGroups.openLocalPlanView',
     openDeploymentPlanView: 'azureResourceGroups.openDeployPlanView',
     openRequirementsView: 'azureResourceGroups.openRequirementsView',
-    completeStep: 'azureProjectCreation.completeStep',
 } as const;

@@ -9,7 +9,6 @@ import { ViewColumn } from "vscode";
 import { ext } from "../../../../extensionVariables";
 import { type PlanData } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
-import { copilotOnRailsCommandIds } from "../copilotOnRailsCommands";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class ScaffoldPlanViewController extends WebviewController<Record<string, never>> {
@@ -26,7 +25,6 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     void this.panel.webview.postMessage({ command: 'setPlanData', data: planData });
                     break;
                 case 'approvePlan':
-                    void vscode.commands.executeCommand(copilotOnRailsCommandIds.completeStep, 'projectCreation/plan/definePlan');
                     void vscode.commands.executeCommand('workbench.action.chat.open', {
                         mode: 'azure-project-scaffold',
                         query: 'I approve the plan.',

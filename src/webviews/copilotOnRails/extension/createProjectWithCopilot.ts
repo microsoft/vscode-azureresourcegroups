@@ -12,8 +12,8 @@ const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
 
 export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
-    // Local Development complete => offer Deploy.
-    if (await hasCompletedPhase('**/vscode-debug-plan.md', 'implemented')) {
+    // Local Development => Deploy
+    if (await hasCompletedPhase('.azure/vscode-debug-plan.md', 'implemented')) {
         const choice = await vscode.window.showInformationMessage(
             vscode.l10n.t('We detected a previous Copilot session with a completed local debug configuration. Would you like to deploy this project?'),
             { modal: true },
@@ -26,8 +26,8 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
         return;
     }
 
-    // Project scaffolded => offer Local Development or Deploy.
-    if (await hasCompletedPhase('**/.azure/project-plan.md', 'scaffolded')) {
+    // Create => Debug | Deploy
+    if (await hasCompletedPhase('.azure/project-plan.md', 'scaffolded')) {
         const choice = await vscode.window.showInformationMessage(
             vscode.l10n.t('We detected a previous Copilot session with a fully scaffolded project. How would you like to proceed?'),
             { modal: true },

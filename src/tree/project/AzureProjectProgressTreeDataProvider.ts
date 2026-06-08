@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { copilotOnRailsCommandIds } from '../../webviews/copilotOnRails/extension/copilotOnRailsCommands';
-import { getDebugConfigurations, getProjectPlanFiles, type ProjectPlanFilesWatcher } from './projectPlanFiles';
-
-type ProgressState = 'completed' | 'current' | 'notStarted';
-
-const notStartedDecorationScheme = 'azure-project-progress-notstarted';
+import { DeploymentStageItem } from './DeploymentStageItem';
+import { LocalDevelopmentStageItem } from './LocalDevelopmentStageItem';
+import { ProgressNode } from './ProgressNode';
+import { ProjectCreationStageItem } from './ProjectCreationStageItem';
+import { getProjectPlanFiles, type ProjectPlanFilesWatcher } from './projectPlanFiles';
+import { notStartedDecorationScheme, StageNode } from './StageNode';
 
 class NotStartedDecorationProvider implements vscode.FileDecorationProvider {
     provideFileDecoration(uri: vscode.Uri): vscode.FileDecoration | undefined {
@@ -21,30 +21,6 @@ class NotStartedDecorationProvider implements vscode.FileDecorationProvider {
         };
     }
 }
-
-interface StageNode {
-    readonly kind: 'stage';
-    readonly id: string;
-    readonly label: string;
-    readonly stepNumber: number;
-    readonly state: ProgressState;
-    readonly hasPlanFile: boolean;
-    readonly openPlanCommandId: string;
-    readonly startCommandId: string;
-    readonly stageKind: 'projectCreation' | 'localDevelopment' | 'deployment';
-}
-
-interface ActionNode {
-    readonly kind: 'action';
-    readonly id: string;
-    readonly label: string;
-    readonly description?: string;
-    readonly iconName: string;
-    readonly commandId?: string;
-    readonly commandArguments?: unknown[];
-}
-
-type ProgressNode = StageNode | ActionNode;
 
 export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProvider<ProgressNode>, vscode.Disposable {
     private readonly onDidChangeTreeDataEmitter = new vscode.EventEmitter<ProgressNode | undefined | void>();
@@ -78,37 +54,7 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
     }
 
     getTreeItem(element: ProgressNode): vscode.TreeItem {
-        if (element.kind === 'stage') {
-            const item = new vscode.TreeItem(
-                vscode.l10n.t('{0}. {1}', element.stepNumber.toString(), element.label),
-                element.state === 'current'
-                    ? vscode.TreeItemCollapsibleState.Expanded
-                    : vscode.TreeItemCollapsibleState.Collapsed,
-            );
-            item.id = `${element.id}.${element.state}`;
-            item.description = toStageDescription(element.state);
-            item.tooltip = new vscode.MarkdownString(`**${element.label}** — ${toStateText(element.state)}`);
-            item.iconPath = toStageIcon(element.state, element.id);
-            if (element.state === 'notStarted') {
-                item.resourceUri = vscode.Uri.from({ scheme: notStartedDecorationScheme, path: `/${element.id}` });
-            }
-            return item;
-        }
-
-        const actionItem = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
-        actionItem.id = element.id;
-        actionItem.iconPath = new vscode.ThemeIcon(element.iconName);
-        actionItem.tooltip = element.description ?? element.label;
-
-        if (element.commandId) {
-            actionItem.command = {
-                command: element.commandId,
-                title: '',
-                arguments: element.commandArguments,
-            };
-        }
-
-        return actionItem;
+        return element.getTreeItem();
     }
 
     async getChildren(element?: ProgressNode): Promise<ProgressNode[]> {
@@ -116,11 +62,7 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
             return this.getStageNodes();
         }
 
-        if (element.kind === 'stage') {
-            return this.getActionNodes(element);
-        }
-
-        return [];
+        return element.getChildren();
     }
 
     private async getStageNodes(): Promise<StageNode[]> {
@@ -132,143 +74,10 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
             return [];
         }
 
-        const currentStep = files.currentStage;
-
         return [
-            {
-                kind: 'stage',
-                id: 'azureProject.stage.projectCreation',
-                label: vscode.l10n.t('Project Creation'),
-                stepNumber: 1,
-                state: getState(0, currentStep),
-                hasPlanFile: files.hasProjectPlan,
-                openPlanCommandId: copilotOnRailsCommandIds.openScaffoldPlanView,
-                startCommandId: copilotOnRailsCommandIds.createProjectWithCopilot,
-                stageKind: 'projectCreation',
-            },
-            {
-                kind: 'stage',
-                id: 'azureProject.stage.localDevelopment',
-                label: vscode.l10n.t('Local Development'),
-                stepNumber: 2,
-                state: getState(1, currentStep),
-                hasPlanFile: files.hasLocalDevelopmentPlan,
-                openPlanCommandId: copilotOnRailsCommandIds.openLocalPlanView,
-                startCommandId: copilotOnRailsCommandIds.startLocalDevelopment,
-                stageKind: 'localDevelopment',
-            },
-            {
-                kind: 'stage',
-                id: 'azureProject.stage.deployment',
-                label: vscode.l10n.t('Deployment'),
-                stepNumber: 3,
-                state: getState(2, currentStep),
-                hasPlanFile: files.hasDeploymentPlan,
-                openPlanCommandId: copilotOnRailsCommandIds.openDeploymentPlanView,
-                startCommandId: copilotOnRailsCommandIds.startDeployment,
-                stageKind: 'deployment',
-            },
+            new ProjectCreationStageItem(files.currentStage, files.hasProjectPlan),
+            new LocalDevelopmentStageItem(files.currentStage, files.hasLocalDevelopmentPlan),
+            new DeploymentStageItem(files.currentStage, files.hasDeploymentPlan),
         ];
     }
-
-    private getActionNodes(stage: StageNode): ActionNode[] {
-        const actions: ActionNode[] = [];
-
-        const debugConfigs = stage.stageKind === 'localDevelopment' && stage.hasPlanFile
-            ? getDebugConfigurations()
-            : [];
-
-        if (stage.hasPlanFile && debugConfigs.length === 0) {
-            actions.push({
-                kind: 'action',
-                id: `${stage.id}.openPlan`,
-                label: vscode.l10n.t('Open plan'),
-                iconName: 'preview',
-                commandId: stage.openPlanCommandId,
-            });
-        }
-
-        if (!stage.hasPlanFile) {
-            actions.push({
-                kind: 'action',
-                id: `${stage.id}.start`,
-                label: vscode.l10n.t('Start'),
-                iconName: 'play-circle',
-                commandId: stage.startCommandId,
-            });
-        }
-
-        for (const config of debugConfigs) {
-            actions.push({
-                kind: 'action',
-                id: `${stage.id}.debug.${config.folder.uri.toString()}.${config.name}`,
-                label: vscode.l10n.t('Debug: {0}', config.name),
-                description: vscode.l10n.t('Start debugging "{0}"', config.name),
-                iconName: 'debug-alt',
-                commandId: 'workbench.action.debug.selectandstart',
-                commandArguments: [config.name],
-            });
-        }
-
-        if (actions.length === 0) {
-            actions.push({
-                kind: 'action',
-                id: `${stage.id}.none`,
-                label: vscode.l10n.t('No actions available'),
-                iconName: 'info',
-            });
-        }
-
-        return actions;
-    }
-}
-
-function getState(stepIndex: number, currentStep: number): ProgressState {
-    if (stepIndex < currentStep) {
-        return 'completed';
-    }
-
-    if (stepIndex === currentStep) {
-        return 'current';
-    }
-
-    return 'notStarted';
-}
-
-function toStageDescription(state: ProgressState): string {
-    return toStateText(state);
-}
-
-function toStateText(state: ProgressState): string {
-    switch (state) {
-        case 'completed':
-            return vscode.l10n.t('Completed');
-        case 'current':
-            return vscode.l10n.t('Current');
-        default:
-            return vscode.l10n.t('Not started');
-    }
-}
-
-function toStageIcon(state: ProgressState, stageId: string): vscode.ThemeIcon {
-    switch (state) {
-        case 'completed':
-            return new vscode.ThemeIcon('pass-filled');
-        case 'current':
-            return new vscode.ThemeIcon(toStageIconName(stageId));
-        default:
-            return new vscode.ThemeIcon(toStageIconName(stageId), new vscode.ThemeColor('disabledForeground'));
-    }
-}
-
-function toStageIconName(stageId: string): string {
-    if (stageId.includes('projectCreation')) {
-        return 'new-file';
-    }
-
-    if (stageId.includes('localDevelopment')) {
-        return 'terminal';
-    }
-
-    return 'rocket';
 }

@@ -8,7 +8,7 @@ import { parseRequirementsJson, type RequirementsData } from "../views/utils/par
 import { RequirementsViewController } from "./controllers/RequirementsViewController";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
-export const REQUIREMENTS_FILE_GLOB = '**/.azure/requirements.json';
+export const REQUIREMENTS_FILE_GLOB = '.azure/requirements.json';
 
 const host = new SingletonViewHost<RequirementsData, RequirementsViewController>({
     createController: (data, uri) => new RequirementsViewController(data, uri),
@@ -70,7 +70,6 @@ export async function openRequirementsViewFromWorkspace(): Promise<void> {
     const selected = await pickWorkspaceFile(
         REQUIREMENTS_FILE_GLOB,
         vscode.l10n.t('No requirements file found. Expected `.azure/requirements.json` in the workspace.'),
-        vscode.l10n.t('Select a requirements file to open'),
     );
     if (selected) {
         await openRequirementsViewAsync(selected);

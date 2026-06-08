@@ -51,9 +51,8 @@ function tryParseLocalPlan(content: string, sourceFileUri: vscode.Uri | undefine
 
 export async function openLocalPlanViewFromWorkspace(): Promise<void> {
     const selected = await pickWorkspaceFile(
-        '**/vscode-debug-plan.md',
+        '.azure/vscode-debug-plan.md',
         vscode.l10n.t('No local plan markdown files found in the workspace.'),
-        vscode.l10n.t('Select a local plan file to open'),
     );
     if (selected) {
         await openLocalPlanViewAsync(selected);

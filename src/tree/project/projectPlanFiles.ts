@@ -19,14 +19,14 @@ export interface ProjectPlanFiles {
 }
 
 const PLAN_FILE_GLOBS = [
-    '**/.azure/project-plan.md',
-    '**/vscode-debug-plan.md',
-    '**/.azure/deployment-plan.md',
+    '.azure/project-plan.md',
+    '.azure/vscode-debug-plan.md',
+    '.azure/deployment-plan.md',
 ] as const;
 
 export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
     const [projectPlanFiles, localDevelopmentPlanFiles, deploymentPlanFiles] = await Promise.all(
-        PLAN_FILE_GLOBS.map((glob) => vscode.workspace.findFiles(glob, '**/node_modules/**', 1)),
+        PLAN_FILE_GLOBS.map((glob) => vscode.workspace.findFiles(glob, undefined, 1)),
     );
 
     const hasProjectPlan = projectPlanFiles.length > 0;
