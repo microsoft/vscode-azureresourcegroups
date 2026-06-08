@@ -12,7 +12,6 @@ export default defineConfig([
         ignores: [
             'api/dist/**',
             'api/out/**',
-            'src/webviews/copilotOnRails/views/react-shim.js',
         ],
     },
     {
@@ -25,15 +24,6 @@ export default defineConfig([
                     },
                 ],
             }],
-        },
-    },
-    {
-        // The Copilot on Rails React views use display strings as object keys (e.g. "Static Web Apps")
-        // for lookup maps and the React-required `__html` property in `dangerouslySetInnerHTML`.
-        // These don't fit camelCase/PascalCase but are intentional.
-        files: ['src/webviews/copilotOnRails/views/**/*.{ts,tsx}'],
-        rules: {
-            '@typescript-eslint/naming-convention': 'off',
         },
     },
 ]);
