@@ -686,6 +686,10 @@
                     "when": "isWorkspaceTrusted"
                 },
                 {
+                    "command": "azureResourceGroups.startAzureDebugGenerate",
+                    "when": "never"
+                },
+                {
                     "command": "azureResourceGroups.showGroupOptions",
                     "when": "never"
                 },
