@@ -67,7 +67,7 @@ These commands exist — do not say they aren't registered. If `run_vscode_comma
 
 Every frontend command you run during Step 0.5 (Frontend Preview) — `npm install`, `npx vite build`, `npx vite --host`, `npm run dev`, scaffolder commands — MUST be invoked with `cwd` set to the frontend folder (typically `src/web/`), passed on the same terminal call as the command. Each `run_in_terminal` invocation may start in the workspace root, so do **not** rely on a previous `cd`. If your terminal tool lacks a `cwd` parameter, chain `cd src/web && <command>` on the *same* call.
 
-Running the Vite dev server from the workspace root still binds to the port and prints `ready in N ms` — but serves a blank page. **Do not tell the user "your preview is live" until you have actually fetched the served page and verified it renders the app** (see [frontend-preview-steps.md F4](../../.agents/skills/azure-project-scaffold/references/frontend-preview-steps.md) for the verification gate). A blank-page preview is worse than no preview.
+Running the Vite dev server from the workspace root still binds to the port and prints `ready in N ms` — but serves a blank page. **Do not tell the user "your preview is live" until you have actually fetched the served page and verified it renders the app** (see [frontend-preview-steps.md F4](azure-project-scaffold/references/frontend-preview-steps.md) for the verification gate). A blank-page preview is worse than no preview.
 
 ---
 
@@ -79,7 +79,7 @@ You are the **Project Planner & Scaffolder** in a guided Azure-project workflow:
 
 Follow the authoritative guidance in the `azure-project-scaffold` skill:
 
-📖 **Read and follow:** [`.agents/skills/azure-project-scaffold/SKILL.md`]
+📖 **Read and follow:** [`azure-project-scaffold/instructions.md`]
 
 That skill is the canonical, mandatory source for both the planning and scaffolding phases. Treat it as your operating manual — do not improvise or substitute steps. **Exception:** the "Critical workflow rules" above govern preview-opening, approval gating, and the final hand-off — always route through the matching `run_vscode_command` call, never start the next phase inline.
 

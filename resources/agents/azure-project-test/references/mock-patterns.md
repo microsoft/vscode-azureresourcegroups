@@ -37,7 +37,7 @@ export function createMockItem(overrides?: Partial<Item>): Item {
 }
 ```
 
-> For Python (pytest) and C# (xUnit) fixture patterns, see runtime-specific references in [../../../shared-references/runtimes/](../../../shared-references/runtimes/).
+> For Python (pytest) and C# (xUnit) fixture patterns, see runtime-specific references in [../../shared-references/runtimes/](../../shared-references/runtimes/).
 
 ---
 

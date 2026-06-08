@@ -1,12 +1,3 @@
----
-name: azure-project-test
-description: "Add test coverage and build verification to a project scaffolded by azure-project-scaffold. Generates test infrastructure, mock services, test fixtures, unit tests for all routes/services/validation, runs lint sweep, and validates the build. WHEN: \"verify project\", \"add tests\", \"test scaffold\", \"verify scaffold\", \"add test coverage\", \"validate project\", \"project test\", \"azure project test\", \"add unit tests\", \"test coverage\", \"test app\"."
-license: MIT
-metadata:
-  author: Microsoft
-  version: "1.0.0"
----
-
 # Azure Project Test
 
 > **POST-SCAFFOLD VERIFICATION TOOL**

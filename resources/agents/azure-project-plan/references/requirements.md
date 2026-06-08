@@ -54,7 +54,7 @@ When `.azure/plan.md` found:
 
 > What test runner do you want to use?
 
-Present options based on selected runtime. Include brief pros/cons. See [testing.md](testing.md) → Test Runner Quick Reference.
+Present options based on selected runtime. Include brief pros/cons. See [testing.md](../../azure-project-scaffold/references/testing.md) → Test Runner Quick Reference.
 
 ### Q4: Data Stores — Ask only if not detectable from SDK imports or `.azure/plan.md`
 

@@ -1,0 +1,29 @@
+ .../SKILL.md => resources/agents/azure-project-plan/instructions.md       | 0
+ .../agents}/azure-project-plan/references/plan-template.md                | 0
+ .../agents}/azure-project-plan/references/requirements.md                 | 0
+ .../SKILL.md => resources/agents/azure-project-scaffold/instructions.md   | 0
+ .../agents}/azure-project-scaffold/references/frontend-patterns.md        | 0
+ .../agents}/azure-project-scaffold/references/frontend-preview-steps.md   | 0
+ .../agents}/azure-project-scaffold/references/frontend-quality-bar.md     | 0
+ .../agents}/azure-project-scaffold/references/plan-template.md            | 0
+ .../agents}/azure-project-scaffold/references/sub-agent-strategy.md       | 0
+ .../agents}/azure-project-scaffold/references/testing.md                  | 0
+ .../SKILL.md => resources/agents/azure-project-test/instructions.md       | 0
+ .../agents}/azure-project-test/references/frontend-test-patterns.md       | 0
+ .../agents}/azure-project-test/references/handler-test-patterns.md        | 0
+ .../agents}/azure-project-test/references/mandatory-test-patterns.md      | 0
+ .../agents}/azure-project-test/references/mock-patterns.md                | 0
+ .../agents}/azure-project-test/references/test-runners.md                 | 0
+ .../skills => resources/agents}/azure-project-test/references/testing.md  | 0
+ .../agents}/azure-project-test/references/verification-patterns.md        | 0
+ {.agents/skills => resources/agents}/shared-references/architecture.md    | 0
+ .../skills => resources/agents}/shared-references/database-integrity.md   | 0
+ {.agents/skills => resources/agents}/shared-references/error-handling.md  | 0
+ .../agents}/shared-references/examples/service-abstraction-examples.md    | 0
+ {.agents/skills => resources/agents}/shared-references/resilience.md      | 0
+ {.agents/skills => resources/agents}/shared-references/runtimes/dotnet.md | 0
+ {.agents/skills => resources/agents}/shared-references/runtimes/python.md | 0
+ .../skills => resources/agents}/shared-references/runtimes/typescript.md  | 0
+ {.agents/skills => resources/agents}/shared-references/seed-data.md       | 0
+ .../skills => resources/agents}/shared-references/service-abstraction.md  | 0
+ 28 files changed, 0 insertions(+), 0 deletions(-)

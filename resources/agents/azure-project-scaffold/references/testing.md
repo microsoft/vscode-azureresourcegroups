@@ -649,4 +649,4 @@ describe('useAuth', () => {
 
 ### Reference
 
-See [frontend-patterns.md](references/frontend-patterns.md) for complete frontend architecture guidance.
+See [frontend-patterns.md](frontend-patterns.md) for complete frontend architecture guidance.

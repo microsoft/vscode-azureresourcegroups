@@ -187,7 +187,7 @@ project-root/
 
 ## 7. Database Constraints
 
-> List all database-level constraints that migrations must enforce. See [database-integrity.md](references/database-integrity.md).
+> List all database-level constraints that migrations must enforce. See [database-integrity.md](../../shared-references/database-integrity.md).
 
 | Table | Constraint Type | Column(s) | Detail |
 |-------|----------------|-----------|--------|
@@ -216,7 +216,7 @@ project-root/
 
 ## 8. Service Dependency Classification
 
-> Classify each external service to determine failure handling. See [resilience.md](references/resilience.md).
+> Classify each external service to determine failure handling. See [resilience.md](../../shared-references/resilience.md).
 
 | Service | Type | Failure Behavior |
 |---------|------|-----------------|

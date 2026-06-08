@@ -1,0 +1,10 @@
+ resources/agents/azure-project-plan.agent.md                    | 4 ++--
+ resources/agents/azure-project-plan/instructions.md             | 2 +-
+ resources/agents/azure-project-plan/references/plan-template.md | 4 ++--
+ resources/agents/azure-project-plan/references/requirements.md  | 2 +-
+ resources/agents/azure-project-scaffold.agent.md                | 4 ++--
+ resources/agents/azure-project-scaffold/references/testing.md   | 2 +-
+ resources/agents/azure-project-test/instructions.md             | 9 ---------
+ resources/agents/azure-project-test/references/mock-patterns.md | 2 +-
+ resources/agents/shared-references/resilience.md                | 2 +-
+ 9 files changed, 11 insertions(+), 20 deletions(-)
