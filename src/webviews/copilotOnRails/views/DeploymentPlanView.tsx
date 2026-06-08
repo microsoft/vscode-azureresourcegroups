@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea } from '@fluentui/react-components';
+import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea, Tooltip } from '@fluentui/react-components';
 import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import mermaid from 'mermaid';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { StageProgress } from './components/StageProgress';
 import './styles/deploymentPlanView.scss';
 import { type DeploymentPlanData, type DeploymentPlanTable } from './utils/deploymentPlanTypes';
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from './utils/viewConfigTypes';
@@ -72,6 +73,11 @@ export const DeploymentPlanView = (): JSX.Element => {
         [feedbackItems, freeformDraft],
     );
 
+    const isAlreadyApproved = useMemo(() => {
+        const s = plan?.status?.trim().toLowerCase();
+        return !!s && s !== 'planning' && s !== 'unknown';
+    }, [plan?.status]);
+
     const editedRows = useMemo(() => {
         const set = new Set<number>();
         for (const item of feedbackItems) {
@@ -105,7 +111,7 @@ export const DeploymentPlanView = (): JSX.Element => {
     }, []);
 
     const handleApprove = useCallback(() => {
-        if (!plan) {
+        if (!plan || isAlreadyApproved) {
             return;
         }
         if (hasEdits) {
@@ -113,7 +119,7 @@ export const DeploymentPlanView = (): JSX.Element => {
             return;
         }
         vscodeApi.postMessage({ command: 'approve', data: plan });
-    }, [vscodeApi, plan, hasEdits]);
+    }, [vscodeApi, plan, hasEdits, isAlreadyApproved]);
 
     const handleSubscriptionChange = useCallback((value: string) => {
         setPlan(prev => {
@@ -276,6 +282,7 @@ export const DeploymentPlanView = (): JSX.Element => {
 
     return (
         <div className={`deploymentPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
+            <StageProgress currentStage={2} />
             <div className='planMain'>
                 <div className='planHeader'>
                     <div className='headerTop'>
@@ -287,33 +294,40 @@ export const DeploymentPlanView = (): JSX.Element => {
                             </div>
                         </div>
                         <div className='headerActions'>
-                            <Button
-                                appearance='subtle'
-                                aria-label={strings.feedbackButtonAriaLabel}
-                                icon={
-                                    <span className='feedbackIconWrapper'>
-                                        <CommentEditRegular />
-                                        {hasEdits && (
-                                            <CounterBadge
-                                                className='feedbackBadge'
-                                                count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
-                                                size='small'
-                                                color='danger'
-                                            />
-                                        )}
-                                    </span>
-                                }
-                                disabled={isAwaitingRevision}
-                                onClick={() => setDrawerOpen(v => !v)}
-                            />
-                            <Button
-                                appearance='primary'
-                                icon={<CheckmarkRegular />}
-                                disabled={isAwaitingRevision}
-                                onClick={handleApprove}
+                            <Tooltip content={strings.feedbackButtonTooltip} relationship='label'>
+                                <Button
+                                    appearance='subtle'
+                                    aria-label={strings.feedbackButtonAriaLabel}
+                                    icon={
+                                        <span className='feedbackIconWrapper'>
+                                            <CommentEditRegular />
+                                            {hasEdits && (
+                                                <CounterBadge
+                                                    className='feedbackBadge'
+                                                    count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
+                                                    size='small'
+                                                    color='danger'
+                                                />
+                                            )}
+                                        </span>
+                                    }
+                                    disabled={isAwaitingRevision}
+                                    onClick={() => setDrawerOpen(v => !v)}
+                                />
+                            </Tooltip>
+                            <Tooltip
+                                content={isAlreadyApproved ? strings.approveButtonAlreadyApprovedTooltip : strings.approveButtonTooltip}
+                                relationship='label'
                             >
-                                {strings.approveButton}
-                            </Button>
+                                <Button
+                                    appearance='primary'
+                                    icon={<CheckmarkRegular />}
+                                    disabled={isAwaitingRevision || isAlreadyApproved}
+                                    onClick={handleApprove}
+                                >
+                                    {strings.approveButton}
+                                </Button>
+                            </Tooltip>
                         </div>
                     </div>
                 </div>
@@ -374,21 +388,6 @@ export const DeploymentPlanView = (): JSX.Element => {
                     </div>
                 </div>
 
-                <details className='sectionCard'>
-                    <summary><h2>{strings.architectureDiagramHeading}</h2></summary>
-                    <MermaidDiagram definition={plan.mermaidDiagram} noDiagramAvailableLabel={strings.noDiagramAvailable} />
-                </details>
-
-                <details className='sectionCard'>
-                    <summary><h2>{strings.workspaceScanHeading}</h2></summary>
-                    <PlanTable table={plan.workspaceScan} />
-                </details>
-
-                <details className='sectionCard'>
-                    <summary><h2>{strings.decisionsHeading}</h2></summary>
-                    <PlanTable table={plan.decisions} />
-                </details>
-
                 <div className='sectionCard'>
                     <h2>{strings.azureResourcesHeading}</h2>
                     <ResourcesTable
@@ -398,6 +397,16 @@ export const DeploymentPlanView = (): JSX.Element => {
                         onSkuChange={handleResourceSkuChange}
                     />
                 </div>
+
+                <details className='sectionCard' open>
+                    <summary><h2>{strings.architectureDiagramHeading}</h2></summary>
+                    <MermaidDiagram definition={plan.mermaidDiagram} noDiagramAvailableLabel={strings.noDiagramAvailable} />
+                </details>
+
+                <details className='sectionCard'>
+                    <summary><h2>{strings.workspaceScanHeading}</h2></summary>
+                    <PlanTable table={plan.workspaceScan} />
+                </details>
             </div>
 
             {drawerOpen && !isAwaitingRevision && (
@@ -450,14 +459,9 @@ const FeedbackDrawer = ({ strings, items, freeformDraft, onFreeformChange, onAdd
                     onClick={onClose}
                 />
             </div>
+            <p className='drawerInfo'>{strings.feedbackDrawerInfoTooltip}</p>
 
             <div className='drawerBody'>
-                {items.length === 0 && (
-                    <p className='drawerHint'>
-                        {strings.drawerHint}
-                    </p>
-                )}
-
                 {items.length > 0 && (
                     <ul className='feedbackList'>
                         {items.map(item => (

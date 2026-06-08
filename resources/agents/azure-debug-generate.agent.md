@@ -2,6 +2,8 @@
 name: azure-debug-generate
 description: Generate artifacts for an approved VS Code debugging plan. Responsible for generating docker-compose, VS Code launch/tasks, and emulator orchestration for streamlined project debugging.
 tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
+model: [Claude Opus 4.6 (copilot), Claude Opus 4.7 (copilot), Claude Sonnet 4.6 (copilot)]
+target: vscode
 ---
 
 # Azure Debug Generate

@@ -25,6 +25,10 @@ export type DeploymentPlanViewStrings = {
     azureResourcesHeading: string;
     approveButton: string;
     feedbackButtonAriaLabel: string;
+    feedbackButtonTooltip: string;
+    approveButtonTooltip: string;
+    approveButtonAlreadyApprovedTooltip: string;
+    feedbackDrawerInfoTooltip: string;
     revisingBanner: string;
     requestChangesHeading: string;
     feedbackDrawerAriaLabel: string;

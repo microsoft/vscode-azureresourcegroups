@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+@use './fluentTooltipPortal';
+
 
 .fui-DialogSurface {
     background-color: var(--vscode-editorWidget-background) !important;
@@ -38,6 +40,7 @@
         top: 0;
         z-index: 10;
         background: var(--vscode-editor-background);
+        padding-top: 8px;
         padding-bottom: 14px;
         margin-bottom: -14px;
 
@@ -94,11 +97,16 @@
                 flex-shrink: 0;
             }
 
+            .fui-Button {
+                overflow: visible;
+            }
+
             .feedbackIconWrapper {
                 position: relative;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
+                overflow: visible;
             }
 
             .feedbackBadge {
@@ -359,6 +367,15 @@
             font-size: 0.78em;
             line-height: 1.4;
             color: var(--vscode-descriptionForeground);
+        }
+
+        .drawerInfo {
+            margin: 0;
+            padding: 6px 14px 8px;
+            font-size: 0.75em;
+            line-height: 1.4;
+            color: var(--vscode-descriptionForeground);
+            border-bottom: 1px solid var(--vscode-widget-border);
         }
 
         .feedbackList {

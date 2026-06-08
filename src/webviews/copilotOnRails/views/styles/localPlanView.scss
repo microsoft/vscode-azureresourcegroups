@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+@use './fluentTooltipPortal';
+
 // Fluent UI's default DialogSurface background matches the VS Code editor
 // background, which makes the Submit Edits confirmation dialog blend into the
 // plan view. Lift it visually with the widget background, a border, and a
@@ -28,6 +30,34 @@
     border-color: var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-button-foreground))) !important;
 }
 
+// Fluent UI's Dropdown listbox is portal-mounted on document.body and renders
+// without VS Code theme tokens, so its surface appears transparent over the
+// page. Give it an opaque background, border, and elevated z-index so the
+// options are legible.
+.fui-Listbox {
+    background-color: var(--vscode-dropdown-background, var(--vscode-editorWidget-background)) !important;
+    color: var(--vscode-dropdown-foreground, var(--vscode-foreground)) !important;
+    border: 1px solid var(--vscode-dropdown-border, var(--vscode-editorWidget-border, var(--vscode-focusBorder))) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+    z-index: 1000;
+}
+
+.fui-Option {
+    color: var(--vscode-dropdown-foreground, var(--vscode-foreground)) !important;
+    background-color: transparent !important;
+
+    &:hover,
+    &[data-highlighted='true'] {
+        background-color: var(--vscode-list-hoverBackground) !important;
+        color: var(--vscode-list-hoverForeground, var(--vscode-foreground)) !important;
+    }
+
+    &[aria-selected='true'] {
+        background-color: var(--vscode-list-activeSelectionBackground) !important;
+        color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground)) !important;
+    }
+}
+
 .localPlanView {
     display: flex;
     flex-direction: column;
@@ -40,6 +70,7 @@
         top: 0;
         z-index: 10;
         background: var(--vscode-editor-background);
+        padding-top: 8px;
         padding-bottom: 14px;
         margin-bottom: -14px;
 
@@ -142,6 +173,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            margin-top: 14px;
         }
     }
 
@@ -316,6 +348,83 @@
         }
     }
 
+    .dataTableWrapper {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .dataTable {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78em;
+        line-height: 1.5;
+        color: var(--vscode-descriptionForeground);
+
+        th,
+        td {
+            text-align: left;
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.35)));
+            vertical-align: top;
+            white-space: nowrap;
+        }
+
+        th {
+            color: var(--vscode-foreground);
+            font-weight: 600;
+            background: var(--vscode-editorWidget-background, transparent);
+            border-bottom: 1px solid var(--vscode-focusBorder, var(--vscode-panel-border, rgba(128, 128, 128, 0.5)));
+        }
+
+        tbody tr:nth-child(even) td {
+            background: var(--vscode-list-hoverBackground, transparent);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .dataTableCheckboxCell {
+            width: 1%;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        details {
+            white-space: normal;
+
+            summary {
+                cursor: pointer;
+                color: var(--vscode-textLink-foreground);
+            }
+
+            br {
+                content: '';
+            }
+        }
+
+        a {
+            color: var(--vscode-textLink-foreground);
+
+            &:hover {
+                color: var(--vscode-textLink-activeForeground);
+            }
+        }
+
+        code {
+            background: var(--vscode-textCodeBlock-background);
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-family: var(--vscode-editor-font-family), monospace;
+            font-size: 0.95em;
+        }
+
+        strong {
+            color: var(--vscode-foreground);
+            font-weight: 600;
+        }
+    }
+
     .bulletList {
         margin: 0;
         padding: 0 0 0 18px;
@@ -403,11 +512,19 @@
             flex-shrink: 0;
         }
 
+        // Let the feedback CounterBadge render outside the Button's bounds;
+        // Fluent UI Button sets overflow: hidden on the root which otherwise
+        // clips the top-right corner of the badge.
+        .fui-Button {
+            overflow: visible;
+        }
+
         .feedbackIconWrapper {
             position: relative;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            overflow: visible;
         }
 
         .feedbackBadge {
@@ -482,6 +599,15 @@
             font-size: 0.78em;
             line-height: 1.4;
             color: var(--vscode-descriptionForeground);
+        }
+
+        .drawerInfo {
+            margin: 0;
+            padding: 6px 14px 8px;
+            font-size: 0.75em;
+            line-height: 1.4;
+            color: var(--vscode-descriptionForeground);
+            border-bottom: 1px solid var(--vscode-widget-border);
         }
 
         .feedbackList {

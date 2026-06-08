@@ -155,6 +155,11 @@
         },
         "commands": [
             {
+                "command": "azureResourceGroups.startAzureDebugGenerate",
+                "title": "Start Azure Debug Generate",
+                "category": "Azure"
+            },
+            {
                 "command": "azureResourceGroups.uploadFileCloudConsole",
                 "title": "%azureResourceGroups.uploadToCloudShell%",
                 "category": "Azure"
@@ -679,6 +684,10 @@
                 {
                     "command": "azureResourceGroups.uploadFileCloudConsole",
                     "when": "isWorkspaceTrusted"
+                },
+                {
+                    "command": "azureResourceGroups.startAzureDebugGenerate",
+                    "when": "never"
                 },
                 {
                     "command": "azureResourceGroups.showGroupOptions",
