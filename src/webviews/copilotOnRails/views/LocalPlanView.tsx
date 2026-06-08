@@ -146,6 +146,11 @@ export const LocalPlanView = (): JSX.Element => {
         [allItems, freeformDraft],
     );
 
+    const isAlreadyApproved = useMemo(() => {
+        const s = plan?.status?.trim().toLowerCase();
+        return !!s && s !== 'planning' && s !== 'unknown';
+    }, [plan?.status]);
+
     useEffect(() => {
         const handler = (event: MessageEvent) => {
             const message = event.data;
@@ -169,7 +174,7 @@ export const LocalPlanView = (): JSX.Element => {
     }, [vscodeApi]);
 
     const handleApprove = useCallback(() => {
-        if (!plan) {
+        if (!plan || isAlreadyApproved) {
             return;
         }
         if (hasEdits) {
@@ -177,7 +182,7 @@ export const LocalPlanView = (): JSX.Element => {
             return;
         }
         vscodeApi.postMessage({ command: 'approvePlan', data: plan });
-    }, [plan, hasEdits, vscodeApi]);
+    }, [plan, hasEdits, isAlreadyApproved, vscodeApi]);
 
     const handleRemoveFeedback = useCallback((id: string) => {
         if (id.startsWith('toggle-')) {
@@ -307,11 +312,14 @@ export const LocalPlanView = (): JSX.Element => {
                                     onClick={() => setDrawerOpen((v) => !v)}
                                 />
                             </Tooltip>
-                            <Tooltip content='Approve the plan and continue with Copilot' relationship='label'>
+                            <Tooltip
+                                content={isAlreadyApproved ? 'Plan already approved' : 'Approve the plan and continue with Copilot'}
+                                relationship='label'
+                            >
                                 <Button
                                     appearance='primary'
                                     icon={<CheckmarkRegular />}
-                                    disabled={isAwaitingRevision}
+                                    disabled={isAwaitingRevision || isAlreadyApproved}
                                     onClick={handleApprove}
                                 >
                                     Approve Plan

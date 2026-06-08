@@ -12,7 +12,7 @@ import './styles/scaffoldPlanView.scss';
 import { type PlanContent, type PlanData, type PlanSection, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 
 const editableOptions: Record<string, string[]> = {
-    'Runtime': ['TypeScript (Node.js)', 'Python', 'Java', '.NET (C#)', 'Go'],
+    'Runtime': ['JavaScript', 'TypeScript', 'Python', 'C# (.NET)'],
     'Backend': ['Azure Functions v4 (Node.js v4 model)', 'Express.js', 'Fastify', 'Flask', 'FastAPI', 'Spring Boot', 'ASP.NET Core'],
     'Frontend': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
     'Package Manager': ['npm', 'yarn', 'pnpm'],
@@ -62,9 +62,6 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
-    // Tracks the ORIGINAL plan cell value when first edited, keyed by cell position.
-    // Used to revert cells when a dropdown feedback item is discarded or the
-    // user selects the same value again.
     const originalCellValues = useRef<Map<CellKey, string>>(new Map());
     const { vscodeApi } = useContext(WebviewContext);
 
@@ -72,6 +69,11 @@ export const ScaffoldPlanView = (): JSX.Element => {
         () => feedbackItems.length > 0 || freeformDraft.trim().length > 0,
         [feedbackItems, freeformDraft],
     );
+
+    const isAlreadyApproved = useMemo(() => {
+        const s = plan?.status?.trim().toLowerCase();
+        return !!s && s !== 'planning' && s !== 'unknown';
+    }, [plan?.status]);
 
     const editedCells = useMemo(() => {
         const set = new Set<CellKey>();
@@ -105,7 +107,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     }, []);
 
     const handleApprove = useCallback(() => {
-        if (!plan) {
+        if (!plan || isAlreadyApproved) {
             return;
         }
         if (hasEdits) {
@@ -113,7 +115,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
             return;
         }
         vscodeApi.postMessage({ command: 'approvePlan', data: plan });
-    }, [plan, hasEdits, vscodeApi]);
+    }, [plan, hasEdits, isAlreadyApproved, vscodeApi]);
 
     const mutateCell = useCallback((sectionIdx: number, contentIdx: number, rowIdx: number, colIdx: number, value: string) => {
         setPlan(prev => {
@@ -299,11 +301,14 @@ export const ScaffoldPlanView = (): JSX.Element => {
                                     onClick={() => setDrawerOpen(v => !v)}
                                 />
                             </Tooltip>
-                            <Tooltip content='Approve the plan and continue with Copilot' relationship='label'>
+                            <Tooltip
+                                content={isAlreadyApproved ? 'Plan already approved' : 'Approve the plan and continue with Copilot'}
+                                relationship='label'
+                            >
                                 <Button
                                     appearance='primary'
                                     icon={<CheckmarkRegular />}
-                                    disabled={isAwaitingRevision}
+                                    disabled={isAwaitingRevision || isAlreadyApproved}
                                     onClick={handleApprove}
                                 >
                                     Approve Plan
