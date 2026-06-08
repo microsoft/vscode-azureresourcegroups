@@ -5,20 +5,12 @@
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
-import { ensureAgentInstructionsInstalled } from "../../../commands/copilotOnRails/agentInstructions";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
 
 export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
-    // The project creation agents read their authoritative guidance from instruction folders
-    // under `.github/agents/` in the workspace. Make sure those are present (prompting the user
-    // to download them if needed) before starting any phase of the flow.
-    if (!(await ensureAgentInstructionsInstalled(true))) {
-        return;
-    }
-
     switch (true) {
         // Local Development => Deploy
         case await hasCompletedPhase('**/vscode-debug-plan.md', 'implemented'): {

@@ -155,11 +155,6 @@
         },
         "commands": [
             {
-                "command": "azureResourceGroups.installCopilotProjectInstructions",
-                "title": "Download Copilot Project Instructions",
-                "category": "Azure"
-            },
-            {
                 "command": "azureResourceGroups.uploadFileCloudConsole",
                 "title": "%azureResourceGroups.uploadToCloudShell%",
                 "category": "Azure"

@@ -26,7 +26,6 @@ import { openPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
-import { installAgentInstructions } from './copilotOnRails/agentInstructions';
 import { openChatWithAgent } from './copilotOnRails/openChatWithAgent';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
@@ -166,7 +165,6 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
 
     registerCommand('azureResourceGroups.createProjectWithCopilot', createProjectWithCopilot);
-    registerCommand('azureResourceGroups.installCopilotProjectInstructions', installAgentInstructions);
     registerCommand('azureResourceGroups.openPlanView', openPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openLocalPlanView', openLocalPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
