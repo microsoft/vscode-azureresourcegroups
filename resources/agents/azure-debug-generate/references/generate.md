@@ -76,7 +76,7 @@ Derive a canonical service ID from the plan's **Service Label** column: lowercas
 
 If two services resolve to the same ID, append the project type: `payments-api-functions`.
 
-> ⛔ **Canonical task-label form — single source of truth.** Every generated task label is `{service-id}: {task name}` (e.g., `functions-api: func host start`, `functions-api: dotnet build`). There is **no** unscoped or `func:`-prefixed form. Wherever a task label is referenced — generation blocks, `dependsOn` chains, `preLaunchTask` values, validation Ready-Signal tables, and validation checklists — it **MUST** use this `{service-id}:` form. Reference files that show a label without the `{service-id}:` prefix are illustrating the *suffix* only; resolve it to the full form before writing or matching.
+> ⛔ Every generated task label should conform to `{service-id}: {task name}` (e.g., `functions-api: func host start`, `functions-api: dotnet build`). Wherever a task label is referenced — generation blocks, `dependsOn` chains, `preLaunchTask` values, validation Ready-Signal tables, and validation checklists — it **MUST** use this `{service-id}:` form. Instruction files and any examples that show a label without the `{service-id}:` prefix added are illustrating the latter part of the label; resolve it to the full form before writing or matching.
 
 ### Task Chain Shape (Server-side only)
 
