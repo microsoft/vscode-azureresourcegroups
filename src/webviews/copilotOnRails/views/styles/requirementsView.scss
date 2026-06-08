@@ -1,0 +1,362 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.requirementsView {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 28px 60px;
+    color: var(--vscode-foreground);
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+
+    .emptyState {
+        text-align: center;
+        color: var(--vscode-descriptionForeground);
+        padding: 60px 0;
+    }
+
+    .requirementsHeader {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 14px 0;
+        margin-top: -24px;
+        background: var(--vscode-editor-background, var(--vscode-sideBar-background, transparent));
+        border-bottom: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, rgba(128, 128, 128, 0.3)));
+
+        .headerText {
+            min-width: 0;
+            flex: 1 1 auto;
+
+            h1 {
+                margin: 0 0 6px;
+                font-size: 1.4em;
+                font-weight: 600;
+                color: var(--vscode-foreground);
+            }
+
+            .summary {
+                margin: 0;
+                color: var(--vscode-descriptionForeground);
+                font-size: 0.9em;
+                line-height: 1.5;
+            }
+        }
+
+        .headerActions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            flex-shrink: 0;
+
+            .progress {
+                font-size: 0.8em;
+                color: var(--vscode-descriptionForeground);
+            }
+        }
+    }
+
+    .banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 12px 14px;
+        border-radius: 4px;
+        border: 1px solid transparent;
+
+        >svg {
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        strong {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        p {
+            margin: 0;
+            font-size: 0.85em;
+            color: var(--vscode-descriptionForeground);
+            line-height: 1.4;
+        }
+
+        .muted {
+            font-size: 0.8em;
+            opacity: 0.8;
+        }
+
+        &.banner--error {
+            background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.15));
+            border-color: var(--vscode-inputValidation-errorBorder, rgba(241, 76, 76, 0.5));
+            color: var(--vscode-inputValidation-errorForeground, var(--vscode-foreground));
+        }
+    }
+
+    .categoryCard {
+        border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.3));
+        border-radius: 6px;
+        background: transparent;
+        overflow: hidden;
+
+        .categoryHeader {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.25));
+            background: transparent;
+            border-left: 3px solid var(--vscode-focusBorder, var(--vscode-button-background, #007acc));
+
+            h2 {
+                margin: 0;
+                font-size: 0.9em;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                font-weight: 700;
+                color: var(--vscode-foreground);
+            }
+        }
+
+        .questionList {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .questionRow {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.18));
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+
+            &:last-child {
+                border-bottom: none;
+            }
+
+            .questionMeta {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: wrap;
+
+                .questionText {
+                    font-weight: 600;
+                    color: var(--vscode-foreground);
+                    font-size: 0.92em;
+                }
+
+                .statusBadges {
+                    display: flex;
+                    gap: 6px;
+                    flex-shrink: 0;
+                }
+            }
+
+            .questionInput {
+                display: flex;
+                align-items: flex-start;
+                gap: 6px;
+
+                .answerInput {
+                    flex: 1 1 360px;
+                    max-width: 100%;
+                    min-width: 0;
+                }
+
+                .answerInput--textarea {
+                    flex: 1 1 auto;
+                    max-width: 100%;
+                }
+
+                .answerInput--number {
+                    flex: 0 0 140px;
+                    max-width: 140px;
+                }
+
+                .optionsList {
+                    flex: 1 1 auto;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0;
+                    border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.25));
+                    border-radius: 4px;
+                    overflow: hidden;
+                    background: var(--vscode-editor-background, transparent);
+
+                    &__row {
+                        all: unset;
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 10px;
+                        padding: 8px 12px;
+                        cursor: pointer;
+                        font-size: 0.9em;
+                        color: var(--vscode-foreground);
+                        border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.12));
+                        transition: background-color 0.08s ease-in-out;
+
+                        &:last-child {
+                            border-bottom: none;
+                        }
+
+                        &:hover {
+                            background: var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.1));
+                        }
+
+                        &:focus-visible {
+                            outline: 1px solid var(--vscode-focusBorder, #007acc);
+                            outline-offset: -1px;
+                        }
+
+                        &--selected {
+                            background: var(--vscode-list-activeSelectionBackground, rgba(0, 122, 204, 0.2));
+                            color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+
+                            &:hover {
+                                background: var(--vscode-list-activeSelectionBackground, rgba(0, 122, 204, 0.28));
+                            }
+
+                            .optionsList__index,
+                            .optionsList__description {
+                                color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+                                opacity: 0.85;
+                            }
+                        }
+
+                        &--custom {
+                            cursor: default;
+                            padding: 4px 12px;
+                            align-items: center;
+
+                            &:hover {
+                                background: transparent;
+                            }
+                        }
+                    }
+
+                    &__indicator {
+                        flex: 0 0 auto;
+                        width: 18px;
+                        height: 18px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-top: 1px;
+                        color: var(--vscode-descriptionForeground);
+
+                        &--blank {
+                            visibility: hidden;
+                        }
+                    }
+
+                    &__checkboxIcon {
+                        font-size: 16px;
+
+                        &--checked {
+                            color: var(--vscode-list-activeSelectionIconForeground, var(--vscode-foreground));
+                        }
+                    }
+
+                    &__radioIcon {
+                        font-size: 16px;
+
+                        &--checked {
+                            color: var(--vscode-list-activeSelectionIconForeground, var(--vscode-foreground));
+                        }
+                    }
+
+                    &__radioDot {
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 50%;
+                        border: 1px solid var(--vscode-descriptionForeground);
+                        opacity: 0.6;
+                    }
+
+                    &__index {
+                        flex: 0 0 auto;
+                        min-width: 16px;
+                        text-align: right;
+                        font-variant-numeric: tabular-nums;
+                        color: var(--vscode-descriptionForeground);
+                        font-size: 0.85em;
+                        line-height: 1.4;
+                    }
+
+                    &__labelGroup {
+                        flex: 1 1 auto;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 2px;
+                        text-align: left;
+                        min-width: 0;
+                    }
+
+                    &__label {
+                        line-height: 1.4;
+                    }
+
+                    &__description {
+                        font-size: 0.8em;
+                        color: var(--vscode-descriptionForeground);
+                        line-height: 1.35;
+                    }
+
+                    &__recommended {
+                        flex: 0 0 auto;
+                        align-self: center;
+                        font-size: 0.72em;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        font-weight: 600;
+                        padding: 2px 6px;
+                        border-radius: 3px;
+                        background: var(--vscode-badge-background);
+                        color: var(--vscode-badge-foreground);
+                        border: 1px solid var(--vscode-contrastBorder, transparent);
+                        white-space: nowrap;
+                    }
+
+                    &__customInput {
+                        flex: 1 1 auto;
+
+                        >.fui-Input,
+                        &.fui-Input {
+                            background: transparent;
+                            border: none;
+                            box-shadow: none;
+                            min-height: 24px;
+
+                            input {
+                                background: transparent;
+                                padding: 2px 0;
+                            }
+
+                            &::after {
+                                display: none !important;
+                            }
+                        }
+                    }
+                }
+            }
+
+            .questionSubtext {
+                margin: -2px 0 4px;
+                font-size: 0.85em;
+                color: var(--vscode-descriptionForeground);
+                line-height: 1.4;
+            }
+        }
+    }
+}

@@ -29,12 +29,28 @@ export interface TreeNode {
     children: TreeNode[];
 }
 
+export interface PaletteEntry {
+    token: string;
+    hex: string;
+    usage: string;
+}
+
+export interface PageEntry {
+    page: string;
+    route: string;
+    purpose: string;
+    /** Ordered top-level region tokens (e.g. ['header', 'hero', 'list', 'footer']). */
+    regions: string[];
+}
+
 export type PlanContent =
     | { type: 'keyValue'; key: string; value: string }
     | { type: 'table'; headers: string[]; rows: string[][] }
     | { type: 'blockquote'; text: string }
     | { type: 'paragraph'; text: string }
-    | { type: 'tree'; root: string; nodes: TreeNode[] };
+    | { type: 'tree'; root: string; nodes: TreeNode[] }
+    | { type: 'colorPalette'; entries: PaletteEntry[] }
+    | { type: 'pages'; entries: PageEntry[] };
 
 export function parseScaffoldPlanMarkdown(markdown: string): PlanData {
     const lines = markdown.replace(/\r\n/g, '\n').split('\n');
@@ -44,6 +60,7 @@ export function parseScaffoldPlanMarkdown(markdown: string): PlanData {
     const mode = extractMetadata(lines, 'Mode') ?? 'Unknown';
 
     const sections = extractSections(lines);
+    specializeDesignSystemSection(sections);
 
     return { status, created, mode, sections };
 }
@@ -327,4 +344,167 @@ function getTreeDepth(line: string): number {
     }
 
     return depth;
+}
+
+/**
+ * After generic section parsing, look at Section 5 ("Design System & UI") and
+ * upgrade its tables to the typed `colorPalette` / `pages` content variants the
+ * UI preview card reads from. Tables that don't match either shape are left
+ * alone as plain `table` content.
+ */
+function specializeDesignSystemSection(sections: PlanSection[]): void {
+    const designSection = sections.find(s => s.title.toLowerCase().includes('design system'));
+    if (!designSection) {
+        return;
+    }
+
+    designSection.content = designSection.content.map((item) => {
+        if (item.type !== 'table') {
+            return item;
+        }
+        const palette = tryParseColorPalette(item.headers, item.rows);
+        if (palette) {
+            return palette;
+        }
+        const pages = tryParsePages(item.headers, item.rows);
+        if (pages) {
+            return pages;
+        }
+        return item;
+    });
+}
+
+const HEX_RE = /^#?[0-9a-f]{3,8}$/i;
+
+function stripHexCell(raw: string): string {
+    // Tolerate placeholder wrappers the agent docs use, e.g. `{#0078D4}` or `*#0078D4*`.
+    return raw.trim().replace(/^[{[(*_`]+|[}\])*_`]+$/g, '').trim();
+}
+
+function tryParseColorPalette(headers: string[], rows: string[][]): PlanContent | undefined {
+    if (rows.length === 0) {
+        return undefined;
+    }
+    const headerLower = headers.map(h => h.toLowerCase().trim());
+    const tokenIdx = headerLower.findIndex(h => h === 'token');
+    const colorIdx = headerLower.findIndex(h => h === 'color' || h === 'hex' || h === 'value');
+    const usageIdx = headerLower.findIndex(h => h === 'usage' || h === 'role' || h === 'use');
+
+    let hexColumn = colorIdx;
+    if (hexColumn < 0) {
+        // Fall back to whichever column looks most hex-ish across rows.
+        for (let c = 0; c < headers.length; c++) {
+            const matches = rows.filter(r => HEX_RE.test(stripHexCell(r[c] ?? ''))).length;
+            if (matches >= Math.max(1, Math.floor(rows.length / 2))) {
+                hexColumn = c;
+                break;
+            }
+        }
+    }
+
+    if (hexColumn < 0) {
+        return undefined;
+    }
+
+    const tokenColumn = tokenIdx >= 0 ? tokenIdx : 0;
+    const usageColumn = usageIdx >= 0 ? usageIdx : (hexColumn + 1 < headers.length ? hexColumn + 1 : -1);
+
+    const entries: PaletteEntry[] = [];
+    for (const row of rows) {
+        const rawHex = stripHexCell(row[hexColumn] ?? '');
+        if (!HEX_RE.test(rawHex)) {
+            continue;
+        }
+        const token = (row[tokenColumn] ?? '').trim();
+        if (!token || tokenColumn === hexColumn) {
+            continue;
+        }
+        entries.push({
+            token,
+            hex: rawHex.startsWith('#') ? rawHex : `#${rawHex}`,
+            usage: usageColumn >= 0 ? (row[usageColumn] ?? '').trim() : '',
+        });
+    }
+
+    if (entries.length === 0) {
+        return undefined;
+    }
+    return { type: 'colorPalette', entries };
+}
+
+function tryParsePages(headers: string[], rows: string[][]): PlanContent | undefined {
+    if (rows.length === 0) {
+        return undefined;
+    }
+    const headerLower = headers.map(h => h.toLowerCase().trim());
+    const layoutIdx = headerLower.findIndex(h => h === 'layout' || h === 'regions');
+    if (layoutIdx < 0) {
+        return undefined;
+    }
+    const pageIdx = headerLower.findIndex(h => h === 'page' || h === 'name' || h === 'screen');
+    const routeIdx = headerLower.findIndex(h => h === 'route' || h === 'path' || h === 'url');
+    const purposeIdx = headerLower.findIndex(h => h === 'purpose' || h === 'description' || h === 'desc');
+
+    const pageCol = pageIdx >= 0 ? pageIdx : 0;
+
+    const entries: PageEntry[] = [];
+    for (const row of rows) {
+        const page = (row[pageCol] ?? '').trim();
+        if (!page) {
+            continue;
+        }
+        const layoutCell = (row[layoutIdx] ?? '').trim();
+        const regions = splitLayoutRegions(layoutCell);
+        if (regions.length === 0) {
+            continue;
+        }
+        entries.push({
+            page,
+            route: routeIdx >= 0 ? (row[routeIdx] ?? '').trim() : '',
+            purpose: purposeIdx >= 0 ? (row[purposeIdx] ?? '').trim() : '',
+            regions,
+        });
+    }
+
+    if (entries.length === 0) {
+        return undefined;
+    }
+    return { type: 'pages', entries };
+}
+
+/**
+ * Split a Layout cell like `header + hero + split(sidebar|list) + footer` into
+ * its top-level region tokens, respecting balanced parens so compound tokens
+ * like `two-column(a+b)` and `split(a|b)` stay intact.
+ */
+export function splitLayoutRegions(cell: string): string[] {
+    const out: string[] = [];
+    let buf = '';
+    let depth = 0;
+    for (const ch of cell) {
+        if (ch === '(') {
+            depth++;
+            buf += ch;
+            continue;
+        }
+        if (ch === ')') {
+            depth = Math.max(0, depth - 1);
+            buf += ch;
+            continue;
+        }
+        if (depth === 0 && (ch === '+' || ch === ',')) {
+            const token = buf.trim().replace(/^`|`$/g, '');
+            if (token) {
+                out.push(token);
+            }
+            buf = '';
+            continue;
+        }
+        buf += ch;
+    }
+    const tail = buf.trim().replace(/^`|`$/g, '');
+    if (tail) {
+        out.push(tail);
+    }
+    return out;
 }
