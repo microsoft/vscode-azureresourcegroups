@@ -395,7 +395,7 @@ async def test_get_items_empty(mock_database):
 
 ### C# — xUnit + NSubstitute + Shouldly
 
-> **Do NOT use Moq** (SponsorLink network calls, blocked in many enterprises) or **FluentAssertions ≥ 8.0** (commercial license). Use **NSubstitute** + **Shouldly** — see [shared-references/runtimes/dotnet.md](../../shared-references/runtimes/dotnet.md).
+> **Do NOT use Moq** (SponsorLink network calls, blocked in many enterprises) or **FluentAssertions ≥ 8.0** (commercial license). Use **NSubstitute** + **Shouldly** — see [shared-references/runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ```csharp
 // Functions/GetItemsTests.cs
@@ -649,4 +649,4 @@ describe('useAuth', () => {
 
 ### Reference
 
-See [frontend-patterns.md](references/frontend-patterns.md) for complete frontend architecture guidance.
+See [frontend-patterns.md](.github/agents/azure-project-scaffold/references/frontend-patterns.md) for complete frontend architecture guidance.

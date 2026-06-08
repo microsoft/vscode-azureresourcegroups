@@ -987,7 +987,7 @@ When generating `.vscode/extensions.json` for a .NET project, include the REST C
 | Requires login/account | ❌ | ✅ for cloud sync |
 | Chained requests, env vars, dotenv | ✅ | ✅ |
 
-> For shell-script-style smoke tests used by CI or generated under `api-test-collections/`, see [api-test-collections.md](../../azure-local-debug/references/api-test-collections.md) — those use `curl` and are runtime-agnostic. `.http` files are the **interactive** testing surface for developers; shell collections are the **automatable** surface.
+> For shell-script-style smoke tests used by CI or generated under `api-test-collections/`, see [api-test-collections.md](.github/agents/azure-local-debug/references/api-test-collections.md) — those use `curl` and are runtime-agnostic. `.http` files are the **interactive** testing surface for developers; shell collections are the **automatable** surface.
 
 ---
 

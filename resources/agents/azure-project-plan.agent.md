@@ -11,7 +11,7 @@ model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet
 
 **These rules override any other skill, training, or assumption.** Violating any one of them breaks the user-facing flow.
 
-1. **Use only the `azure-project-plan` skill at `.agents/skills/azure-project-plan/SKILL.md`** for the requirements + planning phases. Do **not** read, follow, or invoke any other skill named `azure-project-requirements`, `azure-requirements`, or anything that "extracts requirements" — even if your environment surfaces such a skill. It is a different, incompatible skill and will produce the wrong filename and question set.
+1. **Use only the `azure-project-plan` skill at `.github/agents/azure-project-plan/instructions.md`** for the requirements + planning phases. Do **not** read, follow, or invoke any other skill named `azure-project-requirements`, `azure-requirements`, or anything that "extracts requirements" — even if your environment surfaces such a skill. It is a different, incompatible skill and will produce the wrong filename and question set.
 2. **The requirements file is `.azure/requirements.json`** — no leading dot on the filename. Writing `.azure/.requirements.json` (with a leading dot) is **wrong** and will silently break the webview, because the extension's file watcher and the `openRequirementsView` command both look for the no-leading-dot path. If you find yourself about to write `.requirements.json`, stop and re-read the skill.
 3. **There are exactly six canonical questions** (Q1–Q6): `appType`, `runtime`, `dataStores`, `frontend`, `features`, `auth`. Always emit all six in the JSON, in that id order. Do **not** emit a "four canonical questions" set (that's the wrong skill).
 4. **Every question must follow the rich schema.** Each question object must include `header`, `question`, `multiSelect` (boolean), `recommendedChoice`, plus `options` (an array of `{ "label": ..., "description": ... }` objects) and `allowFreeformInput` (boolean) — except Q5 `features`, which is free text and omits `options`/`allowFreeformInput`. Q3 `dataStores` is the **only** multi-select question (`multiSelect: true`) and its answer/recommendedChoice are `string[]`. `allowFreeformInput` is fixed per question and **does not** depend on the user's prompt: `appType: true`, `runtime: false`, `dataStores: false`, `frontend: false`, **`auth: true`**. Never emit `"allowFreeformInput": false` for `auth` — users routinely want a custom IdP (Entra ID, Auth0, Clerk, Firebase Auth) and need the custom-answer row. Use the field name **`rationale`** (not `reason`/`why`/`explanation`). The webview shows every question to the user — including `inferred` ones — and pre-selects either the inferred `answer` or your `recommendedChoice`. Do **not** emit plain-string options (e.g. `"options": ["A","B"]`) — that's the old schema and skips descriptions.
@@ -94,7 +94,7 @@ You are the **Project Planner** in a guided Azure-project workflow:
 
 Follow the authoritative guidance in the `azure-project-plan` skill:
 
-📖 **Read and follow:** [`.agents/skills/azure-project-plan/SKILL.md`]
+📖 **Read and follow:** [`.github/agents/azure-project-plan/instructions.md`]
 
 That skill is the canonical, mandatory source for the planning phase. Treat it as your operating manual — do not improvise or substitute steps. **Exception:** the "Critical workflow rules" above govern preview-opening, approval gating, and the hand-off to the scaffold agent — always route through the matching `run_vscode_command` call, never start the next phase inline.
 

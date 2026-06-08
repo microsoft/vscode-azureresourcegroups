@@ -141,7 +141,7 @@ export function loadConfig(): AppConfig {
 
 ### Concrete Implementation (PostgreSQL Example)
 
-> **Important**: Includes camelCase↔snake_case key conversion and `collectionToTable()` mapping. See [examples/service-abstraction-examples.md](examples/service-abstraction-examples.md) for complete implementation.
+> **Important**: Includes camelCase↔snake_case key conversion and `collectionToTable()` mapping. See [examples/service-abstraction-examples.md](.github/agents/shared-references/examples/service-abstraction-examples.md) for complete implementation.
 
 **Key requirements for concrete implementation**:
 - `toSnake()`/`toCamel()`/`keysToSnake()`/`keysToCamel()` conversion utilities
@@ -152,7 +152,7 @@ export function loadConfig(): AppConfig {
 
 ### Mock Implementation (For Tests)
 
-> See [examples/service-abstraction-examples.md](examples/service-abstraction-examples.md) for complete `MockDatabaseService`.
+> See [examples/service-abstraction-examples.md](.github/agents/shared-references/examples/service-abstraction-examples.md) for complete `MockDatabaseService`.
 
 **Key requirements for mock**:
 - In-memory `Map<string, Map<string, unknown>>` storage (collection → id → item)
@@ -170,7 +170,7 @@ export function loadConfig(): AppConfig {
 >
 > ⚠️ **Enhancement service safety**: Enhancement services MUST be wrapped in try/catch during construction. If constructor throws, registry must substitute no-op fallback — NOT crash all handlers.
 >
-> See [examples/service-abstraction-examples.md](examples/service-abstraction-examples.md) for complete registry pattern.
+> See [examples/service-abstraction-examples.md](.github/agents/shared-references/examples/service-abstraction-examples.md) for complete registry pattern.
 
 **Key requirements for the registry**:
 - `registerServices(registry)` — stores provided services (used by tests)
@@ -210,7 +210,7 @@ app.http('getItems', {
 
 ## Python and C# Patterns
 
-For Python service abstraction patterns (Protocol interfaces, config, mock implementations, registry), see [runtimes/python.md](runtimes/python.md). For C# (.NET) patterns (interfaces, DI registration, mock implementations), see [runtimes/dotnet.md](runtimes/dotnet.md).
+For Python service abstraction patterns (Protocol interfaces, config, mock implementations, registry), see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md). For C# (.NET) patterns (interfaces, DI registration, mock implementations), see [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ---
 

@@ -331,7 +331,7 @@ app.http('createItem', {
 
 ---
 
-For Python error handling, see [runtimes/python.md](runtimes/python.md). For C#, see [runtimes/dotnet.md](runtimes/dotnet.md).
+For Python error handling, see [runtimes/python.md](.github/agents/shared-references/runtimes/python.md). For C#, see [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
 
 ---
 

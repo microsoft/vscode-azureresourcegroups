@@ -54,7 +54,7 @@ When `.azure/plan.md` found:
 
 > What test runner do you want to use?
 
-Present options based on selected runtime. Include brief pros/cons. See [testing.md](testing.md) → Test Runner Quick Reference.
+Present options based on selected runtime. Include brief pros/cons. See [testing.md](.github/agents/azure-project-scaffold/references/testing.md) → Test Runner Quick Reference.
 
 ### Q4: Data Stores — Ask only if not detectable from SDK imports or `.azure/plan.md`
 
@@ -70,7 +70,7 @@ Present options based on selected runtime. Include brief pros/cons. See [testing
 | **Redis** (caching, sessions) | Azure Cache for Redis | `REDIS_URL` |
 | **Azure SQL** (SQL Server compatible) | Azure SQL Database | `SQL_CONNECTION_STRING` |
 
-> ⚠️ **.NET runtime override:** When runtime is C# Functions, the scaffold MUST use `ConnectionStrings:*` keys instead of the generic names above (`STORAGE_CONNECTION_STRING` → `ConnectionStrings:Storage`, `DATABASE_URL` → `ConnectionStrings:AppDb`, `REDIS_URL` → `ConnectionStrings:Redis`, etc.) and authenticate Azure resources via `DefaultAzureCredential` / Managed Identity in production. See [runtimes/dotnet.md](../../shared-references/runtimes/dotnet.md#managed-identity--quick-reference).
+> ⚠️ **.NET runtime override:** When runtime is C# Functions, the scaffold MUST use `ConnectionStrings:*` keys instead of the generic names above (`STORAGE_CONNECTION_STRING` → `ConnectionStrings:Storage`, `DATABASE_URL` → `ConnectionStrings:AppDb`, `REDIS_URL` → `ConnectionStrings:Redis`, etc.) and authenticate Azure resources via `DefaultAzureCredential` / Managed Identity in production. See [runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md#managed-identity--quick-reference).
 
 ### Q5: Frontend Framework — Ask only if app type includes a frontend and not detectable
 
