@@ -83,6 +83,7 @@ export class ProjectPlanFilesWatcher implements vscode.Disposable {
 
 export interface DebugConfigurationSummary {
     readonly name: string;
+    readonly type: string;
     readonly folder: vscode.WorkspaceFolder;
 }
 
@@ -94,8 +95,8 @@ export function getDebugConfigurations(): DebugConfigurationSummary[] {
         const configs = launch.get<Array<{ name?: string; type?: string }>>('configurations');
         if (Array.isArray(configs)) {
             for (const config of configs) {
-                if (config && typeof config.name === 'string' && config.name.length > 0 && config.type) {
-                    results.push({ name: config.name, folder });
+                if (config && typeof config.name === 'string' && config.name.length > 0 && typeof config.type === 'string') {
+                    results.push({ name: config.name, type: config.type, folder });
                 }
             }
         }
@@ -103,7 +104,7 @@ export function getDebugConfigurations(): DebugConfigurationSummary[] {
         if (Array.isArray(compounds)) {
             for (const compound of compounds) {
                 if (compound && typeof compound.name === 'string' && compound.name.length > 0 && Array.isArray(compound.configurations) && compound.configurations.length > 0) {
-                    results.push({ name: compound.name, folder });
+                    results.push({ name: compound.name, type: 'compound', folder });
                 }
             }
         }

@@ -5,7 +5,7 @@
 
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, nonNullValue, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
-import { commands } from 'vscode';
+import { commands, debug, WorkspaceFolder } from 'vscode';
 import { askAgentAboutActivityLog } from '../chat/askAgentAboutActivityLog/askAgentAboutActivityLog';
 import { askAgentAboutResource } from '../chat/askAgentAboutResource';
 import { askAzureInCommandPalette } from '../chat/askAzure';
@@ -162,6 +162,10 @@ export function registerCommands(): void {
     registerCommand("azureResourceGroups.askAgentAboutActivityLog", async (context: IActionContext, _node: ActivityItem) => await askAgentAboutActivityLog(context));
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
+
+    registerCommand('azureResourceGroups.startDebugging', async (_context: IActionContext, folder: WorkspaceFolder, configurationName: string) => {
+        await debug.startDebugging(folder, configurationName);
+    });
 
     registerCommand('azureResourceGroups.createProjectWithCopilot', createProjectWithCopilot);
     registerCommand('azureResourceGroups.openPlanView', openPlanViewFromWorkspace);
