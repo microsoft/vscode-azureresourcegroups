@@ -76,6 +76,7 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string, uiNote: st
 
 export const ScaffoldPlanView = (): JSX.Element => {
     const [plan, setPlan] = useState<PlanData | null>(null);
+    const [previewHtml, setPreviewHtml] = useState<string | undefined>(undefined);
     const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
     const [freeformDraft, setFreeformDraft] = useState('');
     const [uiNote, setUiNote] = useState('');
@@ -124,6 +125,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 setDrawerOpen(false);
             } else if (message?.command === 'revisionComplete') {
                 setIsAwaitingRevision(false);
+            } else if (message?.command === 'setPreviewHtml') {
+                setPreviewHtml(message.html as string | undefined);
             }
         };
         window.addEventListener('message', handler);
@@ -483,6 +486,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                         section={designSection}
                         uiNote={uiNote}
                         disabled={isAwaitingRevision}
+                        previewHtml={previewHtml}
                         onPaletteChange={handlePaletteChange}
                         onTypographyChange={handleTypographyChange}
                         onUiNoteChange={setUiNote}

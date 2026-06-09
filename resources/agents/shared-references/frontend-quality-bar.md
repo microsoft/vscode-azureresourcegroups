@@ -1,26 +1,30 @@
-# Frontend Quality Bar — Render Layout Tokens with Real Library Primitives
+# Frontend Quality Bar — Reproduce the Library's Visual Language
 
-> **Load this BEFORE writing any frontend page or component.** Read during **Step 1** (Frontend Preview) and **Step 12** (Wire Frontend). This is the contract between the plan's Section 5 (Design System & UI) and the scaffolded JSX.
+> **Load this BEFORE producing any frontend.** Two readers, two modes:
+> - **`azure-project-plan` (Phase 2: Frontend Preview)** authors a **single static inline-CSS `index.html`** that *emulates* the library named in Section 5. There are no imports and no components — you reproduce each primitive's **look** (shape, spacing, color, typography, icon silhouette) with plain HTML + inline CSS. Every "render `<Component>`" instruction below means "produce HTML styled to look like that component."
+> - **`azure-project-scaffold` (Step 1: Regenerate Frontend, Step 12: Wire Frontend)** builds the **real framework frontend** and MUST use the library's actual primitives, theme provider, and icon package per the tables below.
+>
+> Either way this is the contract between the plan's Section 5 (Design System & UI) and what the user sees.
 
 ---
 
 ## Core principle
 
-> **Layout tokens are layout INTENT, not implementation.** When the plan's Section 5 says a page's layout is `header + hero + grid + footer`, that does NOT mean produce four `<div>`s with placeholder text. It means **render the equivalent of those regions using the real `Component Library` named in Section 5, themed by the Section 5 Color Palette.**
+> **Layout tokens are layout INTENT, not implementation.** When the plan's Section 5 says a page's layout is `header + hero + grid + footer`, that does NOT mean produce four unstyled `<div>`s with placeholder text. It means **reproduce the equivalent of those regions in the visual language of the `Component Library` named in Section 5, themed by the Section 5 Color Palette** — using real components in the scaffolded app, and high-fidelity inline-CSS HTML in the planning preview.
 
-If you ever emit JSX like this:
+If you ever emit output like this:
 
-```tsx
-// ❌ ZERO-EFFORT WIREFRAME REPRODUCTION — DO NOT SHIP
-<div className="header">Header</div>
-<div className="hero">Hero</div>
-<div className="grid">
-  <div className="card">Card 1</div>
-  <div className="card">Card 2</div>
+```html
+<!-- ❌ ZERO-EFFORT WIREFRAME — DO NOT SHIP (preview OR scaffold) -->
+<div class="header">Header</div>
+<div class="hero">Hero</div>
+<div class="grid">
+  <div class="card">Card 1</div>
+  <div class="card">Card 2</div>
 </div>
 ```
 
-…you have failed the quality bar. That output **looks worse than the plan-preview wireframe** the user already approved, because it strips the library primitives, the theme, the icons, and the state coverage the preview implied. The preview is a promise; this contract is how you keep it.
+…you have failed the quality bar. Unstyled placeholder boxes strip the library look, the theme, the icons, and the state coverage. In the **preview** the same regions must be styled (corner radius, elevation, spacing, themed colors, real icon silhouettes) so it approximates the final product; in the **scaffold** they must be real library primitives.
 
 ---
 
@@ -40,31 +44,31 @@ If you ever emit JSX like this:
 
 ## Per-library region-token → primitive mapping
 
-Pick the row that matches the plan's `Component Library:` value. Every region token below MUST resolve to a real, themed library primitive — not a bare `<div>`. Compound tokens (`split(a|b)`, `two-column(a+b)`) compose two of these in a CSS Grid.
+Pick the row that matches the plan's `Component Library:` value. **Scaffold:** every region token MUST resolve to a real, themed library primitive — not a bare `<div>`. **Preview:** reproduce the same primitive's *look* with inline-CSS HTML (e.g. style a `<div>`/`<button>` to match a shadcn/ui `<Card>` / `<Button>` — rounded corners, subtle border, themed `--primary` fill). Compound tokens (`split(a|b)`, `two-column(a+b)`) compose two of these in a CSS Grid.
 
-### Fluent UI v9 (`@fluentui/react-components`) — React default
+### Tailwind CSS + shadcn/ui (`lucide-react` icons) — React default
 
 | Region token | Primitive(s) to render                                                                                              |
 |--------------|---------------------------------------------------------------------------------------------------------------------|
-| `header`     | `<Toolbar>` + `<Subtitle1>` (app title) + `<Link>`s + `<Avatar name=… />` on the right                              |
-| `nav`        | Horizontal `<TabList>` + `<Tab icon={<HomeRegular />}>` per route                                                   |
-| `sidebar`    | Vertical `<TabList vertical>` + `<Tab icon=…>` per route, with `<Divider>` between groups                           |
-| `hero`       | `<Card appearance="filled-alternative">` + `<Title3>` + `<Body1>` + `<Button appearance="primary">`                 |
-| `main`       | `<Card>` wrapper with `<CardHeader>` + body content driven by page intent                                           |
-| `list`       | List of `<Card>` rows with `<CardHeader image={<Avatar />} header=… description=… />`                               |
-| `card-list`  | CSS Grid of `<Card>`s with `<CardPreview>` + `<CardHeader>` + `<CardFooter>` (real ratings / metadata, not lorem)   |
-| `grid`       | Same as `card-list` but tighter (e.g. `repeat(auto-fill, minmax(220px, 1fr))`)                                      |
-| `form`       | `<Field label=… validationState=…>` wrapping `<Input>` / `<Textarea>` / `<Combobox>` / `<Switch>` — at least one field shows `validationState="warning"` with a `validationMessage` so the four-state contract is visible |
-| `table`      | `<Table>` + `<TableHeader>` + `<TableHeaderCell>`s + `<TableBody>` + `<TableRow>` / `<TableCell>` (real columns)    |
-| `tabs`       | `<TabList>` + `<Tab>`s with the first tab `selected`, second tab content as the visible body                        |
-| `actions` / `action-bar` | `<Toolbar>` + `<ToolbarButton icon=…>`s; primary action uses `appearance="primary"`                        |
+| `header`     | Sticky top bar (`<header className="border-b">`) + brand `<h1 className="font-semibold">` + `<Button variant="ghost">` nav links + `<Avatar>` on the right |
+| `nav`        | Horizontal `<NavigationMenu>` or a row of `<Button variant="ghost">` links, each with a leading `lucide-react` icon  |
+| `sidebar`    | Vertical nav column: `<Button variant="ghost" className="w-full justify-start">` per route + `<Separator>` between groups |
+| `hero`       | `<Card className="bg-muted">` + `<CardHeader><CardTitle>` + `<CardDescription>` + `<Button>` (default = primary)     |
+| `main`       | `<Card>` with `<CardHeader>` + `<CardContent>` driven by page intent                                                |
+| `list`       | List of `<Card>` rows, each with `<Avatar>` + title/description text + a trailing `<Button variant="ghost" size="icon">` |
+| `card-list`  | CSS Grid of `<Card>`s with media (`<AspectRatio>` gradient) + `<CardHeader>` + `<CardFooter>` `<Badge>`s (real metadata, not lorem) |
+| `grid`       | Same as `card-list` but tighter (e.g. `grid-cols-[repeat(auto-fill,minmax(220px,1fr))]`)                            |
+| `form`       | `<Form>` + `<Label>` wrapping `<Input>` / `<Textarea>` / `<Select>` / `<Switch>` — at least one field shows an error via `<p className="text-sm text-destructive">` so the four-state contract is visible |
+| `table`      | `<Table>` + `<TableHeader>` + `<TableHead>`s + `<TableBody>` + `<TableRow>` / `<TableCell>` (real columns)          |
+| `tabs`       | `<Tabs>` + `<TabsList>` + `<TabsTrigger>`s (first `active`) + `<TabsContent>` as the visible body                   |
+| `actions` / `action-bar` | Flex row of `<Button>`s; primary action uses the default variant, secondary `variant="outline"`            |
 | `modal`      | Inline `<Card>` mock (do NOT mount a real `<Dialog>` in the preview — it steals focus and breaks the screenshot)    |
-| `footer`     | `<Divider>` + horizontal `<Caption1>` row with copyright + links                                                    |
-| unknown      | `<MessageBar intent="info">` saying `Unknown layout token "{token}" — will be rendered with {Component Library} in scaffold` |
+| `footer`     | `<Separator>` + horizontal `text-sm text-muted-foreground` row with copyright + links                              |
+| unknown      | `<Alert>` saying `Unknown layout token "{token}" — will be rendered with {Component Library} in scaffold`           |
 
-**Theming**: Wrap the app shell in `<FluentProvider theme={appTheme}>` where `appTheme = createLightTheme(brandRamp)` and `brandRamp` is a 16-step `BrandVariants` derived from Section 5's `primary` color. Body font comes from Section 5's `Typography`.
+**Theming**: shadcn/ui themes via CSS variables on `:root` (`--background`, `--foreground`, `--primary`, `--primary-foreground`, `--muted`, `--border`, `--radius`, …) consumed by Tailwind. Derive `--primary` from Section 5's `primary` color and set `--radius`/density from `Style Direction`. Body font (`font-sans`) comes from Section 5's `Typography`. In the **preview**, declare the same custom properties in the inline `<style>` `:root` block so the webview's palette editor maps onto them.
 
-**Icons**: Use real icons from `@fluentui/react-icons` (Regular variants) — never emoji and never inline SVG hand-drawn placeholders. Reasonable defaults: `HomeRegular`, `SearchRegular`, `SettingsRegular`, `PersonRegular`, `GridRegular`, `DocumentRegular`, `BookmarkRegular`, `MailRegular`, `CalendarRegular`, `ChevronDownRegular`, `AppsRegular`, `TableSimpleRegular`.
+**Icons**: Use real icons from `lucide-react` — never emoji and never hand-drawn placeholders. In the preview, inline the Lucide SVG (24×24, `stroke-width="2"`, rounded caps) so the silhouette matches. Reasonable defaults: `Home`, `Search`, `Settings`, `User`, `LayoutGrid`, `FileText`, `Bookmark`, `Mail`, `Calendar`, `ChevronDown`, `LayoutDashboard`, `Table`.
 
 ### Vuetify 3 — Vue default
 
@@ -149,40 +153,43 @@ Pick the row that matches the plan's `Component Library:` value. Every region to
 
 ## State coverage contract (every data-bearing page)
 
-Every page that displays data MUST cover all four states with real library primitives — not text-only fallbacks:
+Every page that displays data MUST cover all four states with the library's visual treatment — not text-only fallbacks. **Scaffold** uses the real primitives below; **preview** reproduces their look in inline-CSS HTML:
 
-| State    | Fluent UI v9                                  | Vuetify 3                            | Angular Material                                | Skeleton                                | Pico                               |
+| State    | Tailwind + shadcn/ui                                  | Vuetify 3                            | Angular Material                                | Skeleton                                | Pico                               |
 |----------|-----------------------------------------------|--------------------------------------|-------------------------------------------------|-----------------------------------------|------------------------------------|
-| loading  | `<Skeleton>` + `<SkeletonItem>` rows          | `<v-skeleton-loader type="card">`    | `<ngx-skeleton-loader>` or `<mat-progress-bar>` | `<div class="placeholder animate-pulse">` | `<progress indeterminate>`        |
-| error    | `<MessageBar intent="error">` + retry `<Button>` | `<v-alert type="error">` + retry `<v-btn>` | `<mat-card>` + `<mat-icon>error</mat-icon>` + retry button | `<aside class="alert variant-filled-error">` + retry | `<article><mark>` + retry `<button>` |
-| empty    | `<Card>` with illustration + `<Body1>` + primary `<Button>` CTA | `<v-empty-state>` or `<v-card>` with `<v-icon>` + `<v-btn>` CTA | `<mat-card>` + `<mat-icon>` + primary action | `<div class="card">` + icon + primary CTA `<button>` | `<article>` + `<p>` + primary `<button>` |
+| loading  | `<Skeleton className="h-4 w-full">` rows          | `<v-skeleton-loader type="card">`    | `<ngx-skeleton-loader>` or `<mat-progress-bar>` | `<div class="placeholder animate-pulse">` | `<progress indeterminate>`        |
+| error    | `<Alert variant="destructive">` + retry `<Button>` | `<v-alert type="error">` + retry `<v-btn>` | `<mat-card>` + `<mat-icon>error</mat-icon>` + retry button | `<aside class="alert variant-filled-error">` + retry | `<article><mark>` + retry `<button>` |
+| empty    | `<Card>` + icon + `<CardDescription>` + primary `<Button>` CTA | `<v-empty-state>` or `<v-card>` with `<v-icon>` + `<v-btn>` CTA | `<mat-card>` + `<mat-icon>` + primary action | `<div class="card">` + icon + primary CTA `<button>` | `<article>` + `<p>` + primary `<button>` |
 | data     | Real list/grid/table from mock fixtures       | Real list/grid/table                 | Real list/grid/table                            | Real list/grid/table                    | Real list/grid/table               |
 
-> The four states MUST be reachable from the running preview — wire a small dev-only toggle (URL hash, query param, or a corner button gated by `import.meta.env.DEV`) so reviewers can flip between `loading`, `error`, `empty`, `data` without restarting the server. This is also how `azure-project-test` later verifies the four-state contract.
+> **Scaffold (real frontend):** the four states MUST be reachable from the running app — wire a small dev-only toggle (URL hash, query param, or a corner button gated by `import.meta.env.DEV`) so reviewers can flip between `loading`, `error`, `empty`, `data`. This is also how `azure-project-test` later verifies the four-state contract.
+>
+> **Preview (static HTML):** there is no toggle and no server — **depict** each of the four states somewhere in the single `index.html` (e.g. a loading skeleton block, an error banner with a retry button, an empty-state block with a CTA, and the populated data) so the reviewer can see all four treatments at once.
 
 ---
 
 ## Theming contract
 
 1. **Build a brand ramp from Section 5's `primary`** and pass it to the library's theme provider — do **not** ship the library's default brand color.
-   - Fluent UI v9: `createLightTheme(brandRamp)` where `brandRamp: BrandVariants` is a 16-step ramp from HSL lightening/darkening of `primary`.
+   - Tailwind + shadcn/ui: set the HSL theme tokens on `:root` (`--primary`, `--primary-foreground`, `--ring`) derived from `primary`; Tailwind consumes them — no JS theme provider needed.
    - Vuetify: `theme.themes.light.colors.primary`.
    - Angular Material: `mat.define-theme({ color: { primary: $palette } })`.
    - Skeleton: custom theme module with `--color-primary-*` CSS variables.
    - Pico: `--pico-primary` CSS variable.
 2. **Map `surface` / `text` / `muted` / `border`** onto the library's neutral tokens — do not hard-code colors in component JSX. Semantic states (success / warning / error) come from the library's built-in semantic tokens, not from the plan palette.
-3. **Apply `Typography`** at the app shell level (Fluent: `FluentProvider` style override; Vuetify: `<v-app>` font-family; Angular: `--mat-sys-body-large-font`; Skeleton: theme module; Pico: `:root { font-family: … }`).
-4. The plan-preview webview always uses Fluent UI v9 (it's the only library bundled in the extension). When `Component Library` is anything else, the preview shows a footnote: *"Preview rendered with Fluent UI v9 — your scaffolded app will use **{Component Library}** with equivalent components."* The scaffolded app itself MUST use the library named in the plan, not Fluent.
+3. **Apply `Typography`** at the app shell level (shadcn/Tailwind: `font-sans` family via `:root { font-family: … }` / `tailwind.config`; Vuetify: `<v-app>` font-family; Angular: `--mat-sys-body-large-font`; Skeleton: theme module; Pico: `:root { font-family: … }`).
+4. **Preview vs scaffold fidelity.** The planning preview is static inline-CSS HTML that *emulates* the library named in Section 5 — it does not import the real library. Reproduce the library's look (color ramp, radius, elevation, icon silhouettes) as faithfully as inline CSS allows. The **scaffolded** app MUST use the actual library named in the plan with its real theme provider — never a different library and never the preview's hand-rolled CSS.
 
 ---
 
-## Quality gate (run this checklist before claiming the preview is ready)
+## Quality gate (run this checklist before claiming the frontend is ready)
 
-- [ ] Every page imports primitives from the library named in Section 5 — **zero raw `<div className="card">` / `<div className="header">` placeholders** outside the layout grid wrappers.
-- [ ] App shell is wrapped in the library's theme provider; brand ramp is derived from Section 5 `primary`.
-- [ ] Every icon is a real library icon (Fluent: `*Regular` from `@fluentui/react-icons`; Material: `<mat-icon>name</mat-icon>` with real names; Vuetify: `mdi-*`; Skeleton/Pico: native SVG icons via a real icon set such as Lucide or Tabler). **No emoji, no `<svg viewBox="0 0 1 1">` placeholders.**
+- [ ] Every region is styled to the library's visual language — **zero unstyled `<div class="card">` / `<div class="header">` placeholders**. (Scaffold: real imported primitives. Preview: inline-CSS HTML styled to match.)
+- [ ] App shell carries the theme — scaffold wraps it in the library's theme provider; preview sets `:root` custom properties — with a brand ramp derived from Section 5 `primary`.
+- [ ] Every icon is a real icon silhouette (scaffold: the library's icon package — shadcn/ui Lucide (`lucide-react`), Material `<mat-icon>name</mat-icon>`, Vuetify `mdi-*`, Skeleton/Pico Lucide/Tabler; preview: inline SVG matching that set). **No emoji, no `<svg viewBox="0 0 1 1">` placeholders.**
+- [ ] Every image / avatar / thumbnail slot shows a **real sample image** — **no empty grey boxes**. Scaffold: bundled sample asset, a deterministic source keyed by id (`picsum.photos/seed/{id}/...`, `ui-avatars.com/api/?name=...`), or a themed inline-SVG thumbnail. Preview: a CSS-gradient or inline-SVG placeholder with the item's label.
 - [ ] Every `form` region has at least one field with a visible validation state (warning/error) and an inline message.
-- [ ] Every data-bearing page exposes all four states (loading / error / empty / data) via a dev-only toggle.
+- [ ] All four states (loading / error / empty / data) are present — scaffold via a dev-only toggle, preview depicted inline.
 - [ ] `Style Direction:` is reflected in density and corner radius (e.g. "data-dense" → compact toolbars, tight list rows; "calm and spacious" → generous padding, larger cards).
-- [ ] No `any` types; the four-state contract still holds; auto-auth still works (if applicable).
-- [ ] If `Component Library` ≠ Fluent UI v9, the preview shows the disclosure footnote above the iframe.
+- [ ] Scaffold only: no `any` types; auto-auth still works (if applicable).
+- [ ] Preview only: single self-contained `index.html`, inline CSS, no external network, no build step.

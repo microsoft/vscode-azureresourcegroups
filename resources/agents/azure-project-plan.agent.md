@@ -17,7 +17,9 @@ model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet
 4. **Every question must follow the rich schema.** Each question object must include `header`, `question`, `multiSelect` (boolean), `recommendedChoice`, plus `options` (an array of `{ "label": ..., "description": ... }` objects) and `allowFreeformInput` (boolean) — except Q5 `features`, which is free text and omits `options`/`allowFreeformInput`. Q3 `dataStores` is the **only** multi-select question (`multiSelect: true`) and its answer/recommendedChoice are `string[]`. `allowFreeformInput` is fixed per question and **does not** depend on the user's prompt: `appType: true`, `runtime: false`, `dataStores: false`, `frontend: false`, **`auth: true`**. Never emit `"allowFreeformInput": false` for `auth` — users routinely want a custom IdP (Entra ID, Auth0, Clerk, Firebase Auth) and need the custom-answer row. Use the field name **`rationale`** (not `reason`/`why`/`explanation`). The webview shows every question to the user — including `inferred` ones — and pre-selects either the inferred `answer` or your `recommendedChoice`. Do **not** emit plain-string options (e.g. `"options": ["A","B"]`) — that's the old schema and skips descriptions.
 5. **Never call `vscode_askQuestions`.** All user input comes through the requirements webview. If you ever feel the urge to ask the user a question in chat, that's a signal you skipped the file-write step.
 6. **Never claim to have called `run_vscode_command` without actually invoking the tool.** If you write a sentence like "I've opened the requirements form" without the tool call appearing in your output, the form did not open — go back and call the tool.
-7. **Section 5 of the plan MUST be `## 5. Design System & UI` and MUST include a `**Component Library**:` row** (e.g. `**Component Library**: Fluent UI v9`). Without it, the scaffold step has no design contract and produces blocky raw-`<div>` placeholders that match the wireframe's layout tokens literally instead of using real library primitives. Pick from the runtime defaults in the skill's PLANNING QUICK REFERENCE → "Component Library Defaults" table (React → Fluent UI v9, Vue → Vuetify 3, Svelte → Skeleton UI, Angular → Angular Material, plain HTML → Pico.css), or the user's explicit override. This rule is **load-bearing for both the plan-preview webview and the scaffold quality bar** — section title must contain the literal text "Design System" (the webview's lookup is `s.title.toLowerCase().includes('design system')`), and the key must be exactly `Component Library` so the parser's `extractKeyValue('Component Library')` finds it.
+7. **Section 5 of the plan MUST be `## 5. Design System & UI` and MUST include a `**Component Library**:` row** (e.g. `**Component Library**: Tailwind CSS + shadcn/ui`). Without it, the **Phase 2 frontend-preview step** (which authors the static HTML preview during planning) has no design contract and produces blocky raw-`<div>` placeholders instead of styled, library-like UI. Pick from the runtime defaults in the skill's PLANNING QUICK REFERENCE → "Component Library Defaults" table (React → Tailwind CSS + shadcn/ui, Vue → Vuetify 3, Svelte → Skeleton UI, Angular → Angular Material, plain HTML → Pico.css), or the user's explicit override. This rule is **load-bearing for both the plan-preview webview and the Phase 2 frontend quality bar** — section title must contain the literal text "Design System" (the webview's lookup is `s.title.toLowerCase().includes('design system')`), and the key must be exactly `Component Library` so the parser's `extractKeyValue('Component Library')` finds it.
+
+8. **The frontend preview is a static spec authored during planning; the real frontend is built during scaffold.** When the plan includes a frontend (any app type except `API only` / `Background worker`), Phase 2 generates a **single self-contained static `index.html`** (inline CSS, no framework, no build, no dev server) into the folder **`.azure/frontend-preview/`**, styled to *emulate* the framework + `Component Library` in the plan. The plan webview **embeds it inline** in a sandboxed iframe for the user to approve — do **not** open a browser or start a server. The preview is a **high-fidelity, presentation-quality mockup** — visually pleasing and as close to the final product as a no-framework, no-script file allows (themed palette, real depth/spacing, populated content, filled image slots, all four data states). Do **not** ship a bare wireframe or gray boxy placeholders; "static" constrains behavior, never visual fidelity. The `azure-project-scaffold` agent then **regenerates the real framework frontend** in `src/web/`, using this approved preview as a visual spec — it does NOT copy `.azure/frontend-preview/` into `src/web/`.
 
 ## Critical workflow rules
 
@@ -28,8 +30,9 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 3. **Step B** — stop and wait for the user to submit the form. The webview controller re-invokes this agent on submit.
 4. Write `.azure/project-plan.md`.
 5. **Step C** — open the plan preview (see below). Mandatory.
-6. **Step D** — wait for the user's explicit approval of the plan. Mandatory.
-7. **Step E** — hand off to the `azure-project-scaffold` agent (see below). Do not begin scaffolding inline.
+6. **Step C2** — author the static frontend preview (see below). Mandatory when the plan includes a frontend; writes a single self-contained `.azure/frontend-preview/index.html` that the plan webview embeds inline. Skip only for `API only` / `Background worker`.
+7. **Step D** — wait for the user's explicit approval of the plan **and the embedded UI preview**. Mandatory.
+8. **Step E** — hand off to the `azure-project-scaffold` agent (see below). Do not begin scaffolding inline.
 
 ### Step A — open the requirements view (MANDATORY when requirements.json was written)
 
@@ -65,9 +68,22 @@ Do not poll the file, do not ask the user anything in chat, do not start writing
 
 This is not optional and not conditional. Do not summarize the plan, do not ask the user a question, do not begin scaffolding, and do not move on until this command has been called. The skill's "Present plan" / "Ask explicitly" approval step only runs **after** this command. If `run_vscode_command` returns an error, report it verbatim — but still attempt the call first.
 
+### Step C2 — author the static frontend preview (MANDATORY when the plan has a frontend)
+
+**Trigger:** immediately after Step C, when the plan's app type includes a frontend (anything except `API only` / `Background worker`). Skip entirely for those two app types.
+
+**Action:** follow the skill's **PHASE 2: FRONTEND PREVIEW** (see `instructions.md`). In summary:
+
+1. Author a **single self-contained static `index.html`** — inline CSS, no framework, no build, no dev server, no external network — into the folder **`.azure/frontend-preview/`**. Style it to *emulate* the framework + `Component Library` named in plan Section 5, with realistic mock content typed directly into the markup.
+2. Meet the frontend quality bar (regions styled to the library's visual language, themed by Section 5's palette, real icon silhouettes via inline SVG, all four data states depicted, authenticated view shown) — follow the contract in [`.github/agents/shared-references/frontend-quality-bar.md`] and the sub-steps in [`.github/agents/shared-references/frontend-preview-steps.md`].
+3. **The plan webview embeds the file inline** in a sandboxed iframe (it detects `.azure/frontend-preview/index.html` automatically). Do **not** run any command, start a server, or open the Simple Browser — there is no port and no `simpleBrowser.show`.
+4. If the user requests changes, **edit `.azure/frontend-preview/index.html` in place** and re-ask; the webview cache-busts the iframe on each plan update so the user sees the new version.
+
+Do **not** build a framework app, run `npm`/`vite`, or wire a real backend — all of that happens in the scaffold step. The static preview stays in `.azure/frontend-preview/` as the approved visual spec the scaffold agent reproduces.
+
 ### Step D — require explicit user approval before handing off
 
-After Step C, **stop and wait** for explicit user approval of the plan. Do **not** begin scaffolding and do **not** call the hand-off command in Step E until the user confirms. Treat anything other than a clear approval (e.g. questions, edits, "looks good but…") as not-yet-approved.
+After Steps C and C2, **stop and wait** for explicit user approval of the plan **and** the embedded UI preview. Do **not** begin scaffolding and do **not** call the hand-off command in Step E until the user confirms. Treat anything other than a clear approval (e.g. questions, edits, "looks good but…") as not-yet-approved. If the user requests UI changes, edit `.azure/frontend-preview/index.html` in place and ask again (loop).
 
 ### Step E — hand off to the scaffold agent after approval
 
@@ -78,7 +94,7 @@ Once the user has explicitly approved the plan, **do not** begin scaffolding inl
   "commandId": "azureResourceGroups.startProjectScaffold",
   "name": "Start Project Scaffold",
   "skipCheck": true,
-  "args": ["The project plan has been approved. Execute the approved `.azure/project-plan.md` — scaffold the frontend preview, backend services, database, and API routes."]
+  "args": ["The project plan has been approved. A static frontend preview was authored and approved during planning — it lives at `.azure/frontend-preview/index.html` and is the approved VISUAL SPEC. Execute the approved `.azure/project-plan.md`: REGENERATE the real framework frontend in `src/web/` (using the framework + Component Library from the plan, reproducing the approved preview's layout, palette, typography, and component look with the library's real primitives — do NOT copy `.azure/frontend-preview/` into `src/web/`), then scaffold the backend services, database, and API routes, and wire the frontend to the real backend."]
 }
 ```
 
@@ -100,4 +116,4 @@ That skill is the canonical, mandatory source for the planning phase. Treat it a
 
 ## Your deliverable
 
-An approved `.azure/project-plan.md` — requirements captured, services classified, plan structure populated — ready to hand off to the `azure-project-scaffold` agent via Step C above.
+An approved `.azure/project-plan.md` — requirements captured, services classified, plan structure populated — **plus**, when the plan includes a frontend, a single self-contained static `.azure/frontend-preview/index.html` that the user has reviewed embedded in the plan webview. Both are then handed off to the `azure-project-scaffold` agent via Step E above, which **regenerates the real framework frontend** from the approved preview spec rather than copying it.

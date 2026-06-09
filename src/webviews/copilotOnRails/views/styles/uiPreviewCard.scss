@@ -52,231 +52,51 @@
         color: var(--vscode-descriptionForeground);
     }
 
-    .uiPreviewCard__tabs {
+    // -------- Live preview panel --------
+    .uiPreviewCard__livePreview {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .uiPreviewCard__liveBanner {
+        width: 100%;
+    }
+
+    .uiPreviewCard__frame {
+        width: 100%;
+        height: 440px;
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 6px;
+        background: #ffffff;
+    }
+
+    .uiPreviewCard__pageList {
         display: flex;
         flex-wrap: wrap;
-        gap: 4px;
-        border-bottom: 1px solid var(--vscode-widget-border);
-        padding-bottom: 0;
+        gap: 6px;
     }
 
-    .uiPreviewCard__tab {
-        appearance: none;
-        background: transparent;
-        border: none;
-        border-bottom: 2px solid transparent;
-        color: var(--vscode-descriptionForeground);
-        font-size: 0.8em;
-        font-weight: 500;
-        padding: 6px 10px;
-        cursor: pointer;
-        border-radius: 4px 4px 0 0;
-
-        &:hover {
-            color: var(--vscode-foreground);
-            background: var(--vscode-toolbar-hoverBackground);
-        }
-
-        &.uiPreviewCard__tab--active {
-            color: var(--vscode-foreground);
-            border-bottom-color: var(--vscode-focusBorder, var(--vscode-button-background));
-        }
-    }
-
-    // -------- Browser-chrome frame --------
-    .uiPreviewCard__frame {
+    .uiPreviewCard__pageChip {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 6px;
+        padding: 3px 10px;
         border: 1px solid var(--vscode-widget-border);
-        border-radius: 8px;
-        overflow: hidden;
-        background: var(--preview-surface);
-        color: var(--preview-text);
-        font-family: var(--preview-font);
-        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
-    }
-
-    .uiPreviewCard__chrome {
-        display: flex;
-        align-items: center;
-        gap: 6px;
+        border-radius: 12px;
         background: var(--vscode-editorWidget-background);
-        border-bottom: 1px solid var(--vscode-widget-border);
-        padding: 6px 10px;
     }
 
-    .uiPreviewCard__chromeDot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: var(--vscode-descriptionForeground);
-        opacity: 0.45;
-
-        &:nth-of-type(1) { background: #ff5f57; opacity: 0.85; }
-        &:nth-of-type(2) { background: #febc2e; opacity: 0.85; }
-        &:nth-of-type(3) { background: #28c840; opacity: 0.85; }
+    .uiPreviewCard__pageChipName {
+        font-size: 0.8em;
+        font-weight: 600;
+        color: var(--vscode-foreground);
     }
 
-    .uiPreviewCard__urlPill {
-        flex: 1;
-        margin-left: 8px;
-        background: var(--vscode-input-background);
-        color: var(--vscode-input-foreground);
-        border: 1px solid var(--vscode-input-border, var(--vscode-widget-border));
-        border-radius: 4px;
-        font-size: 0.75em;
-        padding: 2px 8px;
+    .uiPreviewCard__pageChipRoute {
+        font-size: 0.72em;
         font-family: var(--vscode-editor-font-family, monospace);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .uiPreviewCard__viewport {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        padding: 16px;
-        min-height: 280px;
-        background: var(--preview-surface);
-        color: var(--preview-text);
-        font-family: var(--preview-font);
-    }
-
-    // -------- Region wrappers --------
-    // Each region renders real Fluent UI v9 primitives (see RegionBlock in
-    // UiPreviewCard.tsx). These wrappers only handle outer layout/spacing
-    // around those primitives — they MUST NOT restyle Fluent internals.
-    .uiPreviewCard__regionWrap {
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    .uiPreviewCard__sidebar {
-        max-width: 220px;
-    }
-
-    .uiPreviewCard__hero {
-        padding: 8px;
-    }
-
-    .uiPreviewCard__main {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        padding: 8px 4px;
-    }
-
-    .uiPreviewCard__cardList {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .uiPreviewCard__cardGrid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 10px;
-    }
-
-    .uiPreviewCard__cardPreview {
-        height: 64px;
-        background: linear-gradient(135deg,
-            color-mix(in srgb, var(--preview-primary) 80%, white 0%) 0%,
-            color-mix(in srgb, var(--preview-accent) 80%, white 0%) 100%);
-    }
-
-    .uiPreviewCard__form {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        padding: 4px 0;
-    }
-
-    .uiPreviewCard__formActions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        padding-top: 4px;
-    }
-
-    .uiPreviewCard__tableCard {
-        padding: 0;
-        overflow: hidden;
-    }
-
-    .uiPreviewCard__tableHead,
-    .uiPreviewCard__tableRow {
-        display: grid;
-        grid-template-columns: 2fr 1fr 1fr;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        font-size: 0.85em;
-        border-bottom: 1px solid var(--preview-border);
-    }
-
-    .uiPreviewCard__tableHead {
-        font-weight: 700;
-        background: color-mix(in srgb, var(--preview-surface) 92%, var(--preview-text) 4%);
-    }
-
-    .uiPreviewCard__tableRow:last-child {
-        border-bottom: none;
-    }
-
-    .uiPreviewCard__actionBar {
-        justify-content: flex-end;
-    }
-
-    .uiPreviewCard__modal {
-        margin: 8px 16px;
-        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
-    }
-
-    .uiPreviewCard__footer {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        padding-top: 8px;
-    }
-
-    .uiPreviewCard__footerRow {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-    }
-
-    .uiPreviewCard__split {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 8px;
-    }
-
-    .uiPreviewCard__twoColumn {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-    }
-
-    .uiPreviewCard__splitChild {
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-    }
-
-    // -------- "Preview rendered with Fluent UI v9" disclosure --------
-    .uiPreviewCard__previewNote {
-        margin: 0;
-        padding: 8px 10px;
-        border-radius: 4px;
-        border: 1px dashed var(--vscode-widget-border);
-        background: var(--vscode-textBlockQuote-background, transparent);
-        font-size: 0.75em;
-        line-height: 1.45;
         color: var(--vscode-descriptionForeground);
-
-        strong {
-            color: var(--vscode-foreground);
-        }
     }
 
     // -------- Palette swatch row --------

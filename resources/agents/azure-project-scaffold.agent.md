@@ -1,6 +1,6 @@
 ---
 name: azure-project-scaffold
-description: Plan and scaffold a NEW Azure-centric project end-to-end — gather requirements, produce an approved `.azure/project-plan.md`, then scaffold the frontend preview, backend services, database, and API routes.
+description: Scaffold a NEW Azure-centric project from an approved `.azure/project-plan.md` — regenerate the real framework frontend in `src/web/` using the approved static preview (`.azure/frontend-preview/index.html`) as a visual spec, then scaffold the backend services, database, and API routes and wire the frontend to the real backend.
 tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
 model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---
@@ -16,6 +16,9 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 3. **Step B** — wait for the user's explicit approval of the plan. Mandatory.
 4. Scaffold the project.
 5. **Step C** — hand off to the next phase based on the user's "Next Step" answer.
+
+> **Scaffolding (phase 4) is ONE uninterrupted run, approval (Step B) → Step 13.** Regenerating the frontend is only **Step 1 of 13** — it is **not** a stopping point. The instant the frontend is built and served, you **must continue automatically** into backend scaffolding (Phase A/B) and then Step 12 (wire the frontend to the real backend), without pausing. Do **not** stop, summarize, ask the user a question, or announce "next steps" after the frontend. **The frontend UI was already approved during planning — do NOT ask the user to approve, confirm, or sign off the regenerated frontend; opening it in the Simple Browser is informational only.** The **only** place you stop and present the "Next Step" prompt is **Step 13**, after the backend is built, the frontend is wired, and `func start` passes. If you find yourself ending your turn right after the frontend preview opens, you have skipped Steps 2–13 — keep going.
+
 
 ### Step A — open the plan preview (MANDATORY, do not skip)
 
@@ -34,6 +37,8 @@ This is not optional and not conditional. Do not summarize the plan, do not ask 
 ### Step B — require explicit user approval before scaffolding
 
 After Step A, **stop and wait** for explicit user approval of the plan. Do **not** begin scaffolding until the user confirms. Treat anything other than a clear approval (e.g. questions, edits, "looks good but…") as not-yet-approved.
+
+> **Already approved via auto-chain?** When you arrive here directly from `azure-project-plan` (the hand-off message says "The project plan has been approved" and `.azure/project-plan.md` status is `Approved`), that approval — covering both the plan **and** the frontend UI preview — already stands. Do **not** re-ask for approval and do **not** re-confirm the frontend; proceed straight into scaffolding. Steps A/B only gate the standalone case where scaffold is invoked on a plan the user hasn't yet approved.
 
 ### Step C — handle the "Next Step" answer at the end of scaffolding
 
@@ -63,11 +68,13 @@ After the user answers the **"Next Step"** question that the skill asks at the e
 
 These commands exist — do not say they aren't registered. If `run_vscode_command` returns an error, report it to the user verbatim, but still attempt the call first. Do not skip the call.
 
-### Frontend preview commands — working directory is mandatory
+### Frontend regeneration commands — working directory is mandatory
 
-Every frontend command you run during Step 0.5 (Frontend Preview) — `npm install`, `npx vite build`, `npx vite --host`, `npm run dev`, scaffolder commands — MUST be invoked with `cwd` set to the frontend folder (typically `src/web/`), passed on the same terminal call as the command. Each `run_in_terminal` invocation may start in the workspace root, so do **not** rely on a previous `cd`. If your terminal tool lacks a `cwd` parameter, chain `cd src/web && <command>` on the *same* call.
+The frontend's **visual design** was approved during planning as a single static `.azure/frontend-preview/index.html` (inline-CSS HTML, not shippable code). Step 1 (Regenerate Frontend) builds the **real framework frontend** in `src/web/` (per the plan's framework + `Component Library`), reproducing the approved preview's layout, palette, typography, page set, and component look with the library's real primitives. **Do NOT copy or move `.azure/frontend-preview/` into `src/web/`** — it is a spec to reproduce, not code to reuse.
 
-Running the Vite dev server from the workspace root still binds to the port and prints `ready in N ms` — but serves a blank page. **Do not tell the user "your preview is live" until you have actually fetched the served page and verified it renders the app** (see [frontend-preview-steps.md F4](.github/agents/azure-project-scaffold/references/frontend-preview-steps.md) for the verification gate). A blank-page preview is worse than no preview.
+Every frontend command — during Step 1 (Regenerate Frontend) and Step 12 (Wire Frontend): `npm install`, `npx vite build`, `npx vite --host`, `npm run dev` — MUST be invoked with `cwd` set to the frontend folder (typically `src/web/`), passed on the same terminal call as the command. Each `run_in_terminal` invocation may start in the workspace root, so do **not** rely on a previous `cd`. If your terminal tool lacks a `cwd` parameter, chain `cd src/web && <command>` on the *same* call.
+
+Running the Vite dev server from the workspace root still binds to the port and prints `ready in N ms` — but serves a blank page. **Do not tell the user "your preview is live" until you have actually fetched the served page and verified it renders the app.** A blank-page preview is worse than no preview. See the working-directory rules in [frontend-preview-steps.md](.github/agents/shared-references/frontend-preview-steps.md) (Scaffold: Regenerate From Spec).
 
 ---
 
@@ -85,4 +92,4 @@ That skill is the canonical, mandatory source for both the planning and scaffold
 
 ## Your deliverable
 
-An approved `.azure/project-plan.md` together with a fully scaffolded, buildable Azure project — frontend preview, backend services, database setup, and API routes all wired together and ready for local development or deployment.
+A fully scaffolded, buildable Azure project from the approved `.azure/project-plan.md` — the real framework frontend regenerated in `src/web/` from the approved static preview spec (`.azure/frontend-preview/index.html`), backend services, database setup, and API routes all wired together and ready for local development or deployment.

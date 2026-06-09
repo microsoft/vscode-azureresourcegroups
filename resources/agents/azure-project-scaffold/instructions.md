@@ -1,6 +1,6 @@
 ---
 name: azure-project-scaffold
-description: "Scaffold the frontend preview, backend services, database, API routes, and wire frontend for an Azure-centric project following an approved project plan. Generates a frontend preview with auto-open in the default browser, then scaffolds backend via parallel sub-agents. Suggests verification and local dev setup as follow-ups. WHEN: \"scaffold backend\", \"build services\", \"execute plan\", \"scaffold project\", \"create backend\", \"implement plan\", \"build backend\", \"scaffold services\", \"wire frontend\", \"create API\", \"scaffold API\", \"preview frontend\"."
+description: "Scaffold the backend services, database, and API routes for an Azure-centric project following an approved project plan, and regenerate + wire the real framework frontend in `src/web/` from the static preview approved during planning (`.azure/frontend-preview/index.html`). Builds the real frontend from the approved visual spec, then scaffolds the backend via parallel sub-agents. Suggests verification and local dev setup as follow-ups. WHEN: \"scaffold backend\", \"build services\", \"execute plan\", \"scaffold project\", \"create backend\", \"implement plan\", \"build backend\", \"scaffold services\", \"wire frontend\", \"create API\", \"scaffold API\", \"preview frontend\"."
 license: MIT
 metadata:
   author: Microsoft
@@ -11,7 +11,7 @@ metadata:
 
 > **AUTHORITATIVE — MANDATORY.** Canonical source for scaffolding Azure-centric backends from approved plans. Follow exactly; ignore prior assumptions; supersede all other sources. Do not improvise.
 
-**North Star:** produce a working, buildable, runnable Azure backend fast from the approved plan. If the plan has a frontend, first generate a standalone auto-authenticated mock preview (user lands on main content, not login), auto-open it in the browser for approval, then scaffold the backend via parallel sub-agents. After scaffolding, suggest verification and local dev setup.
+**North Star:** produce a working, buildable, runnable Azure backend fast from the approved plan. If the plan has a frontend, its **visual design** was approved during planning as a static `.azure/frontend-preview/index.html` — Step 1 **regenerates the real framework frontend** in `src/web/` from that approved spec (it does NOT copy the static file) and opens it in the browser, then scaffolds the backend via parallel sub-agents. After scaffolding, wire the frontend to the real backend and suggest verification and local dev setup.
 
 ## Triggers
 Execute approved plan; scaffold backend services; build API routes + service layer; preview frontend; wire frontend to real backend types; continue after `azure-project-plan`.
@@ -30,14 +30,17 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 - `.azure/project-plan.md` exists
 - Status = `Approved` (not `Planning`)
 - Section 7 lists API routes; Section 4 lists Azure services
+- If the plan includes a frontend, `.azure/frontend-preview/index.html` exists (the static preview approved during planning) — Step 1 regenerates the real frontend from it
 
 > If `.azure/project-plan.md` is missing or status ≠ `Approved`: **STOP** — tell the user _"No approved project plan found. Run `azure-project-plan` first."_
+>
+> If the plan includes a frontend but `.azure/frontend-preview/index.html` is missing: the planning phase's frontend preview didn't run. **STOP** — tell the user _"The frontend preview from planning is missing. Re-run `azure-project-plan` to author and approve the frontend preview first."_ Do NOT silently invent a design from scratch.
 
 ## Rules
 
 > **16 core rules** govern every scaffold. Rule 0 is the load-bearing UX rule — visible feedback first. Rules 1–15 govern correctness. Details in referenced docs, consumed at relevant step.
 
-0. **Frontend-first feedback (load-bearing UX rule)** — If the plan includes a frontend, the preview from Step 1 MUST appear in the user's browser **before** any backend scaffolding sub-agent runs. Visible feedback is the user's signal that work has started; without it the user sees only a quiet terminal. Backend Phase A/B runs concurrently with preview review — not sequentially after it. If the plan has no frontend, this rule is satisfied trivially. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md).
+0. **Frontend-first feedback (load-bearing UX rule)** — If the plan includes a frontend, its visual design was approved during planning as a static `.azure/frontend-preview/index.html`. Step 1 **regenerates the real framework frontend** in `src/web/` from that spec and opens it in the user's browser **before** any backend scaffolding sub-agent runs. Visible feedback is the user's signal that work has started. Backend Phase A/B runs concurrently with the regenerate/serve — not sequentially after it. **Reproduce the approved design** — do not invent a different UI, and do not copy the static preview file into `src/web/`. If the plan has no frontend, this rule is satisfied trivially. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md).
 1. **Plan is source of truth** — Read `.azure/project-plan.md` at start. Follow route definitions, service list, types, architecture exactly. Do NOT re-ask user for plan requirements.
 2. **Track progress** — Copy Section 8 (Execution Checklist) from plan into `.azure/execution-checklist.md`. Mark `[ ]` → `[x]` as each step completes — do NOT defer. Plan stays clean as reference; checklist is live tracker. Update plan status: Approved → In Progress → Scaffolded → Ready. Step 13 MUST verify all items checked. If >50% unchecked despite completion, finalization NOT complete.
 3. **Build-gate enforcement** — Every phase ends with build check (`tsc` / `npm run build`). If fails, iterate until clean. **Do NOT proceed until code compiles.** Most important rule.
@@ -48,11 +51,11 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 8. **Input validation & standardized errors** — Every endpoint has validation schema (Zod/Pydantic/FluentValidation). Every route returns `{ error: { code, message, details? } }`. Error codes typed union, not strings. See [error-handling.md](.github/agents/shared-references/error-handling.md).
 9. **Resilience classification** — Follow plan's Essential/Enhancement classification. Enhancement services wrapped in try/catch with fallback. **Enhancement constructors MUST NOT throw** — defer config validation to method calls or wrap in try/catch in registry. Constructor throws crash ALL handlers via `getServices()`. See [resilience.md](.github/agents/shared-references/resilience.md).
 10. **Database integrity** — Migrations MUST include UNIQUE, FK (ON DELETE), CHECK, INDEX constraints. Multi-table writes MUST use transactions. Collection-to-table mappings documented and verified. See [database-integrity.md](.github/agents/shared-references/database-integrity.md).
-11. **Wire frontend to real types** — If frontend preview generated, replace mock types with shared package imports, replace mock API client with real typed client, verify frontend builds. No `any` types.
+11. **Wire frontend to real types** — If the plan has a frontend (regenerated into `src/web/` in Step 1), replace mock types with shared package imports, replace mock API client with real typed client, verify frontend builds. No `any` types.
 12. **Mandatory `func start` smoke test** — After all handlers implemented, execute `func start`, verify all functions register, stop. Catches blocking runtime errors (broken imports, constructor crashes) that mocked tests miss. **Do NOT skip.** See [architecture.md](.github/agents/shared-references/architecture.md).
 13. **Auto-initialization** — Registry `getServices()` MUST auto-initialize with concrete implementations when nothing pre-registered. Verified by `func start`. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
 14. **Cross-workspace build safety** — When Functions imports `../shared/`, set `rootDir` to `".."` and **compute `main` field from actual `dist/` output after `tsc`** — never hardcode. With `rootDir: ".."`, handlers compile to `dist/functions/src/functions/X.js`. After build, list `dist/`, verify `main` matches. Run `func start` to confirm. **#1 cause of "build passes but app won't start"**. See [architecture.md](.github/agents/shared-references/architecture.md).
-15. **Frontend quality contract** — If the plan has a frontend, **Section 5 (Design System & UI) of the plan is load-bearing**. Treat each region token in Section 5's Pages table (`header`, `hero`, `grid`, `form`, ...) as layout **intent** — render it using real primitives from the library named in `Component Library:`, themed by the Color Palette. **Never produce raw `<div className="card">` placeholders that just mimic the wireframe.** See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the per-library region-token → primitive mapping, theming contract, icon contract, and state-coverage contract. If Section 5 is missing or `Component Library:` is blank, STOP — re-run `azure-project-plan`.
+15. **Frontend quality contract** — If the plan has a frontend, **Section 5 (Design System & UI) of the plan is load-bearing**. The real frontend you regenerate in `src/web/` (Step 1) MUST meet this contract: each region token in Section 5's Pages table (`header`, `hero`, `grid`, `form`, ...) rendered using real primitives from the library named in `Component Library:`, themed by the Color Palette — **never** raw `<div className="card">` placeholders — reproducing the approved static preview. See [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md) for the per-library region-token → primitive mapping, theming contract, icon contract, and state-coverage contract (use the "scaffold" guidance). If Section 5 is missing or `Component Library:` is blank, STOP — re-run `azure-project-plan`.
 
 ---
 
@@ -65,7 +68,7 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 | Step | Read ONLY these files | Skip |
 |------|----------------------|------|
 | **Step 0** (Read Plan) | `.azure/project-plan.md` | All reference files |
-| **Step 1** (Frontend Preview) | `references/frontend-patterns.md`, `references/frontend-preview-steps.md`, `references/frontend-quality-bar.md` | All other reference files |
+| **Step 1** (Regenerate Frontend) | `../shared-references/frontend-quality-bar.md` (scaffold guidance), `../shared-references/frontend-preview-steps.md` (Scaffold: Regenerate From Spec) | All other reference files |
 | **Sub-Agent Strategy** | `references/sub-agent-strategy.md` | |
 | **Step 2** (Foundation) | `../shared-references/architecture.md` | |
 | **Step 3** (Config) | `../shared-references/service-abstraction.md` — read only the Config Module section | |
@@ -75,7 +78,7 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 | **Step 7** (Routes) | `../shared-references/resilience.md`, selected runtime file | |
 | **Step 8** (Errors) | `../shared-references/error-handling.md` (full) | |
 | **Step 9–11** (Health/OpenAPI/Logging) | _(instructions are in SKILL.md)_ | |
-| **Step 12** (Wire Frontend) | _(instructions are in SKILL.md — uses shared types from Step 6; if Section 5 'Design System & UI' is present, re-read `references/frontend-quality-bar.md`)_ | |
+| **Step 12** (Wire Frontend) | _(instructions are in SKILL.md — uses shared types from Step 6; if Section 5 'Design System & UI' is present, re-read `../shared-references/frontend-quality-bar.md`)_ | |
 | **Step 13** (Wrap Up) | _(instructions are in SKILL.md)_ | |
 
 ### Runtime-Specific Files — Load ONLY ONE
@@ -102,7 +105,7 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 | Validate status | Must be `Approved`. If not, STOP — instruct user to run `azure-project-plan`. |
 | Extract plan details | Routes, services, entity types, frontend framework, runtime, **orchestration** (Section 2), structure |
 | Extract design contract (if frontend) | If a frontend is planned, read Section 5 (Design System & UI). Extract `Component Library:`, `Style Direction:`, `Typography:`, the Color Palette table, and the Pages table (page → layout regions). **If Section 5 is missing or `Component Library:` is blank, STOP — instruct user to re-run `azure-project-plan`. Section 5 is load-bearing for Rule 15 / Step 1 quality bar.** |
-| Determine frontend needed | Check if plan includes frontend (SPA + API, Full-stack SSR, Static + API). If yes, Step 1 generates preview. |
+| Determine frontend needed | Check if plan includes frontend (SPA + API, Full-stack SSR, Static + API). If yes, confirm `.azure/frontend-preview/index.html` exists (the static preview from planning) — Step 1 regenerates the real frontend from it. If it's missing, STOP and tell the user to re-run `azure-project-plan`. |
 | Copy execution checklist | Copy Section 8 into `.azure/execution-checklist.md` |
 | Update plan status | Set to `In Progress` |
 
@@ -115,36 +118,64 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 > **Execution chronology** (frontend-first, backend in parallel):
 >
 > ```
-> t=0      Step 0     read plan, validate
-> t=10s    Step 1     frontend preview              ─┐
-> t=10s    Phase A    contracts sub-agents          ─┼─ concurrent
-> t=10s    Phase B    backend sub-agents            ─┘
-> t=Nm     Step 12    sync gate: preview approved AND Phase B done → wire frontend
-> t=...    Step 13    wrap up                          (sequential)
+> t=0      Step 0     read plan, validate, confirm .azure/frontend-preview/index.html exists
+> t=10s    Step 1     regenerate real frontend from preview spec (→ src/web, serve)  ─┐
+> t=10s    Phase A    contracts sub-agents                                          ─┼─ concurrent
+> t=10s    Phase B    backend sub-agents                                            ─┘
+> t=Nm     Step 12    sync gate: frontend regenerated AND Phase B done → wire frontend
+> t=...    Step 13    wrap up                                       (sequential)
 > ```
 >
-> The chronology is load-bearing. **Never** start backend sub-agents before the preview is on the user's screen. **Never** wire the frontend before backend is built. For API-only projects (no frontend), Step 1 is skipped and Phase A/B begin immediately after Step 0.
+> The chronology is load-bearing. **Never** start backend sub-agents before the regenerated frontend is on the user's screen. **Never** wire the frontend before backend is built. For API-only projects (no frontend), Step 1 is skipped and Phase A/B begin immediately after Step 0.
+>
+> 🚦 **RUN TO COMPLETION — do NOT stop after the frontend.** Step 1 (frontend) is the **first** of 13 steps, not the finish line. Once the frontend is built and served, **immediately continue** into backend scaffolding (Phase A/B) and Step 12 (wire frontend) in the same run. Do **not** end your turn, summarize, ask a question, or announce next steps after Step 1. The **only** stop-and-ask point is Step 13's "Next Step" prompt — and you reach it only after the backend is built, the frontend is wired, and `func start` passes. Stopping after the frontend means Steps 2–13 were skipped: keep going until Step 13.
 
-### Step 1: Frontend Preview (If Applicable)
+
+### Step 1: Regenerate Frontend (If Applicable)
 
 > **Skip** if plan has no frontend ("API only" or "Background worker").
 
-**Goal**: Standalone frontend with mock data for user to see/interact with before backend work. **Preview MUST be auto-authenticated** — if app has auth, seed mock auth state so user lands on main view (dashboard, feed), NOT login page. **Auto-open in browser** — do NOT prompt.
+**Goal**: Build the **real framework frontend** in `src/web/`, reproducing the static preview the user approved during planning (`.azure/frontend-preview/index.html`). The preview is a **visual specification** (inline-CSS HTML, not shippable code) — recreate its layout, palette, typography, page set, and component look using the plan's framework + `Component Library` with the library's real primitives. It uses standalone mock data at this stage; Step 12 wires it to the real backend.
 
-> ⚠️ **WORKING DIRECTORY (most-common scaffold failure)**: Every frontend command — `npm install`, `npx vite build`, `npx vite --host`, `npm run dev` — MUST be invoked with `cwd` set to the **frontend folder** (typically `src/web/`), passed on the same terminal call as the command. Running from the workspace root produces a blank white page even though the dev server still binds to a port and prints `ready in N ms`. **Never claim the preview is live until you have fetched the page and confirmed it serves your app** — see the verification gate in [frontend-preview-steps.md F4](.github/agents/azure-project-scaffold/references/frontend-preview-steps.md).
+> ⚠️ **DO NOT COPY THE PREVIEW.** Never move or import `.azure/frontend-preview/index.html` into `src/web/` — it is static HTML, not a runnable app. Reproduce its design with the real library. If `.azure/frontend-preview/index.html` is missing, STOP — see Prerequisites.
+
+**Sub-steps:**
+
+| # | Task | Details |
+|---|------|---------|
+| 1.1 | **Read the approved spec** | Open `.azure/frontend-preview/index.html` and plan Section 5. Treat the preview as the source of truth for layout regions, palette, typography, page set, and the look of each component. |
+| 1.2 | **Initialize the real frontend** | Scaffold the plan's framework (React + Vite / Vue + Vite / Angular / Svelte) into `src/web/` with a real `package.json`. Add the `Component Library` + its theme provider, themed from the same brand color. Define standalone local mock types/data so it runs before the backend exists. **shadcn/ui is not a normal npm kit** — see the shadcn/ui setup block below. |
+| 1.2a | **Use realistic sample data + real sample imagery** | The mock data must look like a populated, demo-ready app — **not** empty boxes. Generate several realistic rows per entity (names, titles, dates, prices, statuses) and, where the plan's Step 5 seed data exists (`seeds/fixtures/seed-data.json`), mirror the same fields/values so the frontend and backend tell a consistent story. **For every image/avatar/thumbnail slot, render an actual image — never a blank placeholder box.** Prefer, in order: (1) bundled sample assets in `src/web/src/assets/` (or `public/`) if any exist; (2) a deterministic image source keyed by the item id so each card is stable across reloads — `https://picsum.photos/seed/{id}/400/300` for photos, `https://ui-avatars.com/api/?name={name}&background=random` for avatars; (3) as a last resort, an inline SVG data-URI thumbnail that shows a themed gradient + the item's initials/label. An empty grey rectangle where an image belongs fails this step. |
+
+| 1.3 | **Reproduce each page** | Recreate every previewed page with the library's real primitives (per the quality bar), matching the approved layout regions, the four data states, and real icons. |
+| 1.4 | **Install + build** | With `cwd: src/web/`: `npm install` then `npx vite build`. Fix until it builds with **zero errors** and **no `any` types**. |
+| 1.5 | **Serve + verify + open** | Start `npx vite --host` with `cwd: src/web/`, fetch the served page and confirm it renders the app, then open it live in VS Code's Simple Browser via `simpleBrowser.show`. **This is informational only — do NOT ask the user to approve, confirm, or sign off the UI. The design was already approved during planning; continue straight into the backend without pausing.** |
+
+> **shadcn/ui setup (React default — run these in order, all with `cwd: src/web/`):**
+> 1. **Create the app**: `npm create vite@latest . -- --template react-ts` (in an empty `src/web/`), then `npm install`.
+> 2. **Add Tailwind**: `npm install -D tailwindcss @tailwindcss/vite` and register the `@tailwindcss/vite` plugin in `vite.config.ts`; add `@import "tailwindcss";` to the global stylesheet. Configure the `@/*` path alias in both `tsconfig.json` and `vite.config.ts` (shadcn requires it).
+> 3. **Init shadcn**: `npx shadcn@latest init` — pick the base color closest to Section 5's `primary`, then edit the generated `:root` CSS variables (`--primary`, `--primary-foreground`, `--ring`, `--radius`, …) to the exact palette + density from Section 5.
+> 4. **Add only the components each page needs**: `npx shadcn@latest add button card input label select switch textarea table tabs avatar badge separator alert skeleton navigation-menu` (trim to what the previewed pages actually use). Components are copied into `src/web/src/components/ui/` — import them from `@/components/ui/...`.
+> 5. **Icons**: `npm install lucide-react` and import named icons (`Home`, `Search`, …). Never re-add the preview's hand-inlined SVGs — use the real Lucide components.
+>
+> For any other React library (MUI / Chakra / Mantine) or non-React framework, install the library normally (`npm install <pkg>`) and wire its theme provider — no shadcn `init`/`add` step.
+
+> ⚠️ **WORKING DIRECTORY (most-common scaffold failure)**: Every frontend command — `npm install`, `npx vite build`, `npx vite --host`, `npm run dev` — MUST be invoked with `cwd` set to the **frontend folder** (`src/web/`), passed on the same terminal call as the command. Running from the workspace root produces a blank white page even though the dev server still binds to a port and prints `ready in N ms`. **Never claim the preview is live until you have fetched the page and confirmed it serves your app.**
 
 **References**:
-- [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the per-library region-token → primitive mapping, theming contract, icon contract, and state-coverage contract. **READ THIS FIRST — it is the contract between the plan's Section 5 and the JSX you ship.**
-- [frontend-patterns.md](.github/agents/azure-project-scaffold/references/frontend-patterns.md) for patterns and quality bar.
-- [frontend-preview-steps.md](.github/agents/azure-project-scaffold/references/frontend-preview-steps.md) for sub-steps (F1–F4), working directory rules, approval loop.
+- [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md) — the per-library region-token → primitive mapping, theming, icon, and state-coverage contracts the real frontend must meet (use the "scaffold" guidance, not the "preview" notes).
+- [frontend-preview-steps.md](.github/agents/shared-references/frontend-preview-steps.md) → **Scaffold: Regenerate From Spec** for the working-directory rules and how to treat the preview as a spec.
+- [frontend-patterns.md](.github/agents/shared-references/frontend-patterns.md) for frontend code patterns.
 
 > **✅ Checkpoint**:
-> 1. Frontend builds zero errors (`npx vite build` with `cwd: src/web/` — **never** from workspace root)
-> 2. No `any` types in `.ts`/`.tsx`
-> 3. Auto-authenticated — user lands on main content on first load
-> 4. Dev server started (with `cwd: src/web/`) **and verified to serve actual app content** (not just "ready in N ms" — page must render). Preview opened in VS Code Simple Browser.
-> 5. User approval obtained (or iterating)
-> 6. **Quality bar (Rule 15)**: Every page imports primitives from the library named in plan Section 5's `Component Library:`; the app shell is wrapped in that library's theme provider with a brand ramp derived from Section 5's palette; every icon is a real library icon (no emoji, no SVG placeholders); every `form` region has a visible validation state; every data-bearing page exposes all four states (loading / error / empty / data) via a dev-only toggle. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md).
+> 1. Real framework frontend built in `src/web/` (the static `.azure/frontend-preview/index.html` was NOT copied in).
+> 2. Frontend builds zero errors (`npx vite build` with `cwd: src/web/` — **never** from workspace root).
+> 3. No `any` types in `.ts`/`.tsx`.
+> 4. Dev server started (with `cwd: src/web/`) **and verified to serve actual app content** (not just "ready in N ms" — page must render). Opened in VS Code Simple Browser.
+> 5. The regenerated frontend reproduces the approved preview and meets the quality bar (real library primitives, theme, real icons, four data states).
+> 6. **Demo-ready mock data**: multiple realistic rows per entity, and **every image/avatar/thumbnail slot shows a real sample image** (bundled asset, deterministic `picsum.photos`/`ui-avatars` source, or themed inline-SVG thumbnail) — **zero empty placeholder boxes**.
+> 7. **Do NOT stop here.** Step 1 is complete, but the run is not — **immediately continue** into backend scaffolding (Phase A/B) and Step 12. Do not summarize, ask, or hand off until Step 13.
+
 
 ---
 
@@ -154,7 +185,7 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 
 > Sub-agents parallelize backend work. Phase A (Contracts) starts after Step 0. Phase B (Backend) launches when Phase A completes. Both run concurrently with Step 1.
 
-> **Synchronization gate**: Step 12 MUST wait for BOTH: (a) frontend preview approved AND (b) Phase B completed.
+> **Synchronization gate**: Step 12 MUST wait for BOTH: (a) the real frontend regenerated into `src/web/` and building AND (b) Phase B completed.
 
 ### Step 2: Foundation
 
@@ -165,7 +196,7 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 | Initialize project | `package.json` + `tsconfig.json` (Node.js) / `pyproject.toml` (Python) / `*.csproj` + `*.sln` (.NET) |
 | Configure linter/formatter | ESLint + Prettier (Node.js) / Ruff (Python) / dotnet format (.NET) |
 | Create `.gitignore` | Runtime-appropriate ignores (node_modules, .env, data/, etc.) |
-| Create directory structure | `src/functions/`, `src/functions/src/utils/`, `src/shared/` (do NOT create `src/web/` — may exist from frontend preview) |
+| Create directory structure | `src/functions/`, `src/functions/src/utils/`, `src/shared/` (do NOT create `src/web/` — it already exists from the Step 1 frontend regeneration) |
 
 **Reference**: [architecture.md](.github/agents/shared-references/architecture.md)
 
@@ -396,9 +427,9 @@ For **each** route in plan:
 
 ### Step 12: Wire Frontend (If Applicable)
 
-**Goal**: Replace mock data/types in frontend preview with real shared types and typed API client.
+**Goal**: Replace mock data/types in the regenerated frontend (`src/web/`) with real shared types and a typed API client.
 
-> **Skip** if no frontend or no preview generated.
+> **Skip** if the plan has no frontend.
 
 | Task | Details |
 |------|---------|  
@@ -406,6 +437,7 @@ For **each** route in plan:
 | Replace mock API client | Remove `src/web/src/mocks/api.ts`. Create typed client in `src/web/src/api/client.ts` calling real endpoints |
 | Configure dev proxy | Dev server proxies `/api` to Functions host (e.g., `localhost:7071`) |
 | Update hooks and pages | Replace mock imports with real API calls. Maintain 4 data states (loading, error, empty, data) |
+| Keep imagery populated | When swapping mock data for real API responses, **do not regress images back to empty boxes.** If the backend entity (and Step 5 seed data) carries an image/avatar URL, render it; if it does not, keep the same deterministic fallback used in Step 1.2a (`picsum.photos`/`ui-avatars` keyed by id, or the themed inline-SVG thumbnail). Every image slot must still show a real image after wiring. |
 | Error handling in hooks | Every async hook catches errors, rolls back optimistic updates on failure |
 | Destructive action confirmations | Delete/irreversible actions require user confirmation |
 | Client-side upload validation | Files validate size and MIME before sending (server also validates) |
@@ -452,7 +484,7 @@ For **each** route in plan:
 | Artifact | Location |
 |----------|----------|
 | **Execution Checklist** | `.azure/execution-checklist.md` (live progress tracker — copied from plan Section 8 at start) |
-| Frontend preview (if applicable) | `src/web/` (with mock data, local types, pages, components — from Step 1) |
+| Frontend (if applicable) | `src/web/` (real framework frontend regenerated from `.azure/frontend-preview/index.html` in Step 1 — mock data, local types, pages, components) |
 | Backend (Functions) | `src/functions/` or user-specified path |
 | Shared types | `src/shared/` |
 | Service abstractions | `src/functions/src/services/` (or equivalent) |

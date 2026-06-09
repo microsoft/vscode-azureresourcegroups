@@ -26,13 +26,13 @@ Plan/design a new Azure-centric app; create requirements/architecture; start a p
 | Benchmark scaffold quality | **scaffold-benchmark** |
 
 ## Rules
-1. **Plan first** — create `.azure/project-plan.md` before any code. No `src/`, configs, or project files until the user approves. Only file allowed: `.azure/project-plan.md`.
+1. **Plan first** — create `.azure/project-plan.md` before any code. No backend `src/`, configs, or project files until the user approves. The only files Phase 1 may write are `.azure/requirements.json` and `.azure/project-plan.md`. (Phase 2 then authors the static frontend preview at `.azure/frontend-preview/index.html` — see below.)
 2. **Resilience classification** — classify each service **Essential** (fails without it) or **Enhancement** (succeeds with fallback). See Quick Reference.
-3. **Auto-chain after approval** — immediately invoke `azure-project-scaffold`; never ask the user to invoke it manually; do NOT generate a frontend preview (scaffold handles it).
-4. **Interactive UI** — use `vscode_askQuestions`, never plain chat; batch unanswered questions into one call.
+3. **Author a static frontend preview during planning** — when the plan includes a frontend, Phase 2 writes a **single self-contained static `index.html`** (inline CSS, no framework, no build, no dev server) into `.azure/frontend-preview/`, styled to emulate the plan's framework + Component Library. It must be a **high-fidelity, presentation-quality mockup** — visually pleasing and as close to the final product as a no-framework, no-script file allows (themed, populated, polished, all four data states, no empty placeholder boxes), never a gray wireframe. The plan webview **embeds it inline** for approval. After the user approves both the plan and the embedded UI, **auto-chain** to `azure-project-scaffold` (never ask the user to invoke it manually). The scaffold agent **regenerates the real framework frontend** from this approved spec — it does NOT copy the file.
+4. **Interactive UI** — use the requirements webview + the embedded plan-preview UI, never plain chat; do NOT call `vscode_askQuestions`.
 
 ## Workflow (mandatory order)
-DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` + approval (Step 3) → AUTO-CHAIN scaffold after approval. Only file allowed: `.azure/project-plan.md` — no `src/`, configs, or code. Planning needs ZERO external file reads; all context is inlined below.
+DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` + plan preview (Step 3) → **AUTHOR static frontend preview into `.azure/frontend-preview/index.html` (Step 4, when the plan has a frontend)** → approval of plan + UI → AUTO-CHAIN scaffold after approval. Phase 1 writes only `.azure/requirements.json` and `.azure/project-plan.md` (no backend `src/`, configs, or code); Phase 2 writes the single static `.azure/frontend-preview/index.html`. Planning needs ZERO external file reads except the frontend references in Phase 2; all other context is inlined below.
 
 ## ═══════════════════════════════════════════════════
 ## PHASE 1: PLANNING
@@ -350,9 +350,9 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ## 5. Design System & UI
 
-> **MANDATORY when the plan includes a frontend.** Skip only for `API only` / `Background worker` app types. The plan-preview webview parses this section by title (`s.title.toLowerCase().includes('design system')`) and the scaffold quality contract reads `Component Library:` to decide which real library primitives to render.
+> **MANDATORY when the plan includes a frontend.** Skip only for `API only` / `Background worker` app types. The plan-preview webview parses this section by title (`s.title.toLowerCase().includes('design system')`), and **Phase 2 (Frontend Preview) reads `Component Library:`, the palette, and the Pages table** to build the real frontend.
 
-**Component Library**: {Fluent UI v9 / Vuetify 3 / Skeleton UI / Angular Material / Pico.css — see PLANNING QUICK REFERENCE → Component Library Defaults}
+**Component Library**: {Tailwind CSS + shadcn/ui / Vuetify 3 / Skeleton UI / Angular Material / Pico.css — see PLANNING QUICK REFERENCE → Component Library Defaults}
 **Style Direction**: {1–2 sentence design intent, e.g. "Modern data-dense console with subtle elevations, rounded 4px corners, and an emphasis on scannable lists."}
 **Typography**: {Inter, system-ui / Roboto / Segoe UI Variable}
 
@@ -376,7 +376,7 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 | {Dashboard} | `/` | {Overview of recent activity} | `header + hero + grid + footer` |
 | {Page name} | `{/route}` | {one-line purpose} | `{region tokens, e.g. header + sidebar + main + footer}` |
 
-> **Layout tokens are layout INTENT, not implementation.** The scaffold agent renders them using `Component Library` primitives per the scaffold skill's `frontend-quality-bar.md`. Recognized tokens: `header, nav, sidebar, hero, main, list, card-list, grid, form, table, actions, action-bar, tabs, modal, footer`. Compound tokens: `split(a|b)` (1:2 columns), `two-column(a+b)` (1:1 columns).
+> **Layout tokens are layout INTENT, not implementation.** Phase 2 (the plan agent's static preview) renders them as inline-CSS HTML emulating the `Component Library` look per `frontend-quality-bar.md`; the scaffold agent later renders them with real primitives. Recognized tokens: `header, nav, sidebar, hero, main, list, card-list, grid, form, table, actions, action-bar, tabs, modal, footer`. Compound tokens: `split(a|b)` (1:2 columns), `two-column(a+b)` (1:1 columns).
 
 ---
 
@@ -402,7 +402,7 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 > The detailed execution checklist is auto-generated by `azure-project-scaffold` when it begins execution. It copies this section's high-level phases and expands them into step-by-step items with build gates.
 
 ### High-Level Phases
-- [ ] Step 1: Frontend Preview (if applicable — first visible feedback; runs in parallel with backend Phase A/B)
+- [ ] Step 1: Regenerate Frontend (if applicable — build the real framework frontend in `src/web/` from the approved static preview `.azure/frontend-preview/index.html`; do NOT copy the static file)
 - [ ] Step 2: Foundation (project config, directory structure, build verification)
 - [ ] Step 3: Configuration & Environment (config module, .env, local.settings.json)
 - [ ] Step 4: Service Abstraction Layer (interfaces + concrete implementations + registry)
@@ -430,11 +430,54 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 #### After Writing the Plan
 
-1. **Present plan**, ask for approval
-2. If approved, update status from `Planning` to `Approved`
-3. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. Do NOT generate frontend preview — `azure-project-scaffold` handles it.
+1. **Open the plan preview** (the agent's Step C handles the `openPlanView` command).
+2. **If the plan includes a frontend** (any app type except `API only` / `Background worker`), proceed to **PHASE 2: FRONTEND PREVIEW** below — author the static `.azure/frontend-preview/index.html`, which the plan webview embeds inline. For `API only` / `Background worker`, skip Phase 2.
+3. **Present plan + embedded UI**, ask for approval.
+4. If approved, update status from `Planning` to `Approved`.
+5. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. The scaffold agent **regenerates the real framework frontend** in `src/web/` using `.azure/frontend-preview/index.html` as a visual spec — it does NOT copy the static file.
 
-> **❌ STOP** — Do NOT proceed past approval until user approves. Once approved, auto-chain immediately.
+> **❌ STOP** — Do NOT proceed past approval until user approves both the plan and the embedded UI preview. Once approved, auto-chain immediately.
+
+---
+
+## ═══════════════════════════════════════════════════
+## PHASE 2: FRONTEND PREVIEW (when the plan has a frontend)
+## ═══════════════════════════════════════════════════
+
+> **Skip this phase** for `API only` / `Background worker` app types. For every other app type, this phase is **mandatory** — the user approves a high-fidelity UI preview, not a bare wireframe.
+
+**Goal:** author a **single self-contained static `index.html`** (inline CSS, no framework, no build, no dev server, no external network) into the folder **`.azure/frontend-preview/`**, styled to *emulate* the framework + `Component Library` from the plan, with realistic mock content. The plan webview **embeds it inline** in a sandboxed iframe for approval. The `azure-project-scaffold` agent later **regenerates the real framework frontend** in `src/web/`, using this approved file as a visual spec — it does NOT copy it.
+
+### Why a single static file
+
+The preview is rendered inside the plan webview's sandboxed iframe, which has no scripts and no network. A single inline-CSS `.azure/frontend-preview/index.html` is the only thing that reliably renders — and it appears **instantly** with no `npm install`, no `vite`, and no dev server that can break on a wrong working directory. Authoring it during planning (not `src/web/`) keeps the project's final structure clean until the user approves the design.
+
+### Read the frontend contract
+
+This phase produces a static approximation of the final UI. **Read and follow these references**:
+
+- **Quality bar (read FIRST):** [`.github/agents/shared-references/frontend-quality-bar.md`] — the per-library region-token → primitive mapping, theming from Section 5's palette, real-icon contract, and four-state coverage. For the preview, reproduce each primitive's *look* with inline-CSS HTML (the doc's "preview" notes).
+- **Sub-steps:** [`.github/agents/shared-references/frontend-preview-steps.md`] — F1–F4 (derive tokens, app shell, pages, write file + embedded approval loop). The hard-constraints table there governs what the single file may contain.
+- Patterns: [`.github/agents/shared-references/frontend-patterns.md`] (these are scaffold/real-frontend code patterns; reference, not required for the static preview).
+
+### Steps
+
+| # | Task | Details |
+|---|------|---------|
+| P1 | Derive design tokens | From plan Section 5: `Component Library`, palette, typography, pages, per-page layout regions. Express colors/fonts as `:root` CSS custom properties. |
+| P2 | Build the app shell | Header/top bar + navigation styled like the target library, themed by the Section 5 palette. Render the **authenticated** view (not a login page). |
+| P3 | Build each page | One section per page; render every Section 5 layout-region token as styled inline-CSS HTML that **emulates** the `Component Library` look (per the quality bar). Real icon silhouettes via inline SVG, realistic mock content, all four data states depicted (loading / error / empty / data), destructive-action confirmation affordances. |
+| P4 | Write the file | Write a single valid standalone `.azure/frontend-preview/index.html` (all CSS inline, no sibling files, no external network). The plan webview embeds it automatically — do NOT run any command or open a browser. If the user requests changes, edit the file in place and re-ask. |
+
+> **✅ Phase 2 Checkpoint:**
+> 1. Single self-contained `.azure/frontend-preview/index.html` written (inline CSS, no framework, no build, no external network).
+> 2. Styled to emulate the framework + `Component Library` from Section 5 — not a bare wireframe.
+> 3. Authenticated view shown (if the app has auth) — not a login page.
+> 4. Quality bar met: regions styled to the library look, theme from Section 5 palette, real icon silhouettes, four data states depicted.
+> 5. Embedded in the plan webview (no browser, no server, no port).
+> 6. Ready for the user to approve the plan + embedded UI.
+
+> **Do NOT** initialize a framework app, run `npm`/`vite`, start a dev server, open the Simple Browser, or wire a real backend — all of that is the scaffold agent's job.
 
 ---
 
@@ -481,20 +524,20 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ### Component Library Defaults (Section 5 of the plan)
 
-> **Pick the default for the user's frontend framework** unless the user explicitly named a different library. The chosen value goes into Section 5 verbatim as `**Component Library**: {value}` and becomes the load-bearing input for the scaffold quality contract (see scaffold skill `references/frontend-quality-bar.md`).
+> **Pick the default for the user's frontend framework** unless the user explicitly named a different library. The chosen value goes into Section 5 verbatim as `**Component Library**: {value}` and becomes the load-bearing input for the **Phase 2 frontend quality contract** (see [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md)).
 
 | Frontend (Q4) | Default `Component Library` | Reasonable alternatives | Use the default unless... |
 |---------------|----------------------------|------------------------|---------------------------|
-| `React` | **Fluent UI v9** (`@fluentui/react-components`) | shadcn/ui + Radix, Material UI v6, Chakra UI v3 | user explicitly names one of the alternatives, OR project already has another library installed |
+| `React` | **Tailwind CSS + shadcn/ui** (`lucide-react` icons) | Material UI v6, Chakra UI v3, Mantine | user explicitly names one of the alternatives, OR project already has another library installed |
 | `Vue` | **Vuetify 3** | PrimeVue 4, Element Plus | user explicitly names one |
 | `Svelte` | **Skeleton UI** | Melt UI + Tailwind | user explicitly names one |
 | `Angular` | **Angular Material** | PrimeNG | user explicitly names one |
 | `None` (plain HTML / Static + API) | **Pico.css** + native form controls | Bulma, water.css | user explicitly names one |
 | `None` + `Background worker` | omit Section 5 entirely | \u2014 | always omit when there is no UI |
 
-> **Why this matters**: Without `Component Library:`, the scaffold step treats the wireframe's region tokens (`header`, `hero`, `grid`, ...) as raw layout instructions and produces blocky placeholder `<div>` JSX that LOOKS worse than the plan-preview wireframe. With `Component Library:` set, the scaffold renders each region using real library primitives (cards, tabs, fields, toolbars, message bars) themed by the Color Palette.
+> **Why this matters**: Without `Component Library:`, the Phase 2 preview treats the layout-region tokens (`header`, `hero`, `grid`, ...) as raw layout instructions and produces blocky placeholder `<div>`s. With `Component Library:` set, Phase 2 styles each region to emulate that library's primitives (cards, tabs, fields, toolbars, message bars) themed by the Color Palette — and the scaffold agent later renders them with the library's real primitives.
 
-> **Plan-preview note**: The plan-preview webview always renders the Section 5 wireframe in Fluent UI v9 (it's the only library bundled). When `Component Library` is anything other than Fluent UI v9, the preview shows a small footnote disclosing this. The scaffolded app still uses the library named in the plan.
+> **Embedded preview note**: The user reviews a **static, self-contained HTML preview embedded directly in the plan webview** (Phase 2), styled to emulate the `Component Library` named in the plan. The same webview shows the plan structure and design tokens alongside it. The real framework frontend is built later by the scaffold agent from this approved spec.
 
 ### Error Response Contract
 
@@ -583,14 +626,15 @@ project-root/
 | Artifact | Location |
 |----------|----------|
 | **Project Plan** | `.azure/project-plan.md` (Status: Approved) |
+| **Frontend preview** (if the plan has a frontend) | `.azure/frontend-preview/` — real, runnable, mock-data frontend, built and approved live |
 
 ---
 
 ## Next
 
-> **Automatic**: After plan approved, immediately invokes **azure-project-scaffold**:
-> - Generates frontend preview (if applicable) with auto-open in VS Code Simple Browser
+> **Automatic**: After the plan + embedded UI are approved, immediately invokes **azure-project-scaffold**:
+> - **Regenerates** the real framework frontend in `src/web/` from the approved static preview `.azure/frontend-preview/index.html` — does NOT copy the static file
 > - Scaffolds backend (services, handlers, migrations, types)
-> - Auto-invokes **azure-project-test** for test coverage
+> - Wires the frontend to the real backend, then auto-invokes **azure-project-test** for test coverage
 >
 > **No user action required** — chain is automatic.
