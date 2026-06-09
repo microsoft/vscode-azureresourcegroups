@@ -45,6 +45,18 @@ For each service in the plan's Services table (where Generate is checked), gener
 
 ---
 
+## Dependency Availability
+
+> ⚠️ **Do not assume CLI tools or packages are installed in the target project.**
+
+Before writing any script or task command that invokes a CLI tool (e.g., `rimraf`, `concurrently`, `cross-env`):
+
+1. **Check** — Verify the tool is already a project dependency.
+2. **Install if missing** — Add it as a project dev dependency. This ensures it is version-locked and works consistently across all machines.
+3. **Ask if uncertain** — Use `ask_user` if the tool is expensive, opinionated, or has multiple alternatives.
+
+---
+
 ## VS Code Debug & Task Configuration
 
 Assemble `.vscode/launch.json` and `.vscode/tasks.json` by combining properties from the detected **project type** and **runtime** references. Use the source ownership table below to determine which file provides each property.

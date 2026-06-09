@@ -139,7 +139,7 @@ Use these implementations when building scripts from the plan:
 |---------------|-----------------|-------|
 | Start emulators | `docker compose up -d` | Idempotent — safe to re-run |
 | Stop emulators | `docker compose down` | Stops and removes containers |
-| Clean emulator data | `docker compose down && npx rimraf {data-dirs}` | `{data-dirs}` = space-separated `./.{name}` directories derived from `docker-compose.yml` `volumes:` mounts (e.g., `.azurite .postgres`). Use `rimraf` (or `npx rimraf`) for cross-platform compatibility instead of `rm -rf`. |
+| Clean emulator data | `docker compose down && rimraf {data-dirs}` | `{data-dirs}` = space-separated `./.{name}` directories derived from `docker-compose.yml` `volumes:` mounts (e.g., `.azurite .postgres`). Use `rimraf` for cross-platform compatibility. Requires `rimraf` in `devDependencies` — see [generate.md § Dependency Availability](../generate.md). |
 | Run migrations | `{migration tool CLI command}` | See [migrations.md](../migrations.md) for how to determine the command |
 
 ---
