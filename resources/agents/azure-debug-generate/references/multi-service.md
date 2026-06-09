@@ -30,22 +30,75 @@ Adding a second service to an existing single-service repo is safe — the origi
 
 > ⛔ **MANDATORY:** When 2+ service roots are detected (including Frontend SPA projects), a compound debug configuration **must** be generated. A frontend SPA counts as a service root — it does not need emulators, but it does need a debug config entry and inclusion in the compound.
 
+> ⚠️ **Working directory:** Multi-service task chains require correct `cwd` on every per-service task. See [generate.md § Working Directory (`cwd`) Rules](generate.md) — without it, commands like `npm install` or `func host start` run from the workspace root and fail.
+
 Use the plan's Services table to assemble the compound config. The compound config row in the plan specifies the Launch Config Name (e.g., "Debug All Services").
+
+### Startup Ordering
+
+VS Code compound launch configurations always start their listed configurations **in parallel** — there is no `dependsOrder` for compounds. The only sequencing mechanism available is the compound's `preLaunchTask`.
+
+When a frontend SPA has a proxy configuration pointing to a local backend service, the backend must be ready before the frontend dev server starts (otherwise the frontend proxy produces `ECONNREFUSED` errors). Use the following pattern:
+
+> The plan may include a note like "ℹ️ **Proxy detected:**" indicating this dependency. Check the frontend's config files (e.g., `vite.config.ts` `server.proxy`) to confirm.
+
+**1. Generate a "Start All Services" compound task** with `dependsOrder: "sequence"`:
+
+```json
+{
+  "label": "Start All Services",
+  "dependsOn": [
+    "{backend-service-id}: {top-level-task}",
+    "{frontend-service-id}: dev server"
+  ],
+  "dependsOrder": "sequence",
+  "problemMatcher": []
+}
+```
+
+The backend task is listed first, so its `problemMatcher` (e.g., `$func-node-watch`) must signal "ready" before the frontend dev server starts.
+
+**2. Set the compound launch config's `preLaunchTask`** to this sequenced task:
 
 ```json
 {
   "name": "{Launch Config Name from plan's compound row}",
   "configurations": ["{Launch Config Name 1}", "{Launch Config Name 2}", "..."],
+  "preLaunchTask": "Start All Services",
   "stopAll": true
 }
 ```
 
-> ⚠️ The compound configuration itself must **not** reference the "Start Emulators" task directly (e.g., via `preLaunchTask`). Emulator startup is owned by each service's task chain via `dependsOn`. Adding it to the compound causes double execution.
+**3. Individual configs keep their own `preLaunchTask`** pointing to their service's top-level task (so they work standalone):
 
-> ⚠️ **Working directory:** Multi-service task chains require correct `cwd` on every per-service task. See [generate.md § Working Directory (`cwd`) Rules](generate.md) — without it, commands like `npm install` or `func host start` run from the workspace root and fail.
+```json
+{
+  "name": "{Launch Config Name 1}",
+  "type": "node",
+  "request": "attach",
+  "port": 9229,
+  "preLaunchTask": "{backend-service-id}: {top-level-task}"
+}
+```
 
-### Startup Ordering
+```json
+{
+  "name": "{Launch Config Name 2}",
+  "type": "chrome",
+  "request": "launch",
+  "url": "http://localhost:{port}",
+  "webRoot": "${workspaceFolder}/{service-root}",
+  "preLaunchTask": "{frontend-service-id}: dev server"
+}
+```
 
-When a frontend SPA has a proxy configuration pointing to a local backend service, the backend service's startup task should complete its ready signal before the frontend dev server starts. Enforce this via `dependsOn` in the task chain — the frontend's dev server task should depend on the backend's top-level task.
+**4. Use `instancePolicy: "silent"` on port-binding background tasks** to prevent double-invocation:
 
-> The plan may include a note like "ℹ️ **Proxy detected:**" indicating this dependency. Check the frontend's config files (e.g., `vite.config.ts` `server.proxy`) to confirm.
+When the compound runs, "Start All Services" starts both services. Then each configuration's `preLaunchTask` fires — but since `instanceLimit: 1` and `instancePolicy: "silent"`, the duplicate is silently skipped.
+
+### Why This Works
+
+- `dependsOrder: "sequence"` on the compound task ensures backend is ready (problem matcher signals) before frontend starts
+- `preLaunchTask` on the compound ensures both services are running before debuggers attach
+- `instancePolicy: "silent"` prevents the individual configs' preLaunchTasks from killing/restarting services already started by the compound task
+- Individual configs still work standalone (when no instance is running, the task starts normally)
