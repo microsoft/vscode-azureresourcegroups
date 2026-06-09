@@ -28,7 +28,6 @@
         ".vscode-test",
         "gulpfile.ts",
         "**/dist",
-        "**/out",
-        "src/webviews/copilotOnRails/views"
+        "**/out"
     ]
 }
