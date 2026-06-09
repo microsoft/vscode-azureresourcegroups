@@ -3,7 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { TenantIdDescription } from '@azure/arm-resources-subscriptions';
+import type { TenantIdDescription } from '@azure/arm-resources-subscriptions';
 import { AzureAccount } from '@microsoft/vscode-azext-azureauth';
 import { nonNullValue } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';

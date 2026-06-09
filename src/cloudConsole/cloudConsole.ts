@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TenantIdDescription } from '@azure/arm-resources-subscriptions';
+import type { TenantIdDescription } from '@azure/arm-resources-subscriptions';
 import { AzureSubscriptionProvider, AzureTenant, getConfiguredAzureEnv } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, IAzureQuickPickItem, IParsedError, callWithTelemetryAndErrorHandlingSync, nonNullProp, parseError } from '@microsoft/vscode-azext-utils';
 import * as cp from 'child_process';

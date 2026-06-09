@@ -949,7 +949,7 @@
     },
     "devDependencies": {
         "@azure/arm-msi": "^2.1.0",
-        "@azure/arm-resources-subscriptions": "^2.1.0",
+        "@azure/arm-resources-subscriptions": "^3.0.0-beta.1",
         "@microsoft/api-extractor": "^7.58.2",
         "@microsoft/vscode-azext-eng": "^1.0.0-alpha.11",
         "@types/fs-extra": "^11.0.4",
@@ -971,7 +971,7 @@
         "@azure/arm-resources": "^5.2.0",
         "@azure/arm-resources-profile-2020-09-01-hybrid": "^2.1.0",
         "@microsoft/vscode-azext-azureauth": "^6.1.0-alpha.2",
-        "@microsoft/vscode-azext-azureutils": "^4.1.0",
+        "@microsoft/vscode-azext-azureutils": "^4.3.0",
         "@microsoft/vscode-azext-utils": "^4.1.0",
         "@microsoft/vscode-azext-webview": "^1.0.2",
         "form-data": "^4.0.4",
