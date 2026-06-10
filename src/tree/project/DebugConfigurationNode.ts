@@ -19,13 +19,19 @@ export class DebugConfigurationNode implements ProgressNode {
 
     getTreeItem(): vscode.TreeItem {
         const { name, type, folder } = this.config;
-        const label = name.toLowerCase() === type.toLowerCase() ? vscode.l10n.t('Debug: {0} ({1})', name, folder.name) : vscode.l10n.t('Debug: {0}', name);
+        // When name matches type (e.g. both are "python"), it's likely that a default/generic name was generated.
+        // Append the folder name to disambiguate across workspace folders.
+        // e.g. name="python", type="python", folder="my-app" => "Debug: python (my-app)"
+        // e.g. name="Launch API Server", type="node" => "Debug: Launch API Server"
+        const label = name.toLowerCase() === type.toLowerCase()
+            ? vscode.l10n.t('Debug: {0} ({1})', name, folder.name)
+            : vscode.l10n.t('Debug: {0}', name);
         const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
         item.id = `${this.stageId}.debug.${folder.uri.toString()}.${name}`;
         item.iconPath = new vscode.ThemeIcon('debug-alt');
         item.tooltip = vscode.l10n.t('Start debugging "{0}"', name);
         item.command = {
-            command: 'azureResourceGroups.startDebugging',
+            command: 'azureResourceGroups.startDebugConfiguration',
             title: '',
             arguments: [folder, name],
         };
