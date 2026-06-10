@@ -27,7 +27,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             switch (message.command) {
                 case 'ready':
                     void this.panel.webview.postMessage({ command: 'setPlanData', data: planData });
-                    void this.postPreviewHtml();
+                    void this.postPreviewUri();
                     break;
                 case 'approvePlan':
                     void vscode.commands.executeCommand('workbench.action.chat.open', {
@@ -61,7 +61,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             this.watchFrontendPreview();
         }
         void this.panel.webview.postMessage({ command: 'setPlanData', data: planData });
-        void this.postPreviewHtml();
+        void this.postPreviewUri();
         void this.panel.webview.postMessage({ command: 'revisionComplete' });
     }
 
@@ -69,8 +69,9 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
      * The base controller's CSP omits `frame-src`. Relying on the `default-src`
      * fallback to govern frames is unreliable in the webview runtime, which can
      * leave the embedded preview iframe blank (a white box) regardless of its
-     * content. Add an explicit `frame-src` so the sandboxed `srcdoc` iframe in
-     * the UI Preview card is allowed to render. `'self'` covers `about:srcdoc`.
+     * content. Add an explicit `frame-src` so the iframe pointed at the
+     * `.azure/frontend-preview/` webview-resource URIs is allowed to render.
+     * `${cspSource}` covers `asWebviewUri(...)` output.
      */
     protected getDocumentTemplate(webview?: vscode.Webview): string {
         const html = super.getDocumentTemplate(webview);
@@ -92,10 +93,38 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         return vscode.workspace.workspaceFolders?.[0]?.uri;
     }
 
+    /** Folder that holds the multi-page static preview (`.azure/frontend-preview/`). */
+    private previewFolderUri(): vscode.Uri | undefined {
+        const folder = this.workspaceFolderUri();
+        return folder ? vscode.Uri.joinPath(folder, '.azure', 'frontend-preview') : undefined;
+    }
+
     /**
-     * Watch `.azure/frontend-preview/index.html` so the embedded iframe refreshes
-     * the moment the agent finishes writing (or rewrites) the preview. Without
-     * this, a webview opened before the file exists shows an empty preview and
+     * Allow the webview to load files from `.azure/frontend-preview/` so the
+     * iframe can point at real resource URIs. The base controller only grants
+     * the extension + bundle dirs; without adding the preview folder the iframe
+     * `src` would be blocked and render blank. Scoped to just this folder so no
+     * other workspace files are exposed.
+     */
+    private ensurePreviewResourceRoot(): void {
+        const previewRoot = this.previewFolderUri();
+        if (!previewRoot) {
+            return;
+        }
+        const existing = this.panel.webview.options.localResourceRoots ?? [];
+        if (existing.some(r => r.toString() === previewRoot.toString())) {
+            return;
+        }
+        this.panel.webview.options = {
+            ...this.panel.webview.options,
+            localResourceRoots: [...existing, previewRoot],
+        };
+    }
+
+    /**
+     * Watch `.azure/frontend-preview/` so the embedded iframe refreshes the
+     * moment the agent finishes writing (or rewrites) any preview page. Without
+     * this, a webview opened before the files exist shows an empty preview and
      * never updates until the next plan revision.
      */
     private watchFrontendPreview(): void {
@@ -103,10 +132,11 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         if (!folder) {
             return;
         }
+        this.ensurePreviewResourceRoot();
         this.previewWatcher?.dispose();
-        const pattern = new vscode.RelativePattern(folder, '.azure/frontend-preview/index.html');
+        const pattern = new vscode.RelativePattern(folder, '.azure/frontend-preview/**');
         const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-        const refresh = () => void this.postPreviewHtml();
+        const refresh = () => void this.postPreviewUri();
         watcher.onDidCreate(refresh);
         watcher.onDidChange(refresh);
         watcher.onDidDelete(refresh);
@@ -114,24 +144,26 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     /**
-     * Read the self-contained preview HTML from disk and hand the raw markup to
-     * the webview, which renders it via a sandboxed `<iframe srcdoc>`. Injecting
-     * the content directly (rather than pointing the iframe at a webview resource
-     * URI) sidesteps `localResourceRoots` / resource-protocol issues that left
-     * the preview blank. Posts `undefined` when no preview has been generated yet.
+     * Resolve `.azure/frontend-preview/index.html` to a webview-resource URI and
+     * hand it to the webview, which loads it as the iframe `src`. Serving the
+     * folder as real resource URIs (rather than injecting `srcdoc`) lets the
+     * preview be a set of cross-linked pages the user can navigate. A cache-bust
+     * query forces the iframe to reload whenever the files change. Posts
+     * `undefined` when no preview has been generated yet.
      */
-    private async postPreviewHtml(): Promise<void> {
-        let html: string | undefined;
-        const folder = this.workspaceFolderUri();
-        if (folder) {
-            const fileUri = vscode.Uri.joinPath(folder, '.azure', 'frontend-preview', 'index.html');
+    private async postPreviewUri(): Promise<void> {
+        let uri: string | undefined;
+        const previewRoot = this.previewFolderUri();
+        if (previewRoot) {
+            this.ensurePreviewResourceRoot();
+            const indexUri = vscode.Uri.joinPath(previewRoot, 'index.html');
             try {
-                const bytes = await vscode.workspace.fs.readFile(fileUri);
-                html = Buffer.from(bytes).toString('utf8');
+                await vscode.workspace.fs.stat(indexUri);
+                uri = this.panel.webview.asWebviewUri(indexUri).with({ query: `t=${Date.now()}` }).toString();
             } catch {
-                html = undefined;
+                uri = undefined;
             }
         }
-        void this.panel.webview.postMessage({ command: 'setPreviewHtml', html });
+        void this.panel.webview.postMessage({ command: 'setPreviewUri', uri });
     }
 }

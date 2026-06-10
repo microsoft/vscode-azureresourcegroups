@@ -59,10 +59,6 @@
         gap: 8px;
     }
 
-    .uiPreviewCard__liveBanner {
-        width: 100%;
-    }
-
     .uiPreviewCard__frame {
         width: 100%;
         height: 440px;
@@ -71,32 +67,15 @@
         background: #ffffff;
     }
 
-    .uiPreviewCard__pageList {
+    .uiPreviewCard__loading {
         display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-    }
-
-    .uiPreviewCard__pageChip {
-        display: inline-flex;
-        align-items: baseline;
-        gap: 6px;
-        padding: 3px 10px;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 440px;
         border: 1px solid var(--vscode-widget-border);
-        border-radius: 12px;
+        border-radius: 6px;
         background: var(--vscode-editorWidget-background);
-    }
-
-    .uiPreviewCard__pageChipName {
-        font-size: 0.8em;
-        font-weight: 600;
-        color: var(--vscode-foreground);
-    }
-
-    .uiPreviewCard__pageChipRoute {
-        font-size: 0.72em;
-        font-family: var(--vscode-editor-font-family, monospace);
-        color: var(--vscode-descriptionForeground);
     }
 
     // -------- Palette swatch row --------
@@ -166,17 +145,15 @@
         font-family: var(--vscode-editor-font-family, monospace);
     }
 
-    // -------- Typography & free-form note --------
-    .uiPreviewCard__typographyRow,
-    .uiPreviewCard__noteRow {
+    // -------- Typography --------
+    .uiPreviewCard__typographyRow {
         display: flex;
         flex-direction: column;
         gap: 4px;
         padding-top: 4px;
     }
 
-    .uiPreviewCard__typographyLabel,
-    .uiPreviewCard__noteLabel {
+    .uiPreviewCard__typographyLabel {
         font-size: 0.72em;
         font-weight: 600;
         text-transform: uppercase;
@@ -184,8 +161,7 @@
         color: var(--vscode-descriptionForeground);
     }
 
-    .uiPreviewCard__typographyInput,
-    .uiPreviewCard__noteInput {
+    .uiPreviewCard__typographyInput {
         width: 100%;
         max-width: 100%;
     }

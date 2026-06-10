@@ -4,44 +4,63 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
-    Badge,
-    Input,
-    MessageBar,
-    MessageBarBody,
-    MessageBarTitle,
-    Textarea,
+    Select,
+    Spinner,
 } from '@fluentui/react-components';
 import { useMemo, useRef, type JSX } from 'react';
 import { type PageEntry, type PaletteEntry, type PlanSection } from '../utils/parseScaffoldPlanMarkdown';
 
+/** Curated font families offered in the Typography dropdown. */
+const FONT_CHOICES = [
+    'Inter',
+    'Roboto',
+    'Open Sans',
+    'Lato',
+    'Montserrat',
+    'Poppins',
+    'Nunito',
+    'Work Sans',
+    'Source Sans 3',
+    'system-ui',
+    'Georgia',
+    'Merriweather',
+    'Playfair Display',
+    'JetBrains Mono',
+];
+
 interface UiPreviewCardProps {
     section: PlanSection;
-    uiNote: string;
     disabled?: boolean;
-    /** Raw HTML of the embedded `.azure/frontend-preview/index.html`, rendered via iframe srcdoc. */
-    previewHtml?: string;
+    /** Webview-resource URI of the embedded `.azure/frontend-preview/index.html`, loaded as the iframe src. */
+    previewUri?: string;
     /** Called when the user picks a new color for a palette token. */
     onPaletteChange: (token: string, originalHex: string, newHex: string) => void;
-    /** Called when the user edits the typography font family. */
+    /** Called when the user picks a new typography font family. */
     onTypographyChange: (originalValue: string, newValue: string) => void;
-    onUiNoteChange: (text: string) => void;
 }
 
 /**
  * Companion controls for the embedded frontend preview. The preview is a single
- * self-contained static HTML/CSS file generated during planning and rendered
- * inline below in a sandboxed iframe (no build step, no dev server). This card
- * also surfaces Section 5 (Design System & UI) as editable controls: the user
- * can pick new palette colors, edit the font family, and add free-form UI notes.
- * Every edit is bubbled up so the parent can mirror it into the feedback drawer
- * and regenerate the preview.
+ * self-contained static HTML/CSS preview generated during planning and rendered
+ * inline below in an iframe that loads the `.azure/frontend-preview/` files as
+ * webview resources (so its pages are navigable). This card also surfaces
+ * Section 5 (Design System & UI) as editable controls: the user can pick new
+ * palette colors and choose the font family. Every edit is bubbled up so the
+ * parent can mirror it into the feedback drawer and regenerate the preview.
  */
-export const UiPreviewCard = ({ section, uiNote, disabled, previewHtml, onPaletteChange, onTypographyChange, onUiNoteChange }: UiPreviewCardProps): JSX.Element | null => {
+export const UiPreviewCard = ({ section, disabled, previewUri, onPaletteChange, onTypographyChange }: UiPreviewCardProps): JSX.Element | null => {
     const palette = useMemo(() => extractPalette(section), [section]);
     const pages = useMemo(() => extractPages(section), [section]);
-    const componentLibrary = useMemo(() => extractKeyValue(section, 'Component Library'), [section]);
+
     const typography = useMemo(() => extractKeyValue(section, 'Typography'), [section]);
     const styleDirection = useMemo(() => extractKeyValue(section, 'Style Direction'), [section]);
+    const fontOptions = useMemo(() => {
+        const list = [...FONT_CHOICES];
+        if (typography && !list.includes(typography)) {
+            list.unshift(typography);
+        }
+        return list;
+    }, [typography]);
 
     const colorInputs = useRef<Map<string, HTMLInputElement | null>>(new Map());
     const originalTypography = useRef<string | undefined>(undefined);
@@ -75,36 +94,22 @@ export const UiPreviewCard = ({ section, uiNote, disabled, previewHtml, onPalett
         <div className='sectionCard uiPreviewCard'>
             <div className='uiPreviewCard__header'>
                 <h2>UI Preview</h2>
-                {componentLibrary && (
-                    <Badge appearance='tint' color='brand' size='medium'>{componentLibrary}</Badge>
-                )}
             </div>
             {styleDirection && <p className='uiPreviewCard__styleDirection'>{styleDirection}</p>}
 
             <div className='uiPreviewCard__livePreview'>
-                {previewHtml ? (
+                {previewUri ? (
                     <iframe
                         className='uiPreviewCard__frame'
-                        srcDoc={previewHtml}
+                        src={previewUri}
                         title='Frontend preview'
-                        sandbox=''
+                        sandbox='allow-same-origin'
                     />
                 ) : (
-                    <MessageBar intent='info' className='uiPreviewCard__liveBanner'>
-                        <MessageBarBody>
-                            <MessageBarTitle>Preview generates here</MessageBarTitle>
-                            Your frontend preview{componentLibrary ? <> (styled like <strong>{componentLibrary}</strong>)</> : null} will appear inline once planning builds it. Tweak the palette, typography, or describe changes below — the preview regenerates in place.
-                        </MessageBarBody>
-                    </MessageBar>
+                    <div className='uiPreviewCard__loading'>
+                        <Spinner size='large' label='Generating your frontend preview…' />
+                    </div>
                 )}
-                <div className='uiPreviewCard__pageList'>
-                    {pages.map((p, i) => (
-                        <div key={`${p.page}-${i}`} className='uiPreviewCard__pageChip'>
-                            <span className='uiPreviewCard__pageChipName'>{p.page}</span>
-                            <span className='uiPreviewCard__pageChipRoute'>{p.route || `/${p.page.toLowerCase().replace(/\s+/g, '-')}`}</span>
-                        </div>
-                    ))}
-                </div>
             </div>
 
             <div className='uiPreviewCard__paletteRow'>
@@ -141,31 +146,19 @@ export const UiPreviewCard = ({ section, uiNote, disabled, previewHtml, onPalett
                     <label className='uiPreviewCard__typographyLabel' htmlFor='ui-preview-typography'>
                         Typography
                     </label>
-                    <Input
+                    <Select
                         id='ui-preview-typography'
                         className='uiPreviewCard__typographyInput'
                         value={typography}
                         disabled={disabled}
                         onChange={(_, data) => handleTypographyChange(data.value)}
-                    />
+                    >
+                        {fontOptions.map((font) => (
+                            <option key={font} value={font}>{font}</option>
+                        ))}
+                    </Select>
                 </div>
             )}
-
-            <div className='uiPreviewCard__noteRow'>
-                <label className='uiPreviewCard__noteLabel' htmlFor='ui-preview-note'>
-                    Request UI changes
-                </label>
-                <Textarea
-                    id='ui-preview-note'
-                    className='uiPreviewCard__noteInput'
-                    value={uiNote}
-                    disabled={disabled}
-                    placeholder="e.g. 'Use larger headlines on the dashboard' or 'Add a search bar to the header'"
-                    rows={2}
-                    resize='vertical'
-                    onChange={(_, data) => onUiNoteChange(data.value)}
-                />
-            </div>
         </div>
     );
 };

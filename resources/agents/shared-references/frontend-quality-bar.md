@@ -1,7 +1,7 @@
 # Frontend Quality Bar — Reproduce the Library's Visual Language
 
 > **Load this BEFORE producing any frontend.** Two readers, two modes:
-> - **`azure-project-plan` (Phase 2: Frontend Preview)** authors a **single static inline-CSS `index.html`** that *emulates* the library named in Section 5. There are no imports and no components — you reproduce each primitive's **look** (shape, spacing, color, typography, icon silhouette) with plain HTML + inline CSS. Every "render `<Component>`" instruction below means "produce HTML styled to look like that component."
+> - **`azure-project-plan` (Phase 2: Frontend Preview)** authors a **navigable set of static pages** (a shared `styles.css` + `index.html` + one `*.html` per page) that look **polished and production-ready**. There are no imports and no components — you produce clean, modern HTML + CSS themed by Section 5's palette. You do **not** need to emulate a specific component library (e.g. Tailwind CSS + shadcn/ui); the per-library tables below are an **optional reference** for component shapes/spacing, but a polished, coherent look is what matters. Every "render `<Component>`" instruction below just means "produce HTML for that kind of element."
 > - **`azure-project-scaffold` (Step 1: Regenerate Frontend, Step 12: Wire Frontend)** builds the **real framework frontend** and MUST use the library's actual primitives, theme provider, and icon package per the tables below.
 >
 > Either way this is the contract between the plan's Section 5 (Design System & UI) and what the user sees.
@@ -164,7 +164,7 @@ Every page that displays data MUST cover all four states with the library's visu
 
 > **Scaffold (real frontend):** the four states MUST be reachable from the running app — wire a small dev-only toggle (URL hash, query param, or a corner button gated by `import.meta.env.DEV`) so reviewers can flip between `loading`, `error`, `empty`, `data`. This is also how `azure-project-test` later verifies the four-state contract.
 >
-> **Preview (static HTML):** there is no toggle and no server — **depict** each of the four states somewhere in the single `index.html` (e.g. a loading skeleton block, an error banner with a retry button, an empty-state block with a CTA, and the populated data) so the reviewer can see all four treatments at once.
+> **Preview (static HTML):** there is no toggle and no server — **depict** each of the four states somewhere in the preview pages (e.g. a loading skeleton block, an error banner with a retry button, an empty-state block with a CTA, and the populated data) so the reviewer can see all four treatments at once.
 
 ---
 
@@ -192,4 +192,4 @@ Every page that displays data MUST cover all four states with the library's visu
 - [ ] All four states (loading / error / empty / data) are present — scaffold via a dev-only toggle, preview depicted inline.
 - [ ] `Style Direction:` is reflected in density and corner radius (e.g. "data-dense" → compact toolbars, tight list rows; "calm and spacious" → generous padding, larger cards).
 - [ ] Scaffold only: no `any` types; auto-auth still works (if applicable).
-- [ ] Preview only: single self-contained `index.html`, inline CSS, no external network, no build step.
+- [ ] Preview only: navigable set of static files (`styles.css` + `index.html` + one `*.html` per page), no external network, no build step; pages cross-linked via relative `<a href>`.

@@ -31,7 +31,7 @@ type FeedbackItem =
 let feedbackIdCounter = 0;
 const nextId = (): string => `fb-${++feedbackIdCounter}`;
 
-function buildFeedbackPrompt(items: FeedbackItem[], freeform: string, uiNote: string): string {
+function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
     const changes = items
         .filter((i): i is Extract<FeedbackItem, { kind: 'dropdown' }> => i.kind === 'dropdown')
         .map(i => `- Change ${i.field} from ${i.from} to ${i.to}`);
@@ -64,22 +64,14 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string, uiNote: st
     if (freeform.trim().length > 0) {
         lines.push('Additional notes:', `- ${freeform.trim()}`, '');
     }
-    if (uiNote.trim().length > 0) {
-        lines.push(
-            'UI changes (apply to Section 5 "Design System & UI" — pages, layout regions, or visual treatments):',
-            `- ${uiNote.trim()}`,
-            '',
-        );
-    }
     return lines.join('\n').trimEnd();
 }
 
 export const ScaffoldPlanView = (): JSX.Element => {
     const [plan, setPlan] = useState<PlanData | null>(null);
-    const [previewHtml, setPreviewHtml] = useState<string | undefined>(undefined);
+    const [previewUri, setPreviewUri] = useState<string | undefined>(undefined);
     const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
     const [freeformDraft, setFreeformDraft] = useState('');
-    const [uiNote, setUiNote] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
@@ -90,8 +82,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const { vscodeApi } = useContext(WebviewContext);
 
     const hasEdits = useMemo(
-        () => feedbackItems.length > 0 || freeformDraft.trim().length > 0 || uiNote.trim().length > 0,
-        [feedbackItems, freeformDraft, uiNote],
+        () => feedbackItems.length > 0 || freeformDraft.trim().length > 0,
+        [feedbackItems, freeformDraft],
     );
 
     const isAlreadyApproved = useMemo(() => {
@@ -117,7 +109,6 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 // post-revision refresh. Either way, clear pending feedback state.
                 setFeedbackItems([]);
                 setFreeformDraft('');
-                setUiNote('');
                 originalCellValues.current.clear();
                 originalDesignValues.current.clear();
             } else if (message?.command === 'revisionInProgress') {
@@ -125,8 +116,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 setDrawerOpen(false);
             } else if (message?.command === 'revisionComplete') {
                 setIsAwaitingRevision(false);
-            } else if (message?.command === 'setPreviewHtml') {
-                setPreviewHtml(message.html as string | undefined);
+            } else if (message?.command === 'setPreviewUri') {
+                setPreviewUri(message.uri as string | undefined);
             }
         };
         window.addEventListener('message', handler);
@@ -351,7 +342,6 @@ export const ScaffoldPlanView = (): JSX.Element => {
         originalCellValues.current.clear();
         originalDesignValues.current.clear();
         setFreeformDraft('');
-        setUiNote('');
     }, [mutateCell, mutatePaletteEntry, mutateTypography]);
 
     const handleSubmitFeedback = useCallback(() => {
@@ -362,12 +352,12 @@ export const ScaffoldPlanView = (): JSX.Element => {
         const items = draftTrimmed.length > 0
             ? [...feedbackItems, { id: nextId(), kind: 'freeform' as const, text: draftTrimmed }]
             : feedbackItems;
-        const prompt = buildFeedbackPrompt(items, '', uiNote);
+        const prompt = buildFeedbackPrompt(items, '');
         vscodeApi.postMessage({ command: 'submitPlanFeedback', prompt, data: plan });
         setIsAwaitingRevision(true);
         setDrawerOpen(false);
         setConfirmSubmitOpen(false);
-    }, [plan, hasEdits, feedbackItems, freeformDraft, uiNote, vscodeApi]);
+    }, [plan, hasEdits, feedbackItems, freeformDraft, vscodeApi]);
 
     if (!plan) {
         return <div className='scaffoldPlanView'><p>Loading plan...</p></div>;
@@ -402,7 +392,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const detailSections = sections.filter(s => s.number === 2 || s.number === 3);
     const structureSection = sections.find(s => s.title.toLowerCase().includes('project structure'));
     const designSection = sections.find(s => s.title.toLowerCase().includes('design system'));
-    const draftCount = (freeformDraft.trim() ? 1 : 0) + (uiNote.trim() ? 1 : 0);
+    const draftCount = (freeformDraft.trim() ? 1 : 0);
 
     return (
         <div className={`scaffoldPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
@@ -484,12 +474,10 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 {designSection && (
                     <UiPreviewCard
                         section={designSection}
-                        uiNote={uiNote}
                         disabled={isAwaitingRevision}
-                        previewHtml={previewHtml}
+                        previewUri={previewUri}
                         onPaletteChange={handlePaletteChange}
                         onTypographyChange={handleTypographyChange}
-                        onUiNoteChange={setUiNote}
                     />
                 )}
 
