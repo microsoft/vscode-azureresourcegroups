@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { ensureAgentInstructions } from './agentInstructions';
 
 const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
 
@@ -34,6 +35,9 @@ export async function openChatWithAgent(agentName: string, prompt: string): Prom
     if (!(await ensureCopilotChatReady())) {
         return;
     }
+    // Make sure the agent's instruction files are present in the workspace before invoking it.
+    // Throws UserCancelledError if the user declines to download required instructions.
+    await ensureAgentInstructions(agentName);
     await vscode.commands.executeCommand('workbench.action.chat.open', {
         mode: agentName,
         query: prompt,
