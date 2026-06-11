@@ -15,4 +15,5 @@
         "**/node_modules": true,
         ".vscode-test": true
     },
+    "typescript.tsdk": "node_modules/typescript/lib",
 }

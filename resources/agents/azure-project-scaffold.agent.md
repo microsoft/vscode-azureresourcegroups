@@ -65,9 +65,17 @@ These commands exist — do not say they aren't registered. If `run_vscode_comma
 
 ### Frontend preview commands — working directory is mandatory
 
-Every frontend command you run during Step 0.5 (Frontend Preview) — `npm install`, `npx vite build`, `npx vite --host`, `npm run dev`, scaffolder commands — MUST be invoked with `cwd` set to the frontend folder (typically `src/web/`), passed on the same terminal call as the command. Each `run_in_terminal` invocation may start in the workspace root, so do **not** rely on a previous `cd`. If your terminal tool lacks a `cwd` parameter, chain `cd src/web && <command>` on the *same* call.
+Every frontend command you run during Step 0.5 (Frontend Preview) — `npm install`, `npx vite build`, `npx vite --host`, `npm run dev`, scaffolder commands — MUST be invoked with `cwd` set to the frontend folder (typically `src/web/`), passed on the same terminal call as the command. Each `run_in_terminal` invocation may start in the workspace root, so do **not** rely on a previous `cd`. Prefer the `cwd` parameter, or use `npm --prefix src/web run <script>` — those are cross-platform. Chained `cd src/web && <command>` works but is bash/PowerShell-fragile, so avoid it when an alternative exists.
 
 Running the Vite dev server from the workspace root still binds to the port and prints `ready in N ms` — but serves a blank page. **Do not tell the user "your preview is live" until you have actually fetched the served page and verified it renders the app** (see [frontend-preview-steps.md F4](.github/agents/azure-project-scaffold/references/frontend-preview-steps.md) for the verification gate). A blank-page preview is worse than no preview.
+
+### No UX approval prompt during scaffolding
+
+The user approves the UI **once**, during planning, via the HTML/CSS mock-up the planner writes to `.azure/.preview-temp/`. During scaffolding the live dev server is shown in the Simple Browser for **visibility only** — so the user can watch the real framework + component library come together while backend Phase B finishes. **Do not call `ask_user` for "do you approve this UI?" during scaffolding** and do not stall the scaffold waiting for design feedback. Treat `.azure/.preview-temp/*.html` as the visual reference (layout regions, palette, density) and translate it into real `Component Library` primitives per [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md).
+
+### Clean up the HTML preview at the end (Step 13)
+
+`.azure/.preview-temp/` is a throwaway mock-up — it must **not** be committed alongside the scaffolded project. As part of Step 13 (Wrap Up), delete the entire `.azure/.preview-temp/` folder using a cross-platform command, e.g.: `node -e "require('fs').rmSync('.azure/.preview-temp', {recursive: true, force: true})"`. Do **not** use `rm -rf` (bash-only) or `Remove-Item -Recurse -Force` (PowerShell-only) directly — those are not portable across Windows / macOS / Linux. See the "Cross-platform command discipline" callout in [instructions.md](.github/agents/azure-project-scaffold/instructions.md).
 
 ---
 

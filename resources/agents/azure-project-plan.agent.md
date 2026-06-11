@@ -27,9 +27,10 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 2. **Step A** — open the requirements view (see below). Mandatory whenever `.azure/requirements.json` was written.
 3. **Step B** — stop and wait for the user to submit the form. The webview controller re-invokes this agent on submit.
 4. Write `.azure/project-plan.md`.
-5. **Step C** — open the plan preview (see below). Mandatory.
-6. **Step D** — wait for the user's explicit approval of the plan. Mandatory.
-7. **Step E** — hand off to the `azure-project-scaffold` agent (see below). Do not begin scaffolding inline.
+5. **Step B-prep** — write `.azure/.preview-temp/{theme.css, manifest.json}` per the skill's Step 3.5a, then fan out one sub-agent per page (Step 3.5b). Skip entirely for `API only` / `Background worker` plans. Sub-agents may still be in flight when Step C runs — the webview's file watcher picks up each `<slug>.html` as it lands.
+6. **Step C** — open the plan preview (see below). Mandatory. Runs **immediately after** `manifest.json` exists so the user sees the loading state while pages are still being rendered.
+7. **Step D** — wait for the user's explicit approval of the plan. Mandatory.
+8. **Step E** — hand off to the `azure-project-scaffold` agent (see below). Do not begin scaffolding inline.
 
 ### Step A — open the requirements view (MANDATORY when requirements.json was written)
 
@@ -53,7 +54,7 @@ Do not poll the file, do not ask the user anything in chat, do not start writing
 
 ### Step C — open the plan preview (MANDATORY, do not skip)
 
-**Trigger:** the instant the skill finishes writing the plan — i.e. as soon as `.azure/project-plan.md` has been written/saved to disk with `Status: Planning`. This must happen **before** the skill's approval gate (before you summarize the plan or ask for approval).
+**Trigger:** the instant `.azure/.preview-temp/manifest.json` has been written (per the skill's Step 3.5a), or — when the plan has no UI (`API only` / `Background worker`) — the instant the skill finishes writing `.azure/project-plan.md` with `Status: Planning`. This must happen **before** the skill's approval gate (before you summarize the plan or ask for approval), and **may run concurrently with the per-page sub-agents from Step 3.5b** — the webview's file watcher picks up each `<slug>.html` as the sub-agents finish.
 
 **Action — call `run_vscode_command` immediately, before any other output:**
 

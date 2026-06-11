@@ -10,7 +10,7 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX
 import { StageProgress } from './components/StageProgress';
 import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
-import { type PlanContent, type PlanData, type PlanSection, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
+import { type PlanContent, type PlanData, type PlanSection, type PreviewPage, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 
 const editableOptions: Record<string, string[]> = {
     'Runtime': ['JavaScript', 'TypeScript', 'Python', 'C# (.NET)'],
@@ -76,6 +76,10 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string, uiNote: st
 
 export const ScaffoldPlanView = (): JSX.Element => {
     const [plan, setPlan] = useState<PlanData | null>(null);
+    // HTML/CSS preview pages pushed from the controller via `setPreviewPages`.
+    // Lives outside `plan` because it's driven by a file-system watcher on
+    // `.azure/.preview-temp/`, not by the plan markdown.
+    const [previewPages, setPreviewPages] = useState<PreviewPage[]>([]);
     const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
     const [freeformDraft, setFreeformDraft] = useState('');
     const [uiNote, setUiNote] = useState('');
@@ -119,6 +123,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 setUiNote('');
                 originalCellValues.current.clear();
                 originalDesignValues.current.clear();
+            } else if (message?.command === 'setPreviewPages') {
+                setPreviewPages(Array.isArray(message.pages) ? message.pages as PreviewPage[] : []);
             } else if (message?.command === 'revisionInProgress') {
                 setIsAwaitingRevision(true);
                 setDrawerOpen(false);
@@ -483,6 +489,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                         section={designSection}
                         uiNote={uiNote}
                         disabled={isAwaitingRevision}
+                        previewPages={previewPages}
                         onPaletteChange={handlePaletteChange}
                         onTypographyChange={handleTypographyChange}
                         onUiNoteChange={setUiNote}
