@@ -14,7 +14,6 @@
 * [[1477]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1477) Add `feedBaseUrl` passthrough to 1ES build pipeline parameters
 * [[1479]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1479) Remove redundant `npmFeed` parameter from the build pipeline
 * [[1424]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1424) Resolve outstanding `npm audit` advisories
-* [[1422]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1422) Update `@azure/identity` to v4.13.1
 * [[1481]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1481) Update `@microsoft/vscode-azext-azureauth` to 6.1.0-alpha.2
 * Update `@microsoft/vscode-azext-azureutils` to ^4.3.0, `@microsoft/api-extractor` to ^7.58.2, `@azure/arm-resources-subscriptions` to ^3.0.0-beta.1, and `ws` to ^8.20.1
 * [[1486]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1486) Remove dead dependencies orphaned by the Copilot on Rails removal
