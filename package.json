@@ -916,15 +916,12 @@
         "@types/semver": "^7.7.1",
         "@types/uuid": "^9.0.1",
         "@types/vscode": "1.105.0",
-        "@types/vscode-webview": "^1.57.5",
         "@types/ws": "^8.5.10",
         "@vscode/test-cli": "*",
         "@vscode/test-electron": "*",
         "@vscode/vsce": "*",
         "esbuild": "*",
-        "esbuild-plugin-copy": "*",
-        "mermaid": "^11.15.0",
-        "sass": "~1.79.6"
+        "esbuild-plugin-copy": "*"
     },
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
@@ -932,7 +929,6 @@
         "@microsoft/vscode-azext-azureauth": "^6.1.0-alpha.2",
         "@microsoft/vscode-azext-azureutils": "^4.3.0",
         "@microsoft/vscode-azext-utils": "^4.1.0",
-        "@microsoft/vscode-azext-webview": "^1.0.2",
         "form-data": "^4.0.4",
         "fs-extra": "^11.3.0",
         "jsonc-parser": "^2.2.1",
