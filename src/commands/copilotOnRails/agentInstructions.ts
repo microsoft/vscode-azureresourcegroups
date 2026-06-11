@@ -18,21 +18,15 @@ interface AgentInstructionMetadata {
     version: string;
 }
 
-/**
- * Maps each contributed chat agent to the instruction folders (under
- * `resources/agents`) it relies on at runtime. Agents that don't ship bundled
- * instruction folders (e.g. `azure-deploy`, which reads an external skill) are
- * intentionally omitted.
- */
-const agentInstructionFolders: Record<string, string[]> = {
-    'azure-project-plan': ['azure-project-plan', 'shared-references'],
-    'azure-project-scaffold': ['azure-project-scaffold', 'shared-references'],
-    'azure-debug-plan': ['azure-debug-plan'],
-    'azure-debug-generate': ['azure-debug-generate'],
-};
-
-/** Every distinct instruction folder across all agents. */
-const allInstructionFolders: string[] = [...new Set(Object.values(agentInstructionFolders).flat())];
+/** Every instruction folder bundled with the extension (under `resources/agents`). */
+const agentInstructionFolders: string[] = [
+    'azure-debug-generate',
+    'azure-debug-plan',
+    'azure-project-plan',
+    'azure-project-scaffold',
+    'azure-project-test',
+    'shared-references',
+];
 
 /** Root of the instruction folders bundled with the extension. */
 function getBundledAgentsRoot(): vscode.Uri {
@@ -108,17 +102,12 @@ async function getInstructionState(folders: string[], agentsRoot: vscode.Uri): P
  * No-ops for agents that don't ship bundled instructions and when no workspace is open.
  */
 export async function ensureAgentInstructions(agentName: string): Promise<void> {
-    const folders = agentInstructionFolders[agentName];
-    if (!folders || folders.length === 0) {
-        return;
-    }
-
     const agentsRoot = getWorkspaceAgentsRoot();
     if (!agentsRoot) {
         return;
     }
 
-    const { anyMissing, anyOutdated } = await getInstructionState(folders, agentsRoot);
+    const { anyMissing, anyOutdated } = await getInstructionState(agentInstructionFolders, agentsRoot);
     if (!anyMissing && !anyOutdated) {
         return;
     }
@@ -151,28 +140,21 @@ export async function ensureAgentInstructions(agentName: string): Promise<void> 
         }
     }
 
-    await copyInstructionFolders(folders, agentsRoot);
+    await copyInstructionFolders(agentInstructionFolders, agentsRoot);
 }
 
 /**
- * Command handler that downloads agent instruction folders into the workspace.
+ * Command handler that downloads all agent instruction folders into the workspace.
  *
- * When invoked directly (e.g. from the Command Palette) the user is not prompted —
+ * When invoked (e.g. from the Command Palette) the user is not prompted —
  * running the command is treated as explicit consent to write into `.github/agents`.
- * An optional `agentName` limits the download to a single agent's folders; otherwise
- * every agent's instructions are downloaded.
  */
-export async function downloadAgentInstructions(_context: IActionContext, agentName?: string): Promise<void> {
+export async function downloadAgentInstructions(_context: IActionContext): Promise<void> {
     const agentsRoot = getWorkspaceAgentsRoot();
     if (!agentsRoot) {
         throw new Error(vscode.l10n.t('Open a folder or workspace before downloading Azure agent instructions.'));
     }
 
-    const folders = agentName ? (agentInstructionFolders[agentName] ?? []) : allInstructionFolders;
-    if (folders.length === 0) {
-        throw new Error(vscode.l10n.t('No instruction files are available for the "{0}" agent.', agentName ?? ''));
-    }
-
-    await copyInstructionFolders(folders, agentsRoot);
+    await copyInstructionFolders(agentInstructionFolders, agentsRoot);
     void vscode.window.showInformationMessage(vscode.l10n.t('Azure agent instructions downloaded to ".github/agents".'));
 }
