@@ -2,8 +2,21 @@
 
 ## Unreleased
 
+## 0.12.7 - 2026-06-11
+
 ### Added
-* Add an optional `options` parameter to `AzureAuthentication.getSessionWithScopes`. Passing `{ createIfNone: true }` allows an interactive consent prompt when a session for the requested scopes has not yet been granted. See [microsoft/vscode-azurefunctions#5073](https://github.com/microsoft/vscode-azurefunctions/issues/5073)
+* [[1433]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1433) Allow resource providers to override resource type node properties (name and icon)
+* [[1441]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1441) Allow resource providers to hide child resource types from "Group by type"
+* [[1466]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1466) Add an optional `options` parameter to `AzureAuthentication.getSessionWithScopes`. Passing `{ createIfNone: true }` allows an interactive consent prompt when a session for the requested scopes has not yet been granted. See [microsoft/vscode-azurefunctions#5073](https://github.com/microsoft/vscode-azurefunctions/issues/5073)
+
+### Engineering
+* [[1469]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1469) Prepare `@microsoft/vscode-azureresources-api` 3.1.1 release
+* [[1477]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1477) Add `feedBaseUrl` passthrough to 1ES build pipeline parameters
+* [[1479]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1479) Remove redundant `npmFeed` parameter from the build pipeline
+* [[1424]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1424) Resolve outstanding `npm audit` advisories
+* [[1422]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1422) Update `@azure/identity` to v4.13.1
+* [[1481]](https://github.com/microsoft/vscode-azureresourcegroups/pull/1481) Update `@microsoft/vscode-azext-azureauth` to 6.1.0-alpha.2
+* Update `@microsoft/vscode-azext-azureutils` to ^4.3.0, `@microsoft/api-extractor` to ^7.58.2, `@azure/arm-resources-subscriptions` to ^3.0.0-beta.1, and `ws` to ^8.20.1
 
 ## 0.12.6 - 2026-06-03
 
