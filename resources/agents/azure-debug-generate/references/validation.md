@@ -84,7 +84,12 @@ Additional checks required for specific debugger types. These run after the read
 
 ### `node`
 
-No additional checks beyond the generic algorithm. The ready signal + curl verification is sufficient — the Node Inspector debug port (`9229`) is handled automatically by the Functions host or `--inspect` flag.
+After the generic algorithm, perform these additional checks for TypeScript projects:
+
+1. Verify `tsconfig.json` has `"sourceMap": true` in `compilerOptions` — without it, breakpoints in `.ts` files appear as gray (unverified) dots even when the debugger is successfully attached
+2. If missing, add `"sourceMap": true` and re-run the build task before marking the config ✅
+
+The Node Inspector debug port (`9229`) is handled automatically by the Functions host or `--inspect` flag.
 
 ### `coreclr` (attach mode)
 

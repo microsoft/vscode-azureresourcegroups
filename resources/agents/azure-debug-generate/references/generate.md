@@ -26,6 +26,7 @@ The plan provides high-level intent. For implementation details, perform **targe
 - **Connection string keys** — Check `local.settings.json`, `.env`, or app config for existing key names.
 - **Existing config** — Check for existing `.vscode/launch.json`, `.vscode/tasks.json`, `docker-compose.yml` to determine merge vs create.
 - **Framework details** — For frontend SPAs, detect the specific framework (Vite, Next.js, Angular, CRA) and dev server port from config files.
+- **TypeScript source maps** — For TypeScript services, verify `tsconfig.json` has `"sourceMap": true` in `compilerOptions`. Without it, breakpoints in `.ts` files appear as unverified. See `runtimes/node.md` § Debugger Properties.
 
 ---
 
@@ -129,7 +130,7 @@ Use the **Service Root** column from the plan's Services table to determine the 
 
 ### Task `runOptions` Rules
 
-Every task generated for the debug chain (install, clean, watch, build, top-level, and emulator tasks) **must** include `runOptions` with both `instanceLimit` and `instancePolicy`. Without these, repeated F5 presses cause blocking dialogs or duplicate processes.
+Every task generated for the debug chain (install, clean, watch, build, top-level, and emulator tasks) **must** include `runOptions` with `instanceLimit: 1` and `instancePolicy: "silent"`. This prevents duplicate task instances and silently skips re-invocations when a task is already running (e.g., from compound + individual `preLaunchTask` chains).
 
 ### Start Emulators Task
 
@@ -141,38 +142,30 @@ When the plan includes emulators, generate a shared `Start Emulators` task. This
   "label": "Start Emulators",
   "command": "docker compose up -d",
   "problemMatcher": [],
-  "runOptions": {
-    "instanceLimit": 1,
-    "instancePolicy": "silent"
-  }
+  "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" }
 }
 ```
 
-> `instancePolicy` is `"silent"` because `docker compose up -d` is idempotent — re-running it when services are already running is a no-op.
-
 ### instanceLimit and instancePolicy
 
-Set **`instanceLimit: 1`** on every task — you generally don't want parallel instances of the same build or startup task.
+Set **`instanceLimit: 1`** and **`instancePolicy: "silent"`** on every task. You never want parallel instances of the same build or startup task, and `"silent"` ensures that duplicate invocations are skipped without prompting the user.
 
-Set **`instancePolicy`** based on these rules (evaluated in order):
+### Problem Matchers
 
-1. **Task binds a network port AND is used in a multi-service compound with a sequenced `preLaunchTask`** → **`"silent"`**. The compound task handles startup ordering; duplicates must be silently skipped. Watch-mode processes (func with tsc --watch, Vite HMR) keep the existing instance valid. Using `"terminateOldest"` here would kill the running process when each configuration's individual `preLaunchTask` fires, defeating the sequenced startup.
-2. **Task binds a network port AND is NOT in a compound setup (single-service)** → **`"terminateOldest"`**. No risk of double-invocation; stale port recovery matters.
-3. **Task requires a full restart to pick up changes** (e.g., .NET `dotnet build` — the compiled binary is stale until rebuilt) → **`"terminateOldest"`**. The old process must be replaced.
-4. **Task auto-reloads on file changes and does NOT bind a port** (e.g., `tsc --watch`) → **`"silent"`**. The existing instance is still valid and handles changes itself.
-5. **Task is idempotent / re-running is a no-op** (e.g., `npm install` when deps haven't changed, `docker compose up -d`) → **`"silent"`**.
+**Background tasks (`isBackground: true`) MUST have a real `problemMatcher`.** An empty matcher (`"problemMatcher": []`) on a background task causes a blocking VS Code dialog ("This task is tracked by a problem matcher"). Look up the correct matcher from the relevant reference file:
 
-> **In practice:** for multi-service repos (the common case for this agent), all background tasks should use `"silent"`.
+- **Runtime tasks** (build, watch) → `runtimes/{rt}.md` § VS Code Problem Matchers
+- **Project-type tasks** (top-level startup) → `project-types/{type}.md` § VS Code Task Configuration
+- **Frontend dev servers** → `project-types/frontend-spa/frontend-spa.md` § Framework Lookup Table
 
-> The default `instancePolicy` is `"prompt"`, which opens a blocking "Select an instance to terminate" picker — even when no instance is actually running. Never leave it unset.
+For non-background tasks:
 
-**Background tasks MUST have a real `problemMatcher`.** Avoid `"problemMatcher": []` on a task with `"isBackground": true` — an empty matcher causes a blocking VS Code dialog. Use a framework-specific background matcher from `project-types/{type}.md` or `runtimes/{rt}.md`.
+| Task Type | Matcher |
+|-----------|---------|
+| Short-lived commands (`npm install`, `npm clean`, `docker compose up -d`) | `"problemMatcher": []` |
+| Dependency-only tasks (only `dependsOn`, no `command`) | Omit `problemMatcher` entirely |
 
-### TypeScript Source Maps
-
-When generating or verifying `tsconfig.json` for a TypeScript service that will be debugged, ensure `"sourceMap": true` is present in `compilerOptions`. Without source maps, the debugger cannot resolve breakpoints in `.ts` files even when successfully attached — breakpoints will appear as "unverified" in VS Code.
-
-> ✅ Add to validation: `tsconfig.json` includes `"sourceMap": true` in `compilerOptions`.
+Short-lived commands use an empty matcher to suppress matching on tasks that don't produce compiler-style output.
 
 ### Example
 

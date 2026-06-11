@@ -46,7 +46,7 @@ For any TypeScript Node.js project, the `launch.json` attach configuration **mus
 
 > `preLaunchTask` uses the canonical `{service-id}:`-prefixed task label — see [generate.md § Service ID Derivation](../generate.md). The example above corresponds to a `functions-api` service, so the resolved value is `functions-api: func host start`.
 
-> **Verify:** `tsconfig.json` must have `"sourceMap": true` (or not explicitly `false`) so `.js.map` files are generated alongside `.js` files. The build/watch task must run **before** the startup task so compiled output exists when the debugger attaches.
+> **Verify:** `tsconfig.json` must have `"sourceMap": true` in `compilerOptions` for any TypeScript project that will be debugged. Without source maps, VS Code breakpoints in `.ts` files cannot bind to the compiled `.js` output and will appear as gray (unverified) dots — even when the debugger is successfully attached. The build/watch task must run **before** the startup task so compiled output exists when the debugger attaches.
 
 ### VS Code Problem Matchers
 
@@ -168,7 +168,7 @@ After generating VS Code configuration, verify the following were produced corre
 
 1. ✅ `launch.json` uses `"type": "node"` with the correct debug port
 2. ✅ For TypeScript: `launch.json` includes `"outFiles"` derived from `tsconfig.json` `outDir` (e.g., `["${workspaceFolder}/{service-root}/{outDir}/**/*.js"]`)
-3. ✅ For TypeScript: `tsconfig.json` has `"sourceMap": true` so `.js.map` files are generated
+3. ✅ For TypeScript: `tsconfig.json` has `"sourceMap": true` — without it, breakpoints in `.ts` files appear as gray (unverified) dots
 4. ✅ For TypeScript: watch task exists in `tasks.json` with `$tsc-watch` problem matcher
 5. ✅ For TypeScript: build chain follows install → clean → watch dependency order
 

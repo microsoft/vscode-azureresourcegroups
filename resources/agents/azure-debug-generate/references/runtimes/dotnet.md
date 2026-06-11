@@ -96,14 +96,11 @@ Chain shape (startup task comes from the project type):
   ],
   "problemMatcher": "$msCompile",
   "group": "build",
-  "runOptions": {
-    "instanceLimit": 1,
-    "instancePolicy": "terminateOldest"
-  }
+  "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" }
 }
 ```
 
-> .NET does not have a watch-based incremental compile step in the debug chain (unlike TypeScript's `tsc --watch`). Each F5 re-runs `dotnet build`, so `instancePolicy` is `"terminateOldest"`.
+> .NET does not have a watch-based incremental compile step in the debug chain (unlike TypeScript's `tsc --watch`). Each F5 re-runs `dotnet build`.
 
 See [generate.md](../generate.md) § Task `runOptions` Rules for how these build steps are rendered into VS Code task configuration.
 

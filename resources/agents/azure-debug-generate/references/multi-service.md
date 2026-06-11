@@ -36,69 +36,66 @@ Use the plan's Services table to assemble the compound config. The compound conf
 
 ### Startup Ordering
 
-VS Code compound launch configurations always start their listed configurations **in parallel** — there is no `dependsOrder` for compounds. The only sequencing mechanism available is the compound's `preLaunchTask`.
+VS Code compound launch configurations always start their listed configurations **in parallel**. There is no `dependsOrder` property for compounds — only individual tasks support sequenced dependencies. This means you cannot directly tell a compound to "start the backend before the frontend."
 
-When a frontend SPA has a proxy configuration pointing to a local backend service, the backend must be ready before the frontend dev server starts (otherwise the frontend proxy produces `ECONNREFUSED` errors). Use the following pattern:
+When a frontend service proxies to a local backend (e.g., a dev server proxy for API calls), the backend must be ready before the frontend starts. Otherwise the frontend proxy may produce `ECONNREFUSED` errors on startup. Since compounds cannot enforce this ordering, the workaround is to push the sequencing into a **compound task** that uses `dependsOrder: "sequence"`, and set that task as the compound's `preLaunchTask`.
 
 > The plan may include a note like "ℹ️ **Proxy detected:**" indicating this dependency. Check the frontend's config files (e.g., `vite.config.ts` `server.proxy`) to confirm.
 
-**1. Generate a "Start All Services" compound task** with `dependsOrder: "sequence"`:
+#### Pattern
+
+**1. Generate a sequenced compound task** that starts services in order:
 
 ```json
 {
   "label": "Start All Services",
   "dependsOn": [
-    "{backend-service-id}: {top-level-task}",
-    "{frontend-service-id}: dev server"
+    "{backend-service-id}: {backend-top-level-task}",
+    "{frontend-service-id}: {frontend-top-level-task}"
   ],
-  "dependsOrder": "sequence",
-  "problemMatcher": []
+  "dependsOrder": "sequence"
 }
 ```
 
-The backend task is listed first, so its `problemMatcher` (e.g., `$func-node-watch`) must signal "ready" before the frontend dev server starts.
+The backend is listed first. Its `problemMatcher` (from `project-types/{type}.md`) signals "ready" before the frontend task starts.
 
-**2. Set the compound launch config's `preLaunchTask`** to this sequenced task:
+**2. Set the compound config's `preLaunchTask`** to the sequenced task:
 
 ```json
 {
   "name": "{Launch Config Name from plan's compound row}",
-  "configurations": ["{Launch Config Name 1}", "{Launch Config Name 2}", "..."],
+  "configurations": ["{Backend Launch Config Name}", "{Frontend Launch Config Name}"],
   "preLaunchTask": "Start All Services",
   "stopAll": true
 }
 ```
 
-**3. Individual configs keep their own `preLaunchTask`** pointing to their service's top-level task (so they work standalone):
+**3. Individual configs keep their own `preLaunchTask`** so they work standalone:
 
 ```json
 {
-  "name": "{Launch Config Name 1}",
-  "type": "node",
-  "request": "attach",
-  "port": 9229,
-  "preLaunchTask": "{backend-service-id}: {top-level-task}"
+  "name": "{Backend Launch Config Name}",
+  "preLaunchTask": "{backend-service-id}: {backend-top-level-task}"
 }
 ```
 
 ```json
 {
-  "name": "{Launch Config Name 2}",
-  "type": "chrome",
-  "request": "launch",
-  "url": "http://localhost:{port}",
-  "webRoot": "${workspaceFolder}/{service-root}",
-  "preLaunchTask": "{frontend-service-id}: dev server"
+  "name": "{Frontend Launch Config Name}",
+  "preLaunchTask": "{frontend-service-id}: {frontend-top-level-task}"
 }
 ```
 
-**4. Use `instancePolicy: "silent"` on port-binding background tasks** to prevent double-invocation:
+**4. Set `instanceLimit: 1` and `instancePolicy: "silent"` on background tasks** to prevent duplicate instances.
 
-When the compound runs, "Start All Services" starts both services. Then each configuration's `preLaunchTask` fires — but since `instanceLimit: 1` and `instancePolicy: "silent"`, the duplicate is silently skipped.
+When the compound runs, "Start All Services" starts both services via `dependsOrder: "sequence"`. Then each individual configuration's `preLaunchTask` fires again — but those services are already running. With `instanceLimit: 1` and `instancePolicy: "silent"`, the duplicate invocation is silently skipped and the existing instance keeps running.
 
-### Why This Works
+#### Why This Pattern Is Necessary
 
-- `dependsOrder: "sequence"` on the compound task ensures backend is ready (problem matcher signals) before frontend starts
-- `preLaunchTask` on the compound ensures both services are running before debuggers attach
-- `instancePolicy: "silent"` prevents the individual configs' preLaunchTasks from killing/restarting services already started by the compound task
-- Individual configs still work standalone (when no instance is running, the task starts normally)
+| Concern | How it's solved |
+|---------|----------------|
+| Compounds can't sequence configurations | The sequenced compound **task** (`dependsOrder: "sequence"`) handles ordering instead |
+| Backend must be ready before frontend starts | Backend is listed first in `dependsOn`; its problem matcher signals readiness |
+| Debuggers must not attach before services are running | The compound's `preLaunchTask` ensures all services are started before any debugger attaches |
+| Individual configs must still work standalone | Each config has its own `preLaunchTask` pointing to its service's top-level task |
+| Duplicate task invocations from compound + individual preLaunchTasks | `instanceLimit: 1` + `instancePolicy: "silent"` silently skips the duplicate — the first instance keeps running |
