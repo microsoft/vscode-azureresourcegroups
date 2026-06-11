@@ -37,8 +37,6 @@
 
 > **Universal rule:** `webRoot` must ALWAYS be the **framework root directory** (where the framework's config file lives), NEVER a subdirectory within it. The dev server determines its URL path structure relative to this root. Setting `webRoot` to a subdirectory like `src/` causes path doubling and breaks breakpoint resolution.
 
-For example, a Vite project at `src/web/` with source files in `src/web/src/` serves paths like `/src/pages/Dashboard.tsx`. Chrome resolves breakpoints as `{webRoot}/src/pages/Dashboard.tsx`. If `webRoot` is incorrectly set to `src/web/src`, the resolved path becomes `src/web/src/src/pages/Dashboard.tsx` — a doubled `src/` that breaks all breakpoints.
-
 This applies to **all frameworks** — any framework where the config file lives in a parent directory of `src/` will exhibit the same bug.
 
 | Framework | Config file that defines the root | `webRoot` value |
