@@ -62,7 +62,9 @@
 
 ## Sub-step F4: Build & Auto-Open the Live Dev Server (no approval prompt)
 
-> ⚠️ **PARALLEL STEP**: Step 1 runs **concurrently** with Phase A (Contracts) and Phase B (Backend). Backend derives from **plan's route definitions and entity types**, not frontend preview — independent work streams. Phase A and Phase B may begin immediately after Step 0 (plan validation) while frontend preview is generated and the dev server opens.
+> 🧭 **ORCHESTRATOR-OWNED STEP.** F1–F3 (generate `src/web/`) are delegated to the **Frontend Preview sub-agent**; **F4 is run by the orchestrator after that sub-agent returns.** The dev server is a long-running background process — a stateless sub-agent must not own it, or it risks being torn down when the sub-agent exits. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md).
+
+> ⚠️ **PARALLEL STEP**: Frontend generation (F1–F3, sub-agent) runs **concurrently** with Phase A (Contracts) and Phase B (Backend). Backend derives from **plan's route definitions and entity types**, not frontend preview — independent work streams. Phase A and Phase B may begin immediately after Step 0 (plan validation) while the Frontend sub-agent generates `src/web/`; the orchestrator then runs F4 to open the dev server.
 >
 > **Step 12 (Wire Frontend) is synchronization gate** — requires BOTH:
 > - (a) Frontend dev server live in Simple Browser AND

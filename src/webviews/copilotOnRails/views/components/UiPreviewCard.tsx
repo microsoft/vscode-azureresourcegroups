@@ -3,13 +3,12 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Badge, Input, Spinner, Textarea } from '@fluentui/react-components';
-import { useMemo, useRef, useState, type JSX } from 'react';
+import { Spinner } from '@fluentui/react-components';
+import { useMemo, useState, type JSX } from 'react';
 import { type PaletteEntry, type PlanSection, type PreviewPage } from '../utils/parseScaffoldPlanMarkdown';
 
 interface UiPreviewCardProps {
     section: PlanSection;
-    uiNote: string;
     disabled?: boolean;
     /**
      * HTML/CSS pages emitted by the planner agent into `.azure/.preview-temp/`
@@ -18,37 +17,32 @@ interface UiPreviewCardProps {
      * HTML into an iframe via `srcDoc`).
      */
     previewPages: PreviewPage[];
-    /** Called when the user picks a new color for a palette token. */
+    /**
+     * Called for each palette token whose color changes when the user picks a
+     * theme. The parent records the true original hex on the first change.
+     */
     onPaletteChange: (token: string, originalHex: string, newHex: string) => void;
-    /** Called when the user edits the typography font family. */
-    onTypographyChange: (originalValue: string, newValue: string) => void;
-    onUiNoteChange: (text: string) => void;
 }
 
 /**
- * Read-only view of Section 5 (Design System & UI). The wireframe itself is
- * now a sandboxed iframe loaded with planner-generated HTML/CSS; the
- * surrounding chrome still lets the user pick new palette colors, tweak the
- * font family, and add free-form UI notes — every edit is bubbled up so the
- * parent can mirror it into the feedback drawer.
+ * Read-only view of Section 5 (Design System & UI). The wireframe itself is a
+ * sandboxed iframe loaded with planner-generated HTML/CSS; below it a curated
+ * color-theme picker lets the user recolor the whole design in one click —
+ * each token change is bubbled up so the parent mirrors it into the feedback
+ * drawer.
  */
-export const UiPreviewCard = ({ section, uiNote, disabled, previewPages, onPaletteChange, onTypographyChange, onUiNoteChange }: UiPreviewCardProps): JSX.Element | null => {
+export const UiPreviewCard = ({ section, disabled, previewPages, onPaletteChange }: UiPreviewCardProps): JSX.Element | null => {
     const palette = useMemo(() => extractPalette(section), [section]);
-    const componentLibrary = useMemo(() => extractKeyValue(section, 'Component Library'), [section]);
-    const typography = useMemo(() => extractKeyValue(section, 'Typography'), [section]);
     const styleDirection = useMemo(() => extractKeyValue(section, 'Style Direction'), [section]);
 
     const [activePageIdx, setActivePageIdx] = useState(0);
-    const colorInputs = useRef<Map<string, HTMLInputElement | null>>(new Map());
-    const originalTypography = useRef<string | undefined>(undefined);
-    const originalPaletteHex = useRef<Map<string, string>>(new Map());
+    const [selectedThemeId, setSelectedThemeId] = useState<string | undefined>(undefined);
 
-    // The card shows three things: palette swatches, the iframe preview, and a
-    // typography/notes row. Render whenever any one of them has content — if
-    // there's truly nothing to show, fall back to letting `SectionCard` handle
-    // Section 5 instead.
+    // The card shows two things: the iframe preview and a color-theme picker.
+    // Render whenever either has content — if there's truly nothing to show,
+    // fall back to letting `SectionCard` handle Section 5 instead.
     const hasPages = previewPages.length > 0;
-    if (palette.length === 0 && !hasPages && typography === undefined) {
+    if (palette.length === 0 && !hasPages) {
         return null;
     }
 
@@ -57,33 +51,30 @@ export const UiPreviewCard = ({ section, uiNote, disabled, previewPages, onPalet
         : undefined;
     const isPending = !activePage || activePage.status !== 'ready' || !activePage.html;
 
-    const handleSwatchClick = (token: string): void => {
-        const input = colorInputs.current.get(token);
-        input?.click();
-    };
-
-    const handleColorChange = (entry: PaletteEntry, newHex: string): void => {
-        if (!originalPaletteHex.current.has(entry.token)) {
-            originalPaletteHex.current.set(entry.token, entry.hex);
+    // Applying a theme rewrites every palette token whose semantic role the
+    // theme knows about, bubbling each change up so the feedback drawer and the
+    // iframe preview both reflect the new color story. The parent records the
+    // true original hex on the first change per token, so passing the current
+    // hex as the "original" is safe on repeat theme switches.
+    const applyTheme = (theme: PreviewTheme): void => {
+        setSelectedThemeId(theme.id);
+        for (const entry of palette) {
+            const role = roleForToken(entry.token);
+            if (!role) {
+                continue;
+            }
+            const newHex = theme.roles[role];
+            if (newHex.toLowerCase() === entry.hex.toLowerCase()) {
+                continue;
+            }
+            onPaletteChange(entry.token, entry.hex, newHex);
         }
-        const original = originalPaletteHex.current.get(entry.token) ?? entry.hex;
-        onPaletteChange(entry.token, original, newHex);
-    };
-
-    const handleTypographyChange = (next: string): void => {
-        if (originalTypography.current === undefined) {
-            originalTypography.current = typography ?? '';
-        }
-        onTypographyChange(originalTypography.current, next);
     };
 
     return (
         <div className='sectionCard uiPreviewCard'>
             <div className='uiPreviewCard__header'>
                 <h2>UI Preview</h2>
-                {componentLibrary && (
-                    <Badge appearance='tint' color='brand' size='medium'>{componentLibrary}</Badge>
-                )}
             </div>
             {styleDirection && <p className='uiPreviewCard__styleDirection'>{styleDirection}</p>}
 
@@ -101,13 +92,6 @@ export const UiPreviewCard = ({ section, uiNote, disabled, previewPages, onPalet
                         </button>
                     ))}
                 </div>
-            )}
-
-            {componentLibrary && (
-                <p className='uiPreviewCard__previewNote'>
-                    <strong>Directional mock, not the final UI.</strong> The scaffold renders this with <strong>{componentLibrary}</strong>,
-                    real icons, motion, and dark mode — it will look noticeably more polished than the sketch below.
-                </p>
             )}
 
             <div className='uiPreviewCard__frame'>
@@ -138,66 +122,34 @@ export const UiPreviewCard = ({ section, uiNote, disabled, previewPages, onPalet
             </div>
 
             {palette.length > 0 && (
-                <div className='uiPreviewCard__paletteRow'>
-                    {palette.map((entry) => (
-                        <div key={entry.token} className='uiPreviewCard__swatch'>
+                <div className='uiPreviewCard__themeRow'>
+                    <span className='uiPreviewCard__themeLabel'>Color theme</span>
+                    <div className='uiPreviewCard__themeGrid' role='radiogroup' aria-label='Color theme'>
+                        {PREVIEW_THEMES.map((theme) => (
                             <button
+                                key={theme.id}
                                 type='button'
-                                className='uiPreviewCard__swatchChip'
-                                style={{ background: entry.hex }}
+                                role='radio'
+                                aria-checked={selectedThemeId === theme.id}
+                                className={`uiPreviewCard__themeCard ${selectedThemeId === theme.id ? 'uiPreviewCard__themeCard--active' : ''}`}
                                 disabled={disabled}
-                                aria-label={`Change ${entry.token} color`}
-                                onClick={() => handleSwatchClick(entry.token)}
-                            />
-                            <input
-                                ref={(el) => { colorInputs.current.set(entry.token, el); }}
-                                type='color'
-                                value={normalizeHexForInput(entry.hex)}
-                                disabled={disabled}
-                                onChange={(e) => handleColorChange(entry, e.target.value)}
-                                className='uiPreviewCard__swatchInput'
-                                aria-hidden='true'
-                                tabIndex={-1}
-                            />
-                            <div className='uiPreviewCard__swatchMeta'>
-                                <span className='uiPreviewCard__swatchToken'>{entry.token}</span>
-                                <span className='uiPreviewCard__swatchHex'>{entry.hex.toUpperCase()}</span>
-                            </div>
-                        </div>
-                    ))}
+                                onClick={() => applyTheme(theme)}
+                            >
+                                <span className='uiPreviewCard__themeSwatches' aria-hidden='true'>
+                                    {theme.swatch.map((color, i) => (
+                                        <span
+                                            key={i}
+                                            className='uiPreviewCard__themeSwatch'
+                                            style={{ background: color }}
+                                        />
+                                    ))}
+                                </span>
+                                <span className='uiPreviewCard__themeName'>{theme.name}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
-
-            {typography !== undefined && (
-                <div className='uiPreviewCard__typographyRow'>
-                    <label className='uiPreviewCard__typographyLabel' htmlFor='ui-preview-typography'>
-                        Typography
-                    </label>
-                    <Input
-                        id='ui-preview-typography'
-                        className='uiPreviewCard__typographyInput'
-                        value={typography}
-                        disabled={disabled}
-                        onChange={(_, data) => handleTypographyChange(data.value)}
-                    />
-                </div>
-            )}
-
-            <div className='uiPreviewCard__noteRow'>
-                <label className='uiPreviewCard__noteLabel' htmlFor='ui-preview-note'>
-                    Request UI changes
-                </label>
-                <Textarea
-                    id='ui-preview-note'
-                    className='uiPreviewCard__noteInput'
-                    value={uiNote}
-                    disabled={disabled}
-                    placeholder="e.g. 'Use larger headlines on the dashboard' or 'Add a search bar to the header'"
-                    rows={2}
-                    resize='vertical'
-                    onChange={(_, data) => onUiNoteChange(data.value)}
-                />
-            </div>
         </div>
     );
 };
@@ -220,16 +172,88 @@ function extractKeyValue(section: PlanSection, key: string): string | undefined 
     return undefined;
 }
 
-function normalizeHexForInput(hex: string): string {
-    const raw = hex.replace(/^#/, '').toLowerCase();
-    if (/^[0-9a-f]{3}$/.test(raw)) {
-        return '#' + raw.split('').map(c => c + c).join('');
+type ThemeRole = 'primary' | 'accent' | 'surface' | 'text' | 'muted' | 'border' | 'onPrimary' | 'onAccent';
+
+interface PreviewTheme {
+    id: string;
+    name: string;
+    /** Representative colors shown on the theme card (primary, accent, surface). */
+    swatch: string[];
+    roles: Record<ThemeRole, string>;
+}
+
+// Curated, ready-to-use palettes. Picking one recolors the whole design in a
+// single click instead of editing individual tokens.
+const PREVIEW_THEMES: PreviewTheme[] = [
+    {
+        id: 'ocean',
+        name: 'Ocean',
+        swatch: ['#0078d4', '#00b7c3', '#f3f9fb'],
+        roles: { primary: '#0078d4', accent: '#00b7c3', surface: '#f3f9fb', text: '#0b1f2a', muted: '#5b7282', border: '#cfe2ea', onPrimary: '#ffffff', onAccent: '#06303a' },
+    },
+    {
+        id: 'sunset',
+        name: 'Sunset',
+        swatch: ['#e8590c', '#e64980', '#fff6f0'],
+        roles: { primary: '#e8590c', accent: '#e64980', surface: '#fff6f0', text: '#2b1410', muted: '#8a6a5e', border: '#f3d8c8', onPrimary: '#ffffff', onAccent: '#ffffff' },
+    },
+    {
+        id: 'forest',
+        name: 'Forest',
+        swatch: ['#2f9e44', '#0ca678', '#f3faf4'],
+        roles: { primary: '#2f9e44', accent: '#0ca678', surface: '#f3faf4', text: '#11241a', muted: '#5d7766', border: '#cfe7d5', onPrimary: '#ffffff', onAccent: '#ffffff' },
+    },
+    {
+        id: 'grape',
+        name: 'Grape',
+        swatch: ['#7048e8', '#ae3ec9', '#f8f5ff'],
+        roles: { primary: '#7048e8', accent: '#ae3ec9', surface: '#f8f5ff', text: '#1f1633', muted: '#6f6585', border: '#e2d8f5', onPrimary: '#ffffff', onAccent: '#ffffff' },
+    },
+    {
+        id: 'slate',
+        name: 'Slate',
+        swatch: ['#334155', '#0ea5e9', '#f5f7fa'],
+        roles: { primary: '#334155', accent: '#0ea5e9', surface: '#f5f7fa', text: '#0f172a', muted: '#64748b', border: '#d8dee8', onPrimary: '#ffffff', onAccent: '#ffffff' },
+    },
+    {
+        id: 'rose',
+        name: 'Rose',
+        swatch: ['#e11d48', '#f97316', '#fff5f6'],
+        roles: { primary: '#e11d48', accent: '#f97316', surface: '#fff5f6', text: '#2b0f15', muted: '#8a5a62', border: '#f5d2d9', onPrimary: '#ffffff', onAccent: '#ffffff' },
+    },
+];
+
+/**
+ * Map a plan palette token name onto a semantic theme role so applying a theme
+ * recolors the right swatch. Returns `undefined` for tokens the themes don't
+ * model (those keep their planned color). Order matters: the `on *` checks run
+ * before the bare `primary` / `accent` checks.
+ */
+function roleForToken(token: string): ThemeRole | undefined {
+    const t = token.toLowerCase();
+    if (/on[ -]?primary/.test(t)) {
+        return 'onPrimary';
     }
-    if (/^[0-9a-f]{6}$/.test(raw)) {
-        return '#' + raw;
+    if (/on[ -]?accent/.test(t)) {
+        return 'onAccent';
     }
-    if (/^[0-9a-f]{8}$/.test(raw)) {
-        return '#' + raw.slice(0, 6);
+    if (t.includes('primary')) {
+        return 'primary';
     }
-    return '#000000';
+    if (t.includes('accent') || t.includes('secondary')) {
+        return 'accent';
+    }
+    if (t.includes('surface') || t.includes('background') || t.includes('canvas')) {
+        return 'surface';
+    }
+    if (t.includes('muted') || t.includes('subtle')) {
+        return 'muted';
+    }
+    if (t.includes('border') || t.includes('outline') || t.includes('divider')) {
+        return 'border';
+    }
+    if (t.includes('text') || t.includes('foreground') || t.includes('ink')) {
+        return 'text';
+    }
+    return undefined;
 }

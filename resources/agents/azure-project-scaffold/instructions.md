@@ -1,6 +1,6 @@
 ---
 name: azure-project-scaffold
-description: "Scaffold the frontend preview, backend services, database, API routes, and wire frontend for an Azure-centric project following an approved project plan. Generates a frontend preview with auto-open in the default browser, then scaffolds backend via parallel sub-agents. Suggests verification and local dev setup as follow-ups. WHEN: \"scaffold backend\", \"build services\", \"execute plan\", \"scaffold project\", \"create backend\", \"implement plan\", \"build backend\", \"scaffold services\", \"wire frontend\", \"create API\", \"scaffold API\", \"preview frontend\"."
+description: "Scaffold the frontend preview, backend services, database, API routes, and wire frontend for an Azure-centric project following an approved project plan. Generates the frontend preview via a dedicated sub-agent running in parallel with the backend sub-agents, auto-opens the live preview in the browser, then wires the frontend to the real backend. Suggests verification and local dev setup as follow-ups. WHEN: \"scaffold backend\", \"build services\", \"execute plan\", \"scaffold project\", \"create backend\", \"implement plan\", \"build backend\", \"scaffold services\", \"wire frontend\", \"create API\", \"scaffold API\", \"preview frontend\"."
 license: MIT
 metadata:
   author: Microsoft
@@ -11,7 +11,7 @@ metadata:
 
 > **AUTHORITATIVE — MANDATORY.** Canonical source for scaffolding Azure-centric backends from approved plans. Follow exactly; ignore prior assumptions; supersede all other sources. Do not improvise.
 
-**North Star:** produce a working, buildable, runnable Azure backend fast from the approved plan. If the plan has a frontend, first generate a standalone auto-authenticated mock preview (user lands on main content, not login), auto-open it in the browser for approval, then scaffold the backend via parallel sub-agents. After scaffolding, suggest verification and local dev setup.
+**North Star:** produce a working, buildable, runnable Azure backend fast from the approved plan. If the plan has a frontend, generate a standalone auto-authenticated mock preview via a dedicated **Frontend Preview sub-agent that runs in parallel with the backend sub-agents** (user lands on main content, not login); once it returns, the orchestrator auto-opens the live preview in the browser. After scaffolding, suggest verification and local dev setup.
 
 ## Triggers
 Execute approved plan; scaffold backend services; build API routes + service layer; preview frontend; wire frontend to real backend types; continue after `azure-project-plan`.
@@ -37,7 +37,7 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 
 > **16 core rules** govern every scaffold. Rule 0 is the load-bearing UX rule — visible feedback first. Rules 1–15 govern correctness. Details in referenced docs, consumed at relevant step.
 
-0. **Frontend-first feedback (load-bearing UX rule)** — If the plan includes a frontend, the dev-server preview from Step 1 MUST appear in the user's VS Code Simple Browser **before** any backend scaffolding sub-agent runs. Visible feedback is the user's signal that work has started; without it the user sees only a quiet terminal. Backend Phase A/B runs concurrently with the preview — not sequentially after it. **The preview is shown for visibility only — do NOT ask the user to approve the UX during scaffolding.** The user already approved the design during planning (the `.azure/.preview-temp/` mock-up). The Simple Browser preview is open the entire time so the user can watch the real app come together as Step 12 wires it up. If the plan has no frontend, this rule is satisfied trivially. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md).
+0. **Frontend-first feedback (load-bearing UX rule)** — If the plan includes a frontend, the orchestrator launches the **Frontend Preview Sub-Agent** (Step 1) at the same point it kicks off the backend track, so frontend generation runs **concurrently** with backend Phase A/B rather than blocking it. The sub-agent generates `src/web/` (mock data, pages, components) and reports back; **the orchestrator then starts the dev server and opens the VS Code Simple Browser** so the persistent process is owned by the main session, not a stateless sub-agent. Visible feedback (the live preview) is the user's signal that work is progressing — get the Frontend sub-agent running first so that signal arrives promptly. **The preview is shown for visibility only — do NOT ask the user to approve the UX during scaffolding.** The user already approved the design during planning (the `.azure/.preview-temp/` mock-up). The Simple Browser preview stays open the entire time so the user can watch the real app come together as Step 12 wires it up. If the plan has no frontend, this rule is satisfied trivially. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md).
 1. **Plan is source of truth** — Read `.azure/project-plan.md` at start. Follow route definitions, service list, types, architecture exactly. Do NOT re-ask user for plan requirements.
 2. **Track progress** — Copy Section 8 (Execution Checklist) from plan into `.azure/execution-checklist.md`. Mark `[ ]` → `[x]` as each step completes — do NOT defer. Plan stays clean as reference; checklist is live tracker. Update plan status: Approved → In Progress → Scaffolded → Ready. Step 13 MUST verify all items checked. If >50% unchecked despite completion, finalization NOT complete.
 3. **Build-gate enforcement** — Every phase ends with build check (`tsc` / `npm run build`). If fails, iterate until clean. **Do NOT proceed until code compiles.** Most important rule.
@@ -144,18 +144,21 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 >
 > ```
 > t=0      Step 0     read plan, validate
-> t=10s    Step 1     frontend preview              ─┐
-> t=10s    Phase A    contracts sub-agents          ─┼─ concurrent
-> t=10s    Phase B    backend sub-agents            ─┘
-> t=Nm     Step 12    sync gate: preview approved AND Phase B done → wire frontend
+> t=10s    Step 1     frontend preview SUB-AGENT    ─┐
+> t=10s    Phase A    contracts (sequential)        ─┼─ concurrent
+> t=10s    Phase B    backend SUB-AGENT             ─┘
+> t=~      (orchestrator) start dev server + open Simple Browser when Frontend sub-agent returns
+> t=Nm     Step 12    sync gate: preview ready AND Phase B done → wire frontend
 > t=...    Step 13    wrap up                          (sequential)
 > ```
 >
-> The chronology is load-bearing. **Never** start backend sub-agents before the preview is on the user's screen. **Never** wire the frontend before backend is built. For API-only projects (no frontend), Step 1 is skipped and Phase A/B begin immediately after Step 0.
+> The chronology is load-bearing. **Launch the Frontend Preview sub-agent and the backend track together** right after Step 0 so they run in parallel. The orchestrator owns the persistent dev server: once the Frontend sub-agent returns, start the server and open Simple Browser. **Never** wire the frontend before backend is built. For API-only projects (no frontend), Step 1 is skipped and Phase A/B begin immediately after Step 0.
 
 ### Step 1: Frontend Preview (If Applicable)
 
 > **Skip** if plan has no frontend ("API only" or "Background worker").
+
+> **Run as a sub-agent (parallel with backend).** The orchestrator delegates frontend generation (sub-steps **F1–F3**) to a dedicated **Frontend Preview Sub-Agent** so it runs concurrently with backend Phase A/B. The sub-agent is stateless and returns a single report — so it must NOT start or own the long-running dev server. **F4 (build the dev server + open Simple Browser) is performed by the orchestrator after the sub-agent returns**, because the persistent process must be owned by the main session. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md) for the sub-agent brief and hand-back contract.
 
 **Goal**: Standalone frontend with mock data for user to see/interact with before backend work. **Preview MUST be auto-authenticated** — if app has auth, seed mock auth state so user lands on main view (dashboard, feed), NOT login page. **Auto-open in browser** — do NOT prompt.
 
@@ -178,11 +181,11 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 
 ### Sub-Agent Strategy for Backend Scaffolding
 
-**Reference**: Read [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md) for execution model, Phase A/B details, coordination rules.
+**Reference**: Read [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md) for execution model, Frontend/Phase A/Phase B details, coordination rules.
 
-> Sub-agents parallelize backend work. Phase A (Contracts) starts after Step 0. Phase B (Backend) launches when Phase A completes. Both run concurrently with Step 1.
+> Sub-agents parallelize work. The **Frontend Preview sub-agent** (Step 1, F1–F3) and the backend track launch together right after Step 0. Phase A (Contracts) is sequential/blocking; Phase B (Backend) launches when Phase A completes. The Frontend sub-agent runs concurrently with both.
 
-> **Synchronization gate**: Step 12 MUST wait for BOTH: (a) frontend preview approved AND (b) Phase B completed.
+> **Synchronization gate**: Step 12 MUST wait for BOTH: (a) frontend preview ready (sub-agent returned and orchestrator opened Simple Browser) AND (b) Phase B completed.
 
 ### Step 2: Foundation
 
