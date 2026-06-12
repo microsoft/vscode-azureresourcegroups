@@ -33,6 +33,7 @@ If you ever emit JSX like this:
 | `Typography:`            | Font family applied at the app shell level.                              |
 | Color Palette table      | Brand ramp / theme tokens — wire through the library's theme provider.   |
 | Pages table (`Layout`)   | Which **library primitives** to compose per page (see mapping below).    |
+| `.azure/.preview-temp/*.html` + `theme.css` | The HTML/CSS **directional sketch** the user approved during planning. Tells you three things only: (1) page regions and rough order, (2) brand color story, (3) content density. The sketch deliberately ships with **no** icons, fonts, motion, dark mode, or polished hero treatments — those are your job. **The scaffold MUST visibly exceed the sketch** (see "Polish floor" below). Do not import, embed, or `<iframe>` it. Folder is deleted in Step 13. |
 
 > If Section 5 is missing or `Component Library:` is blank, **STOP**. The plan is incomplete — re-run `azure-project-plan` instead of guessing.
 
@@ -172,7 +173,7 @@ Every page that displays data MUST cover all four states with real library primi
    - Pico: `--pico-primary` CSS variable.
 2. **Map `surface` / `text` / `muted` / `border`** onto the library's neutral tokens — do not hard-code colors in component JSX. Semantic states (success / warning / error) come from the library's built-in semantic tokens, not from the plan palette.
 3. **Apply `Typography`** at the app shell level (Fluent: `FluentProvider` style override; Vuetify: `<v-app>` font-family; Angular: `--mat-sys-body-large-font`; Skeleton: theme module; Pico: `:root { font-family: … }`).
-4. The plan-preview webview always uses Fluent UI v9 (it's the only library bundled in the extension). When `Component Library` is anything else, the preview shows a footnote: *"Preview rendered with Fluent UI v9 — your scaffolded app will use **{Component Library}** with equivalent components."* The scaffolded app itself MUST use the library named in the plan, not Fluent.
+4. The plan-preview webview renders a sandboxed **HTML/CSS** mock-up — purely presentational, no JavaScript, no real component library involved. Each page lives at `.azure/.preview-temp/<slug>.html` and shares a single `.azure/.preview-temp/theme.css`. Treat those files as a **directional sketch** — they confirm regions, color story, and density. They are **not** the polish bar. Your scaffolded app MUST out-polish the sketch in every visible dimension: real library primitives, real icons, real webfont, motion, dark mode, four states with illustrations, and library elevation. Do not import, embed, or `<iframe>` the mock-up. `.azure/.preview-temp/` is deleted in Step 13.
 
 ---
 
@@ -185,4 +186,153 @@ Every page that displays data MUST cover all four states with real library primi
 - [ ] Every data-bearing page exposes all four states (loading / error / empty / data) via a dev-only toggle.
 - [ ] `Style Direction:` is reflected in density and corner radius (e.g. "data-dense" → compact toolbars, tight list rows; "calm and spacious" → generous padding, larger cards).
 - [ ] No `any` types; the four-state contract still holds; auto-auth still works (if applicable).
-- [ ] If `Component Library` ≠ Fluent UI v9, the preview shows the disclosure footnote above the iframe.
+- [ ] The scaffolded UI **visibly exceeds** the directional sketch at `.azure/.preview-temp/<slug>.html` — same regions, same primary brand color, same density bias, but with real library primitives, real icons, real webfont, motion, dark mode, and library elevation that the static HTML sketch could not show. If a generated page looks like a re-skin of the sketch, the page has failed the bar.
+
+---
+
+## Polish floor — every scaffolded app, regardless of library
+
+These eight requirements are **non-negotiable**. They are the gap between "the sketch with components swapped in" and "an app the user wants to ship". A page that misses any of them fails the bar.
+
+### 1. Hero treatment (every landing / dashboard / list-index page)
+
+A flat colored panel is **not** a hero. Every hero region MUST have:
+
+- A **brand-gradient card** (linear or radial) using two stops from Section 5's palette (typically `primary` → `accent`, or `primary` → a 12-step-lighter `primary`).
+- An **eyebrow line** above the headline: uppercased, letter-spaced ~0.12em, ~11–12px, with a 6px dot prefix — distinct from the headline.
+- A **headline** at the library's `display`/`Title1`/`h1` token, max-width ~24ch, line-height ~1.1, sub-tight letter-spacing.
+- A **subtitle** at the body token, max-width ~60ch, opacity 0.85–0.95.
+- **Two CTAs**: a primary library button (named action, see microcopy below) + a secondary/ghost variant.
+- An **ambient SVG mesh backdrop** layered behind the gradient. Concrete pattern:
+
+```tsx
+<svg className="hero-mesh" aria-hidden="true" viewBox="0 0 800 400" preserveAspectRatio="none">
+  <defs>
+    <radialGradient id="m1" cx="0%" cy="0%" r="80%">
+      <stop offset="0%" stopColor="var(--brand-accent)" stopOpacity="0.55" />
+      <stop offset="100%" stopColor="var(--brand-accent)" stopOpacity="0" />
+    </radialGradient>
+    <radialGradient id="m2" cx="100%" cy="100%" r="80%">
+      <stop offset="0%" stopColor="var(--brand-primary)" stopOpacity="0.55" />
+      <stop offset="100%" stopColor="var(--brand-primary)" stopOpacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="800" height="400" fill="url(#m1)" />
+  <rect width="800" height="400" fill="url(#m2)" />
+</svg>
+```
+
+Position the SVG `position: absolute; inset: 0; pointer-events: none; opacity: 0.7;`. Layer the gradient panel above it. The `aria-hidden` is required.
+
+### 2. Real icons — everywhere (no exceptions)
+
+Every navigation item, sidebar item, KPI tile, empty state, primary CTA, and section title row MUST carry a real, named icon from the library's official icon set:
+
+| Library          | Icon source                       | Concrete sample imports                                                                          |
+|------------------|-----------------------------------|--------------------------------------------------------------------------------------------------|
+| Fluent UI v9     | `@fluentui/react-icons` Regular   | `HomeRegular`, `SearchRegular`, `SettingsRegular`, `PersonRegular`, `GridRegular`, `BookmarkRegular`, `ChevronRightRegular`, `AddRegular`, `DocumentRegular`, `InboxRegular`, `CalendarRegular`, `ChartMultipleRegular` |
+| Vuetify 3        | Material Design Icons (`mdi-*`)   | `mdi-home`, `mdi-magnify`, `mdi-cog`, `mdi-account`, `mdi-view-dashboard`, `mdi-bookmark`, `mdi-chevron-right`, `mdi-plus`, `mdi-file-document`, `mdi-inbox`, `mdi-calendar`, `mdi-chart-line` |
+| Angular Material | Material Symbols / `mat-icon`     | `home`, `search`, `settings`, `person`, `dashboard`, `bookmark`, `chevron_right`, `add`, `description`, `inbox`, `calendar_today`, `show_chart` |
+| Skeleton (Svelte)| Lucide-Svelte                     | `Home`, `Search`, `Settings`, `User`, `LayoutGrid`, `Bookmark`, `ChevronRight`, `Plus`, `FileText`, `Inbox`, `Calendar`, `LineChart` |
+| Pico             | Lucide (`lucide-static` or `lucide` web) | Same Lucide names above; render via inline SVG or `<i data-lucide="home">`                  |
+
+**Hard fail**: emoji (🏠, 📊), Unicode glyphs (▲, ★), or hand-drawn `<svg>` shapes used as nav/section/CTA iconography.
+
+### 3. Motion (lightweight, library-aligned)
+
+Every app MUST add motion in three places, with `prefers-reduced-motion` respected:
+
+| Library          | Motion tool                           | Where it must appear                                                          |
+|------------------|---------------------------------------|-------------------------------------------------------------------------------|
+| Fluent UI v9     | `framer-motion` or `motion/react`     | Route change (fade+12px slide), card hover (1–2px lift), dialog/popover open  |
+| Vuetify 3        | `@vueuse/motion` or built-in `<v-fade-transition>` / `<v-slide-y-transition>` | Route change, card hover, dialog open |
+| Angular Material | Angular Animations (`@angular/animations`) | Route change (`fadeInUp`), card hover, dialog open                       |
+| Skeleton         | Svelte built-in `transition:fade` / `crossfade` | Route change, card hover, drawer open                              |
+
+Duration: 150–300ms. Easing: `cubic-bezier(0.4, 0, 0.2, 1)` or library default. Wrap all motion in a `prefers-reduced-motion: reduce` media query / `useReducedMotion()` hook — no exceptions.
+
+### 4. All four states — visibly, with library illustrations
+
+The state contract in the table above is the **minimum**. Every empty state MUST also include a real visual element (library illustration component, Lucide/Tabler icon at 64–96px, or a domain-specific SVG), not just text:
+
+- Fluent: empty card with a 64px `*Regular` icon centered above the `<Title3>` + body + primary CTA.
+- Vuetify: `<v-empty-state>` (built-in, has illustration slot) or `<v-card>` with `<v-icon size="64">`.
+- Angular Material: `<mat-card>` with a `<mat-icon style="font-size: 64px; width: 64px; height: 64px;">`.
+- Skeleton: `<div class="card">` with `<Inbox size={64} />` (Lucide) above text.
+
+### 5. Density + radius derived from Style Direction
+
+Translate the `Style Direction:` literal from Section 5 into concrete library tokens:
+
+| Style Direction keyword         | Density / radius / weight choices                                              |
+|---------------------------------|--------------------------------------------------------------------------------|
+| `playful`, `friendly`, `consumer` | Large radii (12–20px on cards, full-pill on buttons), comfortable padding, heavier headlines (700+), saturated palette |
+| `professional`, `enterprise`, `serious` | Small radii (4–8px), compact padding, semibold headlines (600), muted palette |
+| `editorial`, `magazine`, `content-led` | Mixed radii (cards 4px, hero 0–4px), generous whitespace, large display type, serif option for headings |
+| `minimal`, `calm`, `data-dense`   | Tight radii (2–6px), compressed padding, regular weight body, restrained palette, hairline 1px borders |
+
+Wire these through the library's density/spacing/radius tokens (Fluent: `tokens.borderRadiusMedium`; Vuetify: `density="compact"` + theme `defaults`; Material: M3 density CSS vars; Skeleton: theme module radius variables).
+
+### 6. Dark mode (required, with persistence)
+
+Every app ships with light + dark themes from day one:
+
+- A theme toggle in the header (uses the library's icon button).
+- Persistence via `localStorage` key `app-theme` (`'light' | 'dark' | 'system'`).
+- Initial value reads `prefers-color-scheme` when key is missing or set to `'system'`.
+- Live update on `matchMedia('(prefers-color-scheme: dark)').addEventListener('change', …)` while in `'system'` mode.
+- Both themes derive from the **same** Section 5 brand palette — only neutrals and surfaces flip.
+
+### 7. Real webfont, mapped from Style Direction
+
+Apply a webfont via the `<head>` (CSS `@import` or `<link>`) and wire it through the library's font token. Choose by Style Direction:
+
+| Style Direction keyword         | Webfont                            |
+|---------------------------------|------------------------------------|
+| `playful`, `friendly`           | `Inter` (variable) or `Geist Sans` |
+| `professional`, `enterprise`    | `Inter` or `IBM Plex Sans`         |
+| `editorial`, `magazine`         | `Source Sans 3` body + `Source Serif 4` headings |
+| `minimal`, `calm`, `data-dense` | `Geist Sans` or `IBM Plex Sans`    |
+
+Load via `<link rel="preconnect">` + `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=…">` or self-host. Fall back to `system-ui, -apple-system, "Segoe UI", sans-serif`.
+
+### 8. Microcopy — primary CTAs name the action
+
+Primary buttons MUST name the action being committed. **Hard fail**: generic verbs.
+
+| ❌ Generic (fails)    | ✅ Named (passes)                                                |
+|----------------------|-------------------------------------------------------------------|
+| `Submit`             | `Save changes`, `Create project`, `Send invite`, `Publish post`   |
+| `OK`                 | `Got it`, `Acknowledge`, `Mark as read`                           |
+| `Continue`           | `Continue to billing`, `Review and confirm`                       |
+| `Delete`             | `Delete project permanently`, `Remove from team`                  |
+
+Secondary/ghost buttons may be generic (`Cancel`, `Back`). Modal confirm buttons follow the same rule (`Delete 3 items` not `Confirm`).
+
+### 9. Imagery & art direction (domain fit beats stock chrome)
+
+A page can pass items 1–8 and still look templated if it renders empty media surfaces and identical generic cards for every app. Every app MUST:
+
+- **Render real images for every media-bearing entity.** Bind the mock data's image URL (see Sub-step F2) into a real `<img>` / Fluent `<CardPreview image>` / Vuetify `<v-img>` / Angular `mat-card-image` / Skeleton-Pico `<img>` — **never** an empty tinted `<CardPreview>` or a solid-color `<div>` standing in for a photo. A media card with no visible photo is a hard fail.
+- **Match the domain's visual idiom.** A photo-sharing app reads as a gallery (edge-to-edge imagery, scrapbook/polaroid framing, captions), a finance app as data-dense tables, an editorial app as a magazine, a chat app as message bubbles. Do not flatten every app into the same generic SaaS card grid.
+- **Use bespoke, domain-specific component treatments** — tilted polaroid frames, ticket stubs, chat bubbles, kanban cards, gallery tiles, etc. — **layered on top of** the library primitives from the region-token mapping. This is encouraged, not forbidden (see self-review item 12). The ban is only on empty placeholder `<div>`s that re-skin the wireframe, never on art direction that fits the domain.
+
+---
+
+## Polish self-review checklist (per page, before marking complete)
+
+Run through this 12-item yes/no list for **each page** generated. A "no" on any item means the page is not done. Do not move on.
+
+1. Does the hero use a brand gradient (not flat color) with eyebrow + headline + subtitle + 2 CTAs + ambient SVG mesh backdrop?
+2. Does every nav/sidebar item carry a real named icon from the library's icon set (not emoji, not glyph)?
+3. Does every KPI tile / section-title row / empty state / primary CTA carry a real icon?
+4. Is there at least one motion: route change, card hover, OR dialog/popover open, wired through the library's motion tool, with `prefers-reduced-motion` respected?
+5. For data-bearing pages: are all four states (loading / error / empty / data) reachable via a dev toggle, and does the empty state include a 64–96px icon or illustration (not just text)?
+6. Is dark mode wired through a header toggle, persisted in `localStorage`, with a `prefers-color-scheme` initial read?
+7. Is a real webfont loaded via `<link>` / `@import` and applied through the library's font token?
+8. Do density + corner radius tokens reflect Section 5's `Style Direction:` (playful → larger radii; professional → tighter)?
+9. Do all primary CTAs name the action (`Save changes`, `Create project`) — no generic `Submit` / `OK` / `Continue`?
+10. Is the brand ramp derived from Section 5's `primary` (16-step / theme-provider-driven), with both themes sharing it?
+11. Is the layout meaningfully **different from** the static HTML sketch — better elevation, real icons, motion, polished spacing — so a reviewer comparing them would say "yes, this exceeds the mock"?
+12. Does every region **resolve to a real library primitive** (no zero-effort `<div className="card">Card 1</div>` wireframe stubs)? Bespoke, domain-styled components (polaroid frames, ticket stubs, gallery tiles, chat bubbles) are **encouraged** as long as they wrap or extend a real library primitive and carry real content + imagery — the ban is on empty placeholder `<div>`s that merely re-skin the wireframe, not on domain art direction.
+13. Does every media-bearing entity render a **real image** (from the mock data's image URL), not an empty tinted surface or solid-color block?
