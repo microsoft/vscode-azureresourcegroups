@@ -48,10 +48,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     private async approveAndOpenScaffoldChat(): Promise<void> {
-        try {
-            await ensureAgentInstructions('azure-project-scaffold');
-        } catch {
-            // User declined to download required instructions — abort the hand-off.
+        if (!(await ensureAgentInstructions('azure-project-scaffold'))) {
             return;
         }
         await vscode.commands.executeCommand('workbench.action.chat.open', {

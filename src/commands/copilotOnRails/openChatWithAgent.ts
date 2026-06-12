@@ -36,8 +36,9 @@ export async function openChatWithAgent(agentName: string, prompt: string): Prom
         return;
     }
     // Make sure the agent's instruction files are present in the workspace before invoking it.
-    // Throws UserCancelledError if the user declines to download required instructions.
-    await ensureAgentInstructions(agentName);
+    if (!(await ensureAgentInstructions(agentName))) {
+        return;
+    }
     await vscode.commands.executeCommand('workbench.action.chat.open', {
         mode: agentName,
         query: prompt,

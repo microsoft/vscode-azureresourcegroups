@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
+import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 
@@ -91,25 +91,27 @@ async function getInstructionState(folders: string[], agentsRoot: vscode.Uri): P
 }
 
 /**
- * Ensures the bundled instruction files for `agentName` are present (and up to date)
- * in the workspace before the agent is invoked.
+ * Ensures the bundled instruction files are present (and up to date) in the workspace
+ * before an agent is invoked.
  *
  * - When the files are missing, the user is asked whether to download them. Declining
- *   throws a {@link UserCancelledError} so the caller aborts the agent invocation.
+ *   returns `false` so the caller can abort the agent invocation.
  * - When the files are present but a newer version is bundled, the user is asked
- *   whether to upgrade. Declining keeps the existing files and continues.
+ *   whether to upgrade. Declining keeps the existing files and returns `true` —
+ *   having any version of the files is sufficient to proceed.
  *
- * No-ops for agents that don't ship bundled instructions and when no workspace is open.
+ * Returns `true` (proceed) in all cases except: files missing **and** user declined download.
+ * No-ops (returns `true`) when no workspace is open.
  */
-export async function ensureAgentInstructions(agentName: string): Promise<void> {
+export async function ensureAgentInstructions(agentName: string): Promise<boolean> {
     const agentsRoot = getWorkspaceAgentsRoot();
     if (!agentsRoot) {
-        return;
+        return true;
     }
 
     const { anyMissing, anyOutdated } = await getInstructionState(agentInstructionFolders, agentsRoot);
     if (!anyMissing && !anyOutdated) {
-        return;
+        return true;
     }
 
     if (anyMissing) {
@@ -123,7 +125,7 @@ export async function ensureAgentInstructions(agentName: string): Promise<void> 
             download,
         );
         if (choice !== download) {
-            throw new UserCancelledError('downloadAgentInstructions');
+            return false;
         }
     } else {
         const upgrade = vscode.l10n.t('Upgrade');
@@ -136,11 +138,12 @@ export async function ensureAgentInstructions(agentName: string): Promise<void> 
             upgrade,
         );
         if (choice !== upgrade) {
-            return;
+            return true;
         }
     }
 
     await copyInstructionFolders(agentInstructionFolders, agentsRoot);
+    return true;
 }
 
 /**

@@ -52,10 +52,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     }
 
     private async openDebugPlanChat(query: string, isFeedback: boolean): Promise<boolean> {
-        try {
-            await ensureAgentInstructions(azureDebugPlanAgent);
-        } catch {
-            // User declined to download required instructions — abort the hand-off.
+        if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
             return false;
         }
         await vscode.commands.executeCommand('workbench.action.chat.open', {

@@ -72,14 +72,15 @@ export class RequirementsViewController extends WebviewController<Record<string,
         void this.panel.webview.postMessage({ command: 'submitComplete' });
 
         const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
-        try {
-            await ensureAgentInstructions('azure-project-plan');
-            await vscode.commands.executeCommand('workbench.action.chat.open', {
-                mode: 'azure-project-plan',
-                query: vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath),
-            });
-        } catch {
-            // Chat may not be available, or the user declined to download required instructions; saving still succeeded.
+        if (await ensureAgentInstructions('azure-project-plan')) {
+            try {
+                await vscode.commands.executeCommand('workbench.action.chat.open', {
+                    mode: 'azure-project-plan',
+                    query: vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath),
+                });
+            } catch {
+                // Chat may not be available; saving still succeeded.
+            }
         }
 
         this.panel.dispose();

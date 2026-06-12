@@ -37,10 +37,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
         if (!(await ensureCopilotChatReady())) {
             return;
         }
-        try {
-            await ensureAgentInstructions('azure-project-plan');
-        } catch {
-            // User declined to download required instructions — abort the hand-off.
+        if (!(await ensureAgentInstructions('azure-project-plan'))) {
             return;
         }
         this.panel.dispose();
