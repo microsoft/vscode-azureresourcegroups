@@ -59,8 +59,6 @@ export interface PageEntry {
     page: string;
     route: string;
     purpose: string;
-    /** Ordered top-level region tokens (e.g. ['header', 'hero', 'list', 'footer']). */
-    regions: string[];
 }
 
 export type PlanContent =
@@ -474,15 +472,13 @@ function tryParsePages(headers: string[], rows: string[][]): PlanContent | undef
             continue;
         }
         const layoutCell = (row[layoutIdx] ?? '').trim();
-        const regions = splitLayoutRegions(layoutCell);
-        if (regions.length === 0) {
+        if (!layoutCell) {
             continue;
         }
         entries.push({
             page,
             route: routeIdx >= 0 ? (row[routeIdx] ?? '').trim() : '',
             purpose: purposeIdx >= 0 ? (row[purposeIdx] ?? '').trim() : '',
-            regions,
         });
     }
 
@@ -492,39 +488,4 @@ function tryParsePages(headers: string[], rows: string[][]): PlanContent | undef
     return { type: 'pages', entries };
 }
 
-/**
- * Split a Layout cell like `header + hero + split(sidebar|list) + footer` into
- * its top-level region tokens, respecting balanced parens so compound tokens
- * like `two-column(a+b)` and `split(a|b)` stay intact.
- */
-export function splitLayoutRegions(cell: string): string[] {
-    const out: string[] = [];
-    let buf = '';
-    let depth = 0;
-    for (const ch of cell) {
-        if (ch === '(') {
-            depth++;
-            buf += ch;
-            continue;
-        }
-        if (ch === ')') {
-            depth = Math.max(0, depth - 1);
-            buf += ch;
-            continue;
-        }
-        if (depth === 0 && (ch === '+' || ch === ',')) {
-            const token = buf.trim().replace(/^`|`$/g, '');
-            if (token) {
-                out.push(token);
-            }
-            buf = '';
-            continue;
-        }
-        buf += ch;
-    }
-    const tail = buf.trim().replace(/^`|`$/g, '');
-    if (tail) {
-        out.push(tail);
-    }
-    return out;
-}
+
