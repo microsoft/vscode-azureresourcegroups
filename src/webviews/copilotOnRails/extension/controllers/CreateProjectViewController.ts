@@ -6,6 +6,7 @@
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
+import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { ext } from "../../../../extensionVariables";
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
@@ -34,6 +35,9 @@ export class CreateProjectViewController extends WebviewController<CreateProject
 
     private async openChatWithQuery(query: string): Promise<void> {
         if (!(await ensureCopilotChatReady())) {
+            return;
+        }
+        if (!(await ensureAgentInstructions('azure-project-plan'))) {
             return;
         }
         this.panel.dispose();
