@@ -164,12 +164,24 @@ No recommended extensions.
 
 ## Checklist — Node.js Runtime Validation
 
+> ⛔ **MANDATORY — runs during Phase 3 validation after all artifacts are generated.** You MUST verify every item below. Do NOT skip, assume, or approximate results.
+
 After generating VS Code configuration, verify the following were produced correctly:
+
+### Post-Generation Checks
 
 1. ✅ `launch.json` uses `"type": "node"` with the correct debug port
 2. ✅ For TypeScript: `launch.json` includes `"outFiles"` derived from `tsconfig.json` `outDir` (e.g., `["${workspaceFolder}/{service-root}/{outDir}/**/*.js"]`)
 3. ✅ For TypeScript: `tsconfig.json` has `"sourceMap": true` — without it, breakpoints in `.ts` files appear as gray (unverified) dots
 4. ✅ For TypeScript: watch task exists in `tasks.json` with `$tsc-watch` problem matcher
 5. ✅ For TypeScript: build chain follows install → clean → watch dependency order
+
+### Live Validation Checks
+
+These checks run during Phase 3 validation ([validation.md](../validation.md) Step 7), after the ready signal is observed:
+
+1. ✅ For TypeScript: verify `tsconfig.json` has `"sourceMap": true` in `compilerOptions`. If missing, add `"sourceMap": true` and re-run the build task before marking the config ✅
+
+> The Node Inspector debug port (`9229`) is handled automatically by the Functions host or `--inspect` flag.
 
 > Project-type-specific checks (e.g., `{service-id}: func host start` task, connection strings) are defined in `project-types/{type}.md`.

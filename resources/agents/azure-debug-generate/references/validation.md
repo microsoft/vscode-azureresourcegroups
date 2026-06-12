@@ -69,41 +69,20 @@ Ready signals and HTTP verification targets are defined in each project-type ref
 |-------------|-----------------|
 | Ready signal (stdout pattern) | `project-types/{type}.md` § Validation Signals § Ready Signal |
 | HTTP verification (curl target, expected status) | `project-types/{type}.md` § Validation Signals § HTTP Verification |
-| Debugger-specific checks (processName, etc.) | § Per-Debugger-Type Validation below |
+| Debugger-specific checks (processName, etc.) | `runtimes/{rt}.md` § Checklist — Live Validation Checks |
 | Runtime-specific details (debug port, outFiles) | `runtimes/{rt}.md` § Debugger Properties |
 
 > **Path resolution:** Some project types use subdirectories — see [generate.md § Project Type Path Resolution](generate.md) for the lookup table.
 
 ---
 
-## Per-Debugger-Type Validation
+## Per-Runtime Validation Checks
 
-Additional checks required for specific debugger types. These run after the ready signal and HTTP verification.
+Additional runtime-specific checks beyond the generic algorithm. These run after the ready signal and HTTP verification.
 
-> **To add a new debugger type:** add a section here if the debugger requires checks beyond the generic algorithm (e.g., process attachment, special port verification).
+> ⛔ You **MUST** load and execute the runtime's live validation checks. Do NOT skip this step or assume the checks pass.
 
-### `node`
-
-After the generic algorithm, perform these additional checks for TypeScript projects:
-
-1. Verify `tsconfig.json` has `"sourceMap": true` in `compilerOptions` — without it, breakpoints in `.ts` files appear as gray (unverified) dots even when the debugger is successfully attached
-2. If missing, add `"sourceMap": true` and re-run the build task before marking the config ✅
-
-The Node Inspector debug port (`9229`) is handled automatically by the Functions host or `--inspect` flag.
-
-### `coreclr` (attach mode)
-
-> See [runtimes/dotnet.md § Checklist](runtimes/dotnet.md) for the full .NET-specific validation checklist.
-
-After the ready signal is observed, verify the target process exists for attachment:
-
-1. List running OS processes and confirm a process with the exact name in `processName` exists
-   - **Windows PowerShell:** `Get-Process -Name "<processName without .exe>" -ErrorAction SilentlyContinue` → must return a process
-   - **macOS/Linux:** `pgrep -x "<processName>"` → must return a PID
-2. The `processName` field MUST include the `.exe` suffix on Windows (e.g., `"Scrapbook.Api.exe"`, NOT `"Scrapbook.Api"`)
-3. If this check fails, fix `launch.json` before marking the config ✅
-
-> If the process is not found, the F5 attach WILL fail with: `"No process with the specified name is currently running"`
+8. Load `runtimes/{rt}.md` § Checklist and execute every item under **Live Validation Checks**. Each runtime's checklist contains debugger-specific verifications (e.g., source map verification for Node.js, process attachment verification for .NET).
 
 ---
 

@@ -114,12 +114,22 @@ Use these implementations when building scripts from the plan:
 
 ## Checklist — {Runtime} Validation
 
+> ⛔ **MANDATORY — runs during Phase 3 validation after all artifacts are generated.** You MUST verify every item below. Do NOT skip, assume, or approximate results.
+
 <!-- Post-generation self-check for this runtime. Verify generated artifacts are correct — do not run or start anything. -->
 
 After generating VS Code configuration, verify the following were produced correctly:
 
+### Post-Generation Checks
+
 1. ✅ Build task exists in `tasks.json` with the correct problem matcher
 2. ✅ `launch.json` uses the correct debugger type and request mode
 3. ✅ `.vscode/extensions.json` includes runtime extensions listed above
+
+### Live Validation Checks
+
+<!-- These checks run during Phase 3 validation (validation.md Step 7), after the ready signal is observed.
+     Add debugger-specific verifications here (e.g., process attachment, source map verification).
+     validation.md delegates to this section — if you add checks here, they WILL be executed. -->
 
 > Project-type-specific checks (e.g., startup task, connection strings) are defined in `project-types/{type}.md`.
