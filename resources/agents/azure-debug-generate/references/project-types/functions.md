@@ -123,10 +123,7 @@ The top-level task uses the VS Code `func` task type provided by the Azure Funct
   "command": "host start --language-worker -- \"--inspect=9229\"",
   "problemMatcher": "$func-node-watch",
   "isBackground": true,
-  "runOptions": { 
-    "instanceLimit": 1, 
-    "instancePolicy": "terminateOldest" 
-  },
+  "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" },
   "dependsOn": ["{service-id}: npm watch", "Start Emulators"]
 }
 ```
@@ -142,10 +139,7 @@ The top-level task uses the VS Code `func` task type provided by the Azure Funct
   "command": "host start --language-worker -- \"--inspect=9229\"",
   "problemMatcher": "$func-node-watch",
   "isBackground": true,
-  "runOptions": { 
-    "instanceLimit": 1, 
-    "instancePolicy": "terminateOldest"
-  },
+  "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" },
   "dependsOn": ["{service-id}: npm install", "Start Emulators"]
 }
 ```
@@ -164,17 +158,12 @@ The top-level task uses the VS Code `func` task type provided by the Azure Funct
   "options": { "cwd": "${workspaceFolder}/{path-to-functions-project}" },
   "problemMatcher": "$func-dotnet-watch",
   "isBackground": true,
-  "runOptions": {
-    "instanceLimit": 1,
-    "instancePolicy": "terminateOldest"
-  },
+  "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" },
   "dependsOn": ["{service-id}: dotnet build", "Start Emulators"]
 }
 ```
 
 > Remove `"Start Emulators"` from `dependsOn` when the plan has no checked emulators.
-
-> All `func host start` tasks use `terminateOldest` because they bind a network port (default 7071). See [generate.md](../generate.md) § Task `runOptions` Rules for the general principle.
 
 > **dotnet `processName`:** The `coreclr` attach configuration requires a literal `processName` in `launch.json`. See [runtimes/dotnet.md § processName Determination](../runtimes/dotnet.md) for how to derive it from the `.csproj`, including cross-platform rules (`.exe` suffix on Windows only).
 
