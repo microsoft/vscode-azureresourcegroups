@@ -44,6 +44,7 @@ export declare enum AzExtResourceType {
     AzureDocumentDb = "AzureDocumentDb",
     ContainerApps = "ContainerApps",
     ContainerAppsEnvironment = "ContainerAppsEnvironment",
+    ContainerAppsSandboxGroups = "ContainerAppsSandboxGroups",
     FunctionApp = "FunctionApp",
     /** @deprecated The 'MongoClusters' value will be removed in future releases. It's being phased out. */
     MongoClusters = "MongoClusters",

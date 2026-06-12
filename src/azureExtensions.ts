@@ -111,6 +111,7 @@ export const azureExtensions: IAzExtMetadata[] = [
         label: 'Container Apps',
         resourceTypes: [
             AzExtResourceType.ContainerAppsEnvironment,
+            AzExtResourceType.ContainerAppsSandboxGroups,
         ],
         reportIssueCommandId: 'containerApps.reportIssue'
     },
