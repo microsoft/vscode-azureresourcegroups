@@ -5,8 +5,13 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
+import { ensureCopilotChatReady } from "../commands/copilotOnRails/openChatWithAgent";
 
 export async function askAzureInCommandPalette(context: IActionContext, prompt?: string) {
+    if (!(await ensureCopilotChatReady())) {
+        return;
+    }
+
     if (!prompt) {
         prompt = await context.ui.showInputBox({ prompt: vscode.l10n.t(`What do you want to ask about Azure?`) });
     }
