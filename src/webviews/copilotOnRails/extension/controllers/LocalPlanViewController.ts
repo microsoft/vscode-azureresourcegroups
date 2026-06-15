@@ -10,6 +10,7 @@ import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { openLoadingView } from "../openLoadingView";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
@@ -31,6 +32,11 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                         query: 'I approve the debug setup plan.',
                     });
                     this.panel.dispose();
+                    openLoadingView({
+                        stage: 2,
+                        title: vscode.l10n.t('Setting up your local development environment…'),
+                        message: vscode.l10n.t('Copilot is setting your project up for local development'),
+                    });
                     break;
                 case 'submitPlanFeedback': {
                     const query = message.prompt?.trim();

@@ -62,3 +62,13 @@ export type DeploymentPlanViewStrings = {
 export type DeploymentPlanViewConfiguration = {
     strings: DeploymentPlanViewStrings;
 };
+
+/** Configuration for the transient loading view shown between workflow steps. */
+export type LoadingViewConfiguration = {
+    /** Stage index for the StageProgress bar (0 = Project Scaffolding, 1 = Local Development, 2 = Deployment). */
+    stage: 0 | 1 | 2;
+    /** Primary spinner label (e.g. "Generating your project plan"). */
+    title: string;
+    /** Optional secondary description shown below the spinner. */
+    message?: string;
+};

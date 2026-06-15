@@ -9,6 +9,7 @@ import { ViewColumn } from "vscode";
 import { ext } from "../../../../extensionVariables";
 import { type RequirementsData } from "../../views/utils/parseRequirements";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { openLoadingView } from "../openLoadingView";
 import { markRequirementsSubmitted } from "../openRequirementsView";
 
 interface SubmitMessage {
@@ -71,6 +72,12 @@ export class RequirementsViewController extends WebviewController<Record<string,
         void this.panel.webview.postMessage({ command: 'submitComplete' });
 
         const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
+        this.panel.dispose();
+        openLoadingView({
+            stage: 0,
+            title: vscode.l10n.t('Generating your project plan…'),
+            message: vscode.l10n.t('Copilot is using your answers to build .azure/project-plan.md. The plan view will open automatically when it’s ready.'),
+        });
         try {
             await vscode.commands.executeCommand('workbench.action.chat.open', {
                 mode: 'azure-project-plan',
@@ -79,7 +86,5 @@ export class RequirementsViewController extends WebviewController<Record<string,
         } catch {
             // Chat may not be available; saving still succeeded.
         }
-
-        this.panel.dispose();
     }
 }

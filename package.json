@@ -467,7 +467,7 @@
                     "id": "azureProject",
                     "name": "%azureProject.viewName%",
                     "visibility": "visible",
-                    "when": "ms-azuretools.vscode-azureresourcegroups.hasProjectPlanFiles == true || ms-azuretools.vscode-azureresourcegroups.isEmptyWorkspace == true"
+                    "when": "ms-azuretools.vscode-azureresourcegroups.hasProjectPlanFiles == true || ms-azuretools.vscode-azureresourcegroups.hasPendingProjectSubmission == true || ms-azuretools.vscode-azureresourcegroups.isEmptyWorkspace == true"
                 }
             ]
         },

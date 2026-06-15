@@ -9,6 +9,7 @@ import { ViewColumn } from "vscode";
 import { ext } from "../../../../extensionVariables";
 import { type PlanData } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { openLoadingView } from "../openLoadingView";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class ScaffoldPlanViewController extends WebviewController<Record<string, never>> {
@@ -30,6 +31,11 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                         query: 'I approve the plan.',
                     });
                     this.panel.dispose();
+                    openLoadingView({
+                        stage: 1,
+                        title: vscode.l10n.t('Scaffolding your project…'),
+                        message: vscode.l10n.t('Copilot is creating your project files. The next view will open automatically when it’s ready.'),
+                    });
                     break;
                 case 'submitPlanFeedback': {
                     const query = message.prompt?.trim();

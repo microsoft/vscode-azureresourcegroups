@@ -62,7 +62,7 @@
             display: flex;
             flex-direction: column;
             width: 100%;
-            border: 1px solid var(--vscode-input-border, var(--vscode-widget-border));
+            border: 1px solid var(--vscode-widget-border, var(--vscode-input-border, var(--vscode-contrastBorder)));
             border-radius: 8px;
             background: var(--vscode-input-background);
             overflow: hidden;
@@ -77,11 +77,22 @@
                 display: flex;
                 flex-direction: column;
 
-                // Override Fluent UI Textarea wrapper to remove its border/padding
+                // Override Fluent UI Textarea wrapper to remove its border,
+                // background, padding, and focus underline pseudo-elements.
+                // Otherwise its ::after underline extends past the card's
+                // rounded corners and makes the box look "open".
                 >span {
                     border: none !important;
                     background: transparent !important;
                     padding: 0 !important;
+                    border-radius: 0 !important;
+
+                    &::before,
+                    &::after {
+                        display: none !important;
+                        content: none !important;
+                        border: none !important;
+                    }
                 }
 
                 textarea {

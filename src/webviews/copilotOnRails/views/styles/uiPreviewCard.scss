@@ -28,9 +28,28 @@
         justify-content: space-between;
         gap: 12px;
         margin-bottom: 0;
+        // Allow the component-library badge to wrap to a new line at high
+        // zoom levels rather than overlapping the "UI Preview" heading.
+        flex-wrap: wrap;
+        row-gap: 8px;
 
         h2 {
             margin: 0;
+            min-width: 0;
+            flex: 0 1 auto;
+            word-break: break-word;
+        }
+
+        // Fluent UI Badge — keep the full label visible at all zoom levels
+        // instead of being truncated by its default fixed width / ellipsis.
+        .fui-Badge {
+            height: auto;
+            min-height: 20px;
+            max-width: 100%;
+            white-space: normal;
+            text-align: left;
+            padding-top: 2px;
+            padding-bottom: 2px;
         }
     }
 
@@ -110,9 +129,20 @@
         background: var(--vscode-descriptionForeground);
         opacity: 0.45;
 
-        &:nth-of-type(1) { background: #ff5f57; opacity: 0.85; }
-        &:nth-of-type(2) { background: #febc2e; opacity: 0.85; }
-        &:nth-of-type(3) { background: #28c840; opacity: 0.85; }
+        &:nth-of-type(1) {
+            background: #ff5f57;
+            opacity: 0.85;
+        }
+
+        &:nth-of-type(2) {
+            background: #febc2e;
+            opacity: 0.85;
+        }
+
+        &:nth-of-type(3) {
+            background: #28c840;
+            opacity: 0.85;
+        }
     }
 
     .uiPreviewCard__urlPill {
@@ -177,11 +207,15 @@
         gap: 10px;
     }
 
-    .uiPreviewCard__cardPreview {
-        height: 64px;
-        background: linear-gradient(135deg,
-            color-mix(in srgb, var(--preview-primary) 80%, white 0%) 0%,
-            color-mix(in srgb, var(--preview-accent) 80%, white 0%) 100%);
+    .uiPreviewCard__frame {
+        width: 100%;
+        // Clamp the iframe height so it stays useful at high zoom levels
+        // (where 440px could dominate the viewport) without forcing the
+        // entire page to scroll horizontally.
+        height: clamp(320px, 60vh, 440px);
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 6px;
+        background: #ffffff;
     }
 
     .uiPreviewCard__form {

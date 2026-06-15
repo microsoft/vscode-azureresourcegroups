@@ -50,7 +50,8 @@ import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzur
 import { registerAzureTree } from './tree/azure/registerAzureTree';
 import { registerFocusTree } from './tree/azure/registerFocusTree';
 import { AzureProjectProgressTreeDataProvider } from './tree/project/AzureProjectProgressTreeDataProvider';
-import { getProjectPlanFiles, ProjectPlanFilesWatcher } from './tree/project/projectPlanFiles';
+import { ProjectPlanFilesWatcher, getProjectPlanFiles } from './tree/project/projectPlanFiles';
+import { projectSubmissionState } from './tree/project/projectSubmissionState';
 import { TenantDefaultBranchDataProvider } from './tree/tenants/TenantDefaultBranchDataProvider';
 import { TenantResourceBranchDataProviderManager } from './tree/tenants/TenantResourceBranchDataProviderManager';
 import { registerTenantTree } from './tree/tenants/registerTenantTree';
@@ -339,6 +340,10 @@ async function registerProjectPlanFilesContext(context: vscode.ExtensionContext,
 
         await vscode.commands.executeCommand('setContext', hasProjectPlanFilesContextKey, files.hasAny);
         await vscode.commands.executeCommand('setContext', isEmptyWorkspaceContextKey, await isWorkspaceEmpty());
+
+        if (files.hasAny) {
+            projectSubmissionState.reset();
+        }
     };
 
     context.subscriptions.push(planFilesWatcher.onDidChange(() => void update()));
