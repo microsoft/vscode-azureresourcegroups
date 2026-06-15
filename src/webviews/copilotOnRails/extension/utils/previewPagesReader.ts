@@ -23,11 +23,16 @@ interface Manifest {
 
 /**
  * Read the planner-generated preview folder and return one `PreviewPage` per
- * entry in `manifest.json`. For pages whose HTML file exists on disk, the
- * shared `theme.css` is inlined into the `<head>` so each page's HTML is fully
- * self-contained and safe to drop into an iframe `srcDoc`. Pages whose HTML
- * file is missing (or whose manifest entry is still `pending`) are returned
- * without `html`, which the webview renders as a "Generating preview…" panel.
+ * entry in `manifest.json`. The **presence of a non-empty `<slug>.html` file is
+ * the source of truth** for readiness — whenever that file exists and has
+ * content, the page is rendered as `ready` (with the shared `theme.css` inlined
+ * into its `<head>` so the HTML is self-contained for an iframe `srcDoc`),
+ * regardless of the manifest's `status` flag. The manifest `status` is only a
+ * hint for the not-yet-written case: a page whose HTML file is missing or empty
+ * is returned without `html`, which the webview renders as a "Generating
+ * preview…" panel. This decoupling means the planner agent does NOT have to
+ * remember to flip `status` to `"ready"` for the preview to appear — writing the
+ * HTML file is enough.
  *
  * Returns `[]` whenever the folder or manifest is missing — the caller treats
  * that the same as "no preview available". Never throws.
@@ -47,12 +52,14 @@ export async function readPreviewPages(previewFolderUri: vscode.Uri): Promise<Pr
         }
         const title = entry.title ?? entry.slug;
         const route = entry.route ?? `/${entry.slug}`;
-        const declaredStatus: 'pending' | 'ready' = entry.status === 'ready' ? 'ready' : 'pending';
 
+        // File presence is the source of truth — always attempt the read, never
+        // gate it on the manifest's `status`. A non-empty HTML file means the
+        // page is ready even if the agent never flipped `status` to `"ready"`.
         const htmlUri = vscode.Uri.joinPath(previewFolderUri, `${entry.slug}.html`);
-        const rawHtml = declaredStatus === 'ready' ? await readOptionalText(htmlUri) : undefined;
+        const rawHtml = await readOptionalText(htmlUri);
 
-        if (rawHtml && rawHtml.length > 0) {
+        if (rawHtml && rawHtml.trim().length > 0) {
             pages.push({
                 slug: entry.slug,
                 title,

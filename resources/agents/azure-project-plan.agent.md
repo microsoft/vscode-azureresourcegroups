@@ -27,10 +27,11 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 2. **Step A** — open the requirements view (see below). Mandatory whenever `.azure/requirements.json` was written.
 3. **Step B** — stop and wait for the user to submit the form. The webview controller re-invokes this agent on submit.
 4. Write `.azure/project-plan.md`.
-5. **Step B-prep** — write `.azure/.preview-temp/{theme.css, manifest.json}` per the skill's Step 3.5a, then fan out one sub-agent per page (Step 3.5b). Skip entirely for `API only` / `Background worker` plans. Sub-agents may still be in flight when Step C runs — the webview's file watcher picks up each `<slug>.html` as it lands.
-6. **Step C** — open the plan preview (see below). Mandatory. Runs **immediately after** `manifest.json` exists so the user sees the loading state while pages are still being rendered.
-7. **Step D** — wait for the user's explicit approval of the plan. Mandatory.
-8. **Step E** — hand off to the `azure-project-scaffold` agent (see below). Do not begin scaffolding inline.
+5. **Step B-prep** — write `.azure/.preview-temp/{theme.css, manifest.json}` per the skill's Step 3.5a (every page `status: "pending"`). Skip entirely for `API only` / `Background worker` plans.
+6. **Step C** — open the plan preview (see below). Mandatory. Runs **immediately after `manifest.json` exists, and BEFORE you fan out the per-page sub-agents** — so the user sees the plan document (and the loading state for each page) and can start reading/interacting while the previews are still rendering.
+7. **Step B-render** — fan out one sub-agent per page (Step 3.5b). The plan view is already open from Step C; its file watcher picks up each `<slug>.html` as it lands and flips that page's tab from "Generating preview…" to the rendered HTML automatically. **Do not wait to open the view until the sub-agents finish** — that's the bug that makes the plan appear late.
+8. **Step D** — wait for the user's explicit approval of the plan. Mandatory.
+9. **Step E** — hand off to the `azure-project-scaffold` agent (see below). Do not begin scaffolding inline.
 
 ### Step A — open the requirements view (MANDATORY when requirements.json was written)
 
@@ -54,7 +55,7 @@ Do not poll the file, do not ask the user anything in chat, do not start writing
 
 ### Step C — open the plan preview (MANDATORY, do not skip)
 
-**Trigger:** the instant `.azure/.preview-temp/manifest.json` has been written (per the skill's Step 3.5a), or — when the plan has no UI (`API only` / `Background worker`) — the instant the skill finishes writing `.azure/project-plan.md` with `Status: Planning`. This must happen **before** the skill's approval gate (before you summarize the plan or ask for approval), and **may run concurrently with the per-page sub-agents from Step 3.5b** — the webview's file watcher picks up each `<slug>.html` as the sub-agents finish.
+**Trigger:** the instant `.azure/.preview-temp/manifest.json` has been written (per the skill's Step 3.5a), or — when the plan has no UI (`API only` / `Background worker`) — the instant the skill finishes writing `.azure/project-plan.md` with `Status: Planning`. This must happen **before** the skill's approval gate (before you summarize the plan or ask for approval) **and before you fan out the per-page sub-agents (Step 3.5b)**. Open the view first; the per-page sub-agents run *after* the view is open, and the webview's file watcher picks up each `<slug>.html` as the sub-agents finish — flipping that page from the loading state to the rendered preview. **Never wait for the sub-agents to finish before opening the view** — doing so makes the plan document appear late and ruins the flow.
 
 **Action — call `run_vscode_command` immediately, before any other output:**
 

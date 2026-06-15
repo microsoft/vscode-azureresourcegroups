@@ -446,11 +446,14 @@ For each page above, list 3–6 representative records using that page's primary
 
 #### After Writing the Plan
 
-1. **Generate the frontend HTML/CSS preview** — Step 3.5 below. Skip this for `API only` / `Background worker` (no UI to preview).
-2. **Open the plan preview** — the workflow rules in `azure-project-plan.agent.md` call `azureResourceGroups.openPlanView`. The webview starts watching `.azure/.preview-temp/` immediately and shows a *Generating preview…* placeholder for any page that's still being rendered by a sub-agent.
-3. **Present plan**, ask for approval.
-4. If approved, update status from `Planning` to `Approved`.
-5. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. The scaffold agent treats `.azure/.preview-temp/*.html` as a mock-up reference and translates it into real components using the framework named in Section 2.
+> **Order matters — open the plan view BEFORE rendering the per-page previews.** The whole point of the loading state is that the user sees and can interact with the plan document while the page previews are still being generated. If you generate every preview page first and only then open the view, the plan appears late and the flow is broken.
+
+1. **Write the preview scaffolding** — Step 3.5a below: write `.azure/.preview-temp/theme.css` + `manifest.json` (every page `status: "pending"`). Skip this and all of Step 3.5 for `API only` / `Background worker` (no UI to preview).
+2. **Open the plan preview NOW** — the workflow rules in `azure-project-plan.agent.md` call `azureResourceGroups.openPlanView`. Do this **immediately after `manifest.json` exists and before fanning out the page sub-agents**. The webview starts watching `.azure/.preview-temp/` and shows the plan document plus a *Generating preview…* placeholder per page.
+3. **Render the page previews** — Step 3.5b below: fan out one sub-agent per page. The view is already open; its file watcher flips each page from *Generating preview…* to the rendered HTML as soon as its `<slug>.html` lands.
+4. **Present plan**, ask for approval.
+5. If approved, update status from `Planning` to `Approved`.
+6. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. The scaffold agent treats `.azure/.preview-temp/*.html` as a mock-up reference and translates it into real components using the framework named in Section 2.
 
 > **❌ STOP** — Do NOT proceed past approval until user approves. Once approved, auto-chain immediately.
 
@@ -563,7 +566,11 @@ Paste the full Shared CSS block from `references/html-preview.md` into the same 
 
 - `slug` is the kebab-cased page name (`Photo Upload` → `photo-upload`). It MUST match the eventual filename (`<slug>.html`). Slugs MUST be unique.
 - `route` is the path from Section 5's Pages table verbatim. Default to `/<slug>` when missing.
-- `status` starts at `"pending"` for every page and is flipped to `"ready"` in step 3.5c after the HTML file is written.
+- `status` starts at `"pending"` for every page. You SHOULD flip it to `"ready"` in step 3.5c after the HTML is written (keeps the manifest accurate), but the webview no longer depends on it — **the presence of a non-empty `<slug>.html` file is what makes a page render**. The manifest only supplies the page list (slug/title/route) and the initial loading tabs.
+
+#### 3.5a-open. Open the plan view NOW — before fanning out
+
+The instant `theme.css` and `manifest.json` exist, the agent workflow opens the plan view (`azureResourceGroups.openPlanView`, per `azure-project-plan.agent.md` Step C). **Do this before Step 3.5b.** The user immediately sees the plan document plus one *Generating preview…* tab per manifest page, and can read and interact with the plan while the page sub-agents render in the background. Do **not** wait for the sub-agents to finish before the view opens — that delay is exactly the regression this ordering prevents.
 
 #### 3.5b. Fan out one sub-agent per page (parallel)
 
@@ -595,15 +602,15 @@ Expected file shape:
 
 > ⚠️ The `<link rel="stylesheet" href="./theme.css">` is load-bearing — the extension's `ScaffoldPlanViewController` substitutes it with an inline `<style>` block at runtime so the iframe `srcDoc` is self-contained. If you inline CSS or use a different `href`, the substitution won't fire and the preview will fall back to unstyled HTML.
 
-#### 3.5c. Flip statuses to `ready` after each page lands
+#### 3.5c. (Optional) Flip statuses to `ready` after each page lands
 
-As soon as a sub-agent reports that `<slug>.html` was written, rewrite `manifest.json` with that page's `status` flipped to `"ready"`. Either:
+The webview renders a page the moment its `<slug>.html` file exists — it does **not** wait for a manifest `status` change — so the preview appears even if you skip this step. Still, for an accurate manifest you SHOULD rewrite `manifest.json` with each page's `status` flipped to `"ready"` once its HTML is written. Either:
 - update the manifest after every sub-agent completes (more responsive), or
 - update once at the end after all sub-agents complete (simpler).
 
 The webview's file watcher refreshes on every change under `.azure/.preview-temp/`, so the user sees tabs flip from loading to rendered in near-real-time.
 
-> **✅ Checkpoint**: `.azure/.preview-temp/{theme.css, manifest.json, *.html}` all exist. Every manifest entry has `status: "ready"`. The plan-preview webview now shows the rendered HTML inside the iframe per page.
+> **✅ Checkpoint**: `.azure/.preview-temp/{theme.css, manifest.json, *.html}` all exist. Every page has a non-empty `<slug>.html` (which is what makes it render; the manifest `status` is best-effort bookkeeping). The plan-preview webview now shows the rendered HTML inside the iframe per page.
 
 ---
 

@@ -192,7 +192,7 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
 /* ───── KPI tiles (still useful — communicates "this is a dashboard") ───── */
 .preview-kpi-row {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: var(--space-3);
 }
 .preview-kpi {
@@ -247,7 +247,7 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
 }
 .preview-card-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: var(--space-3);
 }
 .preview-card {
@@ -486,7 +486,15 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
 
 ## Token → HTML recipes
 
-For each layout token in the plan's Pages table, copy the corresponding snippet into the page's `<body>`. Tokens are **layout intent**, not literal element names — feel free to enrich text/labels with content derived from the page's `purpose` column.
+For each layout token in the plan's Pages table, copy the corresponding snippet into the page's `<body>`. Tokens are **layout intent**, not literal element names.
+
+> **Every human-readable label and every count in these snippets is an illustrative placeholder — adapt it to the app, never ship it verbatim.** Source the replacements from the plan:
+> - **Nav / sidebar labels** → the page names from Section 5's Pages table (link to the app's actual pages, not "Overview / Library / Settings").
+> - **Table headers, form field labels, KPI labels** → the real fields of the page's primary entity.
+> - **Rows, cards, values, badge states** → the page's records from Section 5's **Sample Content** block, using the entity's real status values.
+> - **Counts & sizing** → render as many KPI tiles, grid columns, table rows, list cards, tabs, and form fields as the plan's data actually calls for — the `repeat(4, …)` / `repeat(3, …)` and the three-row stubs below are **defaults, not quotas**. A 2-KPI dashboard renders two tiles; a 6-field form renders six fields. See *Adapting sizing to the domain* below.
+>
+> The literal strings left in the snippets (e.g. `Active`, `Owner`, `2 min ago`) only show the *shape*. A preview that still reads "Overview / Library / Settings" or "Jane Doe" has not been wired to the plan — that's the bug this contract exists to prevent. Only the **CSS / design tokens** (spacing scale, radii, the `theme.css` classes) stay fixed; all visible text and all counts are plan-driven.
 
 ### `header`
 ```html
@@ -505,23 +513,27 @@ For each layout token in the plan's Pages table, copy the corresponding snippet 
 ### `nav` (top horizontal nav)
 ```html
 <nav class="preview-nav">
-    <a class="preview-nav__link preview-nav__link--active" href="#">Overview</a>
-    <a class="preview-nav__link" href="#">Library</a>
-    <a class="preview-nav__link" href="#">Settings</a>
+    <a class="preview-nav__link preview-nav__link--active" href="#">{This page's name, from Pages table}</a>
+    <a class="preview-nav__link" href="#">{Sibling page from Pages table}</a>
+    <a class="preview-nav__link" href="#">{Sibling page from Pages table}</a>
 </nav>
 ```
+
+> One link per page in the Pages table — not a fixed three. The link matching the current page gets `--active`.
 
 ### `sidebar`
 ```html
 <aside class="preview-sidebar">
-    <div class="preview-sidebar__section">Workspace</div>
-    <a class="preview-sidebar__item preview-sidebar__item--active" href="#">Home</a>
-    <a class="preview-sidebar__item" href="#">Items</a>
-    <a class="preview-sidebar__item" href="#">Reports</a>
-    <div class="preview-sidebar__section">Account</div>
-    <a class="preview-sidebar__item" href="#">Settings</a>
+    <div class="preview-sidebar__section">{Nav group label}</div>
+    <a class="preview-sidebar__item preview-sidebar__item--active" href="#">{This page's name}</a>
+    <a class="preview-sidebar__item" href="#">{Sibling page from Pages table}</a>
+    <a class="preview-sidebar__item" href="#">{Sibling page from Pages table}</a>
+    <div class="preview-sidebar__section">{Nav group label}</div>
+    <a class="preview-sidebar__item" href="#">{Settings or account page}</a>
 </aside>
 ```
+
+> Group the app's real pages under however many section headers fit — a small app may need none. Drop the second group if there's nothing to put in it.
 
 ### `hero`
 ```html
@@ -538,31 +550,20 @@ For each layout token in the plan's Pages table, copy the corresponding snippet 
 
 > The `style="color: var(--color-on-primary);"` on the ghost button is the **one** intentional inline-style exception (alongside `modal`) — needed because the ghost variant inherits `--color-text` (dark) which is illegible on the gradient hero. The hero is the **only** place this preview uses a gradient; everywhere else is flat by design.
 
-### `kpi-row` (4 tiles, ideal for dashboards)
+### `kpi-row` (metric tiles, ideal for dashboards)
 ```html
 <div class="preview-kpi-row">
     <div class="preview-kpi">
         <span class="preview-kpi__label">{Metric label}</span>
         <span class="preview-kpi__value">{Value, e.g. 12.4k}</span>
-        <span class="preview-kpi__delta">▲ 8.2%</span>
+        <span class="preview-kpi__delta">{▲ 8.2% / ▼ 1.4% / — stable}</span>
     </div>
-    <div class="preview-kpi">
-        <span class="preview-kpi__label">{Metric label}</span>
-        <span class="preview-kpi__value">{Value}</span>
-        <span class="preview-kpi__delta">▲ 2.1%</span>
-    </div>
-    <div class="preview-kpi">
-        <span class="preview-kpi__label">{Metric label}</span>
-        <span class="preview-kpi__value">{Value}</span>
-        <span class="preview-kpi__delta">▼ 1.4%</span>
-    </div>
-    <div class="preview-kpi">
-        <span class="preview-kpi__label">{Metric label}</span>
-        <span class="preview-kpi__value">{Value}</span>
-        <span class="preview-kpi__delta">— stable</span>
-    </div>
+    <!-- One tile per metric the dashboard actually tracks (typically 2–4). -->
 </div>
 ```
+
+> Render **one tile per real metric** from the plan, not a fixed four. The `.preview-kpi-row` grid auto-flows, so 2 or 3 tiles lay out cleanly too. Labels and values come from the page's domain; drop the `__delta` line for metrics that have no trend.
+
 
 ### `section-title` (in-page heading row with hint)
 ```html
@@ -584,113 +585,111 @@ For each layout token in the plan's Pages table, copy the corresponding snippet 
 <div class="preview-card-list">
     <article class="preview-card">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3);">
-            <h3 class="preview-card__title">{Item name}</h3>
-            <span class="preview-badge preview-badge--success"><span class="preview-badge__dot"></span>Active</span>
+            <h3 class="preview-card__title">{Record name from Sample Content}</h3>
+            <span class="preview-badge preview-badge--success"><span class="preview-badge__dot"></span>{State}</span>
         </div>
         <p class="preview-card__body">{One-line description.}</p>
         <div class="preview-card__meta">
-            <span>{Owner name}</span><span>·</span><span>Updated 2h ago</span>
+            <span>{Meta field}</span><span>·</span><span>{Meta field}</span>
         </div>
     </article>
     <article class="preview-card">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3);">
-            <h3 class="preview-card__title">{Item name}</h3>
-            <span class="preview-badge preview-badge--warning"><span class="preview-badge__dot"></span>Pending</span>
+            <h3 class="preview-card__title">{Record name from Sample Content}</h3>
+            <span class="preview-badge preview-badge--warning"><span class="preview-badge__dot"></span>{State}</span>
         </div>
         <p class="preview-card__body">{One-line description.}</p>
         <div class="preview-card__meta">
-            <span>{Owner name}</span><span>·</span><span>Updated yesterday</span>
+            <span>{Meta field}</span><span>·</span><span>{Meta field}</span>
         </div>
     </article>
     <article class="preview-card">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3);">
-            <h3 class="preview-card__title">{Item name}</h3>
-            <span class="preview-badge preview-badge--neutral">Draft</span>
+            <h3 class="preview-card__title">{Record name from Sample Content}</h3>
+            <span class="preview-badge preview-badge--neutral">{State}</span>
         </div>
         <p class="preview-card__body">{One-line description.}</p>
         <div class="preview-card__meta">
-            <span>{Owner name}</span><span>·</span><span>Updated last week</span>
+            <span>{Meta field}</span><span>·</span><span>{Meta field}</span>
         </div>
     </article>
 </div>
 ```
 
-> The few inline `style="…"` attributes above are intentional layout shims (flex row). Keep them — they don't override colors or fonts.
+> Render **one card per record** in this page's Sample Content (not a fixed three). Pick the badge variant (`--success` / `--warning` / `--danger` / `--neutral`) whose color fits each record's real state, and replace `{State}` with the entity's actual status word — never the literal "Active / Pending / Draft".
 
-### `grid` (3-column card grid)
+### `grid` (responsive card grid)
 ```html
 <div class="preview-card-grid">
     <article class="preview-card">
         <div class="preview-card__media"></div>
-        <h3 class="preview-card__title">{Title}</h3>
+        <h3 class="preview-card__title">{Record name from Sample Content}</h3>
         <p class="preview-card__body">{Description.}</p>
     </article>
-    <article class="preview-card">
-        <div class="preview-card__media"></div>
-        <h3 class="preview-card__title">{Title}</h3>
-        <p class="preview-card__body">{Description.}</p>
-    </article>
-    <article class="preview-card">
-        <div class="preview-card__media"></div>
-        <h3 class="preview-card__title">{Title}</h3>
-        <p class="preview-card__body">{Description.}</p>
-    </article>
+    <!-- One card per record in this page's Sample Content. -->
 </div>
 ```
+
+> Render **one card per record**, not a fixed three. The grid auto-fills columns, so any count reflows cleanly.
+
 
 ### `form`
 ```html
 <form class="preview-form">
     <div class="preview-form__field">
-        <label class="preview-form__label" for="preview-name">Name</label>
-        <input class="preview-form__input" id="preview-name" type="text" placeholder="Jane Doe">
+        <label class="preview-form__label" for="preview-f1">{Field label}</label>
+        <input class="preview-form__input" id="preview-f1" type="text" placeholder="{example value}">
     </div>
     <div class="preview-form__field">
-        <label class="preview-form__label" for="preview-email">Email</label>
-        <input class="preview-form__input" id="preview-email" type="email" placeholder="jane@example.com">
-        <span class="preview-form__hint">We'll never share your email.</span>
+        <label class="preview-form__label" for="preview-f2">{Field label}</label>
+        <input class="preview-form__input" id="preview-f2" type="text" placeholder="{example value}">
+        <span class="preview-form__hint">{Optional helper text.}</span>
     </div>
     <div class="preview-form__field">
-        <label class="preview-form__label" for="preview-notes">Notes</label>
-        <textarea class="preview-form__textarea" id="preview-notes" placeholder="Add any context…"></textarea>
+        <label class="preview-form__label" for="preview-f3">{Field label}</label>
+        <textarea class="preview-form__textarea" id="preview-f3" placeholder="{example value}"></textarea>
     </div>
     <div class="preview-form__actions">
         <button class="preview-btn preview-btn--secondary" type="button">Cancel</button>
-        <button class="preview-btn preview-btn--primary" type="submit">Save</button>
+        <button class="preview-btn preview-btn--primary" type="submit">{Submit label}</button>
     </div>
 </form>
 ```
+
+> Render **one field per real field** of this form's entity (from Section 5) — not a fixed three. Use input types that fit (`text`, `email`, `number`, `date`, `select`, `textarea`). Keep `Cancel`; tailor the submit label to the action (e.g. "Save", "Create", "Send").
 
 ### `table`
 ```html
 <div class="preview-table-wrap">
     <table class="preview-table">
         <thead>
-            <tr><th>Name</th><th>Owner</th><th>Status</th><th>Updated</th></tr>
+            <tr><th>{Field 1}</th><th>{Field 2}</th><th>{Field 3}</th><th>{Field 4}</th></tr>
         </thead>
         <tbody>
             <tr>
-                <td>{Row title}</td>
-                <td>{Owner}</td>
-                <td><span class="preview-badge preview-badge--success"><span class="preview-badge__dot"></span>Active</span></td>
-                <td>2 min ago</td>
+                <td>{record 1 value}</td>
+                <td>{value}</td>
+                <td><span class="preview-badge preview-badge--success"><span class="preview-badge__dot"></span>{State}</span></td>
+                <td>{value}</td>
             </tr>
             <tr>
-                <td>{Row title}</td>
-                <td>{Owner}</td>
-                <td><span class="preview-badge preview-badge--warning"><span class="preview-badge__dot"></span>Pending</span></td>
-                <td>1 hr ago</td>
+                <td>{record 2 value}</td>
+                <td>{value}</td>
+                <td><span class="preview-badge preview-badge--warning"><span class="preview-badge__dot"></span>{State}</span></td>
+                <td>{value}</td>
             </tr>
             <tr>
-                <td>{Row title}</td>
-                <td>{Owner}</td>
-                <td><span class="preview-badge preview-badge--neutral">Archived</span></td>
-                <td>Yesterday</td>
+                <td>{record 3 value}</td>
+                <td>{value}</td>
+                <td><span class="preview-badge preview-badge--neutral">{State}</span></td>
+                <td>{value}</td>
             </tr>
         </tbody>
     </table>
 </div>
 ```
+
+> Columns are the primary entity's real fields (as many as the entity has — not a fixed four); rows are the page's records from Section 5's Sample Content (one `<tr>` per record).
 
 ### `actions` / `action-bar`
 ```html
@@ -703,11 +702,13 @@ For each layout token in the plan's Pages table, copy the corresponding snippet 
 ### `tabs`
 ```html
 <div class="preview-tabs">
-    <div class="preview-tabs__tab preview-tabs__tab--active">Overview</div>
-    <div class="preview-tabs__tab">Activity</div>
-    <div class="preview-tabs__tab">Settings</div>
+    <div class="preview-tabs__tab preview-tabs__tab--active">{Tab 1}</div>
+    <div class="preview-tabs__tab">{Tab 2}</div>
+    <div class="preview-tabs__tab">{Tab 3}</div>
 </div>
 ```
+
+> Use the tab names the page's purpose implies — as many as it needs.
 
 ### `modal` (rendered inline as a preview — no overlay backdrop in the sketch)
 ```html
@@ -755,6 +756,24 @@ For each layout token in the plan's Pages table, copy the corresponding snippet 
     <div>{snippet for b}</div>
 </div>
 ```
+
+---
+
+## Adapting sizing to the domain
+
+The snippets above show a *shape*; the **counts and proportions** must follow the plan's actual data, or every preview collapses back into the same generic four-tile / three-card layout. Match these to the domain:
+
+| Knob | Default in the snippets | Adapt it to… |
+|------|------------------------|--------------|
+| **KPI tiles** | 4 | One per metric the dashboard tracks (a 2-metric app shows 2). The row auto-fits. |
+| **Grid / list cards** | 3 | One per record in this page's Sample Content. The grid auto-fills columns. |
+| **Table rows** | 3 | One `<tr>` per Sample Content record; columns = the entity's real fields. |
+| **Form fields** | 3 | One per real field of the entity (a sign-up form may have 6, a search box 1). |
+| **Nav / sidebar links** | 3 | One per page in Section 5's Pages table. |
+| **Tabs** | 3 | As many as the page's purpose implies. |
+| **Content density** | medium | A list-heavy admin tool packs rows tight; a marketing landing page leans hero + few cards. Let Section 5's Style Direction steer this. |
+
+These are the **only** things that should vary per page. The **design tokens** (`--space-*` scale, `--radius-*`, `--text-*`, the `.preview-*` class definitions) stay fixed — they are the shared contract the parent webview's palette/typography editors key off. Customize *what* and *how many*, never the spacing scale or class CSS.
 
 ---
 

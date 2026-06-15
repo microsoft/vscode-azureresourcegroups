@@ -109,7 +109,7 @@
 
 > **This is the shared content contract that keeps the planning preview and the scaffolded app in sync.** Both the preview sub-agents (Step 3.5b) and the scaffold agent read this block and render the **same** records — so the low-fidelity preview is a faithful preview of what ships, not generic filler. Author it with full domain knowledge (Sections 1–4): real entity names, realistic values, real states drawn from **this** app's domain. **Never** use generic placeholders like "Item 1", "Recent items", "Card title", or lorem ipsum.
 
-For each page in the table above, list 3–6 representative records using that page's primary entity. Use a small table or bullet list per page — whatever fits the data shape. The structure below is a **format example only** — replace every `{...}` with content from your actual domain (a recipe app lists recipes, an issue tracker lists issues, a storefront lists products).
+For each page in the table above, list 3–6 representative records using that page's primary entity. Use a small table or bullet list per page — whatever fits the data shape. The structure below is a **format example only** — replace every `{...}` with content from your actual domain (a recipe app lists recipes, an issue tracker lists issues, a storefront lists products). Use **as many columns as the entity has real fields** and **as many rows as records you list** — the 4-column / 3-row shape below is illustrative, not a quota. The preview and scaffold both size their tables, grids, and forms from this block, so a 6-field entity drives a 6-field form, not a generic three.
 
 **{Page name}** — {primary entity for this page}:
 
