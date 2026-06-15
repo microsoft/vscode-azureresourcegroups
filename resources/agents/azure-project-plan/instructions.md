@@ -358,16 +358,16 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ### Color Palette
 
-> **Pick hex values that fit the project.** Use `Style Direction` above plus any brand cues from the user's prompt (industry, mood, named colors, existing logos) to choose colors. The values in `{}` below are FALLBACK defaults — only keep them verbatim when the project has no brand or style direction (e.g. generic internal tooling). Token names (`primary`, `accent`, `surface`, `text`, `muted`, `border`) are fixed — do NOT rename or add tokens; the scaffold's quality contract and preview theming key off these exact names.
+> **Choose colors that fit THIS app — never copy the example hexes.** Derive the palette from `Style Direction` above plus any brand cues in the user's prompt (industry, mood, named colors, an existing logo). The `{#…}` values are illustrative placeholders, **not** defaults — only fall back to a plain neutral set when the project genuinely has no brand or style direction (e.g. generic internal tooling). The **Usage** column must describe each color's role in **this app's** UI in domain terms, not generic boilerplate. Token names (`primary`, `accent`, `surface`, `text`, `muted`, `border`) are a **fixed contract** — do NOT rename, add, or drop them; the scaffold's quality contract and preview theming key off these exact names.
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `primary` | `{#0078D4}` | Brand color, primary buttons, links |
-| `accent` | `{#5C2D91}` | Secondary accents, highlights |
-| `surface` | `{#FAFAFA}` | Page backgrounds |
-| `text` | `{#1F1F1F}` | Body text |
-| `muted` | `{#767676}` | Secondary text, captions |
-| `border` | `{#E5E5E5}` | Dividers, input borders |
+| `primary` | `{#…}` | {Brand color — primary buttons, links, active nav} |
+| `accent`  | `{#…}` | {Secondary accents, highlights} |
+| `surface` | `{#…}` | {Page + card backgrounds} |
+| `text`    | `{#…}` | {Body text} |
+| `muted`   | `{#…}` | {Secondary text, captions, timestamps} |
+| `border`  | `{#…}` | {Dividers, input + card borders} |
 
 ### Pages
 
@@ -483,9 +483,9 @@ Both files MUST exist before the plan-preview webview opens, so the controller c
     --color-accent: {hex};
     --color-on-accent: {white or near-black};
 
-    /* ── Surfaces (light-theme defaults) ── */
-    --color-surface: {hex — page background; e.g. #fafafa};
-    --color-surface-raised: #ffffff;
+    /* ── Surfaces (derive from the palette — do NOT assume a light theme) ── */
+    --color-surface: {hex — page background from Section 5};
+    --color-surface-raised: {a card/panel tone that reads as raised against surface — #ffffff for a light theme, a step LIGHTER than surface for a dark one};
     --color-surface-sunken: color-mix(in srgb, var(--color-surface) 92%, var(--color-text) 6%);
 
     /* ── Text & borders ── */
@@ -509,7 +509,8 @@ Both files MUST exist before the plan-preview webview opens, so the controller c
     --text-2xl: 26px;
     --text-3xl: 34px;
 
-    /* ── Shape ── */
+    /* ── Shape (match the roundness to Style Direction — these are a neutral middle, not a mandate) ── */
+    /* sharp/technical → 2–4px · balanced → the values below · soft/friendly → 12–18px */
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 16px;
