@@ -7,6 +7,7 @@ import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as path from "path";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
+import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { ext } from "../../../../extensionVariables";
 import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
@@ -37,11 +38,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     void this.postPreviewPages();
                     break;
                 case 'approvePlan':
-                    void vscode.commands.executeCommand('workbench.action.chat.open', {
-                        mode: 'azure-project-scaffold',
-                        query: 'I approve the plan.',
-                    });
-                    this.panel.dispose();
+                    void this.approveAndOpenScaffoldChat();
                     break;
                 case 'submitPlanFeedback': {
                     const query = message.prompt?.trim();
@@ -60,6 +57,17 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     break;
             }
         });
+    }
+
+    private async approveAndOpenScaffoldChat(): Promise<void> {
+        if (!(await ensureAgentInstructions('azure-project-scaffold'))) {
+            return;
+        }
+        await vscode.commands.executeCommand('workbench.action.chat.open', {
+            mode: 'azure-project-scaffold',
+            query: 'I approve the plan.',
+        });
+        this.panel.dispose();
     }
 
     updatePlanData(planData: PlanData, sourceFileUri?: vscode.Uri): void {
