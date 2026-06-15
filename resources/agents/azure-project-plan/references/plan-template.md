@@ -78,25 +78,28 @@
 
 ### Color Palette
 
-| Token   | Color    |
-|---------|----------|
-| Primary | {#0078D4} |
-| Accent  | {#FFB900} |
-| Neutral | {#323130} |
-| Surface | {#FAF9F8} |
-| Success | {#107C10} |
-| Warning | {#F7630C} |
-| Danger  | {#D13438} |
+> **Choose colors that fit THIS app — never copy the example hexes below.** Derive the palette from the **Style Direction** above plus any brand cues in the user's prompt (industry, mood, named colors, an existing logo). The `{#…}` values are illustrative placeholders, **not** defaults — only fall back to a plain neutral set when the project genuinely has no brand or style direction (e.g. generic internal tooling). The **Usage** column must describe each color's role in **this app's** UI in domain terms, not generic boilerplate. The token names (`primary`, `accent`, `surface`, `text`, `muted`, `border`) are a **fixed contract** — do not rename, add, or drop them; the plan-preview theming and the scaffold quality bar key off these exact names.
 
-> The plan view detects this table by the `#xxxxxx` hex column and renders each row as a color swatch chip.
+| Token | Hex | Usage |
+|-------|-----|-------|
+| `primary` | `{#…}` | {Brand color — primary buttons, links, active nav} |
+| `accent`  | `{#…}` | {Secondary accents, highlights} |
+| `surface` | `{#…}` | {Page + card backgrounds} |
+| `text`    | `{#…}` | {Body text} |
+| `muted`   | `{#…}` | {Secondary text, captions, timestamps} |
+| `border`  | `{#…}` | {Dividers, input + card borders} |
+
+> The plan view detects this table by the `#xxxxxx` hex column and renders each row as a color swatch chip; the **Usage** text becomes the swatch's label/tooltip.
 
 ### Pages
 
-| Page          | Route          | Layout                                              |
-|---------------|----------------|-----------------------------------------------------|
-| {Home}        | {`/`}          | {header, hero, card-list, footer}                   |
-| {Item Detail} | {`/items/:id`} | {header, two-column(image+meta), action-bar, footer} |
-| {Settings}    | {`/settings`}  | {header, form, footer}                              |
+> **List THIS app's real screens — do not copy the example rows.** Derive the page list from the app's features (Sections 1 & 5) and name each page after what it actually shows (a recipe app has `Recipes` / `Recipe Detail` / `New Recipe`, an issue tracker has `Board` / `Issue` / `Backlog`). **The Layout column is per-page and content-specific** — pick the region tokens each individual page needs based on the records it displays (a data-heavy list page → `header + sidebar + table + footer`; a single-record page → `header + two-column(media+meta) + action-bar`; a wizard → `header + form`). Do **not** reuse one boilerplate layout for every row, and do not pad a simple page with regions it has no content for.
+
+| Page          | Route           | Layout                                              |
+|---------------|-----------------|-----------------------------------------------------|
+| {Primary list page — name it after the main entity} | {`/`}           | {region tokens chosen for this page's content}      |
+| {Detail page} | {`/{entity}/:id`} | {region tokens for a single-record view}            |
+| {Create/edit or settings page} | {`/{route}`}    | {region tokens for this page's content}             |
 
 > The plan view detects this table by the `Layout` header and renders each row as a small "screen" wireframe — one stacked block per region token.
 >

@@ -371,10 +371,12 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ### Pages
 
+> **List THIS app's real screens and give each its own content-specific layout.** Name pages after what they show (recipe app → `Recipes` / `Recipe Detail` / `New Recipe`; issue tracker → `Board` / `Issue` / `Backlog`), and choose each page's region tokens from the records that page actually displays — a list-heavy page wants `table`/`card-list`, a single-record page wants `two-column(media+meta) + action-bar`, a capture flow wants `form`. Do **not** reuse one boilerplate layout for every row or pad a page with regions it has no content for.
+
 | Page | Route | Purpose | Layout |
 |------|-------|---------|--------|
-| {Dashboard} | `/` | {Overview of recent activity} | `header + hero + grid + footer` |
-| {Page name} | `{/route}` | {one-line purpose} | `{region tokens, e.g. header + sidebar + main + footer}` |
+| {Primary page — name it after the main entity} | `/` | {one-line purpose} | `{region tokens chosen for this page's content}` |
+| {Next page} | `{/route}` | {one-line purpose} | `{region tokens for this page's content}` |
 
 > **Layout tokens are layout INTENT, not implementation.** The scaffold agent renders them using `Component Library` primitives per the scaffold skill's `frontend-quality-bar.md`. Recognized tokens: `header, nav, sidebar, hero, main, list, card-list, grid, form, table, actions, action-bar, tabs, modal, footer`. Compound tokens: `split(a|b)` (1:2 columns), `two-column(a+b)` (1:1 columns).
 

@@ -799,6 +799,8 @@ Wrap the page body in `<div class="preview-root">` so the header → shell → f
 
 Pages without a sidebar can put `<section class="preview-main">` directly inside `.preview-root`.
 
+> **Only emit the regions this page's Layout actually lists.** The wrapper above shows the full nesting *order*, not a required set — drop any region the page's Section 5 Layout column doesn't name (no `sidebar` token → no `<aside>`; no `hero` token → no hero block; a bare `form` page is just `header + form`). Never add chrome a page didn't ask for to make it look fuller.
+
 ---
 
 ## Hard rules — read before writing any HTML
