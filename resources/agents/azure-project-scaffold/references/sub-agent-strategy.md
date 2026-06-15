@@ -6,17 +6,41 @@
 
 ## Execution Model
 
-> ⚠️ **PIPELINING**: Phase A (Contracts) and Phase B (Backend) may begin **immediately after Step 0** (plan validation), running parallel with Step 1 (Frontend Preview). Backend derives from plan, not frontend preview. For API-only projects (no frontend), backend scaffolding proceeds immediately after Step 0.
+> ⚠️ **PIPELINING**: The **Frontend Preview sub-agent** (Step 1) and the backend track both begin **immediately after Step 0** (plan validation) and run **concurrently**. Phase A (Contracts) and Phase B (Backend) derive from the plan, not the frontend preview, so neither track blocks the other. For API-only projects (no frontend), the Frontend sub-agent is skipped and backend scaffolding proceeds immediately after Step 0.
 >
 > **Execution timeline for SPA + API projects:**
 > ```
 > Step 0 (Plan Validated)
->   ├── Step 1: Frontend Preview (sub-agent) ──> User reviews ──> Approved ──┐
->   └── Phase A: Contracts (sequential) ──> Phase B: Backend (sub-agent) ──────┤
->                                                                              ▼
->                                                            Step 12: Wire Frontend
->                                                            Step 13: Wrap Up
+>   ├── Frontend Preview Sub-Agent (F1–F3) ──> returns ──> orchestrator runs F4 (dev server + Simple Browser) ──┐
+>   └── Phase A: Contracts (sequential) ──> Phase B: Backend Sub-Agent ───────────────────────────────────────┤
+>                                                                                                          ▼
+>                                                                                        Step 12: Wire Frontend
+>                                                                                        Step 13: Wrap Up
 > ```
+>
+> **Why the orchestrator runs F4, not the sub-agent**: the dev server is a long-running background process the user watches in Simple Browser and that Step 12 later wires up. A sub-agent is stateless and returns a single message, so a background process it spawns risks being torn down when it exits. The Frontend sub-agent therefore generates + builds + verifies `src/web/` (F1–F3) and hands back; the orchestrator owns the persistent dev server (F4).
+
+---
+
+## Frontend Preview Sub-Agent (parallel with backend)
+
+Launched right after Step 0 (concurrently with Phase A/B). Owns frontend generation only — not the dev server.
+
+| Sub-Agent | Responsibility | Scope |
+|-----------|---------------|-------|
+| **Frontend Preview Agent** (general-purpose) | Generate `src/web/`: mock data layer with real images (F1–F2), pages + shared components wired to the mock API client (F3), auto-authenticated state, all four data states. Apply the Rule 15 quality bar + Polish floor. Run the frontend build gate (`npm --prefix src/web run build`, zero errors, no `any`). | Step 1 sub-steps **F1–F3** |
+
+**Brief handed to the sub-agent** (full context it receives):
+- The approved plan, especially **Section 5 (Design System & UI)**: `Component Library:`, `Style Direction:`, `Typography:`, Color Palette, Pages table.
+- The approved HTML mock-up under `.azure/.preview-temp/` (manifest + per-page `<slug>.html` + `theme.css`) as the directional sketch.
+- The three frontend reference docs: `frontend-quality-bar.md`, `frontend-patterns.md`, `frontend-preview-steps.md`.
+
+**Hand-back contract** (what the sub-agent returns):
+- `src/web/` generated and **building cleanly** (it ran the F1–F3 checkpoints: build passes, no `any`, auto-auth seeded, four states present, Rule 15 satisfied).
+- A short report listing the pages generated and any caveats.
+- It MUST NOT start the dev server, open Simple Browser, or call `ask_user`. **F4 is the orchestrator's job.**
+
+> After the Frontend sub-agent returns, the **orchestrator** performs F4: start the dev server with the cwd-independent form (`npm --prefix src/web run dev -- --host`), verify it serves real app content (not just "ready in N ms"), and open the VS Code Simple Browser. The preview stays open for the rest of the scaffold.
 
 ---
 
@@ -50,9 +74,11 @@ Once contracts exist on disk, launch backend sub-agent:
 
 ## Coordination Rules
 
-- Agent receives full project plan and contracts created in Phase A as context
-- After agent completes, run final build gate (`npm run build` in all workspaces)
-- **Synchronization gate**: Step 12 (Wire Frontend) MUST wait for BOTH: (a) frontend preview approved by user AND (b) Phase B backend agent completed. If backend finishes first, wait for frontend approval. If frontend approved first, wait for backend completion.
+- The **Frontend Preview Agent** and the backend track (Phase A → Phase B) launch together after Step 0 and run concurrently.
+- The **Backend API Agent** receives the full project plan and the contracts created in Phase A as context.
+- After the Backend agent completes, run the final build gate (`npm run build` in all workspaces).
+- After the **Frontend agent** returns, the orchestrator runs F4 (start dev server, open Simple Browser) — the sub-agent never owns the persistent process.
+- **Synchronization gate**: Step 12 (Wire Frontend) MUST wait for BOTH: (a) frontend preview ready — the Frontend sub-agent returned and the orchestrator opened Simple Browser — AND (b) Phase B backend agent completed. If one track finishes first, wait for the other.
 - Then proceed to Step 12 (Wire Frontend) and Step 13 (Wrap Up)
 
 ---

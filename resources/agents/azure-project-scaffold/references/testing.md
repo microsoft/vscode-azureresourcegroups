@@ -107,27 +107,12 @@ recursive: true
 timeout: 5000
 ```
 
-### Python
-
-| Runner | Setup | Config | Test Command | Mock Library | Assertion |
-|--------|-------|--------|-------------|-------------|-----------|
-| **pytest** | `pip install pytest pytest-cov pytest-asyncio` | `pytest.ini` or `pyproject.toml` | `pytest` | `unittest.mock` | Built-in `assert` |
-
-```ini
-# pytest.ini
-[pytest]
-testpaths = tests
-python_files = test_*.py
-python_functions = test_*
-asyncio_mode = auto
-```
-
 ### .NET
 
 | Runner | Setup | Config | Test Command | Mock Library | Assertion |
 |--------|-------|--------|-------------|-------------|-----------|
-| **xUnit** | NuGet: `xunit`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk` | `.csproj` | `dotnet test` | **NSubstitute** (never Moq) | xUnit `Assert` + **Shouldly** (never FluentAssertions ≥ 8.0) |
-| **NUnit** | NuGet: `NUnit`, `NUnit3TestAdapter`, `Microsoft.NET.Test.Sdk` | `.csproj` | `dotnet test` | **NSubstitute** (never Moq) | NUnit `Assert` + **Shouldly** (never FluentAssertions ≥ 8.0) |
+| **xUnit** | NuGet: `xunit`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk` | `.csproj` | `dotnet test` | Moq or NSubstitute | xUnit `Assert` or FluentAssertions |
+| **NUnit** | NuGet: `NUnit`, `NUnit3TestAdapter`, `Microsoft.NET.Test.Sdk` | `.csproj` | `dotnet test` | Moq or NSubstitute | NUnit `Assert` or FluentAssertions |
 
 ---
 
@@ -206,41 +191,6 @@ export function createMockCreateRequest(overrides?: Partial<CreateItemRequest>):
     ...overrides
   };
 }
-```
-
-### Python Fixtures (pytest)
-
-```python
-# tests/conftest.py
-import pytest
-import json
-from pathlib import Path
-
-@pytest.fixture
-def item_fixtures():
-    fixture_path = Path(__file__).parent / "fixtures" / "items.json"
-    with open(fixture_path) as f:
-        return json.load(f)
-
-@pytest.fixture
-def valid_item(item_fixtures):
-    return item_fixtures["validItems"][0]
-
-@pytest.fixture
-def invalid_item(item_fixtures):
-    return item_fixtures["invalidItems"][0]
-
-@pytest.fixture
-def mock_database():
-    """Returns mock database service with pre-loaded data."""
-    from services.interfaces import IDatabaseService
-    from unittest.mock import MagicMock
-    
-    db = MagicMock(spec=IDatabaseService)
-    # Configure default returns
-    db.find_all.return_value = []
-    db.find_by_id.return_value = None
-    return db
 ```
 
 ### C# Fixtures
@@ -368,63 +318,38 @@ describe('getItems', () => {
 });
 ```
 
-### Python — pytest + unittest.mock
-
-```python
-# tests/test_get_items.py
-import pytest
-from unittest.mock import AsyncMock, MagicMock
-from services.interfaces import IDatabaseService
-
-@pytest.fixture
-def mock_database(item_fixtures):
-    db = MagicMock(spec=IDatabaseService)
-    db.find_all = AsyncMock(return_value=item_fixtures["validItems"])
-    db.find_by_id = AsyncMock(return_value=item_fixtures["validItems"][0])
-    return db
-
-async def test_get_items_returns_all(mock_database, item_fixtures):
-    items = await mock_database.find_all()
-    assert len(items) == len(item_fixtures["validItems"])
-
-async def test_get_items_empty(mock_database):
-    mock_database.find_all = AsyncMock(return_value=[])
-    items = await mock_database.find_all()
-    assert items == []
-```
-
-### C# — xUnit + NSubstitute + Shouldly
-
-> **Do NOT use Moq** (SponsorLink network calls, blocked in many enterprises) or **FluentAssertions ≥ 8.0** (commercial license). Use **NSubstitute** + **Shouldly** — see [shared-references/runtimes/dotnet.md](.github/agents/shared-references/runtimes/dotnet.md).
+### C# — xUnit + Moq
 
 ```csharp
 // Functions/GetItemsTests.cs
-using NSubstitute;
-using Shouldly;
-
 public class GetItemsTests
 {
-    private readonly IDatabaseService _db = Substitute.For<IDatabaseService>();
+    private readonly Mock<IDatabaseService> _mockDb;
+
+    public GetItemsTests()
+    {
+        _mockDb = new Mock<IDatabaseService>();
+    }
 
     [Fact]
     public async Task GetItems_ReturnsAllItems()
     {
         var items = ItemFixtures.CreateItemList(3);
-        _db.FindAllAsync().Returns(items);
+        _mockDb.Setup(db => db.FindAllAsync()).ReturnsAsync(items);
 
-        var result = await _db.FindAllAsync();
+        var result = await _mockDb.Object.FindAllAsync();
 
-        result.Count.ShouldBe(3);
+        Assert.Equal(3, result.Count);
     }
 
     [Fact]
     public async Task GetItems_ReturnsEmptyList()
     {
-        _db.FindAllAsync().Returns(new List<Item>());
+        _mockDb.Setup(db => db.FindAllAsync()).ReturnsAsync(new List<Item>());
 
-        var result = await _db.FindAllAsync();
+        var result = await _mockDb.Object.FindAllAsync();
 
-        result.ShouldBeEmpty();
+        Assert.Empty(result);
     }
 }
 ```
@@ -443,9 +368,6 @@ npm test
 # or: npx vitest run
 # or: npx jest
 # or: npx mocha
-
-# Python
-pytest
 
 # .NET
 dotnet test
@@ -523,14 +445,13 @@ Use descriptive test names that document behavior:
 | Runtime | Pattern | Example |
 |---------|---------|---------|
 | TypeScript | `it('should {behavior} when {condition}')` | `it('should return 404 when item not found')` |
-| Python | `def test_{behavior}_when_{condition}()` | `def test_returns_404_when_item_not_found()` |
 | C# | `{Method}_{Condition}_{Expected}` | `GetItemById_ItemNotFound_Returns404()` |
 
 ---
 
 ## Frontend Testing
 
-> The frontend has its own test gate at Step 12. These patterns ensure the frontend is tested as rigorously as the backend.
+> The frontend has its own test gate at Step 11. These patterns ensure the frontend is tested as rigorously as the backend.
 
 ### Minimum Test Coverage
 
@@ -649,4 +570,4 @@ describe('useAuth', () => {
 
 ### Reference
 
-See [frontend-patterns.md](.github/agents/azure-project-scaffold/references/frontend-patterns.md) for complete frontend architecture guidance.
+See [frontend-patterns.md](.github/agents/shared-references/frontend-patterns.md) for complete frontend architecture guidance.
