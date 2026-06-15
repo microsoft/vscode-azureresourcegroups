@@ -76,23 +76,18 @@
                 width: 100%;
                 display: flex;
                 flex-direction: column;
+                border: none !important;
+                background: transparent !important;
+                padding: 0 !important;
+                border-radius: 0 !important;
+                outline: none !important;
+                box-shadow: none !important;
 
-                // Override Fluent UI Textarea wrapper to remove its border,
-                // background, padding, and focus underline pseudo-elements.
-                // Otherwise its ::after underline extends past the card's
-                // rounded corners and makes the box look "open".
-                >span {
+                &::before,
+                &::after {
+                    display: none !important;
+                    content: none !important;
                     border: none !important;
-                    background: transparent !important;
-                    padding: 0 !important;
-                    border-radius: 0 !important;
-
-                    &::before,
-                    &::after {
-                        display: none !important;
-                        content: none !important;
-                        border: none !important;
-                    }
                 }
 
                 textarea {
