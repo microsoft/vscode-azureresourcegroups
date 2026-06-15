@@ -18,57 +18,58 @@ interface UiPreviewCardProps {
      */
     previewPages: PreviewPage[];
     /**
-     * Called for each palette token whose color changes when the user picks a
-     * theme. The parent records the true original hex on the first change.
+     * Called when the user picks a new hex for a palette token via the color
+     * selector. The parent persists the new hex into the plan's palette so the
+     * swatch and the eventual scaffold reflect it. The live preview is recolored
+     * instantly inside this component (no feedback round-trip).
      */
     onPaletteChange: (token: string, originalHex: string, newHex: string) => void;
 }
 
 /**
  * Read-only view of Section 5 (Design System & UI). The wireframe itself is a
- * sandboxed iframe loaded with planner-generated HTML/CSS; below it a curated
- * color-theme picker lets the user recolor the whole design in one click —
- * each token change is bubbled up so the parent mirrors it into the feedback
- * drawer.
+ * sandboxed iframe loaded with planner-generated HTML/CSS; below it a per-color
+ * hex selector lets the user recolor the design. Each pick is applied to the
+ * iframe instantly by injecting CSS-variable overrides into the rendered HTML,
+ * and bubbled up so the parent persists the new hex into the plan's palette.
  */
 export const UiPreviewCard = ({ section, disabled, previewPages, onPaletteChange }: UiPreviewCardProps): JSX.Element | null => {
     const palette = useMemo(() => extractPalette(section), [section]);
     const styleDirection = useMemo(() => extractKeyValue(section, 'Style Direction'), [section]);
 
     const [activePageIdx, setActivePageIdx] = useState(0);
-    const [selectedThemeId, setSelectedThemeId] = useState<string | undefined>(undefined);
+    // Live CSS-variable overrides keyed by `--color-*` name. Applied to the
+    // iframe HTML on every render so a hex pick recolors the preview instantly.
+    const [overrides, setOverrides] = useState<Record<string, string>>({});
 
-    // The card shows two things: the iframe preview and a color-theme picker.
+    // The card shows two things: the iframe preview and a color picker.
     // Render whenever either has content — if there's truly nothing to show,
     // fall back to letting `SectionCard` handle Section 5 instead.
     const hasPages = previewPages.length > 0;
-    if (palette.length === 0 && !hasPages) {
-        return null;
-    }
 
     const activePage: PreviewPage | undefined = hasPages
         ? previewPages[Math.min(activePageIdx, previewPages.length - 1)]
         : undefined;
     const isPending = !activePage || activePage.status !== 'ready' || !activePage.html;
 
-    // Applying a theme rewrites every palette token whose semantic role the
-    // theme knows about, bubbling each change up so the feedback drawer and the
-    // iframe preview both reflect the new color story. The parent records the
-    // true original hex on the first change per token, so passing the current
-    // hex as the "original" is safe on repeat theme switches.
-    const applyTheme = (theme: PreviewTheme): void => {
-        setSelectedThemeId(theme.id);
-        for (const entry of palette) {
-            const role = roleForToken(entry.token);
-            if (!role) {
-                continue;
-            }
-            const newHex = theme.roles[role];
-            if (newHex.toLowerCase() === entry.hex.toLowerCase()) {
-                continue;
-            }
-            onPaletteChange(entry.token, entry.hex, newHex);
-        }
+    // Re-render the page HTML with the user's live color overrides inlined as a
+    // trailing `:root { … }` block so the iframe recolors the moment a hex is
+    // picked — no regeneration, no feedback round-trip.
+    const displayedHtml = useMemo(
+        () => (activePage?.html ? applyOverrides(activePage.html, overrides) : undefined),
+        [activePage?.html, overrides],
+    );
+
+    if (palette.length === 0 && !hasPages) {
+        return null;
+    }
+
+    // Picking a hex recolors the iframe instantly via a CSS-variable override
+    // and bubbles the new value up so the parent persists it into the plan.
+    const handleColorPick = (entry: PaletteEntry, newHex: string): void => {
+        const cssVar = cssVarForToken(entry.token);
+        setOverrides(prev => ({ ...prev, [cssVar]: newHex }));
+        onPaletteChange(entry.token, entry.hex, newHex);
     };
 
     return (
@@ -115,39 +116,41 @@ export const UiPreviewCard = ({ section, disabled, previewPages, onPaletteChange
                         // preview is presentational only.
                         className='uiPreviewCard__iframe'
                         title={`UI preview for ${activePage.title}`}
-                        srcDoc={activePage.html}
+                        srcDoc={displayedHtml}
                         sandbox='allow-same-origin'
                     />
                 )}
             </div>
 
             {palette.length > 0 && (
-                <div className='uiPreviewCard__themeRow'>
-                    <span className='uiPreviewCard__themeLabel'>Color theme</span>
-                    <div className='uiPreviewCard__themeGrid' role='radiogroup' aria-label='Color theme'>
-                        {PREVIEW_THEMES.map((theme) => (
-                            <button
-                                key={theme.id}
-                                type='button'
-                                role='radio'
-                                aria-checked={selectedThemeId === theme.id}
-                                className={`uiPreviewCard__themeCard ${selectedThemeId === theme.id ? 'uiPreviewCard__themeCard--active' : ''}`}
-                                disabled={disabled}
-                                onClick={() => applyTheme(theme)}
-                            >
-                                <span className='uiPreviewCard__themeSwatches' aria-hidden='true'>
-                                    {theme.swatch.map((color, i) => (
-                                        <span
-                                            key={i}
-                                            className='uiPreviewCard__themeSwatch'
-                                            style={{ background: color }}
-                                        />
-                                    ))}
-                                </span>
-                                <span className='uiPreviewCard__themeName'>{theme.name}</span>
-                            </button>
-                        ))}
-                    </div>
+                <div className='uiPreviewCard__paletteRow'>
+                    <span className='uiPreviewCard__paletteLabel'>Colors</span>
+                    <p className='uiPreviewCard__paletteHint'>Pick a color to recolor the preview instantly.</p>
+                    <ul className='uiPreviewCard__paletteList'>
+                        {palette.map((entry) => {
+                            const cssVar = cssVarForToken(entry.token);
+                            const currentHex = overrides[cssVar] ?? entry.hex;
+                            const inputId = `palette-${entry.token.replace(/[^a-z0-9]+/gi, '-')}`;
+                            const label = friendlyToken(entry.token);
+                            return (
+                                <li key={entry.token} className='uiPreviewCard__paletteItem'>
+                                    <input
+                                        id={inputId}
+                                        type='color'
+                                        className='uiPreviewCard__colorInput'
+                                        value={normalizeHex(currentHex)}
+                                        disabled={disabled}
+                                        onChange={(e) => handleColorPick(entry, e.target.value)}
+                                        aria-label={entry.usage ? `Color for ${label} — ${entry.usage}` : `Color for ${label}`}
+                                    />
+                                    <label htmlFor={inputId} className='uiPreviewCard__paletteText' title={entry.usage || undefined}>
+                                        <span className='uiPreviewCard__paletteName'>{label}</span>
+                                        <span className='uiPreviewCard__paletteHex'>{normalizeHex(currentHex).toUpperCase()}</span>
+                                    </label>
+                                </li>
+                            );
+                        })}
+                    </ul>
                 </div>
             )}
         </div>
@@ -172,88 +175,100 @@ function extractKeyValue(section: PlanSection, key: string): string | undefined 
     return undefined;
 }
 
-type ThemeRole = 'primary' | 'accent' | 'surface' | 'text' | 'muted' | 'border' | 'onPrimary' | 'onAccent';
-
-interface PreviewTheme {
-    id: string;
-    name: string;
-    /** Representative colors shown on the theme card (primary, accent, surface). */
-    swatch: string[];
-    roles: Record<ThemeRole, string>;
-}
-
-// Curated, ready-to-use palettes. Picking one recolors the whole design in a
-// single click instead of editing individual tokens.
-const PREVIEW_THEMES: PreviewTheme[] = [
-    {
-        id: 'ocean',
-        name: 'Ocean',
-        swatch: ['#0078d4', '#00b7c3', '#f3f9fb'],
-        roles: { primary: '#0078d4', accent: '#00b7c3', surface: '#f3f9fb', text: '#0b1f2a', muted: '#5b7282', border: '#cfe2ea', onPrimary: '#ffffff', onAccent: '#06303a' },
-    },
-    {
-        id: 'sunset',
-        name: 'Sunset',
-        swatch: ['#e8590c', '#e64980', '#fff6f0'],
-        roles: { primary: '#e8590c', accent: '#e64980', surface: '#fff6f0', text: '#2b1410', muted: '#8a6a5e', border: '#f3d8c8', onPrimary: '#ffffff', onAccent: '#ffffff' },
-    },
-    {
-        id: 'forest',
-        name: 'Forest',
-        swatch: ['#2f9e44', '#0ca678', '#f3faf4'],
-        roles: { primary: '#2f9e44', accent: '#0ca678', surface: '#f3faf4', text: '#11241a', muted: '#5d7766', border: '#cfe7d5', onPrimary: '#ffffff', onAccent: '#ffffff' },
-    },
-    {
-        id: 'grape',
-        name: 'Grape',
-        swatch: ['#7048e8', '#ae3ec9', '#f8f5ff'],
-        roles: { primary: '#7048e8', accent: '#ae3ec9', surface: '#f8f5ff', text: '#1f1633', muted: '#6f6585', border: '#e2d8f5', onPrimary: '#ffffff', onAccent: '#ffffff' },
-    },
-    {
-        id: 'slate',
-        name: 'Slate',
-        swatch: ['#334155', '#0ea5e9', '#f5f7fa'],
-        roles: { primary: '#334155', accent: '#0ea5e9', surface: '#f5f7fa', text: '#0f172a', muted: '#64748b', border: '#d8dee8', onPrimary: '#ffffff', onAccent: '#ffffff' },
-    },
-    {
-        id: 'rose',
-        name: 'Rose',
-        swatch: ['#e11d48', '#f97316', '#fff5f6'],
-        roles: { primary: '#e11d48', accent: '#f97316', surface: '#fff5f6', text: '#2b0f15', muted: '#8a5a62', border: '#f5d2d9', onPrimary: '#ffffff', onAccent: '#ffffff' },
-    },
-];
-
 /**
- * Map a plan palette token name onto a semantic theme role so applying a theme
- * recolors the right swatch. Returns `undefined` for tokens the themes don't
- * model (those keep their planned color). Order matters: the `on *` checks run
+ * Map a plan palette token name onto a `theme.css` CSS custom property so a hex
+ * pick recolors the matching part of the preview. The planner's `theme.css`
+ * declares `--color-primary`, `--color-accent`, `--color-surface`, etc., so the
+ * common semantic tokens are matched explicitly; anything unrecognized falls
+ * back to a kebab-cased `--color-<token>`. Order matters: the `on *` checks run
  * before the bare `primary` / `accent` checks.
  */
-function roleForToken(token: string): ThemeRole | undefined {
+function cssVarForToken(token: string): string {
     const t = token.toLowerCase();
     if (/on[ -]?primary/.test(t)) {
-        return 'onPrimary';
+        return '--color-on-primary';
     }
     if (/on[ -]?accent/.test(t)) {
-        return 'onAccent';
+        return '--color-on-accent';
     }
     if (t.includes('primary')) {
-        return 'primary';
+        return '--color-primary';
     }
     if (t.includes('accent') || t.includes('secondary')) {
-        return 'accent';
+        return '--color-accent';
     }
     if (t.includes('surface') || t.includes('background') || t.includes('canvas')) {
-        return 'surface';
+        return '--color-surface';
     }
     if (t.includes('muted') || t.includes('subtle')) {
-        return 'muted';
+        return '--color-muted';
     }
     if (t.includes('border') || t.includes('outline') || t.includes('divider')) {
-        return 'border';
+        return '--color-border';
     }
     if (t.includes('text') || t.includes('foreground') || t.includes('ink')) {
-        return 'text';
+        return '--color-text';
     }
-    return undefined;
+    if (t.includes('success')) {
+        return '--color-success';
+    }
+    if (t.includes('warning')) {
+        return '--color-warning';
+    }
+    if (t.includes('danger') || t.includes('error')) {
+        return '--color-danger';
+    }
+    return `--color-${t.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`;
+}
+
+/**
+ * Inline the user's live color overrides as a trailing `:root { … }` block so
+ * the iframe recolors instantly. A later same-specificity `:root` rule wins, and
+ * `!important` guards against any inlined rule that might also be marked so.
+ */
+function applyOverrides(html: string, overrides: Record<string, string>): string {
+    const vars = Object.keys(overrides);
+    if (vars.length === 0) {
+        return html;
+    }
+    const decls = vars.map(v => `${v}: ${overrides[v]} !important;`).join(' ');
+    const styleBlock = `<style id="__live-palette-overrides">:root { ${decls} }</style>`;
+    if (html.includes('</head>')) {
+        return html.replace('</head>', `${styleBlock}</head>`);
+    }
+    if (html.includes('</body>')) {
+        return html.replace('</body>', `${styleBlock}</body>`);
+    }
+    return html + styleBlock;
+}
+
+/**
+ * Coerce an arbitrary palette hex into the strict `#rrggbb` form that a native
+ * `<input type="color">` requires: prepend `#`, expand `#rgb` shorthand, and
+ * drop any alpha channel. Falls back to black for unparseable values.
+ */
+function normalizeHex(hex: string): string {
+    let h = (hex ?? '').trim();
+    if (!h.startsWith('#')) {
+        h = `#${h}`;
+    }
+    if (/^#[0-9a-fA-F]{3}$/.test(h)) {
+        h = `#${h[1]}${h[1]}${h[2]}${h[2]}${h[3]}${h[3]}`;
+    }
+    if (/^#[0-9a-fA-F]{8}$/.test(h)) {
+        h = h.slice(0, 7);
+    }
+    return /^#[0-9a-fA-F]{6}$/.test(h) ? h.toLowerCase() : '#000000';
+}
+
+/**
+ * Turn a raw palette token (`onPrimary`, `on-primary`, `surface`) into a
+ * human-readable label for the rare case a palette entry has no `usage` text.
+ */
+function friendlyToken(token: string): string {
+    const spaced = token
+        .replace(/[-_]+/g, ' ')
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .trim();
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }

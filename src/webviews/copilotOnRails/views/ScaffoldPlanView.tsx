@@ -252,50 +252,12 @@ export const ScaffoldPlanView = (): JSX.Element => {
         setFreeformDraft('');
     }, [freeformDraft]);
 
-    const syncDesignTokenFeedback = useCallback((target: string, field: string, original: string, value: string) => {
-        setFeedbackItems(prev => {
-            const existingIdx = prev.findIndex(i => i.kind === 'designToken' && i.target === target);
-            // Back to original → drop the feedback item (and forget the original).
-            if (value === original) {
-                originalDesignValues.current.delete(target);
-                if (existingIdx >= 0) {
-                    const next = prev.slice();
-                    next.splice(existingIdx, 1);
-                    return next;
-                }
-                return prev;
-            }
-            if (existingIdx >= 0) {
-                const next = prev.slice();
-                const existing = next[existingIdx];
-                if (existing.kind === 'designToken') {
-                    next[existingIdx] = { ...existing, to: value };
-                }
-                return next;
-            }
-            return [
-                ...prev,
-                {
-                    id: nextId(),
-                    kind: 'designToken',
-                    target,
-                    field,
-                    from: original,
-                    to: value,
-                },
-            ];
-        });
-    }, []);
-
-    const handlePaletteChange = useCallback((token: string, originalHex: string, newHex: string) => {
-        const target = `palette:${token}`;
-        if (!originalDesignValues.current.has(target)) {
-            originalDesignValues.current.set(target, originalHex);
-        }
-        const original = originalDesignValues.current.get(target) ?? originalHex;
+    const handlePaletteChange = useCallback((token: string, _originalHex: string, newHex: string) => {
+        // Palette picks are applied live to the preview iframe by `UiPreviewCard`
+        // and persisted straight into the plan's palette here — no feedback
+        // round-trip, so the recolor is instant.
         mutatePaletteEntry(token, newHex);
-        syncDesignTokenFeedback(target, `Color: ${token}`, original, newHex);
-    }, [mutatePaletteEntry, syncDesignTokenFeedback]);
+    }, [mutatePaletteEntry]);
 
     const handleDiscardAll = useCallback(() => {
         // Revert any cells touched by dropdown feedback items, plus any palette

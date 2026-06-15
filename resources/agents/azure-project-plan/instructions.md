@@ -572,6 +572,8 @@ Paste the full Shared CSS block from `references/html-preview.md` into the same 
 
 The instant `theme.css` and `manifest.json` exist, the agent workflow opens the plan view (`azureResourceGroups.openPlanView`, per `azure-project-plan.agent.md` Step C). **Do this before Step 3.5b.** The user immediately sees the plan document plus one *Generating preview…* tab per manifest page, and can read and interact with the plan while the page sub-agents render in the background. Do **not** wait for the sub-agents to finish before the view opens — that delay is exactly the regression this ordering prevents.
 
+> **Embedded webview only — never a browser or separate tab.** The planning preview is shown *exclusively* inside the plan webview's **UI Preview** card, where each `.azure/.preview-temp/*.html` page is rendered in a sandboxed iframe. Never open it with `simpleBrowser.show`, `vscode.env.openExternal`, a dev/web server, or by opening a `.preview-temp/*.html` file in an editor/preview tab. There is no port and no URL for the planning preview. (The Simple Browser belongs to the *scaffold* step's real dev server, not here.)
+
 #### 3.5b. Fan out one sub-agent per page (parallel)
 
 Launch one `runSubagent` call per page, **all in a single tool-call batch** (the platform parallelizes independent sub-agent invocations). Cap at **4 concurrent** — if the plan has more than 4 pages, split into batches of 4. Each sub-agent's prompt MUST contain:

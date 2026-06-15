@@ -218,15 +218,15 @@
         color: var(--vscode-descriptionForeground);
     }
 
-    // -------- Color theme picker --------
-    .uiPreviewCard__themeRow {
+    // -------- Color picker --------
+    .uiPreviewCard__paletteRow {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 4px;
         padding-top: 4px;
     }
 
-    .uiPreviewCard__themeLabel {
+    .uiPreviewCard__paletteLabel {
         font-size: 0.72em;
         font-weight: 600;
         text-transform: uppercase;
@@ -234,26 +234,55 @@
         color: var(--vscode-descriptionForeground);
     }
 
-    .uiPreviewCard__themeGrid {
-        display: flex;
-        flex-wrap: wrap;
+    .uiPreviewCard__paletteHint {
+        margin: 0 0 4px;
+        font-size: 0.78em;
+        color: var(--vscode-descriptionForeground);
+    }
+
+    .uiPreviewCard__paletteList {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         gap: 8px;
     }
 
-    .uiPreviewCard__themeCard {
-        appearance: none;
+    .uiPreviewCard__paletteItem {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         background: var(--vscode-editorWidget-background);
         border: 1px solid var(--vscode-widget-border);
         border-radius: 8px;
-        padding: 6px 12px 6px 6px;
-        cursor: pointer;
-        transition: border-color 0.12s ease, box-shadow 0.12s ease;
+        padding: 6px 10px;
+    }
 
-        &:hover {
-            border-color: var(--vscode-focusBorder, var(--vscode-button-background));
+    .uiPreviewCard__colorInput {
+        appearance: none;
+        -webkit-appearance: none;
+        flex: 0 0 auto;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 6px;
+        background: transparent;
+        cursor: pointer;
+
+        &::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+
+        &::-webkit-color-swatch {
+            border: none;
+            border-radius: 4px;
+        }
+
+        &::-moz-color-swatch {
+            border: none;
+            border-radius: 4px;
         }
 
         &:focus-visible {
@@ -265,28 +294,28 @@
             cursor: not-allowed;
             opacity: 0.5;
         }
-
-        &.uiPreviewCard__themeCard--active {
-            border-color: var(--vscode-focusBorder, var(--vscode-button-background));
-            box-shadow: inset 0 0 0 1px var(--vscode-focusBorder, var(--vscode-button-background));
-        }
     }
 
-    .uiPreviewCard__themeSwatches {
-        display: inline-flex;
-        border-radius: 6px;
-        overflow: hidden;
-        border: 1px solid var(--vscode-widget-border);
+    .uiPreviewCard__paletteText {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        cursor: pointer;
     }
 
-    .uiPreviewCard__themeSwatch {
-        width: 18px;
-        height: 28px;
-    }
-
-    .uiPreviewCard__themeName {
+    .uiPreviewCard__paletteName {
         font-size: 0.8em;
         font-weight: 600;
         color: var(--vscode-foreground);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .uiPreviewCard__paletteHex {
+        font-size: 0.72em;
+        font-family: var(--vscode-editor-font-family, monospace);
+        color: var(--vscode-descriptionForeground);
     }
 }
