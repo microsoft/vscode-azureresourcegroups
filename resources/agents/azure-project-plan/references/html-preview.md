@@ -10,6 +10,8 @@
 >
 > Things the preview deliberately **does not** attempt: real icons, real fonts, animations, dark mode, polished hero treatments, illustration art, micro-interactions, or production typography hierarchy. Those are the scaffold's job — see [`frontend-quality-bar.md`](../../azure-project-scaffold/references/frontend-quality-bar.md) "Polish floor" — and the scaffolded app MUST visibly out-polish this sketch.
 >
+> **Low fidelity is about *polish*, never about *content*.** Every `{...}` placeholder token in the recipes below MUST be replaced with the **real, domain-specific Sample Content** handed to you in your prompt (the page's records from the plan's Section 5 Sample Content block). Render the *same* entities, names, numbers, and states the scaffolded app will show — the preview is a faithful low-fidelity view of the real app, not a generic stand-in. **Never** emit generic filler like "Item 1", "Recent items", "Trending", "Card title", or lorem ipsum. **Never** add a banner or note claiming the app "will use" a different framework or component library — render the content directly with no such disclaimer.
+>
 > **Audience:** the planner sub-agents that fan out from Step 3.5b. Each sub-agent owns one page and writes a single self-contained HTML file linking to the shared `./theme.css`. **No `<script>` tags** — the preview iframe is sandboxed without scripts. **No inline `<style>`** — all styling MUST come from `./theme.css`. Keep the visual ambition low; the scaffold will exceed it.
 >
 > **Output shape:** every page file is `<!DOCTYPE html>` + `<head>` (charset + title + single `<link rel="stylesheet" href="./theme.css">`) + `<body>` containing the per-region markup below, in the order from the plan's Section 5 Pages table.

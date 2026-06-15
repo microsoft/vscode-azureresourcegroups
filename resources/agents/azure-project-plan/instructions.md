@@ -378,6 +378,22 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 > **Layout tokens are layout INTENT, not implementation.** The scaffold agent renders them using `Component Library` primitives per the scaffold skill's `frontend-quality-bar.md`. Recognized tokens: `header, nav, sidebar, hero, main, list, card-list, grid, form, table, actions, action-bar, tabs, modal, footer`. Compound tokens: `split(a|b)` (1:2 columns), `two-column(a+b)` (1:1 columns).
 
+### Sample Content
+
+> **Shared content contract — this is what keeps the planning preview and the scaffolded app in parity.** The preview sub-agents (Step 3.5b) and the scaffold agent both read this block and render the **same** records, so the low-fidelity preview faithfully previews what ships instead of generic filler. Author it now, while you have full domain context (Sections 1–4).
+
+For each page above, list 3–6 representative records using that page's primary entity — a short table or bullet list per page, whatever fits the data shape. Use **real values from this app's domain** (real entity names, realistic numbers, real states) — a recipe app lists recipes, an issue tracker lists issues, a storefront lists products. **Never** emit generic placeholders like "Item 1", "Recent items", "Card title", or lorem ipsum. The skeleton below shows the **format**, not the content — replace every `{...}` with your domain's records.
+
+```
+{Page name} — {primary entity}:
+| {Field A}     | {Field B} | {Field C} | {Status} |
+| {record 1 …}  | {…}       | {…}       | {state}  |
+| {record 2 …}  | {…}       | {…}       | {state}  |
+| {record 3 …}  | {…}       | {…}       | {state}  |
+
+{Form/settings page} — {field}: {realistic default} · {field}: {realistic default}
+```
+
 ---
 
 ## 6. Project Structure
@@ -555,9 +571,11 @@ Launch one `runSubagent` call per page, **all in a single tool-call batch** (the
 
 1. The page's row from Section 5's Pages table (page name, route, purpose, layout regions).
 2. The Color Palette, Typography, Style Direction, and Component Library values (for visual fidelity hints).
-3. The full contents of `references/html-preview.md`.
-4. The exact output path: `.azure/.preview-temp/<slug>.html`.
-5. A directive: *"Write a single self-contained HTML file linking to `./theme.css`. Use the per-region recipes in the reference. Do NOT add `<script>` tags — the preview iframe runs sandboxed without scripts. Do NOT inline any CSS — all styling MUST come from `./theme.css`."*
+3. **The app's domain context** — a 1–2 sentence summary of what the app does (from Sections 1–2) plus the relevant entity/data model, so the sub-agent knows what the page is actually about.
+4. **That page's records from Section 5's Sample Content block** — the real, domain-specific rows/values the page must display. This is the shared content contract; the scaffold reproduces the same records.
+5. The full contents of `references/html-preview.md`.
+6. The exact output path: `.azure/.preview-temp/<slug>.html`.
+7. A directive: *"Write a single self-contained HTML file linking to `./theme.css`. Use the per-region recipes in the reference. Replace every `{...}` placeholder token in the recipes with the real Sample Content provided above — never generic filler like 'Item 1', 'Recent items', or 'Card title'. Do NOT add a banner claiming the app 'will use' a different library. Do NOT add `<script>` tags — the preview iframe runs sandboxed without scripts. Do NOT inline any CSS — all styling MUST come from `./theme.css`."*
 
 Expected file shape:
 
@@ -664,7 +682,9 @@ All error responses follow this shape:
 | `FORBIDDEN` | 403 | Insufficient permissions |
 | `INTERNAL_ERROR` | 500 | Unhandled exception |
 
-### Canonical Project Structure (TypeScript — SPA + API)
+### Example Project Structure (TypeScript — SPA + API)
+
+> This is a **default convention for a brand-new project**, not a mandate. When the workspace already has a structure, follow it; never assume or impose these exact paths. Treat the names below (`src/functions`, `src/web`, `src/shared`, …) as illustrative roles the agent maps onto the user's actual layout.
 
 ```
 project-root/

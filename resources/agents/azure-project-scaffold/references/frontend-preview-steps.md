@@ -31,8 +31,8 @@
 | Task | Details |
 |------|---------|
 | Initialize frontend project | React + Vite / Vue + Vite / Angular / Svelte (per plan) |
-| Create `src/web/` directory | Standard structure matching plan's frontend framework |
-| Create local type definitions | Define entity types locally in `src/web/src/types/` — standalone mock types for now |
+| Create the frontend folder | Use the path the plan specifies (e.g. `src/web/`); follow the user's existing structure when one exists. Standard structure matching plan's frontend framework |
+| Create local type definitions | Define entity types locally in the frontend's types folder (e.g. `src/web/src/types/`) — standalone mock types for now |
 
 ---
 
