@@ -111,10 +111,7 @@ The top-level task is the framework's dev server. No runtime build chain — the
   "command": "{command from Framework Lookup Table}",
   "options": { "cwd": "${workspaceFolder}/{service-root}" },
   "isBackground": true,
-  "runOptions": { 
-    "instanceLimit": 1, 
-    "instancePolicy": "terminateOldest"
-  },
+  "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" },
   "problemMatcher": {
     "owner": "{framework name, lowercased}",
     "pattern": { "regexp": "^$" },
