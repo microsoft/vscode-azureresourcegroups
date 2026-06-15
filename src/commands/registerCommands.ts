@@ -172,8 +172,8 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.openRequirementsView', openRequirementsViewFromWorkspace);
 
     // Hand-off commands
-    registerCommand('azureResourceGroups.downloadAgentInstructions', (context: IActionContext, agentName?: string) =>
-        downloadAgentInstructions(context, agentName));
+    registerCommand('azureResourceGroups.downloadAgentInstructions', (context: IActionContext) =>
+        downloadAgentInstructions(context));
     registerCommand('azureResourceGroups.startProjectScaffold', (_context: IActionContext, prompt?: string) =>
         openChatWithAgent('azure-project-scaffold', prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.'));
     registerCommand('azureResourceGroups.startLocalDevelopment', (_context: IActionContext, prompt?: string) =>

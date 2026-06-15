@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 
@@ -34,23 +34,13 @@ function getWorkspaceAgentsRoot(): vscode.Uri | undefined {
     return vscode.Uri.joinPath(folder.uri, ...WORKSPACE_AGENTS_RELATIVE_PATH);
 }
 
-/** Returns `true` if the given URI exists in the workspace filesystem. */
-async function uriExists(uri: vscode.Uri): Promise<boolean> {
-    try {
-        await vscode.workspace.fs.stat(uri);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 /** Copies each of the given instruction folders from the extension bundle into the workspace, replacing any existing copies. */
 async function copyInstructionFolders(folders: string[], agentsRoot: vscode.Uri): Promise<void> {
     const bundledRoot = getBundledAgentsRoot();
     for (const folder of folders) {
         const source = vscode.Uri.joinPath(bundledRoot, folder);
         const dest = vscode.Uri.joinPath(agentsRoot, folder);
-        await vscode.workspace.fs.copy(source, dest, { overwrite: true });
+        await AzExtFsExtra.copy(source, dest, { overwrite: true });
     }
 }
 
@@ -71,7 +61,7 @@ export async function ensureAgentInstructions(agentName: string): Promise<boolea
 
     const missingFolders: string[] = [];
     for (const folder of agentInstructionFolders) {
-        if (!(await uriExists(vscode.Uri.joinPath(agentsRoot, folder)))) {
+        if (!(await AzExtFsExtra.pathExists(vscode.Uri.joinPath(agentsRoot, folder)))) {
             missingFolders.push(folder);
         }
     }
