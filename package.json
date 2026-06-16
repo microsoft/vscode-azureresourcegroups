@@ -29,7 +29,10 @@
     ],
     "preview": true,
     "activationEvents": [
-        "onFileSystem:azureResourceGroups"
+        "onFileSystem:azureResourceGroups",
+        "workspaceContains:**/.azure/project-plan.md",
+        "workspaceContains:**/.azure/requirements.json",
+        "workspaceContains:**/.azure/vscode-debug-plan.md"
     ],
     "main": "./main.js",
     "contributes": {
