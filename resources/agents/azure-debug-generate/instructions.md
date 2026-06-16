@@ -20,6 +20,14 @@
 
 ---
 
+## Autopilot mode
+
+**Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/vscode-debug-plan.md` contains `executionMode: auto`. When active, run fully unattended:
+- **Do NOT call `ask_user`.** This is the tail of an autopilot chain over a freshly generated project, so overwriting/merging the scaffolded config files is expected and safe — proceed without prompting (still preserve and merge existing `docker-compose.yml` per Rule 4 rather than blindly clobbering).
+- Validation (Phase 3) still runs in full — autopilot never skips validation or the `Implemented` status write. Setting status to `Implemented` is what signals the workflow is complete (the extension restores its auto-approve setting at that point).
+
+---
+
 ## Phase 1: Pre-Flight
 
 Verify the plan and environment before generating any files.

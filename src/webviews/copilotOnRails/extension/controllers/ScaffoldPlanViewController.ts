@@ -63,6 +63,9 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         if (!(await ensureAgentInstructions('azure-project-scaffold'))) {
             return;
         }
+        // Fresh chat session per phase hand-off — the scaffold agent reads the approved
+        // plan from disk, so a clean context keeps its window focused on scaffolding.
+        await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: 'azure-project-scaffold',
             query: 'I approve the plan.',

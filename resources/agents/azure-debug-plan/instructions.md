@@ -17,6 +17,12 @@
 4. **Scope — VS Code debug setup only** — This instruction set classifies the workspace and generates a plan. Cloud deployment is handled by **azure-prepare** → **azure-validate** → **azure-deploy**.
 ---
 
+## Autopilot mode (overrides the approval STOP)
+**Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` / `.azure/vscode-debug-plan.md` contains `executionMode: auto`. When active, run fully unattended:
+- **Phase 0–1 still run in full** — scan and write `.azure/vscode-debug-plan.md`. Also record `executionMode: auto` in the plan so `azure-debug-generate` inherits it.
+- **Skip Step 8 / the STOP** — do NOT open `openLocalPlanView` and do NOT wait for approval. Set status straight to `Approved`, then invoke `azure-debug-generate` (via `azureResourceGroups.startAzureDebugGenerate`) with the args prefixed `[AUTOPILOT MODE] `.
+- Never call `ask_user` for non-destructive steps. Scan completeness is unchanged — autopilot suppresses **the preview and approval gates only**.
+
 ## Workflow
 
 > **Two phases — Classify → Plan — then STOP.**
