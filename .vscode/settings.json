@@ -14,5 +14,5 @@
         "dist": true,
         "**/node_modules": true,
         ".vscode-test": true
-    },
+    }
 }

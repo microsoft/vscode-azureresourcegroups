@@ -6,6 +6,7 @@
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
+import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
@@ -27,27 +28,14 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                     void this.panel.webview.postMessage({ command: 'setLocalPlanData', data: planData });
                     break;
                 case 'approvePlan':
-                    void vscode.commands.executeCommand('workbench.action.chat.open', {
-                        mode: azureDebugPlanAgent,
-                        query: 'I approve the debug setup plan.',
-                    });
-                    this.panel.dispose();
-                    openLoadingView({
-                        stage: 1,
-                        title: vscode.l10n.t('Setting up your local development environment…'),
-                        message: vscode.l10n.t('Copilot is setting your project up for local development'),
-                    });
+                    void this.approveAndOpenDebugPlanChat();
                     break;
                 case 'submitPlanFeedback': {
                     const query = message.prompt?.trim();
                     if (!query) {
                         return;
                     }
-                    void vscode.commands.executeCommand('workbench.action.chat.open', {
-                        mode: azureDebugPlanAgent,
-                        query,
-                    });
-                    void this.panel.webview.postMessage({ command: 'revisionInProgress' });
+                    void this.openDebugPlanChat(query, true);
                     break;
                 }
                 case 'openSourceFile':
@@ -55,6 +43,32 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                     break;
             }
         });
+    }
+
+    private async approveAndOpenDebugPlanChat(): Promise<void> {
+        if (!(await this.openDebugPlanChat('I approve the debug setup plan.', false))) {
+            return;
+        }
+        this.panel.dispose();
+        openLoadingView({
+            stage: 1,
+            title: vscode.l10n.t('Setting up your local development environment…'),
+            message: vscode.l10n.t('Copilot is setting your project up for local development'),
+        });
+    }
+
+    private async openDebugPlanChat(query: string, isFeedback: boolean): Promise<boolean> {
+        if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
+            return false;
+        }
+        await vscode.commands.executeCommand('workbench.action.chat.open', {
+            mode: azureDebugPlanAgent,
+            query,
+        });
+        if (isFeedback) {
+            void this.panel.webview.postMessage({ command: 'revisionInProgress' });
+        }
+        return true;
     }
 
     updatePlanData(planData: LocalPlanData, sourceFileUri?: vscode.Uri): void {

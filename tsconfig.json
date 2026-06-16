@@ -15,6 +15,7 @@
         "noUnusedParameters": true,
         "allowSyntheticDefaultImports": true,
         "baseUrl": "./",
+        "ignoreDeprecations": "5.0",
         "paths": {
             "*": [
                 "node_modules/@types/*",

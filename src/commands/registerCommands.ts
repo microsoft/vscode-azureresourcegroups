@@ -28,6 +28,7 @@ import { openPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
+import { downloadAgentInstructions } from './copilotOnRails/agentInstructions';
 import { openChatWithAgent } from './copilotOnRails/openChatWithAgent';
 import { startDebugConfiguration } from './copilotOnRails/startDebugConfiguration';
 import { createResource } from './createResource';
@@ -182,6 +183,8 @@ export function registerCommands(): void {
     });
 
     // Hand-off commands
+    registerCommand('azureResourceGroups.downloadAgentInstructions', (context: IActionContext) =>
+        downloadAgentInstructions(context));
     registerCommand('azureResourceGroups.startProjectScaffold', (_context: IActionContext, prompt?: string) =>
         openChatWithAgent('azure-project-scaffold', prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.'));
     registerCommand('azureResourceGroups.startLocalDevelopment', (_context: IActionContext, prompt?: string) =>

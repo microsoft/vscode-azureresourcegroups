@@ -26,13 +26,13 @@ Plan/design a new Azure-centric app; create requirements/architecture; start a p
 | Benchmark scaffold quality | **scaffold-benchmark** |
 
 ## Rules
-1. **Plan first** — create `.azure/project-plan.md` before any code. No `src/`, configs, or project files until the user approves. Only file allowed: `.azure/project-plan.md`.
+1. **Plan first** — create `.azure/project-plan.md` before any code. No `src/`, configs, or project files until the user approves. Only files allowed under the project root: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` (per Step 3.5).
 2. **Resilience classification** — classify each service **Essential** (fails without it) or **Enhancement** (succeeds with fallback). See Quick Reference.
-3. **Auto-chain after approval** — immediately invoke `azure-project-scaffold`; never ask the user to invoke it manually; do NOT generate a frontend preview (scaffold handles it).
+3. **Auto-chain after approval** — immediately invoke `azure-project-scaffold`; never ask the user to invoke it manually. **Generate a frontend HTML/CSS preview** during planning per Step 3.5 (the scaffold agent consumes it as a mock-up but builds the real app with the chosen framework).
 4. **Interactive UI** — use `vscode_askQuestions`, never plain chat; batch unanswered questions into one call.
 
 ## Workflow (mandatory order)
-DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` + approval (Step 3) → AUTO-CHAIN scaffold after approval. Only file allowed: `.azure/project-plan.md` — no `src/`, configs, or code. Planning needs ZERO external file reads; all context is inlined below.
+DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` (Step 3) → GENERATE FRONTEND PREVIEW (Step 3.5, if applicable) → approval → AUTO-CHAIN scaffold after approval. Only files allowed: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` — no `src/`, configs, or production code. Planning needs ZERO external file reads except `references/html-preview.md` for Step 3.5; all other context is inlined below.
 
 ## ═══════════════════════════════════════════════════
 ## PHASE 1: PLANNING
@@ -358,25 +358,43 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ### Color Palette
 
-> **Pick hex values that fit the project.** Use `Style Direction` above plus any brand cues from the user's prompt (industry, mood, named colors, existing logos) to choose colors. The values in `{}` below are FALLBACK defaults — only keep them verbatim when the project has no brand or style direction (e.g. generic internal tooling). Token names (`primary`, `accent`, `surface`, `text`, `muted`, `border`) are fixed — do NOT rename or add tokens; the scaffold's quality contract and preview theming key off these exact names.
+> **Choose colors that fit THIS app — never copy the example hexes.** Derive the palette from `Style Direction` above plus any brand cues in the user's prompt (industry, mood, named colors, an existing logo). The `{#…}` values are illustrative placeholders, **not** defaults — only fall back to a plain neutral set when the project genuinely has no brand or style direction (e.g. generic internal tooling). The **Usage** column must describe each color's role in **this app's** UI in domain terms, not generic boilerplate. Token names (`primary`, `accent`, `surface`, `text`, `muted`, `border`) are a **fixed contract** — do NOT rename, add, or drop them; the scaffold's quality contract and preview theming key off these exact names.
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `primary` | `{#0078D4}` | Brand color, primary buttons, links |
-| `accent` | `{#5C2D91}` | Secondary accents, highlights |
-| `surface` | `{#FAFAFA}` | Page backgrounds |
-| `text` | `{#1F1F1F}` | Body text |
-| `muted` | `{#767676}` | Secondary text, captions |
-| `border` | `{#E5E5E5}` | Dividers, input borders |
+| `primary` | `{#…}` | {Brand color — primary buttons, links, active nav} |
+| `accent`  | `{#…}` | {Secondary accents, highlights} |
+| `surface` | `{#…}` | {Page + card backgrounds} |
+| `text`    | `{#…}` | {Body text} |
+| `muted`   | `{#…}` | {Secondary text, captions, timestamps} |
+| `border`  | `{#…}` | {Dividers, input + card borders} |
 
 ### Pages
 
+> **List THIS app's real screens and give each its own content-specific layout.** Name pages after what they show (recipe app → `Recipes` / `Recipe Detail` / `New Recipe`; issue tracker → `Board` / `Issue` / `Backlog`), and choose each page's region tokens from the records that page actually displays — a list-heavy page wants `table`/`card-list`, a single-record page wants `two-column(media+meta) + action-bar`, a capture flow wants `form`. Do **not** reuse one boilerplate layout for every row or pad a page with regions it has no content for.
+
 | Page | Route | Purpose | Layout |
 |------|-------|---------|--------|
-| {Dashboard} | `/` | {Overview of recent activity} | `header + hero + grid + footer` |
-| {Page name} | `{/route}` | {one-line purpose} | `{region tokens, e.g. header + sidebar + main + footer}` |
+| {Primary page — name it after the main entity} | `/` | {one-line purpose} | `{region tokens chosen for this page's content}` |
+| {Next page} | `{/route}` | {one-line purpose} | `{region tokens for this page's content}` |
 
 > **Layout tokens are layout INTENT, not implementation.** The scaffold agent renders them using `Component Library` primitives per the scaffold skill's `frontend-quality-bar.md`. Recognized tokens: `header, nav, sidebar, hero, main, list, card-list, grid, form, table, actions, action-bar, tabs, modal, footer`. Compound tokens: `split(a|b)` (1:2 columns), `two-column(a+b)` (1:1 columns).
+
+### Sample Content
+
+> **Shared content contract — this is what keeps the planning preview and the scaffolded app in parity.** The preview sub-agents (Step 3.5b) and the scaffold agent both read this block and render the **same** records, so the low-fidelity preview faithfully previews what ships instead of generic filler. Author it now, while you have full domain context (Sections 1–4).
+
+For each page above, list 3–6 representative records using that page's primary entity — a short table or bullet list per page, whatever fits the data shape. Use **real values from this app's domain** (real entity names, realistic numbers, real states) — a recipe app lists recipes, an issue tracker lists issues, a storefront lists products. **Never** emit generic placeholders like "Item 1", "Recent items", "Card title", or lorem ipsum. The skeleton below shows the **format**, not the content — replace every `{...}` with your domain's records.
+
+```
+{Page name} — {primary entity}:
+| {Field A}     | {Field B} | {Field C} | {Status} |
+| {record 1 …}  | {…}       | {…}       | {state}  |
+| {record 2 …}  | {…}       | {…}       | {state}  |
+| {record 3 …}  | {…}       | {…}       | {state}  |
+
+{Form/settings page} — {field}: {realistic default} · {field}: {realistic default}
+```
 
 ---
 
@@ -430,11 +448,174 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 #### After Writing the Plan
 
-1. **Present plan**, ask for approval
-2. If approved, update status from `Planning` to `Approved`
-3. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. Do NOT generate frontend preview — `azure-project-scaffold` handles it.
+> **Order matters — open the plan view BEFORE rendering the per-page previews.** The whole point of the loading state is that the user sees and can interact with the plan document while the page previews are still being generated. If you generate every preview page first and only then open the view, the plan appears late and the flow is broken.
+
+1. **Write the preview scaffolding** — Step 3.5a below: write `.azure/.preview-temp/theme.css` + `manifest.json` (every page `status: "pending"`). Skip this and all of Step 3.5 for `API only` / `Background worker` (no UI to preview).
+2. **Open the plan preview NOW** — the workflow rules in `azure-project-plan.agent.md` call `azureResourceGroups.openPlanView`. Do this **immediately after `manifest.json` exists and before fanning out the page sub-agents**. The webview starts watching `.azure/.preview-temp/` and shows the plan document plus a *Generating preview…* placeholder per page.
+3. **Render the page previews** — Step 3.5b below: fan out one sub-agent per page. The view is already open; its file watcher flips each page from *Generating preview…* to the rendered HTML as soon as its `<slug>.html` lands.
+4. **Present plan**, ask for approval.
+5. If approved, update status from `Planning` to `Approved`.
+6. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. The scaffold agent treats `.azure/.preview-temp/*.html` as a mock-up reference and translates it into real components using the framework named in Section 2.
 
 > **❌ STOP** — Do NOT proceed past approval until user approves. Once approved, auto-chain immediately.
+
+---
+
+### Step 3.5: Generate Frontend HTML/CSS Preview (parallel sub-agents)
+
+> **Skip entirely** when Section 5 was omitted (i.e. `appType` ∈ `API only` / `Background worker`). For all other app types this step is **mandatory** — without it, the plan-preview webview shows a permanent *Generating preview…* spinner and the user has no UI to approve.
+
+**Output location:** `.azure/.preview-temp/` (note the leading dot on the folder name — it's a transient, gitignored scratch space). The scaffold agent reads it as a mock-up reference, then deletes it as the last step of scaffolding (see scaffold skill Step 13).
+
+**Inputs:** the just-written `.azure/project-plan.md` Section 5 (Color Palette, Typography, Pages, Style Direction, Component Library) plus the per-region recipes in [`references/html-preview.md`](references/html-preview.md). Read that reference file **once** at the start of this step.
+
+#### 3.5a. Write `theme.css` and `manifest.json` (do this BEFORE fan-out)
+
+Both files MUST exist before the plan-preview webview opens, so the controller can render tabs in the loading state. Use the `create_file` tool — it's OS-agnostic and creates parent folders automatically.
+
+**`.azure/.preview-temp/theme.css`** — single shared stylesheet derived from Section 5:
+
+```css
+:root {
+    /* ── Brand colors (from Section 5 palette) ── */
+    --color-primary: {hex from Section 5};
+    --color-on-primary: {white or near-black, whichever contrasts better};
+    --color-accent: {hex};
+    --color-on-accent: {white or near-black};
+
+    /* ── Surfaces (derive from the palette — do NOT assume a light theme) ── */
+    --color-surface: {hex — page background from Section 5};
+    --color-surface-raised: {a card/panel tone that reads as raised against surface — #ffffff for a light theme, a step LIGHTER than surface for a dark one};
+    --color-surface-sunken: color-mix(in srgb, var(--color-surface) 92%, var(--color-text) 6%);
+
+    /* ── Text & borders ── */
+    --color-text: {hex — e.g. #111827};
+    --color-muted: {hex — e.g. #6b7280};
+    --color-border: {hex — e.g. #e5e7eb};
+
+    /* ── Semantic (status badges, alerts) ── */
+    --color-success: #16a34a;
+    --color-warning: #d97706;
+    --color-danger:  #dc2626;
+
+    /* ── Typography ── */
+    --font-body: {typography from Section 5}, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-heading: var(--font-body);
+    --text-xs: 11px;
+    --text-sm: 13px;
+    --text-base: 14px;
+    --text-lg: 16px;
+    --text-xl: 20px;
+    --text-2xl: 26px;
+    --text-3xl: 34px;
+
+    /* ── Shape (match the roundness to Style Direction — these are a neutral middle, not a mandate) ── */
+    /* sharp/technical → 2–4px · balanced → the values below · soft/friendly → 12–18px */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-pill: 9999px;
+
+    /* ── Spacing scale (4px base) ── */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 28px;
+    --space-7: 40px;
+    --space-8: 56px;
+
+    /* ── Elevation (preview = single tier; the scaffold uses real component-library elevation) ── */
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    line-height: 1.2;
+    margin: 0;
+}
+a { color: var(--color-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+/* Plus the shared component CSS from references/html-preview.md §Shared CSS */
+```
+
+> **Why so plain?** This stylesheet powers a *directional sketch* — it confirms color story, page regions, and density during planning, nothing more. The scaffold raises the visual ambition (real component library, real icons, motion, dark mode, polished hero treatments). Resist the urge to add depth/shadow tiers/gradients here — that work belongs in the scaffold and is governed by `azure-project-scaffold/references/frontend-quality-bar.md` "Polish floor".
+
+Paste the full Shared CSS block from `references/html-preview.md` into the same file (header, nav, sidebar, hero, etc. — keep names exactly as the reference defines so the per-page HTML matches).
+
+**`.azure/.preview-temp/manifest.json`** — one entry per page in Section 5's Pages table:
+
+```json
+{
+    "generatedAt": "{ISO timestamp}",
+    "pages": [
+        { "slug": "dashboard", "title": "Dashboard", "route": "/", "status": "pending" },
+        { "slug": "settings",  "title": "Settings",  "route": "/settings", "status": "pending" }
+    ]
+}
+```
+
+- `slug` is the kebab-cased page name (`Photo Upload` → `photo-upload`). It MUST match the eventual filename (`<slug>.html`). Slugs MUST be unique.
+- `route` is the path from Section 5's Pages table verbatim. Default to `/<slug>` when missing.
+- `status` starts at `"pending"` for every page. You SHOULD flip it to `"ready"` in step 3.5c after the HTML is written (keeps the manifest accurate), but the webview no longer depends on it — **the presence of a non-empty `<slug>.html` file is what makes a page render**. The manifest only supplies the page list (slug/title/route) and the initial loading tabs.
+
+#### 3.5a-open. Open the plan view NOW — before fanning out
+
+The instant `theme.css` and `manifest.json` exist, the agent workflow opens the plan view (`azureResourceGroups.openPlanView`, per `azure-project-plan.agent.md` Step C). **Do this before Step 3.5b.** The user immediately sees the plan document plus one *Generating preview…* tab per manifest page, and can read and interact with the plan while the page sub-agents render in the background. Do **not** wait for the sub-agents to finish before the view opens — that delay is exactly the regression this ordering prevents.
+
+> **Embedded webview only — never a browser or separate tab.** The planning preview is shown *exclusively* inside the plan webview's **UI Preview** card, where each `.azure/.preview-temp/*.html` page is rendered in a sandboxed iframe. Never open it with `simpleBrowser.show`, `vscode.env.openExternal`, a dev/web server, or by opening a `.preview-temp/*.html` file in an editor/preview tab. There is no port and no URL for the planning preview. (The Simple Browser belongs to the *scaffold* step's real dev server, not here.)
+
+#### 3.5b. Fan out one sub-agent per page (parallel)
+
+Launch one `runSubagent` call per page, **all in a single tool-call batch** (the platform parallelizes independent sub-agent invocations). Cap at **4 concurrent** — if the plan has more than 4 pages, split into batches of 4. Each sub-agent's prompt MUST contain:
+
+1. The page's row from Section 5's Pages table (page name, route, purpose, layout regions).
+2. The Color Palette, Typography, Style Direction, and Component Library values (for visual fidelity hints).
+3. **The app's domain context** — a 1–2 sentence summary of what the app does (from Sections 1–2) plus the relevant entity/data model, so the sub-agent knows what the page is actually about.
+4. **That page's records from Section 5's Sample Content block** — the real, domain-specific rows/values the page must display. This is the shared content contract; the scaffold reproduces the same records.
+5. The full contents of `references/html-preview.md`.
+6. The exact output path: `.azure/.preview-temp/<slug>.html`.
+7. A directive: *"Write a single self-contained HTML file linking to `./theme.css`. Use the per-region recipes in the reference. Replace every `{...}` placeholder token in the recipes with the real Sample Content provided above — never generic filler like 'Item 1', 'Recent items', or 'Card title'. Do NOT add a banner claiming the app 'will use' a different library. Do NOT add `<script>` tags — the preview iframe runs sandboxed without scripts. Do NOT inline any CSS — all styling MUST come from `./theme.css`."*
+
+Expected file shape:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{Page Title} — Preview</title>
+    <link rel="stylesheet" href="./theme.css">
+</head>
+<body>
+    <!-- Per-region HTML per references/html-preview.md, in the order from the plan's Pages table -->
+</body>
+</html>
+```
+
+> ⚠️ The `<link rel="stylesheet" href="./theme.css">` is load-bearing — the extension's `ScaffoldPlanViewController` substitutes it with an inline `<style>` block at runtime so the iframe `srcDoc` is self-contained. If you inline CSS or use a different `href`, the substitution won't fire and the preview will fall back to unstyled HTML.
+
+#### 3.5c. (Optional) Flip statuses to `ready` after each page lands
+
+The webview renders a page the moment its `<slug>.html` file exists — it does **not** wait for a manifest `status` change — so the preview appears even if you skip this step. Still, for an accurate manifest you SHOULD rewrite `manifest.json` with each page's `status` flipped to `"ready"` once its HTML is written. Either:
+- update the manifest after every sub-agent completes (more responsive), or
+- update once at the end after all sub-agents complete (simpler).
+
+The webview's file watcher refreshes on every change under `.azure/.preview-temp/`, so the user sees tabs flip from loading to rendered in near-real-time.
+
+> **✅ Checkpoint**: `.azure/.preview-temp/{theme.css, manifest.json, *.html}` all exist. Every page has a non-empty `<slug>.html` (which is what makes it render; the manifest `status` is best-effort bookkeeping). The plan-preview webview now shows the rendered HTML inside the iframe per page.
 
 ---
 
@@ -494,7 +675,7 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 > **Why this matters**: Without `Component Library:`, the scaffold step treats the wireframe's region tokens (`header`, `hero`, `grid`, ...) as raw layout instructions and produces blocky placeholder `<div>` JSX that LOOKS worse than the plan-preview wireframe. With `Component Library:` set, the scaffold renders each region using real library primitives (cards, tabs, fields, toolbars, message bars) themed by the Color Palette.
 
-> **Plan-preview note**: The plan-preview webview always renders the Section 5 wireframe in Fluent UI v9 (it's the only library bundled). When `Component Library` is anything other than Fluent UI v9, the preview shows a small footnote disclosing this. The scaffolded app still uses the library named in the plan.
+> **Plan-preview note**: The plan-preview webview renders Section 5 as a **sandboxed HTML/CSS iframe** loaded from `.azure/.preview-temp/<page>.html`. It deliberately does NOT use any component library, real icons, motion, dark mode, or webfonts — the preview is a *directional sketch* (color story + page regions + density), and the scaffolded app is required to visibly exceed it using whatever `Component Library` is named in the plan. The webview disclosure reads *"Directional mock, not the final UI. The scaffold renders this with **{Component Library}**, real icons, motion, and dark mode — it will look noticeably more polished than the sketch below."* and a `MOCK` ribbon overlays the iframe.
 
 ### Error Response Contract
 
@@ -513,7 +694,9 @@ All error responses follow this shape:
 | `FORBIDDEN` | 403 | Insufficient permissions |
 | `INTERNAL_ERROR` | 500 | Unhandled exception |
 
-### Canonical Project Structure (TypeScript — SPA + API)
+### Example Project Structure (TypeScript — SPA + API)
+
+> This is a **default convention for a brand-new project**, not a mandate. When the workspace already has a structure, follow it; never assume or impose these exact paths. Treat the names below (`src/functions`, `src/web`, `src/shared`, …) as illustrative roles the agent maps onto the user's actual layout.
 
 ```
 project-root/

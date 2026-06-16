@@ -96,14 +96,11 @@ Chain shape (startup task comes from the project type):
   ],
   "problemMatcher": "$msCompile",
   "group": "build",
-  "runOptions": {
-    "instanceLimit": 1,
-    "instancePolicy": "terminateOldest"
-  }
+  "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" }
 }
 ```
 
-> .NET does not have a watch-based incremental compile step in the debug chain (unlike TypeScript's `tsc --watch`). Each F5 re-runs `dotnet build`, so `instancePolicy` is `"terminateOldest"`.
+> .NET does not have a watch-based incremental compile step in the debug chain (unlike TypeScript's `tsc --watch`). Each F5 re-runs `dotnet build`.
 
 See [generate.md](../generate.md) § Task `runOptions` Rules for how these build steps are rendered into VS Code task configuration.
 
@@ -170,9 +167,25 @@ Use these implementations when building scripts from the plan:
 
 ## Checklist — .NET Runtime Validation
 
+> ⛔ **MANDATORY — runs during Phase 3 validation after all artifacts are generated.** You MUST verify every item below. Do NOT skip, assume, or approximate results.
+
 After generating VS Code configuration, verify the following were produced correctly:
+
+### Post-Generation Checks
 
 1. ✅ `dotnet build` task exists in `tasks.json` with `$msCompile` problem matcher
 2. ✅ `processName` in `launch.json` matches the `AssemblyName` derived from `.csproj` (platform-appropriate — see § processName Determination)
 3. ✅ `launch.json` uses `"type": "coreclr"` with `"request": "attach"`
 4. ✅ `.vscode/extensions.json` includes `ms-dotnettools.csharp` and `ms-dotnettools.csdevkit`
+
+### Live Validation Checks
+
+These checks run during Phase 3 validation ([validation.md](../validation.md) Step 7), after the ready signal is observed:
+
+1. ✅ Verify the target process exists for attachment — the `processName` in `launch.json` must match a running OS process:
+   - **Windows PowerShell:** `Get-Process -Name "<processName without .exe>" -ErrorAction SilentlyContinue` → must return a process
+   - **macOS/Linux:** `pgrep -x "<processName>"` → must return a PID
+2. ✅ On Windows, confirm `processName` includes the `.exe` suffix (e.g., `"Scrapbook.Api.exe"`, NOT `"Scrapbook.Api"`)
+3. ✅ If process check fails, fix `launch.json` before marking the config ✅
+
+> If the process is not found, the F5 attach WILL fail with: `"No process with the specified name is currently running"`

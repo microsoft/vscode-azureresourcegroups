@@ -6,6 +6,7 @@
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
+import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { ext } from "../../../../extensionVariables";
 import { type RequirementsData } from "../../views/utils/parseRequirements";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
@@ -72,19 +73,21 @@ export class RequirementsViewController extends WebviewController<Record<string,
         void this.panel.webview.postMessage({ command: 'submitComplete' });
 
         const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
-        this.panel.dispose();
-        openLoadingView({
-            stage: 0,
-            title: vscode.l10n.t('Generating your project plan…'),
-            message: vscode.l10n.t('Copilot is using your answers to build .azure/project-plan.md. The plan view will open automatically when it’s ready.'),
-        });
-        try {
-            await vscode.commands.executeCommand('workbench.action.chat.open', {
-                mode: 'azure-project-plan',
-                query: vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath),
+        if (await ensureAgentInstructions('azure-project-plan')) {
+            this.panel.dispose();
+            openLoadingView({
+                stage: 0,
+                title: vscode.l10n.t('Generating your project plan…'),
+                message: vscode.l10n.t('Copilot is using your answers to build .azure/project-plan.md. The plan view will open automatically when it’s ready.'),
             });
-        } catch {
-            // Chat may not be available; saving still succeeded.
+            try {
+                await vscode.commands.executeCommand('workbench.action.chat.open', {
+                    mode: 'azure-project-plan',
+                    query: vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath),
+                });
+            } catch {
+                // Chat may not be available; saving still succeeded.
+            }
         }
     }
 }

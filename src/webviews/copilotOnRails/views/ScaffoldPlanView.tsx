@@ -10,7 +10,7 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX
 import { StageProgress } from './components/StageProgress';
 import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
-import { type PlanContent, type PlanData, type PlanSection, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
+import { type PlanContent, type PlanData, type PlanSection, type PreviewPage, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 
 const editableOptions: Record<string, string[]> = {
     'Runtime': ['JavaScript', 'TypeScript', 'Python', 'C# (.NET)'],
@@ -31,7 +31,7 @@ type FeedbackItem =
 let feedbackIdCounter = 0;
 const nextId = (): string => `fb-${++feedbackIdCounter}`;
 
-function buildFeedbackPrompt(items: FeedbackItem[], freeform: string, uiNote: string): string {
+function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
     const changes = items
         .filter((i): i is Extract<FeedbackItem, { kind: 'dropdown' }> => i.kind === 'dropdown')
         .map(i => `- Change ${i.field} from ${i.from} to ${i.to}`);
@@ -64,33 +64,29 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string, uiNote: st
     if (freeform.trim().length > 0) {
         lines.push('Additional notes:', `- ${freeform.trim()}`, '');
     }
-    if (uiNote.trim().length > 0) {
-        lines.push(
-            'UI changes (apply to Section 5 "Design System & UI" — pages, layout regions, or visual treatments):',
-            `- ${uiNote.trim()}`,
-            '',
-        );
-    }
     return lines.join('\n').trimEnd();
 }
 
 export const ScaffoldPlanView = (): JSX.Element => {
     const [plan, setPlan] = useState<PlanData | null>(null);
+    // HTML/CSS preview pages pushed from the controller via `setPreviewPages`.
+    // Lives outside `plan` because it's driven by a file-system watcher on
+    // `.azure/.preview-temp/`, not by the plan markdown.
+    const [previewPages, setPreviewPages] = useState<PreviewPage[]>([]);
     const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
     const [freeformDraft, setFreeformDraft] = useState('');
-    const [uiNote, setUiNote] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
     const originalCellValues = useRef<Map<CellKey, string>>(new Map());
-    // Same idea for design tokens (palette swatches + typography), keyed by
-    // synthetic target like `palette:Primary` or `typography`.
+    // Same idea for design tokens (palette swatches), keyed by a synthetic
+    // target like `palette:Primary`.
     const originalDesignValues = useRef<Map<string, string>>(new Map());
     const { vscodeApi } = useContext(WebviewContext);
 
     const hasEdits = useMemo(
-        () => feedbackItems.length > 0 || freeformDraft.trim().length > 0 || uiNote.trim().length > 0,
-        [feedbackItems, freeformDraft, uiNote],
+        () => feedbackItems.length > 0 || freeformDraft.trim().length > 0,
+        [feedbackItems, freeformDraft],
     );
 
     const isAlreadyApproved = useMemo(() => {
@@ -116,9 +112,10 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 // post-revision refresh. Either way, clear pending feedback state.
                 setFeedbackItems([]);
                 setFreeformDraft('');
-                setUiNote('');
                 originalCellValues.current.clear();
                 originalDesignValues.current.clear();
+            } else if (message?.command === 'setPreviewPages') {
+                setPreviewPages(Array.isArray(message.pages) ? message.pages as PreviewPage[] : []);
             } else if (message?.command === 'revisionInProgress') {
                 setIsAwaitingRevision(true);
                 setDrawerOpen(false);
@@ -176,22 +173,6 @@ export const ScaffoldPlanView = (): JSX.Element => {
         });
     }, []);
 
-    const mutateTypography = useCallback((value: string) => {
-        setPlan(prev => {
-            if (!prev) {
-                return prev;
-            }
-            const updated = structuredClone(prev);
-            for (const section of updated.sections) {
-                for (const content of section.content) {
-                    if (content.type === 'keyValue' && content.key === 'Typography') {
-                        content.value = value;
-                    }
-                }
-            }
-            return updated;
-        });
-    }, []);
     const handleTableCellChange = useCallback((sectionIdx: number, contentIdx: number, rowIdx: number, colIdx: number, value: string) => {
         if (!plan) {
             return;
@@ -253,16 +234,14 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 mutateCell(item.sectionIdx, item.contentIdx, item.rowIdx, item.colIdx, item.from);
                 originalCellValues.current.delete(item.cell);
             } else if (item?.kind === 'designToken') {
-                if (item.target === 'typography') {
-                    mutateTypography(item.from);
-                } else if (item.target.startsWith('palette:')) {
+                if (item.target.startsWith('palette:')) {
                     mutatePaletteEntry(item.target.slice('palette:'.length), item.from);
                 }
                 originalDesignValues.current.delete(item.target);
             }
             return prev.filter(i => i.id !== id);
         });
-    }, [mutateCell, mutatePaletteEntry, mutateTypography]);
+    }, [mutateCell, mutatePaletteEntry]);
 
     const handleAddNote = useCallback(() => {
         const text = freeformDraft.trim();
@@ -273,72 +252,22 @@ export const ScaffoldPlanView = (): JSX.Element => {
         setFreeformDraft('');
     }, [freeformDraft]);
 
-    const syncDesignTokenFeedback = useCallback((target: string, field: string, original: string, value: string) => {
-        setFeedbackItems(prev => {
-            const existingIdx = prev.findIndex(i => i.kind === 'designToken' && i.target === target);
-            // Back to original → drop the feedback item (and forget the original).
-            if (value === original) {
-                originalDesignValues.current.delete(target);
-                if (existingIdx >= 0) {
-                    const next = prev.slice();
-                    next.splice(existingIdx, 1);
-                    return next;
-                }
-                return prev;
-            }
-            if (existingIdx >= 0) {
-                const next = prev.slice();
-                const existing = next[existingIdx];
-                if (existing.kind === 'designToken') {
-                    next[existingIdx] = { ...existing, to: value };
-                }
-                return next;
-            }
-            return [
-                ...prev,
-                {
-                    id: nextId(),
-                    kind: 'designToken',
-                    target,
-                    field,
-                    from: original,
-                    to: value,
-                },
-            ];
-        });
-    }, []);
-
-    const handlePaletteChange = useCallback((token: string, originalHex: string, newHex: string) => {
-        const target = `palette:${token}`;
-        if (!originalDesignValues.current.has(target)) {
-            originalDesignValues.current.set(target, originalHex);
-        }
-        const original = originalDesignValues.current.get(target) ?? originalHex;
+    const handlePaletteChange = useCallback((token: string, _originalHex: string, newHex: string) => {
+        // Palette picks are applied live to the preview iframe by `UiPreviewCard`
+        // and persisted straight into the plan's palette here — no feedback
+        // round-trip, so the recolor is instant.
         mutatePaletteEntry(token, newHex);
-        syncDesignTokenFeedback(target, `Color: ${token}`, original, newHex);
-    }, [mutatePaletteEntry, syncDesignTokenFeedback]);
-
-    const handleTypographyChange = useCallback((originalValue: string, newValue: string) => {
-        const target = 'typography';
-        if (!originalDesignValues.current.has(target)) {
-            originalDesignValues.current.set(target, originalValue);
-        }
-        const original = originalDesignValues.current.get(target) ?? originalValue;
-        mutateTypography(newValue);
-        syncDesignTokenFeedback(target, 'Typography', original, newValue);
-    }, [mutateTypography, syncDesignTokenFeedback]);
+    }, [mutatePaletteEntry]);
 
     const handleDiscardAll = useCallback(() => {
-        // Revert any cells touched by dropdown feedback items, plus any palette /
-        // typography edits captured by designToken items.
+        // Revert any cells touched by dropdown feedback items, plus any palette
+        // edits captured by designToken items.
         setFeedbackItems(prev => {
             for (const item of prev) {
                 if (item.kind === 'dropdown') {
                     mutateCell(item.sectionIdx, item.contentIdx, item.rowIdx, item.colIdx, item.from);
                 } else if (item.kind === 'designToken') {
-                    if (item.target === 'typography') {
-                        mutateTypography(item.from);
-                    } else if (item.target.startsWith('palette:')) {
+                    if (item.target.startsWith('palette:')) {
                         mutatePaletteEntry(item.target.slice('palette:'.length), item.from);
                     }
                 }
@@ -348,8 +277,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
         originalCellValues.current.clear();
         originalDesignValues.current.clear();
         setFreeformDraft('');
-        setUiNote('');
-    }, [mutateCell, mutatePaletteEntry, mutateTypography]);
+    }, [mutateCell, mutatePaletteEntry]);
 
     const handleSubmitFeedback = useCallback(() => {
         if (!plan || !hasEdits) {
@@ -359,12 +287,12 @@ export const ScaffoldPlanView = (): JSX.Element => {
         const items = draftTrimmed.length > 0
             ? [...feedbackItems, { id: nextId(), kind: 'freeform' as const, text: draftTrimmed }]
             : feedbackItems;
-        const prompt = buildFeedbackPrompt(items, '', uiNote);
+        const prompt = buildFeedbackPrompt(items, '');
         vscodeApi.postMessage({ command: 'submitPlanFeedback', prompt, data: plan });
         setIsAwaitingRevision(true);
         setDrawerOpen(false);
         setConfirmSubmitOpen(false);
-    }, [plan, hasEdits, feedbackItems, freeformDraft, uiNote, vscodeApi]);
+    }, [plan, hasEdits, feedbackItems, freeformDraft, vscodeApi]);
 
     if (!plan) {
         return <div className='scaffoldPlanView'><p>Loading plan...</p></div>;
@@ -399,7 +327,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const detailSections = sections.filter(s => s.number === 2 || s.number === 3);
     const structureSection = sections.find(s => s.title.toLowerCase().includes('project structure'));
     const designSection = sections.find(s => s.title.toLowerCase().includes('design system'));
-    const draftCount = (freeformDraft.trim() ? 1 : 0) + (uiNote.trim() ? 1 : 0);
+    const draftCount = (freeformDraft.trim() ? 1 : 0);
 
     return (
         <div className={`scaffoldPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
@@ -481,11 +409,9 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 {designSection && (
                     <UiPreviewCard
                         section={designSection}
-                        uiNote={uiNote}
                         disabled={isAwaitingRevision}
+                        previewPages={previewPages}
                         onPaletteChange={handlePaletteChange}
-                        onTypographyChange={handleTypographyChange}
-                        onUiNoteChange={setUiNote}
                     />
                 )}
 

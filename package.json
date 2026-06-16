@@ -29,7 +29,10 @@
     ],
     "preview": true,
     "activationEvents": [
-        "onFileSystem:azureResourceGroups"
+        "onFileSystem:azureResourceGroups",
+        "workspaceContains:**/.azure/project-plan.md",
+        "workspaceContains:**/.azure/requirements.json",
+        "workspaceContains:**/.azure/vscode-debug-plan.md"
     ],
     "main": "./main.js",
     "contributes": {
@@ -157,6 +160,11 @@
             {
                 "command": "azureResourceGroups.startAzureDebugGenerate",
                 "title": "Start Azure Debug Generate",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.downloadAgentInstructions",
+                "title": "Download Azure Agent Instructions",
                 "category": "Azure"
             },
             {
