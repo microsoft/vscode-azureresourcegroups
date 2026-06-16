@@ -9,6 +9,7 @@ import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { ext } from "../../../../extensionVariables";
 import { type RequirementsData } from "../../views/utils/parseRequirements";
+import { AUTOPILOT_QUERY_MARKER, enableAutopilot } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { markRequirementsSubmitted } from "../openRequirementsView";
 
@@ -71,12 +72,34 @@ export class RequirementsViewController extends WebviewController<Record<string,
 
         void this.panel.webview.postMessage({ command: 'submitComplete' });
 
+        // Decide whether to run unattended (autopilot/"YOLO") or guided. Autopilot
+        // requires an explicit modal confirmation because it enables global
+        // auto-approval of chat tool actions for the duration of the run.
+        let autopilot = false;
+        if (data.executionMode === 'auto') {
+            const enable = vscode.l10n.t('Enable Autopilot');
+            const choice = await vscode.window.showWarningMessage(
+                vscode.l10n.t('Run this project end-to-end in Autopilot mode?'),
+                {
+                    modal: true,
+                    detail: vscode.l10n.t('Autopilot will plan, scaffold, and set up local debugging without stopping for approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally. You can turn this off any time from the status bar.'),
+                },
+                enable,
+            );
+            autopilot = choice === enable;
+            if (autopilot) {
+                await enableAutopilot(ext.context);
+            }
+        }
+
         const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
         if (await ensureAgentInstructions('azure-project-plan')) {
+            const baseQuery = vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath);
+            const query = autopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery;
             try {
                 await vscode.commands.executeCommand('workbench.action.chat.open', {
                     mode: 'azure-project-plan',
-                    query: vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath),
+                    query,
                 });
             } catch {
                 // Chat may not be available; saving still succeeded.
