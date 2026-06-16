@@ -32,7 +32,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     });
                     this.panel.dispose();
                     openLoadingView({
-                        stage: 1,
+                        stage: 0,
                         title: vscode.l10n.t('Scaffolding your project…'),
                         message: vscode.l10n.t('Copilot is creating your project files. The next view will open automatically when it’s ready.'),
                     });

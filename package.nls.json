@@ -68,6 +68,10 @@
     "azureResourceGroups.openLocalPlanView": "Open Local Plan View",
     "azureResourceGroups.openDeployPlanView": "Open Deploy Plan View",
     "azureResourceGroups.openRequirementsView": "Open Project Requirements View",
+    "azureResourceGroups.openNextStepsView": "Open Next Steps View",
+    "azureResourceGroups.dev.openLoadingView": "Open Loading View (Dev)",
+    "azureResourceGroups.dev.openNextStepsView": "Open Next Steps View (Dev)",
+    "azureResourceGroups.dev.openScaffoldNextStepsView": "Open Scaffold Next Steps View (Dev)",
     "azureProject.viewName": "Azure Project",
     "azureProject.welcomeContent": "Use Copilot to plan and create a complete application that's configured for Azure services and setup for local development.\n[Create New Project With Copilot](command:azureResourceGroups.createProjectWithCopilot)"
 }

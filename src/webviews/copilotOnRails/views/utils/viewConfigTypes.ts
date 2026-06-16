@@ -72,3 +72,12 @@ export type LoadingViewConfiguration = {
     /** Optional secondary description shown below the spinner. */
     message?: string;
 };
+
+/**
+ * Configuration for the post-local-development "what's next" view that surfaces
+ * the three branching options (keep iterating, run API tests, deploy to Azure).
+ */
+export type LocalDevNextStepsViewConfiguration = {
+    /** When false, the "Run API tests" card is hidden (no API tests were generated). */
+    hasApiTests: boolean;
+};
