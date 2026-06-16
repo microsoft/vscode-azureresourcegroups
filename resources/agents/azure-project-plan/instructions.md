@@ -696,7 +696,7 @@ All error responses follow this shape:
 
 ### Example Project Structure (TypeScript — SPA + API)
 
-> This is a **default convention for a brand-new project**, not a mandate. When the workspace already has a structure, follow it; never assume or impose these exact paths. Treat the names below (`src/functions`, `src/web`, `src/shared`, …) as illustrative roles the agent maps onto the user's actual layout.
+> This is a **default convention for a brand-new project**, not a mandate. When the workspace already has a structure, follow it; never assume or impose these exact paths. Treat the names below (`functions`, `web`, `shared`, …) as illustrative roles the agent maps onto the user's actual layout.
 
 ```
 project-root/
@@ -705,42 +705,41 @@ project-root/
 ├── .env.example
 ├── .gitignore
 ├── package.json                    ← Root workspace config
-├── src/
-│   ├── functions/                  ← Azure Functions project
-│   │   ├── host.json
-│   │   ├── local.settings.json
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   ├── src/
-│   │   │   ├── functions/          ← One handler per file
-│   │   │   ├── services/           ← Service abstraction layer
-│   │   │   │   ├── interfaces/     ← Service contracts
-│   │   │   │   ├── config.ts       ← Config loader + validation
-│   │   │   │   └── registry.ts     ← Service factory / DI
-│   │   │   ├── errors/             ← Error types and middleware
-│   │   │   └── middleware/
-│   │   ├── tests/
-│   │   │   ├── fixtures/
-│   │   │   ├── mocks/
-│   │   │   ├── services/
-│   │   │   ├── functions/
-│   │   │   └── validation/
-│   │   └── seeds/
-│   ├── web/                        ← Frontend (if applicable)
-│   │   ├── package.json
-│   │   ├── vite.config.ts
-│   │   └── src/
-│   │       ├── api/client.ts       ← Typed API client
-│   │       ├── components/
-│   │       ├── pages/
-│   │       └── hooks/
-│   └── shared/                     ← Shared types and schemas
-│       ├── package.json
-│       ├── types/
-│       │   ├── entities.ts         ← Entity types
-│       │   └── api.ts              ← Response contracts + ErrorCode
-│       └── schemas/
-│           └── validation.ts       ← Zod schemas + inferred request types
+├── functions/                      ← Azure Functions project
+│   ├── host.json
+│   ├── local.settings.json
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── src/
+│   │   ├── functions/              ← One handler per file
+│   │   ├── services/               ← Service abstraction layer
+│   │   │   ├── interfaces/         ← Service contracts
+│   │   │   ├── config.ts           ← Config loader + validation
+│   │   │   └── registry.ts         ← Service factory / DI
+│   │   ├── errors/                 ← Error types and middleware
+│   │   └── middleware/
+│   ├── tests/
+│   │   ├── fixtures/
+│   │   ├── mocks/
+│   │   ├── services/
+│   │   ├── functions/
+│   │   └── validation/
+│   └── seeds/
+├── web/                            ← Frontend (if applicable)
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── src/
+│       ├── api/client.ts           ← Typed API client
+│       ├── components/
+│       ├── pages/
+│       └── hooks/
+└── shared/                         ← Shared types and schemas
+    ├── package.json
+    ├── types/
+    │   ├── entities.ts             ← Entity types
+    │   └── api.ts                  ← Response contracts + ErrorCode
+    └── schemas/
+        └── validation.ts           ← Zod schemas + inferred request types
 ```
 
 ### Shared Types Design Rule

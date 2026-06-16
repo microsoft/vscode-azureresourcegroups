@@ -242,7 +242,7 @@ export function handleError(error: unknown, context: InvocationContext): HttpRes
   // Unknown errors → 500
   const err = error instanceof Error ? error : new Error(String(error));
   logger.error({ err }, 'Unhandled error');
-  
+
   return {
     status: 500,
     jsonBody: {
@@ -413,7 +413,7 @@ describe('errorHandler', () => {
 ```typescript
 // tests/validation/itemSchema.test.ts
 import { describe, it, expect } from 'vitest';
-import { createItemSchema } from '../../src/shared/schemas/validation';
+import { createItemSchema } from '../../../shared/schemas/validation';
 
 describe('createItemSchema', () => {
   it('should pass with valid input', () => {

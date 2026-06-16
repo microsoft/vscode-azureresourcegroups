@@ -142,87 +142,86 @@ project-root/
 ├── .env.example
 ├── .gitignore
 ├── package.json                    ← Root workspace config
-├── src/
-│   ├── functions/                  ← Azure Functions project
-│   │   ├── host.json
-│   │   ├── local.settings.json
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   ├── vitest.config.ts        ← (or jest.config.ts, .mocharc.yml)
-│   │   ├── openapi.yaml
-│   │   ├── src/
-│   │   │   ├── functions/          ← One file per Azure Function
-│   │   │   │   ├── getItems.ts
-│   │   │   │   ├── createItem.ts
-│   │   │   │   ├── getItemById.ts
-│   │   │   │   ├── health.ts
-│   │   │   │   └── openapi.ts
-│   │   │   ├── services/           ← Service abstraction layer
-│   │   │   │   ├── interfaces/     ← Service contracts
-│   │   │   │   │   ├── IStorageService.ts
-│   │   │   │   │   ├── IDatabaseService.ts
-│   │   │   │   │   └── ICacheService.ts
-│   │   │   │   ├── storage.ts      ← Concrete implementation
-│   │   │   │   ├── database.ts
-│   │   │   │   ├── cache.ts
-│   │   │   │   ├── config.ts       ← Configuration loader + validation
-│   │   │   │   └── registry.ts     ← Service factory / DI registry
-│   │   │   ├── errors/             ← Error types and middleware
-│   │   │   │   ├── AppError.ts
-│   │   │   │   ├── errorHandler.ts
-│   │   │   │   └── errorTypes.ts
-│   │   │   ├── middleware/         ← Request middleware
-│   │   │   │   ├── requestLogger.ts
-│   │   │   │   └── validateRequest.ts
-│   │   │   └── logger.ts          ← Structured logger setup
-│   │   ├── tests/
-│   │   │   ├── setup.ts             ← Test setup (registers mock services)
-│   │   │   ├── helpers.ts           ← Typed mock helpers (MockHttpRequest, HandlerFn — zero `any`)
-│   │   │   ├── fixtures/           ← Mock data / fixture files
-│   │   │   │   ├── items.json
-│   │   │   │   └── users.json
-│   │   │   ├── mocks/              ← Mock service implementations
-│   │   │   │   ├── mockStorage.ts
-│   │   │   │   ├── mockDatabase.ts
-│   │   │   │   └── mockCache.ts
-│   │   │   ├── services/           ← Service unit tests
-│   │   │   │   ├── config.test.ts
-│   │   │   │   ├── storage.test.ts
-│   │   │   │   ├── registry.test.ts ← Includes auto-init test (Rule 11)
-│   │   │   │   └── database.test.ts
-│   │   │   ├── functions/          ← Function handler tests
-│   │   │   │   ├── getItems.test.ts
-│   │   │   │   ├── createItem.test.ts
-│   │   │   │   └── health.test.ts
-│   │   │   ├── errors/             ← Error handling tests
-│   │   │   │   └── errorHandler.test.ts
-│   │   │   └── validation/         ← Validation schema tests
-│   │   │       └── itemSchema.test.ts
-│   │   └── seeds/                  ← Database seed data
-│   │       ├── seed.ts
-│   │       └── fixtures/
-│   │           └── seed-data.json
-│   ├── web/                        ← Frontend (if applicable)
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   ├── vite.config.ts
-│   │   ├── index.html
-│   │   └── src/
-│   │       ├── App.tsx
-│   │       ├── main.tsx
-│   │       ├── api/                ← Typed API client
-│   │       │   └── client.ts
-│   │       ├── components/
-│   │       ├── pages/
-│   │       └── types/
-│   └── shared/                     ← Shared types and schemas
-│       ├── package.json
-│       ├── types/
-│       │   ├── index.ts
-│       │   ├── entities.ts         ← Entity types (Item, User, etc.)
-│       │   └── api.ts              ← API request/response contracts
-│       └── schemas/
-│           └── validation.ts       ← Zod / validation schemas
+├── functions/                      ← Azure Functions project
+│   ├── host.json
+│   ├── local.settings.json
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vitest.config.ts        ← (or jest.config.ts, .mocharc.yml)
+│   ├── openapi.yaml
+│   ├── src/
+│   │   ├── functions/          ← One file per Azure Function
+│   │   │   ├── getItems.ts
+│   │   │   ├── createItem.ts
+│   │   │   ├── getItemById.ts
+│   │   │   ├── health.ts
+│   │   │   └── openapi.ts
+│   │   ├── services/           ← Service abstraction layer
+│   │   │   ├── interfaces/     ← Service contracts
+│   │   │   │   ├── IStorageService.ts
+│   │   │   │   ├── IDatabaseService.ts
+│   │   │   │   └── ICacheService.ts
+│   │   │   ├── storage.ts      ← Concrete implementation
+│   │   │   ├── database.ts
+│   │   │   ├── cache.ts
+│   │   │   ├── config.ts       ← Configuration loader + validation
+│   │   │   └── registry.ts     ← Service factory / DI registry
+│   │   ├── errors/             ← Error types and middleware
+│   │   │   ├── AppError.ts
+│   │   │   ├── errorHandler.ts
+│   │   │   └── errorTypes.ts
+│   │   ├── middleware/         ← Request middleware
+│   │   │   ├── requestLogger.ts
+│   │   │   └── validateRequest.ts
+│   │   └── logger.ts          ← Structured logger setup
+│   ├── tests/
+│   │   ├── setup.ts             ← Test setup (registers mock services)
+│   │   ├── helpers.ts           ← Typed mock helpers (MockHttpRequest, HandlerFn — zero `any`)
+│   │   ├── fixtures/           ← Mock data / fixture files
+│   │   │   ├── items.json
+│   │   │   └── users.json
+│   │   ├── mocks/              ← Mock service implementations
+│   │   │   ├── mockStorage.ts
+│   │   │   ├── mockDatabase.ts
+│   │   │   └── mockCache.ts
+│   │   ├── services/           ← Service unit tests
+│   │   │   ├── config.test.ts
+│   │   │   ├── storage.test.ts
+│   │   │   ├── registry.test.ts ← Includes auto-init test (Rule 11)
+│   │   │   └── database.test.ts
+│   │   ├── functions/          ← Function handler tests
+│   │   │   ├── getItems.test.ts
+│   │   │   ├── createItem.test.ts
+│   │   │   └── health.test.ts
+│   │   ├── errors/             ← Error handling tests
+│   │   │   └── errorHandler.test.ts
+│   │   └── validation/         ← Validation schema tests
+│   │       └── itemSchema.test.ts
+│   └── seeds/                  ← Database seed data
+│       ├── seed.ts
+│       └── fixtures/
+│           └── seed-data.json
+├── web/                            ← Frontend (if applicable)
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   ├── index.html
+│   └── src/
+│       ├── App.tsx
+│       ├── main.tsx
+│       ├── api/                ← Typed API client
+│       │   └── client.ts
+│       ├── components/
+│       ├── pages/
+│       └── types/
+├── shared/                         ← Shared types and schemas
+│   ├── package.json
+│   ├── types/
+│   │   ├── index.ts
+│   │   ├── entities.ts         ← Entity types (Item, User, etc.)
+│   │   └── api.ts              ← API request/response contracts
+│   └── schemas/
+│       └── validation.ts       ← Zod / validation schemas
 └── data/                           ← Volume mounts (gitignored)
 ```
 
@@ -354,8 +353,8 @@ project-root/
 - [ ] 🧪 **Test Gate**: All migration, constraint, and seed tests pass
 
 #### Step 5: Shared Types & Validation
-- [ ] Create entity types in the shared types location (e.g. `src/shared/types/`)
-- [ ] Create API request/response contracts in the shared types location (e.g. `src/shared/types/`)
+- [ ] Create entity types in the shared types location (e.g. `shared/types/`)
+- [ ] Create API request/response contracts in the shared types location (e.g. `shared/types/`)
 - [ ] Define error code enum/union type (not plain string)
 - [ ] Create validation schemas ({Zod / FluentValidation}) — **one per endpoint that accepts input**
 - [ ] Create path parameter validation schemas (e.g., UUID format for `:id`)
@@ -369,7 +368,7 @@ project-root/
 > Repeat this block for EACH feature/route defined in Section 7:
 
 **Feature: {feature name} — `{METHOD} {/api/path}`**
-- [ ] Create function handler in the Functions handlers location (e.g. `src/functions/src/functions/{name}.ts`)
+- [ ] Create function handler in the Functions handlers location (e.g. `functions/src/functions/{name}.ts`)
 - [ ] Use `database.transaction()` if handler writes to 2+ tables
 - [ ] Wrap Enhancement service calls in try/catch with fallback (per Section 9)
 - [ ] Validate file uploads server-side (size + MIME type) if applicable
@@ -478,21 +477,21 @@ _(Repeat for every route)_
 | `{build config}` | CREATE | `tsconfig.json` / build settings |
 | `{test config}` | CREATE | `vitest.config.ts` / `jest.config.ts` / `.mocharc.yml` / xUnit `.csproj` |
 | `{lint config}` | CREATE | `.eslintrc.*` / `.editorconfig` |
-| `src/functions/host.json` | CREATE | Functions host configuration |
-| `src/functions/local.settings.json` | CREATE | Functions local env config |
-| `src/functions/src/services/config.ts` | CREATE | Configuration loader + validation |
-| `src/functions/src/services/interfaces/*` | CREATE | Service contracts |
-| `src/functions/src/services/*.ts` | CREATE | Service implementations |
-| `src/functions/src/errors/*` | CREATE | Error types and handler |
-| `src/functions/src/middleware/*` | CREATE | Request logging, validation |
-| `src/functions/src/functions/*.ts` | CREATE | Function handlers (one per route) |
-| `src/functions/openapi.yaml` | CREATE | OpenAPI 3.x specification |
-| `src/functions/tests/**` | CREATE | All test files |
-| `src/functions/tests/fixtures/*` | CREATE | Mock data fixtures |
-| `src/functions/tests/mocks/*` | CREATE | Mock service implementations |
-| `src/shared/types/*` | CREATE | Shared entity and API types |
-| `src/shared/schemas/*` | CREATE | Validation schemas |
-| `src/web/**` | CREATE | Frontend (if applicable) |
+| `functions/host.json` | CREATE | Functions host configuration |
+| `functions/local.settings.json` | CREATE | Functions local env config |
+| `functions/src/services/config.ts` | CREATE | Configuration loader + validation |
+| `functions/src/services/interfaces/*` | CREATE | Service contracts |
+| `functions/src/services/*.ts` | CREATE | Service implementations |
+| `functions/src/errors/*` | CREATE | Error types and handler |
+| `functions/src/middleware/*` | CREATE | Request logging, validation |
+| `functions/src/functions/*.ts` | CREATE | Function handlers (one per route) |
+| `functions/openapi.yaml` | CREATE | OpenAPI 3.x specification |
+| `functions/tests/**` | CREATE | All test files |
+| `functions/tests/fixtures/*` | CREATE | Mock data fixtures |
+| `functions/tests/mocks/*` | CREATE | Mock service implementations |
+| `shared/types/*` | CREATE | Shared entity and API types |
+| `shared/schemas/*` | CREATE | Validation schemas |
+| `web/**` | CREATE | Frontend (if applicable) |
 
 ---
 

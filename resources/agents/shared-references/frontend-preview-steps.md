@@ -2,7 +2,7 @@
 
 > **Who reads this:**
 > - **`azure-project-plan` (Phase 2: Frontend Preview)** — during planning you generate a **small set of cross-linked static HTML pages** in `.azure/frontend-preview/` (a shared `styles.css` + `index.html` + one `*.html` file per page) that together are a **high-fidelity, presentation-quality mockup of the final UI** — visually pleasing and as close to the shipped product as a no-framework, no-script set of files can be. **Navigation between pages works** via relative `<a href>` links; every other control (buttons, inputs, toggles) is **non-functional**. No framework, no build step, no dev server, no JavaScript. **Author the per-page files in parallel with subagents** (one page each) for speed. Follow sub-steps **F1–F4** to author the files and let the plan webview embed the navigable preview for approval. The approval loop in F4 is the user's UX sign-off.
-> - **`azure-project-scaffold` (Step 1: Regenerate Frontend)** — the static preview is a **visual specification**, not shippable code. The scaffold agent builds the **real framework frontend** (React/Vue/Angular/Svelte per plan) in the project's frontend folder (e.g. `src/web/`, or the user's existing structure), reproducing the approved preview's layout, palette, typography, and component look using the chosen library's real primitives. It does NOT copy `.azure/frontend-preview/` into the frontend folder.
+> - **`azure-project-scaffold` (Step 1: Regenerate Frontend)** — the static preview is a **visual specification**, not shippable code. The scaffold agent builds the **real framework frontend** (React/Vue/Angular/Svelte per plan) in the project's frontend folder (e.g. `web/`, or the user's existing structure), reproducing the approved preview's layout, palette, typography, and component look using the chosen library's real primitives. It does NOT copy `.azure/frontend-preview/` into the frontend folder.
 >
 > Sub-steps F1–F4 below describe the planning case (authoring the static preview). The scaffold case reads the **Scaffold: Regenerate From Spec** section at the bottom.
 
@@ -118,9 +118,9 @@ The approved `.azure/frontend-preview/index.html` is a **visual specification**,
 | Task | Details |
 |------|---------|
 | Read the spec | Open `.azure/frontend-preview/index.html` and the plan's Section 5. Treat the preview as the source of truth for layout, palette, typography, page set, and component look. |
-| Build the real frontend | Initialize the **framework chosen in the plan** (React + Vite / Vue + Vite / Angular / Svelte) in `src/web/` with a proper `package.json`, real components, and the library's real primitives + theme provider. |
+| Build the real frontend | Initialize the **framework chosen in the plan** (React + Vite / Vue + Vite / Angular / Svelte) in `web/` with a proper `package.json`, real components, and the library's real primitives + theme provider. |
 | Reproduce the approved look | Recreate each previewed page using the library's actual components, theming from the same brand color, matching the approved layout regions and the four data states. |
 | Wire real data | Replace the preview's static mock markup with the real mock data layer / API client, then (at the wiring step) the real backend contracts. |
-| Do NOT copy the preview | Never move or import `.azure/frontend-preview/index.html` into `src/web/`. It is a spec to reproduce, not code to reuse. |
+| Do NOT copy the preview | Never move or import `.azure/frontend-preview/index.html` into `web/`. It is a spec to reproduce, not code to reuse. |
 
-> **Working directory (scaffold only):** once `src/web/` exists, every `npm install` / `npm run build` / framework command MUST run with `cwd` set to `src/web/` (the folder containing `package.json`). Running from the workspace root is the #1 cause of build failures. Pass `cwd` explicitly on every terminal call — do not rely on a previous `cd`.
+> **Working directory (scaffold only):** once `web/` exists, every `npm install` / `npm run build` / framework command MUST run with `cwd` set to `web/` (the folder containing `package.json`). Running from the workspace root is the #1 cause of build failures. Pass `cwd` explicitly on every terminal call — do not rely on a previous `cd`.

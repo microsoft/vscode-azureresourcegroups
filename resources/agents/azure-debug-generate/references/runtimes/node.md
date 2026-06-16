@@ -29,7 +29,7 @@ For any TypeScript Node.js project, the `launch.json` attach configuration **mus
 2. Construct the glob: `${workspaceFolder}/{service-root}/{outDir}/**/*.js`
 3. If `outDir` is not set, fall back to the project root: `${workspaceFolder}/{service-root}/**/*.js`
 
-> `{service-root}` is the path from the workspace root to the project directory. In a single-project workspace this is empty (just `${workspaceFolder}/dist/**/*.js`). In a monorepo it includes the nested path (e.g., `${workspaceFolder}/src/functions/dist/**/*.js`).
+> `{service-root}` is the path from the workspace root to the project directory. In a single-project workspace this is empty (just `${workspaceFolder}/dist/**/*.js`). In a monorepo it includes the nested path (e.g., `${workspaceFolder}/functions/dist/**/*.js`).
 
 **Example:**
 ```json
@@ -39,7 +39,7 @@ For any TypeScript Node.js project, the `launch.json` attach configuration **mus
   "request": "attach",
   "port": 9229,
   "restart": true,
-  "outFiles": ["${workspaceFolder}/src/functions/dist/**/*.js"],
+  "outFiles": ["${workspaceFolder}/functions/dist/**/*.js"],
   "preLaunchTask": "{service-id}: func host start"
 }
 ```

@@ -28,89 +28,88 @@ project-root/
 ├── .env                            ← Actual values (gitignored)
 ├── .gitignore
 ├── package.json                    ← Root workspace config
-├── src/
-│   ├── functions/                  ← Azure Functions project
-│   │   ├── host.json
-│   │   ├── local.settings.json     ← Functions env config (gitignored)
-│   │   ├── package.json            ← Backend dependencies
-│   │   ├── tsconfig.json
-│   │   ├── vitest.config.ts        ← Test runner config
-│   │   ├── openapi.yaml            ← API contract
-│   │   ├── src/
-│   │   │   ├── functions/          ← Function handlers (one per file)
-│   │   │   │   ├── getItems.ts
-│   │   │   │   ├── createItem.ts
-│   │   │   │   ├── getItemById.ts
-│   │   │   │   ├── updateItem.ts
-│   │   │   │   ├── deleteItem.ts
-│   │   │   │   ├── health.ts
-│   │   │   │   └── openapi.ts
-│   │   │   ├── services/           ← Service abstraction layer
-│   │   │   │   ├── interfaces/
-│   │   │   │   │   ├── IStorageService.ts
-│   │   │   │   │   ├── IDatabaseService.ts
-│   │   │   │   │   └── ICacheService.ts
-│   │   │   │   ├── storage.ts
-│   │   │   │   ├── database.ts
-│   │   │   │   ├── cache.ts
-│   │   │   │   ├── config.ts       ← Config loader + env validation
-│   │   │   │   └── registry.ts     ← Service factory / DI registry
-│   │   │   ├── errors/
-│   │   │   │   ├── AppError.ts     ← Base error class
-│   │   │   │   ├── errorTypes.ts   ← NotFoundError, ValidationError, etc.
-│   │   │   │   └── errorHandler.ts ← Global error handler
-│   │   │   ├── middleware/
-│   │   │   │   ├── requestLogger.ts
-│   │   │   │   └── validateRequest.ts
-│   │   │   └── logger.ts           ← Structured logger (pino)
-│   │   ├── tests/
-│   │   │   ├── fixtures/           ← Mock data (JSON files)
-│   │   │   │   ├── items.json
-│   │   │   │   └── users.json
-│   │   │   ├── mocks/              ← Mock service implementations
-│   │   │   │   ├── mockStorage.ts
-│   │   │   │   ├── mockDatabase.ts
-│   │   │   │   └── mockCache.ts
-│   │   │   ├── services/
-│   │   │   │   ├── config.test.ts
-│   │   │   │   ├── storage.test.ts
-│   │   │   │   ├── database.test.ts
-│   │   │   │   └── registry.test.ts
-│   │   │   ├── functions/
-│   │   │   │   ├── getItems.test.ts
-│   │   │   │   ├── createItem.test.ts
-│   │   │   │   ├── getItemById.test.ts
-│   │   │   │   ├── health.test.ts
-│   │   │   │   └── openapi.test.ts
-│   │   │   ├── errors/
-│   │   │   │   └── errorHandler.test.ts
-│   │   │   └── validation/
-│   │   │       └── itemSchema.test.ts
-│   │   └── seeds/                  ← Database seed data (if applicable)
-│   │       ├── seed.ts
-│   │       └── fixtures/
-│   │           └── seed-data.json
-│   ├── web/                        ← Frontend application
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   ├── vite.config.ts          ← Dev proxy to Functions
-│   │   ├── index.html
-│   │   └── src/
-│   │       ├── App.tsx
-│   │       ├── main.tsx
-│   │       ├── api/
-│   │       │   └── client.ts       ← Typed API client
-│   │       ├── components/
-│   │       ├── pages/
-│   │       └── hooks/
-│   └── shared/                     ← Shared types and schemas
-│       ├── package.json
-│       ├── types/
-│       │   ├── index.ts
-│       │   ├── entities.ts         ← Entity types (shared FE + BE)
-│       │   └── api.ts              ← Response contracts + ErrorCode union
-│       └── schemas/
-│           └── validation.ts       ← Zod schemas + inferred request types
+├── functions/                      ← Azure Functions project
+│   ├── host.json
+│   ├── local.settings.json     ← Functions env config (gitignored)
+│   ├── package.json            ← Backend dependencies
+│   ├── tsconfig.json
+│   ├── vitest.config.ts        ← Test runner config
+│   ├── openapi.yaml            ← API contract
+│   ├── src/
+│   │   ├── functions/          ← Function handlers (one per file)
+│   │   │   ├── getItems.ts
+│   │   │   ├── createItem.ts
+│   │   │   ├── getItemById.ts
+│   │   │   ├── updateItem.ts
+│   │   │   ├── deleteItem.ts
+│   │   │   ├── health.ts
+│   │   │   └── openapi.ts
+│   │   ├── services/           ← Service abstraction layer
+│   │   │   ├── interfaces/
+│   │   │   │   ├── IStorageService.ts
+│   │   │   │   ├── IDatabaseService.ts
+│   │   │   │   └── ICacheService.ts
+│   │   │   ├── storage.ts
+│   │   │   ├── database.ts
+│   │   │   ├── cache.ts
+│   │   │   ├── config.ts       ← Config loader + env validation
+│   │   │   └── registry.ts     ← Service factory / DI registry
+│   │   ├── errors/
+│   │   │   ├── AppError.ts     ← Base error class
+│   │   │   ├── errorTypes.ts   ← NotFoundError, ValidationError, etc.
+│   │   │   └── errorHandler.ts ← Global error handler
+│   │   ├── middleware/
+│   │   │   ├── requestLogger.ts
+│   │   │   └── validateRequest.ts
+│   │   └── logger.ts           ← Structured logger (pino)
+│   ├── tests/
+│   │   ├── fixtures/           ← Mock data (JSON files)
+│   │   │   ├── items.json
+│   │   │   └── users.json
+│   │   ├── mocks/              ← Mock service implementations
+│   │   │   ├── mockStorage.ts
+│   │   │   ├── mockDatabase.ts
+│   │   │   └── mockCache.ts
+│   │   ├── services/
+│   │   │   ├── config.test.ts
+│   │   │   ├── storage.test.ts
+│   │   │   ├── database.test.ts
+│   │   │   └── registry.test.ts
+│   │   ├── functions/
+│   │   │   ├── getItems.test.ts
+│   │   │   ├── createItem.test.ts
+│   │   │   ├── getItemById.test.ts
+│   │   │   ├── health.test.ts
+│   │   │   └── openapi.test.ts
+│   │   ├── errors/
+│   │   │   └── errorHandler.test.ts
+│   │   └── validation/
+│   │       └── itemSchema.test.ts
+│   └── seeds/                  ← Database seed data (if applicable)
+│       ├── seed.ts
+│       └── fixtures/
+│           └── seed-data.json
+├── web/                            ← Frontend application
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts          ← Dev proxy to Functions
+│   ├── index.html
+│   └── src/
+│       ├── App.tsx
+│       ├── main.tsx
+│       ├── api/
+│       │   └── client.ts       ← Typed API client
+│       ├── components/
+│       ├── pages/
+│       └── hooks/
+├── shared/                         ← Shared types and schemas
+│   ├── package.json
+│   ├── types/
+│   │   ├── index.ts
+│   │   ├── entities.ts         ← Entity types (shared FE + BE)
+│   │   └── api.ts              ← Response contracts + ErrorCode union
+│   └── schemas/
+│       └── validation.ts       ← Zod schemas + inferred request types
 └── data/                           ← Docker volume mounts (gitignored)
 ```
 
@@ -138,30 +137,29 @@ project-root/
 ├── .env.example
 ├── .gitignore
 ├── package.json
-├── src/
-│   ├── functions/
-│   │   ├── host.json
-│   │   ├── local.settings.json
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   ├── vitest.config.ts
-│   │   ├── openapi.yaml
-│   │   ├── src/
-│   │   │   ├── functions/
-│   │   │   ├── services/
-│   │   │   ├── errors/
-│   │   │   ├── middleware/
-│   │   │   └── logger.ts
-│   │   ├── tests/
-│   │   │   ├── fixtures/
-│   │   │   ├── mocks/
-│   │   │   ├── services/
-│   │   │   ├── functions/
-│   │   │   └── errors/
-│   │   └── seeds/
-│   └── shared/
-│       ├── types/
-│       └── schemas/
+├── functions/
+│   ├── host.json
+│   ├── local.settings.json
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vitest.config.ts
+│   ├── openapi.yaml
+│   ├── src/
+│   │   ├── functions/
+│   │   ├── services/
+│   │   ├── errors/
+│   │   ├── middleware/
+│   │   └── logger.ts
+│   ├── tests/
+│   │   ├── fixtures/
+│   │   ├── mocks/
+│   │   ├── services/
+│   │   ├── functions/
+│   │   └── errors/
+│   └── seeds/
+├── shared/
+│   ├── types/
+│   └── schemas/
 └── data/
 ```
 
@@ -173,50 +171,49 @@ project-root/
 │   └── project-plan.md
 ├── .env.example
 ├── .gitignore
-├── src/
-│   ├── functions/                  ← Azure Functions Python project
-│   │   ├── host.json
-│   │   ├── local.settings.json
-│   │   ├── pyproject.toml          ← Python project config
-│   │   ├── pytest.ini              ← Test config
-│   │   ├── openapi.yaml
-│   │   ├── function_app.py         ← Function registration
-│   │   ├── services/
-│   │   │   ├── __init__.py
-│   │   │   ├── interfaces.py       ← ABC / Protocol definitions
-│   │   │   ├── storage.py
-│   │   │   ├── database.py
-│   │   │   ├── cache.py
-│   │   │   ├── config.py           ← Config loader + validation
-│   │   │   └── registry.py         ← Service factory
-│   │   ├── errors/
-│   │   │   ├── __init__.py
-│   │   │   ├── app_error.py
-│   │   │   ├── error_types.py
-│   │   │   └── error_handler.py
-│   │   ├── middleware/
-│   │   │   ├── __init__.py
-│   │   │   ├── request_logger.py
-│   │   │   └── validate_request.py
-│   │   ├── logger.py               ← structlog setup
-│   │   └── tests/
-│   │       ├── conftest.py          ← Pytest fixtures (mock services)
-│   │       ├── fixtures/
-│   │       │   ├── items.json
-│   │       │   └── users.json
-│   │       ├── test_config.py
-│   │       ├── test_storage.py
-│   │       ├── test_database.py
-│   │       ├── test_get_items.py
-│   │       ├── test_create_item.py
-│   │       ├── test_error_handler.py
-│   │       ├── test_health.py
-│   │       └── test_validation.py
-│   ├── web/                        ← Frontend
-│   │   └── (same as TypeScript)
-│   └── shared/
-│       ├── types.py                ← Pydantic models
-│       └── validation.py           ← Validation schemas
+├── functions/                      ← Azure Functions Python project
+│   ├── host.json
+│   ├── local.settings.json
+│   ├── pyproject.toml          ← Python project config
+│   ├── pytest.ini              ← Test config
+│   ├── openapi.yaml
+│   ├── function_app.py         ← Function registration
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── interfaces.py       ← ABC / Protocol definitions
+│   │   ├── storage.py
+│   │   ├── database.py
+│   │   ├── cache.py
+│   │   ├── config.py           ← Config loader + validation
+│   │   └── registry.py         ← Service factory
+│   ├── errors/
+│   │   ├── __init__.py
+│   │   ├── app_error.py
+│   │   ├── error_types.py
+│   │   └── error_handler.py
+│   ├── middleware/
+│   │   ├── __init__.py
+│   │   ├── request_logger.py
+│   │   └── validate_request.py
+│   ├── logger.py               ← structlog setup
+│   └── tests/
+│       ├── conftest.py          ← Pytest fixtures (mock services)
+│       ├── fixtures/
+│       │   ├── items.json
+│       │   └── users.json
+│       ├── test_config.py
+│       ├── test_storage.py
+│       ├── test_database.py
+│       ├── test_get_items.py
+│       ├── test_create_item.py
+│       ├── test_error_handler.py
+│       ├── test_health.py
+│       └── test_validation.py
+├── web/                            ← Frontend
+│   └── (same as TypeScript)
+├── shared/
+│   ├── types.py                ← Pydantic models
+│   └── validation.py           ← Validation schemas
 └── data/
 ```
 
@@ -229,65 +226,64 @@ project-root/
 ├── .env.example
 ├── .gitignore
 ├── ProjectName.sln
-├── src/
-│   ├── Functions/                  ← Azure Functions isolated worker
-│   │   ├── Functions.csproj
-│   │   ├── host.json
-│   │   ├── local.settings.json
-│   │   ├── Program.cs              ← DI registration + startup
-│   │   ├── openapi.yaml
-│   │   ├── Functions/              ← Function handlers
-│   │   │   ├── GetItems.cs
-│   │   │   ├── CreateItem.cs
-│   │   │   ├── GetItemById.cs
-│   │   │   ├── Health.cs
-│   │   │   └── OpenApi.cs
-│   │   ├── Services/
-│   │   │   ├── Interfaces/
-│   │   │   │   ├── IStorageService.cs
-│   │   │   │   ├── IDatabaseService.cs
-│   │   │   │   └── ICacheService.cs
-│   │   │   ├── StorageService.cs
-│   │   │   ├── DatabaseService.cs
-│   │   │   ├── CacheService.cs
-│   │   │   └── Config.cs
-│   │   ├── Errors/
-│   │   │   ├── AppException.cs
-│   │   │   ├── ErrorTypes.cs
-│   │   │   └── ErrorHandler.cs
-│   │   ├── Middleware/
-│   │   │   ├── RequestLogger.cs
-│   │   │   └── ValidateRequest.cs
-│   │   └── Seeds/
-│   │       └── SeedData.cs
-│   ├── Functions.Tests/            ← xUnit test project
-│   │   ├── Functions.Tests.csproj
-│   │   ├── Fixtures/
-│   │   │   └── ItemFixtures.cs
-│   │   ├── Mocks/
-│   │   │   ├── MockStorageService.cs
-│   │   │   ├── MockDatabaseService.cs
-│   │   │   └── MockCacheService.cs
-│   │   ├── Services/
-│   │   │   ├── ConfigTests.cs
-│   │   │   └── StorageTests.cs
-│   │   ├── Functions/
-│   │   │   ├── GetItemsTests.cs
-│   │   │   ├── CreateItemTests.cs
-│   │   │   └── HealthTests.cs
-│   │   ├── Errors/
-│   │   │   └── ErrorHandlerTests.cs
-│   │   └── Validation/
-│   │       └── ItemValidatorTests.cs
-│   ├── Shared/
-│   │   ├── Shared.csproj
-│   │   ├── Models/
-│   │   │   ├── Item.cs
-│   │   │   └── ApiContracts.cs
-│   │   └── Validators/
-│   │       └── ItemValidator.cs    ← FluentValidation
-│   └── Web/                        ← Frontend
-│       └── (same as TypeScript)
+├── Functions/                      ← Azure Functions isolated worker
+│   ├── Functions.csproj
+│   ├── host.json
+│   ├── local.settings.json
+│   ├── Program.cs              ← DI registration + startup
+│   ├── openapi.yaml
+│   ├── Functions/              ← Function handlers
+│   │   ├── GetItems.cs
+│   │   ├── CreateItem.cs
+│   │   ├── GetItemById.cs
+│   │   ├── Health.cs
+│   │   └── OpenApi.cs
+│   ├── Services/
+│   │   ├── Interfaces/
+│   │   │   ├── IStorageService.cs
+│   │   │   ├── IDatabaseService.cs
+│   │   │   └── ICacheService.cs
+│   │   ├── StorageService.cs
+│   │   ├── DatabaseService.cs
+│   │   ├── CacheService.cs
+│   │   └── Config.cs
+│   ├── Errors/
+│   │   ├── AppException.cs
+│   │   ├── ErrorTypes.cs
+│   │   └── ErrorHandler.cs
+│   ├── Middleware/
+│   │   ├── RequestLogger.cs
+│   │   └── ValidateRequest.cs
+│   └── Seeds/
+│       └── SeedData.cs
+├── Functions.Tests/            ← xUnit test project
+│   ├── Functions.Tests.csproj
+│   ├── Fixtures/
+│   │   └── ItemFixtures.cs
+│   ├── Mocks/
+│   │   ├── MockStorageService.cs
+│   │   ├── MockDatabaseService.cs
+│   │   └── MockCacheService.cs
+│   ├── Services/
+│   │   ├── ConfigTests.cs
+│   │   └── StorageTests.cs
+│   ├── Functions/
+│   │   ├── GetItemsTests.cs
+│   │   ├── CreateItemTests.cs
+│   │   └── HealthTests.cs
+│   ├── Errors/
+│   │   └── ErrorHandlerTests.cs
+│   └── Validation/
+│       └── ItemValidatorTests.cs
+├── Shared/
+│   ├── Shared.csproj
+│   ├── Models/
+│   │   ├── Item.cs
+│   │   └── ApiContracts.cs
+│   └── Validators/
+│       └── ItemValidator.cs    ← FluentValidation
+├── Web/                        ← Frontend
+│   └── (same as TypeScript)
 └── data/
 ```
 
@@ -306,7 +302,7 @@ The `services/` directory is the **critical architectural component** for testab
 ### One Function Per File (Required)
 
 ```
-src/functions/src/functions/
+functions/src/functions/
 ├── getItems.ts         ← HTTP GET /api/items
 ├── createItem.ts       ← HTTP POST /api/items
 ├── getItemById.ts      ← HTTP GET /api/items/{id}
@@ -337,12 +333,12 @@ app.http("getItems", {
 
 ### Shared Handler Utilities (Required — DRY Enforcement)
 
-When same helper needed in 3+ handlers, extract to `src/functions/src/utils/` — do NOT duplicate inline.
+When same helper needed in 3+ handlers, extract to `functions/src/utils/` — do NOT duplicate inline.
 
 **Common examples:**
 
 ```typescript
-// src/functions/src/utils/toPublicUser.ts
+// functions/src/utils/toPublicUser.ts
 import type { User, PublicUser } from '../../../shared/types/entities.js';
 
 export function toPublicUser(user: User): PublicUser {
@@ -408,11 +404,11 @@ export default defineConfig({
 ```json
 {
   "private": true,
-  "workspaces": ["src/functions", "src/web", "src/shared"],
+  "workspaces": ["functions", "web", "shared"],
   "scripts": {
     "test": "npm test --workspaces",
-    "test:functions": "cd src/functions && npm test",
-    "test:web": "cd src/web && npm test",
+    "test:functions": "cd functions && npm test",
+    "test:web": "cd web && npm test",
     "build": "npm run build --workspaces"
   }
 }
@@ -423,10 +419,10 @@ export default defineConfig({
 When Functions imports from `../shared/`, `tsconfig.json` must set `rootDir` to reach outside workspace:
 
 ```jsonc
-// src/functions/tsconfig.json
+// functions/tsconfig.json
 {
   "compilerOptions": {
-    "rootDir": "..",        // ← Parent of functions dir (i.e., src/)
+    "rootDir": "..",        // ← Parent of functions dir (i.e., project root)
     "outDir": "dist",
     // ... other options
   },
@@ -439,11 +435,10 @@ When Functions imports from `../shared/`, `tsconfig.json` must set `rootDir` to 
 >
 > When `rootDir` is parent dir, `tsc` mirrors full structure under `dist/`. `main` in `package.json` MUST be computed from actual output — never hardcoded.
 >
-> | `rootDir` value | `src/functions/src/functions/register.ts` compiles to | Correct `main` field |
+> | `rootDir` value | `functions/src/functions/register.ts` compiles to | Correct `main` field |
 > |-----------------|-------------------------------------------------------|---------------------|
-> | `"."` | `dist/src/functions/register.js` | `"dist/src/functions/*.js"` |
-> | `".."` (= `src/`) | `dist/functions/src/functions/register.js` | `"dist/functions/src/functions/*.js"` |
-> | `"../.."` (= project root) | `dist/src/functions/src/functions/register.js` | `"dist/src/functions/src/functions/*.js"` |
+> | `"."` (= `functions/`) | `dist/src/functions/register.js` | `"dist/src/functions/*.js"` |
+> | `".."` (= project root) | `dist/functions/src/functions/register.js` | `"dist/functions/src/functions/*.js"` |
 >
 > **Verification (MANDATORY after every `tsc` build):**
 > 1. Run `tsc` in functions workspace
@@ -460,8 +455,8 @@ When Functions imports from `../shared/`, `tsconfig.json` must set `rootDir` to 
 # pyproject.toml at project root
 [tool.poetry]
 packages = [
-    { include = "services", from = "src/functions" },
-    { include = "shared", from = "src" },
+    { include = "services", from = "functions" },
+    { include = "shared", from = "." },
 ]
 ```
 
@@ -469,9 +464,9 @@ packages = [
 
 ```xml
 <!-- ProjectName.sln references -->
-<!-- src/Functions/Functions.csproj -->
-<!-- src/Functions.Tests/Functions.Tests.csproj -->
-<!-- src/Shared/Shared.csproj -->
+<!-- Functions/Functions.csproj -->
+<!-- Functions.Tests/Functions.Tests.csproj -->
+<!-- Shared/Shared.csproj -->
 ```
 
 ---

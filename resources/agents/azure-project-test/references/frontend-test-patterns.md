@@ -9,7 +9,7 @@
 Install test deps in web workspace:
 
 ```bash
-cd src/web && npm install -D @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
+cd web && npm install -D @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
 ```
 
 ---
@@ -34,7 +34,7 @@ export default defineConfig({
 ## Test Setup Pattern (React + Vitest)
 
 ```typescript
-// src/web/src/tests/setup.ts
+// web/src/tests/setup.ts
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 

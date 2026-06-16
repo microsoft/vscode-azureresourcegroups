@@ -9,8 +9,8 @@
 ### Initialization
 
 ```bash
-func init src/functions --typescript --model V4
-cd src/functions
+func init functions --typescript --model V4
+cd functions
 npm install
 ```
 
@@ -120,11 +120,11 @@ npm install
 ### HTTP Function (v4 Model)
 
 ```typescript
-// src/functions/getItems.ts
+// functions/src/functions/getItems.ts
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { getServices } from '../services/registry';
 import { handleError } from '../errors/errorHandler';
-import { Item } from '../../shared/types/entities';
+import { Item } from '../../../shared/types/entities';
 
 app.http('getItems', {
   methods: ['GET'],
@@ -152,12 +152,12 @@ app.http('getItems', {
 ### POST with Validation
 
 ```typescript
-// src/functions/createItem.ts
+// functions/src/functions/createItem.ts
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { getServices } from '../services/registry';
 import { handleError } from '../errors/errorHandler';
 import { validateBody } from '../middleware/validateRequest';
-import { createItemSchema } from '../../shared/schemas/validation';
+import { createItemSchema } from '../../../shared/schemas/validation';
 import { v4 as uuid } from 'uuid';
 
 app.http('createItem', {
@@ -188,12 +188,12 @@ app.http('createItem', {
 ### GET by ID with 404 Handling
 
 ```typescript
-// src/functions/getItemById.ts
+// functions/src/functions/getItemById.ts
 import { app } from '@azure/functions';
 import { getServices } from '../services/registry';
 import { handleError } from '../errors/errorHandler';
 import { NotFoundError } from '../errors/errorTypes';
-import { Item } from '../../shared/types/entities';
+import { Item } from '../../../shared/types/entities';
 
 app.http('getItemById', {
   methods: ['GET'],
@@ -220,7 +220,7 @@ app.http('getItemById', {
 ### Health Check
 
 ```typescript
-// src/functions/health.ts
+// functions/src/functions/health.ts
 import { app } from '@azure/functions';
 import { getServices } from '../services/registry';
 
@@ -232,7 +232,7 @@ app.http('health', {
     const services = getServices();
 
     const checks: Record<string, boolean> = {};
-    
+
     // Check each service
     try { checks.database = await services.database.healthCheck(); } catch { checks.database = false; }
     try { checks.storage = await services.storage.healthCheck(); } catch { checks.storage = false; }
