@@ -18,7 +18,7 @@
 >                                                                                        Step 13: Wrap Up
 > ```
 >
-> **Why the orchestrator runs F4, not the sub-agent**: the dev server is a long-running background process the user watches in Simple Browser and that Step 12 later wires up. A sub-agent is stateless and returns a single message, so a background process it spawns risks being torn down when it exits. The Frontend sub-agent therefore generates + builds + verifies `src/web/` (F1–F3) and hands back; the orchestrator owns the persistent dev server (F4).
+> **Why the orchestrator runs F4, not the sub-agent**: the dev server is a long-running background process the user watches in Simple Browser and that Step 12 later wires up. A sub-agent is stateless and returns a single message, so a background process it spawns risks being torn down when it exits. The Frontend sub-agent therefore generates + builds + verifies `services/web/` (F1–F3) and hands back; the orchestrator owns the persistent dev server (F4).
 
 ---
 
@@ -28,7 +28,7 @@ Launched right after Step 0 (concurrently with Phase A/B). Owns frontend generat
 
 | Sub-Agent | Responsibility | Scope |
 |-----------|---------------|-------|
-| **Frontend Preview Agent** (general-purpose) | Generate `src/web/`: mock data layer with real images (F1–F2), pages + shared components wired to the mock API client (F3), auto-authenticated state, all four data states. Apply the Rule 15 quality bar + Polish floor. Run the frontend build gate (`npm --prefix src/web run build`, zero errors, no `any`). | Step 1 sub-steps **F1–F3** |
+| **Frontend Preview Agent** (general-purpose) | Generate `services/web/`: mock data layer with real images (F1–F2), pages + shared components wired to the mock API client (F3), auto-authenticated state, all four data states. Apply the Rule 15 quality bar + Polish floor. Run the frontend build gate (`npm --prefix services/web run build`, zero errors, no `any`). | Step 1 sub-steps **F1–F3** |
 
 **Brief handed to the sub-agent** (full context it receives):
 - The approved plan, especially **Section 5 (Design System & UI)**: `Component Library:`, `Style Direction:`, `Typography:`, Color Palette, Pages table.
@@ -36,22 +36,22 @@ Launched right after Step 0 (concurrently with Phase A/B). Owns frontend generat
 - The three frontend reference docs: `frontend-quality-bar.md`, `frontend-patterns.md`, `frontend-preview-steps.md`.
 
 **Hand-back contract** (what the sub-agent returns):
-- `src/web/` generated and **building cleanly** (it ran the F1–F3 checkpoints: build passes, no `any`, auto-auth seeded, four states present, Rule 15 satisfied).
+- `services/web/` generated and **building cleanly** (it ran the F1–F3 checkpoints: build passes, no `any`, auto-auth seeded, four states present, Rule 15 satisfied).
 - A short report listing the pages generated and any caveats.
 - It MUST NOT start the dev server, open Simple Browser, or call `ask_user`. **F4 is the orchestrator's job.**
 
-> After the Frontend sub-agent returns, the **orchestrator** performs F4: start the dev server with the cwd-independent form (`npm --prefix src/web run dev -- --host`), verify it serves real app content (not just "ready in N ms"), and open the VS Code Simple Browser. The preview stays open for the rest of the scaffold.
+> After the Frontend sub-agent returns, the **orchestrator** performs F4: start the dev server with the cwd-independent form (`npm --prefix services/web run dev -- --host`), verify it serves real app content (not just "ready in N ms"), and open the VS Code Simple Browser. The preview stays open for the rest of the scaffold.
 
 ---
 
 ## Phase A: Contracts First (BLOCKING — Sequential, No Parallelism)
 
 Create sequentially — dependencies for everything else:
-1. Shared types (`src/shared/types/`)
-2. Validation schemas (`src/shared/schemas/`)
-3. Service interfaces (`src/functions/src/services/interfaces/`)
-4. Error types (`src/functions/src/errors/`)
-5. Config module (`src/functions/src/services/config.ts`)
+1. Shared types (`services/shared/types/`)
+2. Validation schemas (`services/shared/schemas/`)
+3. Service interfaces (`services/functions/src/services/interfaces/`)
+4. Error types (`services/functions/src/errors/`)
+5. Config module (`services/functions/src/services/config.ts`)
 
 Build shared package to produce `dist/`. Verify cross-workspace imports resolve.
 
@@ -87,4 +87,4 @@ Once contracts exist on disk, launch backend sub-agent:
 
 - Agent MUST use same `AppConfig` shape (flat structure — see [../../shared-references/service-abstraction.md](.github/agents/shared-references/service-abstraction.md))
 - Agent MUST use same collection names (`'user'`, `'couple'`, etc.) mapping to SQL table names
-- Agent MUST use same validation schema names exported from `src/shared/schemas/validation.ts`
+- Agent MUST use same validation schema names exported from `services/shared/schemas/validation.ts`

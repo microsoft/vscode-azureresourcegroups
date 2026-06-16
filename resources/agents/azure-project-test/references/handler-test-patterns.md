@@ -108,7 +108,7 @@ vi.mock('@azure/functions', () => ({
   InvocationContext: vi.fn(),
 }));
 
-await import('../../src/functions/{handlerName}.js');
+await import('../../services/functions/{handlerName}.js');
 
 describe('{METHOD} {route}', () => {
   beforeEach(async () => {

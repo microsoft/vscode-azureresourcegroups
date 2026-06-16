@@ -17,7 +17,7 @@ Verify skill reads existing code to determine tests needed. Does NOT require use
 
 ## Detecting Routes
 
-Scan `src/functions/src/functions/*.ts` for `app.http()` calls:
+Scan `services/functions/src/functions/*.ts` for `app.http()` calls:
 
 ```typescript
 // Pattern to detect:
@@ -41,33 +41,33 @@ Extract:
 
 ```powershell
 # Find all app.http registrations
-Get-ChildItem src/functions/src/functions -Filter "*.ts" | Select-String -Pattern "app\.http\("
+Get-ChildItem services/functions/src/functions -Filter "*.ts" | Select-String -Pattern "app\.http\("
 
 # Find auth-required handlers
-Get-ChildItem src/functions/src/functions -Filter "*.ts" | Select-String -Pattern "extractUserId"
+Get-ChildItem services/functions/src/functions -Filter "*.ts" | Select-String -Pattern "extractUserId"
 
 # Find Enhancement service usage
-Get-ChildItem src/functions/src/functions -Filter "*.ts" | Select-String -Pattern "\bai\." 
+Get-ChildItem services/functions/src/functions -Filter "*.ts" | Select-String -Pattern "\bai\." 
 
 # Find transaction usage
-Get-ChildItem src/functions/src/functions -Filter "*.ts" | Select-String -Pattern "\.transaction\("
+Get-ChildItem services/functions/src/functions -Filter "*.ts" | Select-String -Pattern "\.transaction\("
 ```
 
 ---
 
 ## Detecting Services
 
-Scan `src/functions/src/services/interfaces/` for interface files:
+Scan `services/functions/src/services/interfaces/` for interface files:
 
 ```powershell
-Get-ChildItem src/functions/src/services/interfaces -Filter "I*.ts"
+Get-ChildItem services/functions/src/services/interfaces -Filter "I*.ts"
 ```
 
 Each file = one service. Read interface for method signatures.
 
 ### Detecting Service Classification
 
-Check service registry (`src/functions/src/services/registry.ts`) for try/catch patterns:
+Check service registry (`services/functions/src/services/registry.ts`) for try/catch patterns:
 
 - Services constructed **without** try/catch = Essential
 - Services constructed **with** try/catch = Enhancement
@@ -76,10 +76,10 @@ Check service registry (`src/functions/src/services/registry.ts`) for try/catch 
 
 ## Detecting Schemas
 
-Scan `src/shared/schemas/validation.ts` for exported schemas:
+Scan `services/shared/schemas/validation.ts` for exported schemas:
 
 ```powershell
-Select-String -Path "src/shared/schemas/validation.ts" -Pattern "export const \w+Schema"
+Select-String -Path "services/shared/schemas/validation.ts" -Pattern "export const \w+Schema"
 ```
 
 Each exported schema needs validation tests (valid + invalid + edge cases).
@@ -109,7 +109,7 @@ Second approach preferred — fixtures use human-readable IDs like `usr-001`.
 
 ## Generating Test Fixtures
 
-1. Read entity types from `src/shared/types/entities.ts`
+1. Read entity types from `services/shared/types/entities.ts`
 2. Read seed data from `seeds/fixtures/seed-data.json` (if exists)
 3. Generate fixture JSON with:
    - 2-3 records per entity
@@ -139,7 +139,7 @@ For each handler, generate test file following this template:
 
 ```powershell
 # What errors does this handler throw?
-Select-String -Path "src/functions/src/functions/register.ts" -Pattern "throw new \w+Error"
+Select-String -Path "services/functions/src/functions/register.ts" -Pattern "throw new \w+Error"
 ```
 
 Each thrown error type maps to a test case.

@@ -28,7 +28,7 @@ project-root/
 ├── .env                            ← Actual values (gitignored)
 ├── .gitignore
 ├── package.json                    ← Root workspace config
-├── src/
+├── services/
 │   ├── functions/                  ← Azure Functions project
 │   │   ├── host.json
 │   │   ├── local.settings.json     ← Functions env config (gitignored)
@@ -138,7 +138,7 @@ project-root/
 ├── .env.example
 ├── .gitignore
 ├── package.json
-├── src/
+├── services/
 │   ├── functions/
 │   │   ├── host.json
 │   │   ├── local.settings.json
@@ -173,7 +173,7 @@ project-root/
 │   └── project-plan.md
 ├── .env.example
 ├── .gitignore
-├── src/
+├── services/
 │   ├── functions/                  ← Azure Functions Python project
 │   │   ├── host.json
 │   │   ├── local.settings.json
@@ -229,7 +229,7 @@ project-root/
 ├── .env.example
 ├── .gitignore
 ├── ProjectName.sln
-├── src/
+├── services/
 │   ├── Functions/                  ← Azure Functions isolated worker
 │   │   ├── Functions.csproj
 │   │   ├── host.json
@@ -306,7 +306,7 @@ The `services/` directory is the **critical architectural component** for testab
 ### One Function Per File (Required)
 
 ```
-src/functions/src/functions/
+services/functions/src/functions/
 ├── getItems.ts         ← HTTP GET /api/items
 ├── createItem.ts       ← HTTP POST /api/items
 ├── getItemById.ts      ← HTTP GET /api/items/{id}
@@ -337,12 +337,12 @@ app.http("getItems", {
 
 ### Shared Handler Utilities (Required — DRY Enforcement)
 
-When same helper needed in 3+ handlers, extract to `src/functions/src/utils/` — do NOT duplicate inline.
+When same helper needed in 3+ handlers, extract to `services/functions/src/utils/` — do NOT duplicate inline.
 
 **Common examples:**
 
 ```typescript
-// src/functions/src/utils/toPublicUser.ts
+// services/functions/src/utils/toPublicUser.ts
 import type { User, PublicUser } from '../../../shared/types/entities.js';
 
 export function toPublicUser(user: User): PublicUser {
@@ -408,11 +408,11 @@ export default defineConfig({
 ```json
 {
   "private": true,
-  "workspaces": ["src/functions", "src/web", "src/shared"],
+  "workspaces": ["services/functions", "services/web", "services/shared"],
   "scripts": {
     "test": "npm test --workspaces",
-    "test:functions": "cd src/functions && npm test",
-    "test:web": "cd src/web && npm test",
+    "test:functions": "cd services/functions && npm test",
+    "test:web": "cd services/web && npm test",
     "build": "npm run build --workspaces"
   }
 }
@@ -423,10 +423,10 @@ export default defineConfig({
 When Functions imports from `../shared/`, `tsconfig.json` must set `rootDir` to reach outside workspace:
 
 ```jsonc
-// src/functions/tsconfig.json
+// services/functions/tsconfig.json
 {
   "compilerOptions": {
-    "rootDir": "..",        // ← Parent of functions dir (i.e., src/)
+    "rootDir": "..",        // ← Parent of functions dir (i.e., services/)
     "outDir": "dist",
     // ... other options
   },
@@ -439,11 +439,11 @@ When Functions imports from `../shared/`, `tsconfig.json` must set `rootDir` to 
 >
 > When `rootDir` is parent dir, `tsc` mirrors full structure under `dist/`. `main` in `package.json` MUST be computed from actual output — never hardcoded.
 >
-> | `rootDir` value | `src/functions/src/functions/register.ts` compiles to | Correct `main` field |
+> | `rootDir` value | `services/functions/src/functions/register.ts` compiles to | Correct `main` field |
 > |-----------------|-------------------------------------------------------|---------------------|
 > | `"."` | `dist/src/functions/register.js` | `"dist/src/functions/*.js"` |
-> | `".."` (= `src/`) | `dist/functions/src/functions/register.js` | `"dist/functions/src/functions/*.js"` |
-> | `"../.."` (= project root) | `dist/src/functions/src/functions/register.js` | `"dist/src/functions/src/functions/*.js"` |
+> | `".."` (= `services/`) | `dist/functions/src/functions/register.js` | `"dist/functions/src/functions/*.js"` |
+> | `"../.."` (= project root) | `dist/services/functions/src/functions/register.js` | `"dist/services/functions/src/functions/*.js"` |
 >
 > **Verification (MANDATORY after every `tsc` build):**
 > 1. Run `tsc` in functions workspace
@@ -460,8 +460,8 @@ When Functions imports from `../shared/`, `tsconfig.json` must set `rootDir` to 
 # pyproject.toml at project root
 [tool.poetry]
 packages = [
-    { include = "services", from = "src/functions" },
-    { include = "shared", from = "src" },
+    { include = "services", from = "services/functions" },
+    { include = "shared", from = "services" },
 ]
 ```
 
@@ -469,9 +469,9 @@ packages = [
 
 ```xml
 <!-- ProjectName.sln references -->
-<!-- src/Functions/Functions.csproj -->
-<!-- src/Functions.Tests/Functions.Tests.csproj -->
-<!-- src/Shared/Shared.csproj -->
+<!-- services/Functions/Functions.csproj -->
+<!-- services/Functions.Tests/Functions.Tests.csproj -->
+<!-- services/Shared/Shared.csproj -->
 ```
 
 ---

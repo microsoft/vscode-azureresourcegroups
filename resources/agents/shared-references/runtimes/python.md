@@ -9,8 +9,8 @@
 ### Initialization
 
 ```bash
-func init src/functions --python --model V2
-cd src/functions
+func init services/functions --python --model V2
+cd services/functions
 pip install -r requirements.txt
 ```
 

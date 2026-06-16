@@ -142,7 +142,7 @@ project-root/
 ├── .env.example
 ├── .gitignore
 ├── package.json                    ← Root workspace config
-├── src/
+├── services/
 │   ├── functions/                  ← Azure Functions project
 │   │   ├── host.json
 │   │   ├── local.settings.json
@@ -354,8 +354,8 @@ project-root/
 - [ ] 🧪 **Test Gate**: All migration, constraint, and seed tests pass
 
 #### Step 5: Shared Types & Validation
-- [ ] Create entity types in the shared types location (e.g. `src/shared/types/`)
-- [ ] Create API request/response contracts in the shared types location (e.g. `src/shared/types/`)
+- [ ] Create entity types in the shared types location (e.g. `services/shared/types/`)
+- [ ] Create API request/response contracts in the shared types location (e.g. `services/shared/types/`)
 - [ ] Define error code enum/union type (not plain string)
 - [ ] Create validation schemas ({Zod / FluentValidation}) — **one per endpoint that accepts input**
 - [ ] Create path parameter validation schemas (e.g., UUID format for `:id`)
@@ -369,7 +369,7 @@ project-root/
 > Repeat this block for EACH feature/route defined in Section 7:
 
 **Feature: {feature name} — `{METHOD} {/api/path}`**
-- [ ] Create function handler in the Functions handlers location (e.g. `src/functions/src/functions/{name}.ts`)
+- [ ] Create function handler in the Functions handlers location (e.g. `services/functions/src/functions/{name}.ts`)
 - [ ] Use `database.transaction()` if handler writes to 2+ tables
 - [ ] Wrap Enhancement service calls in try/catch with fallback (per Section 9)
 - [ ] Validate file uploads server-side (size + MIME type) if applicable
@@ -478,21 +478,21 @@ _(Repeat for every route)_
 | `{build config}` | CREATE | `tsconfig.json` / build settings |
 | `{test config}` | CREATE | `vitest.config.ts` / `jest.config.ts` / `.mocharc.yml` / xUnit `.csproj` |
 | `{lint config}` | CREATE | `.eslintrc.*` / `.editorconfig` |
-| `src/functions/host.json` | CREATE | Functions host configuration |
-| `src/functions/local.settings.json` | CREATE | Functions local env config |
-| `src/functions/src/services/config.ts` | CREATE | Configuration loader + validation |
-| `src/functions/src/services/interfaces/*` | CREATE | Service contracts |
-| `src/functions/src/services/*.ts` | CREATE | Service implementations |
-| `src/functions/src/errors/*` | CREATE | Error types and handler |
-| `src/functions/src/middleware/*` | CREATE | Request logging, validation |
-| `src/functions/src/functions/*.ts` | CREATE | Function handlers (one per route) |
-| `src/functions/openapi.yaml` | CREATE | OpenAPI 3.x specification |
-| `src/functions/tests/**` | CREATE | All test files |
-| `src/functions/tests/fixtures/*` | CREATE | Mock data fixtures |
-| `src/functions/tests/mocks/*` | CREATE | Mock service implementations |
-| `src/shared/types/*` | CREATE | Shared entity and API types |
-| `src/shared/schemas/*` | CREATE | Validation schemas |
-| `src/web/**` | CREATE | Frontend (if applicable) |
+| `services/functions/host.json` | CREATE | Functions host configuration |
+| `services/functions/local.settings.json` | CREATE | Functions local env config |
+| `services/functions/src/services/config.ts` | CREATE | Configuration loader + validation |
+| `services/functions/src/services/interfaces/*` | CREATE | Service contracts |
+| `services/functions/src/services/*.ts` | CREATE | Service implementations |
+| `services/functions/src/errors/*` | CREATE | Error types and handler |
+| `services/functions/src/middleware/*` | CREATE | Request logging, validation |
+| `services/functions/src/functions/*.ts` | CREATE | Function handlers (one per route) |
+| `services/functions/openapi.yaml` | CREATE | OpenAPI 3.x specification |
+| `services/functions/tests/**` | CREATE | All test files |
+| `services/functions/tests/fixtures/*` | CREATE | Mock data fixtures |
+| `services/functions/tests/mocks/*` | CREATE | Mock service implementations |
+| `services/shared/types/*` | CREATE | Shared entity and API types |
+| `services/shared/schemas/*` | CREATE | Validation schemas |
+| `services/web/**` | CREATE | Frontend (if applicable) |
 
 ---
 
