@@ -26,13 +26,13 @@ Plan/design a new Azure-centric app; create requirements/architecture; start a p
 | Benchmark scaffold quality | **scaffold-benchmark** |
 
 ## Rules
-1. **Plan first** — create `.azure/project-plan.md` before any code. No `src/`, configs, or project files until the user approves. Only files allowed under the project root: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` (per Step 3.5).
+1. **Plan first** — create `.azure/project-plan.md` before any code. No `services/`, configs, or project files until the user approves. Only files allowed under the project root: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` (per Step 3.5).
 2. **Resilience classification** — classify each service **Essential** (fails without it) or **Enhancement** (succeeds with fallback). See Quick Reference.
 3. **Auto-chain after approval** — immediately invoke `azure-project-scaffold`; never ask the user to invoke it manually. **Generate a frontend HTML/CSS preview** during planning per Step 3.5 (the scaffold agent consumes it as a mock-up but builds the real app with the chosen framework).
 4. **Interactive UI** — use `vscode_askQuestions`, never plain chat; batch unanswered questions into one call.
 
 ## Workflow (mandatory order)
-DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` (Step 3) → GENERATE FRONTEND PREVIEW (Step 3.5, if applicable) → approval → AUTO-CHAIN scaffold after approval. Only files allowed: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` — no `src/`, configs, or production code. Planning needs ZERO external file reads except `references/html-preview.md` for Step 3.5; all other context is inlined below.
+DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` (Step 3) → GENERATE FRONTEND PREVIEW (Step 3.5, if applicable) → approval → AUTO-CHAIN scaffold after approval. Only files allowed: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` — no `services/`, configs, or production code. Planning needs ZERO external file reads except `references/html-preview.md` for Step 3.5; all other context is inlined below.
 
 ## ═══════════════════════════════════════════════════
 ## PHASE 1: PLANNING
@@ -696,7 +696,7 @@ All error responses follow this shape:
 
 ### Example Project Structure (TypeScript — SPA + API)
 
-> This is a **default convention for a brand-new project**, not a mandate. When the workspace already has a structure, follow it; never assume or impose these exact paths. Treat the names below (`src/functions`, `src/web`, `src/shared`, …) as illustrative roles the agent maps onto the user's actual layout.
+> This is a **default convention for a brand-new project**, not a mandate. When the workspace already has a structure, follow it; never assume or impose these exact paths. Treat the names below (`services/functions`, `services/web`, `services/shared`, …) as illustrative roles the agent maps onto the user's actual layout.
 
 ```
 project-root/
@@ -705,7 +705,7 @@ project-root/
 ├── .env.example
 ├── .gitignore
 ├── package.json                    ← Root workspace config
-├── src/
+├── services/
 │   ├── functions/                  ← Azure Functions project
 │   │   ├── host.json
 │   │   ├── local.settings.json
