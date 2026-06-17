@@ -341,7 +341,7 @@ For **each** route in plan:
 | Validate file uploads server-side | Check file size and MIME type before processing |
 | Validate path params before DB queries | When auth middleware extracts userId from token, **validate format** (e.g., UUID) before DB query. Malformed ID on typed column causes 500 instead of 401. Most common runtime error mocked tests miss. |
 | Verify response shape | `jsonBody` must match Route Definitions |
-| Verify collection names | Must map to migration tables (Rule 10) |
+| Verify collection names | Must map to the data-access service's entity/collection-to-table mapping (Rule 10) |
 | Extract shared utilities | Duplicated helpers → `services/functions/src/utils/` (Rule 6). **After each handler**, grep for helpers in 2+ files, extract immediately. Consider handler wrapper if >8 handlers share try/catch boilerplate. Prefix unused params with `_`. |
 
 **Reference**: [service-abstraction.md](.github/agents/shared-references/service-abstraction.md), [resilience.md](.github/agents/shared-references/resilience.md)
