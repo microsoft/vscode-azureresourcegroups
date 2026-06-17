@@ -131,6 +131,8 @@ For each page in the table above, list 3–6 representative records using that p
 ## 6. Project Structure
 
 > The tree below is **one example layout**, not a required structure. Mirror the user's existing project conventions where they already exist, and only introduce new folders where the project has none. Treat every path in this plan as an illustrative default the agent adapts to the actual workspace — never assume these exact directories.
+>
+> **Name the deployable apps after the product.** When the project has a clear name, prefer domain-specific folder names: `services/<project>-api` for the Functions backend and `services/<project>-<type>` (`-portal`/`-app`/`-web`) for the frontend — e.g. `services/office-compliance-api`, `services/office-compliance-portal`. Keep the shared package generic (`services/shared`). Fall back to generic `functions`/`web` only when there's no clear name. Use the chosen names consistently in the tree and the Files-to-create table below.
 
 ```
 {Generated directory tree showing the planned project layout}
