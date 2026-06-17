@@ -929,7 +929,7 @@
         "@microsoft/vscode-azext-azureauth": "^6.1.0-alpha.2",
         "@microsoft/vscode-azext-azureutils": "^4.3.0",
         "@microsoft/vscode-azext-utils": "^4.1.0",
-        "form-data": "^4.0.4",
+        "form-data": "^4.0.6",
         "fs-extra": "^11.3.0",
         "jsonc-parser": "^2.2.1",
         "semver": "^7.7.3",
