@@ -18,6 +18,14 @@
 
 ## Canonical Project Structures
 
+> **📁 Naming the service folders.** The folder names in the trees below (`functions`, `web`) are **role placeholders**. When the project has a clear product name, **prefer domain-specific names for the deployable apps** — derive a kebab-case slug from the product name and add a role suffix:
+>
+> - **Functions backend** → `<project>-api` (e.g. `office-compliance-api`)
+> - **Frontend** → `<project>-<type>`, where `<type>` fits the app — `-portal`, `-app`, or `-web` (e.g. `office-compliance-portal`)
+> - **Shared package** → keep the generic `shared/` (it is internal, never a deployed app)
+>
+> This is a **SHOULD**, not a mandate: fall back to the generic `functions`/`web` only when there is no clear project name (e.g. generic internal tooling), or when the workspace already has a structure to follow. Whatever names you pick, apply them **consistently everywhere** — npm `workspaces`, `cd` commands, tsconfig `rootDir`, and the computed `main` field (e.g. with `rootDir: ".."`, `<project>-api` handlers compile to `dist/<project>-api/src/functions/*.js`). Imports of the shared package stay `../shared/...`. The plan's Project Structure section is the source of truth; the trees below use generic names purely as illustration.
+
 ### TypeScript — SPA + Azure Functions
 
 ```
