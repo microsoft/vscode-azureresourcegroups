@@ -235,12 +235,19 @@
                         }
 
                         &--custom {
-                            cursor: default;
+                            cursor: pointer;
                             padding: 4px 12px;
                             align-items: center;
 
-                            &:hover {
-                                background: transparent;
+                            &:focus-within {
+                                background: var(--vscode-list-activeSelectionBackground, rgba(0, 122, 204, 0.2));
+                                color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+
+                                .optionsList__index,
+                                .optionsList__description {
+                                    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+                                    opacity: 0.85;
+                                }
                             }
                         }
                     }

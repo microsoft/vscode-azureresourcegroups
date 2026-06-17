@@ -6,7 +6,7 @@
 import { Button, Input, Textarea, Tooltip } from '@fluentui/react-components';
 import { CheckboxUncheckedRegular, CheckmarkRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
-import { useCallback, useContext, useEffect, useMemo, useState, type JSX } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import './styles/requirementsView.scss';
 import { inferInputType, isAnswerEmpty, type RequirementsAnswer, type RequirementsData, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice } from './utils/parseRequirements';
 
@@ -422,6 +422,8 @@ const OptionsList = ({
     onChange: (next: RequirementsAnswer) => void;
 }): JSX.Element => {
     const optionLabels = useMemo(() => options.map(o => o.label), [options]);
+    const customInputRef = useRef<HTMLInputElement | null>(null);
+    const [isCustomFocused, setIsCustomFocused] = useState(false);
 
     const selected = useMemo<string[]>(() => {
         if (multiSelect) {
@@ -443,6 +445,15 @@ const OptionsList = ({
         }
         return selected.length === 1 && !optionLabels.includes(selected[0]) ? selected[0] : '';
     }, [multiSelect, optionLabels, selected]);
+    const hasCustomAnswer = customAnswer.trim().length > 0;
+    const isCustomActive = hasCustomAnswer || isCustomFocused;
+
+    const handleCustomFocus = () => {
+        setIsCustomFocused(true);
+        if (!multiSelect && !hasCustomAnswer) {
+            onChange('');
+        }
+    };
 
     const handleOptionClick = (label: string) => {
         if (multiSelect) {
@@ -507,15 +518,31 @@ const OptionsList = ({
                 );
             })}
             {showFreeform && (
-                <div className='optionsList__row optionsList__row--custom'>
-                    <span className='optionsList__indicator optionsList__indicator--blank' aria-hidden='true' />
+                <div
+                    className={`optionsList__row optionsList__row--custom ${isCustomActive ? 'optionsList__row--selected' : ''}`}
+                    onClick={() => customInputRef.current?.focus()}
+                >
+                    <span className='optionsList__indicator' aria-hidden='true'>
+                        {isCustomActive
+                            ? (multiSelect
+                                ? <CheckmarkRegular className='optionsList__checkboxIcon optionsList__checkboxIcon--checked' />
+                                : <CheckmarkRegular className='optionsList__radioIcon optionsList__radioIcon--checked' />)
+                            : (multiSelect
+                                ? <CheckboxUncheckedRegular className='optionsList__checkboxIcon' />
+                                : <span className='optionsList__radioDot' />)
+                        }
+                    </span>
                     <span className='optionsList__index'>{options.length + 1}</span>
                     <Input
                         size='small'
                         value={customAnswer}
                         placeholder={multiSelect ? 'Add custom values (comma-separated)' : 'Enter custom answer'}
                         onChange={(_, data) => handleCustomChange(data.value)}
+                        onClick={(event) => event.stopPropagation()}
+                        onFocus={handleCustomFocus}
+                        onBlur={() => setIsCustomFocused(false)}
                         className='optionsList__customInput'
+                        input={{ ref: customInputRef }}
                     />
                 </div>
             )}

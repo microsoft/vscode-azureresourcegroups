@@ -36,11 +36,14 @@ export class LocalDevNextStepsViewController extends WebviewController<LocalDevN
     private async handleAction(action: NextStepAction): Promise<void> {
         switch (action) {
             case 'iterate':
+                if (!(await ensureCopilotChatReady())) {
+                    return;
+                }
                 this.panel.dispose();
                 await vscode.commands.executeCommand('workbench.view.debug');
-                void vscode.window.showInformationMessage(
-                    vscode.l10n.t('Press F5 to start debugging. Come back to Copilot chat any time to iterate on your code.'),
-                );
+                await vscode.commands.executeCommand('workbench.action.chat.open', {
+                    query: vscode.l10n.t('I want to keep iterating on my project'),
+                });
                 return;
             case 'apiTests':
                 if (!(await ensureCopilotChatReady())) {
