@@ -910,7 +910,7 @@
         "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources-subscriptions": "^3.0.0-beta.1",
         "@microsoft/api-extractor": "^7.58.2",
-        "@microsoft/vscode-azext-eng": "^1.0.0-alpha.11",
+        "@microsoft/vscode-azext-eng": "1.1.0-alpha.1",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "22.x",
         "@types/semver": "^7.7.1",
@@ -920,8 +920,9 @@
         "@vscode/test-cli": "*",
         "@vscode/test-electron": "*",
         "@vscode/vsce": "*",
-        "esbuild": "*",
-        "esbuild-plugin-copy": "*"
+        "esbuild": "^0.28.1",
+        "esbuild-plugin-copy": "*",
+        "tsx": "*"
     },
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
