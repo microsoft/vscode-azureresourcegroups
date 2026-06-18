@@ -22,9 +22,12 @@ You **MUST** create this plan file and get user approval BEFORE generating any c
 > VS Code debug setup in this workspace.
 >
 > **Status:** {Planning | Approved | Executing | Implemented}
-> **Execution Mode:** {Auto | Manual}
+> **Execution Mode:** {Auto | Guided}
 > **Created:** {ISO-8601 datetime}
 > **Last Updated:** {ISO-8601 datetime}
+>
+> <!-- Guided Mode (default) - hand-holds the user through review and approval before generating. -->
+> <!-- Auto Mode (aka YOLO mode) — skips approval gates and runs generation unattended. -->
 
 ---
 
