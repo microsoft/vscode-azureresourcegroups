@@ -218,6 +218,24 @@
         color: var(--vscode-descriptionForeground);
     }
 
+    // -------- Per-page feedback --------
+    .uiPreviewCard__pageFeedback {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding-top: 8px;
+    }
+
+    .uiPreviewCard__pageFeedbackInput {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .uiPreviewCard__pageFeedbackSubmit {
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
     // -------- Color picker --------
     .uiPreviewCard__paletteRow {
         display: flex;

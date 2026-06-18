@@ -24,9 +24,14 @@ type CellKey = `${number}:${number}:${number}:${number}`;
 const cellKey = (s: number, c: number, r: number, col: number): CellKey => `${s}:${c}:${r}:${col}`;
 
 type FeedbackItem =
+    /** A technology/config change made via a table dropdown (e.g. Runtime: JS → TS). */
     | { id: string; kind: 'dropdown'; cell: CellKey; sectionIdx: number; contentIdx: number; rowIdx: number; colIdx: number; field: string; from: string; to: string }
+    /** A design token change (e.g. palette color, spacing, typography). The `target` field identifies the token (e.g. "palette:primary"). */
     | { id: string; kind: 'designToken'; target: string; field: string; from: string; to: string }
-    | { id: string; kind: 'freeform'; text: string };
+    /** A general freeform note typed into the feedback drawer. */
+    | { id: string; kind: 'freeform'; text: string }
+    /** A note targeting a specific preview page (e.g. "make the hero section taller" on the Home page). */
+    | { id: string; kind: 'pageFeedback'; pageSlug: string; pageTitle: string; text: string };
 
 let feedbackIdCounter = 0;
 const nextId = (): string => `fb-${++feedbackIdCounter}`;
@@ -42,6 +47,15 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
         .filter((i): i is Extract<FeedbackItem, { kind: 'freeform' }> => i.kind === 'freeform')
         .map(i => `- ${i.text.trim()}`)
         .filter(t => t.length > 2);
+    const pageFeedback = items
+        .filter((i): i is Extract<FeedbackItem, { kind: 'pageFeedback' }> => i.kind === 'pageFeedback');
+
+    const pageFeedbackMap = new Map<string, string[]>();
+    for (const item of pageFeedback) {
+        const existing = pageFeedbackMap.get(item.pageTitle) ?? [];
+        existing.push(`- ${item.text.trim()}`);
+        pageFeedbackMap.set(item.pageTitle, existing);
+    }
 
     const lines: string[] = [
         'Please revise the project plan based on my feedback and update project-plan.md.',
@@ -57,6 +71,16 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
             ...designChanges,
             '',
         );
+    }
+    if (pageFeedbackMap.size > 0) {
+        lines.push('Page-specific feedback:');
+        for (const [pageTitle, feedbackLines] of pageFeedbackMap) {
+            lines.push(`${pageTitle} page:`);
+            for (const fl of feedbackLines) {
+                lines.push(fl);
+            }
+        }
+        lines.push('');
     }
     if (notes.length > 0) {
         lines.push('Additional notes:', ...notes, '');
@@ -252,6 +276,13 @@ export const ScaffoldPlanView = (): JSX.Element => {
         setFreeformDraft('');
     }, [freeformDraft]);
 
+    const handlePageFeedback = useCallback((pageSlug: string, pageTitle: string, text: string) => {
+        if (!text.trim()) {
+            return;
+        }
+        setFeedbackItems(prev => [...prev, { id: nextId(), kind: 'pageFeedback', pageSlug, pageTitle, text: text.trim() }]);
+    }, []);
+
     const handlePaletteChange = useCallback((token: string, _originalHex: string, newHex: string) => {
         // Palette picks are applied live to the preview iframe by `UiPreviewCard`
         // and persisted straight into the plan's palette here — no feedback
@@ -412,6 +443,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                         disabled={isAwaitingRevision}
                         previewPages={previewPages}
                         onPaletteChange={handlePaletteChange}
+                        onPageFeedback={handlePageFeedback}
                     />
                 )}
 
@@ -477,6 +509,10 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
                                         <strong>{item.field}:</strong> {item.from}
                                         <span className='arrow'> → </span>
                                         {item.to}
+                                    </span>
+                                ) : item.kind === 'pageFeedback' ? (
+                                    <span className='feedbackChipText'>
+                                        <strong>{item.pageTitle} page:</strong> {item.text}
                                     </span>
                                 ) : (
                                     <span className='feedbackFreeformText'>{item.text}</span>
