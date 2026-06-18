@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 
-/** Zero-based index of the furthest stage the workspace has reached. */
+/** The furthest stage reached: 0 = project creation, 1 = local dev, 2 = deployment. */
 export type ProjectStage = 0 | 1 | 2;
 
 export interface ProjectPlanFiles {
@@ -14,7 +14,7 @@ export interface ProjectPlanFiles {
     hasDeploymentPlan: boolean;
     /** True when any of the plan files exist. */
     hasAny: boolean;
-    /** The furthest stage reached: 0 = project creation, 1 = local dev, 2 = deployment. */
+    /** The furthest stage reached. */
     currentStage: ProjectStage;
 }
 
