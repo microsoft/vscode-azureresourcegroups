@@ -50,7 +50,7 @@ import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzur
 import { registerAzureTree } from './tree/azure/registerAzureTree';
 import { registerFocusTree } from './tree/azure/registerFocusTree';
 import { AzureProjectProgressTreeDataProvider } from './tree/project/AzureProjectProgressTreeDataProvider';
-import { getProjectPlanFiles, ProjectPlanFilesWatcher } from './tree/project/projectPlanFiles';
+import { ProjectPlanFilesWatcher, getProjectPlanFiles } from './tree/project/projectPlanFiles';
 import { TenantDefaultBranchDataProvider } from './tree/tenants/TenantDefaultBranchDataProvider';
 import { TenantResourceBranchDataProviderManager } from './tree/tenants/TenantResourceBranchDataProviderManager';
 import { registerTenantTree } from './tree/tenants/registerTenantTree';
@@ -58,6 +58,7 @@ import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDe
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
+import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
@@ -76,6 +77,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     context.subscriptions.push(projectPlanFilesWatcher);
     await registerProjectPlanFilesContext(context, projectPlanFilesWatcher);
     registerRequirementsAutoOpen(context);
+    registerAutopilot(context);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);
@@ -331,6 +333,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
 export function deactivate(): void {
     ext.diagnosticWatcher?.dispose();
+    void disableAutopilot();
 }
 
 async function registerProjectPlanFilesContext(context: vscode.ExtensionContext, planFilesWatcher: ProjectPlanFilesWatcher): Promise<void> {

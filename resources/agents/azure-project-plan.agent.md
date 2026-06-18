@@ -89,6 +89,28 @@ Once the user has explicitly approved the plan, **do not** begin scaffolding inl
 
 This command exists — do not say it isn't registered. If `run_vscode_command` returns an error, report it to the user verbatim, but still attempt the call first. Do not skip the call.
 
+### Autopilot mode (overrides Steps C–E gating)
+
+**Autopilot is active when** the invoking chat query begins with the marker `[AUTOPILOT MODE]`, **or** `.azure/requirements.json` contains `"executionMode": "auto"`. Autopilot is only ever relevant on the **re-entry** path (after the requirements form was submitted) — the first invocation that writes `.azure/requirements.json` always runs guided, because the user toggles Autopilot inside the requirements webview.
+
+When autopilot is active, the goal is a fully unattended run with **zero chat questions and no manual approval**. Apply these overrides:
+
+1. **Skip Step C** — do **not** open the plan preview webview (`azureResourceGroups.openPlanView`), and do **not** write the `.azure/.preview-temp/` theme/manifest or fan out per-page preview sub-agents. The preview is a human-review aid and is suppressed in autopilot.
+2. **Skip Step D** — do **not** stop for plan approval. Proceed straight to hand-off once `.azure/project-plan.md` is written.
+3. **Record the mode in the plan** — `.azure/project-plan.md` MUST include `executionMode: auto` in its front-matter (or a `**Execution Mode**: auto` row in section 1) so downstream agents inherit autopilot without relying on the query marker.
+4. **Hand off automatically (Step E)** — immediately after writing the plan, call `azureResourceGroups.startProjectScaffold`, and **prefix the args string with `[AUTOPILOT MODE] `** so the scaffold agent stays unattended:
+
+```json
+{
+  "commandId": "azureResourceGroups.startProjectScaffold",
+  "name": "Start Project Scaffold",
+  "skipCheck": true,
+  "args": ["[AUTOPILOT MODE] The project plan has been approved. Execute the approved `.azure/project-plan.md` — scaffold the frontend preview, backend services, database, and API routes."]
+}
+```
+
+Everything else (writing a correct, complete `.azure/project-plan.md`, including Hard rule 7's Design System section) still applies in full — autopilot suppresses **gates and previews**, never plan quality.
+
 ---
 
 You are the **Project Planner** in a guided Azure-project workflow:
