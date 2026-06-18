@@ -50,7 +50,7 @@ import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzur
 import { registerAzureTree } from './tree/azure/registerAzureTree';
 import { registerFocusTree } from './tree/azure/registerFocusTree';
 import { AzureProjectProgressTreeDataProvider } from './tree/project/AzureProjectProgressTreeDataProvider';
-import { getProjectPlanFiles, ProjectPlanFilesWatcher } from './tree/project/projectPlanFiles';
+import { ProjectPlanFilesWatcher, getProjectPlanFiles } from './tree/project/projectPlanFiles';
 import { TenantDefaultBranchDataProvider } from './tree/tenants/TenantDefaultBranchDataProvider';
 import { TenantResourceBranchDataProviderManager } from './tree/tenants/TenantResourceBranchDataProviderManager';
 import { registerTenantTree } from './tree/tenants/registerTenantTree';
@@ -58,7 +58,7 @@ import { WorkspaceDefaultBranchDataProvider } from './tree/workspace/WorkspaceDe
 import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/WorkspaceResourceBranchDataProviderManager';
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
-import { registerAutopilot, disableAutopilot } from './webviews/copilotOnRails/extension/autopilot';
+import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
