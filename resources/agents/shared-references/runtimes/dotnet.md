@@ -108,8 +108,8 @@ All package versions pinned in ONE place. **Never use wildcards** (`1.*`, `4.*`)
 ### Initialization
 
 ```bash
-func init src/Functions --worker-runtime dotnet-isolated --target-framework net10.0
-cd src/Functions
+func init services/Functions --worker-runtime dotnet-isolated --target-framework net10.0
+cd services/Functions
 ```
 
 Then hand-author `Functions.csproj` (see below) — the `func init` template uses outdated defaults.
@@ -159,7 +159,7 @@ Then hand-author `Functions.csproj` (see below) — the `func init` template use
 Never commit real secrets. For anything you can't put in plaintext `local.settings.json` (API keys, OpenAI keys, Entra client secrets during dev):
 
 ```bash
-cd src/Functions
+cd services/Functions
 dotnet user-secrets init
 dotnet user-secrets set "ConnectionStrings:AppDb" "Host=...;Password=realpassword"
 dotnet user-secrets set "OpenAI:ApiKey" "sk-..."
@@ -619,13 +619,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 dotnet tool install --global dotnet-ef
 
 # create a migration
-dotnet ef migrations add InitialCreate --project src/Functions
+dotnet ef migrations add InitialCreate --project services/Functions
 
 # apply to local database
-dotnet ef database update --project src/Functions
+dotnet ef database update --project services/Functions
 
 # generate an idempotent SQL script for CI/CD
-dotnet ef migrations script --idempotent --output migrations/deploy.sql --project src/Functions
+dotnet ef migrations script --idempotent --output migrations/deploy.sql --project services/Functions
 ```
 
 ### Production Migration Strategy
@@ -860,14 +860,14 @@ Prefer `.http` files over Postman/Insomnia for .NET projects — they're first-c
 ### Where to put them
 
 ```
-src/
+services/
 ├── Functions/
 │   ├── Functions.csproj
 │   └── Functions.http        ← committed, one file per project
 └── Functions.Tests/
 ```
 
-The scaffold **MUST** generate `src/Functions/Functions.http` with one request per endpoint.
+The scaffold **MUST** generate `services/Functions/Functions.http` with one request per endpoint.
 
 ### Example — `Functions.http`
 

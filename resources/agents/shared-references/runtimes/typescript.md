@@ -9,8 +9,8 @@
 ### Initialization
 
 ```bash
-func init src/functions --typescript --model V4
-cd src/functions
+func init services/functions --typescript --model V4
+cd services/functions
 npm install
 ```
 
@@ -120,7 +120,7 @@ npm install
 ### HTTP Function (v4 Model)
 
 ```typescript
-// src/functions/getItems.ts
+// services/functions/getItems.ts
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { getServices } from '../services/registry';
 import { handleError } from '../errors/errorHandler';
@@ -152,7 +152,7 @@ app.http('getItems', {
 ### POST with Validation
 
 ```typescript
-// src/functions/createItem.ts
+// services/functions/createItem.ts
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { getServices } from '../services/registry';
 import { handleError } from '../errors/errorHandler';
@@ -188,7 +188,7 @@ app.http('createItem', {
 ### GET by ID with 404 Handling
 
 ```typescript
-// src/functions/getItemById.ts
+// services/functions/getItemById.ts
 import { app } from '@azure/functions';
 import { getServices } from '../services/registry';
 import { handleError } from '../errors/errorHandler';
@@ -220,7 +220,7 @@ app.http('getItemById', {
 ### Health Check
 
 ```typescript
-// src/functions/health.ts
+// services/functions/health.ts
 import { app } from '@azure/functions';
 import { getServices } from '../services/registry';
 

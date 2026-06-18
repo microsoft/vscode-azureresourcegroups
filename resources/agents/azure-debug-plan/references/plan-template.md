@@ -13,6 +13,14 @@ You **MUST** create this plan file and get user approval BEFORE generating any c
 
 ---
 
+## Markdown Table Integrity
+
+When editing markdown tables with `replace_string_in_file` or `multi_replace_string_in_file`, always **read the file back** after the edit and verify that each table row is on its own line. Markdown tables require exactly one row per line — a missing newline between `|---|` and `| data |` breaks parsing completely.
+
+**Post-edit verification rule:** After any edit to `.azure/vscode-debug-plan.md` that modifies a table, immediately read the affected lines back to confirm the table renders correctly (header, separator, and each data row on separate lines). If rows are concatenated, fix before proceeding.
+
+---
+
 ## Template
 
 ````markdown
