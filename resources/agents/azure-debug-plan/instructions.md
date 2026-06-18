@@ -18,8 +18,8 @@
 ---
 
 ## Autopilot mode (overrides the approval STOP)
-**Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto`. When active, run fully unattended:
-- **Phase 0–1 still run in full** — scan and write `.azure/vscode-debug-plan.md`. Also record `executionMode: auto` in the plan.
+**Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` records `executionMode: auto` or equivalent. When active, run fully unattended:
+- **Phase 0–1 still run in full**.  When generating the plan `.azure/vscode-debug-plan.md`, also record `executionMode: auto` or similar.  Follow any specific instructions per the template.
 - Skip the step that instructs to run `openLocalPlanView` and do NOT wait for approval. Set status straight to `Approved`, then invoke `azure-debug-generate` as you normally would, but with the chat arg prefixed with `[AUTOPILOT MODE] `.
 - Never call `ask_user` for non-destructive steps. Scan completeness is unchanged — autopilot suppresses **the preview and approval gates only**.
 
