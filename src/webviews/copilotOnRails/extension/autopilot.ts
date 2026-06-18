@@ -159,8 +159,3 @@ export function registerAutopilot(context: vscode.ExtensionContext): void {
         void disableAutopilot();
     }
 }
-
-/** Best-effort restore on extension shutdown. */
-export function deactivateAutopilot(): void {
-    void disableAutopilot();
-}
