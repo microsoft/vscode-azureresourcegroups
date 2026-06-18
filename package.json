@@ -910,7 +910,7 @@
         "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources-subscriptions": "^3.0.0-beta.1",
         "@microsoft/api-extractor": "^7.58.2",
-        "@microsoft/vscode-azext-eng": "1.1.0-alpha.1",
+        "@microsoft/vscode-azext-eng": "^1.1.0-alpha.1",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "22.x",
         "@types/semver": "^7.7.1",
