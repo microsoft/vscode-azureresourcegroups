@@ -17,13 +17,24 @@ import * as vscode from "vscode";
  * Because that setting is global and security-sensitive, restoration is layered:
  *  1. A completion watcher restores it the moment the local debug plan reaches
  *     `Status: Implemented` (the end of the chain).
- *  2. A status-bar item lets the user turn it off manually at any time.
- *  3. On the next activation, if a prior session left autopilot active, it is
- *     restored immediately (covers window reloads / crashes mid-run).
+ *  2. A safety deadline restores it after `MAX_RUN_DURATION_MS` even if the
+ *     chain never reaches `Implemented` (failure, stall, or abandoned run), so
+ *     auto-approve can never stay on indefinitely.
+ *  3. A status-bar item lets the user turn it off manually at any time.
+ *  4. On the next activation, a prior active run is either re-armed (if still
+ *     within its deadline — covers window reloads mid-run) or restored (if the
+ *     deadline has elapsed — covers crashes / abandoned runs).
  */
 
 const AUTO_APPROVE_SECTION = 'chat.tools.global';
 const AUTO_APPROVE_KEY = 'autoApprove';
+
+/**
+ * Maximum wall-clock duration an autopilot run may keep global auto-approve on.
+ * After this elapses the setting is restored even if the chain never completed,
+ * so a failed/stalled/abandoned run can't leave auto-approve on forever.
+ */
+const MAX_RUN_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 /** Marker embedded in the chat query so agents can detect an autopilot run. */
 export const AUTOPILOT_QUERY_MARKER = '[AUTOPILOT MODE]';
@@ -34,12 +45,15 @@ const DEBUG_PLAN_GLOB = '.azure/vscode-debug-plan.md';
 /** globalState keys used to survive window reloads mid-run. */
 const STATE_ACTIVE = 'azureResourceGroups.autopilot.active';
 const STATE_PRIOR_VALUE = 'azureResourceGroups.autopilot.priorAutoApprove';
+/** Epoch ms after which an active run is considered stale and auto-restored. */
+const STATE_DEADLINE = 'azureResourceGroups.autopilot.deadline';
 
 /** Command id used by the status-bar item to turn autopilot off. */
 export const DISABLE_AUTOPILOT_COMMAND = 'azureResourceGroups.disableAutopilot';
 
 let statusBarItem: vscode.StatusBarItem | undefined;
 let completionWatcher: vscode.FileSystemWatcher | undefined;
+let safetyTimer: ReturnType<typeof setTimeout> | undefined;
 let extensionContext: vscode.ExtensionContext | undefined;
 
 function getAutoApproveValue(): unknown {
@@ -74,6 +88,27 @@ function hideStatusBarItem(): void {
 function disposeCompletionWatcher(): void {
     completionWatcher?.dispose();
     completionWatcher = undefined;
+}
+
+function clearSafetyTimer(): void {
+    if (safetyTimer) {
+        clearTimeout(safetyTimer);
+        safetyTimer = undefined;
+    }
+}
+
+/** (Re)schedules the safety timeout that restores auto-approve at `deadline`. */
+function scheduleSafetyTimer(deadline: number): void {
+    clearSafetyTimer();
+    const ms = Math.max(0, deadline - Date.now());
+    safetyTimer = setTimeout(() => { void disableAutopilot(); }, ms);
+}
+
+/** Arms the user-facing run aids: status bar, completion watcher, safety timeout. */
+function armAutopilot(deadline: number): void {
+    showStatusBarItem();
+    registerCompletionWatcher();
+    scheduleSafetyTimer(deadline);
 }
 
 /** Returns true when the debug plan file content indicates the chain is finished. */
@@ -112,11 +147,12 @@ export async function enableAutopilot(context: vscode.ExtensionContext): Promise
     if (context.globalState.get<boolean>(STATE_ACTIVE) !== true) {
         await context.globalState.update(STATE_PRIOR_VALUE, getAutoApproveValue() ?? null);
     }
+    const deadline = Date.now() + MAX_RUN_DURATION_MS;
     await context.globalState.update(STATE_ACTIVE, true);
+    await context.globalState.update(STATE_DEADLINE, deadline);
 
     await setAutoApproveValue(true);
-    showStatusBarItem();
-    registerCompletionWatcher();
+    armAutopilot(deadline);
 }
 
 /**
@@ -137,15 +173,22 @@ export async function disableAutopilot(): Promise<void> {
         await setAutoApproveValue(prior === null ? undefined : prior);
         await context.globalState.update(STATE_ACTIVE, false);
         await context.globalState.update(STATE_PRIOR_VALUE, undefined);
+        await context.globalState.update(STATE_DEADLINE, undefined);
     }
 
+    clearSafetyTimer();
     hideStatusBarItem();
     disposeCompletionWatcher();
 }
 
 /**
  * Wires up autopilot for the extension lifetime: registers the disable command
- * and, if a previous session left autopilot active (e.g. a window reload), it is
+ * and reconciles any prior active run.
+ *
+ * If a previous session left autopilot active and the run is still within its
+ * safety deadline (e.g. a window reload, or a second window opened mid-run), it
+ * is **re-armed** so the chain keeps running unattended rather than being killed.
+ * If the deadline has already elapsed (crash / abandoned run), auto-approve is
  * restored immediately as a security-first safety net.
  */
 export function registerAutopilot(context: vscode.ExtensionContext): void {
@@ -156,6 +199,11 @@ export function registerAutopilot(context: vscode.ExtensionContext): void {
     );
 
     if (context.globalState.get<boolean>(STATE_ACTIVE) === true) {
-        void disableAutopilot();
+        const deadline = context.globalState.get<number>(STATE_DEADLINE) ?? 0;
+        if (Date.now() < deadline) {
+            armAutopilot(deadline);
+        } else {
+            void disableAutopilot();
+        }
     }
 }
