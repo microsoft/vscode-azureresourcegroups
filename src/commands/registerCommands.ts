@@ -5,7 +5,7 @@
 
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, nonNullValue, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
-import { commands, window } from 'vscode';
+import { commands } from 'vscode';
 import { askAgentAboutActivityLog } from '../chat/askAgentAboutActivityLog/askAgentAboutActivityLog';
 import { askAgentAboutResource } from '../chat/askAgentAboutResource';
 import { askAzureInCommandPalette } from '../chat/askAzure';
@@ -19,11 +19,8 @@ import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { createProjectWithCopilot } from '../webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { openDeploymentPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openDeploymentPlanView';
-import { closeLoadingView, openLoadingView } from '../webviews/copilotOnRails/extension/openLoadingView';
-import { openLocalDevNextStepsView } from '../webviews/copilotOnRails/extension/openLocalDevNextStepsView';
 import { openLocalPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openLocalPlanView';
 import { openRequirementsViewFromWorkspace } from '../webviews/copilotOnRails/extension/openRequirementsView';
-import { openScaffoldNextStepsView } from '../webviews/copilotOnRails/extension/openScaffoldNextStepsView';
 import { openPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openScaffoldPlanView';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
@@ -174,14 +171,6 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openRequirementsView', openRequirementsViewFromWorkspace);
 
-    // TODO: Remove
-    registerCommand('azureResourceGroups.openNextStepsView', (_context: IActionContext, hasApiTests?: boolean) => {
-        openLocalDevNextStepsView({ hasApiTests: hasApiTests ?? false });
-    });
-    registerCommand('azureResourceGroups.openScaffoldNextStepsView', (_context: IActionContext) => {
-        openScaffoldNextStepsView({});
-    });
-
     // Hand-off commands
     registerCommand('azureResourceGroups.downloadAgentInstructions', (context: IActionContext) =>
         downloadAgentInstructions(context));
@@ -194,43 +183,6 @@ export function registerCommands(): void {
         openChatWithAgent('azure-debug-generate', prompt ?? 'The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`.'));
     registerCommand('azureResourceGroups.startDeployment', (_context: IActionContext, prompt?: string) =>
         openChatWithAgent('azure-deploy', prompt ?? 'Prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`.'));
-
-    // TODO: Remove
-    registerCommand('azureResourceGroups.dev.openLoadingView', async () => {
-        const pick = await window.showQuickPick(
-            [
-                { label: '1. Project Scaffolding', stage: 0 as const, title: 'Generating your project plan', message: 'Copilot is gathering your requirements…' },
-                { label: '2. Local Development', stage: 1 as const, title: 'Setting up your local development environment', message: 'Copilot is preparing your debug configuration…' },
-                { label: '3. Deployment', stage: 2 as const, title: 'Preparing your deployment plan', message: 'Copilot is preparing your Azure infrastructure…' },
-                { label: '$(close) Close loading view', stage: -1 as const, title: '', message: '' },
-            ],
-            { placeHolder: 'Open loading view at stage…', title: 'Azure: Open Loading View (Dev)' },
-        );
-        if (!pick) {
-            return;
-        }
-        if (pick.stage === -1) {
-            closeLoadingView();
-            return;
-        }
-        openLoadingView({ stage: pick.stage, title: pick.title, message: pick.message });
-    });
-    registerCommand('azureResourceGroups.dev.openNextStepsView', async () => {
-        const pick = await window.showQuickPick(
-            [
-                { label: 'With API tests (all 3 options)', hasApiTests: true },
-                { label: 'Without API tests (2 options)', hasApiTests: false },
-            ],
-            { placeHolder: 'Open Next Steps view with…', title: 'Azure: Open Next Steps View (Dev)' },
-        );
-        if (!pick) {
-            return;
-        }
-        openLocalDevNextStepsView({ hasApiTests: pick.hasApiTests });
-    });
-    registerCommand('azureResourceGroups.dev.openScaffoldNextStepsView', async () => {
-        openScaffoldNextStepsView({});
-    });
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {

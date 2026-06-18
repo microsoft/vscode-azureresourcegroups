@@ -414,26 +414,6 @@
                 "command": "azureResourceGroups.openRequirementsView",
                 "title": "%azureResourceGroups.openRequirementsView%",
                 "category": "Azure"
-            },
-            {
-                "command": "azureResourceGroups.openNextStepsView",
-                "title": "%azureResourceGroups.openNextStepsView%",
-                "category": "Azure"
-            },
-            {
-                "command": "azureResourceGroups.dev.openLoadingView",
-                "title": "%azureResourceGroups.dev.openLoadingView%",
-                "category": "Azure (Dev)"
-            },
-            {
-                "command": "azureResourceGroups.dev.openNextStepsView",
-                "title": "%azureResourceGroups.dev.openNextStepsView%",
-                "category": "Azure (Dev)"
-            },
-            {
-                "command": "azureResourceGroups.dev.openScaffoldNextStepsView",
-                "title": "%azureResourceGroups.dev.openScaffoldNextStepsView%",
-                "category": "Azure (Dev)"
             }
         ],
         "viewsContainers": {
