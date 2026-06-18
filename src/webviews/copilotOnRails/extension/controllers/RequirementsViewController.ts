@@ -9,7 +9,7 @@ import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { ext } from "../../../../extensionVariables";
-import { type RequirementsData } from "../../views/utils/parseRequirements";
+import { type RequirementsData, type RequirementsExecutionMode } from "../../views/utils/parseRequirements";
 import { AUTOPILOT_QUERY_MARKER, enableAutopilot } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { markRequirementsSubmitted } from "../openRequirementsView";
@@ -61,21 +61,10 @@ export class RequirementsViewController extends WebviewController<Record<string,
             return;
         }
 
-        try {
-            const serialized = JSON.stringify({ ...data, parseError: undefined }, null, 2) + '\n';
-            markRequirementsSubmitted(this.sourceFileUri, serialized);
-            await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(serialized, 'utf-8'));
-        } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            void this.panel.webview.postMessage({ command: 'submitError', error: message });
-            return;
-        }
-
-        void this.panel.webview.postMessage({ command: 'submitComplete' });
-
-        // Decide whether to run unattended (autopilot/"YOLO") or guided. Autopilot
-        // requires an explicit modal confirmation because it enables global
-        // auto-approval of chat tool actions for the duration of the run.
+        // Decide whether to run unattended (autopilot/"YOLO") or guided BEFORE persisting,
+        // so the file we write reflects the real decision. Autopilot requires an explicit
+        // modal confirmation because it enables global auto-approval of chat tool actions
+        // for the duration of the run.
         let autopilot = false;
         if (data.executionMode === 'auto') {
             // Cancelling the modal throws UserCancelledError, which
@@ -92,9 +81,27 @@ export class RequirementsViewController extends WebviewController<Record<string,
                 );
                 return true;
             }) ?? false;
-            if (autopilot) {
-                await enableAutopilot(ext.context);
-            }
+        }
+
+        // Normalize the persisted execution mode to the confirmed decision. If the user
+        // toggled autopilot on but cancelled the modal, fall back to 'guided' so the
+        // file-driven agents don't skip approval gates while tool actions stay un-approved.
+        const executionMode: RequirementsExecutionMode = autopilot ? 'auto' : 'guided';
+
+        try {
+            const serialized = JSON.stringify({ ...data, executionMode, parseError: undefined }, null, 2) + '\n';
+            markRequirementsSubmitted(this.sourceFileUri, serialized);
+            await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(serialized, 'utf-8'));
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            void this.panel.webview.postMessage({ command: 'submitError', error: message });
+            return;
+        }
+
+        void this.panel.webview.postMessage({ command: 'submitComplete' });
+
+        if (autopilot) {
+            await enableAutopilot(ext.context);
         }
 
         const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
