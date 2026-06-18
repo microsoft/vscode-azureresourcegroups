@@ -82,8 +82,10 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 
 ### Runtime-Specific Files — Load ONLY ONE
 
-| Selected Runtime | Orchestration | Load | Do NOT load |
-|------------------|---------------|------|-------------|
+Select based on the **backend service's Language** (its stack section, e.g. `## 2. Backend`) — not the `Runtime` row (Node / Bun / etc.). When the frontend is a different language than the backend, load the runtime reference for each language a service uses.
+
+| Selected Language | Orchestration | Load | Do NOT load |
+|-------------------|---------------|------|-------------|
 | TypeScript | docker-compose | `../shared-references/runtimes/typescript.md` | `python.md`, `dotnet.md` |
 | Python | docker-compose | `../shared-references/runtimes/python.md` | `typescript.md`, `dotnet.md` |
 | C# (.NET) | docker-compose / Functions | `../shared-references/runtimes/dotnet.md` | `typescript.md`, `python.md` |
@@ -129,9 +131,9 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 |------|---------|
 | Read `.azure/project-plan.md` | Load complete plan |
 | Validate status | Must be `Approved`. If not, STOP — instruct user to run `azure-project-plan`. |
-| Extract plan details | Routes, services, entity types, frontend framework, runtime, **orchestration** (Section 2), structure |
+| Extract plan details | Routes, services, entity types, language, runtime, framework, and **orchestration** for each service's stack section (`## 2. Backend`, `## 3. Frontend`, …), structure |
 | Extract design contract (if frontend) | If a frontend is planned, read Section 5 (Design System & UI). Extract `Component Library:`, `Style Direction:`, `Typography:`, the Color Palette table, and the Pages table (page → layout regions). **If Section 5 is missing or `Component Library:` is blank, STOP — instruct user to re-run `azure-project-plan`. Section 5 is load-bearing for Rule 15 / Step 1 quality bar.** |
-| Read the approved HTML preview (if frontend) | List `.azure/.preview-temp/` if it exists. Read `manifest.json` to get the page list, then read each `<slug>.html` plus `theme.css`. **Treat these files as the visual mock-up that the user already approved during planning.** They are the source of truth for layout, palette translation, and per-page region composition. The scaffolded app must reproduce this look using the framework + library named in Section 2 / Section 5 — NOT by serving the preview HTML itself. If `.azure/.preview-temp/` is missing for a plan that has a frontend, do not fail — just rely on Section 5 alone. |
+| Read the approved HTML preview (if frontend) | List `.azure/.preview-temp/` if it exists. Read `manifest.json` to get the page list, then read each `<slug>.html` plus `theme.css`. **Treat these files as the visual mock-up that the user already approved during planning.** They are the source of truth for layout, palette translation, and per-page region composition. The scaffolded app must reproduce this look using the framework + library named in the Frontend stack section / Section 5 — NOT by serving the preview HTML itself. If `.azure/.preview-temp/` is missing for a plan that has a frontend, do not fail — just rely on Section 5 alone. |
 | Determine frontend needed | Check if plan includes frontend (SPA + API, Full-stack SSR, Static + API). If yes, Step 1 generates preview. |
 | Copy execution checklist | Copy Section 8 into `.azure/execution-checklist.md` |
 | Update plan status | Set to `In Progress` |
@@ -507,8 +509,8 @@ For **each** route in plan:
 
 ## Runtime Quick Reference
 
-| Runtime | Orchestration | Init | Hosting Model | Package Manager |
-|---------|---------------|------|---------------|-----------------|
+| Language | Orchestration | Init | Hosting Model | Package Manager |
+|----------|---------------|------|---------------|-----------------|
 | TypeScript | docker-compose | `func init --typescript --model V4` | Functions v4 | npm / pnpm |
 | Python | docker-compose | `func init --python --model V2` | Functions v2 | pip / poetry |
 | C# (.NET) | docker-compose | `func init --dotnet --isolated` | Functions isolated worker | dotnet |

@@ -106,14 +106,14 @@ Anything the user stated explicitly in their prompt ("build me a TypeScript Func
 
 #### 2b. The six canonical questions
 
-Always emit **all six** in JSON, in this order, regardless of status. Each option is `{ label, description }` (label = the value picked; description = one-line muted hint). `multiSelect: true` lets the user tick more than one; `allowFreeformInput: false` for questions where free text is meaningless (e.g. runtime).
+Always emit **all six** in JSON, in this order, regardless of status. Each option is `{ label, description }` (label = the value picked; description = one-line muted hint). `multiSelect: true` lets the user tick more than one; `allowFreeformInput: false` for questions where free text is meaningless (e.g. the `Language` question).
 
 | # | `id`            | `category`  | `header`              | `question`                                              | Multi-select | Free-form input | `options` (label + description)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Sensible default for `recommendedChoice`                                       |
 |---|-----------------|-------------|-----------------------|---------------------------------------------------------|--------------|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
 | 1 | `appType`       | `app`       | App Type              | What type of application are you building?              | no           | yes             | `API only` (Backend services without a UI), `SPA + API` (Single-page app with REST/GraphQL backend), `Full-stack SSR` (Server-rendered pages plus API), `Static site + API` (Pre-built static frontend with serverless API), `Background worker` (Headless queue/timer-driven worker)                                                                                                                                                                                                                                                                                          | `SPA + API`                                                                   |
-| 2 | `runtime`       | `runtime`   | Runtime               | Which runtime language?                                 | no           | no              | `TypeScript` (Node.js + TypeScript on Azure Functions), `Python` (Python on Azure Functions), `C# (.NET)` (Isolated worker on .NET 10)                                                                                                                                                                                                                                                                                                                                                                                                                                       | `TypeScript`                                                                  |
+| 2 | `runtime`       | `runtime`   | Language              | Which programming language?                             | no           | no              | `TypeScript` (Node.js + TypeScript on Azure Functions), `Python` (Python on Azure Functions), `C# (.NET)` (Isolated worker on .NET 10)                                                                                                                                                                                                                                                                                                                                                                                                                                       | `TypeScript`                                                                  |
 | 3 | `dataStores`    | `data`      | Data Stores           | Which data stores does your app need?                   | **yes**      | no              | `Blob Storage` (Store files and images), `Queue Storage` (Async message queue), `PostgreSQL` (Relational database), `CosmosDB` (NoSQL document database), `Redis` (In-memory cache), `Azure SQL` (Managed SQL Server)                                                                                                                                                                                                                                                                                                                                                          | Best-guess subset (e.g. `["PostgreSQL"]`)                                     |
-| 4 | `frontend`      | `frontend`  | Frontend Framework    | Which frontend framework?                               | no           | no              | `React` (React + Vite), `Vue` (Vue + Vite), `Angular` (Angular CLI), `Svelte` (Svelte + Vite), `None` (No frontend)                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `React`                                                                       |
+| 4 | `frontend`      | `frontend`  | Frontend Framework    | Which frontend framework?                               | no           | yes             | `React` (React + Vite), `Vue` (Vue + Vite), `Angular` (Angular CLI), `Svelte` (Svelte + Vite), `None` (No frontend)                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `React`                                                                       |
 | 5 | `features`      | `app`       | Features              | Describe the features or API routes your app needs.    | no           | n/a             | *(omit `options` — free-text question, no choices)*                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Short description distilled from the user's prompt                            |
 | 6 | `auth`          | `auth`      | Authentication        | Does your app need authentication?                      | no           | **yes (always)** | `No auth` (Public app, no login required), `Mock auth middleware` (HMAC-signed test tokens — testable without an IdP), `Microsoft Entra ID` (Workforce identity — formerly Azure AD; sign in with org/Microsoft accounts), `Microsoft Entra External ID` (Customer identity — formerly Azure AD B2C; sign-up + social logins), `Auth0` (Third-party IdP — social + enterprise connections), `Clerk` (Drop-in user management with prebuilt UI)                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `Mock auth middleware` if the app exposes user data, else `No auth`           |
 
@@ -159,8 +159,8 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
     {
       "id": "runtime",
       "category": "runtime",
-      "header": "Runtime",
-      "question": "Which runtime language?",
+      "header": "Language",
+      "question": "Which programming language?",
       "multiSelect": false,
       "allowFreeformInput": false,
       "options": [
@@ -199,7 +199,7 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
       "header": "Frontend Framework",
       "question": "Which frontend framework?",
       "multiSelect": false,
-      "allowFreeformInput": false,
+      "allowFreeformInput": true,
       "options": [
         { "label": "React", "description": "React + Vite" },
         { "label": "Vue", "description": "Vue + Vite" },
@@ -256,7 +256,7 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
   - `appType` → `true`
   - `runtime` → `false`
   - `dataStores` → `false`
-  - `frontend` → `false`
+  - `frontend` → **`true`** (users frequently want a framework not in the list — Solid, Qwik, Next.js, Remix, Astro, etc. — so always allow a custom answer)
   - `auth` → **`true`** (users frequently want a real IdP like Entra ID, Auth0, Clerk, Firebase Auth, etc. — never emit `false` here, even when one of the listed options seems to fit; if you find yourself writing `"allowFreeformInput": false` for `auth`, stop and re-read this rule)
   For Q5 `features` (free text, no `options`), omit `allowFreeformInput` entirely.
 - Use the field name **`rationale`** (not `reason`, not `why`, not `explanation`). The webview parser falls back to `reason` for resilience, but `rationale` is canonical — always write `rationale`.
@@ -317,25 +317,36 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ---
 
-## 2. Runtime & Framework
+## 2. Backend — Azure Functions
+
+> One **stack section per service** — emit a `## N. <Service> — <role>` heading and a single combined table for the backend, a frontend section when the app has a UI, and extra sections for any worker services. The plan view turns every section that has a **Language** row into an editable, language-aware stack card, so each service picks its own language independently. Renumber the sections that follow to match the services you emit.
 
 | Component | Technology |
 |-----------|-----------|
-| **Runtime** | {TypeScript / Python / C#} |
-| **Backend** | {Azure Functions v4 / Azure Functions v2 / Azure Functions isolated worker} |
-| **Orchestration** | docker-compose |
-| **Frontend** | {React + Vite / Vue + Vite / Angular / Svelte / None} |
-| **Package Manager** | {npm / pnpm / pip / poetry / dotnet} |
-
----
-
-## 3. Test Runner & Configuration
-
-| Component | Technology |
-|-----------|-----------|
+| **Language** | {TypeScript / Python / C#} |
+| **Runtime** | {Node / Bun / Deno / CPython / PyPy / .NET} |
+| **Package Manager** | {npm / pnpm / pip / poetry / dotnet (NuGet)} |
 | **Test Runner** | {vitest / jest / pytest / xUnit} |
 | **Mocking Library** | {vi.mock / jest.mock / sinon / unittest.mock / **NSubstitute** (.NET — never Moq, see runtimes/dotnet.md)} |
 | **Test Command** | {npm test / pytest / dotnet test} |
+| **Orchestration** | docker-compose |
+
+> **Language vs Runtime**: `Language` is the source language the user picked (Q2). `Runtime` is the execution runtime — default `Node` for TypeScript/JavaScript, `CPython` for Python, `.NET` for C#. Only deviate from the default (e.g. `Bun`, `Deno`, `PyPy`) when the user explicitly asks. **Package Manager and Test Runner are language-dependent** — match them to this service's Language (e.g. C# → `dotnet (NuGet)` + `xUnit`/`NUnit`/`MSTest`). The `Orchestration` row is recorded for the scaffold step but hidden in the plan UI — always keep it set to `docker-compose`.
+
+---
+
+## 3. Frontend — Web App
+
+> Emit this section only when the app has a frontend (App Type ≠ `API only` / `Background worker`); omit it entirely otherwise. The frontend is its own service with its own Language and **Framework** (language-dependent: TypeScript/JavaScript → React/Vue/Angular/Svelte, C# → Blazor).
+
+| Component | Technology |
+|-----------|-----------|
+| **Language** | {TypeScript / JavaScript / C#} |
+| **Framework** | {React + Vite / Vue + Vite / Angular / Svelte / Blazor (C# only)} |
+| **Package Manager** | {npm / pnpm / dotnet (NuGet)} |
+| **Test Runner** | {vitest / jest / xUnit} |
+| **Mocking Library** | {vi.mock / jest.mock / sinon / NSubstitute} |
+| **Test Command** | {npm test / dotnet test} |
 
 ---
 
@@ -455,7 +466,7 @@ For each page above, list 3–6 representative records using that page's primary
 3. **Render the page previews** — Step 3.5b below: fan out one sub-agent per page. The view is already open; its file watcher flips each page from *Generating preview…* to the rendered HTML as soon as its `<slug>.html` lands.
 4. **Present plan**, ask for approval.
 5. If approved, update status from `Planning` to `Approved`.
-6. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. The scaffold agent treats `.azure/.preview-temp/*.html` as a mock-up reference and translates it into real components using the framework named in Section 2.
+6. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. The scaffold agent treats `.azure/.preview-temp/*.html` as a mock-up reference and translates it into real components using the framework named in the Frontend stack section.
 
 > **❌ STOP** — Do NOT proceed past approval until user approves. Once approved, auto-chain immediately.
 

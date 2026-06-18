@@ -38,9 +38,9 @@ When `.azure/plan.md` found:
 | **Static site + API** | Static HTML/CSS/JS site with serverless API endpoints |
 | **Background worker** | Event-driven processing (queue, timer, blob triggers) — no HTTP frontend |
 
-### Q2: Runtime — Ask only if not detectable from workspace
+### Q2: Language — Ask only if not detectable from workspace
 
-> What language/runtime do you want to use?
+> What programming language do you want to use?
 
 | Option | Backend Host | Test Runner Options |
 |--------|--------------|---------------------|
@@ -142,7 +142,8 @@ After gathering requirements, produce summary that feeds directly into plan temp
 ### Requirements Summary
 
 - **App Type**: SPA + API
-- **Runtime**: TypeScript (Node.js)
+- **Language**: TypeScript
+- **Runtime**: Node
 - **Backend**: Azure Functions v4
 - **Orchestration**: docker-compose
 - **Frontend**: React + Vite

@@ -239,7 +239,7 @@
                             padding: 4px 12px;
                             align-items: center;
 
-                            &:hover {
+                            &:not(.optionsList__row--selected):hover {
                                 background: transparent;
                             }
                         }
@@ -254,10 +254,6 @@
                         justify-content: center;
                         margin-top: 1px;
                         color: var(--vscode-descriptionForeground);
-
-                        &--blank {
-                            visibility: hidden;
-                        }
                     }
 
                     &__checkboxIcon {

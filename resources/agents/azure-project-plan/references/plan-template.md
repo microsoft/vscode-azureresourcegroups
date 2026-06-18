@@ -31,27 +31,34 @@
 
 ---
 
-## 2. Runtime & Framework
+## 2. Backend — Azure Functions
+
+> One **stack section per service**. Emit a `## N. <Service> — <role>` heading and a single combined table for every service the project ships — at minimum the backend, plus a frontend section when the app has a UI, and additional sections for any worker/queue services. The plan view renders every section that contains a **Language** row as an editable, language-aware stack card, so each service can pick its own language independently (e.g. a C# backend alongside a TypeScript React frontend). Renumber the sections below (Services Required, Design System, …) to follow whatever services you emit.
 
 | Component | Technology |
 |-----------|-----------|
-| **Runtime** | {TypeScript / JavaScript / .NET} |
-| **Backend** | Azure Functions ({chosen runtime}) |
-| **Frontend** | {React + Vite / Vue + Vite / Angular / Svelte / None} |
-| **Package Manager** | {npm / pnpm / dotnet} |
+| **Language** | {TypeScript / JavaScript / Python / C# (.NET)} |
+| **Runtime** | {Node / Bun / Deno / CPython / PyPy / .NET} |
+| **Package Manager** | {npm / pnpm / pip / poetry / dotnet (NuGet)} |
+| **Test Runner** | {vitest / jest / mocha+chai+sinon / pytest / xUnit / NUnit} |
+| **Mocking Library** | {vi.mock (vitest) / jest.mock / sinon / Moq / NSubstitute} |
+| **Test Command** | {npm test / pytest / dotnet test} |
 
-> **Backend is fixed**: every project uses Azure Functions paired with the chosen runtime. Do not ask the user, do not list alternatives — just fill in the runtime in parentheses.
+> **Backend is fixed**: every project uses Azure Functions paired with the chosen language. `Runtime` defaults to `Node` for TypeScript/JavaScript, `CPython` for Python, and `.NET` for C#; only change it (e.g. `Bun`, `Deno`, `PyPy`) when the user explicitly asks. **Package Manager and Test Runner are language-dependent** — match them to this service's Language (C# → `dotnet (NuGet)` + `xUnit`/`NUnit`/`MSTest`).
 
 ---
 
-## 3. Test Runner & Configuration
+## 3. Frontend — Web App
+
+> Emit this section only when the app has a frontend (App Type ≠ `API only` / `Background worker`). Omit it entirely otherwise — do not leave an empty stack table. The frontend is its own service with its own Language and **Framework** (which is language-dependent: TypeScript/JavaScript → React/Vue/Angular/Svelte, C# → Blazor).
 
 | Component | Technology |
 |-----------|-----------|
-| **Test Runner** | {vitest / jest / mocha+chai+sinon / xUnit / NUnit} |
-| **Mocking Library** | {vi.mock (vitest) / jest.mock / sinon / Moq / NSubstitute} |
-| **Assertion Library** | {vitest expect / jest expect / chai / xUnit Assert / FluentAssertions} |
-| **Coverage Tool** | {vitest --coverage / jest --coverage / nyc / coverlet} |
+| **Language** | {TypeScript / JavaScript / C# (.NET)} |
+| **Framework** | {React + Vite / Vue + Vite / Angular / Svelte / Blazor (C# only)} |
+| **Package Manager** | {npm / pnpm / dotnet (NuGet)} |
+| **Test Runner** | {vitest / jest / mocha+chai+sinon / xUnit} |
+| **Mocking Library** | {vi.mock (vitest) / jest.mock / sinon / Moq} |
 | **Test Command** | {npm test / dotnet test} |
 
 ---
@@ -70,7 +77,7 @@
 
 ## 5. Design System & UI
 
-> Only populate this section when the app has a frontend (Frontend ≠ None in Section 2). For API-only or Background-worker plans, leave the **Component Library** field blank — the plan view will hide the card automatically. Renumbering of later sections does NOT depend on whether this section has content; keep it stable.
+> Only populate this section when the app has a frontend (a Frontend stack section exists). For API-only or Background-worker plans, leave the **Component Library** field blank — the plan view will hide the card automatically. Renumbering of later sections does NOT depend on whether this section has content; keep it stable.
 
 **Component Library**: {Tailwind CSS + shadcn/ui / Material UI (MUI) / Chakra UI / Vuetify 3 / Angular Material / Pico.css / Custom CSS / —}
 **Typography**: {e.g. Inter, system-ui fallback}

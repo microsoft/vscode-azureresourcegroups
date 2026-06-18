@@ -17,7 +17,7 @@ interface DraftMap {
 const CATEGORY_LABELS: Record<string, string> = {
     project: 'Project',
     app: 'Application',
-    runtime: 'Runtime',
+    runtime: 'Language',
     frontend: 'Frontend',
     backend: 'Backend',
     auth: 'Authentication',
@@ -468,6 +468,7 @@ const OptionsList = ({
     };
 
     const showFreeform = allowFreeformInput !== false;
+    const hasCustomAnswer = customAnswer.trim().length > 0;
 
     return (
         <div className={`optionsList ${multiSelect ? 'optionsList--multi' : 'optionsList--single'}`} role={multiSelect ? 'group' : 'radiogroup'}>
@@ -507,8 +508,17 @@ const OptionsList = ({
                 );
             })}
             {showFreeform && (
-                <div className='optionsList__row optionsList__row--custom'>
-                    <span className='optionsList__indicator optionsList__indicator--blank' aria-hidden='true' />
+                <div className={`optionsList__row optionsList__row--custom ${hasCustomAnswer ? 'optionsList__row--selected' : ''}`}>
+                    <span className='optionsList__indicator' aria-hidden='true'>
+                        {hasCustomAnswer
+                            ? (multiSelect
+                                ? <CheckmarkRegular className='optionsList__checkboxIcon optionsList__checkboxIcon--checked' />
+                                : <CheckmarkRegular className='optionsList__radioIcon optionsList__radioIcon--checked' />)
+                            : (multiSelect
+                                ? <CheckboxUncheckedRegular className='optionsList__checkboxIcon' />
+                                : <span className='optionsList__radioDot' />)
+                        }
+                    </span>
                     <span className='optionsList__index'>{options.length + 1}</span>
                     <Input
                         size='small'
