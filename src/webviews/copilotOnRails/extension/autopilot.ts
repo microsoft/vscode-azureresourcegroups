@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 
 /**
@@ -76,7 +77,7 @@ function showStatusBarItem(): void {
         statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
         extensionContext?.subscriptions.push(statusBarItem);
     }
-    statusBarItem.text = '$(rocket) Autopilot ON';
+    statusBarItem.text = `$(rocket) ${vscode.l10n.t('Autopilot ON')}`;
     statusBarItem.tooltip = vscode.l10n.t('Autopilot is auto-approving all chat tool actions. Click to turn it off.');
     statusBarItem.show();
 }
@@ -124,7 +125,7 @@ function registerCompletionWatcher(): void {
     const check = async (uri: vscode.Uri): Promise<void> => {
         let content: string;
         try {
-            content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
+            content = await AzExtFsExtra.readFile(uri);
         } catch {
             return;
         }

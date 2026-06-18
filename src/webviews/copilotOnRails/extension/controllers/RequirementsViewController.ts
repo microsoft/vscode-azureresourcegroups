@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
@@ -77,16 +78,20 @@ export class RequirementsViewController extends WebviewController<Record<string,
         // auto-approval of chat tool actions for the duration of the run.
         let autopilot = false;
         if (data.executionMode === 'auto') {
-            const enable = vscode.l10n.t('Enable Autopilot');
-            const choice = await vscode.window.showWarningMessage(
-                vscode.l10n.t('Run this project end-to-end in Autopilot mode?'),
-                {
-                    modal: true,
-                    detail: vscode.l10n.t('Autopilot will plan, scaffold, and set up local debugging without stopping for approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally. You can turn this off any time from the status bar.'),
-                },
-                enable,
-            );
-            autopilot = choice === enable;
+            // Cancelling the modal throws UserCancelledError, which
+            // callWithTelemetryAndErrorHandling swallows — leaving autopilot off (guided).
+            autopilot = await callWithTelemetryAndErrorHandling('azureResourceGroups.autopilot.confirm', async (context: IActionContext) => {
+                context.errorHandling.suppressDisplay = true;
+                await context.ui.showWarningMessage(
+                    vscode.l10n.t('Run this project end-to-end in Autopilot mode?'),
+                    {
+                        modal: true,
+                        detail: vscode.l10n.t('Autopilot will plan, scaffold, and set up local debugging without stopping for approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally. You can turn this off any time from the status bar.'),
+                    },
+                    { title: vscode.l10n.t('Enable Autopilot') },
+                );
+                return true;
+            }) ?? false;
             if (autopilot) {
                 await enableAutopilot(ext.context);
             }
