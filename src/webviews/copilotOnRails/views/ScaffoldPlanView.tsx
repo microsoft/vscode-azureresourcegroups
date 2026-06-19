@@ -10,7 +10,7 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX
 import { StageProgress } from './components/StageProgress';
 import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
-import { type PlanContent, type PlanData, type PlanSection, type PreviewPage, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
+import { type PlanContent, type PlanData, type PlanSection, type PreviewPage, type PreviewStatus, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 
 const editableOptions: Record<string, string[]> = {
     'Runtime': ['JavaScript', 'TypeScript', 'Python', 'C# (.NET)'],
@@ -30,7 +30,7 @@ type FeedbackItem =
     | { id: string; kind: 'designToken'; target: string; field: string; from: string; to: string }
     /** A general freeform note typed into the feedback drawer. */
     | { id: string; kind: 'freeform'; text: string }
-    /** A note targeting a specific preview page (e.g. "make the hero section taller" on the Home page). */
+    /** A note targeting a specific preview page. */
     | { id: string; kind: 'pageFeedback'; pageSlug: string; pageTitle: string; text: string };
 
 let feedbackIdCounter = 0;
@@ -102,8 +102,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
-    /** Top-level `previewStatus` from manifest.json — `"generating"` or `"ready"`. */
-    const [previewStatus, setPreviewStatus] = useState<string | undefined>(undefined);
+    const [previewStatus, setPreviewStatus] = useState<PreviewStatus | undefined>(undefined);
     const originalCellValues = useRef<Map<CellKey, string>>(new Map());
     // Same idea for design tokens (palette swatches), keyed by a synthetic
     // target like `palette:Primary`.
@@ -143,7 +142,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
             } else if (message?.command === 'setPreviewPages') {
                 setPreviewPages(Array.isArray(message.pages) ? message.pages as PreviewPage[] : []);
                 if (typeof message.previewStatus === 'string') {
-                    setPreviewStatus(message.previewStatus);
+                    setPreviewStatus(message.previewStatus as PreviewStatus);
                 }
             } else if (message?.command === 'revisionInProgress') {
                 setIsAwaitingRevision(true);

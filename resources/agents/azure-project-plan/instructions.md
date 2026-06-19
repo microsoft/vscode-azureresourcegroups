@@ -560,7 +560,7 @@ Paste the full Shared CSS block from `references/html-preview.md` into the same 
 ```json
 {
     "generatedAt": "{ISO timestamp}",
-    "previewStatus": "ready",
+    "previewStatus": "{ready | generating}",
     "pages": [
         { "slug": "dashboard", "title": "Dashboard", "route": "/", "status": "pending" },
         { "slug": "settings",  "title": "Settings",  "route": "/settings", "status": "pending" }
@@ -568,7 +568,7 @@ Paste the full Shared CSS block from `references/html-preview.md` into the same 
 }
 ```
 
-- `previewStatus` is a top-level field indicating the overall state of the preview set. Valid values: `"generating"` (initial generation or revision in progress), `"ready"` (all preview work is complete). Set it to `"generating"` before starting any preview file writes and to `"ready"` after all pages have been written. The webview uses this field to show/hide a "Generating preview…" overlay — **always update it, both during initial generation and when revising previews after user feedback**.
+- `previewStatus` is a top-level field indicating the overall state of the preview set. Valid values: `"generating"` (initial generation or revision in progress), `"ready"` (all preview work is complete). Set it to `"generating"` before starting any preview file writes and to `"ready"` after all pages have been written. **Always update it, both during initial generation and when revising previews after user feedback**.
 - `slug` is the kebab-cased page name (`Photo Upload` → `photo-upload`). It MUST match the eventual filename (`<slug>.html`). Slugs MUST be unique.
 - `route` is the path from Section 5's Pages table verbatim. Default to `/<slug>` when missing.
 - `status` starts at `"pending"` for every page. You SHOULD flip it to `"ready"` in step 3.5c after the HTML is written (keeps the manifest accurate), but the webview no longer depends on it — **the presence of a non-empty `<slug>.html` file is what makes a page render**. The manifest only supplies the page list (slug/title/route) and the initial loading tabs.

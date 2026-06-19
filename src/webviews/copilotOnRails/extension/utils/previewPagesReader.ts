@@ -5,7 +5,7 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
+import { type PreviewPage, type PreviewStatus } from "../../views/utils/parseScaffoldPlanMarkdown";
 
 /** Workspace-relative path of the per-page HTML preview folder written by the planner agent. */
 export const PREVIEW_FOLDER_RELATIVE_PATH = path.join('.azure', '.preview-temp');
@@ -18,15 +18,13 @@ interface ManifestPage {
 }
 
 interface Manifest {
-    /** Top-level status of the preview set: `"generating"` or `"ready"`. */
-    previewStatus?: string;
+    previewStatus?: PreviewStatus;
     pages?: ManifestPage[];
 }
 
 export interface PreviewPagesResult {
     pages: PreviewPage[];
-    /** Top-level `previewStatus` from manifest.json (`"generating"` | `"ready"`). */
-    previewStatus?: string;
+    previewStatus?: PreviewStatus;
 }
 
 /**

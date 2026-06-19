@@ -31,6 +31,13 @@ export interface PreviewPage {
     status: 'pending' | 'ready';
 }
 
+/**
+ * Top-level status of the preview set written to `manifest.json`.
+ * - `"generating"` — initial generation or revision in progress.
+ * - `"ready"` — all preview work is complete.
+ */
+export type PreviewStatus = 'generating' | 'ready';
+
 export interface PlanParseError {
     message: string;
     fileLabel?: string;

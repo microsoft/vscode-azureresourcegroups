@@ -6,7 +6,7 @@
 import { Button, Spinner, Textarea } from '@fluentui/react-components';
 import { SendRegular } from '@fluentui/react-icons';
 import { useCallback, useMemo, useState, type JSX } from 'react';
-import { type PaletteEntry, type PlanSection, type PreviewPage } from '../utils/parseScaffoldPlanMarkdown';
+import { type PaletteEntry, type PlanSection, type PreviewPage, type PreviewStatus } from '../utils/parseScaffoldPlanMarkdown';
 
 interface UiPreviewCardProps {
     /** The parsed "Design System & UI" plan section containing palette entries, style direction, and other design tokens. */
@@ -20,8 +20,7 @@ interface UiPreviewCardProps {
      * HTML into an iframe via `srcDoc`).
      */
     previewPages: PreviewPage[];
-    /** Top-level `previewStatus` from manifest.json (`"generating"` | `"ready"`). */
-    previewStatus?: string;
+    previewStatus?: PreviewStatus;
     /**
      * Called when the user picks a new hex for a palette token via the color
      * selector. The parent persists the new hex into the plan's palette so the
@@ -52,8 +51,8 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
     // Live CSS-variable overrides keyed by `--color-*` name. Applied to the
     // iframe HTML on every render so a hex pick recolors the preview instantly.
     const [overrides, setOverrides] = useState<Record<string, string>>({});
-    // Per-page feedback draft text
-    const [pageFeedbackDraft, setPageFeedbackDraft] = useState('');
+    // Per-page feedback text
+    const [pageFeedback, setPageFeedback] = useState('');
 
     // The card shows two things: the iframe preview and a color picker.
     // Render whenever either has content — if there's truly nothing to show,
@@ -66,12 +65,12 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
     const isPending = !activePage || activePage.status !== 'ready' || !activePage.html;
 
     const handleSubmitPageFeedback = useCallback(() => {
-        if (!pageFeedbackDraft.trim() || !activePage) {
+        if (!pageFeedback.trim() || !activePage) {
             return;
         }
-        onPageFeedback(activePage.slug, activePage.title, pageFeedbackDraft);
-        setPageFeedbackDraft('');
-    }, [pageFeedbackDraft, activePage, onPageFeedback]);
+        onPageFeedback(activePage.slug, activePage.title, pageFeedback);
+        setPageFeedback('');
+    }, [pageFeedback, activePage, onPageFeedback]);
 
     const activePageFeedback = useMemo(
         () => activePage ? pageFeedbackItems.filter(i => i.pageSlug === activePage.slug) : [],
@@ -80,7 +79,7 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
 
     // Re-render the page HTML with the user's live color overrides inlined as a
     // trailing `:root { … }` block so the iframe recolors the moment a hex is
-    // picked — no generation, no feedback round-trip.
+    // picked — no regeneration, no feedback round-trip.
     const displayedHtml = useMemo(
         () => (activePage?.html ? applyOverrides(activePage.html, overrides) : undefined),
         [activePage?.html, overrides],
@@ -131,23 +130,21 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
                     <span className='uiPreviewCard__urlPill'>{activePage?.route || '/'}</span>
                 </div>
                 {isPending ? (
+                    // First-load spinner: page has no HTML yet, show spinner instead of iframe
                     <div className='uiPreviewCard__loading' role='status' aria-live='polite'>
                         <Spinner size='medium' label='Generating preview…' />
                     </div>
                 ) : (
                     <>
                     <iframe
-                        // `srcDoc` keeps the iframe self-contained: the controller
-                        // has already inlined `theme.css` into a `<style>` block,
-                        // so no `localResourceRoots` plumbing is required. The
-                        // sandbox intentionally omits `allow-scripts` — the
-                        // preview is presentational only.
                         className='uiPreviewCard__iframe'
                         title={`UI preview for ${activePage.title}`}
                         srcDoc={displayedHtml}
                         sandbox='allow-same-origin'
                     />
                     {previewStatus === 'generating' && (
+                        // Regenerating preview spinner - page already has HTML but the agent is regenerating previews.
+                        // Show spinner on top of stale content while it reloads.
                         <div className='uiPreviewCard__generating' role='status' aria-live='polite'>
                             <Spinner size='medium' label='Generating preview…' />
                         </div>
@@ -176,8 +173,8 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
                     <div className='uiPreviewCard__pageFeedbackRow'>
                         <Textarea
                             className='uiPreviewCard__pageFeedbackInput'
-                            value={pageFeedbackDraft}
-                            onChange={(_, data) => setPageFeedbackDraft(data.value)}
+                            value={pageFeedback}
+                            onChange={(_, data) => setPageFeedback(data.value)}
                             placeholder={`Add feedback for "${activePage.title}" page…`}
                             rows={2}
                             resize='vertical'
@@ -187,7 +184,7 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
                             appearance='secondary'
                             size='small'
                             icon={<SendRegular />}
-                            disabled={pageFeedbackDraft.trim().length === 0}
+                            disabled={pageFeedback.trim().length === 0}
                             onClick={handleSubmitPageFeedback}
                         >
                             Add feedback
