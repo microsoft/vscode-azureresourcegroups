@@ -853,63 +853,65 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
             );
         case 'table':
             return (
-                <table className='planTable'>
-                    <thead>
-                        <tr>
-                            {item.headers.map((h, i) => <th key={i}>{h}</th>)}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {item.rows.map((row, ri) => {
-                            if (hiddenPlanRowLabels.has(row[0]?.trim())) { return null; }
-                            if (collapsedRows?.has(row[0]?.trim())) { return null; }
-                            return (
-                            <tr key={ri}>
-                                {row.map((cell, ci) => {
-                                    const componentName = row[0];
-                                    // Language-dependent fields (Runtime, Framework,
-                                    // Package Manager, Test Runner) derive their choices
-                                    // from the Language row in this same service table so
-                                    // each service narrows independently.
-                                    const language = item.rows.find(r => r[0]?.trim() === 'Language')?.[ci];
-                                    const options = ci > 0
-                                        ? optionsForField(componentName?.trim(), language, isFrontend)
-                                        : undefined;
-                                    const isEdited = options ? editedCells?.has(cellKey(sectionIdx, contentIdx, ri, ci)) : false;
-                                    // Soft warning when an option outside the officially
-                                    // supported set is picked (e.g. Bun runtime, yarn,
-                                    // Next.js). Informational only — doesn't block.
-                                    const supportedSet = ci > 0 ? fullySupportedOptions[componentName?.trim()] : undefined;
-                                    const showSupportWarning = supportedSet !== undefined
-                                        && cell
-                                        && !supportedSet.has(cell.trim());
-                                    return (
-                                        <td key={ci} className={isEdited ? 'editedCell' : undefined}>
-                                            {options ? (
-                                                <select
-                                                    className={`cellDropdown ${isEdited ? 'edited' : ''}`}
-                                                    value={cell}
-                                                    disabled={disabled}
-                                                    onChange={(e) => onTableCellChange(sectionIdx, contentIdx, ri, ci, e.target.value)}
-                                                >
-                                                    {!options.includes(cell) && <option value={cell}>{cell}</option>}
-                                                    {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                                </select>
-                                            ) : cell}
-                                            {showSupportWarning && (
-                                                <span className='supportWarning'>
-                                                    <WarningRegular />
-                                                    {cell} isn't officially supported — scaffolding may be incomplete.
-                                                </span>
-                                            )}
-                                        </td>
-                                    );
-                                })}
+                <div className='planTableWrapper'>
+                    <table className='planTable'>
+                        <thead>
+                            <tr>
+                                {item.headers.map((h, i) => <th key={i}>{h}</th>)}
                             </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {item.rows.map((row, ri) => {
+                                if (hiddenPlanRowLabels.has(row[0]?.trim())) { return null; }
+                                if (collapsedRows?.has(row[0]?.trim())) { return null; }
+                                return (
+                                    <tr key={ri}>
+                                        {row.map((cell, ci) => {
+                                            const componentName = row[0];
+                                            // Language-dependent fields (Runtime, Framework,
+                                            // Package Manager, Test Runner) derive their choices
+                                            // from the Language row in this same service table so
+                                            // each service narrows independently.
+                                            const language = item.rows.find(r => r[0]?.trim() === 'Language')?.[ci];
+                                            const options = ci > 0
+                                                ? optionsForField(componentName?.trim(), language, isFrontend)
+                                                : undefined;
+                                            const isEdited = options ? editedCells?.has(cellKey(sectionIdx, contentIdx, ri, ci)) : false;
+                                            // Soft warning when an option outside the officially
+                                            // supported set is picked (e.g. Bun runtime, yarn,
+                                            // Next.js). Informational only — doesn't block.
+                                            const supportedSet = ci > 0 ? fullySupportedOptions[componentName?.trim()] : undefined;
+                                            const showSupportWarning = supportedSet !== undefined
+                                                && cell
+                                                && !supportedSet.has(cell.trim());
+                                            return (
+                                                <td key={ci} className={isEdited ? 'editedCell' : undefined}>
+                                                    {options ? (
+                                                        <select
+                                                            className={`cellDropdown ${isEdited ? 'edited' : ''}`}
+                                                            value={cell}
+                                                            disabled={disabled}
+                                                            onChange={(e) => onTableCellChange(sectionIdx, contentIdx, ri, ci, e.target.value)}
+                                                        >
+                                                            {!options.includes(cell) && <option value={cell}>{cell}</option>}
+                                                            {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                        </select>
+                                                    ) : cell}
+                                                    {showSupportWarning && (
+                                                        <span className='supportWarning'>
+                                                            <WarningRegular />
+                                                            {cell} isn't officially supported — scaffolding may be incomplete.
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             );
         case 'blockquote':
             return <div className='blockquote'>{item.text}</div>;

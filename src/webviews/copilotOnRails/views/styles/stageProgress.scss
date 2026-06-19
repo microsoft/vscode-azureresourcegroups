@@ -15,6 +15,9 @@
     border: 1px solid var(--vscode-widget-border);
     border-radius: 8px;
     background: var(--vscode-editor-background);
+    // When the viewport (or zoom) gets too narrow to fit all steps at their
+    // natural width, scroll horizontally instead of squashing the labels.
+    overflow-x: auto;
 }
 
 .stageProgressTrack {
@@ -23,6 +26,9 @@
     border-radius: 999px;
     overflow: hidden;
     background: var(--vscode-widget-border);
+    // Track sits above the steps row and should match its scrollable width.
+    min-width: 100%;
+    width: max-content;
 }
 
 .stageProgressFill {
@@ -37,7 +43,11 @@
     margin: 0;
     display: flex;
     justify-content: space-between;
-    gap: 6px;
+    gap: 14px;
+    // Don't allow steps to shrink below their natural label width — the
+    // outer .stageProgress scrolls instead.
+    min-width: 100%;
+    width: max-content;
 }
 
 .stageProgressStep {
@@ -46,8 +56,8 @@
     align-items: center;
     text-align: center;
     gap: 4px;
-    flex: 1;
-    min-width: 0;
+    flex: 1 1 0;
+    min-width: max-content;
 }
 
 .stageProgressMarker {
@@ -62,6 +72,7 @@
     color: var(--vscode-descriptionForeground);
     background: var(--vscode-editor-background);
     border: 1px solid var(--vscode-widget-border);
+    flex-shrink: 0;
 }
 
 .stageProgressLabel {
@@ -70,6 +81,7 @@
     letter-spacing: 0.03em;
     color: var(--vscode-descriptionForeground);
     line-height: 1.1;
+    white-space: nowrap;
 }
 
 .stageProgressStep.completed .stageProgressMarker {

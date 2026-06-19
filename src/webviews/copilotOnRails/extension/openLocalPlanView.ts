@@ -6,10 +6,14 @@
 import * as vscode from "vscode";
 import { type LocalPlanData, parseLocalPlanMarkdown } from "../views/utils/parseLocalPlanMarkdown";
 import { LocalPlanViewController } from "./controllers/LocalPlanViewController";
+import { closeLoadingView } from "./openLoadingView";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<LocalPlanData, LocalPlanViewController>({
-    createController: (data, uri) => new LocalPlanViewController(data, uri),
+    createController: (data, uri) => {
+        closeLoadingView();
+        return new LocalPlanViewController(data, uri);
+    },
     updateController: (controller, data, uri) => controller.updatePlanData(data, uri),
 });
 

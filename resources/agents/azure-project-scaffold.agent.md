@@ -39,6 +39,25 @@ After Step A, **stop and wait** for explicit user approval of the plan. Do **not
 
 When scaffolding finishes, announce **"Scaffolding complete!"** and **stop**. Do **NOT** ask the user what to do next: do **NOT** call `vscode_askQuestions` (or any chat question API), and do **NOT** print plain-text "Verify project" / "Set up local dev" suggestions. A separate view surfaces those choices and invokes the matching command (`azureResourceGroups.startProjectTest` or `azureResourceGroups.startLocalDevelopment`) itself — you do not run those commands from chat.
 
+### Autopilot mode (overrides Steps A–C gating)
+
+**Autopilot is active when** the invoking chat query begins with the marker `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto` (front-matter or a `**Execution Mode**: auto` row). When autopilot is active, run fully unattended — **no chat questions, no manual approval**:
+
+1. **Skip Step A** — the plan was already produced and approved upstream; do **not** open the plan preview (`azureResourceGroups.openPlanView`) and do **not** re-write `.azure/project-plan.md` for approval. Go straight to scaffolding.
+2. **Skip Step B** — do not stop for approval; begin scaffolding immediately.
+3. **Skip the "Next Step" question at Step C** — do **not** call `vscode_askQuestions`. Automatically choose **"Set up local dev"** and hand off by calling `run_vscode_command` with `azureResourceGroups.startLocalDevelopment`, prefixing the args with `[AUTOPILOT MODE] `:
+
+```json
+{
+  "commandId": "azureResourceGroups.startLocalDevelopment",
+  "name": "Start Local Development",
+  "skipCheck": true,
+  "args": ["[AUTOPILOT MODE] The project has been scaffolded. Now set up the local development environment so the user can start building and testing."]
+}
+```
+
+All scaffold quality work (frontend preview verification, backend services, cleanup of `.azure/.preview-temp/` at Step 13) still applies — autopilot suppresses **gates and questions**, never scaffold quality.
+
 ### Frontend preview commands — working directory is mandatory
 
 Every frontend command you run during Step 0.5 (Frontend Preview) — `npm install`, `npx vite build`, `npx vite --host`, `npm run dev`, scaffolder commands — MUST be invoked with `cwd` set to the frontend folder (typically `services/web/`), passed on the same terminal call as the command. Each `run_in_terminal` invocation may start in the workspace root, so do **not** rely on a previous `cd`. Prefer the `cwd` parameter, or use `npm --prefix services/web run <script>` — those are cross-platform. Chained `cd services/web && <command>` works but is bash/PowerShell-fragile, so avoid it when an alternative exists.
