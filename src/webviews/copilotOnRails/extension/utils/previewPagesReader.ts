@@ -18,7 +18,15 @@ interface ManifestPage {
 }
 
 interface Manifest {
+    /** Top-level status of the preview set: `"generating"` or `"ready"`. */
+    previewStatus?: string;
     pages?: ManifestPage[];
+}
+
+export interface PreviewPagesResult {
+    pages: PreviewPage[];
+    /** Top-level `previewStatus` from manifest.json (`"generating"` | `"ready"`). */
+    previewStatus?: string;
 }
 
 /**
@@ -37,10 +45,10 @@ interface Manifest {
  * Returns `[]` whenever the folder or manifest is missing — the caller treats
  * that the same as "no preview available". Never throws.
  */
-export async function readPreviewPages(previewFolderUri: vscode.Uri): Promise<PreviewPage[]> {
+export async function readPreviewPages(previewFolderUri: vscode.Uri): Promise<PreviewPagesResult> {
     const manifest = await readManifest(previewFolderUri);
     if (!manifest?.pages?.length) {
-        return [];
+        return { pages: [], previewStatus: manifest?.previewStatus };
     }
 
     const themeCss = await readOptionalText(vscode.Uri.joinPath(previewFolderUri, 'theme.css'));
@@ -71,7 +79,7 @@ export async function readPreviewPages(previewFolderUri: vscode.Uri): Promise<Pr
             pages.push({ slug: entry.slug, title, route, status: 'pending' });
         }
     }
-    return pages;
+    return { pages, previewStatus: manifest.previewStatus };
 }
 
 async function readManifest(previewFolderUri: vscode.Uri): Promise<Manifest | undefined> {

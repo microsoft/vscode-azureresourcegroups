@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Button, Spinner, Textarea } from '@fluentui/react-components';
-import { DismissRegular, SendRegular } from '@fluentui/react-icons';
+import { SendRegular } from '@fluentui/react-icons';
 import { useCallback, useMemo, useState, type JSX } from 'react';
 import { type PaletteEntry, type PlanSection, type PreviewPage } from '../utils/parseScaffoldPlanMarkdown';
 
@@ -20,6 +20,8 @@ interface UiPreviewCardProps {
      * HTML into an iframe via `srcDoc`).
      */
     previewPages: PreviewPage[];
+    /** Top-level `previewStatus` from manifest.json (`"generating"` | `"ready"`). */
+    previewStatus?: string;
     /**
      * Called when the user picks a new hex for a palette token via the color
      * selector. The parent persists the new hex into the plan's palette so the
@@ -29,8 +31,8 @@ interface UiPreviewCardProps {
     onPaletteChange: (token: string, originalHex: string, newHex: string) => void;
     /** Called when the user submits feedback specific to a preview page. */
     onPageFeedback: (pageSlug: string, pageTitle: string, text: string) => void;
-    /** Feedback items for the active page, displayed inline so the user can see past submissions without opening the drawer. */
-    pageFeedbackItems: { id: string; text: string }[];
+    /** All page feedback items, filtered by active page internally. */
+    pageFeedbackItems: { id: string; pageSlug: string; text: string }[];
     /** Called when the user removes a page feedback item by id. */
     onRemovePageFeedback: (id: string) => void;
 }
@@ -42,7 +44,7 @@ interface UiPreviewCardProps {
  * iframe instantly by injecting CSS-variable overrides into the rendered HTML,
  * and bubbled up so the parent persists the new hex into the plan's palette.
  */
-export const UiPreviewCard = ({ section, disabled, previewPages, onPaletteChange, onPageFeedback, pageFeedbackItems, onRemovePageFeedback }: UiPreviewCardProps): JSX.Element | null => {
+export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, onPaletteChange, onPageFeedback, pageFeedbackItems, onRemovePageFeedback }: UiPreviewCardProps): JSX.Element | null => {
     const palette = useMemo(() => extractPalette(section), [section]);
     const styleDirection = useMemo(() => extractKeyValue(section, 'Style Direction'), [section]);
 
@@ -71,9 +73,14 @@ export const UiPreviewCard = ({ section, disabled, previewPages, onPaletteChange
         setPageFeedbackDraft('');
     }, [pageFeedbackDraft, activePage, onPageFeedback]);
 
+    const activePageFeedback = useMemo(
+        () => activePage ? pageFeedbackItems.filter(i => i.pageSlug === activePage.slug) : [],
+        [pageFeedbackItems, activePage],
+    );
+
     // Re-render the page HTML with the user's live color overrides inlined as a
     // trailing `:root { … }` block so the iframe recolors the moment a hex is
-    // picked — no regeneration, no feedback round-trip.
+    // picked — no generation, no feedback round-trip.
     const displayedHtml = useMemo(
         () => (activePage?.html ? applyOverrides(activePage.html, overrides) : undefined),
         [activePage?.html, overrides],
@@ -128,6 +135,7 @@ export const UiPreviewCard = ({ section, disabled, previewPages, onPaletteChange
                         <Spinner size='medium' label='Generating preview…' />
                     </div>
                 ) : (
+                    <>
                     <iframe
                         // `srcDoc` keeps the iframe self-contained: the controller
                         // has already inlined `theme.css` into a `<style>` block,
@@ -139,31 +147,52 @@ export const UiPreviewCard = ({ section, disabled, previewPages, onPaletteChange
                         srcDoc={displayedHtml}
                         sandbox='allow-same-origin'
                     />
+                    {previewStatus === 'generating' && (
+                        <div className='uiPreviewCard__generating' role='status' aria-live='polite'>
+                            <Spinner size='medium' label='Generating preview…' />
+                        </div>
+                    )}
+                    </>
                 )}
             </div>
 
             {/* Per-page feedback: lets users submit notes targeting the active preview page */}
             {hasPages && activePage && !isPending && (
                 <div className='uiPreviewCard__pageFeedback'>
-                    <Textarea
-                        className='uiPreviewCard__pageFeedbackInput'
-                        value={pageFeedbackDraft}
-                        onChange={(_, data) => setPageFeedbackDraft(data.value)}
-                        placeholder={`Add feedback for "${activePage.title}" page…`}
-                        rows={2}
-                        resize='vertical'
-                        disabled={disabled}
-                    />
-                    <Button
-                        className='uiPreviewCard__pageFeedbackSubmit'
-                        appearance='secondary'
-                        size='small'
-                        icon={<SendRegular />}
-                        disabled={disabled || pageFeedbackDraft.trim().length === 0}
-                        onClick={handleSubmitPageFeedback}
-                    >
-                        Add feedback
-                    </Button>
+                    {activePageFeedback.length > 0 && (
+                        <ul className='uiPreviewCard__pageFeedbackList'>
+                            {activePageFeedback.map(item => (
+                                <li key={item.id} className='uiPreviewCard__pageFeedbackItem'>
+                                    <span>{item.text}</span>
+                                    <button
+                                        className='uiPreviewCard__pageFeedbackRemove'
+                                        aria-label='Remove feedback'
+                                        onClick={() => onRemovePageFeedback(item.id)}
+                                    >×</button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    <div className='uiPreviewCard__pageFeedbackRow'>
+                        <Textarea
+                            className='uiPreviewCard__pageFeedbackInput'
+                            value={pageFeedbackDraft}
+                            onChange={(_, data) => setPageFeedbackDraft(data.value)}
+                            placeholder={`Add feedback for "${activePage.title}" page…`}
+                            rows={2}
+                            resize='vertical'
+                        />
+                        <Button
+                            className='uiPreviewCard__pageFeedbackSubmit'
+                            appearance='secondary'
+                            size='small'
+                            icon={<SendRegular />}
+                            disabled={pageFeedbackDraft.trim().length === 0}
+                            onClick={handleSubmitPageFeedback}
+                        >
+                            Add feedback
+                        </Button>
+                    </div>
                 </div>
             )}
 

@@ -560,6 +560,7 @@ Paste the full Shared CSS block from `references/html-preview.md` into the same 
 ```json
 {
     "generatedAt": "{ISO timestamp}",
+    "previewStatus": "ready",
     "pages": [
         { "slug": "dashboard", "title": "Dashboard", "route": "/", "status": "pending" },
         { "slug": "settings",  "title": "Settings",  "route": "/settings", "status": "pending" }
@@ -567,6 +568,7 @@ Paste the full Shared CSS block from `references/html-preview.md` into the same 
 }
 ```
 
+- `previewStatus` is a top-level field indicating the overall state of the preview set. Valid values: `"generating"` (initial generation or revision in progress), `"ready"` (all preview work is complete). Set it to `"generating"` before starting any preview file writes and to `"ready"` after all pages have been written. The webview uses this field to show/hide a "Generating preview…" overlay — **always update it, both during initial generation and when revising previews after user feedback**.
 - `slug` is the kebab-cased page name (`Photo Upload` → `photo-upload`). It MUST match the eventual filename (`<slug>.html`). Slugs MUST be unique.
 - `route` is the path from Section 5's Pages table verbatim. Default to `/<slug>` when missing.
 - `status` starts at `"pending"` for every page. You SHOULD flip it to `"ready"` in step 3.5c after the HTML is written (keeps the manifest accurate), but the webview no longer depends on it — **the presence of a non-empty `<slug>.html` file is what makes a page render**. The manifest only supplies the page list (slug/title/route) and the initial loading tabs.
@@ -613,9 +615,23 @@ The webview renders a page the moment its `<slug>.html` file exists — it does 
 - update the manifest after every sub-agent completes (more responsive), or
 - update once at the end after all sub-agents complete (simpler).
 
+**Always set `"previewStatus": "ready"` in the final manifest update** after all pages are written — this is what dismisses the "Generating preview…" overlay in the webview.
+
 The webview's file watcher refreshes on every change under `.azure/.preview-temp/`, so the user sees tabs flip from loading to rendered in near-real-time.
 
-> **✅ Checkpoint**: `.azure/.preview-temp/{theme.css, manifest.json, *.html}` all exist. Every page has a non-empty `<slug>.html` (which is what makes it render; the manifest `status` is best-effort bookkeeping). The plan-preview webview now shows the rendered HTML inside the iframe per page.
+> **✅ Checkpoint**: `.azure/.preview-temp/{theme.css, manifest.json, *.html}` all exist. Every page has a non-empty `<slug>.html` (which is what makes it render; the manifest `status` is best-effort bookkeeping). `manifest.json` has `"previewStatus": "ready"`. The plan-preview webview now shows the rendered HTML inside the iframe per page.
+
+#### 3.5d. Updating previews after user feedback
+
+When the user requests changes to the plan that affect preview pages (e.g. color changes, layout changes, content changes), you MUST update `previewStatus` in `manifest.json` to signal the webview:
+
+1. **Before writing any preview files**: update `manifest.json` with `"previewStatus": "generating"`. This shows the "Generating preview…" overlay immediately.
+2. **Edit the affected files** — `theme.css`, `project-plan.md`, and/or individual `<slug>.html` pages as needed.
+3. **After all preview files are written**: update `manifest.json` with `"previewStatus": "ready"`. This dismisses the overlay.
+
+If the user's feedback only affects the plan text (e.g. renaming a section, adjusting a description) and does **not** require changes to any file in `.azure/.preview-temp/`, do **not** touch `previewStatus` — leave it at `"ready"`. The overlay is driven exclusively by this field; setting it to `"generating"` when no preview work is happening will confuse the user.
+
+The webview watches the entire `.azure/.preview-temp/` folder, so the manifest update is picked up automatically. Skipping the `previewStatus` update when preview files *are* being rewritten will leave the overlay absent during generation, also confusing the user.
 
 ---
 

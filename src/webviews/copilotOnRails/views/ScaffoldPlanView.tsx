@@ -73,14 +73,14 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
         );
     }
     if (pageFeedbackMap.size > 0) {
-        lines.push('Page-specific feedback:');
+        lines.push('Page-specific feedback:', '');
         for (const [pageTitle, feedbackLines] of pageFeedbackMap) {
             lines.push(`${pageTitle} page:`);
             for (const fl of feedbackLines) {
                 lines.push(fl);
             }
+            lines.push('');
         }
-        lines.push('');
     }
     if (notes.length > 0) {
         lines.push('Additional notes:', ...notes, '');
@@ -102,6 +102,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
+    /** Top-level `previewStatus` from manifest.json — `"generating"` or `"ready"`. */
+    const [previewStatus, setPreviewStatus] = useState<string | undefined>(undefined);
     const originalCellValues = useRef<Map<CellKey, string>>(new Map());
     // Same idea for design tokens (palette swatches), keyed by a synthetic
     // target like `palette:Primary`.
@@ -140,6 +142,9 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 originalDesignValues.current.clear();
             } else if (message?.command === 'setPreviewPages') {
                 setPreviewPages(Array.isArray(message.pages) ? message.pages as PreviewPage[] : []);
+                if (typeof message.previewStatus === 'string') {
+                    setPreviewStatus(message.previewStatus);
+                }
             } else if (message?.command === 'revisionInProgress') {
                 setIsAwaitingRevision(true);
                 setDrawerOpen(false);
@@ -442,8 +447,13 @@ export const ScaffoldPlanView = (): JSX.Element => {
                         section={designSection}
                         disabled={isAwaitingRevision}
                         previewPages={previewPages}
+                        previewStatus={previewStatus}
                         onPaletteChange={handlePaletteChange}
                         onPageFeedback={handlePageFeedback}
+                        pageFeedbackItems={feedbackItems
+                            .filter((i): i is Extract<FeedbackItem, { kind: 'pageFeedback' }> => i.kind === 'pageFeedback')
+                            .map(i => ({ id: i.id, pageSlug: i.pageSlug, text: i.text }))}
+                        onRemovePageFeedback={handleRemoveFeedback}
                     />
                 )}
 
@@ -512,7 +522,7 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
                                     </span>
                                 ) : item.kind === 'pageFeedback' ? (
                                     <span className='feedbackChipText'>
-                                        <strong>{item.pageTitle} page:</strong> {item.text}
+                                        <strong>{item.pageTitle} Page:</strong> {item.text}
                                     </span>
                                 ) : (
                                     <span className='feedbackFreeformText'>{item.text}</span>

@@ -11,7 +11,7 @@ import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/age
 import { ext } from "../../../../extensionVariables";
 import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
-import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages } from "../utils/previewPagesReader";
+import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class ScaffoldPlanViewController extends WebviewController<Record<string, never>> {
@@ -127,12 +127,12 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             return;
         }
         try {
-            const pages: PreviewPage[] = await readPreviewPages(folder);
-            const summary = pages.length === 0
+            const result: PreviewPagesResult = await readPreviewPages(folder);
+            const summary = result.pages.length === 0
                 ? 'no pages (manifest missing or empty)'
-                : pages.map((p: PreviewPage) => `${p.slug}=${p.status}${p.html ? `(${p.html.length}b)` : ''}`).join(', ');
-            ext.outputChannel.appendLog(`[ScaffoldPlanView] preview folder ${folder.fsPath} → ${summary}`);
-            void this.panel.webview.postMessage({ command: 'setPreviewPages', pages });
+                : result.pages.map((p: PreviewPage) => `${p.slug}=${p.status}${p.html ? `(${p.html.length}b)` : ''}`).join(', ');
+            ext.outputChannel.appendLog(`[ScaffoldPlanView] preview folder ${folder.fsPath} → ${summary} (previewStatus=${result.previewStatus ?? 'undefined'})`);
+            void this.panel.webview.postMessage({ command: 'setPreviewPages', pages: result.pages, previewStatus: result.previewStatus });
         } catch (err) {
             ext.outputChannel.appendLog(`[ScaffoldPlanView] preview read failed for ${folder.fsPath}: ${err instanceof Error ? err.message : String(err)}`);
             void this.panel.webview.postMessage({ command: 'setPreviewPages', pages: [] });
