@@ -9,6 +9,7 @@ import { LocalDevelopmentStageItem } from './LocalDevelopmentStageItem';
 import { ProgressNode } from './ProgressNode';
 import { ProjectCreationStageItem } from './ProjectCreationStageItem';
 import { getProjectPlanFiles, type ProjectPlanFilesWatcher } from './projectPlanFiles';
+import { projectSubmissionState } from './projectSubmissionState';
 import { notStartedDecorationScheme, StageNode } from './StageNode';
 
 class NotStartedDecorationProvider implements vscode.FileDecorationProvider {
@@ -30,6 +31,7 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
 
     constructor(context: vscode.ExtensionContext, planFilesWatcher: ProjectPlanFilesWatcher) {
         this.disposables.push(planFilesWatcher.onDidChange(() => this.refresh()));
+        this.disposables.push(projectSubmissionState.onDidChange(() => this.refresh()));
 
         this.disposables.push(vscode.workspace.onDidChangeConfiguration((e) => {
             if (e.affectsConfiguration('launch')) {
@@ -68,9 +70,7 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
     private async getStageNodes(): Promise<StageNode[]> {
         const files = await getProjectPlanFiles();
 
-        // When no plan files exist, return no nodes so VS Code renders the
-        // configured viewsWelcome content (the "Create New Project With Copilot" button).
-        if (!files.hasAny) {
+        if (!files.hasAny && !projectSubmissionState.isPending) {
             return [];
         }
 

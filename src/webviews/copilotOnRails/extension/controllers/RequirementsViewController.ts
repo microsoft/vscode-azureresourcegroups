@@ -12,6 +12,7 @@ import { ext } from "../../../../extensionVariables";
 import { type RequirementsData, type RequirementsExecutionMode } from "../../views/utils/parseRequirements";
 import { AUTOPILOT_QUERY_MARKER, enableAutopilot } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { openLoadingView } from "../openLoadingView";
 import { markRequirementsSubmitted } from "../openRequirementsView";
 
 interface SubmitMessage {
@@ -106,6 +107,12 @@ export class RequirementsViewController extends WebviewController<Record<string,
 
         const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
         if (await ensureAgentInstructions('azure-project-plan')) {
+            this.panel.dispose();
+            openLoadingView({
+                stage: 0,
+                title: vscode.l10n.t('Generating your project plan…'),
+                message: vscode.l10n.t('Copilot is using your answers to build .azure/project-plan.md. The plan view will open automatically when it’s ready.'),
+            });
             const baseQuery = vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath);
             const query = autopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery;
             try {
@@ -120,7 +127,5 @@ export class RequirementsViewController extends WebviewController<Record<string,
                 // Chat may not be available; saving still succeeded.
             }
         }
-
-        this.panel.dispose();
     }
 }
