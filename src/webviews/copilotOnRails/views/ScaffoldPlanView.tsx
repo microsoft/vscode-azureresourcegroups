@@ -52,9 +52,9 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
 
     const pageFeedbackMap = new Map<string, string[]>();
     for (const item of pageFeedback) {
-        const existing = pageFeedbackMap.get(item.pageTitle) ?? [];
-        existing.push(`- ${item.text.trim()}`);
-        pageFeedbackMap.set(item.pageTitle, existing);
+        const existingFeedback = pageFeedbackMap.get(item.pageTitle) ?? [];
+        existingFeedback.push(`- ${item.text.trim()}`);
+        pageFeedbackMap.set(item.pageTitle, existingFeedback);
     }
 
     const lines: string[] = [
