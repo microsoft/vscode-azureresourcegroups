@@ -64,6 +64,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         if (!(await ensureAgentInstructions('azure-project-scaffold'))) {
             return;
         }
+        await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: 'azure-project-scaffold',
             query: 'I approve the plan.',

@@ -59,6 +59,15 @@
             gap: 4px;
             flex-shrink: 0;
 
+            .autopilotSwitch {
+                .autopilotLabel {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    font-size: 0.9em;
+                }
+            }
+
             .progress {
                 font-size: 0.8em;
                 color: var(--vscode-descriptionForeground);

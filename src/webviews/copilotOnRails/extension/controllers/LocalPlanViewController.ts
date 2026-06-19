@@ -61,6 +61,12 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
             return false;
         }
+        if (!isFeedback) {
+            // Fresh chat session for the approval hand-off so the next phase starts with a
+            // clean context window. Feedback/revision stays in the current session because
+            // it iterates on the plan with the existing conversation.
+            await vscode.commands.executeCommand('workbench.action.chat.newChat');
+        }
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: azureDebugPlanAgent,
             query,

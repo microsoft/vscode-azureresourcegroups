@@ -163,7 +163,7 @@ Store realistic mock data in `tests/fixtures/`:
 For dynamic mock data, use factory functions:
 ```typescript
 // tests/fixtures/itemFactory.ts
-import { Item, CreateItemRequest } from '../../src/shared/types/entities';
+import { Item, CreateItemRequest } from '../../services/shared/types/entities';
 
 let counter = 0;
 
@@ -234,7 +234,7 @@ public static class ItemFixtures
 ```typescript
 // tests/mocks/mockDatabase.ts
 import { IDatabaseService } from '../../src/services/interfaces/IDatabaseService';
-import { Item } from '../../src/shared/types/entities';
+import { Item } from '../../services/shared/types/entities';
 
 export function createMockDatabase(initialData: Item[] = []): IDatabaseService {
   const store = new Map<string, Item>();

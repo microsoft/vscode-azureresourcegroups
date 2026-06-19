@@ -413,7 +413,7 @@ describe('errorHandler', () => {
 ```typescript
 // tests/validation/itemSchema.test.ts
 import { describe, it, expect } from 'vitest';
-import { createItemSchema } from '../../src/shared/schemas/validation';
+import { createItemSchema } from '../../services/shared/schemas/validation';
 
 describe('createItemSchema', () => {
   it('should pass with valid input', () => {

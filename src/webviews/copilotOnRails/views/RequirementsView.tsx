@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, Input, Textarea, Tooltip } from '@fluentui/react-components';
-import { CheckboxUncheckedRegular, CheckmarkRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { Button, Input, Switch, Textarea, Tooltip } from '@fluentui/react-components';
+import { CheckboxUncheckedRegular, CheckmarkRegular, RocketRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import './styles/requirementsView.scss';
-import { inferInputType, isAnswerEmpty, type RequirementsAnswer, type RequirementsData, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice } from './utils/parseRequirements';
+import { inferInputType, isAnswerEmpty, type RequirementsAnswer, type RequirementsData, type RequirementsExecutionMode, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice } from './utils/parseRequirements';
 
 interface DraftMap {
     [questionId: string]: RequirementsAnswer;
@@ -85,6 +85,7 @@ export const RequirementsView = (): JSX.Element => {
     const [drafts, setDrafts] = useState<DraftMap>({});
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [autopilot, setAutopilot] = useState(false);
     const { vscodeApi } = useContext(WebviewContext);
 
     useEffect(() => {
@@ -93,6 +94,7 @@ export const RequirementsView = (): JSX.Element => {
             if (message?.command === 'setRequirementsData') {
                 const incoming = message.data as RequirementsData;
                 setData(incoming);
+                setAutopilot(incoming.executionMode === 'auto');
                 // Seed drafts from the file. When a question is missing an answer
                 // but has a recommendedChoice, pre-select the recommendation so
                 // the user just has to review-and-submit rather than fill from
@@ -167,14 +169,16 @@ export const RequirementsView = (): JSX.Element => {
 
         setIsSaving(true);
         setSaveError(null);
+        const executionMode: RequirementsExecutionMode = autopilot ? 'auto' : 'guided';
         vscodeApi.postMessage({
             command: 'submitRequirements',
             data: {
                 ...data,
+                executionMode,
                 questions: updatedQuestions,
             },
         });
-    }, [data, canSubmit, drafts, vscodeApi]);
+    }, [data, canSubmit, drafts, autopilot, vscodeApi]);
 
     if (!data) {
         return (
@@ -215,6 +219,24 @@ export const RequirementsView = (): JSX.Element => {
                     </p>
                 </div>
                 <div className='headerActions'>
+                    <Tooltip
+                        relationship='label'
+                        content='Autopilot runs the entire workflow — plan, scaffold, and local debugging setup — end-to-end without stopping for approvals, and auto-approves all tool actions (file edits and terminal commands). You’ll confirm once before it starts.'
+                    >
+                        <Switch
+                            className='autopilotSwitch'
+                            checked={autopilot}
+                            onChange={(_, switchData) => setAutopilot(switchData.checked)}
+                            label={
+                                <span className='autopilotLabel'>
+                                    <RocketRegular />
+                                    Autopilot
+                                </span>
+                            }
+                            labelPosition='before'
+                            disabled={isSaving}
+                        />
+                    </Tooltip>
                     <Tooltip
                         relationship='label'
                         content={
