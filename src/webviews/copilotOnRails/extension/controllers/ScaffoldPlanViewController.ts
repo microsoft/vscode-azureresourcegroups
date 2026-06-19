@@ -11,6 +11,7 @@ import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/age
 import { ext } from "../../../../extensionVariables";
 import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { openLoadingView } from "../openLoadingView";
 import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
@@ -63,11 +64,17 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         if (!(await ensureAgentInstructions('azure-project-scaffold'))) {
             return;
         }
+        await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: 'azure-project-scaffold',
             query: 'I approve the plan.',
         });
         this.panel.dispose();
+        openLoadingView({
+            stage: 0,
+            title: vscode.l10n.t('Scaffolding your project…'),
+            message: vscode.l10n.t('Copilot is creating your project files. For progress please view the Copilot chat.'),
+        });
     }
 
     updatePlanData(planData: PlanData, sourceFileUri?: vscode.Uri): void {

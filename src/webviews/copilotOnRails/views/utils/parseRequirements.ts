@@ -9,6 +9,14 @@ export type RequirementsStatus = 'inferred' | 'needs_input' | 'confirmed' | stri
 
 export type RequirementsRecommendedChoice = string | string[];
 
+/**
+ * How the create-project workflow should run after the requirements form is
+ * submitted. `'guided'` keeps the default step-by-step flow with preview
+ * webviews and explicit approval gates. `'auto'` ("autopilot") runs the entire
+ * plan → scaffold → local debug chain end-to-end without further interaction.
+ */
+export type RequirementsExecutionMode = 'guided' | 'auto';
+
 export interface RequirementsOption {
     label: string;
     description?: string;
@@ -42,6 +50,7 @@ export interface RequirementsData {
     generatedAt?: string;
     mode?: string;
     summary?: string;
+    executionMode?: RequirementsExecutionMode;
     workspaceSignals?: RequirementsWorkspaceSignals;
     questions: RequirementsQuestion[];
     parseError?: {
@@ -158,11 +167,17 @@ export function parseRequirementsJson(content: string): RequirementsData {
         ? raw.workspaceSignals as RequirementsWorkspaceSignals
         : undefined;
 
+    const executionMode: RequirementsExecutionMode | undefined =
+        raw.executionMode === 'auto' || raw.executionMode === 'guided'
+            ? raw.executionMode
+            : undefined;
+
     return {
         schemaVersion: typeof raw.schemaVersion === 'string' ? raw.schemaVersion : undefined,
         generatedAt: typeof raw.generatedAt === 'string' ? raw.generatedAt : undefined,
         mode: typeof raw.mode === 'string' ? raw.mode : undefined,
         summary: typeof raw.summary === 'string' ? raw.summary : undefined,
+        executionMode,
         workspaceSignals,
         questions,
     };

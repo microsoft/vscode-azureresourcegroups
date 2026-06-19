@@ -28,9 +28,28 @@
         justify-content: space-between;
         gap: 12px;
         margin-bottom: 0;
+        // Allow the component-library badge to wrap to a new line at high
+        // zoom levels rather than overlapping the "UI Preview" heading.
+        flex-wrap: wrap;
+        row-gap: 8px;
 
         h2 {
             margin: 0;
+            min-width: 0;
+            flex: 0 1 auto;
+            word-break: break-word;
+        }
+
+        // Fluent UI Badge — keep the full label visible at all zoom levels
+        // instead of being truncated by its default fixed width / ellipsis.
+        .fui-Badge {
+            height: auto;
+            min-height: 20px;
+            max-width: 100%;
+            white-space: normal;
+            text-align: left;
+            padding-top: 2px;
+            padding-bottom: 2px;
         }
     }
 

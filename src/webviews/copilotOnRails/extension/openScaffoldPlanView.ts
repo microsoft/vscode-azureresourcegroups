@@ -6,10 +6,14 @@
 import * as vscode from "vscode";
 import { type PlanData, parseScaffoldPlanMarkdown } from "../views/utils/parseScaffoldPlanMarkdown";
 import { ScaffoldPlanViewController } from "./controllers/ScaffoldPlanViewController";
+import { closeLoadingView } from "./openLoadingView";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<PlanData, ScaffoldPlanViewController>({
-    createController: (data, uri) => new ScaffoldPlanViewController(data, uri),
+    createController: (data, uri) => {
+        closeLoadingView();
+        return new ScaffoldPlanViewController(data, uri);
+    },
     updateController: (controller, data, uri) => controller.updatePlanData(data, uri),
 });
 
