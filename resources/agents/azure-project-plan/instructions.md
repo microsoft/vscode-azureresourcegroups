@@ -74,10 +74,10 @@ Infer everything possible from the Step 1 scan; gather the rest through the requ
 
 #### 2a. Inference — pick the most likely answer for every question
 
-For each canonical question (Q1–Q6), use the Step 1 scan + the user's prompt to fill:
+For each question (shared + per-service), use the Step 1 scan + the user's prompt to fill:
 
-- **`answer`** — the inferred value when confident, else `null` (`[]` for the array-typed Q3).
-- **`recommendedChoice`** — always provide one (string for Q1/Q2/Q4/Q5/Q6, `string[]` for Q3); becomes the **pre-selected** option in the webview, even for `needs_input`.
+- **`answer`** — the inferred value when confident, else `null` (`[]` for array-typed `dataStores`).
+- **`recommendedChoice`** — always provide one (string for single-select questions, `string[]` for `dataStores`); becomes the **pre-selected** option in the webview, even for `needs_input`.
 
 Then set **`status`**:
 
@@ -104,22 +104,68 @@ Then set **`status`**:
 
 Anything the user stated explicitly in their prompt ("build me a TypeScript Functions API with PostgreSQL") is also `inferred` — don't re-ask.
 
-#### 2b. The six canonical questions
+#### 2b. Services and questions
 
-Always emit **all six** in JSON, in this order, regardless of status. Each option is `{ label, description }` (label = the value picked; description = one-line muted hint). `multiSelect: true` lets the user tick more than one; `allowFreeformInput: false` for questions where free text is meaningless (e.g. the `Language` question).
+The requirements JSON has two top-level concepts:
 
-| # | `id`            | `category`  | `header`              | `question`                                              | Multi-select | Free-form input | `options` (label + description)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Sensible default for `recommendedChoice`                                       |
-|---|-----------------|-------------|-----------------------|---------------------------------------------------------|--------------|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| 1 | `appType`       | `app`       | App Type              | What type of application are you building?              | no           | yes             | `API only` (Backend services without a UI), `SPA + API` (Single-page app with REST/GraphQL backend), `Full-stack SSR` (Server-rendered pages plus API), `Static site + API` (Pre-built static frontend with serverless API), `Background worker` (Headless queue/timer-driven worker)                                                                                                                                                                                                                                                                                          | `SPA + API`                                                                   |
-| 2 | `runtime`       | `runtime`   | Language              | Which programming language?                             | no           | no              | `TypeScript` (Node.js + TypeScript on Azure Functions), `Python` (Python on Azure Functions), `C# (.NET)` (Isolated worker on .NET 10)                                                                                                                                                                                                                                                                                                                                                                                                                                       | `TypeScript`                                                                  |
-| 3 | `dataStores`    | `data`      | Data Stores           | Which data stores does your app need?                   | **yes**      | no              | `Blob Storage` (Store files and images), `Queue Storage` (Async message queue), `PostgreSQL` (Relational database), `CosmosDB` (NoSQL document database), `Redis` (In-memory cache), `Azure SQL` (Managed SQL Server)                                                                                                                                                                                                                                                                                                                                                          | Best-guess subset (e.g. `["PostgreSQL"]`)                                     |
-| 4 | `frontend`      | `frontend`  | Frontend Framework    | Which frontend framework?                               | no           | yes             | `React` (React + Vite), `Vue` (Vue + Vite), `Angular` (Angular CLI), `Svelte` (Svelte + Vite), `None` (No frontend)                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `React`                                                                       |
-| 5 | `features`      | `app`       | Features              | Describe the features or API routes your app needs.    | no           | n/a             | *(omit `options` — free-text question, no choices)*                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Short description distilled from the user's prompt                            |
-| 6 | `auth`          | `auth`      | Authentication        | Does your app need authentication?                      | no           | **yes (always)** | `No auth` (Public app, no login required), `Mock auth middleware` (HMAC-signed test tokens — testable without an IdP), `Microsoft Entra ID` (Workforce identity — formerly Azure AD; sign in with org/Microsoft accounts), `Microsoft Entra External ID` (Customer identity — formerly Azure AD B2C; sign-up + social logins), `Auth0` (Third-party IdP — social + enterprise connections), `Clerk` (Drop-in user management with prebuilt UI)                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `Mock auth middleware` if the app exposes user data, else `No auth`           |
+1. **`services[]`** — detected service roots (backends, frontends, workers). Each gets a per-service question section in the webview.
+2. **`questions[]`** — questions, either scoped to a service (`serviceId` set) or shared/cross-cutting (`serviceId` omitted).
 
-**`recommendedChoice` — always provide one, even for `inferred`:** for `inferred`, usually equal to `answer`; for `needs_input`, your best guess (bias to the most common Azure-friendly choice) so the user can review-and-submit; for `dataStores` it's a `string[]` matching the `answer` shape.
+##### Services
 
-> ❌ **DO NOT** ask the user which .NET version to target. If Q2 = `C# (.NET)`, the target framework is **always `net10.0`** (with `global.json` pinned to `10.0.*`). Only downgrade when the user **explicitly and unambiguously** states an older version (e.g. "target .NET 8", "we need net9.0", "stuck on 8.0 LTS"). Do not interpret "use a stable version" / "use LTS" / "use what you have installed" as a request for an older framework — default to 10.
+For each runnable service root detected in the workspace (or planned from the user's prompt), emit a service entry:
+
+```json
+{
+  "id": "{kebab-case-id}",
+  "label": "{Human-readable name, e.g. Payments API}",
+  "role": "{backend | frontend | worker}",
+  "root": "{workspace-relative path, e.g. ./api}"
+}
+```
+
+- **`role`** — `backend` for APIs/Azure Functions, `frontend` for SPAs/web apps, `worker` for background/queue processors.
+- **`root`** — workspace-relative path to the service directory. Omit for NEW-mode when no directories exist yet.
+- Derive `id` from the project manifest name (e.g. `package.json` → `"name"`) when available, else from the directory name.
+
+##### Per-service questions
+
+For **each service**, emit these questions with `"serviceId": "{service.id}"`:
+
+| `id` pattern | `header` | `question` | Options / Type | Notes |
+|---|---|---|---|---|
+| `{serviceId}:language` | Language | Which programming language for {label}? | `TypeScript`, `Python`, `C# (.NET)` for backends/workers; `TypeScript`, `JavaScript` for frontends | `allowFreeformInput: false` |
+| `{serviceId}:framework` | Framework | Which framework for {label}? | Frontends: `React + Vite`, `Vue + Vite`, `Angular`, `Svelte`; Backends: `Azure Functions`, etc. | `allowFreeformInput: true`; omit for backends when Azure Functions is the only option |
+| `{serviceId}:features` | Features | Describe the features or API routes for {label}. | Free text (omit `options`) | |
+
+Use `category: "service"` for all per-service questions. The webview groups them under the service card, not by category.
+
+##### Shared questions (no `serviceId`)
+
+These are asked once for the whole project. Always emit all of them:
+
+| # | `id` | `category` | `header` | `question` | Multi-select | Free-form | `options` | Default `recommendedChoice` |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `dataStores` | `data` | Data Stores | Which data stores does your app need? | **yes** | no | `Blob Storage`, `Queue Storage`, `PostgreSQL`, `CosmosDB`, `Redis`, `Azure SQL` | Best-guess subset |
+| 2 | `auth` | `auth` | Authentication | Does your app need authentication? | no | **yes** | `No auth`, `Mock auth middleware`, `Microsoft Entra ID`, `Microsoft Entra External ID`, `Auth0`, `Clerk` | `Mock auth middleware` if user data, else `No auth` |
+
+> The old `appType`, `runtime`, and `frontend` questions are gone. **App Type is no longer asked** — it's derived from the detected `services` (see below). Language and framework are now per-service questions.
+
+##### App Type is derived, not asked
+
+Do **not** emit an `appType` question. Instead, derive the plan's App Type from the `services` array:
+
+| Detected services | Derived App Type |
+|---|---|
+| At least one `frontend` + at least one `backend` | `SPA + API` |
+| Only `backend` service(s) | `API only` |
+| Only `worker` service(s) | `Background worker` |
+| `frontend` that is server-rendered (Next.js SSR, etc.) | `Full-stack SSR` |
+| Static `frontend` + `backend` | `Static site + API` |
+
+Use this derived value to fill Section 1 of the plan and to decide whether to emit the Frontend / Design System sections.
+
+Each option is `{ label, description }` as before. Include `multiSelect`, `allowFreeformInput`, `recommendedChoice`, `status`, `answer`, and `rationale` on every question.
 
 #### 2c. Write `.azure/requirements.json`
 
@@ -127,59 +173,68 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 
 ```json
 {
-  "schemaVersion": "1",
-  "generatedAt": "{ISO date, e.g. 2026-06-02}",
+  "schemaVersion": "2",
+  "generatedAt": "{ISO date}",
   "mode": "{NEW | AUGMENT}",
-  "summary": "{1–2 sentences describing what the user is building, in your own words}",
+  "summary": "{1–2 sentences describing what the user is building}",
   "workspaceSignals": {
     "decision": "{NEW | AUGMENT}",
     "decisionReason": "{one sentence on why}",
     "detectedFiles": ["{relative paths from Step 1, if any}"]
   },
+  "services": [
+    { "id": "functions-api", "label": "Functions API", "role": "backend", "root": "./api" },
+    { "id": "web-app", "label": "Customer Portal", "role": "frontend", "root": "./web" }
+  ],
   "questions": [
     {
-      "id": "appType",
-      "category": "app",
-      "header": "App Type",
-      "question": "What type of application are you building?",
-      "multiSelect": false,
-      "allowFreeformInput": true,
-      "options": [
-        { "label": "API only", "description": "Backend services without a UI" },
-        { "label": "SPA + API", "description": "Single-page app with REST/GraphQL backend" },
-        { "label": "Full-stack SSR", "description": "Server-rendered pages plus API" },
-        { "label": "Static site + API", "description": "Pre-built static frontend with serverless API" },
-        { "label": "Background worker", "description": "Headless queue/timer-driven worker" }
-      ],
-      "recommendedChoice": "SPA + API",
-      "status": "needs_input",
-      "answer": null,
-      "rationale": "User's prompt mentions a frontend plus REST endpoints."
-    },
-    {
-      "id": "runtime",
-      "category": "runtime",
-      "header": "Language",
-      "question": "Which programming language?",
-      "multiSelect": false,
-      "allowFreeformInput": false,
+      "id": "functions-api:language", "category": "service", "serviceId": "functions-api",
+      "header": "Language", "question": "Which programming language for Functions API?",
+      "multiSelect": false, "allowFreeformInput": false,
       "options": [
         { "label": "TypeScript", "description": "Node.js + TypeScript on Azure Functions" },
         { "label": "Python", "description": "Python on Azure Functions" },
         { "label": "C# (.NET)", "description": "Isolated worker on .NET 10" }
       ],
-      "recommendedChoice": "TypeScript",
-      "status": "inferred",
-      "answer": "TypeScript",
-      "rationale": "Detected `package.json` with TypeScript devDependency."
+      "recommendedChoice": "TypeScript", "status": "inferred", "answer": "TypeScript",
+      "rationale": "Detected package.json with TypeScript devDependency."
     },
     {
-      "id": "dataStores",
-      "category": "data",
-      "header": "Data Stores",
+      "id": "functions-api:features", "category": "service", "serviceId": "functions-api",
+      "header": "Features", "question": "Describe the features or API routes for Functions API.",
+      "multiSelect": false,
+      "recommendedChoice": "Auth, photo upload/list/delete, AI captions",
+      "status": "inferred", "answer": "Auth, photo upload/list/delete, AI captions",
+      "rationale": "Distilled from the user's prompt."
+    },
+    {
+      "id": "web-app:language", "category": "service", "serviceId": "web-app",
+      "header": "Language", "question": "Which programming language for Customer Portal?",
+      "multiSelect": false, "allowFreeformInput": false,
+      "options": [
+        { "label": "TypeScript", "description": "TypeScript with type safety" },
+        { "label": "JavaScript", "description": "Plain JavaScript" }
+      ],
+      "recommendedChoice": "TypeScript", "status": "inferred", "answer": "TypeScript",
+      "rationale": "TypeScript is the most popular choice for modern SPAs."
+    },
+    {
+      "id": "web-app:framework", "category": "service", "serviceId": "web-app",
+      "header": "Framework", "question": "Which frontend framework for Customer Portal?",
+      "multiSelect": false, "allowFreeformInput": true,
+      "options": [
+        { "label": "React + Vite", "description": "React with Vite bundler" },
+        { "label": "Vue + Vite", "description": "Vue with Vite bundler" },
+        { "label": "Angular", "description": "Angular CLI" },
+        { "label": "Svelte", "description": "Svelte + Vite" }
+      ],
+      "recommendedChoice": "React + Vite", "status": "needs_input", "answer": null,
+      "rationale": "React is the most common pick for SPA + API on Azure."
+    },
+    {
+      "id": "dataStores", "category": "data", "header": "Data Stores",
       "question": "Which data stores does your app need?",
-      "multiSelect": true,
-      "allowFreeformInput": false,
+      "multiSelect": true, "allowFreeformInput": false,
       "options": [
         { "label": "Blob Storage", "description": "Store files and images" },
         { "label": "Queue Storage", "description": "Async message queue" },
@@ -189,59 +244,23 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
         { "label": "Azure SQL", "description": "Managed SQL Server" }
       ],
       "recommendedChoice": ["Blob Storage", "PostgreSQL"],
-      "status": "inferred",
-      "answer": ["Blob Storage", "PostgreSQL"],
-      "rationale": "Photo files map to Blob Storage; users, couples, photo metadata, and AI captions are relational and best modeled in PostgreSQL."
+      "status": "inferred", "answer": ["Blob Storage", "PostgreSQL"],
+      "rationale": "Photo files → Blob Storage; relational data → PostgreSQL."
     },
     {
-      "id": "frontend",
-      "category": "frontend",
-      "header": "Frontend Framework",
-      "question": "Which frontend framework?",
-      "multiSelect": false,
-      "allowFreeformInput": true,
-      "options": [
-        { "label": "React", "description": "React + Vite" },
-        { "label": "Vue", "description": "Vue + Vite" },
-        { "label": "Angular", "description": "Angular CLI" },
-        { "label": "Svelte", "description": "Svelte + Vite" },
-        { "label": "None", "description": "No frontend" }
-      ],
-      "recommendedChoice": "React",
-      "status": "needs_input",
-      "answer": null,
-      "rationale": "React is the most common pick for SPA + API on Azure."
-    },
-    {
-      "id": "features",
-      "category": "app",
-      "header": "Features",
-      "question": "Describe the features or API routes your app needs.",
-      "multiSelect": false,
-      "recommendedChoice": "Auth, pairing, photo upload/list/delete, AI captions with fallback, scrapbook UI",
-      "status": "inferred",
-      "answer": "Auth, pairing, photo upload/list/delete, AI captions with fallback, scrapbook UI",
-      "rationale": "Distilled from the user's prompt."
-    },
-    {
-      "id": "auth",
-      "category": "auth",
-      "header": "Authentication",
+      "id": "auth", "category": "auth", "header": "Authentication",
       "question": "Does your app need authentication?",
-      "multiSelect": false,
-      "allowFreeformInput": true,
+      "multiSelect": false, "allowFreeformInput": true,
       "options": [
         { "label": "No auth", "description": "Public app, no login required" },
         { "label": "Mock auth middleware", "description": "HMAC-signed test tokens — testable without an IdP" },
-        { "label": "Microsoft Entra ID", "description": "Workforce identity — sign in with org or Microsoft accounts (formerly Azure AD)" },
-        { "label": "Microsoft Entra External ID", "description": "Customer identity — sign-up plus social logins (formerly Azure AD B2C)" },
+        { "label": "Microsoft Entra ID", "description": "Workforce identity — sign in with org or Microsoft accounts" },
+        { "label": "Microsoft Entra External ID", "description": "Customer identity — sign-up plus social logins" },
         { "label": "Auth0", "description": "Third-party IdP — social and enterprise connections" },
         { "label": "Clerk", "description": "Drop-in user management with prebuilt UI" }
       ],
-      "recommendedChoice": "Mock auth middleware",
-      "status": "needs_input",
-      "answer": null,
-      "rationale": "App handles user data — start with mock auth so every protected route is testable without an external IdP; pick a real IdP (Entra ID, External ID, Auth0, Clerk) or type your own when you're ready."
+      "recommendedChoice": "Mock auth middleware", "status": "needs_input", "answer": null,
+      "rationale": "App handles user data — start with mock auth for testability."
     }
   ]
 }
@@ -249,24 +268,28 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 
 **Rules for the JSON:**
 
-- Always emit all six questions in `id` order: `appType`, `runtime`, `dataStores`, `frontend`, `features`, `auth`. Never omit one.
-- Always include a short `header` (column heading style — "App Type", "Data Stores") plus the full `question` text.
-- Always include `multiSelect` (boolean). Only Q3 (`dataStores`) is `true`; the rest are `false`.
-- Always include `allowFreeformInput` (boolean) for questions that have `options`. The value per question is fixed — do not change it based on the user's prompt:
-  - `appType` → `true`
-  - `runtime` → `false`
+- Always emit a `services` array with one entry per detected/planned service.
+- For each service, emit per-service questions with `serviceId` matching the service's `id`. Use the `id` pattern `{serviceId}:{questionType}` (e.g. `functions-api:language`).
+- Frontend services must only offer `TypeScript` / `JavaScript` for their language question — never `Python` or `C# (.NET)`.
+- Backend/worker services offer `TypeScript`, `Python`, `C# (.NET)` for language.
+- Always emit both shared questions: `dataStores`, `auth`. Never omit one.
+- **Do not emit an `appType` question** — App Type is derived from the `services` array (see the derivation table above).
+- Always include a short `header` plus the full `question` text on every question.
+- Always include `multiSelect` (boolean). Only `dataStores` is `true`.
+- Always include `allowFreeformInput` (boolean) for questions with `options`:
+  - Language questions → `false`
+  - Framework questions → `true`
   - `dataStores` → `false`
-  - `frontend` → **`true`** (users frequently want a framework not in the list — Solid, Qwik, Next.js, Remix, Astro, etc. — so always allow a custom answer)
-  - `auth` → **`true`** (users frequently want a real IdP like Entra ID, Auth0, Clerk, Firebase Auth, etc. — never emit `false` here, even when one of the listed options seems to fit; if you find yourself writing `"allowFreeformInput": false` for `auth`, stop and re-read this rule)
-  For Q5 `features` (free text, no `options`), omit `allowFreeformInput` entirely.
-- Use the field name **`rationale`** (not `reason`, not `why`, not `explanation`). The webview parser falls back to `reason` for resilience, but `rationale` is canonical — always write `rationale`.
-- Always include `options` (array of `{ label, description }`), except for Q5 `features`, which omits `options` so the webview renders a textarea.
-- Every option object must have a `label` (the value the user picks) and a short `description` (one phrase, displayed in muted text under the label).
-- Always include `recommendedChoice`. For single-select questions it's a string; for `dataStores` it's a `string[]`. The webview pre-selects it so the user just reviews and submits.
-- For `inferred` questions, fill in `answer` with the actual value (a string for Q1/Q2/Q4/Q5/Q6, a `string[]` for Q3). For `needs_input` questions, set `answer: null` (or `[]` for Q3).
-- Q3 (`dataStores`) is the only multi-select question — `answer`, `recommendedChoice`, and any future submitted answer are always `string[]`. Use `[]` for `answer` when `needs_input` (never `null`).
-- Q5 (`features`) is free text. Omit both `options` and `allowFreeformInput`. When `inferred` from the user's prompt, store the description verbatim in both `answer` and `recommendedChoice`.
-- Strict JSON — no comments in the actual file, no trailing commas.
+  - `auth` → **`true`** (always — never `false`, even when a listed option fits)
+  For free-text questions (features), omit `allowFreeformInput`.
+- Use the field name **`rationale`** (not `reason`).
+- Always include `options` (array of `{ label, description }`), except for feature questions.
+- Always include `recommendedChoice`. For single-select it's a string; for `dataStores` it's a `string[]`.
+- For `inferred` questions, fill in `answer`. For `needs_input`, set `answer: null` (`[]` for `dataStores`).
+- `dataStores` is the only multi-select question — `answer` and `recommendedChoice` are always `string[]`.
+- Strict JSON — no comments, no trailing commas.
+
+> ❌ **DO NOT** ask the user which .NET version to target. If a service's language = `C# (.NET)`, the target framework is **always `net10.0`**. Only downgrade when the user explicitly states an older version.
 
 #### 2d. Hand off to the webview — then stop
 
@@ -274,7 +297,7 @@ Once the file is written, **stop**. Do NOT print the JSON, summarize inferences,
 
 #### 2e. Skip rule — only when the prompt is fully unambiguous
 
-If the prompt was extremely explicit (e.g. *"Azure Functions TypeScript API with PostgreSQL — no frontend, no auth, routes GET /widgets and POST /widgets"*) and every Q1–Q6 is `inferred` in Step 2a, you **may** skip writing `.azure/requirements.json` and go straight to Step 3. When in doubt, **write the file** — review is fast and cheap.
+If the prompt was extremely explicit (e.g. *"Azure Functions TypeScript API with PostgreSQL — no frontend, no auth, routes GET /widgets and POST /widgets"*) and every question is `inferred` in Step 2a, you **may** skip writing `.azure/requirements.json` and go straight to Step 3. When in doubt, **write the file** — review is fast and cheap.
 
 #### 2f. Re-entry — reading the answered file
 
@@ -309,7 +332,7 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 **Goal**: {Brief description of what the user is building}. The project is designed so that every module is independently testable.
 
-**App Type**: {API only | SPA + API | Full-stack SSR | Static + API | Background worker}
+**App Type**: {API only | SPA + API | Full-stack SSR | Static + API | Background worker — **derived from the detected services**, not asked}
 
 **Mode**: {NEW | AUGMENT}
 
@@ -337,16 +360,16 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ## 3. Frontend — Web App
 
-> Emit this section only when the app has a frontend (App Type ≠ `API only` / `Background worker`); omit it entirely otherwise. The frontend is its own service with its own Language and **Framework** (language-dependent: TypeScript/JavaScript → React/Vue/Angular/Svelte, C# → Blazor).
+> Emit this section only when `services` contains a `frontend` service (derived App Type ≠ `API only` / `Background worker`); omit it entirely otherwise. The frontend is its own service with its own Language and **Framework**. Frontend Language is always **JavaScript or TypeScript** — even when the backend uses Python or C#, the frontend is a JS/TS app.
 
 | Component | Technology |
 |-----------|-----------|
-| **Language** | {TypeScript / JavaScript / C#} |
-| **Framework** | {React + Vite / Vue + Vite / Angular / Svelte / Blazor (C# only)} |
-| **Package Manager** | {npm / pnpm / dotnet (NuGet)} |
-| **Test Runner** | {vitest / jest / xUnit} |
-| **Mocking Library** | {vi.mock / jest.mock / sinon / NSubstitute} |
-| **Test Command** | {npm test / dotnet test} |
+| **Language** | {TypeScript / JavaScript} |
+| **Framework** | {React + Vite / Vue + Vite / Angular / Svelte} |
+| **Package Manager** | {npm / pnpm} |
+| **Test Runner** | {vitest / jest} |
+| **Mocking Library** | {vi.mock / jest.mock / sinon} |
+| **Test Command** | {npm test} |
 
 ---
 
@@ -361,7 +384,7 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ## 5. Design System & UI
 
-> **MANDATORY when the plan includes a frontend.** Skip only for `API only` / `Background worker` app types. The plan-preview webview parses this section by title (`s.title.toLowerCase().includes('design system')`) and the scaffold quality contract reads `Component Library:` to decide which real library primitives to render.
+> **MANDATORY when `services` contains a `frontend` service.** Skip only when there is no frontend service (derived App Type `API only` / `Background worker`). The plan-preview webview parses this section by title (`s.title.toLowerCase().includes('design system')`) and the scaffold quality contract reads `Component Library:` to decide which real library primitives to render.
 
 **Component Library**: {Fluent UI v9 / Vuetify 3 / Skeleton UI / Angular Material / Pico.css — see PLANNING QUICK REFERENCE → Component Library Defaults}
 **Style Direction**: {1–2 sentence design intent, e.g. "Modern data-dense console with subtle elevations, rounded 4px corners, and an emphasis on scannable lists."}
@@ -461,7 +484,7 @@ For each page above, list 3–6 representative records using that page's primary
 
 > **Order matters — open the plan view BEFORE rendering the per-page previews.** The whole point of the loading state is that the user sees and can interact with the plan document while the page previews are still being generated. If you generate every preview page first and only then open the view, the plan appears late and the flow is broken.
 
-1. **Write the preview scaffolding** — Step 3.5a below: write `.azure/.preview-temp/theme.css` + `manifest.json` (every page `status: "pending"`). Skip this and all of Step 3.5 for `API only` / `Background worker` (no UI to preview).
+1. **Write the preview scaffolding** — Step 3.5a below: write `.azure/.preview-temp/theme.css` + `manifest.json` (every page `status: "pending"`). Skip this and all of Step 3.5 when there is no `frontend` service (derived App Type `API only` / `Background worker` — no UI to preview).
 2. **Open the plan preview NOW** — the workflow rules in `azure-project-plan.agent.md` call `azureResourceGroups.openPlanView`. Do this **immediately after `manifest.json` exists and before fanning out the page sub-agents**. The webview starts watching `.azure/.preview-temp/` and shows the plan document plus a *Generating preview…* placeholder per page.
 3. **Render the page previews** — Step 3.5b below: fan out one sub-agent per page. The view is already open; its file watcher flips each page from *Generating preview…* to the rendered HTML as soon as its `<slug>.html` lands.
 4. **Present plan**, ask for approval.
@@ -474,7 +497,7 @@ For each page above, list 3–6 representative records using that page's primary
 
 ### Step 3.5: Generate Frontend HTML/CSS Preview (parallel sub-agents)
 
-> **Skip entirely** when Section 5 was omitted (i.e. `appType` ∈ `API only` / `Background worker`). For all other app types this step is **mandatory** — without it, the plan-preview webview shows a permanent *Generating preview…* spinner and the user has no UI to approve.
+> **Skip entirely** when Section 5 was omitted (i.e. no `frontend` service — derived App Type `API only` / `Background worker`). For all other app types this step is **mandatory** — without it, the plan-preview webview shows a permanent *Generating preview…* spinner and the user has no UI to approve.
 
 **Output location:** `.azure/.preview-temp/` (note the leading dot on the folder name — it's a transient, gitignored scratch space). The scaffold agent reads it as a mock-up reference, then deletes it as the last step of scaffolding (see scaffold skill Step 13).
 

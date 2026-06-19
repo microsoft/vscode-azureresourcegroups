@@ -70,9 +70,17 @@ const fullySupportedOptions: Record<string, Set<string>> = {
     'Test Runner': new Set(['vitest', 'jest', 'mocha', 'pytest', 'xUnit', 'NUnit', 'MSTest']),
 };
 
+// Language choices allowed in frontend service sections. Frontends are always
+// JavaScript or TypeScript — Python and C# backends can pair with a JS/TS
+// frontend, but the frontend section itself must not offer those languages.
+const frontendLanguageOptions = ['JavaScript', 'TypeScript'];
+
 // Returns the dropdown options for a given field, narrowing to the language's
 // choices when the field is language-dependent.
-function optionsForField(field: string, language: string | undefined): string[] | undefined {
+function optionsForField(field: string, language: string | undefined, isFrontend?: boolean): string[] | undefined {
+    if (field === 'Language' && isFrontend) {
+        return frontendLanguageOptions;
+    }
     const byLanguage = languageDependentOptions[field];
     if (byLanguage) {
         const key = language?.trim();
@@ -736,9 +744,15 @@ interface SectionCardProps {
     onTableCellChange: (sectionIdx: number, contentIdx: number, rowIdx: number, colIdx: number, value: string) => void;
 }
 
+// True when a section title indicates a frontend service (e.g. "Frontend — Web App").
+function isFrontendSection(section: PlanSection): boolean {
+    return /\bfrontend\b/i.test(section.title);
+}
+
 const SectionCard = ({ section, sectionIdx, disabled, editedCells, onTableCellChange }: SectionCardProps): JSX.Element => {
     const [expanded, setExpanded] = useState(false);
     const isStack = isServiceStackSection(section);
+    const isFrontend = isFrontendSection(section);
 
     return (
         <div className='sectionCard'>
@@ -754,6 +768,7 @@ const SectionCard = ({ section, sectionIdx, disabled, editedCells, onTableCellCh
                         editedCells={editedCells}
                         onTableCellChange={onTableCellChange}
                         collapsedRows={isStack && !expanded ? collapsiblePlanRowLabels : undefined}
+                        isFrontend={isFrontend}
                     />
                 ))}
             </div>
@@ -822,10 +837,12 @@ interface ContentBlockProps {
     editedCells?: Set<CellKey>;
     /** Row labels to hide (collapsed state). When undefined, all rows are shown. */
     collapsedRows?: Set<string>;
+    /** When true, restricts Language choices to JavaScript/TypeScript. */
+    isFrontend?: boolean;
     onTableCellChange: (sectionIdx: number, contentIdx: number, rowIdx: number, colIdx: number, value: string) => void;
 }
 
-const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, collapsedRows, onTableCellChange }: ContentBlockProps): JSX.Element => {
+const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, collapsedRows, isFrontend, onTableCellChange }: ContentBlockProps): JSX.Element => {
     switch (item.type) {
         case 'keyValue':
             return (
@@ -856,7 +873,7 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                                     // each service narrows independently.
                                     const language = item.rows.find(r => r[0]?.trim() === 'Language')?.[ci];
                                     const options = ci > 0
-                                        ? optionsForField(componentName?.trim(), language)
+                                        ? optionsForField(componentName?.trim(), language, isFrontend)
                                         : undefined;
                                     const isEdited = options ? editedCells?.has(cellKey(sectionIdx, contentIdx, ri, ci)) : false;
                                     // Soft warning when an option outside the officially

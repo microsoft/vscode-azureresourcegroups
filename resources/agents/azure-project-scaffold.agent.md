@@ -15,7 +15,7 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 2. **Step A** — open the plan preview (see below). Mandatory.
 3. **Step B** — wait for the user's explicit approval of the plan. Mandatory.
 4. Scaffold the project.
-5. **Step C** — hand off to the next phase based on the user's "Next Step" answer.
+5. **Step C** — announce completion and **stop**. Do not prompt for next steps; a separate view handles verification / local dev.
 
 ### Step A — open the plan preview (MANDATORY, do not skip)
 
@@ -35,33 +35,9 @@ This is not optional and not conditional. Do not summarize the plan, do not ask 
 
 After Step A, **stop and wait** for explicit user approval of the plan. Do **not** begin scaffolding until the user confirms. Treat anything other than a clear approval (e.g. questions, edits, "looks good but…") as not-yet-approved.
 
-### Step C — handle the "Next Step" answer at the end of scaffolding
+### Step C — stop after scaffolding; do NOT prompt for the next step
 
-After the user answers the **"Next Step"** question that the skill asks at the end of scaffolding, **do not** print plain-text suggestions and **do not** start the next phase yourself. Call `run_vscode_command` with the matching command:
-
-**Answer "Verify project"** →
-
-```json
-{
-  "commandId": "azureResourceGroups.startProjectTest",
-  "name": "Start Project Test",
-  "skipCheck": true,
-  "args": ["Scaffolding is complete. Add test coverage and runtime validation to the scaffolded project."]
-}
-```
-
-**Answer "Set up local dev"** →
-
-```json
-{
-  "commandId": "azureResourceGroups.startLocalDevelopment",
-  "name": "Start Local Development",
-  "skipCheck": true,
-  "args": ["The project has been scaffolded. Now set up the local development environment so the user can start building and testing."]
-}
-```
-
-These commands exist — do not say they aren't registered. If `run_vscode_command` returns an error, report it to the user verbatim, but still attempt the call first. Do not skip the call.
+When scaffolding finishes, announce **"Scaffolding complete!"** and **stop**. Do **NOT** ask the user what to do next: do **NOT** call `vscode_askQuestions` (or any chat question API), and do **NOT** print plain-text "Verify project" / "Set up local dev" suggestions. A separate view surfaces those choices and invokes the matching command (`azureResourceGroups.startProjectTest` or `azureResourceGroups.startLocalDevelopment`) itself — you do not run those commands from chat.
 
 ### Frontend preview commands — working directory is mandatory
 

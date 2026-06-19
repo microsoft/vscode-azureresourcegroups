@@ -26,6 +26,21 @@ export interface RequirementsQuestion {
     recommendedChoice?: RequirementsRecommendedChoice;
     multiSelect?: boolean;
     allowFreeformInput?: boolean;
+    /** When set, ties this question to a specific service in `services[]`. */
+    serviceId?: string;
+}
+
+export type RequirementsServiceRole = 'frontend' | 'backend' | 'worker';
+
+export interface RequirementsService {
+    /** Unique ID for this service, matching `serviceId` on questions. */
+    id: string;
+    /** Human-readable label, e.g. "Payments API" or "Customer Portal". */
+    label: string;
+    /** Service role. */
+    role: RequirementsServiceRole;
+    /** Workspace-relative root path, e.g. "./api" or "./web". */
+    root?: string;
 }
 
 export interface RequirementsWorkspaceSignals {
@@ -43,6 +58,8 @@ export interface RequirementsData {
     mode?: string;
     summary?: string;
     workspaceSignals?: RequirementsWorkspaceSignals;
+    /** Detected services (frontends, backends, workers). */
+    services?: RequirementsService[];
     questions: RequirementsQuestion[];
     parseError?: {
         message: string;
@@ -115,6 +132,7 @@ export function parseRequirementsJson(content: string): RequirementsData {
                 : (typeof obj.reason === 'string' ? obj.reason : undefined);
             const multiSelect = typeof obj.multiSelect === 'boolean' ? obj.multiSelect : undefined;
             const allowFreeformInput = typeof obj.allowFreeformInput === 'boolean' ? obj.allowFreeformInput : undefined;
+            const serviceId = typeof obj.serviceId === 'string' && obj.serviceId.trim() ? obj.serviceId : undefined;
 
             let answer: RequirementsAnswer;
             if (obj.answer === null || obj.answer === undefined) {
@@ -150,6 +168,7 @@ export function parseRequirementsJson(content: string): RequirementsData {
                 recommendedChoice,
                 multiSelect,
                 allowFreeformInput,
+                serviceId,
             };
         })
         .filter((q): q is RequirementsQuestion => q !== undefined);
@@ -158,12 +177,27 @@ export function parseRequirementsJson(content: string): RequirementsData {
         ? raw.workspaceSignals as RequirementsWorkspaceSignals
         : undefined;
 
+    const servicesRaw = Array.isArray(raw.services) ? raw.services as unknown[] : [];
+    const services: RequirementsService[] = servicesRaw
+        .map((s): RequirementsService | undefined => {
+            if (!s || typeof s !== 'object') { return undefined; }
+            const obj = s as Record<string, unknown>;
+            const id = typeof obj.id === 'string' && obj.id.trim() ? obj.id : undefined;
+            const label = typeof obj.label === 'string' && obj.label.trim() ? obj.label : undefined;
+            const role = typeof obj.role === 'string' && ['frontend', 'backend', 'worker'].includes(obj.role) ? obj.role as RequirementsServiceRole : undefined;
+            if (!id || !label || !role) { return undefined; }
+            const root = typeof obj.root === 'string' ? obj.root : undefined;
+            return { id, label, role, root };
+        })
+        .filter((s): s is RequirementsService => s !== undefined);
+
     return {
         schemaVersion: typeof raw.schemaVersion === 'string' ? raw.schemaVersion : undefined,
         generatedAt: typeof raw.generatedAt === 'string' ? raw.generatedAt : undefined,
         mode: typeof raw.mode === 'string' ? raw.mode : undefined,
         summary: typeof raw.summary === 'string' ? raw.summary : undefined,
         workspaceSignals,
+        services: services.length > 0 ? services : undefined,
         questions,
     };
 }

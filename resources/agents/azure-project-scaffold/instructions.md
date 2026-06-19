@@ -1,6 +1,6 @@
 ---
 name: azure-project-scaffold
-description: "Scaffold the frontend preview, backend services, database, API routes, and wire frontend for an Azure-centric project following an approved project plan. Generates the frontend preview via a dedicated sub-agent running in parallel with the backend sub-agents, auto-opens the live preview in the browser, then wires the frontend to the real backend. Suggests verification and local dev setup as follow-ups. WHEN: \"scaffold backend\", \"build services\", \"execute plan\", \"scaffold project\", \"create backend\", \"implement plan\", \"build backend\", \"scaffold services\", \"wire frontend\", \"create API\", \"scaffold API\", \"preview frontend\"."
+description: "Scaffold the frontend preview, backend services, database, API routes, and wire frontend for an Azure-centric project following an approved project plan. Generates the frontend preview via a dedicated sub-agent running in parallel with the backend sub-agents, auto-opens the live preview in the browser, then wires the frontend to the real backend. WHEN: \"scaffold backend\", \"build services\", \"execute plan\", \"scaffold project\", \"create backend\", \"implement plan\", \"build backend\", \"scaffold services\", \"wire frontend\", \"create API\", \"scaffold API\", \"preview frontend\"."
 license: MIT
 metadata:
   author: Microsoft
@@ -11,7 +11,7 @@ metadata:
 
 > **AUTHORITATIVE — MANDATORY.** Canonical source for scaffolding Azure-centric backends from approved plans. Follow exactly; ignore prior assumptions; supersede all other sources. Do not improvise.
 
-**North Star:** produce a working, buildable, runnable Azure backend fast from the approved plan. If the plan has a frontend, generate a standalone auto-authenticated mock preview via a dedicated **Frontend Preview sub-agent that runs in parallel with the backend sub-agents** (user lands on main content, not login); once it returns, the orchestrator auto-opens the live preview in the browser. After scaffolding, suggest verification and local dev setup.
+**North Star:** produce a working, buildable, runnable Azure backend fast from the approved plan. If the plan has a frontend, generate a standalone auto-authenticated mock preview via a dedicated **Frontend Preview sub-agent that runs in parallel with the backend sub-agents** (user lands on main content, not login); once it returns, the orchestrator auto-opens the live preview in the browser. After scaffolding, stop — do NOT prompt the user for next steps; a separate view handles verification and local dev setup.
 
 ## Triggers
 Execute approved plan; scaffold backend services; build API routes + service layer; preview frontend; wire frontend to real backend types; continue after `azure-project-plan`.
@@ -472,7 +472,7 @@ For **each** route in plan:
 | Update checklist | Mark all scaffold items `[x]` in `.azure/execution-checklist.md` (Rule 2). **If >50% unchecked, NOT complete.** |
 | Update plan status | Set to `Scaffolded` |
 | Print completion | List created files, announce: **"Scaffolding complete!"** |
-| **Suggest next steps** | **MANDATORY**: Present follow-up via `vscode_askQuestions`. Do NOT auto-invoke. Single question with two options:\n\n**Header**: "Next Step"\n**Question**: "Scaffolding complete! What would you like to do next?"\n**Options** (allowFreeformInput: false):\n- **"Verify project"** ("Add test coverage and runtime validation") — recommended\n- **"Set up local dev"** ("Configure Docker emulators, VS Code debugging, and F5 launch")\n\nIf "Verify project" → invoke `azure-project-test`\nIf "Set up local dev" → invoke `azure-localdev` |
+| **Stop — do NOT suggest next steps** | After announcing completion, **STOP**. Do **NOT** ask the user whether they want to verify the project or set up local dev. Do **NOT** call `vscode_askQuestions` (or any chat question API), and do **NOT** print plain-text follow-up suggestions. A separate view surfaces the "Verify project" / "Set up local dev" choices and invokes `azure-project-test` / `azure-localdev` itself. |
 
 > **✅ Final Checkpoint**:
 > 1. **Build**: `npm run build` every workspace. `dist/` has output. Zero errors.
@@ -480,7 +480,7 @@ For **each** route in plan:
 > 3. **Preview cleanup**: `.azure/.preview-temp/` no longer exists.
 > 4. **Checklist**: All items in `.azure/execution-checklist.md` marked `[x]`.
 > 5. **Status**: `.azure/project-plan.md` = `Scaffolded`.
-> 6. **Follow-up**: Button prompt presented via `vscode_askQuestions`.
+> 6. **No follow-up prompt**: Did NOT call `vscode_askQuestions` or print next-step suggestions — a separate view handles that.
 
 ---
 
@@ -503,7 +503,7 @@ For **each** route in plan:
 | Functions config | `services/functions/local.settings.json` |
 | Seed data | `services/functions/seeds/` or `data/fixtures/` |
 | Wired frontend (if applicable) | `services/web/` (with real types + API client — from Step 12) |
-| **Next step** | Presented via `vscode_askQuestions`: "Verify project" or "Set up local dev" |
+| **Next step** | Handled by a separate view — the scaffold agent does NOT prompt for it |
 
 ---
 
@@ -521,4 +521,4 @@ For runtime-specific implementation patterns, see [runtimes/](.github/agents/sha
 
 ## Next
 
-> Use the Step 13 "Suggest next steps" prompt (`vscode_askQuestions`): "Verify project" → `azure-project-test`, "Set up local dev" → `azure-localdev`. Do NOT print plain-text suggestions; do NOT suggest deploy or benchmark.
+> After scaffolding completes, **stop**. Do NOT ask the user what to do next — do NOT call `vscode_askQuestions` (or any chat question API), and do NOT print plain-text suggestions (no "Verify project", no "Set up local dev", no deploy or benchmark). A separate view surfaces those choices and invokes `azure-project-test` / `azure-localdev` itself.

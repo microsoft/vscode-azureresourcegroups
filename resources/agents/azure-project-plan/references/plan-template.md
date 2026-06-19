@@ -23,7 +23,7 @@
 
 **Goal**: {Brief description of what the user is building}. The project is designed so that every module is independently testable. An AI agent can self-validate each component by running its test suite — if tests pass, the module is working as intended.
 
-**App Type**: {API only | SPA + API | Full-stack SSR | Static + API | Background worker}
+**App Type**: {API only | SPA + API | Full-stack SSR | Static + API | Background worker — **derived from the detected services**, not asked}
 
 **Mode**: {NEW | AUGMENT}
 - NEW: Scaffolding entire project from scratch
@@ -50,16 +50,16 @@
 
 ## 3. Frontend — Web App
 
-> Emit this section only when the app has a frontend (App Type ≠ `API only` / `Background worker`). Omit it entirely otherwise — do not leave an empty stack table. The frontend is its own service with its own Language and **Framework** (which is language-dependent: TypeScript/JavaScript → React/Vue/Angular/Svelte, C# → Blazor).
+> Emit this section only when `services` contains a `frontend` service (derived App Type ≠ `API only` / `Background worker`). Omit it entirely otherwise — do not leave an empty stack table. The frontend is its own service with its own Language and **Framework**. Frontend Language is always **JavaScript or TypeScript** — even when the backend uses Python or C#, the frontend is a JS/TS app.
 
 | Component | Technology |
 |-----------|-----------|
-| **Language** | {TypeScript / JavaScript / C# (.NET)} |
-| **Framework** | {React + Vite / Vue + Vite / Angular / Svelte / Blazor (C# only)} |
-| **Package Manager** | {npm / pnpm / dotnet (NuGet)} |
-| **Test Runner** | {vitest / jest / mocha+chai+sinon / xUnit} |
-| **Mocking Library** | {vi.mock (vitest) / jest.mock / sinon / Moq} |
-| **Test Command** | {npm test / dotnet test} |
+| **Language** | {TypeScript / JavaScript} |
+| **Framework** | {React + Vite / Vue + Vite / Angular / Svelte} |
+| **Package Manager** | {npm / pnpm} |
+| **Test Runner** | {vitest / jest / mocha+chai+sinon} |
+| **Mocking Library** | {vi.mock (vitest) / jest.mock / sinon} |
+| **Test Command** | {npm test} |
 
 ---
 

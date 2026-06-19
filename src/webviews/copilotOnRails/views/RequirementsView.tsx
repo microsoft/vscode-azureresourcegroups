@@ -8,7 +8,7 @@ import { CheckboxUncheckedRegular, CheckmarkRegular, SendRegular, WarningRegular
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useState, type JSX } from 'react';
 import './styles/requirementsView.scss';
-import { inferInputType, isAnswerEmpty, type RequirementsAnswer, type RequirementsData, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice } from './utils/parseRequirements';
+import { inferInputType, isAnswerEmpty, type RequirementsAnswer, type RequirementsData, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice, type RequirementsService, type RequirementsServiceRole } from './utils/parseRequirements';
 
 interface DraftMap {
     [questionId: string]: RequirementsAnswer;
@@ -61,6 +61,29 @@ function categoryLabel(category: string): string {
 function categorySortValue(category: string): number {
     const idx = CATEGORY_ORDER.indexOf(category);
     return idx === -1 ? CATEGORY_ORDER.length : idx;
+}
+
+const ROLE_LABELS: Record<RequirementsServiceRole, string> = {
+    backend: 'Backend',
+    frontend: 'Frontend',
+    worker: 'Worker',
+};
+
+const ROLE_ORDER: RequirementsServiceRole[] = ['backend', 'frontend', 'worker'];
+
+function roleSortValue(role: RequirementsServiceRole): number {
+    const idx = ROLE_ORDER.indexOf(role);
+    return idx === -1 ? ROLE_ORDER.length : idx;
+}
+
+interface ServiceGroup {
+    service: RequirementsService;
+    questions: RequirementsQuestion[];
+}
+
+interface CategoryGroup {
+    category: string;
+    questions: RequirementsQuestion[];
 }
 
 function defaultDraftFor(question: RequirementsQuestion): RequirementsAnswer {
@@ -120,19 +143,45 @@ export const RequirementsView = (): JSX.Element => {
         setSaveError(null);
     }, []);
 
-    const grouped = useMemo(() => {
+    const { serviceGroups, sharedGroups } = useMemo(() => {
         if (!data) {
-            return [] as { category: string; questions: RequirementsQuestion[] }[];
+            return { serviceGroups: [] as ServiceGroup[], sharedGroups: [] as CategoryGroup[] };
         }
-        const map = new Map<string, RequirementsQuestion[]>();
+
+        const servicesById = new Map<string, RequirementsService>();
+        for (const s of data.services ?? []) {
+            servicesById.set(s.id, s);
+        }
+
+        // Separate service-scoped questions from shared ones
+        const serviceQMap = new Map<string, RequirementsQuestion[]>();
+        const sharedQMap = new Map<string, RequirementsQuestion[]>();
+
         for (const q of data.questions) {
-            const list = map.get(q.category) ?? [];
-            list.push(q);
-            map.set(q.category, list);
+            if (q.serviceId && servicesById.has(q.serviceId)) {
+                const list = serviceQMap.get(q.serviceId) ?? [];
+                list.push(q);
+                serviceQMap.set(q.serviceId, list);
+            } else {
+                const list = sharedQMap.get(q.category) ?? [];
+                list.push(q);
+                sharedQMap.set(q.category, list);
+            }
         }
-        return Array.from(map.entries())
+
+        const svcGroups: ServiceGroup[] = Array.from(serviceQMap.entries())
+            .map(([svcId, questions]) => {
+                const service = servicesById.get(svcId);
+                return service ? { service, questions } : undefined;
+            })
+            .filter((g): g is ServiceGroup => g !== undefined)
+            .sort((a, b) => roleSortValue(a.service.role) - roleSortValue(b.service.role));
+
+        const catGroups: CategoryGroup[] = Array.from(sharedQMap.entries())
             .sort((a, b) => categorySortValue(a[0]) - categorySortValue(b[0]))
             .map(([category, questions]) => ({ category, questions }));
+
+        return { serviceGroups: svcGroups, sharedGroups: catGroups };
     }, [data]);
 
     const missingRequired = useMemo(() => {
@@ -248,7 +297,38 @@ export const RequirementsView = (): JSX.Element => {
                 </div>
             )}
 
-            {grouped.map(group => {
+            {serviceGroups.length > 0 && (
+                <div className='servicesSection'>
+                    <h2 className='sectionHeading'>Services</h2>
+                    <div className='serviceCards'>
+                        {serviceGroups.map(({ service, questions }) => (
+                            <section className='categoryCard categoryCard--service' key={service.id}>
+                                <header className='categoryHeader'>
+                                    <h2>{service.label}</h2>
+                                    <span className={`roleBadge roleBadge--${service.role}`}>{ROLE_LABELS[service.role]}</span>
+                                    {service.root && <span className='serviceRoot'>{service.root}</span>}
+                                </header>
+                                <ul className='questionList'>
+                                    {questions.map(q => {
+                                        const hideHeader = questions.length === 1;
+                                        return (
+                                            <QuestionRow
+                                                key={q.id}
+                                                question={q}
+                                                draft={drafts[q.id] === undefined ? q.answer : drafts[q.id]}
+                                                hideHeader={hideHeader}
+                                                onChange={(value) => updateDraft(q.id, value)}
+                                            />
+                                        );
+                                    })}
+                                </ul>
+                            </section>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {sharedGroups.map(group => {
                 const label = categoryLabel(group.category);
                 return (
                     <section className='categoryCard' key={group.category}>
