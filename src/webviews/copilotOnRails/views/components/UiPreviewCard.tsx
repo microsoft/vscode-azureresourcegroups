@@ -62,7 +62,7 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
     const activePage: PreviewPage | undefined = hasPages
         ? previewPages[Math.min(activePageIdx, previewPages.length - 1)]
         : undefined;
-    const isPending = !activePage || activePage.status !== 'ready' || !activePage.html;
+    const isLoading = !activePage || activePage.status !== 'ready' || !activePage.html || previewStatus === 'generating';
 
     const handleSubmitPageFeedback = useCallback(() => {
         if (!pageFeedback.trim() || !activePage) {
@@ -129,32 +129,24 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
                     <span className='uiPreviewCard__chromeDot' />
                     <span className='uiPreviewCard__urlPill'>{activePage?.route || '/'}</span>
                 </div>
-                {isPending ? (
-                    // First-load spinner: page has no HTML yet, show spinner instead of iframe
+                {isLoading ? (
+                    // Show a spinner whenever the preview is being generated (first
+                    // load or regeneration) in place of the iframe.
                     <div className='uiPreviewCard__loading' role='status' aria-live='polite'>
                         <Spinner size='medium' label='Generating preview…' />
                     </div>
                 ) : (
-                    <>
                     <iframe
                         className='uiPreviewCard__iframe'
                         title={`UI preview for ${activePage.title}`}
                         srcDoc={displayedHtml}
                         sandbox='allow-same-origin'
                     />
-                    {previewStatus === 'generating' && (
-                        // Regenerating preview spinner - page already has HTML but the agent is regenerating previews.
-                        // Show spinner on top of stale content while it reloads.
-                        <div className='uiPreviewCard__generating' role='status' aria-live='polite'>
-                            <Spinner size='medium' label='Generating preview…' />
-                        </div>
-                    )}
-                    </>
                 )}
             </div>
 
             {/* Per-page feedback: lets users submit notes targeting the active preview page */}
-            {hasPages && activePage && !isPending && (
+            {hasPages && activePage && !isLoading && (
                 <div className='uiPreviewCard__pageFeedback'>
                     {activePageFeedback.length > 0 && (
                         <ul className='uiPreviewCard__pageFeedbackList'>

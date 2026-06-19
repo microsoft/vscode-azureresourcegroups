@@ -237,17 +237,6 @@
         color: var(--vscode-descriptionForeground);
     }
 
-    .uiPreviewCard__generating {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(0, 0, 0, 0.55);
-        z-index: 3;
-        pointer-events: none;
-    }
-
     // -------- Per-page feedback --------
     .uiPreviewCard__pageFeedback {
         display: flex;
