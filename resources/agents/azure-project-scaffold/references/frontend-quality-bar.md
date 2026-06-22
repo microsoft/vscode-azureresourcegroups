@@ -1,6 +1,6 @@
 # Frontend Quality Bar — Render Layout Tokens with Real Library Primitives
 
-> **Load this BEFORE writing any frontend page or component.** Read during **Step 1** (Frontend Preview) and **Step 12** (Wire Frontend). This is the contract between the plan's Section 5 (Design System & UI) and the scaffolded JSX.
+> **Load this BEFORE writing any frontend page or component.** Read during **Step 1** (Frontend) and **Step 12** (Wire Frontend). This is the contract between the plan's Section 5 (Design System & UI) and the scaffolded JSX.
 
 ---
 
@@ -35,7 +35,7 @@ If you ever emit JSX like this:
 | Pages table (`Layout`)   | Which **library primitives** to compose per page (see mapping below).    |
 | `.azure/.preview-temp/*.html` + `theme.css` | The HTML/CSS **directional sketch** the user approved during planning. Tells you three things only: (1) page regions and rough order, (2) brand color story, (3) content density. The sketch deliberately ships with **no** icons, fonts, motion, dark mode, or polished hero treatments — those are your job. **The scaffold MUST visibly exceed the sketch** (see "Polish floor" below). Do not import, embed, or `<iframe>` it. Folder is deleted in Step 13. |
 
-> If Section 5 is missing or `Component Library:` is blank, **STOP**. The plan is incomplete — re-run `azure-project-plan` instead of guessing.
+> If Section 5 is missing or `Component Library:` is blank, **STOP**. The plan is incomplete — complete the plan instead of guessing.
 
 ---
 
@@ -159,7 +159,7 @@ Every page that displays data MUST cover all four states with real library primi
 | empty    | `<Card>` with illustration + `<Body1>` + primary `<Button>` CTA | `<v-empty-state>` or `<v-card>` with `<v-icon>` + `<v-btn>` CTA | `<mat-card>` + `<mat-icon>` + primary action | `<div class="card">` + icon + primary CTA `<button>` | `<article>` + `<p>` + primary `<button>` |
 | data     | Real list/grid/table from mock fixtures       | Real list/grid/table                 | Real list/grid/table                            | Real list/grid/table                    | Real list/grid/table               |
 
-> The four states MUST be reachable from the running preview — wire a small dev-only toggle (URL hash, query param, or a corner button gated by `import.meta.env.DEV`) so reviewers can flip between `loading`, `error`, `empty`, `data` without restarting the server. This is also how `azure-project-test` later verifies the four-state contract.
+> The four states MUST be reachable in the running app — wire a small dev-only toggle (URL hash, query param, or a corner button gated by `import.meta.env.DEV`) so `loading`, `error`, `empty`, and `data` can each be exercised. The toggle is the verification path for the four-state contract.
 
 ---
 

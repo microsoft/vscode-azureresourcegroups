@@ -344,6 +344,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 if (depRowIdx < 0) {
                     continue;
                 }
+                // Only non-`Language` fields cascade here, so `isFrontend` never
+                // narrows the result — pass undefined deliberately.
                 const validOptions = optionsForField(dependentField, value) ?? [];
                 const currentValue = content.rows[depRowIdx][colIdx];
                 if (validOptions.length > 0 && !validOptions.includes(currentValue)) {
@@ -881,7 +883,7 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                                     // Next.js). Informational only — doesn't block.
                                     const supportedSet = ci > 0 ? fullySupportedOptions[componentName?.trim()] : undefined;
                                     const showSupportWarning = supportedSet !== undefined
-                                        && cell
+                                        && !!cell
                                         && !supportedSet.has(cell.trim());
                                     return (
                                         <td key={ci} className={isEdited ? 'editedCell' : undefined}>
