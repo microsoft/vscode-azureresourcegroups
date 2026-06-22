@@ -41,7 +41,7 @@ const MAX_RUN_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 export const AUTOPILOT_QUERY_MARKER = '[AUTOPILOT MODE]';
 
 /** Glob for the local debug plan whose completion ends an autopilot run. */
-const DEBUG_PLAN_GLOB = '.azure/vscode-debug-plan.md';
+export const DEBUG_PLAN_GLOB = '.azure/vscode-debug-plan.md';
 
 /** globalState keys used to survive window reloads mid-run. */
 const STATE_ACTIVE = 'azureResourceGroups.autopilot.active';
@@ -113,7 +113,7 @@ function armAutopilot(deadline: number): void {
 }
 
 /** Returns true when the debug plan file content indicates the chain is finished. */
-function isDebugPlanImplemented(content: string): boolean {
+export function isDebugPlanImplemented(content: string): boolean {
     // Tolerates markdown formatting around the status line, e.g.
     // `> **Status:** Implemented`, `Status: Implemented`, `**Status**: implemented`.
     return /status\b[^a-z0-9]{0,8}implemented\b/i.test(content);

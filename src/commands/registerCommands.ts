@@ -5,7 +5,7 @@
 
 import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, nonNullValue, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
-import { commands } from 'vscode';
+import { commands, l10n } from 'vscode';
 import { askAgentAboutActivityLog } from '../chat/askAgentAboutActivityLog/askAgentAboutActivityLog';
 import { askAgentAboutResource } from '../chat/askAgentAboutResource';
 import { askAzureInCommandPalette } from '../chat/askAzure';
@@ -19,8 +19,10 @@ import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { createProjectWithCopilot } from '../webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { openDeploymentPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openDeploymentPlanView';
+import { openLocalDevNextStepsView } from '../webviews/copilotOnRails/extension/openLocalDevNextStepsView';
 import { openLocalPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openLocalPlanView';
 import { openRequirementsViewFromWorkspace } from '../webviews/copilotOnRails/extension/openRequirementsView';
+import { openScaffoldNextStepsView } from '../webviews/copilotOnRails/extension/openScaffoldNextStepsView';
 import { openPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openScaffoldPlanView';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
@@ -170,19 +172,38 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.openLocalPlanView', openLocalPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openRequirementsView', openRequirementsViewFromWorkspace);
+    registerCommand('azureResourceGroups.openLocalNextStepsView', (_context: IActionContext, hasApiTests?: boolean) =>
+        openLocalDevNextStepsView({ hasApiTests: hasApiTests === true }));
+    registerCommand('azureResourceGroups.openScaffoldNextStepsView', () => openScaffoldNextStepsView({}));
 
     // Hand-off commands
     registerCommand('azureResourceGroups.downloadAgentInstructions', (context: IActionContext) =>
         downloadAgentInstructions(context));
     registerCommand('azureResourceGroups.startProjectScaffold', (_context: IActionContext, prompt?: string) =>
-        openChatWithAgent('azure-project-scaffold', prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.'));
+        openChatWithAgent('azure-project-scaffold', prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.', {
+            stage: 0,
+            title: l10n.t('Scaffolding your project…'),
+            message: l10n.t('Copilot is gathering requirements and preparing your project plan.'),
+        }));
     registerCommand('azureResourceGroups.startLocalDevelopment', (_context: IActionContext, prompt?: string) =>
-        openChatWithAgent('azure-debug-plan', prompt ?? 'The project has been scaffolded. Now set up the local debugging environment so the user can start building and testing.'));
+        openChatWithAgent('azure-debug-plan', prompt ?? 'The project has been scaffolded. Now set up the local debugging environment so the user can start building and testing.', {
+            stage: 1,
+            title: l10n.t('Setting up local development…'),
+            message: l10n.t('Copilot is preparing your local debugging plan.'),
+        }));
     registerCommand('azureResourceGroups.startDebugConfiguration', startDebugConfiguration);
     registerCommand('azureResourceGroups.startAzureDebugGenerate', (_context: IActionContext, prompt?: string) =>
-        openChatWithAgent('azure-debug-generate', prompt ?? 'The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`.'));
+        openChatWithAgent('azure-debug-generate', prompt ?? 'The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`.', {
+            stage: 1,
+            title: l10n.t('Generating local development artifacts…'),
+            message: l10n.t('Copilot is generating the artifacts from your local debugging plan.'),
+        }));
     registerCommand('azureResourceGroups.startDeployment', (_context: IActionContext, prompt?: string) =>
-        openChatWithAgent('azure-deploy', prompt ?? 'Prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`.'));
+        openChatWithAgent('azure-deploy', prompt ?? 'Prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`.', {
+            stage: 2,
+            title: l10n.t('Preparing deployment…'),
+            message: l10n.t('Copilot is preparing your deployment plan.'),
+        }));
 }
 
 async function handleAzExtTreeItemRefresh(context: IActionContext, node?: ResourceGroupsItem): Promise<void> {
