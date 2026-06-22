@@ -41,6 +41,9 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 case 'openSourceFile':
                     openSourceFileOrWarn(this.sourceFileUri);
                     break;
+                case 'refreshPrerequisites':
+                    void this.refreshPrerequisites();
+                    break;
             }
         });
     }
@@ -77,11 +80,23 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         return true;
     }
 
+    private async refreshPrerequisites(): Promise<void> {
+        if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
+            return;
+        }
+        void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
+        await vscode.commands.executeCommand('workbench.action.chat.open', {
+            mode: azureDebugPlanAgent,
+            query: 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites table and update the plan file with the current results.',
+        });
+    }
+
     updatePlanData(planData: LocalPlanData, sourceFileUri?: vscode.Uri): void {
         if (sourceFileUri) {
             this.sourceFileUri = sourceFileUri;
         }
         void this.panel.webview.postMessage({ command: 'setLocalPlanData', data: planData });
         void this.panel.webview.postMessage({ command: 'revisionComplete' });
+        void this.panel.webview.postMessage({ command: 'prerequisitesRefreshComplete' });
     }
 }
