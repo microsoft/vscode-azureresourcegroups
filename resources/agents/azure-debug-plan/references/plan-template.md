@@ -41,7 +41,7 @@ When editing markdown tables with `replace_string_in_file` or `multi_replace_str
 
 ## Prerequisites
 
-<!-- All required tools and VS Code extensions with install status. -->
+<!-- All required tools and VS Code extensions with install status — list both the Run and Debug tool sets defined in prerequisites.md. -->
 <!-- The user must install anything marked ❌ before approving. -->
 
 | Tool / Extension | Required For | Installed | Version | Install |

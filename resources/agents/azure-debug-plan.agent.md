@@ -24,10 +24,10 @@ If the project appears incomplete (missing entry points, no dependency file, hal
 
 The steps below are **strictly ordered**. You **must not** start a later step until the earlier one is completed:
 
-1. Step 1: Scan the project and generate a plan.
-2. Step 2: Preview the generated plan.
-3. Step 3: Iterate and wait for approval.
-4. Step 4: Invoke the generation command via `run_vscode_command`.
+- Step 1: Scan the project and generate a plan.
+- Step 2: Preview the generated plan.
+- Step 3: Iterate and wait for approval.
+- Step 4: Invoke the generation command via `run_vscode_command`.
 
 ### Step 1: Scan the project and generate a plan
 

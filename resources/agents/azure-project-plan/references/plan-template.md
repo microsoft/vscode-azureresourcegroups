@@ -33,17 +33,14 @@
 
 ## 2. Prerequisites
 
-> **Tooling the user must have installed to run this project locally.** Unlike the local-debug plan — which scans an existing workspace — this list is **derived from the technology stacks and Azure services chosen for this project** (the service stack sections and the Services Required section below), because at planning time there is no project to scan yet. Infer one row per tool implied by each service's stack (Language / Runtime / Package Manager / Test Runner) and each required Azure service.
->
-> The plan view renders this section by title (`s.title.toLowerCase().includes('prerequisite')`) as a read-only card, so keep the table shape below stable.
->
-> <!-- ⚠️ EXTENSIBLE / SCAFFOLD-ONLY — basic shape only; detailed inference rules are still TODO. -->
-> <!-- TODO(prerequisites): Document the full inference rules mapping each stack + Azure service to its required tooling (Node.js + npm/pnpm for TS/JS, Python + pip for Python, .NET SDK for C#, Azure Functions Core Tools for any Functions backend, Azurite for Blob/Queue/Table, Docker Desktop for PostgreSQL/Redis, etc.). -->
-> <!-- TODO(prerequisites): Add a dependency-scan pass that detects which prerequisites are already installed on the user's machine and fills the `Installed` column (✅ / ❌), flagging anything missing before the project can run. -->
+<!-- The tools the user must install to run this project locally, derived from the chosen stacks and Azure services. See [§ 5. Prerequisites](../instructions.md#5-prerequisites) in the agent instructions for how to identify and inventory them. -->
+<!-- The Run tool set is Required; Debug-set tools (Docker, Docker Compose, VS Code extensions) are only listed when the execution mode is set to autopilot. -->
 
-| Tool | Required For | Minimum Version | Installed | Install |
-|------|-------------|-----------------|-----------|---------|
-| {Tool name — derived from the chosen stacks/services} | {which service(s)/feature(s) need it} | {min version or —} | {TODO — populate via dependency scan} | {install URL or command} |
+| Tool / Extension | Required For | Installed | Version | Install |
+|-----------------|-------------|-----------|---------|---------|
+| {name} | {reason} | {✅/❌} | {version or —} | {install URL or link} |
+
+> ⚠️ Ask the user to install any tools or extensions marked ❌ before approving this plan.
 
 ---
 

@@ -801,15 +801,43 @@ const ProjectStructureCard = ({ section }: { section: PlanSection }): JSX.Elemen
     );
 };
 
+// Classifies the value of an "Installed" cell from the agent's detection pass.
+// The planner writes ✅ / ❌ (or yes/no) once it runs the shared prerequisites
+// detection; anything else (e.g. a leftover `{…}` placeholder or `—`) is treated
+// as "unknown" so the card never claims a tool's status it doesn't actually know.
+type InstalledStatus = 'installed' | 'missing' | 'unknown';
+
+function classifyInstalled(cell: string): InstalledStatus {
+    const value = cell.trim().toLowerCase();
+    if (value.includes('✅') || value === 'yes' || value === 'true' || value === 'installed') {
+        return 'installed';
+    }
+    if (value.includes('❌') || value === 'no' || value === 'false' || value === 'missing') {
+        return 'missing';
+    }
+    return 'unknown';
+}
+
+const INSTALLED_STATUS_LABEL: Record<InstalledStatus, string> = {
+    installed: 'Installed',
+    missing: 'Not installed',
+    unknown: 'Unknown',
+};
+
+const InstalledChip = ({ status }: { status: InstalledStatus }): JSX.Element => (
+    <span className={`installedChip installed-${status}`}>
+        <span className={`codicon ${status === 'installed' ? 'codicon-pass-filled' : status === 'missing' ? 'codicon-error' : 'codicon-question'}`} />
+        {INSTALLED_STATUS_LABEL[status]}
+    </span>
+);
+
 // Renders the "Prerequisites" section — the tooling the user must have installed
 // to run the scaffolded project locally. Unlike the local-debug plan, this is
 // inferred from the chosen technology stacks/services (there is no existing
-// project to scan at planning time), so this card is read-only and simply
-// surfaces what the planner agent recorded.
-//
-// TODO(prerequisites): once the agent populates an "Installed" column via a
-// dependency scan, render ✅/❌ status chips and surface a clear "install these
-// before continuing" call-to-action (mirroring LocalPlanView's prerequisites).
+// project to scan at planning time). The planner agent runs the shared
+// prerequisites detection pass and records an "Installed" column; this card
+// surfaces that column as ✅/❌ status chips and, when anything is still missing,
+// a "install these before continuing" call-to-action.
 const PrerequisitesCard = ({ section }: { section: PlanSection }): JSX.Element => {
     const intro = (section.content ?? []).filter(
         (c): c is Extract<PlanContent, { type: 'blockquote' | 'paragraph' }> =>
@@ -818,6 +846,14 @@ const PrerequisitesCard = ({ section }: { section: PlanSection }): JSX.Element =
     const tables = (section.content ?? []).filter(
         (c): c is Extract<PlanContent, { type: 'table' }> => c.type === 'table',
     );
+
+    const missingCount = tables.reduce((total, table) => {
+        const installedIdx = table.headers.findIndex(h => h.toLowerCase().includes('installed'));
+        if (installedIdx < 0) {
+            return total;
+        }
+        return total + table.rows.filter(row => classifyInstalled(row[installedIdx] ?? '') === 'missing').length;
+    }, 0);
 
     return (
         <div className='sectionCard prerequisitesCard'>
@@ -828,23 +864,40 @@ const PrerequisitesCard = ({ section }: { section: PlanSection }): JSX.Element =
                         ? <div key={i} className='blockquote'>{item.text}</div>
                         : <p key={i} className='paragraph'>{item.text}</p>,
                 )}
+                {missingCount > 0 && (
+                    <div className='prerequisitesCallToAction' role='alert'>
+                        <span className='codicon codicon-warning' />
+                        <span>
+                            {missingCount === 1
+                                ? '1 prerequisite is not installed. Install it before continuing.'
+                                : `${missingCount} prerequisites are not installed. Install them before continuing.`}
+                        </span>
+                    </div>
+                )}
                 {tables.length === 0 && intro.length === 0 && (
                     <p className='paragraph'>No prerequisites identified yet.</p>
                 )}
-                {tables.map((table, ti) => (
-                    <div key={ti} className='planTableWrapper'>
-                        <table className='planTable'>
-                            <thead>
-                                <tr>{table.headers.map((h, hi) => <th key={hi}>{h}</th>)}</tr>
-                            </thead>
-                            <tbody>
-                                {table.rows.map((row, ri) => (
-                                    <tr key={ri}>{row.map((cell, ci) => <td key={ci}>{cell}</td>)}</tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                ))}
+                {tables.map((table, ti) => {
+                    const installedIdx = table.headers.findIndex(h => h.toLowerCase().includes('installed'));
+                    return (
+                        <div key={ti} className='planTableWrapper'>
+                            <table className='planTable'>
+                                <thead>
+                                    <tr>{table.headers.map((h, hi) => <th key={hi}>{h}</th>)}</tr>
+                                </thead>
+                                <tbody>
+                                    {table.rows.map((row, ri) => (
+                                        <tr key={ri}>{row.map((cell, ci) =>
+                                            ci === installedIdx
+                                                ? <td key={ci}><InstalledChip status={classifyInstalled(cell)} /></td>
+                                                : <td key={ci}>{cell}</td>,
+                                        )}</tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

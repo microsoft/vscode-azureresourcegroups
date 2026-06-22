@@ -323,6 +323,8 @@ When re-invoked with a query mentioning submitted requirements (e.g. *"Requireme
 
 Write `.azure/project-plan.md` from the template below in a **single pass** (fill all sections at once — never section-by-section), then present for approval.
 
+**Before writing, make sure to include the prerequisites detection pass** (Section 5) so the `Installed` column reflects what is actually present. Do this in the same pass — no separate gate.
+
 #### Plan Template
 
 `.azure/project-plan.md` structure (replace all `{placeholders}`):
@@ -392,24 +394,13 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ## 5. Prerequisites
 
-> **Tooling the user must have installed to run this project locally.** Unlike the local-debug plan — which scans an existing workspace — this list is **derived from the technology stacks and Azure services chosen above**, because at planning time there is no project to scan yet. Infer one row per tool implied by each service's stack (Language / Runtime / Package Manager / Test Runner from Section 2+) and each Azure service (Section 4).
->
-> The plan view renders this section by title (`s.title.toLowerCase().includes('prerequisite')`) as a read-only card. Keep the table shape below stable so it parses.
->
-> <!-- ⚠️ EXTENSIBLE / SCAFFOLD-ONLY — basic shape only; detailed inference rules are still TODO. -->
-> <!-- TODO(prerequisites): Document the full inference rules mapping each stack + Azure service to its required tooling, e.g.: -->
-> <!--   • TypeScript/JavaScript + Node → Node.js (LTS) + the chosen package manager (npm/pnpm/yarn) -->
-> <!--   • Python + CPython → Python 3.x + pip/poetry/uv -->
-> <!--   • C# + .NET → .NET SDK -->
-> <!--   • Any Azure Functions backend → Azure Functions Core Tools v4 -->
-> <!--   • Blob/Queue/Table Storage → Azurite (or Docker Desktop) -->
-> <!--   • PostgreSQL / Redis / other emulated services → Docker Desktop -->
-> <!--   • Frontend framework → same Node toolchain as its stack -->
-> <!-- TODO(prerequisites): Add a dependency-scan pass that detects which prerequisites are already installed on the user's machine and fills the `Installed` column (✅ / ❌), then flags anything missing the user must install before running. -->
+Identify the required tools, then inventory them by following [prerequisites.md](../shared-references/prerequisites.md).
 
-| Tool | Required For | Minimum Version | Installed | Install |
-|------|-------------|-----------------|-----------|---------|
-| {Tool name — derived from the chosen stacks/services} | {which service(s)/feature(s) need it} | {min version or —} | {TODO — populate via dependency scan} | {install URL or command} |
+The required tools are derived from the technology stacks and Azure services associated with each service. Map each stack to its chosen tooling, e.g. runtime - Node, package manager - npm, project type - Azure Functions Core Tools (for Azure Functions), etc.
+
+The **Run** tool set is required whenever its stack is present and should always be displayed. The **Debug** tool set (Docker, Docker Compose, and any VS Code extensions) does not need to be inventoried at this scaffold stage unless `autopilot` mode is active.  If no `autopilot` mode is selected, do not show the debug set of tools.  If `autopilot` mode is selected, surface both sets, since autopilot runs all the way to the end of the local debugging setup. The Run vs Debug distinction is defined in [prerequisites.md](../shared-references/prerequisites.md).
+
+After identifying the required tools, you should run the detection pass to fill the `Installed` column (✅ / ❌) and detected version. Recompute the table whenever the plan changes (e.g. a Runtime edit or an added/removed service). Flag any Required tool marked ❌ — the user must install it before approving.
 
 ---
 
