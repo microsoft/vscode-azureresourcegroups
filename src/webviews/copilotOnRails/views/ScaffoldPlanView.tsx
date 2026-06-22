@@ -144,7 +144,7 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
     }
     if (designChanges.length > 0) {
         lines.push(
-            'Design changes (update Section 5 "Design System & UI" in project-plan.md):',
+            'Design changes (update Section 6 "Design System & UI" in project-plan.md):',
             ...designChanges,
             '',
         );
@@ -453,6 +453,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const detailSections = sections.filter(s => s.number !== 1 && isServiceStackSection(s));
     const structureSection = sections.find(s => s.title.toLowerCase().includes('project structure'));
     const designSection = sections.find(s => s.title.toLowerCase().includes('design system'));
+    const prerequisitesSection = sections.find(s => s.title.toLowerCase().includes('prerequisite'));
     const draftCount = (freeformDraft.trim() ? 1 : 0);
 
     return (
@@ -542,6 +543,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 )}
 
                 {structureSection && <ProjectStructureCard section={structureSection} />}
+
+                {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} />}
             </div>
 
             {drawerOpen && !isAwaitingRevision && (
@@ -793,6 +796,55 @@ const ProjectStructureCard = ({ section }: { section: PlanSection }): JSX.Elemen
             <h2>{section.title}</h2>
             <div className='treeView'>
                 <TreeNodeItem node={{ name: treeContent.root, isFolder: true, children: treeContent.nodes }} depth={0} defaultOpen={true} />
+            </div>
+        </div>
+    );
+};
+
+// Renders the "Prerequisites" section — the tooling the user must have installed
+// to run the scaffolded project locally. Unlike the local-debug plan, this is
+// inferred from the chosen technology stacks/services (there is no existing
+// project to scan at planning time), so this card is read-only and simply
+// surfaces what the planner agent recorded.
+//
+// TODO(prerequisites): once the agent populates an "Installed" column via a
+// dependency scan, render ✅/❌ status chips and surface a clear "install these
+// before continuing" call-to-action (mirroring LocalPlanView's prerequisites).
+const PrerequisitesCard = ({ section }: { section: PlanSection }): JSX.Element => {
+    const intro = (section.content ?? []).filter(
+        (c): c is Extract<PlanContent, { type: 'blockquote' | 'paragraph' }> =>
+            c.type === 'blockquote' || c.type === 'paragraph',
+    );
+    const tables = (section.content ?? []).filter(
+        (c): c is Extract<PlanContent, { type: 'table' }> => c.type === 'table',
+    );
+
+    return (
+        <div className='sectionCard prerequisitesCard'>
+            <h2>{section.title}</h2>
+            <div className='sectionContent'>
+                {intro.map((item, i) =>
+                    item.type === 'blockquote'
+                        ? <div key={i} className='blockquote'>{item.text}</div>
+                        : <p key={i} className='paragraph'>{item.text}</p>,
+                )}
+                {tables.length === 0 && intro.length === 0 && (
+                    <p className='paragraph'>No prerequisites identified yet.</p>
+                )}
+                {tables.map((table, ti) => (
+                    <div key={ti} className='planTableWrapper'>
+                        <table className='planTable'>
+                            <thead>
+                                <tr>{table.headers.map((h, hi) => <th key={hi}>{h}</th>)}</tr>
+                            </thead>
+                            <tbody>
+                                {table.rows.map((row, ri) => (
+                                    <tr key={ri}>{row.map((cell, ci) => <td key={ci}>{cell}</td>)}</tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ))}
             </div>
         </div>
     );

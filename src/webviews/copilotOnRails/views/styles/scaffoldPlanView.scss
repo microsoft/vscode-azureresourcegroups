@@ -358,6 +358,17 @@
         overflow-x: auto;
     }
 
+    .prerequisitesCard {
+        .planTable {
+            width: 100%;
+        }
+
+        .blockquote + .planTableWrapper,
+        .paragraph + .planTableWrapper {
+            margin-top: 4px;
+        }
+    }
+
     .planTable td.editedCell {
         box-shadow: inset 2px 0 0 var(--vscode-editorGutter-modifiedBackground, var(--vscode-focusBorder));
     }

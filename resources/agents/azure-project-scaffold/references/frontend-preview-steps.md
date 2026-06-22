@@ -2,7 +2,7 @@
 
 > Detailed sub-steps for standalone frontend preview. Read during **Step 1** (Frontend Preview).
 
-> **Companion contract**: Before writing any JSX, also read [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md). It defines the load-bearing contract between the plan's Section 5 (Design System & UI) and the JSX you ship — per-library region-token → primitive mapping, theming via the library's brand ramp, real icons, and the four-state coverage gate. The sub-steps below cover *how* to stand up the live preview (working directory, build, verify, open in Simple Browser); the quality bar covers *what* the preview must contain. Design approval already happened during planning via `.azure/.preview-temp/` — Step 1 does **not** re-prompt the user for UX approval.
+> **Companion contract**: Before writing any JSX, also read [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md). It defines the load-bearing contract between the plan's Section 6 (Design System & UI) and the JSX you ship — per-library region-token → primitive mapping, theming via the library's brand ramp, real icons, and the four-state coverage gate. The sub-steps below cover *how* to stand up the live preview (working directory, build, verify, open in Simple Browser); the quality bar covers *what* the preview must contain. Design approval already happened during planning via `.azure/.preview-temp/` — Step 1 does **not** re-prompt the user for UX approval.
 
 ---
 
@@ -105,7 +105,7 @@ The `.azure/.preview-temp/*.html` files are a **layout + tonal reference**, not 
 
 - The plan's Pages table tells you which **regions** belong on the page (`header + hero + grid + footer` etc.).
 - The HTML mock-up shows the **approved arrangement, density, and palette** of those regions.
-- Your job in Step 1 is to reproduce that visual feel using the **real `Component Library:` primitives** from Section 5 (see [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the per-library token → primitive mapping).
+- Your job in Step 1 is to reproduce that visual feel using the **real `Component Library:` primitives** from Section 6 (see [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the per-library token → primitive mapping).
 
 Do not import the HTML mock-up, embed it via `<iframe>`, or copy CSS class names from it into your JSX — the mock-up is throwaway and `.azure/.preview-temp/` is deleted in Step 13. Only the visual intent (regions, palette, density) carries forward into real components.
 
@@ -122,5 +122,5 @@ Even in preview mode, frontend MUST meet these standards. The full per-library c
 - All 4 data states handled: loading, error, empty, data (see quality-bar's State Coverage Contract for per-library primitives — `<Skeleton>` / `<MessageBar intent="error">` / empty illustration + CTA / real data)
 - **Auto-authenticated preview**: If app has auth, preview MUST auto-login on first load so user sees main content immediately (not login page)
 - **Render layout tokens with real library primitives** — never raw `<div className="card">` placeholders. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the region-token → primitive mapping per library.
-- **Wrap the app shell in the library's theme provider** with a brand ramp derived from plan Section 5's `primary` color. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) → Theming contract.
+- **Wrap the app shell in the library's theme provider** with a brand ramp derived from plan Section 6's `primary` color. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) → Theming contract.
 - **Use real icons** from the library's icon set (Fluent: `@fluentui/react-icons` Regular variants; Vuetify: `mdi-*`; Material: `<mat-icon>` real names; Skeleton/Pico: Lucide/Tabler). No emoji, no SVG placeholders.

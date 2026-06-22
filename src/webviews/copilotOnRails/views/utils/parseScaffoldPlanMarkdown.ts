@@ -365,7 +365,7 @@ function getTreeDepth(line: string): number {
 }
 
 /**
- * After generic section parsing, look at Section 5 ("Design System & UI") and
+ * After generic section parsing, look at Section 6 ("Design System & UI") and
  * upgrade its tables to the typed `colorPalette` / `pages` content variants the
  * UI preview card reads from. Tables that don't match either shape are left
  * alone as plain `table` content.

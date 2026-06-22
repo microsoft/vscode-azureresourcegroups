@@ -2,7 +2,7 @@
 
 > Frontend has same quality bar as backend: typed, tested, structured.
 
-> **Companion contract**: For the **visual** quality bar — how to render Section 5's layout tokens with real library primitives, how to theme the app from the plan's palette, and the four-state coverage gate — read [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md). This file covers structural patterns (types, hooks, services, error handling); the quality bar covers what each region must actually render.
+> **Companion contract**: For the **visual** quality bar — how to render Section 6's layout tokens with real library primitives, how to theme the app from the plan's palette, and the four-state coverage gate — read [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md). This file covers structural patterns (types, hooks, services, error handling); the quality bar covers what each region must actually render.
 
 ---
 
