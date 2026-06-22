@@ -39,6 +39,11 @@ export async function openChatWithAgent(agentName: string, prompt: string): Prom
     if (!(await ensureAgentInstructions(agentName))) {
         return;
     }
+    // Start a fresh chat session for each phase hand-off. Agents communicate through the
+    // `.azure/*.md` plan files on disk, not chat history, so a clean session keeps each
+    // agent's context window focused on its own phase instead of accumulating the entire
+    // plan → scaffold → debug conversation.
+    await vscode.commands.executeCommand('workbench.action.chat.newChat');
     await vscode.commands.executeCommand('workbench.action.chat.open', {
         mode: agentName,
         query: prompt,

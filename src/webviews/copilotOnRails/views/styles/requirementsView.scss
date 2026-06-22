@@ -59,6 +59,15 @@
             gap: 4px;
             flex-shrink: 0;
 
+            .autopilotSwitch {
+                .autopilotLabel {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    font-size: 0.9em;
+                }
+            }
+
             .progress {
                 font-size: 0.8em;
                 color: var(--vscode-descriptionForeground);
@@ -280,12 +289,23 @@
                         }
 
                         &--custom {
-                            cursor: default;
+                            cursor: pointer;
                             padding: 4px 12px;
                             align-items: center;
 
                             &:not(.optionsList__row--selected):hover {
                                 background: transparent;
+                            }
+
+                            &:focus-within {
+                                background: var(--vscode-list-activeSelectionBackground, rgba(0, 122, 204, 0.2));
+                                color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+
+                                .optionsList__index,
+                                .optionsList__description {
+                                    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+                                    opacity: 0.85;
+                                }
                             }
                         }
                     }

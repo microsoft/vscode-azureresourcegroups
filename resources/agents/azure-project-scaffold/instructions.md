@@ -24,6 +24,12 @@ Requires an approved plan. Verify before starting:
 
 > If `.azure/project-plan.md` is missing or status ≠ `Approved`: **STOP** — tell the user _"No approved project plan found. Create and approve a project plan first."_
 
+## Autopilot mode (overrides approval gates & the Next Step question)
+**Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto` (front-matter or a `**Execution Mode**: auto` row). When active, run fully unattended:
+- **Skip the plan preview & approval** — the plan was already approved upstream; go straight to scaffolding (do NOT open `openPlanView` or re-request approval).
+- **Skip the Step 13 "Next Step" question** — do NOT call `vscode_askQuestions`. Automatically choose **"Set up local dev"** and hand off to `azure-localdev` / `azureResourceGroups.startLocalDevelopment`, prefixing the args with `[AUTOPILOT MODE] `.
+- All scaffold quality work (frontend preview verification, build gates, `.azure/.preview-temp/` cleanup) still applies — autopilot suppresses **gates and questions only**.
+
 ## Rules
 
 > **16 core rules** govern every scaffold. Rule 0 is the load-bearing UX rule — visible feedback first. Rules 1–15 govern correctness. Details in referenced docs, consumed at relevant step.

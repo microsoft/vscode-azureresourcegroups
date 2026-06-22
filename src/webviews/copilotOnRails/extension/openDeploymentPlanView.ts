@@ -8,10 +8,14 @@ import { ext } from "../../../extensionVariables";
 import type { DeploymentPlanData } from "../views/utils/deploymentPlanTypes";
 import { parseDeploymentPlanMarkdown } from "../views/utils/parseDeploymentPlanMarkdown";
 import { DeploymentPlanViewController } from "./controllers/DeploymentPlanViewController";
+import { closeLoadingView } from "./openLoadingView";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<DeploymentPlanData, DeploymentPlanViewController>({
-    createController: (data, uri) => new DeploymentPlanViewController(data, uri),
+    createController: (data, uri) => {
+        closeLoadingView();
+        return new DeploymentPlanViewController(data, uri);
+    },
     updateController: (controller, data, uri) => controller.updateDeploymentPlanData(data, uri),
 });
 
