@@ -476,7 +476,8 @@ For **each** route in plan:
 | Update checklist | Mark all scaffold items `[x]` in `.azure/execution-checklist.md` (Rule 2). **If >50% unchecked, NOT complete.** |
 | Update plan status | Set to `Scaffolded` |
 | Print completion | List created files, announce: **"Scaffolding complete!"** |
-| **Suggest next steps** | **MANDATORY**: Present follow-up via `vscode_askQuestions`. Do NOT auto-invoke. Single question with two options:\n\n**Header**: "Next Step"\n**Question**: "Scaffolding complete! What would you like to do next?"\n**Options** (allowFreeformInput: false):\n- **"Verify project"** ("Add test coverage and runtime validation") — recommended\n- **"Set up local dev"** ("Configure Docker emulators, VS Code debugging, and F5 launch")\n\nIf "Verify project" → invoke `azure-project-test`\nIf "Set up local dev" → invoke `azure-localdev` |
+| Open next-steps view | Call `run_vscode_command` with `{ "commandId": "azureResourceGroups.openScaffoldNextStepsView" }` so the user can choose what to do next (verify code, local development, or deploy). Load it via `tool_search` first if needed. There is no reliable file-watcher fallback — skipping this leaves the user stuck. |
+| **Then stop — do NOT prompt in chat** | After opening the view, **STOP**. Do **NOT** ask the user what to do next in chat. Do **NOT** call `vscode_askQuestions` (or any chat question API), and do **NOT** print plain-text follow-up suggestions — the view handles those choices. |
 
 > **✅ Final Checkpoint**:
 > 1. **Build**: `npm run build` every workspace. `dist/` has output. Zero errors.
@@ -484,7 +485,7 @@ For **each** route in plan:
 > 3. **Preview cleanup**: `.azure/.preview-temp/` no longer exists.
 > 4. **Checklist**: All items in `.azure/execution-checklist.md` marked `[x]`.
 > 5. **Status**: `.azure/project-plan.md` = `Scaffolded`.
-> 6. **Follow-up**: Button prompt presented via `vscode_askQuestions`.
+> 6. **Next-steps view opened**: Called `run_vscode_command` with `azureResourceGroups.openScaffoldNextStepsView`, then stopped without calling `vscode_askQuestions` or printing next-step suggestions — the view handles those choices.
 
 ---
 
