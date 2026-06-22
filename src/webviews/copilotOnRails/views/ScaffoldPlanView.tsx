@@ -517,6 +517,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
 
                 {overviewSection && <OverviewCard section={overviewSection} created={plan.created && plan.created !== 'Unknown' ? plan.created : undefined} />}
 
+                {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} />}
+
                 <div className='sectionsRow'>
                     {detailSections.map((section) => {
                         const sectionIdx = sections.indexOf(section);
@@ -543,8 +545,6 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 )}
 
                 {structureSection && <ProjectStructureCard section={structureSection} />}
-
-                {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} />}
             </div>
 
             {drawerOpen && !isAwaitingRevision && (

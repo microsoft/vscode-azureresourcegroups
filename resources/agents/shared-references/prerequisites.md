@@ -41,7 +41,7 @@ missing the project cannot start.
 | Python | Runtime | `python --version` (or `python3 --version`) | python stacks |
 | pip | Package manager | `pip --version` (or `pip3 --version`) | Python dependency management |
 | .NET SDK | Runtime / SDK | `dotnet --version` | dotnet stacks |
-| Azure Functions Core Tools | Build / run CLI | `func --version` | Azure Functions backends |
+| Azure Functions Core Tools | Runtime | `func --version` | Azure Functions backends |
 
 ### Debug Tools
 
