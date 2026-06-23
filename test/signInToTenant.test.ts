@@ -82,6 +82,34 @@ suite('signInToTenant', () => {
         assert.strictEqual(getManualSignInTenant(), 'contoso.onmicrosoft.com');
     });
 
+    test('prompts for tenant when discovery returns no tenants', async () => {
+        const account = createAccount();
+        let signedInTenantId: string | undefined;
+        let quickPickShown = false;
+
+        const context = createTestActionContext({
+            showQuickPick: async picks => {
+                quickPickShown = true;
+                return picks[0];
+            },
+            showInputBox: async () => 'contoso.onmicrosoft.com',
+        });
+        const provider = createTestSubscriptionProvider({
+            getAccounts: async () => [account],
+            getUnauthenticatedTenantsForAccount: async () => [],
+            signIn: async tenant => {
+                signedInTenantId = tenant?.tenantId;
+                return true;
+            },
+        });
+
+        await signInToTenant(context, provider);
+
+        assert.strictEqual(signedInTenantId, 'contoso.onmicrosoft.com');
+        assert.strictEqual(quickPickShown, false);
+        assert.strictEqual(getManualSignInTenant(), 'contoso.onmicrosoft.com');
+    });
+
     test('uses tenant domain as quick pick label when display name is missing', async () => {
         const account = createAccount();
         const discoveredTenant: AzureTenant = {

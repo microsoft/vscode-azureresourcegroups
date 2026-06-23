@@ -60,11 +60,12 @@ async function getPicks(subscriptionProvider: AzureSubscriptionProvider, account
         .filter((tenant, index, self) => index !== self.findIndex(t => t.tenantId === tenant.tenantId))
         .map(tenant => tenant.tenantId));
     const isDuplicate = (tenantId: string) => duplicateTenants.has(tenantId);
+    const tenantLabel = (tenant: AzureTenant) => tenant.displayName ?? tenant.defaultDomain ?? tenant.tenantId;
 
     return unauthenticatedTenants
-        .sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''))
+        .sort((a, b) => tenantLabel(a).localeCompare(tenantLabel(b)))
         .map(tenant => ({
-            label: tenant.displayName ?? tenant.defaultDomain ?? tenant.tenantId,
+            label: tenantLabel(tenant),
             description: `${tenant.tenantId}${isDuplicate(tenant.tenantId) ? ` (${tenant.account.label})` : ''}`,
             detail: tenant.defaultDomain,
             data: tenant,
