@@ -60,9 +60,7 @@ export class RequirementsViewController extends WebviewController<Record<string,
             return;
         }
 
-        // Autopilot is now chosen on the plan page (not here), so requirements
-        // submission is always guided. The plan agent always generates and shows
-        // the plan for approval.
+        // Autopilot is chosen on the plan page so requirements start in guided until then.
         const executionMode: RequirementsExecutionMode = 'guided';
 
         try {

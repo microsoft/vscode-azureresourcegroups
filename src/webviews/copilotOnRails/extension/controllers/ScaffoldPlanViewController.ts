@@ -111,10 +111,8 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     /**
-     * Records `executionMode: auto` in the plan file so downstream agents
-     * (scaffold, local-dev, debug) inherit autopilot from the file rather than
-     * relying on the chat query marker. No-op if the source file is unknown or
-     * already records autopilot.
+     * Records autopilot mode in the plan file for downstream agents to reference.
+     * No-op if the source file is unknown or autopilot is already recorded.
      */
     private async recordAutopilotMode(): Promise<void> {
         if (!this.sourceFileUri) {
@@ -127,7 +125,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             }
             const lines = raw.split('\n');
             const row = '**Execution Mode**: auto';
-            // If an Execution Mode row already exists (e.g. with a `guided` value),
+            // If an row already exists (e.g. with a `guided` value),
             // update it in place rather than inserting a duplicate/conflicting row.
             const existingAt = lines.findIndex(l => /^\*\*Execution\s*Mode\*\*\s*[:=]/i.test(l.trim()));
             if (existingAt >= 0) {
