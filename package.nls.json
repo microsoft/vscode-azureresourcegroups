@@ -8,6 +8,7 @@
     "azureResourceGroups.selectSubscriptions": "Select Subscriptions...",
     "azureResourceGroups.createResourceGroup": "Create Resource Group...",
     "azureResourceGroups.createResourceGroupDetail": "The logical grouping for your resources.",
+    "azure.tenant": "The Microsoft Entra tenant ID or domain to use when signing in to Azure.",
     "azureResourceGroups.deleteResourceGroup": "Delete Resource Group...",
     "azureResourceGroups.editTags": "Edit Tags...",
     "azureResourceGroups.description": "An extension for viewing and managing Azure resources.",

@@ -10,6 +10,7 @@ import * as path from 'path';
 import type { ExtensionContext } from 'vscode';
 import * as vscode from 'vscode';
 import { ext } from './extensionVariables';
+import { addConfiguredTenantScope, getConfiguredAzureTenant } from './utils/azureTenantSetting';
 import { inCloudShell } from './utils/inCloudShell';
 
 /**
@@ -174,7 +175,7 @@ export function getAuthAccountStateManager(): AuthAccountStateManager {
  */
 export async function exportAuthRecord(context: IActionContext, evt?: vscode.AuthenticationSessionsChangeEvent): Promise<void> {
     const AUTH_PROVIDER_ID = 'microsoft'; // VS Code Azure auth provider
-    const SCOPES = ['https://management.azure.com/.default']; // Default ARM scope
+    const SCOPES = addConfiguredTenantScope(['https://management.azure.com/.default']); // Default ARM scope, optionally tenant-scoped
 
     context.errorHandling.suppressDisplay = true;
     context.telemetry.suppressIfSuccessful = true;
@@ -264,16 +265,9 @@ export async function exportAuthRecord(context: IActionContext, evt?: vscode.Aut
 
 // Helper to get tenantId from session or config override
 function getTenantId(session: unknown, context?: IActionContext): string | undefined {
-    let tenantFromArg: string | undefined = undefined;
-    try {
-        // This handles the case if an error is thrown, if the configuration is not registered by any extension
-        tenantFromArg = vscode.workspace.getConfiguration().get<string>('@azure.argTenant');
-    } catch {
-        // If the configuration is not found, ignore and proceed
-        ext.outputChannel.appendLine('No @azure.argTenant configuration found. Proceeding without tenant override.');
-    }
-    if (tenantFromArg) {
-        return tenantFromArg;
+    const configuredTenant = getConfiguredAzureTenant();
+    if (configuredTenant) {
+        return configuredTenant;
     }
     return extractTenantIdFromIdToken(session, context);
 }

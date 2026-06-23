@@ -6,6 +6,7 @@
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import type { SignInOptions } from '@microsoft/vscode-azext-azureauth';
 import { ext } from '../../extensionVariables';
+import { getConfiguredAzureTenant } from '../../utils/azureTenantSetting';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 let _isLoggingIn: boolean = false;
@@ -16,7 +17,9 @@ export async function logIn(_context: IActionContext, options?: SignInOptions): 
         _isLoggingIn = true;
         ext.actions.refreshAzureTree(); // Refresh to cause the "logging in" spinner to show
         ext.actions.refreshTenantTree(); // Refresh to cause the "logging in" spinner to show
-        await provider.signIn(undefined, options);
+        const tenantId = getConfiguredAzureTenant();
+        const tenant = tenantId ? { tenantId } as Parameters<typeof provider.signIn>[0] : undefined;
+        await provider.signIn(tenant, options);
     } finally {
         _isLoggingIn = false;
         // Clear cache to ensure fresh data is fetched after sign-in
