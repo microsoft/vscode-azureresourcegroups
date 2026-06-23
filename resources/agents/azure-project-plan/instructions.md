@@ -83,7 +83,7 @@ Infer everything possible from the Step 1 scan; gather the rest through the requ
 For each question (shared + per-service), use the Step 1 scan + the user's prompt to fill:
 
 - **`answer`** — the inferred value when confident, else `null` (`[]` for array-typed `dataStores`).
-- **`recommendedChoice`** — always provide one (string for single-select questions, `string[]` for `dataStores`); becomes the **pre-selected** option in the webview, even for `needs_input`.
+- **`recommendedChoice`** — always provide one (string for single-select questions, `string[]` for `dataStores`); becomes the **pre-selected** option in the webview, even for `needs_input`. For `dataStores`, recommend **every** store the app needs, not just one — it is a subset and often has more than one entry, and the webview shows a Recommended badge on each (including the `Blob Storage` cases required by the `dataStores` MUST rules below).
 
 Then set **`status`**:
 
@@ -94,6 +94,8 @@ Then set **`status`**:
 |-----------------|---------------|
 | `.azure/plan.md` exists | Read it — extract all Azure services. Authoritative. |
 | `@azure/storage-blob` import | App uses Blob Storage |
+| App stores files, photos, images, uploads, documents, or media | App uses Blob Storage |
+| Backend service uses Azure Functions | App uses Blob Storage (Functions requires a storage account) |
 | `@azure/cosmos` import | App uses CosmosDB |
 | `pg` or `psycopg2` import | App uses PostgreSQL |
 | `redis` or `ioredis` import | App uses Redis |
@@ -152,7 +154,7 @@ These are asked once for the whole project. Always emit all of them:
 
 | # | `id` | `category` | `header` | `question` | Multi-select | Free-form | `options` | Default `recommendedChoice` |
 |---|---|---|---|---|---|---|---|---|
-| 1 | `dataStores` | `data` | Data Stores | Which data stores does your app need? | **yes** | no | `Blob Storage`, `Queue Storage`, `PostgreSQL`, `CosmosDB`, `Redis`, `Azure SQL` | Best-guess subset |
+| 1 | `dataStores` | `data` | Data Stores | Which data stores does your app need? | **yes** | no | `Blob Storage`, `Queue Storage`, `PostgreSQL`, `CosmosDB`, `Redis`, `Azure SQL` | Every store the app needs (often more than one) |
 | 2 | `auth` | `auth` | Authentication | Does your app need authentication? | no | **yes** | `No auth`, `Mock auth middleware`, `Microsoft Entra ID`, `Microsoft Entra External ID`, `Auth0`, `Clerk` | `Mock auth middleware` if user data, else `No auth` |
 
 > The old `appType`, `runtime`, and `frontend` questions are gone. **App Type is no longer asked** — it's derived from the detected `services` (see below). Language and framework are now per-service questions.
@@ -293,6 +295,8 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 - Always include `recommendedChoice`. For single-select it's a string; for `dataStores` it's a `string[]`.
 - For `inferred` questions, fill in `answer`. For `needs_input`, set `answer: null` (`[]` for `dataStores`).
 - `dataStores` is the only multi-select question — `answer` and `recommendedChoice` are always `string[]`.
+- **`dataStores` file rule (MUST):** when any service stores or serves files, photos, images, uploads, documents, or media, include `Blob Storage` in `dataStores` `recommendedChoice` — and in `answer` when the question is `inferred` — alongside any database. A file/photo app whose recommendation is only a database is wrong.
+- **`dataStores` Functions rule (MUST):** when any backend service uses Azure Functions, include `Blob Storage` in `dataStores` `recommendedChoice` — and in `answer` when the question is `inferred` — because Azure Functions requires an associated storage account (`AzureWebJobsStorage`). A Functions app whose recommendation has no storage option is wrong.
 - Strict JSON — no comments, no trailing commas.
 
 > ❌ **DO NOT** ask the user which .NET version to target. If a service's language = `C# (.NET)`, the target framework is **always `net10.0`**. Only downgrade when the user explicitly states an older version.
