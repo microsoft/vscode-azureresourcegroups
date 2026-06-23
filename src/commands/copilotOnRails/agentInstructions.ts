@@ -10,15 +10,27 @@ import { ext } from '../../extensionVariables';
 /** Folder (relative to the workspace root) where instruction folders are downloaded. */
 const WORKSPACE_AGENTS_RELATIVE_PATH = ['.github', 'agents'];
 
+/**
+ * Name of the stamp file (written under `.github/agents`) recording the extension
+ * version that produced the currently-copied instruction folders. Used to detect
+ * stale copies left behind by an older extension version so they can be refreshed.
+ */
+const VERSION_STAMP_FILE = '.version';
+
 /** Every instruction folder bundled with the extension (under `resources/agents`). */
 const agentInstructionFolders: string[] = [
     'azure-debug-generate',
     'azure-debug-plan',
     'azure-project-plan',
     'azure-project-scaffold',
-    'azure-project-test',
+    'azure-project-integrate',
     'shared-references',
 ];
+
+/** The running extension's version, used to stamp copied instruction folders. */
+function getExtensionVersion(): string {
+    return (ext.context.extension.packageJSON as { version: string }).version;
+}
 
 /** Root of the instruction folders bundled with the extension. */
 function getBundledAgentsRoot(): vscode.Uri {
@@ -44,12 +56,36 @@ async function copyInstructionFolders(folders: string[], agentsRoot: vscode.Uri)
     }
 }
 
+/** Reads the version stamp written next to the copied instruction folders, or `undefined` when absent/unreadable. */
+async function readVersionStamp(agentsRoot: vscode.Uri): Promise<string | undefined> {
+    const stampUri = vscode.Uri.joinPath(agentsRoot, VERSION_STAMP_FILE);
+    if (!(await AzExtFsExtra.pathExists(stampUri))) {
+        return undefined;
+    }
+    try {
+        return (await AzExtFsExtra.readFile(stampUri)).trim();
+    } catch {
+        return undefined;
+    }
+}
+
+/** Writes the running extension's version into the stamp file next to the copied instruction folders. */
+async function writeVersionStamp(agentsRoot: vscode.Uri): Promise<void> {
+    const stampUri = vscode.Uri.joinPath(agentsRoot, VERSION_STAMP_FILE);
+    await AzExtFsExtra.writeFile(stampUri, getExtensionVersion());
+}
+
 /**
- * Ensures the bundled instruction files are present in the workspace before an agent is invoked.
+ * Ensures the bundled instruction files are present — and up to date — in the workspace
+ * before an agent is invoked.
  *
  * - When any folder is missing, the user is asked whether to download them. Declining
  *   returns `false` so the caller can abort the agent invocation.
- * - When all folders are already present, returns `true` immediately without any prompts.
+ * - When every folder is present but the version stamp is missing or does not match the
+ *   running extension version, the folders are refreshed silently so a stale copy left by
+ *   an older extension version can't make the agent follow outdated instructions.
+ * - When all folders are present and the stamp matches, returns `true` immediately without
+ *   any prompts or copies.
  *
  * No-ops (returns `true`) when no workspace is open.
  */
@@ -67,6 +103,12 @@ export async function ensureAgentInstructions(agentName: string): Promise<boolea
     }
 
     if (missingFolders.length === 0) {
+        // All folders present — refresh silently if they were written by a different
+        // extension version (stale instructions are a silent correctness hazard).
+        if ((await readVersionStamp(agentsRoot)) !== getExtensionVersion()) {
+            await copyInstructionFolders(agentInstructionFolders, agentsRoot);
+            await writeVersionStamp(agentsRoot);
+        }
         return true;
     }
 
@@ -83,7 +125,10 @@ export async function ensureAgentInstructions(agentName: string): Promise<boolea
         return false;
     }
 
-    await copyInstructionFolders(missingFolders, agentsRoot);
+    // A folder was missing — bring everything to the current version, not just the
+    // missing folders, so present-but-stale folders are refreshed at the same time.
+    await copyInstructionFolders(agentInstructionFolders, agentsRoot);
+    await writeVersionStamp(agentsRoot);
     return true;
 }
 
@@ -100,5 +145,6 @@ export async function downloadAgentInstructions(_context: IActionContext): Promi
     }
 
     await copyInstructionFolders(agentInstructionFolders, agentsRoot);
+    await writeVersionStamp(agentsRoot);
     void vscode.window.showInformationMessage(vscode.l10n.t('Azure agent instructions downloaded to ".github/agents".'));
 }
