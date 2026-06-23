@@ -81,6 +81,15 @@
                 flex-shrink: 0;
             }
 
+            .autopilotSwitch {
+                .autopilotLabel {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    font-size: 0.9em;
+                }
+            }
+
             .fui-Button {
                 overflow: visible;
             }
@@ -356,6 +365,105 @@
     .planTableWrapper {
         max-width: 100%;
         overflow-x: auto;
+    }
+
+    .prerequisitesCard {
+        .planTable {
+            width: 100%;
+        }
+
+        .prereqGroup + .prereqGroup {
+            margin-top: 10px;
+        }
+
+        .prereqGroupLabel {
+            margin: 8px 0 4px;
+            font-size: 0.72em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .blockquote + .planTableWrapper,
+        .paragraph + .planTableWrapper {
+            margin-top: 4px;
+        }
+
+        .prerequisitesCallToAction {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            margin: 6px 0;
+            padding: 6px 10px;
+            font-size: 0.82em;
+            border-radius: 4px;
+            color: var(--vscode-inputValidation-warningForeground, var(--vscode-editorWarning-foreground));
+            background: var(--vscode-inputValidation-warningBackground);
+            border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
+
+            .codicon {
+                flex: 0 0 auto;
+                margin-top: 2px;
+            }
+
+            .prerequisitesCallToActionBody {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .prerequisitesMissingList {
+                margin: 0;
+                padding-left: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+
+                li {
+                    display: flex;
+                    align-items: baseline;
+                    gap: 6px;
+                    flex-wrap: wrap;
+                }
+
+                .prerequisitesMissingName {
+                    font-weight: 600;
+                }
+
+                .prerequisitesMissingInstall {
+                    font-family: var(--vscode-editor-font-family, monospace);
+                    font-size: 0.95em;
+                    padding: 1px 5px;
+                    border-radius: 3px;
+                    background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.18));
+                }
+            }
+        }
+
+        .installedChip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+            font-size: 0.85em;
+
+            .codicon {
+                font-size: 13px;
+            }
+
+            &.installed-installed {
+                color: var(--vscode-testing-iconPassed, var(--vscode-charts-green));
+            }
+
+            &.installed-missing {
+                color: var(--vscode-testing-iconFailed, var(--vscode-errorForeground));
+            }
+
+            &.installed-unknown {
+                color: var(--vscode-descriptionForeground);
+            }
+        }
     }
 
     .planTable td.editedCell {

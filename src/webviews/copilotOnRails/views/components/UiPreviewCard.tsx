@@ -27,7 +27,7 @@ interface UiPreviewCardProps {
 }
 
 /**
- * Read-only view of Section 5 (Design System & UI). The wireframe itself is a
+ * Read-only view of Section 6 (Design System & UI). The wireframe itself is a
  * sandboxed iframe loaded with planner-generated HTML/CSS; below it a per-color
  * hex selector lets the user recolor the design. Each pick is applied to the
  * iframe instantly by injecting CSS-variable overrides into the rendered HTML,
@@ -44,7 +44,7 @@ export const UiPreviewCard = ({ section, disabled, previewPages, onPaletteChange
 
     // The card shows two things: the iframe preview and a color picker.
     // Render whenever either has content — if there's truly nothing to show,
-    // fall back to letting `SectionCard` handle Section 5 instead.
+    // fall back to letting `SectionCard` handle Section 6 instead.
     const hasPages = previewPages.length > 0;
 
     const activePage: PreviewPage | undefined = hasPages

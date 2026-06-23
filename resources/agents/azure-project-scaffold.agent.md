@@ -15,7 +15,7 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 2. **Step A** — open the plan preview (see below). Mandatory.
 3. **Step B** — wait for the user's explicit approval of the plan. Mandatory.
 4. Scaffold the project.
-5. **Step C** — announce completion and **stop**. Do not prompt for next steps.
+5. **Step C** — announce completion and **stop**. Do not prompt for next steps; a separate view handles verification / local dev.
 
 ### Step A — open the plan preview (MANDATORY, do not skip)
 
@@ -37,7 +37,7 @@ After Step A, **stop and wait** for explicit user approval of the plan. Do **not
 
 ### Step C — stop after scaffolding; do NOT prompt for the next step
 
-When scaffolding finishes, announce **"Scaffolding complete!"** and **stop**. Do **NOT** ask the user what to do next: do **NOT** call `vscode_askQuestions` (or any chat question API).
+When scaffolding finishes, announce **"Scaffolding complete!"** and **stop**. Do **NOT** ask the user what to do next: do **NOT** call `vscode_askQuestions` (or any chat question API), and do **NOT** print plain-text "Verify project" / "Set up local dev" suggestions. A separate view surfaces those choices and invokes the matching command (`azureResourceGroups.startProjectTest` or `azureResourceGroups.startLocalDevelopment`) itself — you do not run those commands from chat.
 
 ### Frontend commands — working directory is mandatory
 ### Autopilot mode (overrides Steps A–C gating)

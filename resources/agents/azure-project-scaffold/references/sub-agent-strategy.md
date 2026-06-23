@@ -31,7 +31,7 @@ Launched right after Step 0 (concurrently with Phase A/B). Owns frontend generat
 | **Frontend Agent** (general-purpose) | Generate `services/web/`: mock data layer with real images (F1–F2), pages + shared components wired to the mock API client (F3), auto-authenticated state, all four data states. Apply the Rule 15 quality bar + Polish floor. Run the frontend build gate (`npm --prefix services/web run build`, zero errors, no `any`) (F4). | Step 1 sub-steps **F1–F4** |
 
 **Brief handed to the sub-agent** (full context it receives):
-- The approved plan, especially **Section 5 (Design System & UI)**: `Component Library:`, `Style Direction:`, `Typography:`, Color Palette, Pages table.
+- The approved plan, especially **Section 6 (Design System & UI)**: `Component Library:`, `Style Direction:`, `Typography:`, Color Palette, Pages table.
 - The approved HTML mock-up under `.azure/.preview-temp/` (manifest + per-page `<slug>.html` + `theme.css`) as the directional sketch.
 - The three frontend reference docs: `frontend-quality-bar.md`, `frontend-patterns.md`, `frontend-preview-steps.md`.
 

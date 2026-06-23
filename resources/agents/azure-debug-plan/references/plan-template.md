@@ -41,12 +41,14 @@ When editing markdown tables with `replace_string_in_file` or `multi_replace_str
 
 ## Prerequisites
 
-<!-- All required tools and VS Code extensions with install status. -->
-<!-- The user must install anything marked ❌ before approving. -->
+<!-- All required tools and VS Code extensions with install status — list both the Run and Debug tool sets defined in prerequisites.md. -->
+<!-- Service(s): the service(s) that need the tool (e.g. `api`, `worker`); use `*` for global toolchain shared by all services. -->
+<!-- Installed/Version come from the detection pass and must be re-run every time this section is (re)generated — never leave a placeholder. -->
+<!-- Install holds the install command/URL; the plan webview hides this column and surfaces it only for ❌ tools in the action callout. -->
 
-| Tool / Extension | Required For | Installed | Version | Install |
-|-----------------|-------------|-----------|---------|---------|
-| {name} | {reason} | {✅/❌} | {version or —} | {install URL or link} |
+| Tool / Extension | Category | Service(s) | Installed | Version | Install |
+|------------------|----------|------------|-----------|---------|---------|
+| {name} | {Runtime / Package manager / …} | {service(s) or *} | {✅/❌} | {version or —} | {install URL or command} |
 
 > ⚠️ **Action required:** Install any tools or extensions marked ❌ before approving this plan.
 
