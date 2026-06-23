@@ -241,7 +241,7 @@ For Python and C# parallel call patterns, see [runtimes/python.md](.github/agent
 
 ## Testing Resilience
 
-> ⚠️ **MANDATORY for every handler using Enhancement service.** Absence consistently flagged during scaffold benchmarking. See [mandatory-test-patterns.md](.github/agents/azure-project-test/references/mandatory-test-patterns.md) → "Mandatory Test Patterns → Pattern 2" for complete typed test pattern.
+> ⚠️ **MANDATORY for every handler using Enhancement service.** Absence consistently flagged during scaffold benchmarking. Every Enhancement service wrapper must verify graceful degradation with a typed test.
 
 Every Enhancement service wrapper must have tests verifying graceful degradation:
 

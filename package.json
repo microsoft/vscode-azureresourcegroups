@@ -419,6 +419,11 @@
                 "category": "Azure"
             },
             {
+                "command": "azureResourceGroups.openFrontendPreviewView",
+                "title": "%azureResourceGroups.openFrontendPreviewView%",
+                "category": "Azure"
+            },
+            {
                 "command": "azureResourceGroups.openLocalNextStepsView",
                 "title": "%azureResourceGroups.openLocalNextStepsView%",
                 "category": "Azure"
@@ -764,6 +769,10 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.openFrontendPreviewView",
                     "when": "never"
                 }
             ],

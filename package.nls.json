@@ -68,6 +68,7 @@
     "azureResourceGroups.openLocalPlanView": "Open Local Plan View",
     "azureResourceGroups.openDeployPlanView": "Open Deploy Plan View",
     "azureResourceGroups.openRequirementsView": "Open Project Requirements View",
+    "azureResourceGroups.openFrontendPreviewView": "Open Frontend Preview View",
     "azureResourceGroups.openLocalNextStepsView": "Open Local Next Steps View",
     "azureResourceGroups.openScaffoldNextStepsView": "Open Scaffold Next Steps View",
     "azureProject.viewName": "Azure Project",

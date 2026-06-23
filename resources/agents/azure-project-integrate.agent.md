@@ -1,6 +1,6 @@
 ---
 name: azure-project-integrate
-description: Integrate a freshly scaffolded Azure-centric project — wire the frontend to LIVE backend data (replace all mock data), smoke-test the backend so every endpoint responds, create the SQL/PostgreSQL schema migrations (NO seed data), and run the frontend and backend wired together end-to-end. Runs after `azure-project-scaffold`. WHEN "integrate project", "wire to live data", "remove mock data", "smoke test backend", "verify endpoints", "create migrations", "wire frontend and backend", "integrate scaffold", "make the app run".
+description: Integrate a freshly scaffolded Azure-centric project — create the SQL/PostgreSQL schema migrations (NO seed data), smoke-test the backend so every endpoint responds, wire the frontend to LIVE backend data (replace all mock data), and run the frontend and backend wired together end-to-end. Runs after `azure-project-scaffold`. WHEN "integrate project", "wire to live data", "remove mock data", "smoke test backend", "verify endpoints", "create migrations", "wire frontend and backend", "integrate scaffold", "make the app run".
 tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
 model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---
@@ -32,13 +32,23 @@ You create **schema migrations only** — `CREATE TABLE`, constraints, indexes, 
 
 When a step asks you to call `run_vscode_command` (e.g. the final hand-off), first call `tool_search` with the query `run_vscode_command` to load it, **then** invoke it. Both `tool_search` and `run_vscode_command` are listed in this agent's `tools:` frontmatter — they are available in this session. Do **not** claim the tool is unavailable.
 
-### Step 6 — stop after integration; do NOT prompt for the next step
+### Step 6 — open the Next Steps view, then stop; do NOT prompt for the next step
 
-When integration finishes, announce **"Integration complete!"** with a short summary, and **stop**. Do **NOT** ask the user what to do next: do **NOT** call `vscode_askQuestions` (or any chat question API).
+When integration finishes, announce **"Integration complete!"** with a short summary. Then surface the post-integration "What's next?" view by loading `run_vscode_command` and calling:
+
+```json
+{
+  "commandId": "azureResourceGroups.openScaffoldNextStepsView",
+  "name": "Open Project Next Steps View",
+  "skipCheck": true
+}
+```
+
+After opening the view, **stop**. The view owns the next hand-off (set up local development, or deploy) — do **NOT** ask the user what to do next, and do **NOT** call `vscode_askQuestions` (or any chat question API). (Autopilot skips this view — see below.)
 
 ### Autopilot mode (overrides the stop/question gating)
 
-**Autopilot is active when** the invoking chat query begins with the marker `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto` (front-matter or a `**Execution Mode**: auto` row). When autopilot is active, run fully unattended — **no chat questions, no manual approval**. After integration completes, hand off to local development automatically by loading `run_vscode_command` and calling:
+**Autopilot is active when** the invoking chat query begins with the marker `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto` (front-matter or a `**Execution Mode**: auto` row). When autopilot is active, run fully unattended — **no chat questions, no manual approval**. **Skip the Next Steps view** (Step 6) and instead hand off to local development directly by loading `run_vscode_command` and calling:
 
 ```json
 {

@@ -19,6 +19,7 @@ import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { createProjectWithCopilot } from '../webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { openDeploymentPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openDeploymentPlanView';
+import { openFrontendPreviewView } from '../webviews/copilotOnRails/extension/openFrontendPreviewView';
 import { openLocalDevNextStepsView } from '../webviews/copilotOnRails/extension/openLocalDevNextStepsView';
 import { openLocalPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openLocalPlanView';
 import { openRequirementsViewFromWorkspace } from '../webviews/copilotOnRails/extension/openRequirementsView';
@@ -172,6 +173,8 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.openLocalPlanView', openLocalPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openRequirementsView', openRequirementsViewFromWorkspace);
+    registerCommand('azureResourceGroups.openFrontendPreviewView', (_context: IActionContext, frontendFolder?: string) =>
+        openFrontendPreviewView(frontendFolder));
     registerCommand('azureResourceGroups.openLocalNextStepsView', (_context: IActionContext, hasApiTests?: boolean) =>
         openLocalDevNextStepsView({ hasApiTests: hasApiTests === true }));
     registerCommand('azureResourceGroups.openScaffoldNextStepsView', () => openScaffoldNextStepsView({}));

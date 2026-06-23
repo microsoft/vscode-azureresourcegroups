@@ -1,0 +1,236 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.frontendPreviewView {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 28px;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100vh;
+
+    .previewMain {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .previewHeader {
+        .headerTop {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--vscode-widget-border);
+            gap: 12px;
+            flex-wrap: wrap;
+            row-gap: 8px;
+
+            >div:first-child {
+                min-width: 0;
+                flex: 1 1 auto;
+            }
+
+            h1 {
+                margin: 0 0 6px;
+                font-size: 1.3rem;
+            }
+        }
+
+        .metadataBadges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 0.72rem;
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+
+            &.subtle {
+                background: transparent;
+                color: var(--vscode-descriptionForeground);
+                border: 1px solid var(--vscode-widget-border);
+            }
+        }
+
+        .headerActions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+    }
+
+    .feedbackBanner {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-widget-border);
+        color: var(--vscode-foreground);
+        font-size: 0.85rem;
+    }
+
+    .previewSurface {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+    }
+
+    .previewPlaceholder {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        text-align: center;
+        border: 1px dashed var(--vscode-widget-border);
+        border-radius: 8px;
+        padding: 32px;
+
+        .previewHint {
+            margin: 0;
+            color: var(--vscode-descriptionForeground);
+            font-size: 0.85rem;
+        }
+
+        &.previewError {
+            border-style: solid;
+            border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground));
+        }
+
+        .previewErrorIcon {
+            font-size: 1.6rem;
+            color: var(--vscode-errorForeground);
+        }
+
+        h2 {
+            margin: 0;
+        }
+
+        .previewErrorMessage {
+            max-width: 640px;
+            max-height: 200px;
+            overflow: auto;
+            white-space: pre-wrap;
+            text-align: left;
+            font-family: var(--vscode-editor-font-family, monospace);
+            font-size: 0.8rem;
+            background: var(--vscode-textCodeBlock-background);
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin: 0;
+        }
+    }
+
+    .previewFrame {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--vscode-editor-background);
+    }
+
+    .previewChrome {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        background: var(--vscode-editorWidget-background);
+        border-bottom: 1px solid var(--vscode-widget-border);
+    }
+
+    .previewChromeDot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--vscode-descriptionForeground);
+        opacity: 0.4;
+    }
+
+    .previewUrlPill {
+        margin-left: 8px;
+        padding: 2px 10px;
+        border-radius: 10px;
+        font-size: 0.74rem;
+        color: var(--vscode-descriptionForeground);
+        background: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-widget-border);
+        max-width: 60%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .previewIframe {
+        flex: 1 1 auto;
+        width: 100%;
+        border: 0;
+        background: #fff;
+    }
+
+    .feedbackDrawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        width: min(420px, 90vw);
+        box-sizing: border-box;
+        background: var(--vscode-editorWidget-background);
+        border-left: 1px solid var(--vscode-widget-border);
+        box-shadow: -8px 0 24px rgba(0, 0, 0, 0.35);
+        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        z-index: 20;
+
+        .drawerHeader {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            h2 {
+                margin: 0;
+                font-size: 1.05rem;
+            }
+        }
+
+        .drawerInfo {
+            margin: 0;
+            color: var(--vscode-descriptionForeground);
+            font-size: 0.82rem;
+        }
+
+        .drawerTextarea {
+            width: 100%;
+            min-height: 160px;
+        }
+
+        .drawerActions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: auto;
+        }
+    }
+}

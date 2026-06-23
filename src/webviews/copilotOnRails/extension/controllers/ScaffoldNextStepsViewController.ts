@@ -10,7 +10,7 @@ import { ensureCopilotChatReady } from "../../../../commands/copilotOnRails/open
 import { ext } from "../../../../extensionVariables";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 
-type ScaffoldAction = 'setupLocal' | 'verifyCode' | 'deploy';
+type ScaffoldAction = 'setupLocal' | 'deploy';
 
 export class ScaffoldNextStepsViewController extends WebviewController<Record<string, never>> {
     constructor(initialConfig: Record<string, never>) {
@@ -42,16 +42,6 @@ export class ScaffoldNextStepsViewController extends WebviewController<Record<st
                 await vscode.commands.executeCommand('workbench.action.chat.open', {
                     mode: 'azure-debug-plan',
                     query: vscode.l10n.t('The project has been scaffolded. Now set up the local debugging environment so I can start building and testing.'),
-                });
-                return;
-            case 'verifyCode':
-                if (!(await ensureCopilotChatReady())) {
-                    return;
-                }
-                this.panel.dispose();
-                await vscode.commands.executeCommand('workbench.action.chat.open', {
-                    mode: 'azure-project-test',
-                    query: vscode.l10n.t('Verify the project by running tests, linters, and build checks to ensure everything is working correctly.'),
                 });
                 return;
             case 'deploy':

@@ -159,7 +159,18 @@ Every page that displays data MUST cover all four states with real library primi
 | empty    | `<Card>` with illustration + `<Body1>` + primary `<Button>` CTA | `<v-empty-state>` or `<v-card>` with `<v-icon>` + `<v-btn>` CTA | `<mat-card>` + `<mat-icon>` + primary action | `<div class="card">` + icon + primary CTA `<button>` | `<article>` + `<p>` + primary `<button>` |
 | data     | Real list/grid/table from mock fixtures       | Real list/grid/table                 | Real list/grid/table                            | Real list/grid/table                    | Real list/grid/table               |
 
-> The four states MUST be reachable from the running preview — wire a small dev-only toggle (URL hash, query param, or a corner button gated by `import.meta.env.DEV`) so reviewers can flip between `loading`, `error`, `empty`, `data` without restarting the server. This is also how `azure-project-test` later verifies the four-state contract.
+### Mock State Switcher (STANDARD — always scaffold it)
+
+The four states MUST be reachable from the running preview **without code edits or a server restart**. This is not optional and not a per-project judgement call — **every scaffolded frontend with a data-bearing page ships the same dev-only Mock State Switcher**, wired to a single shared override so reviewers (and the preview gate) can flip `data → loading → empty → error` on demand. Build it to this fixed contract so it behaves identically across projects:
+
+| Piece | Standard |
+|-------|----------|
+| **Override source** | A single module (`services/web/src/api/previewState.ts`) exposes the current forced state: `type PreviewDataState = 'data' \| 'loading' \| 'empty' \| 'error'`. It reads the initial value from the `?previewState=` URL query param, falls back to `localStorage['previewState']`, then defaults to `'data'`. Setting it updates `localStorage` and notifies subscribers (or reloads). |
+| **Mock client honors it** | The mock client (F2) checks `previewState` on every method: `loading` → never resolves (or resolves after a long delay) so skeletons stay up; `error` → rejects with a realistic `Error` so error UI + retry render; `empty` → resolves with empty collections (`[]`) / `null` singletons so empty-state CTAs render; `data` → returns the normal fixtures. One switch, all endpoints — no per-page wiring. |
+| **The switcher UI** | A small fixed-corner control (segmented buttons or a `<select>`) rendered **only when `import.meta.env.DEV`**, labelled Data / Loading / Empty / Error, that sets the override. It must never ship in a production build and must sit above app chrome (high `z-index`, `position: fixed`). |
+| **Gating** | The entire switcher + override is dev-only. In `import.meta.env.PROD` the override is forced to `'data'` and the UI is not rendered. |
+
+> The switcher rides on the **mock layer only**. When `azure-project-integrate` swaps the seam to the live client, it **removes the switcher as part of the mock-layer teardown** — deleting `src/api/previewState.ts`, the corner-switcher component, and every `previewState` import/usage. Integrate still uses these four states to confirm the four-state contract against live data, but the dev-only switcher MUST NOT survive into the wired-up app.
 
 ---
 
