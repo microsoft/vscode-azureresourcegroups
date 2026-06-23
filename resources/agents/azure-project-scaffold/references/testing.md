@@ -388,7 +388,7 @@ Look for:
 
 ### 4. If Tests Pass
 
-1. Mark current phase's checklist items as complete in `.azure/project-plan.md`
+1. Update the plan's `Status:` field in `.azure/project-plan.md` if the phase advances it
 2. Proceed to next phase
 
 ### Decision Tree
@@ -451,7 +451,7 @@ Use descriptive test names that document behavior:
 
 ## Frontend Testing
 
-> The frontend has its own test gate at Step 11. These patterns ensure the frontend is tested as rigorously as the backend.
+> The frontend has its own build gate at Step 1 (F4). These patterns ensure the frontend is tested as rigorously as the backend.
 
 ### Minimum Test Coverage
 

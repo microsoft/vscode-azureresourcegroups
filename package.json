@@ -109,6 +109,9 @@
                 "path": "resources/agents/azure-project-scaffold.agent.md"
             },
             {
+                "path": "resources/agents/azure-project-integrate.agent.md"
+            },
+            {
                 "path": "resources/agents/azure-debug-plan.agent.md"
             },
             {
@@ -413,6 +416,11 @@
             {
                 "command": "azureResourceGroups.openRequirementsView",
                 "title": "%azureResourceGroups.openRequirementsView%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openFrontendPreviewView",
+                "title": "%azureResourceGroups.openFrontendPreviewView%",
                 "category": "Azure"
             },
             {
@@ -761,6 +769,10 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.openFrontendPreviewView",
                     "when": "never"
                 }
             ],
