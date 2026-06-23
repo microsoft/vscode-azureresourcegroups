@@ -8,6 +8,7 @@ import type { AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureaut
 import * as vscode from 'vscode';
 import { logIn } from '../src/commands/accounts/logIn';
 import { ext } from '../src/extensionVariables';
+import { getTenantId } from '../src/exportAuthRecord';
 import { addConfiguredTenantScope, getTenantIdForAuthentication, normalizeConfiguredTenant } from '../src/utils/azureTenantSetting';
 
 suite('azureTenantSetting', () => {
@@ -51,6 +52,20 @@ suite('azureTenantSetting', () => {
 
     test('getTenantIdForAuthentication falls back to configured tenant', () => {
         assert.strictEqual(getTenantIdForAuthentication(undefined, 'configured-tenant'), 'configured-tenant');
+    });
+
+    test('getTenantId prefers token tid over configured tenant domain', async () => {
+        const tenantId = '11111111-2222-3333-4444-555555555555';
+        const tokenPayload = Buffer.from(JSON.stringify({ tid: tenantId })).toString('base64');
+        const session = { idToken: `header.${tokenPayload}.signature` };
+
+        try {
+            await vscode.workspace.getConfiguration().update('azure.tenant', 'contoso.onmicrosoft.com', vscode.ConfigurationTarget.Global);
+
+            assert.strictEqual(getTenantId(session), tenantId);
+        } finally {
+            await vscode.workspace.getConfiguration().update('azure.tenant', undefined, vscode.ConfigurationTarget.Global);
+        }
     });
 
     test('logIn passes configured azure.tenant to subscription provider signIn', async () => {

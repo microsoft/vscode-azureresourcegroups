@@ -264,12 +264,8 @@ export async function exportAuthRecord(context: IActionContext, evt?: vscode.Aut
 }
 
 // Helper to get tenantId from session or config override
-function getTenantId(session: unknown, context?: IActionContext): string | undefined {
-    const configuredTenant = getConfiguredAzureTenant();
-    if (configuredTenant) {
-        return configuredTenant;
-    }
-    return extractTenantIdFromIdToken(session, context);
+export function getTenantId(session: unknown, context?: IActionContext): string | undefined {
+    return extractTenantIdFromIdToken(session, context) ?? getConfiguredAzureTenant();
 }
 
 // Helper to extract tenantId (tid) from the idToken of a VS Code authentication session (For MS Auth, this will be present).

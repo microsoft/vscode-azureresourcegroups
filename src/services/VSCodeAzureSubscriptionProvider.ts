@@ -16,7 +16,11 @@ import { isTenantFilteredOut } from '../utils/tenantSelection';
  */
 class ResourceGroupsSubscriptionProvider extends VSCodeAzureSubscriptionProvider {
     public override async signIn(tenant?: TenantIdAndAccount, options?: SignInOptions): Promise<boolean> {
-        const tenantId = getTenantIdForAuthentication(tenant?.tenantId);
+        if (tenant?.tenantId) {
+            return super.signIn(tenant, options);
+        }
+
+        const tenantId = getTenantIdForAuthentication(undefined);
         const tenantForSignIn = tenantId ? { ...tenant, tenantId } as TenantIdAndAccount : tenant;
         return super.signIn(tenantForSignIn, options);
     }
