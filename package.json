@@ -424,6 +424,11 @@
                 "category": "Azure"
             },
             {
+                "command": "azureResourceGroups.openLocalNextStepsView",
+                "title": "%azureResourceGroups.openLocalNextStepsView%",
+                "category": "Azure"
+            },
+            {
                 "command": "azureResourceGroups.openScaffoldNextStepsView",
                 "title": "%azureResourceGroups.openScaffoldNextStepsView%",
                 "category": "Azure"
@@ -703,6 +708,14 @@
             ],
             "commandPalette": [
                 {
+                    "command": "azureResourceGroups.openLocalNextStepsView",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.openScaffoldNextStepsView",
+                    "when": "never"
+                },
+                {
                     "command": "azureResourceGroups.uploadFileCloudConsole",
                     "when": "isWorkspaceTrusted"
                 },
@@ -760,10 +773,6 @@
                 },
                 {
                     "command": "azureResourceGroups.openFrontendPreviewView",
-                    "when": "never"
-                },
-                {
-                    "command": "azureResourceGroups.openScaffoldNextStepsView",
                     "when": "never"
                 }
             ],

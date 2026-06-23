@@ -147,6 +147,12 @@
             opacity: 0.85;
         }
 
+        .sectionHeadingRow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
         .sectionHeading {
             display: flex;
             align-items: center;
