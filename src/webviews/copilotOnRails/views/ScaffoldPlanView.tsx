@@ -29,9 +29,7 @@ type FeedbackItem =
     /** A design token change (e.g. palette color, spacing, typography). The `target` field identifies the token (e.g. "palette:primary"). */
     | { id: string; kind: 'designToken'; target: string; field: string; from: string; to: string }
     /** A general freeform note typed into the feedback drawer. */
-    | { id: string; kind: 'freeform'; text: string }
-    /** A note targeting a specific preview page. */
-    | { id: string; kind: 'pageFeedback'; pageSlug: string; pageTitle: string; text: string };
+    | { id: string; kind: 'freeform'; text: string };
 
 let feedbackIdCounter = 0;
 const nextId = (): string => `fb-${++feedbackIdCounter}`;
@@ -47,15 +45,6 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
         .filter((i): i is Extract<FeedbackItem, { kind: 'freeform' }> => i.kind === 'freeform')
         .map(i => `- ${i.text.trim()}`)
         .filter(t => t.length > 2);
-    const pageFeedback = items
-        .filter((i): i is Extract<FeedbackItem, { kind: 'pageFeedback' }> => i.kind === 'pageFeedback');
-
-    const pageFeedbackMap = new Map<string, string[]>();
-    for (const item of pageFeedback) {
-        const existingFeedback = pageFeedbackMap.get(item.pageTitle) ?? [];
-        existingFeedback.push(`- ${item.text.trim()}`);
-        pageFeedbackMap.set(item.pageTitle, existingFeedback);
-    }
 
     const lines: string[] = [
         'Please revise the project plan based on my feedback and update project-plan.md.',
@@ -71,16 +60,6 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
             ...designChanges,
             '',
         );
-    }
-    if (pageFeedbackMap.size > 0) {
-        lines.push('Page-specific feedback:', '');
-        for (const [pageTitle, feedbackLines] of pageFeedbackMap) {
-            lines.push(`${pageTitle} page:`);
-            for (const fl of feedbackLines) {
-                lines.push(fl);
-            }
-            lines.push('');
-        }
     }
     if (notes.length > 0) {
         lines.push('Additional notes:', ...notes, '');
@@ -280,11 +259,12 @@ export const ScaffoldPlanView = (): JSX.Element => {
         setFreeformDraft('');
     }, [freeformDraft]);
 
-    const handlePageFeedback = useCallback((pageSlug: string, pageTitle: string, text: string) => {
-        if (!text.trim()) {
-            return;
-        }
-        setFeedbackItems(prev => [...prev, { id: nextId(), kind: 'pageFeedback', pageSlug, pageTitle, text: text.trim() }]);
+    const handleEditPage = useCallback((pageTitle: string) => {
+        // Open the feedback drawer with a note prepopulated for the page so the
+        // user can type their feedback after the "<Page> Page: " prefix.
+        const prefix = `${pageTitle} Page: `;
+        setFreeformDraft(prev => (prev.trim().length > 0 ? `${prev.trimEnd()}\n${prefix}` : prefix));
+        setDrawerOpen(true);
     }, []);
 
     const handlePaletteChange = useCallback((token: string, _originalHex: string, newHex: string) => {
@@ -448,11 +428,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                         previewPages={previewPages}
                         previewStatus={previewStatus}
                         onPaletteChange={handlePaletteChange}
-                        onPageFeedback={handlePageFeedback}
-                        pageFeedbackItems={feedbackItems
-                            .filter((i): i is Extract<FeedbackItem, { kind: 'pageFeedback' }> => i.kind === 'pageFeedback')
-                            .map(i => ({ id: i.id, pageSlug: i.pageSlug, text: i.text }))}
-                        onRemovePageFeedback={handleRemoveFeedback}
+                        onEditPage={handleEditPage}
                     />
                 )}
 
@@ -495,6 +471,19 @@ interface FeedbackDrawerProps {
 
 const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onRemoveItem, onSubmit, onDiscardAll, onClose }: FeedbackDrawerProps): JSX.Element => {
     const hasAny = items.length > 0 || freeformDraft.trim().length > 0;
+    const freeformRef = useRef<HTMLTextAreaElement>(null);
+
+    // Focus the note field when the drawer opens and place the cursor at the end
+    // so the user can type right after a prepopulated "<Page> Page: " prefix.
+    useEffect(() => {
+        const el = freeformRef.current;
+        if (el) {
+            el.focus();
+            const end = el.value.length;
+            el.setSelectionRange(end, end);
+        }
+    }, []);
+
     return (
         <aside className='feedbackDrawer' aria-label='Plan feedback'>
             <div className='drawerHeader'>
@@ -519,10 +508,6 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
                                         <span className='arrow'> → </span>
                                         {item.to}
                                     </span>
-                                ) : item.kind === 'pageFeedback' ? (
-                                    <span className='feedbackChipText'>
-                                        <strong>{item.pageTitle} Page:</strong> {item.text}
-                                    </span>
                                 ) : (
                                     <span className='feedbackFreeformText'>{item.text}</span>
                                 )}
@@ -540,6 +525,7 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
 
                 <div className='freeformBlock'>
                     <Textarea
+                        ref={freeformRef}
                         value={freeformDraft}
                         onChange={(_, data) => onFreeformChange(data.value)}
                         placeholder='Add a note for Copilot (e.g. "Prefer a monorepo layout")'

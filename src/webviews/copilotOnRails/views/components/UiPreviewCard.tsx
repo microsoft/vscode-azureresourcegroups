@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, Spinner, Textarea } from '@fluentui/react-components';
-import { SendRegular } from '@fluentui/react-icons';
-import { useCallback, useMemo, useState, type JSX } from 'react';
+import { Button, Spinner, Tooltip } from '@fluentui/react-components';
+import { CommentEditRegular } from '@fluentui/react-icons';
+import { useMemo, useState, type JSX } from 'react';
 import { type PaletteEntry, type PlanSection, type PreviewPage, type PreviewStatus } from '../utils/parseScaffoldPlanMarkdown';
 
 interface UiPreviewCardProps {
@@ -28,12 +28,11 @@ interface UiPreviewCardProps {
      * instantly inside this component (no feedback round-trip).
      */
     onPaletteChange: (token: string, originalHex: string, newHex: string) => void;
-    /** Called when the user submits feedback specific to a preview page. */
-    onPageFeedback: (pageSlug: string, pageTitle: string, text: string) => void;
-    /** All page feedback items, filtered by active page internally. */
-    pageFeedbackItems: { id: string; pageSlug: string; text: string }[];
-    /** Called when the user removes a page feedback item by id. */
-    onRemovePageFeedback: (id: string) => void;
+    /**
+     * Called when the user clicks the "Edit" button for the active preview page.
+     * The parent opens the feedback drawer with a note prepopulated for that page.
+     */
+    onEditPage: (pageTitle: string) => void;
 }
 
 /**
@@ -43,7 +42,7 @@ interface UiPreviewCardProps {
  * iframe instantly by injecting CSS-variable overrides into the rendered HTML,
  * and bubbled up so the parent persists the new hex into the plan's palette.
  */
-export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, onPaletteChange, onPageFeedback, pageFeedbackItems, onRemovePageFeedback }: UiPreviewCardProps): JSX.Element | null => {
+export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, onPaletteChange, onEditPage }: UiPreviewCardProps): JSX.Element | null => {
     const palette = useMemo(() => extractPalette(section), [section]);
     const styleDirection = useMemo(() => extractKeyValue(section, 'Style Direction'), [section]);
 
@@ -51,8 +50,6 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
     // Live CSS-variable overrides keyed by `--color-*` name. Applied to the
     // iframe HTML on every render so a hex pick recolors the preview instantly.
     const [overrides, setOverrides] = useState<Record<string, string>>({});
-    // Per-page feedback text
-    const [pageFeedback, setPageFeedback] = useState('');
 
     // The card shows two things: the iframe preview and a color picker.
     // Render whenever either has content — if there's truly nothing to show,
@@ -63,19 +60,6 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
         ? previewPages[Math.min(activePageIdx, previewPages.length - 1)]
         : undefined;
     const isLoading = !activePage || activePage.status !== 'ready' || !activePage.html || previewStatus === 'generating';
-
-    const handleSubmitPageFeedback = useCallback(() => {
-        if (!pageFeedback.trim() || !activePage) {
-            return;
-        }
-        onPageFeedback(activePage.slug, activePage.title, pageFeedback);
-        setPageFeedback('');
-    }, [pageFeedback, activePage, onPageFeedback]);
-
-    const activePageFeedback = useMemo(
-        () => activePage ? pageFeedbackItems.filter(i => i.pageSlug === activePage.slug) : [],
-        [pageFeedbackItems, activePage],
-    );
 
     // Re-render the page HTML with the user's live color overrides inlined as a
     // trailing `:root { … }` block so the iframe recolors the moment a hex is
@@ -104,20 +88,41 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
             </div>
             {styleDirection && <p className='uiPreviewCard__styleDirection'>{styleDirection}</p>}
 
-            {/* Page tab bar: allows switching between multiple preview pages */}
-            {hasPages && previewPages.length > 1 && (
-                <div className='uiPreviewCard__tabs' role='tablist' aria-label='Preview page'>
-                    {previewPages.map((p, i) => (
-                        <button
-                            key={`${p.slug}-${i}`}
-                            role='tab'
-                            aria-selected={i === activePageIdx}
-                            className={`uiPreviewCard__tab ${i === activePageIdx ? 'uiPreviewCard__tab--active' : ''}`}
-                            onClick={() => setActivePageIdx(i)}
-                        >
-                            {p.title}
-                        </button>
-                    ))}
+            {/* Preview toolbar: page tabs on the left, an Edit box on the right
+                that opens the feedback drawer prepopulated for the active page. */}
+            {hasPages && (
+                <div className='uiPreviewCard__previewBar'>
+                    {previewPages.length > 1 ? (
+                        <div className='uiPreviewCard__tabs' role='tablist' aria-label='Preview page'>
+                            {previewPages.map((p, i) => (
+                                <button
+                                    key={`${p.slug}-${i}`}
+                                    role='tab'
+                                    aria-selected={i === activePageIdx}
+                                    className={`uiPreviewCard__tab ${i === activePageIdx ? 'uiPreviewCard__tab--active' : ''}`}
+                                    onClick={() => setActivePageIdx(i)}
+                                >
+                                    {p.title}
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <span className='uiPreviewCard__tabsSpacer' />
+                    )}
+                    {activePage && (
+                        <div className='uiPreviewCard__editBox'>
+                            <Tooltip content='Request page-specific changes' relationship='label'>
+                                <Button
+                                    appearance='subtle'
+                                    size='small'
+                                    icon={<CommentEditRegular />}
+                                    aria-label='Request page-specific changes'
+                                    disabled={disabled}
+                                    onClick={() => onEditPage(activePage.title)}
+                                />
+                            </Tooltip>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -144,46 +149,6 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
                     />
                 )}
             </div>
-
-            {/* Per-page feedback: lets users submit notes targeting the active preview page */}
-            {hasPages && activePage && !isLoading && (
-                <div className='uiPreviewCard__pageFeedback'>
-                    {activePageFeedback.length > 0 && (
-                        <ul className='uiPreviewCard__pageFeedbackList'>
-                            {activePageFeedback.map(item => (
-                                <li key={item.id} className='uiPreviewCard__pageFeedbackItem'>
-                                    <span>{item.text}</span>
-                                    <button
-                                        className='uiPreviewCard__pageFeedbackRemove'
-                                        aria-label='Remove feedback'
-                                        onClick={() => onRemovePageFeedback(item.id)}
-                                    >×</button>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                    <div className='uiPreviewCard__pageFeedbackRow'>
-                        <Textarea
-                            className='uiPreviewCard__pageFeedbackInput'
-                            value={pageFeedback}
-                            onChange={(_, data) => setPageFeedback(data.value)}
-                            placeholder={`Add feedback for "${activePage.title}" page…`}
-                            rows={2}
-                            resize='vertical'
-                        />
-                        <Button
-                            className='uiPreviewCard__pageFeedbackSubmit'
-                            appearance='secondary'
-                            size='small'
-                            icon={<SendRegular />}
-                            disabled={pageFeedback.trim().length === 0}
-                            onClick={handleSubmitPageFeedback}
-                        >
-                            Add feedback
-                        </Button>
-                    </div>
-                </div>
-            )}
 
             {palette.length > 0 && (
                 <div className='uiPreviewCard__paletteRow'>

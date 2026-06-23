@@ -237,63 +237,26 @@
         color: var(--vscode-descriptionForeground);
     }
 
-    // -------- Per-page feedback --------
-    .uiPreviewCard__pageFeedback {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        padding-top: 8px;
-    }
-
-    .uiPreviewCard__pageFeedbackList {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .uiPreviewCard__pageFeedbackItem {
+    // -------- Preview toolbar (page tabs + Edit box) --------
+    .uiPreviewCard__previewBar {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 8px;
-        padding: 4px 8px;
-        background: var(--vscode-editorWidget-background);
-        border: 1px solid var(--vscode-widget-border);
-        border-radius: 4px;
-        font-size: 0.85em;
+        gap: 12px;
     }
 
-    .uiPreviewCard__pageFeedbackRemove {
-        background: none;
-        border: none;
-        color: var(--vscode-descriptionForeground);
-        cursor: pointer;
-        font-size: 1.1em;
-        line-height: 1;
-        padding: 2px 4px;
-
-        &:hover {
-            color: var(--vscode-errorForeground);
-        }
-    }
-
-    .uiPreviewCard__pageFeedbackRow {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    .uiPreviewCard__pageFeedbackInput {
+    .uiPreviewCard__tabsSpacer {
         flex: 1;
-        min-width: 0;
     }
 
-    .uiPreviewCard__pageFeedbackSubmit {
+    // The Edit button sits in its own box, visually separated from the page
+    // tabs list, and stays pinned to the end of the preview toolbar.
+    .uiPreviewCard__editBox {
         flex-shrink: 0;
-        margin-top: 2px;
+        display: flex;
+        align-items: center;
+        padding-left: 12px;
+        border-left: 1px solid var(--vscode-widget-border);
     }
 
     // -------- Color picker --------
