@@ -94,10 +94,6 @@ project-root/
 │   │   │   │   └── errorHandler.test.ts
 │   │   │   └── validation/
 │   │   │       └── itemSchema.test.ts
-│   │   └── seeds/                  ← Database seed data (if applicable)
-│   │       ├── seed.ts
-│   │       └── fixtures/
-│   │           └── seed-data.json
 │   ├── web/                        ← Frontend application
 │   │   ├── package.json
 │   │   ├── tsconfig.json
@@ -166,7 +162,6 @@ project-root/
 │   │   │   ├── services/
 │   │   │   ├── functions/
 │   │   │   └── errors/
-│   │   └── seeds/
 │   └── shared/
 │       ├── types/
 │       └── schemas/
@@ -266,8 +261,6 @@ project-root/
 │   │   ├── Middleware/
 │   │   │   ├── RequestLogger.cs
 │   │   │   └── ValidateRequest.cs
-│   │   └── Seeds/
-│   │       └── SeedData.cs
 │   ├── Functions.Tests/            ← xUnit test project
 │   │   ├── Functions.Tests.csproj
 │   │   ├── Fixtures/

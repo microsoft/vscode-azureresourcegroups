@@ -13,6 +13,19 @@ metadata:
 
 **North Star:** produce a working, buildable, runnable Azure backend fast from the approved plan. If the plan has a frontend, generate a standalone auto-authenticated mock preview via a dedicated **Frontend Preview sub-agent that runs in parallel with the backend sub-agents** (user lands on main content, not login); once it returns, the orchestrator auto-opens the live preview in the browser. After scaffolding, suggest verification and local dev setup.
 
+## 🚫 Scope boundaries — NEVER scaffold these (read first, no exceptions)
+
+> **You scaffold high-quality application / service code ONLY.** The following are categorically **out of scope** for this skill. Do **not** create them, do **not** generate placeholders for them, and do **not** add checklist items, build steps, or follow-up tasks that produce them — even if the plan, a reference file, or a runtime guide mentions them. If a referenced doc instructs you to create one of these, that instruction is **superseded** by this section.
+
+| ❌ Never generate | Why it's excluded | What to do instead |
+|-------------------|-------------------|--------------------|
+| `docker-compose.yml` / any Docker Compose, Dockerfile, or emulator orchestration | Local-dev orchestration is a separate concern | Leave it out. Local dev/emulators are owned by the **azure-debug-plan** skill. |
+| **SQL migration files** (Knex / Alembic / EF Core migrations, `migrations/`, `CREATE TABLE` scripts, migration runners) | Schema/migration management is not app code | Access data through the service abstraction layer (interfaces + concrete implementations) only. |
+| **Seed / fixture data files for SQL** (`seeds/`, `seed.ts`, `seed-data.json`, DB seed scripts) | Seeding a real database is out of scope | Frontend mock data for the preview is fine; do not seed a real database. |
+| **Infrastructure-as-Code** (Bicep, ARM, Terraform, Pulumi, `infra/`, `main.bicep`, `azure.yaml` infra) | Provisioning/deployment is a separate concern | Leave it out. IaC is owned by **azure-prepare** / **azure-deploy**. |
+
+> If the plan calls for a relational database (PostgreSQL / Azure SQL), still build the **service abstraction layer and typed data-access code** — just do **not** emit migration files, seed files, a migration runner, or `docker-compose.yml`. The app code is the deliverable; provisioning and schema management are handled by other skills later.
+
 ## Triggers
 Execute approved plan; scaffold backend services; build API routes + service layer; preview frontend; wire frontend to real backend types; continue after `azure-project-plan`.
 
@@ -20,7 +33,7 @@ Execute approved plan; scaffold backend services; build API routes + service lay
 | User intent | Correct skill |
 |-------------|---------------|
 | Plan / gather requirements | **azure-project-plan** |
-| Docker Compose, emulators, VS Code F5 | **azure-localdev** |
+| Docker Compose, emulators, VS Code F5 | **azure-debug-plan** |
 | Add test coverage | **azure-project-test** |
 | Deploy to Azure / generate Bicep/Terraform | **azure-prepare** |
 | Benchmark scaffold quality | **scaffold-benchmark** |
@@ -55,7 +68,7 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 7. **Environment-driven config** — Connection strings switch local/Azure via env vars. Validate required vars on startup, fail fast. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
 8. **Input validation & standardized errors** — Every endpoint has validation schema (Zod/Pydantic/FluentValidation). Every route returns `{ error: { code, message, details? } }`. Error codes typed union, not strings. See [error-handling.md](.github/agents/shared-references/error-handling.md).
 9. **Resilience classification** — Follow plan's Essential/Enhancement classification. Enhancement services wrapped in try/catch with fallback. **Enhancement constructors MUST NOT throw** — defer config validation to method calls or wrap in try/catch in registry. Constructor throws crash ALL handlers via `getServices()`. See [resilience.md](.github/agents/shared-references/resilience.md).
-10. **Database integrity** — Migrations MUST include UNIQUE, FK (ON DELETE), CHECK, INDEX constraints. Multi-table writes MUST use transactions. Collection-to-table mappings documented and verified. See [database-integrity.md](.github/agents/shared-references/database-integrity.md).
+10. **Database integrity (app-code level only)** — Do **NOT** generate SQL migration files or seed files (see Scope boundaries). Enforce integrity in the data-access / service layer: multi-table writes MUST use transactions via the database service's `transaction()` method, and uniqueness / referential checks live in app code. Collection-to-table mappings documented and verified. See [database-integrity.md](.github/agents/shared-references/database-integrity.md) — apply only its app-code guidance, never its migration-file guidance.
 11. **Wire frontend to real types** — If frontend preview generated, replace mock types with shared package imports, replace mock API client with real typed client, verify frontend builds. No `any` types.
 12. **Mandatory `func start` smoke test** — After all handlers implemented, execute `func start`, verify all functions register, stop. Catches blocking runtime errors (broken imports, constructor crashes) that mocked tests miss. **Do NOT skip.** See [architecture.md](.github/agents/shared-references/architecture.md).
 13. **Auto-initialization** — Registry `getServices()` MUST auto-initialize with concrete implementations when nothing pre-registered. Verified by `func start`. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
@@ -78,7 +91,7 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 | **Step 2** (Foundation) | `../shared-references/architecture.md` | |
 | **Step 3** (Config) | `../shared-references/service-abstraction.md` — read only the Config Module section | |
 | **Step 4** (Services) | `../shared-references/service-abstraction.md` (full), selected runtime file | |
-| **Step 5** (Migrations) | `../shared-references/database-integrity.md`, `../shared-references/seed-data.md` | |
+| **Step 5** (Data access) | `../shared-references/database-integrity.md` (app-code guidance only — NO migration/seed files) | `../shared-references/seed-data.md` |
 | **Step 6** (Types/Validation) | `../shared-references/error-handling.md` — read only the Error Code Type Safety section | |
 | **Step 7** (Routes) | `../shared-references/resilience.md`, selected runtime file | |
 | **Step 8** (Errors) | `../shared-references/error-handling.md` (full) | |
@@ -88,11 +101,13 @@ Requires an approved plan (`azure-project-plan` runs first). Verify before start
 
 ### Runtime-Specific Files — Load ONLY ONE
 
-| Selected Runtime | Orchestration | Load | Do NOT load |
-|------------------|---------------|------|-------------|
-| TypeScript | docker-compose | `../shared-references/runtimes/typescript.md` | `python.md`, `dotnet.md` |
-| Python | docker-compose | `../shared-references/runtimes/python.md` | `typescript.md`, `dotnet.md` |
-| C# (.NET) | docker-compose / Functions | `../shared-references/runtimes/dotnet.md` | `typescript.md`, `python.md` |
+> Load only the application-code guidance from the selected runtime file. Ignore any Docker Compose / emulator orchestration content — that is out of scope (see Scope boundaries).
+
+| Selected Runtime | Load | Do NOT load |
+|------------------|------|-------------|
+| TypeScript | `../shared-references/runtimes/typescript.md` | `python.md`, `dotnet.md` |
+| Python | `../shared-references/runtimes/python.md` | `typescript.md`, `dotnet.md` |
+| C# (.NET) | `../shared-references/runtimes/dotnet.md` | `typescript.md`, `python.md` |
 
 ### Context Release
 
@@ -135,7 +150,7 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 |------|---------|
 | Read `.azure/project-plan.md` | Load complete plan |
 | Validate status | Must be `Approved`. If not, STOP — instruct user to run `azure-project-plan`. |
-| Extract plan details | Routes, services, entity types, frontend framework, runtime, **orchestration** (Section 2), structure |
+| Extract plan details | Routes, services, entity types, frontend framework, runtime, structure |
 | Extract design contract (if frontend) | If a frontend is planned, read Section 5 (Design System & UI). Extract `Component Library:`, `Style Direction:`, `Typography:`, the Color Palette table, and the Pages table (page → layout regions). **If Section 5 is missing or `Component Library:` is blank, STOP — instruct user to re-run `azure-project-plan`. Section 5 is load-bearing for Rule 15 / Step 1 quality bar.** |
 | Read the approved HTML preview (if frontend) | List `.azure/.preview-temp/` if it exists. Read `manifest.json` to get the page list, then read each `<slug>.html` plus `theme.css`. **Treat these files as the visual mock-up that the user already approved during planning.** They are the source of truth for layout, palette translation, and per-page region composition. The scaffolded app must reproduce this look using the framework + library named in Section 2 / Section 5 — NOT by serving the preview HTML itself. If `.azure/.preview-temp/` is missing for a plan that has a frontend, do not fail — just rely on Section 5 alone. |
 | Determine frontend needed | Check if plan includes frontend (SPA + API, Full-stack SSR, Static + API). If yes, Step 1 generates preview. |
@@ -268,34 +283,22 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 
 ---
 
-### Step 5: Database Schema & Migrations
+### Step 5: Data Access (App Code Only — NO Migrations / Seeds)
 
-**Goal**: Repeatable schema management and seed data with constraints.
+**Goal**: Type-safe data access through the service abstraction layer — **without** generating any SQL migration files, seed files, migration runners, or `docker-compose.yml` (see Scope boundaries).
 
-> ⛛ **MANDATORY for relational databases.** If plan includes PostgreSQL, Azure SQL, or any relational DB, NOT optional. Empty `seeds/` directory = scaffold failure — tables don't exist, every handler fails with `relation "X" does not exist`. Mocked tests can't catch this.
->
-> ⛛ **BLOCKING DEPENDENCY**: Step 5 can't complete until Step 7 (API Routes) planned. Migration schema must match handler data access patterns. If Step 7 reveals schema changes, return and update.
->
-> ⛛ **MIGRATION FILES MUST CONTAIN CODE.** Empty migration files do NOT satisfy this step. Each MUST contain complete `up()` with `CREATE TABLE` (all columns, types, constraints, indexes from plan) and `down()` reversing changes. **After creating, list directory and verify non-zero size.** Empty files = NOT complete.
->
-> ⛛ **SEED DATA MUST BE GENERATED.** `seeds/fixtures/seed-data.json` and `seeds/seed.ts` (or equivalent) MUST be created with realistic data. Enables demo-ability and integration testing baseline.
+> 🚫 **DO NOT scaffold schema management.** Even when the plan includes PostgreSQL, Azure SQL, or any relational DB, do **NOT** create `migrations/`, migration scripts (Knex / Alembic / EF Core), a migration runner, `seeds/`, `seed.ts`, or `seed-data.json`. Schema provisioning and seeding are owned by other skills (**azure-debug-plan** / **azure-prepare**) and are explicitly out of scope here.
 
 | Task | Details |
 |------|---------|
-| Create migration scripts | Knex (Node.js) / Alembic (Python) / EF Core (C#) |
-| Add database constraints | UNIQUE on business-unique fields, FK with ON DELETE, CHECK for enums, indexes on queried columns |
-| Create seed data scripts | Realistic fixtures in JSON + seed script |
-| Create migration runner | Script/function to run migrations forward/backward |
-| Verify table names match handlers | Cross-reference every table in migration against handler collection names via `collectionToTable` mapping. Document mapping in plan. |
+| Implement data-access in the service layer | The concrete database service (from Step 4) holds all SQL/data access. Handlers never touch the DB directly. |
+| Document table/collection mapping | Cross-reference every collection name used in handlers against the entity names in the plan via the `collectionToTable` mapping. Document the mapping; do NOT emit a migration to back it. |
+| Enforce integrity in app code | Multi-table writes MUST use `database.transaction()` (BEGIN/COMMIT/ROLLBACK). Uniqueness / referential checks live in the service layer, not in migration constraints. |
 
 > **✅ Checkpoint**:
-> - Migration files exist and non-empty (check count > 0)
-> - **List migration files, verify each > 0 bytes.** If directory empty or files empty, **STOP — create migrations with full `CREATE TABLE` before continuing.**
-> - **Seed data files exist.** `seeds/fixtures/seed-data.json` with valid JSON. `seeds/seed.ts` with idempotent script. If missing, create before proceeding.
-> - **File existence**: Every plan table has corresponding migration.
-> - **Migration count**: Should match plan's schema section.
-> - Seed data exists. Table names match collection-to-table mapping.
-> - All pass → proceed
+> - No `migrations/`, `seeds/`, migration runner, or `docker-compose.yml` were created.
+> - The concrete database service implements all data access and `transaction()`.
+> - Collection-to-table mapping documented and consistent with handler usage.
 
 ---
 
@@ -344,7 +347,7 @@ For **each** route in plan:
 | Validate file uploads server-side | Check file size and MIME type before processing |
 | Validate path params before DB queries | When auth middleware extracts userId from token, **validate format** (e.g., UUID) before DB query. Malformed ID on typed column causes 500 instead of 401. Most common runtime error mocked tests miss. |
 | Verify response shape | `jsonBody` must match Route Definitions |
-| Verify collection names | Must map to migration tables (Rule 10) |
+| Verify collection names | Must map to the data-access service's entity/collection-to-table mapping (Rule 10) |
 | Extract shared utilities | Duplicated helpers → `services/functions/src/utils/` (Rule 6). **After each handler**, grep for helpers in 2+ files, extract immediately. Consider handler wrapper if >8 handlers share try/catch boilerplate. Prefix unused params with `_`. |
 
 **Reference**: [service-abstraction.md](.github/agents/shared-references/service-abstraction.md), [resilience.md](.github/agents/shared-references/resilience.md)
@@ -360,7 +363,7 @@ For **each** route in plan:
 > 5. **`GET /api/health`** → 200. Confirm app starts and serves.
 > 6. Stop Functions host.
 >
-> ⚠️ **Catches blocking runtime errors** (missing migrations, broken imports) that compile-time checks miss. Full API testing handled by `azure-project-test`.
+> ⚠️ **Catches blocking runtime errors** (broken imports, constructor crashes) that compile-time checks miss. Full API testing handled by `azure-project-test`.
 
 ---
 
@@ -476,7 +479,8 @@ For **each** route in plan:
 | Update checklist | Mark all scaffold items `[x]` in `.azure/execution-checklist.md` (Rule 2). **If >50% unchecked, NOT complete.** |
 | Update plan status | Set to `Scaffolded` |
 | Print completion | List created files, announce: **"Scaffolding complete!"** |
-| **Suggest next steps** | **MANDATORY**: Present follow-up via `vscode_askQuestions`. Do NOT auto-invoke. Single question with two options:\n\n**Header**: "Next Step"\n**Question**: "Scaffolding complete! What would you like to do next?"\n**Options** (allowFreeformInput: false):\n- **"Verify project"** ("Add test coverage and runtime validation") — recommended\n- **"Set up local dev"** ("Configure Docker emulators, VS Code debugging, and F5 launch")\n\nIf "Verify project" → invoke `azure-project-test`\nIf "Set up local dev" → invoke `azure-localdev` |
+| Open next-steps view | Call `run_vscode_command` with `{ "commandId": "azureResourceGroups.openScaffoldNextStepsView" }` so the user can choose what to do next (verify code, local development, or deploy). Load it via `tool_search` first if needed. There is no reliable file-watcher fallback — skipping this leaves the user stuck. |
+| **Then stop — do NOT prompt in chat** | After opening the view, **STOP**. Do **NOT** ask the user what to do next in chat. Do **NOT** call `vscode_askQuestions` (or any chat question API), and do **NOT** print plain-text follow-up suggestions — the view handles those choices. |
 
 > **✅ Final Checkpoint**:
 > 1. **Build**: `npm run build` every workspace. `dist/` has output. Zero errors.
@@ -484,7 +488,7 @@ For **each** route in plan:
 > 3. **Preview cleanup**: `.azure/.preview-temp/` no longer exists.
 > 4. **Checklist**: All items in `.azure/execution-checklist.md` marked `[x]`.
 > 5. **Status**: `.azure/project-plan.md` = `Scaffolded`.
-> 6. **Follow-up**: Button prompt presented via `vscode_askQuestions`.
+> 6. **Next-steps view opened**: Called `run_vscode_command` with `azureResourceGroups.openScaffoldNextStepsView`, then stopped without calling `vscode_askQuestions` or printing next-step suggestions — the view handles those choices.
 
 ---
 
@@ -505,7 +509,6 @@ For **each** route in plan:
 | OpenAPI spec | `services/functions/openapi.yaml` or `openapi.json` |
 | Environment template | `.env.example` (project root) |
 | Functions config | `services/functions/local.settings.json` |
-| Seed data | `services/functions/seeds/` or `data/fixtures/` |
 | Wired frontend (if applicable) | `services/web/` (with real types + API client — from Step 12) |
 | **Next step** | Presented via `vscode_askQuestions`: "Verify project" or "Set up local dev" |
 
@@ -513,16 +516,16 @@ For **each** route in plan:
 
 ## Runtime Quick Reference
 
-| Runtime | Orchestration | Init | Hosting Model | Package Manager |
-|---------|---------------|------|---------------|-----------------|
-| TypeScript | docker-compose | `func init --typescript --model V4` | Functions v4 | npm / pnpm |
-| Python | docker-compose | `func init --python --model V2` | Functions v2 | pip / poetry |
-| C# (.NET) | docker-compose | `func init --dotnet --isolated` | Functions isolated worker | dotnet |
+| Runtime | Init | Hosting Model | Package Manager |
+|---------|------|---------------|-----------------|
+| TypeScript | `func init --typescript --model V4` | Functions v4 | npm / pnpm |
+| Python | `func init --python --model V2` | Functions v2 | pip / poetry |
+| C# (.NET) | `func init --dotnet --isolated` | Functions isolated worker | dotnet |
 
-For runtime-specific implementation patterns, see [runtimes/](.github/agents/shared-references/runtimes//).
+For runtime-specific implementation patterns, see [runtimes/](.github/agents/shared-references/runtimes//). Ignore any Docker Compose / orchestration sections — out of scope (see Scope boundaries).
 
 ---
 
 ## Next
 
-> Use the Step 13 "Suggest next steps" prompt (`vscode_askQuestions`): "Verify project" → `azure-project-test`, "Set up local dev" → `azure-localdev`. Do NOT print plain-text suggestions; do NOT suggest deploy or benchmark.
+> Use the Step 13 "Suggest next steps" prompt (`vscode_askQuestions`): "Verify project" → `azure-project-test`, "Set up local dev" → `azure-debug-plan`. Do NOT print plain-text suggestions; do NOT suggest deploy or benchmark.
