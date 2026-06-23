@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Spinner } from '@fluentui/react-components';
+import { Button, Spinner, Tooltip } from '@fluentui/react-components';
+import { CommentEditRegular } from '@fluentui/react-icons';
 import { useMemo, useState, type JSX } from 'react';
-import { type PaletteEntry, type PlanSection, type PreviewPage } from '../utils/parseScaffoldPlanMarkdown';
+import { type PaletteEntry, type PlanSection, type PreviewPage, type PreviewStatus } from '../utils/parseScaffoldPlanMarkdown';
 
 interface UiPreviewCardProps {
+    /** The parsed "Design System & UI" plan section containing palette entries, style direction, and other design tokens. */
     section: PlanSection;
+    /** When true, disables interactive controls (e.g. color pickers) while the plan is being revised. */
     disabled?: boolean;
     /**
      * HTML/CSS pages emitted by the planner agent into `.azure/.preview-temp/`
@@ -17,6 +20,7 @@ interface UiPreviewCardProps {
      * HTML into an iframe via `srcDoc`).
      */
     previewPages: PreviewPage[];
+    previewStatus?: PreviewStatus;
     /**
      * Called when the user picks a new hex for a palette token via the color
      * selector. The parent persists the new hex into the plan's palette so the
@@ -24,6 +28,11 @@ interface UiPreviewCardProps {
      * instantly inside this component (no feedback round-trip).
      */
     onPaletteChange: (token: string, originalHex: string, newHex: string) => void;
+    /**
+     * Called when the user clicks the "Edit" button for the active preview page.
+     * The parent opens the feedback drawer with a note prepopulated for that page.
+     */
+    onEditPage: (pageTitle: string) => void;
 }
 
 /**
@@ -33,7 +42,7 @@ interface UiPreviewCardProps {
  * iframe instantly by injecting CSS-variable overrides into the rendered HTML,
  * and bubbled up so the parent persists the new hex into the plan's palette.
  */
-export const UiPreviewCard = ({ section, disabled, previewPages, onPaletteChange }: UiPreviewCardProps): JSX.Element | null => {
+export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, onPaletteChange, onEditPage }: UiPreviewCardProps): JSX.Element | null => {
     const palette = useMemo(() => extractPalette(section), [section]);
     const styleDirection = useMemo(() => extractKeyValue(section, 'Style Direction'), [section]);
 
@@ -50,7 +59,7 @@ export const UiPreviewCard = ({ section, disabled, previewPages, onPaletteChange
     const activePage: PreviewPage | undefined = hasPages
         ? previewPages[Math.min(activePageIdx, previewPages.length - 1)]
         : undefined;
-    const isPending = !activePage || activePage.status !== 'ready' || !activePage.html;
+    const isLoading = !activePage || activePage.status !== 'ready' || !activePage.html || previewStatus === 'generating';
 
     // Re-render the page HTML with the user's live color overrides inlined as a
     // trailing `:root { … }` block so the iframe recolors the moment a hex is
@@ -79,19 +88,41 @@ export const UiPreviewCard = ({ section, disabled, previewPages, onPaletteChange
             </div>
             {styleDirection && <p className='uiPreviewCard__styleDirection'>{styleDirection}</p>}
 
-            {hasPages && previewPages.length > 1 && (
-                <div className='uiPreviewCard__tabs' role='tablist' aria-label='Preview page'>
-                    {previewPages.map((p, i) => (
-                        <button
-                            key={`${p.slug}-${i}`}
-                            role='tab'
-                            aria-selected={i === activePageIdx}
-                            className={`uiPreviewCard__tab ${i === activePageIdx ? 'uiPreviewCard__tab--active' : ''}`}
-                            onClick={() => setActivePageIdx(i)}
-                        >
-                            {p.title}
-                        </button>
-                    ))}
+            {/* Preview toolbar: page tabs on the left, an Edit box on the right
+                that opens the feedback drawer prepopulated for the active page. */}
+            {hasPages && (
+                <div className='uiPreviewCard__previewBar'>
+                    {previewPages.length > 1 ? (
+                        <div className='uiPreviewCard__tabs' role='tablist' aria-label='Preview page'>
+                            {previewPages.map((p, i) => (
+                                <button
+                                    key={`${p.slug}-${i}`}
+                                    role='tab'
+                                    aria-selected={i === activePageIdx}
+                                    className={`uiPreviewCard__tab ${i === activePageIdx ? 'uiPreviewCard__tab--active' : ''}`}
+                                    onClick={() => setActivePageIdx(i)}
+                                >
+                                    {p.title}
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <span className='uiPreviewCard__tabsSpacer' />
+                    )}
+                    {activePage && (
+                        <div className='uiPreviewCard__editBox'>
+                            <Tooltip content='Request page-specific changes' relationship='label'>
+                                <Button
+                                    appearance='subtle'
+                                    size='small'
+                                    icon={<CommentEditRegular />}
+                                    aria-label='Request page-specific changes'
+                                    disabled={disabled}
+                                    onClick={() => onEditPage(activePage.title)}
+                                />
+                            </Tooltip>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -103,17 +134,14 @@ export const UiPreviewCard = ({ section, disabled, previewPages, onPaletteChange
                     <span className='uiPreviewCard__chromeDot' />
                     <span className='uiPreviewCard__urlPill'>{activePage?.route || '/'}</span>
                 </div>
-                {isPending ? (
+                {isLoading ? (
+                    // Show a spinner whenever the preview is being generated (first
+                    // load or regeneration) in place of the iframe.
                     <div className='uiPreviewCard__loading' role='status' aria-live='polite'>
                         <Spinner size='medium' label='Generating preview…' />
                     </div>
                 ) : (
                     <iframe
-                        // `srcDoc` keeps the iframe self-contained: the controller
-                        // has already inlined `theme.css` into a `<style>` block,
-                        // so no `localResourceRoots` plumbing is required. The
-                        // sandbox intentionally omits `allow-scripts` — the
-                        // preview is presentational only.
                         className='uiPreviewCard__iframe'
                         title={`UI preview for ${activePage.title}`}
                         srcDoc={displayedHtml}

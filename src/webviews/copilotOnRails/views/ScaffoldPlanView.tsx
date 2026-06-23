@@ -10,7 +10,7 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX
 import { StageProgress } from './components/StageProgress';
 import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
-import { type PlanContent, type PlanData, type PlanSection, type PreviewPage, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
+import { type PlanContent, type PlanData, type PlanSection, type PreviewPage, type PreviewStatus, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 
 const editableOptions: Record<string, string[]> = {
     'Language': ['JavaScript', 'TypeScript', 'Python', 'C# (.NET)'],
@@ -115,8 +115,11 @@ type CellKey = `${number}:${number}:${number}:${number}`;
 const cellKey = (s: number, c: number, r: number, col: number): CellKey => `${s}:${c}:${r}:${col}`;
 
 type FeedbackItem =
+    /** A technology/config change made via a table dropdown (e.g. Runtime: JS → TS). */
     | { id: string; kind: 'dropdown'; cell: CellKey; sectionIdx: number; contentIdx: number; rowIdx: number; colIdx: number; field: string; from: string; to: string }
+    /** A design token change (e.g. palette color, spacing, typography). The `target` field identifies the token (e.g. "palette:primary"). */
     | { id: string; kind: 'designToken'; target: string; field: string; from: string; to: string }
+    /** A general freeform note typed into the feedback drawer. */
     | { id: string; kind: 'freeform'; text: string };
 
 let feedbackIdCounter = 0;
@@ -169,6 +172,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
+    const [previewStatus, setPreviewStatus] = useState<PreviewStatus | undefined>(undefined);
     const [autopilot, setAutopilot] = useState(false);
     const originalCellValues = useRef<Map<CellKey, string>>(new Map());
     // Same idea for design tokens (palette swatches), keyed by a synthetic
@@ -208,6 +212,9 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 originalDesignValues.current.clear();
             } else if (message?.command === 'setPreviewPages') {
                 setPreviewPages(Array.isArray(message.pages) ? message.pages as PreviewPage[] : []);
+                if (typeof message.previewStatus === 'string') {
+                    setPreviewStatus(message.previewStatus as PreviewStatus);
+                }
             } else if (message?.command === 'revisionInProgress') {
                 setIsAwaitingRevision(true);
                 setDrawerOpen(false);
@@ -380,6 +387,14 @@ export const ScaffoldPlanView = (): JSX.Element => {
         setFeedbackItems(prev => [...prev, { id: nextId(), kind: 'freeform', text }]);
         setFreeformDraft('');
     }, [freeformDraft]);
+
+    const handleEditPage = useCallback((pageTitle: string) => {
+        // Open the feedback drawer with a note prepopulated for the page so the
+        // user can type their feedback after the "<Page> Page: " prefix.
+        const prefix = `${pageTitle} Page: `;
+        setFreeformDraft(prev => (prev.trim().length > 0 ? `${prev.trimEnd()}\n${prefix}` : prefix));
+        setDrawerOpen(true);
+    }, []);
 
     const handlePaletteChange = useCallback((token: string, _originalHex: string, newHex: string) => {
         // Palette picks are applied live to the preview iframe by `UiPreviewCard`
@@ -561,7 +576,9 @@ export const ScaffoldPlanView = (): JSX.Element => {
                         section={designSection}
                         disabled={isAwaitingRevision}
                         previewPages={previewPages}
+                        previewStatus={previewStatus}
                         onPaletteChange={handlePaletteChange}
+                        onEditPage={handleEditPage}
                     />
                 )}
 
@@ -604,6 +621,19 @@ interface FeedbackDrawerProps {
 
 const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onRemoveItem, onSubmit, onDiscardAll, onClose }: FeedbackDrawerProps): JSX.Element => {
     const hasAny = items.length > 0 || freeformDraft.trim().length > 0;
+    const freeformRef = useRef<HTMLTextAreaElement>(null);
+
+    // Focus the note field when the drawer opens and place the cursor at the end
+    // so the user can type right after a prepopulated "<Page> Page: " prefix.
+    useEffect(() => {
+        const el = freeformRef.current;
+        if (el) {
+            el.focus();
+            const end = el.value.length;
+            el.setSelectionRange(end, end);
+        }
+    }, []);
+
     return (
         <aside className='feedbackDrawer' aria-label='Plan feedback'>
             <div className='drawerHeader'>
@@ -645,6 +675,7 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
 
                 <div className='freeformBlock'>
                     <Textarea
+                        ref={freeformRef}
                         value={freeformDraft}
                         onChange={(_, data) => onFreeformChange(data.value)}
                         placeholder='Add a note for Copilot (e.g. "Prefer a monorepo layout")'
