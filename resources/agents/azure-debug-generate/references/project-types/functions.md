@@ -71,10 +71,10 @@ Scan every `function.json` for its `"type"` binding field, **or** scan Python/Ja
 **Node.js (TypeScript & JavaScript):**
 
 ```
-func host start --language-worker -- "--inspect=9229"
+languageWorkers__node__arguments="--inspect=9229" func host start
 ```
 
-> ⚠️ The Azure Functions Core Tools do **not** automatically enable the Node.js debugger. You **must** pass `--language-worker -- "--inspect=9229"` explicitly so the Node worker process opens a debug port for VS Code to attach to. Without this flag, the `attach` configuration connects to nothing.
+> ⚠️ The Azure Functions Core Tools do **not** automatically enable the Node.js debugger. You **must** supply `--inspect=9229` to the Node worker so it opens a debug port for VS Code to attach to. Without it, the `attach` configuration connects to nothing. In the VS Code `func` task, set this via `options.env` (`languageWorkers__node__arguments`) rather than a command-line flag — the env-var form avoids shell/JSON quoting issues and uses the same `languageWorkers__<runtime>__arguments` convention across runtimes.
 
 **dotnet:**
 
@@ -120,7 +120,11 @@ The top-level task uses the VS Code `func` task type provided by the Azure Funct
 {
   "type": "func",
   "label": "{service-id}: func host start",
-  "command": "host start --language-worker -- \"--inspect=9229\"",
+  "command": "host start",
+  "options": {
+    "cwd": "${workspaceFolder}/{path-to-functions-project}",
+    "env": { "languageWorkers__node__arguments": "--inspect=9229" }
+  },
   "problemMatcher": "$func-node-watch",
   "isBackground": true,
   "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" },
@@ -136,7 +140,11 @@ The top-level task uses the VS Code `func` task type provided by the Azure Funct
 {
   "type": "func",
   "label": "{service-id}: func host start",
-  "command": "host start --language-worker -- \"--inspect=9229\"",
+  "command": "host start",
+  "options": {
+    "cwd": "${workspaceFolder}/{path-to-functions-project}",
+    "env": { "languageWorkers__node__arguments": "--inspect=9229" }
+  },
   "problemMatcher": "$func-node-watch",
   "isBackground": true,
   "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" },
