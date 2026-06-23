@@ -6,7 +6,7 @@
 >
 > Sub-steps F1–F4 below describe the planning case (authoring the static preview). The scaffold case reads the **Scaffold: Regenerate From Spec** section at the bottom.
 
-> **Companion contract**: Before authoring the preview markup, also read [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md). It defines the load-bearing contract between the plan's Section 5 (Design System & UI) and what the preview must show — region-token coverage, theming from the brand color, real iconography, and the four-state gate. The sub-steps below cover *how* to produce the preview; the quality bar covers *what* it must contain.
+> **Companion contract**: Before authoring the preview markup, also read [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md). It defines the load-bearing contract between the plan's Section 6 (Design System & UI) and what the preview must show — region-token coverage, theming from the brand color, real iconography, and the four-state gate. The sub-steps below cover *how* to produce the preview; the quality bar covers *what* it must contain.
 
 ---
 
@@ -37,14 +37,14 @@ The planning-phase preview is a **single static file**. It must render instantly
 
 ## Sub-step F1: Derive Design Tokens From the Plan
 
-Read **Section 5 (Design System & UI)** of the plan and extract:
+Read **Section 6 (Design System & UI)** of the plan and extract:
 
 | Token | Source | Use in preview |
 |-------|--------|----------------|
 | Component library | Plan's chosen library (shadcn/ui, Vuetify, Material, Pico, etc.) | Informational only — you do **not** need to emulate it; aim for a clean, production-ready look |
-| Palette | Section 5 color list (`primary`, `surface`, `text`, etc.) | CSS custom properties at `:root` |
-| Typography | Section 5 font family / scale | `font-family`, heading/body sizes |
-| Pages | Section 5 / route list | One `*.html` file per page |
+| Palette | Section 6 color list (`primary`, `surface`, `text`, etc.) | CSS custom properties at `:root` |
+| Typography | Section 6 font family / scale | `font-family`, heading/body sizes |
+| Pages | Section 6 / route list | One `*.html` file per page |
 | Layout regions | Per-page region tokens (header, sidebar, content, etc.) | Real layout, not placeholder boxes |
 
 Define every color and font as a CSS custom property in `:root` inside the shared `styles.css` so the webview's palette/typography editors map cleanly onto them, and so every page inherits one consistent design system.
@@ -56,7 +56,7 @@ Define every color and font as a CSS custom property in `:root` inside the share
 | Task | Details |
 |------|---------|
 | Shared stylesheet | Author `styles.css` with the `:root` theme variables plus reusable component classes (buttons, cards, tables, nav, badges, form fields). Every page links it with `<link rel="stylesheet" href="styles.css">` so all pages share one look |
-| Theme variables | `:root { --primary: ...; --surface: ...; --text: ...; --font: ...; }` derived from Section 5 |
+| Theme variables | `:root { --primary: ...; --surface: ...; --text: ...; --font: ...; }` derived from Section 6 |
 | App chrome | A header/top bar + navigation (sidebar or nav rail) that is **identical on every page** and whose nav items are real relative `<a href="page.html">` links so the embedded preview is navigable |
 | Authenticated view | Render the **main authenticated content directly** — the preview is the signed-in app, NOT a login page |
 | Production-ready polish | Apply a clean, modern look: consistent corner radius, subtle elevation/shadows, balanced spacing rhythm, clear button shapes, comfortable control density — you do **not** need to mimic any specific component library |
@@ -98,7 +98,7 @@ Write **one HTML file per page** (`index.html` for the landing/home page, then `
 Even as a static approximation, the preview MUST meet these standards. The full per-library contract lives in [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md) — read it before authoring markup. Baseline rules:
 
 - **Self-contained**: one file, inline CSS, no external network, no scripts required to look correct.
-- **Theme from the brand color**: derive the palette from Section 5's `primary`, expressed as `:root` custom properties.
+- **Theme from the brand color**: derive the palette from Section 6's `primary`, expressed as `:root` custom properties.
 - **Render layout tokens as real structure** — never raw placeholder boxes. See [frontend-quality-bar.md](.github/agents/shared-references/frontend-quality-bar.md) for the region-token → visual-treatment mapping per library.
 - **Emulate the target library's visual language** in inline CSS (corner radius, elevation, spacing, control shape) so the user previews something close to the final product.
 - **Presentation-quality polish**: balanced whitespace, real depth (subtle shadows), consistent radius, clear typographic hierarchy, purely visual `:hover`/`:focus` *styling* on interactive-looking elements (no working behavior). It should look like a finished product screenshot, not a sketch.
@@ -117,7 +117,7 @@ The approved `.azure/frontend-preview/index.html` is a **visual specification**,
 
 | Task | Details |
 |------|---------|
-| Read the spec | Open `.azure/frontend-preview/index.html` and the plan's Section 5. Treat the preview as the source of truth for layout, palette, typography, page set, and component look. |
+| Read the spec | Open `.azure/frontend-preview/index.html` and the plan's Section 6. Treat the preview as the source of truth for layout, palette, typography, page set, and component look. |
 | Build the real frontend | Initialize the **framework chosen in the plan** (React + Vite / Vue + Vite / Angular / Svelte) in `services/web/` with a proper `package.json`, real components, and the library's real primitives + theme provider. |
 | Reproduce the approved look | Recreate each previewed page using the library's actual components, theming from the same brand color, matching the approved layout regions and the four data states. |
 | Wire real data | Replace the preview's static mock markup with the real mock data layer / API client, then (at the wiring step) the real backend contracts. |

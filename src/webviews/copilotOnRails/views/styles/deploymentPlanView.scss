@@ -180,12 +180,12 @@
         border: 1px solid var(--vscode-widget-border);
         border-radius: 12px;
         overflow-x: auto;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        overflow-y: hidden;
 
         svg {
-            max-width: 100%;
+            display: block;
+            margin: 0 auto;
+            max-width: none;
             height: auto;
             border-radius: 8px;
 

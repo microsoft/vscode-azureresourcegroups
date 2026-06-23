@@ -31,13 +31,11 @@ Plan/design a new Azure-centric app; create requirements/architecture; start a p
 3. **Auto-chain after approval** — immediately invoke `azure-project-scaffold`; never ask the user to invoke it manually. **Generate a frontend HTML/CSS preview** during planning per Step 3.5 (the scaffold agent consumes it as a mock-up but builds the real app with the chosen framework).
 4. **Interactive UI** — use `vscode_askQuestions`, never plain chat; batch unanswered questions into one call.
 
-## Autopilot mode (overrides the gates below)
-**Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/requirements.json` contains `"executionMode": "auto"`. Autopilot only applies on the **re-entry** path (after the requirements form was submitted) — the first pass that writes `.azure/requirements.json` is always guided. When active, run fully unattended:
-- **Skip the frontend preview** (Step 3.5) and the `openPlanView` preview — do NOT write `.azure/.preview-temp/` or fan out page sub-agents.
-- **Skip the approval gate** (Step 3 "Present plan… ask for approval" / the STOP). Set status straight from `Planning` to `Approved` and auto-chain.
-- **Record the mode** — write `executionMode: auto` into `.azure/project-plan.md` (front-matter or a `**Execution Mode**: auto` row) so downstream skills inherit it.
-- **Hand off with the marker** — prefix the `azure-project-scaffold` invocation args with `[AUTOPILOT MODE] `.
-- Never call `vscode_askQuestions`. Plan quality (incl. the Design System section) is unchanged — autopilot suppresses **gates and previews only**.
+## Autopilot is selected on the plan page (this agent always runs guided)
+This agent **always** runs guided: it generates `.azure/project-plan.md` with `Status: Planning`, opens the plan preview, and stops for the user's approval. It does **not** detect, decide, or record autopilot, and never skips the preview or approval gate.
+Autopilot is chosen by the **user** via the **Autopilot toggle on the plan webview**, after the plan is shown. When they approve with it on, the extension records `**Execution Mode**: auto` in `.azure/project-plan.md`, enables global auto-approve, and hands off to the scaffold agent with the `[AUTOPILOT MODE]` marker; every downstream skill then inherits autopilot from the plan file and runs unattended to the end.
+
+There is nothing autopilot-specific for you to do here — just write a correct, complete plan and always emit both the `### Run` and `### Debug` prerequisite sub-tables (§ 5). Never call `vscode_askQuestions` in chat — the only stop is the plan webview approval.
 
 ## Workflow (mandatory order)
 DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` (Step 3) → GENERATE FRONTEND PREVIEW (Step 3.5, if applicable) → approval → AUTO-CHAIN scaffold after approval. Only files allowed: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` — no `services/`, configs, or production code. Planning needs ZERO external file reads except `references/html-preview.md` for Step 3.5; all other context is inlined below.
@@ -82,15 +80,15 @@ Infer everything possible from the Step 1 scan; gather the rest through the requ
 
 #### 2a. Inference — pick the most likely answer for every question
 
-For each canonical question (Q1–Q6), use the Step 1 scan + the user's prompt to fill:
+For each question (shared + per-service), use the Step 1 scan + the user's prompt to fill:
 
-- **`answer`** — the inferred value when confident, else `null` (`[]` for the array-typed Q3).
-- **`recommendedChoice`** — always provide one (string for Q1/Q2/Q4/Q5/Q6, `string[]` for Q3); becomes the **pre-selected** option in the webview, even for `needs_input`.
+- **`answer`** — the inferred value when confident, else `null` (`[]` for array-typed `dataStores`).
+- **`recommendedChoice`** — always provide one (string for single-select questions, `string[]` for `dataStores`); becomes the **pre-selected** option in the webview, even for `needs_input`.
 
 Then set **`status`**:
 
 - **`inferred`** — confidently known from workspace signals or an explicit user statement. Set `answer` + `rationale`; the webview pre-selects the inferred value for review/override.
-- **`needs_input`** — not confidently known. Leave `answer` `null` (`[]` for Q3); the webview pre-selects your `recommendedChoice` to confirm or change.
+- **`needs_input`** — not confidently known. Leave `answer` `null` (`[]` for `dataStores`); the webview pre-selects your `recommendedChoice` to confirm or change.
 
 | If you detect... | Then infer... |
 |-----------------|---------------|
@@ -112,22 +110,68 @@ Then set **`status`**:
 
 Anything the user stated explicitly in their prompt ("build me a TypeScript Functions API with PostgreSQL") is also `inferred` — don't re-ask.
 
-#### 2b. The six canonical questions
+#### 2b. Services and questions
 
-Always emit **all six** in JSON, in this order, regardless of status. Each option is `{ label, description }` (label = the value picked; description = one-line muted hint). `multiSelect: true` lets the user tick more than one; `allowFreeformInput: false` for questions where free text is meaningless (e.g. runtime).
+The requirements JSON has two top-level concepts:
 
-| # | `id`            | `category`  | `header`              | `question`                                              | Multi-select | Free-form input | `options` (label + description)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Sensible default for `recommendedChoice`                                       |
-|---|-----------------|-------------|-----------------------|---------------------------------------------------------|--------------|-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| 1 | `appType`       | `app`       | App Type              | What type of application are you building?              | no           | yes             | `API only` (Backend services without a UI), `SPA + API` (Single-page app with REST/GraphQL backend), `Full-stack SSR` (Server-rendered pages plus API), `Static site + API` (Pre-built static frontend with serverless API), `Background worker` (Headless queue/timer-driven worker)                                                                                                                                                                                                                                                                                          | `SPA + API`                                                                   |
-| 2 | `runtime`       | `runtime`   | Runtime               | Which runtime language?                                 | no           | no              | `TypeScript` (Node.js + TypeScript on Azure Functions), `Python` (Python on Azure Functions), `C# (.NET)` (Isolated worker on .NET 10)                                                                                                                                                                                                                                                                                                                                                                                                                                       | `TypeScript`                                                                  |
-| 3 | `dataStores`    | `data`      | Data Stores           | Which data stores does your app need?                   | **yes**      | no              | `Blob Storage` (Store files and images), `Queue Storage` (Async message queue), `PostgreSQL` (Relational database), `CosmosDB` (NoSQL document database), `Redis` (In-memory cache), `Azure SQL` (Managed SQL Server)                                                                                                                                                                                                                                                                                                                                                          | Best-guess subset (e.g. `["PostgreSQL"]`)                                     |
-| 4 | `frontend`      | `frontend`  | Frontend Framework    | Which frontend framework?                               | no           | no              | `React` (React + Vite), `Vue` (Vue + Vite), `Angular` (Angular CLI), `Svelte` (Svelte + Vite), `None` (No frontend)                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `React`                                                                       |
-| 5 | `features`      | `app`       | Features              | Describe the features or API routes your app needs.    | no           | n/a             | *(omit `options` — free-text question, no choices)*                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Short description distilled from the user's prompt                            |
-| 6 | `auth`          | `auth`      | Authentication        | Does your app need authentication?                      | no           | **yes (always)** | `No auth` (Public app, no login required), `Mock auth middleware` (HMAC-signed test tokens — testable without an IdP), `Microsoft Entra ID` (Workforce identity — formerly Azure AD; sign in with org/Microsoft accounts), `Microsoft Entra External ID` (Customer identity — formerly Azure AD B2C; sign-up + social logins), `Auth0` (Third-party IdP — social + enterprise connections), `Clerk` (Drop-in user management with prebuilt UI)                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `Mock auth middleware` if the app exposes user data, else `No auth`           |
+1. **`services[]`** — detected service roots (backends, frontends, workers). Each gets a per-service question section in the webview.
+2. **`questions[]`** — questions, either scoped to a service (`serviceId` set) or shared/cross-cutting (`serviceId` omitted).
 
-**`recommendedChoice` — always provide one, even for `inferred`:** for `inferred`, usually equal to `answer`; for `needs_input`, your best guess (bias to the most common Azure-friendly choice) so the user can review-and-submit; for `dataStores` it's a `string[]` matching the `answer` shape.
+##### Services
 
-> ❌ **DO NOT** ask the user which .NET version to target. If Q2 = `C# (.NET)`, the target framework is **always `net10.0`** (with `global.json` pinned to `10.0.*`). Only downgrade when the user **explicitly and unambiguously** states an older version (e.g. "target .NET 8", "we need net9.0", "stuck on 8.0 LTS"). Do not interpret "use a stable version" / "use LTS" / "use what you have installed" as a request for an older framework — default to 10.
+For each runnable service root detected in the workspace (or planned from the user's prompt), emit a service entry:
+
+```json
+{
+  "id": "{kebab-case-id}",
+  "label": "{Human-readable name, e.g. Payments API}",
+  "role": "{backend | frontend | worker}",
+  "root": "{workspace-relative path, e.g. ./api}"
+}
+```
+
+- **`role`** — `backend` for APIs/Azure Functions, `frontend` for SPAs/web apps, `worker` for background/queue processors.
+- **`root`** — workspace-relative path to the service directory. Omit for NEW-mode when no directories exist yet.
+- Derive `id` from the project manifest name (e.g. `package.json` → `"name"`) when available, else from the directory name.
+
+##### Per-service questions
+
+For **each service**, emit these questions with `"serviceId": "{service.id}"`:
+
+| `id` pattern | `header` | `question` | Options / Type | Notes |
+|---|---|---|---|---|
+| `{serviceId}:language` | Language | Which programming language for {label}? | `TypeScript`, `Python`, `C# (.NET)` for backends/workers; `TypeScript`, `JavaScript` for frontends | `allowFreeformInput: false` |
+| `{serviceId}:framework` | Framework | Which framework for {label}? | Frontends: `React + Vite`, `Vue + Vite`, `Angular`, `Svelte`; Backends: `Azure Functions`, etc. | `allowFreeformInput: true`; omit for backends when Azure Functions is the only option |
+| `{serviceId}:features` | Features | Describe the features or API routes for {label}. | Free text (omit `options`) | |
+
+Use `category: "service"` for all per-service questions. The webview groups them under the service card, not by category.
+
+##### Shared questions (no `serviceId`)
+
+These are asked once for the whole project. Always emit all of them:
+
+| # | `id` | `category` | `header` | `question` | Multi-select | Free-form | `options` | Default `recommendedChoice` |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `dataStores` | `data` | Data Stores | Which data stores does your app need? | **yes** | no | `Blob Storage`, `Queue Storage`, `PostgreSQL`, `CosmosDB`, `Redis`, `Azure SQL` | Best-guess subset |
+| 2 | `auth` | `auth` | Authentication | Does your app need authentication? | no | **yes** | `No auth`, `Mock auth middleware`, `Microsoft Entra ID`, `Microsoft Entra External ID`, `Auth0`, `Clerk` | `Mock auth middleware` if user data, else `No auth` |
+
+> The old `appType`, `runtime`, and `frontend` questions are gone. **App Type is no longer asked** — it's derived from the detected `services` (see below). Language and framework are now per-service questions.
+
+##### App Type is derived, not asked
+
+Do **not** emit an `appType` question. Instead, derive the plan's App Type from the `services` array:
+
+| Detected services | Derived App Type |
+|---|---|
+| At least one `frontend` + at least one `backend` | `SPA + API` |
+| Only `backend` service(s) | `API only` |
+| Only `worker` service(s) | `Background worker` |
+| `frontend` that is server-rendered (Next.js SSR, etc.) | `Full-stack SSR` |
+| Static `frontend` + `backend` | `Static site + API` |
+
+Use this derived value to fill Section 1 of the plan and to decide whether to emit the Frontend / Design System sections.
+
+Each option is `{ label, description }` as before. Include `multiSelect`, `allowFreeformInput`, `recommendedChoice`, `status`, `answer`, and `rationale` on every question.
 
 #### 2c. Write `.azure/requirements.json`
 
@@ -135,59 +179,68 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 
 ```json
 {
-  "schemaVersion": "1",
-  "generatedAt": "{ISO date, e.g. 2026-06-02}",
+  "schemaVersion": "2",
+  "generatedAt": "{ISO date}",
   "mode": "{NEW | AUGMENT}",
-  "summary": "{1–2 sentences describing what the user is building, in your own words}",
+  "summary": "{1–2 sentences describing what the user is building}",
   "workspaceSignals": {
     "decision": "{NEW | AUGMENT}",
     "decisionReason": "{one sentence on why}",
     "detectedFiles": ["{relative paths from Step 1, if any}"]
   },
+  "services": [
+    { "id": "functions-api", "label": "Functions API", "role": "backend", "root": "./api" },
+    { "id": "web-app", "label": "Customer Portal", "role": "frontend", "root": "./web" }
+  ],
   "questions": [
     {
-      "id": "appType",
-      "category": "app",
-      "header": "App Type",
-      "question": "What type of application are you building?",
-      "multiSelect": false,
-      "allowFreeformInput": true,
-      "options": [
-        { "label": "API only", "description": "Backend services without a UI" },
-        { "label": "SPA + API", "description": "Single-page app with REST/GraphQL backend" },
-        { "label": "Full-stack SSR", "description": "Server-rendered pages plus API" },
-        { "label": "Static site + API", "description": "Pre-built static frontend with serverless API" },
-        { "label": "Background worker", "description": "Headless queue/timer-driven worker" }
-      ],
-      "recommendedChoice": "SPA + API",
-      "status": "needs_input",
-      "answer": null,
-      "rationale": "User's prompt mentions a frontend plus REST endpoints."
-    },
-    {
-      "id": "runtime",
-      "category": "runtime",
-      "header": "Runtime",
-      "question": "Which runtime language?",
-      "multiSelect": false,
-      "allowFreeformInput": false,
+      "id": "functions-api:language", "category": "service", "serviceId": "functions-api",
+      "header": "Language", "question": "Which programming language for Functions API?",
+      "multiSelect": false, "allowFreeformInput": false,
       "options": [
         { "label": "TypeScript", "description": "Node.js + TypeScript on Azure Functions" },
         { "label": "Python", "description": "Python on Azure Functions" },
         { "label": "C# (.NET)", "description": "Isolated worker on .NET 10" }
       ],
-      "recommendedChoice": "TypeScript",
-      "status": "inferred",
-      "answer": "TypeScript",
-      "rationale": "Detected `package.json` with TypeScript devDependency."
+      "recommendedChoice": "TypeScript", "status": "inferred", "answer": "TypeScript",
+      "rationale": "Detected package.json with TypeScript devDependency."
     },
     {
-      "id": "dataStores",
-      "category": "data",
-      "header": "Data Stores",
+      "id": "functions-api:features", "category": "service", "serviceId": "functions-api",
+      "header": "Features", "question": "Describe the features or API routes for Functions API.",
+      "multiSelect": false,
+      "recommendedChoice": "Auth, photo upload/list/delete, AI captions",
+      "status": "inferred", "answer": "Auth, photo upload/list/delete, AI captions",
+      "rationale": "Distilled from the user's prompt."
+    },
+    {
+      "id": "web-app:language", "category": "service", "serviceId": "web-app",
+      "header": "Language", "question": "Which programming language for Customer Portal?",
+      "multiSelect": false, "allowFreeformInput": false,
+      "options": [
+        { "label": "TypeScript", "description": "TypeScript with type safety" },
+        { "label": "JavaScript", "description": "Plain JavaScript" }
+      ],
+      "recommendedChoice": "TypeScript", "status": "inferred", "answer": "TypeScript",
+      "rationale": "TypeScript is the most popular choice for modern SPAs."
+    },
+    {
+      "id": "web-app:framework", "category": "service", "serviceId": "web-app",
+      "header": "Framework", "question": "Which frontend framework for Customer Portal?",
+      "multiSelect": false, "allowFreeformInput": true,
+      "options": [
+        { "label": "React + Vite", "description": "React with Vite bundler" },
+        { "label": "Vue + Vite", "description": "Vue with Vite bundler" },
+        { "label": "Angular", "description": "Angular CLI" },
+        { "label": "Svelte", "description": "Svelte + Vite" }
+      ],
+      "recommendedChoice": "React + Vite", "status": "needs_input", "answer": null,
+      "rationale": "React is the most common pick for SPA + API on Azure."
+    },
+    {
+      "id": "dataStores", "category": "data", "header": "Data Stores",
       "question": "Which data stores does your app need?",
-      "multiSelect": true,
-      "allowFreeformInput": false,
+      "multiSelect": true, "allowFreeformInput": false,
       "options": [
         { "label": "Blob Storage", "description": "Store files and images" },
         { "label": "Queue Storage", "description": "Async message queue" },
@@ -197,59 +250,23 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
         { "label": "Azure SQL", "description": "Managed SQL Server" }
       ],
       "recommendedChoice": ["Blob Storage", "PostgreSQL"],
-      "status": "inferred",
-      "answer": ["Blob Storage", "PostgreSQL"],
-      "rationale": "Photo files map to Blob Storage; users, couples, photo metadata, and AI captions are relational and best modeled in PostgreSQL."
+      "status": "inferred", "answer": ["Blob Storage", "PostgreSQL"],
+      "rationale": "Photo files → Blob Storage; relational data → PostgreSQL."
     },
     {
-      "id": "frontend",
-      "category": "frontend",
-      "header": "Frontend Framework",
-      "question": "Which frontend framework?",
-      "multiSelect": false,
-      "allowFreeformInput": false,
-      "options": [
-        { "label": "React", "description": "React + Vite" },
-        { "label": "Vue", "description": "Vue + Vite" },
-        { "label": "Angular", "description": "Angular CLI" },
-        { "label": "Svelte", "description": "Svelte + Vite" },
-        { "label": "None", "description": "No frontend" }
-      ],
-      "recommendedChoice": "React",
-      "status": "needs_input",
-      "answer": null,
-      "rationale": "React is the most common pick for SPA + API on Azure."
-    },
-    {
-      "id": "features",
-      "category": "app",
-      "header": "Features",
-      "question": "Describe the features or API routes your app needs.",
-      "multiSelect": false,
-      "recommendedChoice": "Auth, pairing, photo upload/list/delete, AI captions with fallback, scrapbook UI",
-      "status": "inferred",
-      "answer": "Auth, pairing, photo upload/list/delete, AI captions with fallback, scrapbook UI",
-      "rationale": "Distilled from the user's prompt."
-    },
-    {
-      "id": "auth",
-      "category": "auth",
-      "header": "Authentication",
+      "id": "auth", "category": "auth", "header": "Authentication",
       "question": "Does your app need authentication?",
-      "multiSelect": false,
-      "allowFreeformInput": true,
+      "multiSelect": false, "allowFreeformInput": true,
       "options": [
         { "label": "No auth", "description": "Public app, no login required" },
         { "label": "Mock auth middleware", "description": "HMAC-signed test tokens — testable without an IdP" },
-        { "label": "Microsoft Entra ID", "description": "Workforce identity — sign in with org or Microsoft accounts (formerly Azure AD)" },
-        { "label": "Microsoft Entra External ID", "description": "Customer identity — sign-up plus social logins (formerly Azure AD B2C)" },
+        { "label": "Microsoft Entra ID", "description": "Workforce identity — sign in with org or Microsoft accounts" },
+        { "label": "Microsoft Entra External ID", "description": "Customer identity — sign-up plus social logins" },
         { "label": "Auth0", "description": "Third-party IdP — social and enterprise connections" },
         { "label": "Clerk", "description": "Drop-in user management with prebuilt UI" }
       ],
-      "recommendedChoice": "Mock auth middleware",
-      "status": "needs_input",
-      "answer": null,
-      "rationale": "App handles user data — start with mock auth so every protected route is testable without an external IdP; pick a real IdP (Entra ID, External ID, Auth0, Clerk) or type your own when you're ready."
+      "recommendedChoice": "Mock auth middleware", "status": "needs_input", "answer": null,
+      "rationale": "App handles user data — start with mock auth for testability."
     }
   ]
 }
@@ -257,24 +274,28 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 
 **Rules for the JSON:**
 
-- Always emit all six questions in `id` order: `appType`, `runtime`, `dataStores`, `frontend`, `features`, `auth`. Never omit one.
-- Always include a short `header` (column heading style — "App Type", "Data Stores") plus the full `question` text.
-- Always include `multiSelect` (boolean). Only Q3 (`dataStores`) is `true`; the rest are `false`.
-- Always include `allowFreeformInput` (boolean) for questions that have `options`. The value per question is fixed — do not change it based on the user's prompt:
-  - `appType` → `true`
-  - `runtime` → `false`
+- Always emit a `services` array with one entry per detected/planned service.
+- For each service, emit per-service questions with `serviceId` matching the service's `id`. Use the `id` pattern `{serviceId}:{questionType}` (e.g. `functions-api:language`).
+- Frontend services must only offer `TypeScript` / `JavaScript` for their language question — never `Python` or `C# (.NET)`.
+- Backend/worker services offer `TypeScript`, `Python`, `C# (.NET)` for language.
+- Always emit both shared questions: `dataStores`, `auth`. Never omit one.
+- **Do not emit an `appType` question** — App Type is derived from the `services` array (see the derivation table above).
+- Always include a short `header` plus the full `question` text on every question.
+- Always include `multiSelect` (boolean). Only `dataStores` is `true`.
+- Always include `allowFreeformInput` (boolean) for questions with `options`:
+  - Language questions → `false`
+  - Framework questions → `true`
   - `dataStores` → `false`
-  - `frontend` → `false`
-  - `auth` → **`true`** (users frequently want a real IdP like Entra ID, Auth0, Clerk, Firebase Auth, etc. — never emit `false` here, even when one of the listed options seems to fit; if you find yourself writing `"allowFreeformInput": false` for `auth`, stop and re-read this rule)
-  For Q5 `features` (free text, no `options`), omit `allowFreeformInput` entirely.
-- Use the field name **`rationale`** (not `reason`, not `why`, not `explanation`). The webview parser falls back to `reason` for resilience, but `rationale` is canonical — always write `rationale`.
-- Always include `options` (array of `{ label, description }`), except for Q5 `features`, which omits `options` so the webview renders a textarea.
-- Every option object must have a `label` (the value the user picks) and a short `description` (one phrase, displayed in muted text under the label).
-- Always include `recommendedChoice`. For single-select questions it's a string; for `dataStores` it's a `string[]`. The webview pre-selects it so the user just reviews and submits.
-- For `inferred` questions, fill in `answer` with the actual value (a string for Q1/Q2/Q4/Q5/Q6, a `string[]` for Q3). For `needs_input` questions, set `answer: null` (or `[]` for Q3).
-- Q3 (`dataStores`) is the only multi-select question — `answer`, `recommendedChoice`, and any future submitted answer are always `string[]`. Use `[]` for `answer` when `needs_input` (never `null`).
-- Q5 (`features`) is free text. Omit both `options` and `allowFreeformInput`. When `inferred` from the user's prompt, store the description verbatim in both `answer` and `recommendedChoice`.
-- Strict JSON — no comments in the actual file, no trailing commas.
+  - `auth` → **`true`** (always — never `false`, even when a listed option fits)
+  For free-text questions (features), omit `allowFreeformInput`.
+- Use the field name **`rationale`** (not `reason`).
+- Always include `options` (array of `{ label, description }`), except for feature questions.
+- Always include `recommendedChoice`. For single-select it's a string; for `dataStores` it's a `string[]`.
+- For `inferred` questions, fill in `answer`. For `needs_input`, set `answer: null` (`[]` for `dataStores`).
+- `dataStores` is the only multi-select question — `answer` and `recommendedChoice` are always `string[]`.
+- Strict JSON — no comments, no trailing commas.
+
+> ❌ **DO NOT** ask the user which .NET version to target. If a service's language = `C# (.NET)`, the target framework is **always `net10.0`**. Only downgrade when the user explicitly states an older version.
 
 #### 2d. Hand off to the webview — then stop
 
@@ -282,7 +303,7 @@ Once the file is written, **stop**. Do NOT print the JSON, summarize inferences,
 
 #### 2e. Skip rule — only when the prompt is fully unambiguous
 
-If the prompt was extremely explicit (e.g. *"Azure Functions TypeScript API with PostgreSQL — no frontend, no auth, routes GET /widgets and POST /widgets"*) and every Q1–Q6 is `inferred` in Step 2a, you **may** skip writing `.azure/requirements.json` and go straight to Step 3. When in doubt, **write the file** — review is fast and cheap.
+If the prompt was extremely explicit (e.g. *"Azure Functions TypeScript API with PostgreSQL — no frontend, no auth, routes GET /widgets and POST /widgets"*) and every question is `inferred` in Step 2a, you **may** skip writing `.azure/requirements.json` and go straight to Step 3. When in doubt, **write the file** — review is fast and cheap.
 
 #### 2f. Re-entry — reading the answered file
 
@@ -299,6 +320,8 @@ When re-invoked with a query mentioning submitted requirements (e.g. *"Requireme
 ### Step 3: Generate Plan & Present for Approval
 
 Write `.azure/project-plan.md` from the template below in a **single pass** (fill all sections at once — never section-by-section), then present for approval.
+
+**Before writing, run the prerequisites detection pass** (Section 5) so the `Installed` and `Version` columns reflect what is actually present. Do this in the same pass — no separate gate. Re-run this scan on every rebuild so the status never goes stale or shows an un-scanned value.
 
 #### Plan Template
 
@@ -317,7 +340,7 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 **Goal**: {Brief description of what the user is building}. The project is designed so that every module is independently testable.
 
-**App Type**: {API only | SPA + API | Full-stack SSR | Static + API | Background worker}
+**App Type**: {API only | SPA + API | Full-stack SSR | Static + API | Background worker — **derived from the detected services**, not asked}
 
 **Mode**: {NEW | AUGMENT}
 
@@ -325,25 +348,36 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ---
 
-## 2. Runtime & Framework
+## 2. Backend — Azure Functions
+
+> One **stack section per service** — emit a `## N. <Service> — <role>` heading and a single combined table for the backend, a frontend section when the app has a UI, and extra sections for any worker services. The plan view turns every section that has a **Language** row into an editable, language-aware stack card, so each service picks its own language independently. Renumber the sections that follow to match the services you emit.
 
 | Component | Technology |
 |-----------|-----------|
-| **Runtime** | {TypeScript / Python / C#} |
-| **Backend** | {Azure Functions v4 / Azure Functions v2 / Azure Functions isolated worker} |
-| **Orchestration** | docker-compose |
-| **Frontend** | {React + Vite / Vue + Vite / Angular / Svelte / None} |
-| **Package Manager** | {npm / pnpm / pip / poetry / dotnet} |
-
----
-
-## 3. Test Runner & Configuration
-
-| Component | Technology |
-|-----------|-----------|
+| **Language** | {TypeScript / Python / C#} |
+| **Runtime** | {Node / Bun / Deno / CPython / PyPy / .NET} |
+| **Package Manager** | {npm / pnpm / pip / poetry / dotnet (NuGet)} |
 | **Test Runner** | {vitest / jest / pytest / xUnit} |
 | **Mocking Library** | {vi.mock / jest.mock / sinon / unittest.mock / **NSubstitute** (.NET — never Moq, see runtimes/dotnet.md)} |
 | **Test Command** | {npm test / pytest / dotnet test} |
+| **Orchestration** | docker-compose |
+
+> **Language vs Runtime**: `Language` is the source language the user picked in this service's `language` question. `Runtime` is the execution runtime — default `Node` for TypeScript/JavaScript, `CPython` for Python, `.NET` for C#. Only deviate from the default (e.g. `Bun`, `Deno`, `PyPy`) when the user explicitly asks. **Package Manager and Test Runner are language-dependent** — match them to this service's Language (e.g. C# → `dotnet (NuGet)` + `xUnit`/`NUnit`/`MSTest`). The `Orchestration` row is recorded for the scaffold step but hidden in the plan UI — always keep it set to `docker-compose`.
+
+---
+
+## 3. Frontend — Web App
+
+> Emit this section only when `services` contains a `frontend` service (derived App Type ≠ `API only` / `Background worker`); omit it entirely otherwise. The frontend is its own service with its own Language and **Framework**. Frontend Language is always **JavaScript or TypeScript** — even when the backend uses Python or C#, the frontend is a JS/TS app.
+
+| Component | Technology |
+|-----------|-----------|
+| **Language** | {TypeScript / JavaScript} |
+| **Framework** | {React + Vite / Vue + Vite / Angular / Svelte} |
+| **Package Manager** | {npm / pnpm} |
+| **Test Runner** | {vitest / jest} |
+| **Mocking Library** | {vi.mock / jest.mock / sinon} |
+| **Test Command** | {npm test} |
 
 ---
 
@@ -356,9 +390,24 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ---
 
-## 5. Design System & UI
+## 5. Prerequisites
 
-> **MANDATORY when the plan includes a frontend.** Skip only for `API only` / `Background worker` app types. The plan-preview webview parses this section by title (`s.title.toLowerCase().includes('design system')`) and the scaffold quality contract reads `Component Library:` to decide which real library primitives to render.
+Identify the required tools, then inventory them by following [prerequisites.md](../shared-references/prerequisites.md). Always produce **both** groups — `### Run` and `### Debug` — as two sub-tables under this section. The plan webview shows the Run group always and the Debug group only when the user turns on the Autopilot toggle, so do not omit either group yourself.
+
+The required tools are derived from the technology stacks and Azure services associated with each service. Map each stack to its chosen tooling, e.g. runtime - Node, package manager - npm, project type - Azure Functions Core Tools (for Azure Functions), etc. The Run vs Debug distinction is defined in [prerequisites.md](../shared-references/prerequisites.md): Run tools are needed to run the project; Debug tools (Docker, Docker Compose, VS Code extensions) are the local-debugging extras.
+
+For each tool, record which planned service(s) need it in the `Service(s)` column (use `*` for global toolchain shared by all services, or list each service explicitly). For a container runtime or orchestrator (Docker, Docker Compose), list the service(s) whose Azure dependencies its emulators stand in for, rather than `*`.
+
+After identifying the required tools, run the detection pass to fill the `Installed` column (✅ / ❌) and detected `Version`. In the `Install` column, record the install command/URL the user would run if the tool is missing.
+
+**You must re-run the detection pass every time this section is generated or the plan is rebuilt** — recompute it whenever the plan changes (e.g. a Runtime edit or an added/removed service). Never leave the `Installed` column as a placeholder, `—`, or unknown value; every row must resolve to ✅ or ❌ from an actual scan. Flag any tool marked ❌ — the user must install it before approving.
+
+---
+
+## 6. Design System & UI
+
+
+> **MANDATORY when `services` contains a `frontend` service.** Skip only when there is no frontend service (derived App Type `API only` / `Background worker`). The plan-preview webview parses this section by title (`s.title.toLowerCase().includes('design system')`) and the scaffold quality contract reads `Component Library:` to decide which real library primitives to render.
 
 **Component Library**: {Fluent UI v9 / Vuetify 3 / Skeleton UI / Angular Material / Pico.css — see PLANNING QUICK REFERENCE → Component Library Defaults}
 **Style Direction**: {1–2 sentence design intent, e.g. "Modern data-dense console with subtle elevations, rounded 4px corners, and an emphasis on scannable lists."}
@@ -406,15 +455,15 @@ For each page above, list 3–6 representative records using that page's primary
 
 ---
 
-## 6. Project Structure
+## 7. Project Structure
 
 ```
-{Generated directory tree — see Canonical Structure in SKILL.md}
+{Generated directory tree for the chosen stack}
 ```
 
 ---
 
-## 7. Route Definitions
+## 8. Route Definitions
 
 | # | Method | Path | Description | Request Body | Response Body | Auth | Status Codes |
 |---|--------|------|-------------|-------------|--------------|------|-------------|
@@ -423,12 +472,12 @@ For each page above, list 3–6 representative records using that page's primary
 
 ---
 
-## 8. Execution Checklist
+## 9. Execution Checklist
 
 > The detailed execution checklist is auto-generated by `azure-project-scaffold` when it begins execution. It copies this section's high-level phases and expands them into step-by-step items with build gates.
 
 ### High-Level Phases
-- [ ] Step 1: Frontend Preview (if applicable — first visible feedback; runs in parallel with backend Phase A/B)
+- [ ] Step 1: Frontend (if applicable — runs in parallel with backend Phase A/B)
 - [ ] Step 2: Foundation (project config, directory structure, build verification)
 - [ ] Step 3: Configuration & Environment (config module, .env, local.settings.json)
 - [ ] Step 4: Service Abstraction Layer (interfaces + concrete implementations + registry)
@@ -446,7 +495,7 @@ For each page above, list 3–6 representative records using that page's primary
 
 ---
 
-## 9. Next Steps
+## 10. Next Steps
 
 1. Run **azure-project-scaffold** to execute this plan
 2. Run **azure-project-test** to add test coverage and validate the build
@@ -458,12 +507,12 @@ For each page above, list 3–6 representative records using that page's primary
 
 > **Order matters — open the plan view BEFORE rendering the per-page previews.** The whole point of the loading state is that the user sees and can interact with the plan document while the page previews are still being generated. If you generate every preview page first and only then open the view, the plan appears late and the flow is broken.
 
-1. **Write the preview scaffolding** — Step 3.5a below: write `.azure/.preview-temp/theme.css` + `manifest.json` (every page `status: "pending"`). Skip this and all of Step 3.5 for `API only` / `Background worker` (no UI to preview).
+1. **Write the preview scaffolding** — Step 3.5a below: write `.azure/.preview-temp/theme.css` + `manifest.json` (every page `status: "pending"`). Skip this and all of Step 3.5 when there is no `frontend` service (derived App Type `API only` / `Background worker` — no UI to preview).
 2. **Open the plan preview NOW** — the workflow rules in `azure-project-plan.agent.md` call `azureResourceGroups.openPlanView`. Do this **immediately after `manifest.json` exists and before fanning out the page sub-agents**. The webview starts watching `.azure/.preview-temp/` and shows the plan document plus a *Generating preview…* placeholder per page.
 3. **Render the page previews** — Step 3.5b below: fan out one sub-agent per page. The view is already open; its file watcher flips each page from *Generating preview…* to the rendered HTML as soon as its `<slug>.html` lands.
 4. **Present plan**, ask for approval.
 5. If approved, update status from `Planning` to `Approved`.
-6. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. The scaffold agent treats `.azure/.preview-temp/*.html` as a mock-up reference and translates it into real components using the framework named in Section 2.
+6. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. The scaffold agent treats `.azure/.preview-temp/*.html` as a mock-up reference and translates it into real components using the framework named in the Frontend stack section.
 
 > **❌ STOP** — Do NOT proceed past approval until user approves. Once approved, auto-chain immediately.
 
@@ -471,28 +520,28 @@ For each page above, list 3–6 representative records using that page's primary
 
 ### Step 3.5: Generate Frontend HTML/CSS Preview (parallel sub-agents)
 
-> **Skip entirely** when Section 5 was omitted (i.e. `appType` ∈ `API only` / `Background worker`). For all other app types this step is **mandatory** — without it, the plan-preview webview shows a permanent *Generating preview…* spinner and the user has no UI to approve.
+> **Skip entirely** when Section 6 was omitted (i.e. no `frontend` service — derived App Type `API only` / `Background worker`). For all other app types this step is **mandatory** — without it, the plan-preview webview shows a permanent *Generating preview…* spinner and the user has no UI to approve.
 
 **Output location:** `.azure/.preview-temp/` (note the leading dot on the folder name — it's a transient, gitignored scratch space). The scaffold agent reads it as a mock-up reference, then deletes it as the last step of scaffolding (see scaffold skill Step 13).
 
-**Inputs:** the just-written `.azure/project-plan.md` Section 5 (Color Palette, Typography, Pages, Style Direction, Component Library) plus the per-region recipes in [`references/html-preview.md`](references/html-preview.md). Read that reference file **once** at the start of this step.
+**Inputs:** the just-written `.azure/project-plan.md` Section 6 (Color Palette, Typography, Pages, Style Direction, Component Library) plus the per-region recipes in [`references/html-preview.md`](references/html-preview.md). Read that reference file **once** at the start of this step.
 
 #### 3.5a. Write `theme.css` and `manifest.json` (do this BEFORE fan-out)
 
 Both files MUST exist before the plan-preview webview opens, so the controller can render tabs in the loading state. Use the `create_file` tool — it's OS-agnostic and creates parent folders automatically.
 
-**`.azure/.preview-temp/theme.css`** — single shared stylesheet derived from Section 5:
+**`.azure/.preview-temp/theme.css`** — single shared stylesheet derived from Section 6:
 
 ```css
 :root {
-    /* ── Brand colors (from Section 5 palette) ── */
-    --color-primary: {hex from Section 5};
+    /* ── Brand colors (from Section 6 palette) ── */
+    --color-primary: {hex from Section 6};
     --color-on-primary: {white or near-black, whichever contrasts better};
     --color-accent: {hex};
     --color-on-accent: {white or near-black};
 
     /* ── Surfaces (derive from the palette — do NOT assume a light theme) ── */
-    --color-surface: {hex — page background from Section 5};
+    --color-surface: {hex — page background from Section 6};
     --color-surface-raised: {a card/panel tone that reads as raised against surface — #ffffff for a light theme, a step LIGHTER than surface for a dark one};
     --color-surface-sunken: color-mix(in srgb, var(--color-surface) 92%, var(--color-text) 6%);
 
@@ -507,7 +556,7 @@ Both files MUST exist before the plan-preview webview opens, so the controller c
     --color-danger:  #dc2626;
 
     /* ── Typography ── */
-    --font-body: {typography from Section 5}, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-body: {typography from Section 6}, system-ui, -apple-system, "Segoe UI", sans-serif;
     --font-heading: var(--font-body);
     --text-xs: 11px;
     --text-sm: 13px;
@@ -563,7 +612,7 @@ a:hover { text-decoration: underline; }
 
 Paste the full Shared CSS block from `references/html-preview.md` into the same file (header, nav, sidebar, hero, etc. — keep names exactly as the reference defines so the per-page HTML matches).
 
-**`.azure/.preview-temp/manifest.json`** — one entry per page in Section 5's Pages table:
+**`.azure/.preview-temp/manifest.json`** — one entry per page in Section 6's Pages table:
 
 ```json
 {
@@ -578,7 +627,7 @@ Paste the full Shared CSS block from `references/html-preview.md` into the same 
 
 - `previewStatus` is a top-level field indicating the overall state of the preview set. Valid values: `"generating"` (initial generation or revision in progress), `"ready"` (all preview work is complete). Set it to `"generating"` before starting any preview file writes and to `"ready"` after all pages have been written. **Always update it, both during initial generation and when revising previews after user feedback**.
 - `slug` is the kebab-cased page name (`Photo Upload` → `photo-upload`). It MUST match the eventual filename (`<slug>.html`). Slugs MUST be unique.
-- `route` is the path from Section 5's Pages table verbatim. Default to `/<slug>` when missing.
+- `route` is the path from Section 6's Pages table verbatim. Default to `/<slug>` when missing.
 - `status` starts at `"pending"` for every page. You SHOULD flip it to `"ready"` in step 3.5c after the HTML is written (keeps the manifest accurate), but the webview no longer depends on it — **the presence of a non-empty `<slug>.html` file is what makes a page render**. The manifest only supplies the page list (slug/title/route) and the initial loading tabs.
 
 #### 3.5a-open. Open the plan view NOW — before fanning out
@@ -591,10 +640,10 @@ The instant `theme.css` and `manifest.json` exist, the agent workflow opens the 
 
 Launch one `runSubagent` call per page, **all in a single tool-call batch** (the platform parallelizes independent sub-agent invocations). Cap at **4 concurrent** — if the plan has more than 4 pages, split into batches of 4. Each sub-agent's prompt MUST contain:
 
-1. The page's row from Section 5's Pages table (page name, route, purpose, layout regions).
+1. The page's row from Section 6's Pages table (page name, route, purpose, layout regions).
 2. The Color Palette, Typography, Style Direction, and Component Library values (for visual fidelity hints).
 3. **The app's domain context** — a 1–2 sentence summary of what the app does (from Sections 1–2) plus the relevant entity/data model, so the sub-agent knows what the page is actually about.
-4. **That page's records from Section 5's Sample Content block** — the real, domain-specific rows/values the page must display. This is the shared content contract; the scaffold reproduces the same records.
+4. **That page's records from Section 6's Sample Content block** — the real, domain-specific rows/values the page must display. This is the shared content contract; the scaffold reproduces the same records.
 5. The full contents of `references/html-preview.md`.
 6. The exact output path: `.azure/.preview-temp/<slug>.html`.
 7. A directive: *"Write a single self-contained HTML file linking to `./theme.css`. Use the per-region recipes in the reference. Replace every `{...}` placeholder token in the recipes with the real Sample Content provided above — never generic filler like 'Item 1', 'Recent items', or 'Card title'. Do NOT add a banner claiming the app 'will use' a different library. Do NOT add `<script>` tags — the preview iframe runs sandboxed without scripts. Do NOT inline any CSS — all styling MUST come from `./theme.css`."*
@@ -684,22 +733,22 @@ The webview watches the entire `.azure/.preview-temp/` folder, so the manifest u
 
 > **Key rule**: Enhancement service constructors MUST NOT throw. Defer config validation to method calls or wrap in try/catch.
 
-### Component Library Defaults (Section 5 of the plan)
+### Component Library Defaults (Section 6 of the plan)
 
-> **Pick the default for the user's frontend framework** unless the user explicitly named a different library. The chosen value goes into Section 5 verbatim as `**Component Library**: {value}` and becomes the load-bearing input for the scaffold quality contract (see scaffold skill `references/frontend-quality-bar.md`).
+> **Pick the default for the user's frontend framework** unless the user explicitly named a different library. The chosen value goes into Section 6 verbatim as `**Component Library**: {value}` and becomes the load-bearing input for the scaffold quality contract (see scaffold skill `references/frontend-quality-bar.md`).
 
-| Frontend (Q4) | Default `Component Library` | Reasonable alternatives | Use the default unless... |
+| Frontend framework | Default `Component Library` | Reasonable alternatives | Use the default unless... |
 |---------------|----------------------------|------------------------|---------------------------|
 | `React` | **Fluent UI v9** (`@fluentui/react-components`) | shadcn/ui + Radix, Material UI v6, Chakra UI v3 | user explicitly names one of the alternatives, OR project already has another library installed |
 | `Vue` | **Vuetify 3** | PrimeVue 4, Element Plus | user explicitly names one |
 | `Svelte` | **Skeleton UI** | Melt UI + Tailwind | user explicitly names one |
 | `Angular` | **Angular Material** | PrimeNG | user explicitly names one |
 | `None` (plain HTML / Static + API) | **Pico.css** + native form controls | Bulma, water.css | user explicitly names one |
-| `None` + `Background worker` | omit Section 5 entirely | \u2014 | always omit when there is no UI |
+| `None` + `Background worker` | omit Section 6 entirely | \u2014 | always omit when there is no UI |
 
 > **Why this matters**: Without `Component Library:`, the scaffold step treats the wireframe's region tokens (`header`, `hero`, `grid`, ...) as raw layout instructions and produces blocky placeholder `<div>` JSX that LOOKS worse than the plan-preview wireframe. With `Component Library:` set, the scaffold renders each region using real library primitives (cards, tabs, fields, toolbars, message bars) themed by the Color Palette.
 
-> **Plan-preview note**: The plan-preview webview renders Section 5 as a **sandboxed HTML/CSS iframe** loaded from `.azure/.preview-temp/<page>.html`. It deliberately does NOT use any component library, real icons, motion, dark mode, or webfonts — the preview is a *directional sketch* (color story + page regions + density), and the scaffolded app is required to visibly exceed it using whatever `Component Library` is named in the plan. The webview disclosure reads *"Directional mock, not the final UI. The scaffold renders this with **{Component Library}**, real icons, motion, and dark mode — it will look noticeably more polished than the sketch below."* and a `MOCK` ribbon overlays the iframe.
+> **Plan-preview note**: The plan-preview webview renders Section 6 as a **sandboxed HTML/CSS iframe** loaded from `.azure/.preview-temp/<page>.html`. It deliberately does NOT use any component library, real icons, motion, dark mode, or webfonts — the preview is a *directional sketch* (color story + page regions + density), and the scaffolded app is required to visibly exceed it using whatever `Component Library` is named in the plan. The webview disclosure reads *"Directional mock, not the final UI. The scaffold renders this with **{Component Library}**, real icons, motion, and dark mode — it will look noticeably more polished than the sketch below."* and a `MOCK` ribbon overlays the iframe.
 
 ### Error Response Contract
 
@@ -722,7 +771,7 @@ All error responses follow this shape:
 
 > This is a **default convention for a brand-new project**, not a mandate. When the workspace already has a structure, follow it; never assume or impose these exact paths. Treat the names below (`services/functions`, `services/web`, `services/shared`, …) as illustrative roles the agent maps onto the user's actual layout.
 >
-> **Prefer domain-specific names for the deployable apps.** When the project has a clear product name, derive a kebab-case slug and name the Functions backend `services/<project>-api` and the frontend `services/<project>-<type>` (`-portal`/`-app`/`-web`, whichever fits) — e.g. for an office-compliance calendar: `services/office-compliance-api`, `services/office-compliance-portal`. Keep the shared package generic (`services/shared`). Fall back to the generic `functions`/`web` only when there is no clear project name. Whatever you choose, record it in Section 6 and use it consistently across `workspaces`, imports, and `main`/`rootDir`.
+> **Prefer domain-specific names for the deployable apps.** When the project has a clear product name, derive a kebab-case slug and name the Functions backend `services/<project>-api` and the frontend `services/<project>-<type>` (`-portal`/`-app`/`-web`, whichever fits) — e.g. for an office-compliance calendar: `services/office-compliance-api`, `services/office-compliance-portal`. Keep the shared package generic (`services/shared`). Fall back to the generic `functions`/`web` only when there is no clear project name. Whatever you choose, record it in Section 7 and use it consistently across `workspaces`, imports, and `main`/`rootDir`.
 
 ```
 project-root/

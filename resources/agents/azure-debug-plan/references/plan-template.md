@@ -41,12 +41,14 @@ When editing markdown tables with `replace_string_in_file` or `multi_replace_str
 
 ## Prerequisites
 
-<!-- All required tools and VS Code extensions with install status. -->
-<!-- The user must install anything marked ❌ before approving. -->
+<!-- All required tools and VS Code extensions with install status — list both the Run and Debug tool sets defined in prerequisites.md. -->
+<!-- Service(s): the service(s) that need the tool (e.g. `api`, `worker`); use `*` for global toolchain shared by all services. -->
+<!-- Installed/Version come from the detection pass and must be re-run every time this section is (re)generated — never leave a placeholder. -->
+<!-- Install holds the install command/URL; the plan webview hides this column and surfaces it only for ❌ tools in the action callout. -->
 
-| Tool / Extension | Required For | Installed | Version | Install |
-|-----------------|-------------|-----------|---------|---------|
-| {name} | {reason} | {✅/❌} | {version or —} | {install URL or link} |
+| Tool / Extension | Category | Service(s) | Installed | Version | Install |
+|------------------|----------|------------|-----------|---------|---------|
+| {name} | {Runtime / Package manager / …} | {service(s) or *} | {✅/❌} | {version or —} | {install URL or command} |
 
 > ⚠️ **Action required:** Install any tools or extensions marked ❌ before approving this plan.
 
@@ -72,6 +74,24 @@ Each checked row below produces a VS Code debug configuration in the `.vscode/la
 <!-- | [x] | Payments API (debug) | Payments API | ./api | functions | node-ts | 20.x | Azure Storage, Azure PostgreSQL | -->
 <!-- | [x] | Customer Portal (debug) | Customer Portal | ./web | frontend-spa | node-ts | 20.x | — | -->
 <!-- | [x] | Debug All Services | Debug All Services | | *Compound Config* |||| -->
+
+<!-- Project Type descriptions are shown in a collapsible block so the table stays compact. -->
+<!-- Only include project types that appear in the table above. -->
+
+<details>
+<summary>ℹ️ Project Type Descriptions</summary>
+
+| Project Type | Description |
+|-------------|-------------|
+| {type} | {brief description of what this project type means} |
+
+<!-- Example: -->
+<!-- | functions | Azure Functions — serverless compute with triggers and bindings | -->
+<!-- | frontend-spa | Single-page application served by a dev server (Vite, Next.js, Angular, etc.) | -->
+<!-- | app-service | HTTP server application (Express, Fastify, Flask, ASP.NET, Spring Boot, etc.) | -->
+<!-- | container-app | Containerized application running via Dockerfile | -->
+
+</details>
 
 <!-- If a frontend SPA has a proxy config pointing to a local backend, add a note: -->
 <!-- > ℹ️ **Proxy detected:** Customer Portal proxies requests to Payments API (via `vite.config.ts`). The compound config should start backends before frontends. -->

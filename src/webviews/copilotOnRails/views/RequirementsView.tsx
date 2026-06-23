@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, Input, Switch, Textarea, Tooltip } from '@fluentui/react-components';
-import { CheckboxUncheckedRegular, CheckmarkRegular, RocketRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { Button, Input, Textarea, Tooltip } from '@fluentui/react-components';
+import { CheckboxUncheckedRegular, CheckmarkRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import './styles/requirementsView.scss';
-import { inferInputType, isAnswerEmpty, type RequirementsAnswer, type RequirementsData, type RequirementsExecutionMode, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice } from './utils/parseRequirements';
+import { inferInputType, isAnswerEmpty, type RequirementsAnswer, type RequirementsData, type RequirementsExecutionMode, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice, type RequirementsService, type RequirementsServiceRole } from './utils/parseRequirements';
 
 interface DraftMap {
     [questionId: string]: RequirementsAnswer;
@@ -17,7 +17,7 @@ interface DraftMap {
 const CATEGORY_LABELS: Record<string, string> = {
     project: 'Project',
     app: 'Application',
-    runtime: 'Runtime',
+    runtime: 'Language',
     frontend: 'Frontend',
     backend: 'Backend',
     auth: 'Authentication',
@@ -63,6 +63,29 @@ function categorySortValue(category: string): number {
     return idx === -1 ? CATEGORY_ORDER.length : idx;
 }
 
+const ROLE_LABELS: Record<RequirementsServiceRole, string> = {
+    backend: 'Backend',
+    frontend: 'Frontend',
+    worker: 'Worker',
+};
+
+const ROLE_ORDER: RequirementsServiceRole[] = ['backend', 'frontend', 'worker'];
+
+function roleSortValue(role: RequirementsServiceRole): number {
+    const idx = ROLE_ORDER.indexOf(role);
+    return idx === -1 ? ROLE_ORDER.length : idx;
+}
+
+interface ServiceGroup {
+    service: RequirementsService;
+    questions: RequirementsQuestion[];
+}
+
+interface CategoryGroup {
+    category: string;
+    questions: RequirementsQuestion[];
+}
+
 function defaultDraftFor(question: RequirementsQuestion): RequirementsAnswer {
     if (!isAnswerEmpty(question.answer)) {
         return question.answer;
@@ -85,7 +108,6 @@ export const RequirementsView = (): JSX.Element => {
     const [drafts, setDrafts] = useState<DraftMap>({});
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
-    const [autopilot, setAutopilot] = useState(false);
     const { vscodeApi } = useContext(WebviewContext);
 
     useEffect(() => {
@@ -94,7 +116,6 @@ export const RequirementsView = (): JSX.Element => {
             if (message?.command === 'setRequirementsData') {
                 const incoming = message.data as RequirementsData;
                 setData(incoming);
-                setAutopilot(incoming.executionMode === 'auto');
                 // Seed drafts from the file. When a question is missing an answer
                 // but has a recommendedChoice, pre-select the recommendation so
                 // the user just has to review-and-submit rather than fill from
@@ -122,19 +143,45 @@ export const RequirementsView = (): JSX.Element => {
         setSaveError(null);
     }, []);
 
-    const grouped = useMemo(() => {
+    const { serviceGroups, sharedGroups } = useMemo(() => {
         if (!data) {
-            return [] as { category: string; questions: RequirementsQuestion[] }[];
+            return { serviceGroups: [] as ServiceGroup[], sharedGroups: [] as CategoryGroup[] };
         }
-        const map = new Map<string, RequirementsQuestion[]>();
+
+        const servicesById = new Map<string, RequirementsService>();
+        for (const s of data.services ?? []) {
+            servicesById.set(s.id, s);
+        }
+
+        // Separate service-scoped questions from shared ones
+        const serviceQMap = new Map<string, RequirementsQuestion[]>();
+        const sharedQMap = new Map<string, RequirementsQuestion[]>();
+
         for (const q of data.questions) {
-            const list = map.get(q.category) ?? [];
-            list.push(q);
-            map.set(q.category, list);
+            if (q.serviceId && servicesById.has(q.serviceId)) {
+                const list = serviceQMap.get(q.serviceId) ?? [];
+                list.push(q);
+                serviceQMap.set(q.serviceId, list);
+            } else {
+                const list = sharedQMap.get(q.category) ?? [];
+                list.push(q);
+                sharedQMap.set(q.category, list);
+            }
         }
-        return Array.from(map.entries())
+
+        const svcGroups: ServiceGroup[] = Array.from(serviceQMap.entries())
+            .map(([svcId, questions]) => {
+                const service = servicesById.get(svcId);
+                return service ? { service, questions } : undefined;
+            })
+            .filter((g): g is ServiceGroup => g !== undefined)
+            .sort((a, b) => roleSortValue(a.service.role) - roleSortValue(b.service.role));
+
+        const catGroups: CategoryGroup[] = Array.from(sharedQMap.entries())
             .sort((a, b) => categorySortValue(a[0]) - categorySortValue(b[0]))
             .map(([category, questions]) => ({ category, questions }));
+
+        return { serviceGroups: svcGroups, sharedGroups: catGroups };
     }, [data]);
 
     const missingRequired = useMemo(() => {
@@ -169,7 +216,9 @@ export const RequirementsView = (): JSX.Element => {
 
         setIsSaving(true);
         setSaveError(null);
-        const executionMode: RequirementsExecutionMode = autopilot ? 'auto' : 'guided';
+        // Autopilot is chosen later on the plan page; requirements submission is
+        // always guided.
+        const executionMode: RequirementsExecutionMode = 'guided';
         vscodeApi.postMessage({
             command: 'submitRequirements',
             data: {
@@ -178,7 +227,7 @@ export const RequirementsView = (): JSX.Element => {
                 questions: updatedQuestions,
             },
         });
-    }, [data, canSubmit, drafts, autopilot, vscodeApi]);
+    }, [data, canSubmit, drafts, vscodeApi]);
 
     if (!data) {
         return (
@@ -221,24 +270,6 @@ export const RequirementsView = (): JSX.Element => {
                 <div className='headerActions'>
                     <Tooltip
                         relationship='label'
-                        content='Autopilot runs the entire workflow — plan, scaffold, and local debugging setup — end-to-end without stopping for approvals, and auto-approves all tool actions (file edits and terminal commands). You’ll confirm once before it starts.'
-                    >
-                        <Switch
-                            className='autopilotSwitch'
-                            checked={autopilot}
-                            onChange={(_, switchData) => setAutopilot(switchData.checked)}
-                            label={
-                                <span className='autopilotLabel'>
-                                    <RocketRegular />
-                                    Autopilot
-                                </span>
-                            }
-                            labelPosition='before'
-                            disabled={isSaving}
-                        />
-                    </Tooltip>
-                    <Tooltip
-                        relationship='label'
                         content={
                             missingRequired.length === 0
                                 ? 'Save answers and generate the scaffold plan.'
@@ -270,7 +301,38 @@ export const RequirementsView = (): JSX.Element => {
                 </div>
             )}
 
-            {grouped.map(group => {
+            {serviceGroups.length > 0 && (
+                <div className='servicesSection'>
+                    <h2 className='sectionHeading'>Services</h2>
+                    <div className='serviceCards'>
+                        {serviceGroups.map(({ service, questions }) => (
+                            <section className='categoryCard categoryCard--service' key={service.id}>
+                                <header className='categoryHeader'>
+                                    <h2>{service.label}</h2>
+                                    <span className={`roleBadge roleBadge--${service.role}`}>{ROLE_LABELS[service.role]}</span>
+                                    {service.root && <span className='serviceRoot'>{service.root}</span>}
+                                </header>
+                                <ul className='questionList'>
+                                    {questions.map(q => {
+                                        const hideHeader = questions.length === 1;
+                                        return (
+                                            <QuestionRow
+                                                key={q.id}
+                                                question={q}
+                                                draft={drafts[q.id] === undefined ? q.answer : drafts[q.id]}
+                                                hideHeader={hideHeader}
+                                                onChange={(value) => updateDraft(q.id, value)}
+                                            />
+                                        );
+                                    })}
+                                </ul>
+                            </section>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {sharedGroups.map(group => {
                 const label = categoryLabel(group.category);
                 return (
                     <section className='categoryCard' key={group.category}>

@@ -113,6 +113,26 @@
         }
     }
 
+    .sectionHeading {
+        margin: 8px 0 4px;
+        font-size: 0.8em;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--vscode-descriptionForeground);
+    }
+
+    .serviceCards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+
+        >.categoryCard--service {
+            flex: 1 1 280px;
+            min-width: 0;
+        }
+    }
+
     .categoryCard {
         border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.3));
         border-radius: 6px;
@@ -124,6 +144,9 @@
             border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.25));
             background: transparent;
             border-left: 3px solid var(--vscode-focusBorder, var(--vscode-button-background, #007acc));
+            display: flex;
+            align-items: center;
+            gap: 8px;
 
             h2 {
                 margin: 0;
@@ -132,6 +155,28 @@
                 letter-spacing: 0.1em;
                 font-weight: 700;
                 color: var(--vscode-foreground);
+            }
+
+            .roleBadge {
+                font-size: 0.7em;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                font-weight: 600;
+                padding: 1px 6px;
+                border-radius: 3px;
+                background: var(--vscode-badge-background);
+                color: var(--vscode-badge-foreground);
+                border: 1px solid var(--vscode-contrastBorder, transparent);
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+
+            .serviceRoot {
+                font-size: 0.75em;
+                color: var(--vscode-descriptionForeground);
+                margin-left: auto;
+                font-family: var(--vscode-editor-font-family, monospace);
+                flex-shrink: 0;
             }
         }
 
@@ -248,6 +293,10 @@
                             padding: 4px 12px;
                             align-items: center;
 
+                            &:not(.optionsList__row--selected):hover {
+                                background: transparent;
+                            }
+
                             &:focus-within {
                                 background: var(--vscode-list-activeSelectionBackground, rgba(0, 122, 204, 0.2));
                                 color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
@@ -270,10 +319,6 @@
                         justify-content: center;
                         margin-top: 1px;
                         color: var(--vscode-descriptionForeground);
-
-                        &--blank {
-                            visibility: hidden;
-                        }
                     }
 
                     &__checkboxIcon {

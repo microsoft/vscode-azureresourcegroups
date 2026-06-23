@@ -29,7 +29,7 @@ An AI agent runs tests after every module. If tests fail, iterate until pass. No
 |-------|---------------|-------------|-------|------|
 | **Unit** | Single function/class in isolation | All deps mocked | Fast (ms) | Every module, always |
 | **Integration** | Request → handler → service → response cycle | Mock services injected | Fast (ms) | Every route, always |
-| **E2E** | Full stack with real emulators | Running emulators (via local-dev) | Slower (s) | When emulators available |
+| **E2E** | Full stack with real emulators | Running emulators (via azure-debug-plan) | Slower (s) | When emulators available |
 
 ### What Each Layer Covers
 
@@ -48,7 +48,7 @@ An AI agent runs tests after every module. If tests fail, iterate until pass. No
 - Request validation (bad input rejected)
 - Error handling (service failures produce correct error responses)
 
-**E2E Tests** (when emulators available via local-dev):
+**E2E Tests** (when emulators available via azure-debug-plan):
 - Full database round-trip (create → read → verify)
 - File upload → storage → retrieval
 - Cache set → get → verify
