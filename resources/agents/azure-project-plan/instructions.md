@@ -32,6 +32,14 @@ Plan/design a new Azure-centric app; create requirements/architecture; start a p
 4. **Interactive UI** — use `vscode_askQuestions`, never plain chat; batch unanswered questions into one call.
 5. **Scope = app/service code only** — the plan must describe **only** high-quality application / service code. Do **NOT** plan for, reference, or add checklist items that produce `docker-compose.yml` / Docker / emulator orchestration, **SQL migration files**, **SQL seed / fixture data files**, or **Infrastructure-as-Code** (Bicep / ARM / Terraform / Pulumi / `infra/`). Those are owned by other skills (**azure-debug-plan**, **azure-prepare**). If a relational DB is chosen, the plan still describes the data-access service layer — never schema migrations or seed scripts.
 
+## Autopilot mode (overrides the gates below)
+**Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/requirements.json` contains `"executionMode": "auto"`. Autopilot only applies on the **re-entry** path (after the requirements form was submitted) — the first pass that writes `.azure/requirements.json` is always guided. When active, run fully unattended:
+- **Skip the frontend preview** (Step 3.5) and the `openPlanView` preview — do NOT write `.azure/.preview-temp/` or fan out page sub-agents.
+- **Skip the approval gate** (Step 3 "Present plan… ask for approval" / the STOP). Set status straight from `Planning` to `Approved` and auto-chain.
+- **Record the mode** — write `executionMode: auto` into `.azure/project-plan.md` (front-matter or a `**Execution Mode**: auto` row) so downstream skills inherit it.
+- **Hand off with the marker** — prefix the `azure-project-scaffold` invocation args with `[AUTOPILOT MODE] `.
+- Never call `vscode_askQuestions`. Plan quality (incl. the Design System section) is unchanged — autopilot suppresses **gates and previews only**.
+
 ## Workflow (mandatory order)
 DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` (Step 3) → GENERATE FRONTEND PREVIEW (Step 3.5, if applicable) → approval → AUTO-CHAIN scaffold after approval. Only files allowed: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` — no `services/`, configs, or production code. Planning needs ZERO external file reads except `references/html-preview.md` for Step 3.5; all other context is inlined below.
 

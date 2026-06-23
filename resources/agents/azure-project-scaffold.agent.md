@@ -15,7 +15,7 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 2. **Step A** — open the plan preview (see below). Mandatory.
 3. **Step B** — wait for the user's explicit approval of the plan. Mandatory.
 4. Scaffold the project.
-5. **Step C** — hand off to the next phase based on the user's "Next Step" answer.
+5. **Step C** — announce completion, open the next-steps view (see below), then **stop**. Do not prompt for next steps in chat.
 
 ### Step A — open the plan preview (MANDATORY, do not skip)
 
@@ -35,33 +35,36 @@ This is not optional and not conditional. Do not summarize the plan, do not ask 
 
 After Step A, **stop and wait** for explicit user approval of the plan. Do **not** begin scaffolding until the user confirms. Treat anything other than a clear approval (e.g. questions, edits, "looks good but…") as not-yet-approved.
 
-### Step C — handle the "Next Step" answer at the end of scaffolding
+### Step C — open the next-steps view, then stop; do NOT prompt in chat
 
-After the user answers the **"Next Step"** question that the skill asks at the end of scaffolding, **do not** print plain-text suggestions and **do not** start the next phase yourself. Call `run_vscode_command` with the matching command:
-
-**Answer "Verify project"** →
+When scaffolding finishes, announce **"Scaffolding complete!"** Then, **before stopping**, open the post-scaffold next-steps view by calling `run_vscode_command` (do this immediately, just like Step A):
 
 ```json
-{
-  "commandId": "azureResourceGroups.startProjectTest",
-  "name": "Start Project Test",
-  "skipCheck": true,
-  "args": ["Scaffolding is complete. Add test coverage and runtime validation to the scaffolded project."]
-}
+{ "commandId": "azureResourceGroups.openScaffoldNextStepsView", "name": "Open Scaffold Next Steps View" }
 ```
 
-**Answer "Set up local dev"** →
+`run_vscode_command` is a deferred tool. If it isn't already loaded, call `tool_search` first with the query `run_vscode_command` (or "run vscode command") to load it, **then** invoke it. Both `tool_search` and `run_vscode_command` are listed in this agent's `tools:` frontmatter — they are available in this session. Do **not** claim the tool is unavailable. This is how the user picks what to do next (verify code, set up local development, or deploy) — there is no reliable file-watcher fallback, so if you skip this call the user will be stuck.
+
+After making this call, **stop**. Do **NOT** ask the user what to do next in chat: do **NOT** call `vscode_askQuestions` (or any chat question API) — the view handles those choices.
+
+### Autopilot mode (overrides Steps A–C gating)
+
+**Autopilot is active when** the invoking chat query begins with the marker `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto` (front-matter or a `**Execution Mode**: auto` row). When autopilot is active, run fully unattended — **no chat questions, no manual approval**:
+
+1. **Skip Step A** — the plan was already produced and approved upstream; do **not** open the plan preview (`azureResourceGroups.openPlanView`) and do **not** re-write `.azure/project-plan.md` for approval. Go straight to scaffolding.
+2. **Skip Step B** — do not stop for approval; begin scaffolding immediately.
+3. **Skip Step C's next-steps view** — do **not** open `azureResourceGroups.openScaffoldNextStepsView`. Instead, when scaffolding finishes, advance the chain directly by calling `run_vscode_command` with the command below.
 
 ```json
 {
   "commandId": "azureResourceGroups.startLocalDevelopment",
   "name": "Start Local Development",
   "skipCheck": true,
-  "args": ["The project has been scaffolded. Now set up the local development environment so the user can start building and testing."]
+  "args": ["[AUTOPILOT MODE] The project has been scaffolded. Now set up the local development environment so the user can start building and testing."]
 }
 ```
 
-These commands exist — do not say they aren't registered. If `run_vscode_command` returns an error, report it to the user verbatim, but still attempt the call first. Do not skip the call.
+All scaffold quality work (frontend preview verification, backend services, cleanup of `.azure/.preview-temp/` at Step 13) still applies — autopilot suppresses **gates and questions**, never scaffold quality.
 
 ### Frontend preview commands — working directory is mandatory
 

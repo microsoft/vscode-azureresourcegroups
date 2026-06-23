@@ -9,8 +9,10 @@ import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { ext } from "../../../../extensionVariables";
+import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { openLoadingView } from "../openLoadingView";
 
 export type { CreateProjectViewControllerType };
 
@@ -45,6 +47,12 @@ export class CreateProjectViewController extends WebviewController<CreateProject
         await vscode.commands.executeCommand("workbench.action.chat.open", {
             mode: 'azure-project-plan',
             query,
+        });
+        projectSubmissionState.setPending();
+        openLoadingView({
+            stage: 0,
+            title: vscode.l10n.t('Gathering project requirements…'),
+            message: vscode.l10n.t('Copilot is analyzing your prompt and preparing the requirements questionnaire.'),
         });
     }
 }

@@ -6,12 +6,16 @@
 import * as vscode from "vscode";
 import { parseRequirementsJson, type RequirementsData } from "../views/utils/parseRequirements";
 import { RequirementsViewController } from "./controllers/RequirementsViewController";
+import { closeLoadingView } from "./openLoadingView";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 export const REQUIREMENTS_FILE_GLOB = '.azure/requirements.json';
 
 const host = new SingletonViewHost<RequirementsData, RequirementsViewController>({
-    createController: (data, uri) => new RequirementsViewController(data, uri),
+    createController: (data, uri) => {
+        closeLoadingView();
+        return new RequirementsViewController(data, uri);
+    },
     updateController: (controller, data, uri) => controller.updateData(data, uri),
 });
 

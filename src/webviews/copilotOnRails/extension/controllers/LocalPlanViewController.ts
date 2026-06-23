@@ -11,6 +11,7 @@ import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { openLoadingView } from "../openLoadingView";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
@@ -49,11 +50,22 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             return;
         }
         this.panel.dispose();
+        openLoadingView({
+            stage: 1,
+            title: vscode.l10n.t('Setting up your local development environment…'),
+            message: vscode.l10n.t('Copilot is setting your project up for local development'),
+        });
     }
 
     private async openDebugPlanChat(query: string, isFeedback: boolean): Promise<boolean> {
         if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
             return false;
+        }
+        if (!isFeedback) {
+            // Fresh chat session for the approval hand-off so the next phase starts with a
+            // clean context window. Feedback/revision stays in the current session because
+            // it iterates on the plan with the existing conversation.
+            await vscode.commands.executeCommand('workbench.action.chat.newChat');
         }
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: azureDebugPlanAgent,

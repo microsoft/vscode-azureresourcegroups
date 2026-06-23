@@ -704,39 +704,47 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, onT
             );
         case 'table':
             return (
-                <table className='planTable'>
-                    <thead>
-                        <tr>
-                            {item.headers.map((h, i) => <th key={i}>{h}</th>)}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {item.rows.map((row, ri) => (
-                            <tr key={ri}>
-                                {row.map((cell, ci) => {
-                                    const componentName = row[0];
-                                    const options = ci > 0 ? editableOptions[componentName] : undefined;
-                                    const isEdited = options ? editedCells?.has(cellKey(sectionIdx, contentIdx, ri, ci)) : false;
-                                    return (
-                                        <td key={ci} className={isEdited ? 'editedCell' : undefined}>
-                                            {options ? (
-                                                <select
-                                                    className={`cellDropdown ${isEdited ? 'edited' : ''}`}
-                                                    value={cell}
-                                                    disabled={disabled}
-                                                    onChange={(e) => onTableCellChange(sectionIdx, contentIdx, ri, ci, e.target.value)}
-                                                >
-                                                    {!options.includes(cell) && <option value={cell}>{cell}</option>}
-                                                    {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                                </select>
-                                            ) : cell}
-                                        </td>
-                                    );
-                                })}
+                <div className='planTableWrapper'>
+                    <table className='planTable'>
+                        <thead>
+                            <tr>
+                                {item.headers.map((h, i) => <th key={i}>{h}</th>)}
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {item.rows.map((row, ri) => {
+                                // Hide the Orchestration row from the plan view.
+                                if (row[0] === 'Orchestration') {
+                                    return null;
+                                }
+                                return (
+                                    <tr key={ri}>
+                                        {row.map((cell, ci) => {
+                                            const componentName = row[0];
+                                            const options = ci > 0 ? editableOptions[componentName] : undefined;
+                                            const isEdited = options ? editedCells?.has(cellKey(sectionIdx, contentIdx, ri, ci)) : false;
+                                            return (
+                                                <td key={ci} className={isEdited ? 'editedCell' : undefined}>
+                                                    {options ? (
+                                                        <select
+                                                            className={`cellDropdown ${isEdited ? 'edited' : ''}`}
+                                                            value={cell}
+                                                            disabled={disabled}
+                                                            onChange={(e) => onTableCellChange(sectionIdx, contentIdx, ri, ci, e.target.value)}
+                                                        >
+                                                            {!options.includes(cell) && <option value={cell}>{cell}</option>}
+                                                            {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                        </select>
+                                                    ) : cell}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             );
         case 'blockquote':
             return <div className='blockquote'>{item.text}</div>;

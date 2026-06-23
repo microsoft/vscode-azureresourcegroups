@@ -11,6 +11,7 @@ export const showHiddenTypesSettingKey = 'showHiddenTypes';
 export const hasFocusedGroupContextKey = 'ms-azuretools.vscode-azureresourcegroups.hasFocusedGroup';
 export const hasProjectPlanFilesContextKey = 'ms-azuretools.vscode-azureresourcegroups.hasProjectPlanFiles';
 export const isEmptyWorkspaceContextKey = 'ms-azuretools.vscode-azureresourcegroups.isEmptyWorkspace';
+export const hasPendingProjectSubmissionContextKey = 'ms-azuretools.vscode-azureresourcegroups.hasPendingProjectSubmission';
 export const canFocusContextValue = 'canFocus';
 
 export const azureDebugPlanAgent = 'azure-debug-plan';

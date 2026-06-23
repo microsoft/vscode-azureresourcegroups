@@ -19,6 +19,8 @@
 
 For Azure Functions projects, scan bindings to identify Azure service dependencies. Parse `function.json` files or decorator/attribute bindings in source code.
 
+> **Implicit dependency:** All Azure Functions projects require Azure Storage for the host runtime (trigger management, lease coordination, internal state). Always emit an Azurite emulator entry in the plan regardless of whether application-level storage SDK packages are detected.
+
 | Binding | Azure Service | Emulator |
 |---------|--------------|----------|
 | `blobTrigger`, `blob` | Blob Storage | azurite |
