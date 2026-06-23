@@ -3,14 +3,12 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { ext } from "../../../../extensionVariables";
 import { type RequirementsData, type RequirementsExecutionMode } from "../../views/utils/parseRequirements";
-import { AUTOPILOT_QUERY_MARKER, enableAutopilot } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { markRequirementsSubmitted } from "../openRequirementsView";
@@ -62,32 +60,10 @@ export class RequirementsViewController extends WebviewController<Record<string,
             return;
         }
 
-        // Decide whether to run unattended (autopilot/"YOLO") or guided BEFORE persisting,
-        // so the file we write reflects the real decision. Autopilot requires an explicit
-        // modal confirmation because it enables global auto-approval of chat tool actions
-        // for the duration of the run.
-        let autopilot = false;
-        if (data.executionMode === 'auto') {
-            // Cancelling the modal throws UserCancelledError, which
-            // callWithTelemetryAndErrorHandling swallows — leaving autopilot off (guided).
-            autopilot = await callWithTelemetryAndErrorHandling('azureResourceGroups.autopilot.confirm', async (context: IActionContext) => {
-                context.errorHandling.suppressDisplay = true;
-                await context.ui.showWarningMessage(
-                    vscode.l10n.t('Run this project end-to-end in Autopilot mode?'),
-                    {
-                        modal: true,
-                        detail: vscode.l10n.t('Autopilot will plan, scaffold, and set up local debugging without stopping for approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally. You can turn this off any time from the status bar.'),
-                    },
-                    { title: vscode.l10n.t('Enable Autopilot') },
-                );
-                return true;
-            }) ?? false;
-        }
-
-        // Normalize the persisted execution mode to the confirmed decision. If the user
-        // toggled autopilot on but cancelled the modal, fall back to 'guided' so the
-        // file-driven agents don't skip approval gates while tool actions stay un-approved.
-        const executionMode: RequirementsExecutionMode = autopilot ? 'auto' : 'guided';
+        // Autopilot is now chosen on the plan page (not here), so requirements
+        // submission is always guided. The plan agent always generates and shows
+        // the plan for approval.
+        const executionMode: RequirementsExecutionMode = 'guided';
 
         try {
             const serialized = JSON.stringify({ ...data, executionMode, parseError: undefined }, null, 2) + '\n';
@@ -101,10 +77,6 @@ export class RequirementsViewController extends WebviewController<Record<string,
 
         void this.panel.webview.postMessage({ command: 'submitComplete' });
 
-        if (autopilot) {
-            await enableAutopilot(ext.context);
-        }
-
         const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
         if (await ensureAgentInstructions('azure-project-plan')) {
             this.panel.dispose();
@@ -113,8 +85,7 @@ export class RequirementsViewController extends WebviewController<Record<string,
                 title: vscode.l10n.t('Generating your project plan…'),
                 message: vscode.l10n.t('Copilot is using your answers to build .azure/project-plan.md. The plan view will open automatically when it’s ready.'),
             });
-            const baseQuery = vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath);
-            const query = autopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery;
+            const query = vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath);
             try {
                 // Fresh chat session per phase hand-off — the plan agent reads the
                 // requirements file from disk, so a clean context keeps the window focused.

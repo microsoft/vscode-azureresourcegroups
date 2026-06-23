@@ -31,13 +31,11 @@ Plan/design a new Azure-centric app; create requirements/architecture; start a p
 3. **Auto-chain after approval** — immediately invoke `azure-project-scaffold`; never ask the user to invoke it manually. **Generate a frontend HTML/CSS preview** during planning per Step 3.5 (the scaffold agent consumes it as a mock-up but builds the real app with the chosen framework).
 4. **Interactive UI** — use `vscode_askQuestions`, never plain chat; batch unanswered questions into one call.
 
-## Autopilot mode (overrides the gates below)
-**Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/requirements.json` contains `"executionMode": "auto"`. Autopilot only applies on the **re-entry** path (after the requirements form was submitted) — the first pass that writes `.azure/requirements.json` is always guided. When active, run fully unattended:
-- **Skip the frontend preview** (Step 3.5) and the `openPlanView` preview — do NOT write `.azure/.preview-temp/` or fan out page sub-agents.
-- **Skip the approval gate** (Step 3 "Present plan… ask for approval" / the STOP). Set status straight from `Planning` to `Approved` and auto-chain.
-- **Record the mode** — write `executionMode: auto` into `.azure/project-plan.md` (front-matter or a `**Execution Mode**: auto` row) so downstream skills inherit it.
-- **Hand off with the marker** — prefix the `azure-project-scaffold` invocation args with `[AUTOPILOT MODE] `.
-- Never call `vscode_askQuestions`. Plan quality (incl. the Design System section) is unchanged — autopilot suppresses **gates and previews only**.
+## Autopilot is selected on the plan page (this agent always runs guided)
+This agent **always** runs guided: it generates `.azure/project-plan.md` with `Status: Planning`, opens the plan preview, and stops for the user's approval. It does **not** detect, decide, or record autopilot, and never skips the preview or approval gate.
+Autopilot is chosen by the **user** via the **Autopilot toggle on the plan webview**, after the plan is shown. When they approve with it on, the extension records `**Execution Mode**: auto` in `.azure/project-plan.md`, enables global auto-approve, and hands off to the scaffold agent with the `[AUTOPILOT MODE]` marker; every downstream skill then inherits autopilot from the plan file and runs unattended to the end.
+
+There is nothing autopilot-specific for you to do here — just write a correct, complete plan and always emit both the `### Run` and `### Debug` prerequisite sub-tables (§ 5). Never call `vscode_askQuestions` in chat — the only stop is the plan webview approval.
 
 ## Workflow (mandatory order)
 DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` (Step 3) → GENERATE FRONTEND PREVIEW (Step 3.5, if applicable) → approval → AUTO-CHAIN scaffold after approval. Only files allowed: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` — no `services/`, configs, or production code. Planning needs ZERO external file reads except `references/html-preview.md` for Step 3.5; all other context is inlined below.
@@ -323,7 +321,7 @@ When re-invoked with a query mentioning submitted requirements (e.g. *"Requireme
 
 Write `.azure/project-plan.md` from the template below in a **single pass** (fill all sections at once — never section-by-section), then present for approval.
 
-**Before writing, make sure to include the prerequisites detection pass** (Section 5) so the `Installed` column reflects what is actually present. Do this in the same pass — no separate gate.
+**Before writing, run the prerequisites detection pass** (Section 5) so the `Installed` and `Version` columns reflect what is actually present. Do this in the same pass — no separate gate. Re-run this scan on every rebuild so the status never goes stale or shows an un-scanned value.
 
 #### Plan Template
 
@@ -394,13 +392,15 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ## 5. Prerequisites
 
-Identify the required tools, then inventory them by following [prerequisites.md](../shared-references/prerequisites.md).
+Identify the required tools, then inventory them by following [prerequisites.md](../shared-references/prerequisites.md). Always produce **both** groups — `### Run` and `### Debug` — as two sub-tables under this section. The plan webview shows the Run group always and the Debug group only when the user turns on the Autopilot toggle, so do not omit either group yourself.
 
-The required tools are derived from the technology stacks and Azure services associated with each service. Map each stack to its chosen tooling, e.g. runtime - Node, package manager - npm, project type - Azure Functions Core Tools (for Azure Functions), etc.
+The required tools are derived from the technology stacks and Azure services associated with each service. Map each stack to its chosen tooling, e.g. runtime - Node, package manager - npm, project type - Azure Functions Core Tools (for Azure Functions), etc. The Run vs Debug distinction is defined in [prerequisites.md](../shared-references/prerequisites.md): Run tools are needed to run the project; Debug tools (Docker, Docker Compose, VS Code extensions) are the local-debugging extras.
 
-The **Run** tool set is required whenever its stack is present and should always be displayed. The **Debug** tool set (Docker, Docker Compose, and any VS Code extensions) does not need to be inventoried at this scaffold stage unless `autopilot` mode is active.  If no `autopilot` mode is selected, do not show the debug set of tools.  If `autopilot` mode is selected, surface both sets, since autopilot runs all the way to the end of the local debugging setup. The Run vs Debug distinction is defined in [prerequisites.md](../shared-references/prerequisites.md).
+For each tool, record which planned service(s) need it in the `Service(s)` column (use `*` for global toolchain shared by all services, or list each service explicitly). For a container runtime or orchestrator (Docker, Docker Compose), list the service(s) whose Azure dependencies its emulators stand in for, rather than `*`.
 
-After identifying the required tools, you should run the detection pass to fill the `Installed` column (✅ / ❌) and detected version. Recompute the table whenever the plan changes (e.g. a Runtime edit or an added/removed service). Flag any Required tool marked ❌ — the user must install it before approving.
+After identifying the required tools, run the detection pass to fill the `Installed` column (✅ / ❌) and detected `Version`. In the `Install` column, record the install command/URL the user would run if the tool is missing.
+
+**You must re-run the detection pass every time this section is generated or the plan is rebuilt** — recompute it whenever the plan changes (e.g. a Runtime edit or an added/removed service). Never leave the `Installed` column as a placeholder, `—`, or unknown value; every row must resolve to ✅ or ❌ from an actual scan. Flag any tool marked ❌ — the user must install it before approving.
 
 ---
 

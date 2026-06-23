@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea, Tooltip } from '@fluentui/react-components';
-import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Switch, Textarea, Tooltip } from '@fluentui/react-components';
+import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, RocketRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
@@ -169,6 +169,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
+    const [autopilot, setAutopilot] = useState(false);
     const originalCellValues = useRef<Map<CellKey, string>>(new Map());
     // Same idea for design tokens (palette swatches), keyed by a synthetic
     // target like `palette:Primary`.
@@ -227,8 +228,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
             setConfirmSubmitOpen(true);
             return;
         }
-        vscodeApi.postMessage({ command: 'approvePlan', data: plan });
-    }, [plan, hasEdits, isAlreadyApproved, vscodeApi]);
+        vscodeApi.postMessage({ command: 'approvePlan', data: plan, autopilot });
+    }, [plan, hasEdits, isAlreadyApproved, autopilot, vscodeApi]);
 
     const mutateCell = useCallback((sectionIdx: number, contentIdx: number, rowIdx: number, colIdx: number, value: string) => {
         setPlan(prev => {
@@ -470,6 +471,24 @@ export const ScaffoldPlanView = (): JSX.Element => {
                             </div>
                         </div>
                         <div className='headerActions'>
+                            <Tooltip
+                                content='Autopilot runs everything after this plan is approved — scaffold and local debugging setup — without stopping for further approvals, and auto-approves all tool actions. When on, the Debug prerequisites are shown too. You confirm once on approval.'
+                                relationship='label'
+                            >
+                                <Switch
+                                    className='autopilotSwitch'
+                                    checked={autopilot}
+                                    onChange={(_, switchData) => setAutopilot(switchData.checked)}
+                                    disabled={isAwaitingRevision || isAlreadyApproved}
+                                    label={
+                                        <span className='autopilotLabel'>
+                                            <RocketRegular />
+                                            Autopilot
+                                        </span>
+                                    }
+                                    labelPosition='before'
+                                />
+                            </Tooltip>
                             <Tooltip content='Request changes to the plan before approving' relationship='label'>
                                 <Button
                                     appearance='subtle'
@@ -517,7 +536,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
 
                 {overviewSection && <OverviewCard section={overviewSection} created={plan.created && plan.created !== 'Unknown' ? plan.created : undefined} />}
 
-                {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} />}
+                {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} showDebug={autopilot} />}
 
                 <div className='sectionsRow'>
                     {detailSections.map((section) => {
@@ -831,29 +850,91 @@ const InstalledChip = ({ status }: { status: InstalledStatus }): JSX.Element => 
     </span>
 );
 
+interface PrereqGroup {
+    label?: string;
+    isDebug: boolean;
+    tables: Extract<PlanContent, { type: 'table' }>[];
+}
+
+// Groups the Prerequisites tables by their preceding "### Run" / "### Debug"
+// sub-heading so the card can show Run always and Debug only under Autopilot.
+// A plan with no sub-headings (older format) yields a single unlabeled group
+// that is always shown.
+function groupPrereqTables(content: PlanContent[]): PrereqGroup[] {
+    const groups: PrereqGroup[] = [];
+    let current: PrereqGroup | undefined;
+    for (const item of content) {
+        if (item.type === 'subheading') {
+            current = { label: item.text, isDebug: item.text.toLowerCase().includes('debug'), tables: [] };
+            groups.push(current);
+        } else if (item.type === 'table') {
+            if (!current) {
+                current = { isDebug: false, tables: [] };
+                groups.push(current);
+            }
+            current.tables.push(item);
+        }
+    }
+    return groups;
+}
+
 // Renders the "Prerequisites" section — the tooling the user must have installed
 // to run the scaffolded project locally. Unlike the local-debug plan, this is
 // inferred from the chosen technology stacks/services (there is no existing
 // project to scan at planning time). The planner agent runs the shared
 // prerequisites detection pass and records an "Installed" column; this card
 // surfaces that column as ✅/❌ status chips and, when anything is still missing,
-// a "install these before continuing" call-to-action.
-const PrerequisitesCard = ({ section }: { section: PlanSection }): JSX.Element => {
+// a "install these before continuing" call-to-action. The Debug group is only
+// shown when Autopilot is on (`showDebug`), since the unattended chain runs all
+// the way through local-debug setup.
+const PrerequisitesCard = ({ section, showDebug }: { section: PlanSection; showDebug: boolean }): JSX.Element => {
     const intro = (section.content ?? []).filter(
         (c): c is Extract<PlanContent, { type: 'blockquote' | 'paragraph' }> =>
             c.type === 'blockquote' || c.type === 'paragraph',
     );
-    const tables = (section.content ?? []).filter(
-        (c): c is Extract<PlanContent, { type: 'table' }> => c.type === 'table',
-    );
+    const groups = groupPrereqTables(section.content ?? []);
+    const visibleGroups = groups.filter(g => showDebug || !g.isDebug);
+    const visibleTables = visibleGroups.flatMap(g => g.tables);
 
-    const missingCount = tables.reduce((total, table) => {
+    const missingTools = visibleTables.flatMap((table) => {
         const installedIdx = table.headers.findIndex(h => h.toLowerCase().includes('installed'));
+        const installIdx = table.headers.findIndex(h => h.trim().toLowerCase() === 'install');
         if (installedIdx < 0) {
-            return total;
+            return [];
         }
-        return total + table.rows.filter(row => classifyInstalled(row[installedIdx] ?? '') === 'missing').length;
-    }, 0);
+        return table.rows
+            .filter(row => classifyInstalled(row[installedIdx] ?? '') === 'missing')
+            .map(row => ({
+                name: (row[0] ?? '').trim() || 'Tool',
+                install: installIdx >= 0 ? (row[installIdx] ?? '').trim() : '',
+            }));
+    });
+
+    const renderTable = (table: Extract<PlanContent, { type: 'table' }>, key: number): JSX.Element => {
+        const installedIdx = table.headers.findIndex(h => h.toLowerCase().includes('installed'));
+        const installIdx = table.headers.findIndex(h => h.trim().toLowerCase() === 'install');
+        const visible = (idx: number): boolean => idx !== installIdx;
+        return (
+            <div key={key} className='planTableWrapper'>
+                <table className='planTable'>
+                    <thead>
+                        <tr>{table.headers.map((h, hi) => visible(hi) ? <th key={hi}>{h}</th> : null)}</tr>
+                    </thead>
+                    <tbody>
+                        {table.rows.map((row, ri) => (
+                            <tr key={ri}>{row.map((cell, ci) =>
+                                !visible(ci)
+                                    ? null
+                                    : ci === installedIdx
+                                        ? <td key={ci}><InstalledChip status={classifyInstalled(cell)} /></td>
+                                        : <td key={ci}>{cell}</td>,
+                            )}</tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        );
+    };
 
     return (
         <div className='sectionCard prerequisitesCard'>
@@ -864,40 +945,35 @@ const PrerequisitesCard = ({ section }: { section: PlanSection }): JSX.Element =
                         ? <div key={i} className='blockquote'>{item.text}</div>
                         : <p key={i} className='paragraph'>{item.text}</p>,
                 )}
-                {missingCount > 0 && (
+                {missingTools.length > 0 && (
                     <div className='prerequisitesCallToAction' role='alert'>
                         <span className='codicon codicon-warning' />
-                        <span>
-                            {missingCount === 1
-                                ? '1 prerequisite is not installed. Install it before continuing.'
-                                : `${missingCount} prerequisites are not installed. Install them before continuing.`}
-                        </span>
+                        <div className='prerequisitesCallToActionBody'>
+                            <span className='prerequisitesCallToActionTitle'>
+                                {missingTools.length === 1
+                                    ? '1 prerequisite is not installed. Install it before continuing:'
+                                    : `${missingTools.length} prerequisites are not installed. Install them before continuing:`}
+                            </span>
+                            <ul className='prerequisitesMissingList'>
+                                {missingTools.map((tool, i) => (
+                                    <li key={i}>
+                                        <span className='prerequisitesMissingName'>{tool.name}</span>
+                                        {tool.install && <code className='prerequisitesMissingInstall'>{tool.install}</code>}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
                     </div>
                 )}
-                {tables.length === 0 && intro.length === 0 && (
+                {visibleTables.length === 0 && intro.length === 0 && (
                     <p className='paragraph'>No prerequisites identified yet.</p>
                 )}
-                {tables.map((table, ti) => {
-                    const installedIdx = table.headers.findIndex(h => h.toLowerCase().includes('installed'));
-                    return (
-                        <div key={ti} className='planTableWrapper'>
-                            <table className='planTable'>
-                                <thead>
-                                    <tr>{table.headers.map((h, hi) => <th key={hi}>{h}</th>)}</tr>
-                                </thead>
-                                <tbody>
-                                    {table.rows.map((row, ri) => (
-                                        <tr key={ri}>{row.map((cell, ci) =>
-                                            ci === installedIdx
-                                                ? <td key={ci}><InstalledChip status={classifyInstalled(cell)} /></td>
-                                                : <td key={ci}>{cell}</td>,
-                                        )}</tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    );
-                })}
+                {visibleGroups.map((group, gi) => (
+                    <div key={gi} className='prereqGroup'>
+                        {group.label && <h3 className='prereqGroupLabel'>{group.label}</h3>}
+                        {group.tables.map((table, ti) => renderTable(table, ti))}
+                    </div>
+                ))}
             </div>
         </div>
     );
