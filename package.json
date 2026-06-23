@@ -109,6 +109,9 @@
                 "path": "resources/agents/azure-project-scaffold.agent.md"
             },
             {
+                "path": "resources/agents/azure-project-integrate.agent.md"
+            },
+            {
                 "path": "resources/agents/azure-debug-plan.agent.md"
             },
             {
