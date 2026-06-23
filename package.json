@@ -723,12 +723,6 @@
             {
                 "title": "Azure",
                 "properties": {
-                    "azure.tenant": {
-                        "type": "string",
-                        "description": "%azure.tenant%",
-                        "default": "",
-                        "scope": "machine"
-                    },
                     "azureResourceGroups.enableOutputTimestamps": {
                         "type": "boolean",
                         "description": "%azureResourceGroups.enableOutputTimestamps%",
