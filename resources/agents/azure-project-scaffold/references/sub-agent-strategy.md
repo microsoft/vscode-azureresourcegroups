@@ -6,29 +6,29 @@
 
 ## Execution Model
 
-> ⚠️ **PIPELINING**: The **Frontend Preview sub-agent** (Step 1) and the backend track both begin **immediately after Step 0** (plan validation) and run **concurrently**. Phase A (Contracts) and Phase B (Backend) derive from the plan, not the frontend preview, so neither track blocks the other. For API-only projects (no frontend), the Frontend sub-agent is skipped and backend scaffolding proceeds immediately after Step 0.
+> ⚠️ **PIPELINING**: The **Frontend sub-agent** (Step 1) and the backend track both begin **immediately after Step 0** (plan validation) and run **concurrently**. Phase A (Contracts) and Phase B (Backend) derive from the plan, not the frontend, so neither track blocks the other. For API-only projects (no frontend), the Frontend sub-agent is skipped and backend scaffolding proceeds immediately after Step 0.
 >
 > **Execution timeline for SPA + API projects:**
 > ```
 > Step 0 (Plan Validated)
->   ├── Frontend Preview Sub-Agent (F1–F3) ──> returns ──> orchestrator runs F4 (dev server + Simple Browser) ──┐
->   └── Phase A: Contracts (sequential) ──> Phase B: Backend Sub-Agent ───────────────────────────────────────┤
->                                                                                                          ▼
->                                                                                        Step 12: Wire Frontend
->                                                                                        Step 13: Wrap Up
+>   ├── Frontend Sub-Agent (F1–F4: generate + build) ──> returns ──────────────────────────┐
+>   └── Phase A: Contracts (sequential) ──> Phase B: Backend Sub-Agent ────────────────────┤
+>                                                                                          ▼
+>                                                                        Step 12: Wire Frontend
+>                                                                        Step 13: Wrap Up
 > ```
 >
-> **Why the orchestrator runs F4, not the sub-agent**: the dev server is a long-running background process the user watches in Simple Browser and that Step 12 later wires up. A sub-agent is stateless and returns a single message, so a background process it spawns risks being torn down when it exits. The Frontend sub-agent therefore generates + builds + verifies `services/web/` (F1–F3) and hands back; the orchestrator owns the persistent dev server (F4).
+> **No live preview**: the scaffold generates and builds the frontend but does **not** start a dev server or open the Simple Browser. Running the app locally is out of scope for scaffolding. The Frontend sub-agent generates + builds + verifies `services/web/` (F1–F4) and hands back.
 
 ---
 
-## Frontend Preview Sub-Agent (parallel with backend)
+## Frontend Sub-Agent (parallel with backend)
 
-Launched right after Step 0 (concurrently with Phase A/B). Owns frontend generation only — not the dev server.
+Launched right after Step 0 (concurrently with Phase A/B). Owns frontend generation and build — no dev server, no live preview.
 
 | Sub-Agent | Responsibility | Scope |
 |-----------|---------------|-------|
-| **Frontend Preview Agent** (general-purpose) | Generate `services/web/`: mock data layer with real images (F1–F2), pages + shared components wired to the mock API client (F3), auto-authenticated state, all four data states. Apply the Rule 15 quality bar + Polish floor. Run the frontend build gate (`npm --prefix services/web run build`, zero errors, no `any`). | Step 1 sub-steps **F1–F3** |
+| **Frontend Agent** (general-purpose) | Generate `services/web/`: mock data layer with real images (F1–F2), pages + shared components wired to the mock API client (F3), auto-authenticated state, all four data states. Apply the Rule 15 quality bar + Polish floor. Run the frontend build gate (`npm --prefix services/web run build`, zero errors, no `any`) (F4). | Step 1 sub-steps **F1–F4** |
 
 **Brief handed to the sub-agent** (full context it receives):
 - The approved plan, especially **Section 6 (Design System & UI)**: `Component Library:`, `Style Direction:`, `Typography:`, Color Palette, Pages table.
@@ -36,11 +36,9 @@ Launched right after Step 0 (concurrently with Phase A/B). Owns frontend generat
 - The three frontend reference docs: `frontend-quality-bar.md`, `frontend-patterns.md`, `frontend-preview-steps.md`.
 
 **Hand-back contract** (what the sub-agent returns):
-- `services/web/` generated and **building cleanly** (it ran the F1–F3 checkpoints: build passes, no `any`, auto-auth seeded, four states present, Rule 15 satisfied).
+- `services/web/` generated and **building cleanly** (it ran the F1–F4 checkpoints: build passes, no `any`, auto-auth seeded, four states present, Rule 15 satisfied).
 - A short report listing the pages generated and any caveats.
-- It MUST NOT start the dev server, open Simple Browser, or call `ask_user`. **F4 is the orchestrator's job.**
-
-> After the Frontend sub-agent returns, the **orchestrator** performs F4: start the dev server with the cwd-independent form (`npm --prefix services/web run dev -- --host`), verify it serves real app content (not just "ready in N ms"), and open the VS Code Simple Browser. The preview stays open for the rest of the scaffold.
+- It MUST NOT start the dev server, open Simple Browser, or call `ask_user`. **The scaffold does not launch a live preview.**
 
 ---
 
@@ -65,20 +63,17 @@ Once contracts exist on disk, launch backend sub-agent:
 |-----------|---------------|-------|
 | **Backend API Agent** (general-purpose) | Concrete service implementations, service registry, function handlers, migrations, seed data, OpenAPI spec, structured logging | Steps 3–10 implementation files |
 
-> **NOTE**: Testing is NOT part of scaffold phase. Test infrastructure, mocks, fixtures, and unit tests are generated by `azure-project-test`, invoked after scaffolding completes (Step 13). This separation ensures:
-> 1. Scaffold focuses on correct, buildable production code
-> 2. Verify skill has clean baseline to generate and validate tests against
-> 3. User sees test results as distinct verification step, not buried in scaffold output
+> **NOTE**: Testing is NOT part of the scaffold phase. Test infrastructure, mocks, fixtures, and unit tests are out of scope — the scaffold produces correct, buildable production code only. Keeping tests out of scaffold ensures the production code stays focused and is not buried under test scaffolding.
 
 ---
 
 ## Coordination Rules
 
-- The **Frontend Preview Agent** and the backend track (Phase A → Phase B) launch together after Step 0 and run concurrently.
+- The **Frontend Agent** and the backend track (Phase A → Phase B) launch together after Step 0 and run concurrently.
 - The **Backend API Agent** receives the full project plan and the contracts created in Phase A as context.
 - After the Backend agent completes, run the final build gate (`npm run build` in all workspaces).
-- After the **Frontend agent** returns, the orchestrator runs F4 (start dev server, open Simple Browser) — the sub-agent never owns the persistent process.
-- **Synchronization gate**: Step 12 (Wire Frontend) MUST wait for BOTH: (a) frontend preview ready — the Frontend sub-agent returned and the orchestrator opened Simple Browser — AND (b) Phase B backend agent completed. If one track finishes first, wait for the other.
+- The scaffold does **not** start a dev server or open Simple Browser — the frontend is generated and built only; running it locally is out of scope for scaffolding.
+- **Synchronization gate**: Step 12 (Wire Frontend) MUST wait for BOTH: (a) frontend generated and building cleanly — the Frontend sub-agent returned — AND (b) Phase B backend agent completed. If one track finishes first, wait for the other.
 - Then proceed to Step 12 (Wire Frontend) and Step 13 (Wrap Up)
 
 ---

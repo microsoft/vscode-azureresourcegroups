@@ -345,6 +345,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 if (depRowIdx < 0) {
                     continue;
                 }
+                // Only non-`Language` fields cascade here, so `isFrontend` never
+                // narrows the result — pass undefined deliberately.
                 const validOptions = optionsForField(dependentField, value) ?? [];
                 const currentValue = content.rows[depRowIdx][colIdx];
                 if (validOptions.length > 0 && !validOptions.includes(currentValue)) {

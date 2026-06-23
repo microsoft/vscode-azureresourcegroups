@@ -159,7 +159,7 @@ Every page that displays data MUST cover all four states with real library primi
 | empty    | `<Card>` with illustration + `<Body1>` + primary `<Button>` CTA | `<v-empty-state>` or `<v-card>` with `<v-icon>` + `<v-btn>` CTA | `<mat-card>` + `<mat-icon>` + primary action | `<div class="card">` + icon + primary CTA `<button>` | `<article>` + `<p>` + primary `<button>` |
 | data     | Real list/grid/table from mock fixtures       | Real list/grid/table                 | Real list/grid/table                            | Real list/grid/table                    | Real list/grid/table               |
 
-> The four states MUST be reachable from the running preview — wire a small dev-only toggle (URL hash, query param, or a corner button gated by `import.meta.env.DEV`) so reviewers can flip between `loading`, `error`, `empty`, `data` without restarting the server. This is also how `azure-project-test` later verifies the four-state contract.
+> The four states MUST be reachable in the running app — wire a small dev-only toggle (URL hash, query param, or a corner button gated by `import.meta.env.DEV`) so `loading`, `error`, `empty`, and `data` can each be exercised. The toggle is the verification path for the four-state contract.
 
 ---
 

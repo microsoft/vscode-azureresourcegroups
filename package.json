@@ -414,6 +414,16 @@
                 "command": "azureResourceGroups.openRequirementsView",
                 "title": "%azureResourceGroups.openRequirementsView%",
                 "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openLocalNextStepsView",
+                "title": "%azureResourceGroups.openLocalNextStepsView%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openScaffoldNextStepsView",
+                "title": "%azureResourceGroups.openScaffoldNextStepsView%",
+                "category": "Azure"
             }
         ],
         "viewsContainers": {
@@ -689,6 +699,14 @@
                 }
             ],
             "commandPalette": [
+                {
+                    "command": "azureResourceGroups.openLocalNextStepsView",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.openScaffoldNextStepsView",
+                    "when": "never"
+                },
                 {
                     "command": "azureResourceGroups.uploadFileCloudConsole",
                     "when": "isWorkspaceTrusted"
