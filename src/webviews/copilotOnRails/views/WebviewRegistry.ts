@@ -5,6 +5,7 @@
 
 import { CreateProjectView } from "./CreateProjectView";
 import { DeploymentPlanView } from "./DeploymentPlanView";
+import { FrontendPreviewView } from "./FrontendPreviewView";
 import { LoadingView } from "./LoadingView";
 import { LocalDevNextStepsView } from "./LocalDevNextStepsView";
 import { LocalPlanView } from "./LocalPlanView";
@@ -15,6 +16,7 @@ import { ScaffoldPlanView } from "./ScaffoldPlanView";
 export const WebviewRegistry = {
     createProjectView: CreateProjectView,
     deploymentPlanView: DeploymentPlanView,
+    frontendPreviewView: FrontendPreviewView,
     loadingView: LoadingView,
     localDevNextStepsView: LocalDevNextStepsView,
     localPlanView: LocalPlanView,

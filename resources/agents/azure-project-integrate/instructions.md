@@ -60,7 +60,7 @@ Requires a scaffolded project. Verify before starting:
 
 | Task | Details |
 |------|---------|
-| Read `.azure/integration-plan.md` | The scaffold agent wrote this for you. Extract: backend project path + run command + port; frontend project path + build/dev commands; the API route inventory (method + path); the database type + migration tool + migration directory + connection env vars; the **API seam to swap** (`src/api/index.ts`) + the **mock files to delete** (`src/api/mockClient.ts`, `src/mocks/*`); the shared-types/package location; the health endpoint. |
+| Read `.azure/integration-plan.md` | The scaffold agent wrote this for you. Extract: backend project path + run command + port; frontend project path + build/dev commands; the API route inventory (method + path); the database type + migration tool + migration directory + connection env vars; the **API seam to swap** (`src/api/index.ts`) + the **mock files to delete** (`src/api/mockClient.ts`, `src/mocks/*`, the dev-only Mock State Switcher `src/api/previewState.ts` + its corner-switcher component); the shared-types/package location; the health endpoint. |
 | Read `.azure/project-plan.md` | Cross-check routes (Section 7), services (Section 4), entities/types, and the database choice. The plan is the source of truth where the artifact is silent. |
 | Scan the workspace | Confirm the folders the artifact names actually exist. List the frontend `src/` to locate the API seam (`src/api/` — `index.ts`, `mockClient.ts`) and the mock data (`src/mocks/`). List the backend functions folder to count handlers. List the migration directory. |
 | Check database type | If the plan/artifact specifies PostgreSQL or Azure SQL (relational), migrations are **mandatory** (Step 1). If the project uses only non-relational storage (Cosmos, Table, Blob), Step 1's SQL migrations are N/A — note it and skip to Step 2. |
@@ -135,16 +135,18 @@ Requires a scaffolded project. Verify before starting:
 | **Swap the seam (one file)** | Edit `src/api/index.ts` so `api` points at the live client (`mockClient` → `liveClient`). This single line wires every page/hook to live data — **no page or hook edits**. |
 | Configure the dev proxy | Point the dev server's `/api` proxy at the backend host (e.g. `http://localhost:7071`) so the frontend reaches live endpoints in development. |
 | Remove the mock layer | Delete `src/api/mockClient.ts` and `src/mocks/*` (and local types now sourced from shared). A lingering `import … from './mockClient'` or `'../mocks'` = NOT done. |
+| **Remove the Mock State Switcher** | Delete the dev-only state switcher the scaffold added: `src/api/previewState.ts`, its corner-switcher component, and every `previewState` import/usage in the mock client, pages, hooks, and app shell. Live data is the only source now — the forced `loading`/`empty`/`error` override must be gone. A lingering `import … previewState` or a rendered Data/Loading/Empty/Error switcher = NOT done. |
 | Keep correct file extensions | JSX (`<Component />`) MUST be `.tsx`; pure TS `.ts`. |
 | Rebuild the frontend | Run `npm --prefix <frontend> run build` (cwd-independent). Zero errors, zero `any`. |
 
-> ⚠️ **No mock data may remain in use.** Searching the frontend `src/` for `mock` / `mockData` must turn up nothing that is still imported. `useState<any>` or untyped responses = NOT done.
+> ⚠️ **No mock data may remain in use.** Searching the frontend `src/` for `mock` / `mockData` / `previewState` must turn up nothing that is still imported. `useState<any>` or untyped responses = NOT done.
 
 > **Reference**: [wire-live-data.md](.github/agents/azure-project-integrate/references/wire-live-data.md) for the one-file seam swap, the typed-client pattern, and the dev-proxy config per framework.
 
 > **✅ Checkpoint**:
 > - Frontend builds with zero errors and zero `any`.
 > - The mock layer (`src/api/mockClient.ts`, `src/mocks/*`) is deleted or no longer imported anywhere.
+> - The Mock State Switcher (`src/api/previewState.ts` + corner switcher component) is deleted and no longer imported anywhere.
 > - The seam (`src/api/index.ts`) points at the live client; pages/hooks were not edited.
 > - The dev proxy targets the backend host.
 
@@ -182,7 +184,7 @@ Requires a scaffolded project. Verify before starting:
 | Update the artifact | Mark `.azure/integration-plan.md` items complete (or append a short "Integration results" section: what was migrated, which endpoints passed, the mock files removed, the end-to-end evidence). |
 | Update plan status | Set `.azure/project-plan.md` status to `Integrated`. |
 | Print completion | Summarize: migrations created, endpoints verified, mock layer removed, end-to-end request proven. Announce: **"Integration complete!"** |
-| **Stop — do NOT suggest next steps** | After announcing, **STOP**. Do **NOT** ask the user what to do next; do **NOT** call `vscode_askQuestions`. (Autopilot exception: hand off to `azureResourceGroups.startLocalDevelopment` per the agent's autopilot rule.) |
+| **Open the Next Steps view, then stop** | Load `run_vscode_command` (via `tool_search`) and call `{ "commandId": "azureResourceGroups.openScaffoldNextStepsView", "name": "Open Project Next Steps View", "skipCheck": true }` to surface the post-integration "What's next?" view. Then **STOP** — the view owns the next hand-off (set up local development, or deploy). Do **NOT** ask the user what to do next; do **NOT** call `vscode_askQuestions`. (Autopilot exception: **skip** this view and hand off to `azureResourceGroups.startLocalDevelopment` per the agent's autopilot rule.) |
 
 > **✅ Final Checkpoint**:
 > 1. Migrations exist, are non-empty, apply cleanly — **no seed data**.
@@ -190,7 +192,7 @@ Requires a scaffolded project. Verify before starting:
 > 3. Frontend builds clean on live data; mock layer removed; no `any`.
 > 4. Frontend + backend ran together; a real `/api/...` request returned live data.
 > 5. `.azure/project-plan.md` = `Integrated`; artifact updated.
-> 6. **No follow-up prompt** (unless autopilot hand-off).
+> 6. Opened the **Next Steps view** (`azureResourceGroups.openScaffoldNextStepsView`), then stopped — **no follow-up prompt** (autopilot instead hands off to `azure-debug-plan`).
 
 ---
 
@@ -203,10 +205,10 @@ Requires a scaffolded project. Verify before starting:
 | Dev proxy config | The frontend dev-server config (e.g. `vite.config.ts`) |
 | Updated artifact | `.azure/integration-plan.md` (results appended) |
 | Plan status | `.azure/project-plan.md` → `Integrated` |
-| **Next step** | Out of scope (autopilot hands off to `azure-debug-plan`) |
+| **Next step** | Open the Next Steps view via `azureResourceGroups.openScaffoldNextStepsView` (autopilot instead hands off to `azure-debug-plan`) |
 
 ---
 
 ## Next
 
-> After integration completes, **stop**. Do NOT ask the user what to do next — do NOT call `vscode_askQuestions` or print plain-text follow-up suggestions. (Autopilot exception: hand off to `azureResourceGroups.startLocalDevelopment` with the `[AUTOPILOT MODE]` marker.)
+> After integration completes, announce **"Integration complete!"**, then open the post-integration **Next Steps view** by loading `run_vscode_command` and calling `azureResourceGroups.openScaffoldNextStepsView`. After opening it, **stop** — the view drives the next hand-off (local development or deploy). Do NOT ask the user what to do next — do NOT call `vscode_askQuestions` or print plain-text follow-up suggestions. (Autopilot exception: **skip** the view and hand off to `azureResourceGroups.startLocalDevelopment` with the `[AUTOPILOT MODE]` marker.)

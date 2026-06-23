@@ -417,6 +417,16 @@
                 "command": "azureResourceGroups.openRequirementsView",
                 "title": "%azureResourceGroups.openRequirementsView%",
                 "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openFrontendPreviewView",
+                "title": "%azureResourceGroups.openFrontendPreviewView%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.openScaffoldNextStepsView",
+                "title": "%azureResourceGroups.openScaffoldNextStepsView%",
+                "category": "Azure"
             }
         ],
         "viewsContainers": {
@@ -746,6 +756,14 @@
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLogItem",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.openFrontendPreviewView",
+                    "when": "never"
+                },
+                {
+                    "command": "azureResourceGroups.openScaffoldNextStepsView",
                     "when": "never"
                 }
             ],

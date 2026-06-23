@@ -19,8 +19,10 @@ import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { createProjectWithCopilot } from '../webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { openDeploymentPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openDeploymentPlanView';
+import { openFrontendPreviewView } from '../webviews/copilotOnRails/extension/openFrontendPreviewView';
 import { openLocalPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openLocalPlanView';
 import { openRequirementsViewFromWorkspace } from '../webviews/copilotOnRails/extension/openRequirementsView';
+import { openScaffoldNextStepsView } from '../webviews/copilotOnRails/extension/openScaffoldNextStepsView';
 import { openPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openScaffoldPlanView';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
@@ -170,6 +172,10 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.openLocalPlanView', openLocalPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openRequirementsView', openRequirementsViewFromWorkspace);
+    registerCommand('azureResourceGroups.openFrontendPreviewView', (_context: IActionContext, frontendFolder?: string) =>
+        openFrontendPreviewView(frontendFolder));
+    registerCommand('azureResourceGroups.openScaffoldNextStepsView', (_context: IActionContext) =>
+        openScaffoldNextStepsView({}));
 
     // Hand-off commands
     registerCommand('azureResourceGroups.downloadAgentInstructions', (context: IActionContext) =>

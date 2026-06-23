@@ -15,8 +15,6 @@ import { type PlanContent, type PlanData, type PlanSection, type PreviewPage, ty
 const editableOptions: Record<string, string[]> = {
     'Language': ['JavaScript', 'TypeScript', 'Python', 'C# (.NET)'],
     'Runtime': ['Node', 'Deno', 'Bun', 'CPython', 'PyPy', '.NET'],
-    'Backend': ['Azure Functions v4 (Node.js v4 model)', 'Express.js', 'Fastify', 'Flask', 'FastAPI', 'Spring Boot', 'ASP.NET Core'],
-    'Frontend': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'Blazor', 'None'],
     'Framework': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'Blazor'],
     'Package Manager': ['npm', 'yarn', 'pnpm', 'pip', 'poetry', 'uv', 'dotnet (NuGet)'],
     'Test Runner': ['vitest', 'jest', 'mocha', 'pytest', 'unittest', 'xUnit', 'NUnit', 'MSTest'],
@@ -33,12 +31,6 @@ const languageDependentOptions: Record<string, Record<string, string[]>> = {
         'JavaScript': ['Node', 'Deno', 'Bun'],
         'Python': ['CPython', 'PyPy'],
         'C# (.NET)': ['.NET'],
-    },
-    'Frontend': {
-        'TypeScript': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
-        'JavaScript': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
-        'Python': ['React + Vite', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
-        'C# (.NET)': ['Blazor', 'React + Vite', 'Vue + Vite', 'Angular', 'Svelte', 'None'],
     },
     'Framework': {
         'TypeScript': ['React + Vite', 'Next.js', 'Vue + Vite', 'Angular', 'Svelte'],
@@ -64,7 +56,6 @@ const languageDependentOptions: Record<string, Record<string, string[]>> = {
 // convenience but flagged with a soft "not officially supported" warning.
 const fullySupportedOptions: Record<string, Set<string>> = {
     'Runtime': new Set(['Node', 'CPython', '.NET']),
-    'Frontend': new Set(['React + Vite', 'Vue + Vite', 'Angular', 'Svelte', 'Blazor', 'None']),
     'Framework': new Set(['React + Vite', 'Vue + Vite', 'Angular', 'Svelte', 'Blazor']),
     'Package Manager': new Set(['npm', 'pnpm', 'pip', 'poetry', 'dotnet (NuGet)']),
     'Test Runner': new Set(['vitest', 'jest', 'mocha', 'pytest', 'xUnit', 'NUnit', 'MSTest']),
@@ -344,8 +335,6 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 if (depRowIdx < 0) {
                     continue;
                 }
-                // Only non-`Language` fields cascade here, so `isFrontend` never
-                // narrows the result — pass undefined deliberately.
                 const validOptions = optionsForField(dependentField, value) ?? [];
                 const currentValue = content.rows[depRowIdx][colIdx];
                 if (validOptions.length > 0 && !validOptions.includes(currentValue)) {

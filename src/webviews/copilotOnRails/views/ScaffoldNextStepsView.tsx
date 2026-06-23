@@ -1,6 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
@@ -8,7 +8,7 @@ import { useContext, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import './styles/nextStepsView.scss';
 
-type ActionId = 'setupLocal' | 'verifyCode' | 'deploy';
+type ActionId = 'setupLocal' | 'deploy';
 
 type ActionCardProps = {
     id: ActionId;
@@ -45,7 +45,7 @@ export const ScaffoldNextStepsView = (): JSX.Element => {
             <StageProgress currentStage={0} />
             <div className='nextStepsContent'>
                 <header className='nextStepsHeader'>
-                    <h1>Your project has been scaffolded. What would you like to do next?</h1>
+                    <h1>Your project is integrated and running. What would you like to do next?</h1>
                 </header>
 
                 <div className='nextStepsCards'>
@@ -54,14 +54,6 @@ export const ScaffoldNextStepsView = (): JSX.Element => {
                         icon='terminal'
                         title='Set up local development'
                         description='Configure your VS Code debugging environment, emulators, and launch configurations for local testing.'
-                        onSelect={handleSelect}
-                    />
-
-                    <ActionCard
-                        id='verifyCode'
-                        icon='check-all'
-                        title='Verify code'
-                        description='Run build checks, linters, and unit tests to ensure your project is ready for development.'
                         onSelect={handleSelect}
                     />
 

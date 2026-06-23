@@ -1,6 +1,6 @@
 # Frontend Quality Bar — Render Layout Tokens with Real Library Primitives
 
-> **Load this BEFORE writing any frontend page or component.** Read during **Step 1** (Frontend) and **Step 12** (Wire Frontend). This is the contract between the plan's Section 5 (Design System & UI) and the scaffolded JSX.
+> **Load this BEFORE writing any frontend page or component.** Read during **Step 1** (Frontend). This is the contract between the plan's Section 5 (Design System & UI) and the scaffolded JSX.
 
 ---
 
@@ -33,7 +33,7 @@ If you ever emit JSX like this:
 | `Typography:`            | Font family applied at the app shell level.                              |
 | Color Palette table      | Brand ramp / theme tokens — wire through the library's theme provider.   |
 | Pages table (`Layout`)   | Which **library primitives** to compose per page (see mapping below).    |
-| `.azure/.preview-temp/*.html` + `theme.css` | The HTML/CSS **directional sketch** the user approved during planning. Tells you three things only: (1) page regions and rough order, (2) brand color story, (3) content density. The sketch deliberately ships with **no** icons, fonts, motion, dark mode, or polished hero treatments — those are your job. **The scaffold MUST visibly exceed the sketch** (see "Polish floor" below). Do not import, embed, or `<iframe>` it. Folder is deleted in Step 13. |
+| `.azure/.preview-temp/*.html` + `theme.css` | The HTML/CSS **directional sketch** the user approved during planning. Tells you three things only: (1) page regions and rough order, (2) brand color story, (3) content density. The sketch deliberately ships with **no** icons, fonts, motion, dark mode, or polished hero treatments — those are your job. **The scaffold MUST visibly exceed the sketch** (see "Polish floor" below). Do not import, embed, or `<iframe>` it. Folder is deleted in Step 11. |
 
 > If Section 5 is missing or `Component Library:` is blank, **STOP**. The plan is incomplete — complete the plan instead of guessing.
 
@@ -173,7 +173,7 @@ Every page that displays data MUST cover all four states with real library primi
    - Pico: `--pico-primary` CSS variable.
 2. **Map `surface` / `text` / `muted` / `border`** onto the library's neutral tokens — do not hard-code colors in component JSX. Semantic states (success / warning / error) come from the library's built-in semantic tokens, not from the plan palette.
 3. **Apply `Typography`** at the app shell level (Fluent: `FluentProvider` style override; Vuetify: `<v-app>` font-family; Angular: `--mat-sys-body-large-font`; Skeleton: theme module; Pico: `:root { font-family: … }`).
-4. The plan-preview webview renders a sandboxed **HTML/CSS** mock-up — purely presentational, no JavaScript, no real component library involved. Each page lives at `.azure/.preview-temp/<slug>.html` and shares a single `.azure/.preview-temp/theme.css`. Treat those files as a **directional sketch** — they confirm regions, color story, and density. They are **not** the polish bar. Your scaffolded app MUST out-polish the sketch in every visible dimension: real library primitives, real icons, real webfont, motion, dark mode, four states with illustrations, and library elevation. Do not import, embed, or `<iframe>` the mock-up. `.azure/.preview-temp/` is deleted in Step 13.
+4. The plan-preview webview renders a sandboxed **HTML/CSS** mock-up — purely presentational, no JavaScript, no real component library involved. Each page lives at `.azure/.preview-temp/<slug>.html` and shares a single `.azure/.preview-temp/theme.css`. Treat those files as a **directional sketch** — they confirm regions, color story, and density. They are **not** the polish bar. Your scaffolded app MUST out-polish the sketch in every visible dimension: real library primitives, real icons, real webfont, motion, dark mode, four states with illustrations, and library elevation. Do not import, embed, or `<iframe>` the mock-up. `.azure/.preview-temp/` is deleted in Step 11.
 
 ---
 
