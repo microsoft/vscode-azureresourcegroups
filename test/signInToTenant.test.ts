@@ -8,8 +8,17 @@ import { AzureAccount, AzureSubscriptionProvider, AzureTenant, NotSignedInError,
 import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import type * as vscode from 'vscode';
 import { signInToTenant } from '../src/commands/accounts/signInToTenant';
+import { getManualSignInTenant, resetManualSignInTenantForTests } from '../src/utils/manualSignInTenant';
 
 suite('signInToTenant', () => {
+    setup(() => {
+        resetManualSignInTenantForTests();
+    });
+
+    teardown(() => {
+        resetManualSignInTenantForTests();
+    });
+
     test('signs in to selected discovered tenant', async () => {
         const account = createAccount();
         const discoveredTenant: AzureTenant = {
@@ -67,6 +76,7 @@ suite('signInToTenant', () => {
 
         assert.strictEqual(signedInTenantId, 'contoso.onmicrosoft.com');
         assert.strictEqual(quickPickShown, false);
+        assert.strictEqual(getManualSignInTenant(), 'contoso.onmicrosoft.com');
     });
 });
 

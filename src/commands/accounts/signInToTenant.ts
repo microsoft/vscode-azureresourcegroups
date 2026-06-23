@@ -5,23 +5,33 @@
 
 import { AzureAccount, AzureSubscriptionProvider, AzureTenant, isNotSignedInError, TenantIdAndAccount } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
+import { setManualSignInTenant } from '../../utils/manualSignInTenant';
 import { localize } from '../../utils/localize';
 
 export async function signInToTenant(context: IActionContext, subscriptionProvider: AzureSubscriptionProvider, account?: AzureAccount): Promise<void> {
-    const tenant = await pickTenant(context, subscriptionProvider, account);
-    if (tenant) {
-        await subscriptionProvider.signIn(tenant);
+    const tenantPick = await pickTenant(context, subscriptionProvider, account);
+    if (tenantPick) {
+        const signedIn = await subscriptionProvider.signIn(tenantPick.tenant);
+        if (signedIn && tenantPick.isManual) {
+            await setManualSignInTenant(tenantPick.tenant.tenantId);
+        }
     }
 }
 
-async function pickTenant(context: IActionContext, subscriptionProvider: AzureSubscriptionProvider, account?: AzureAccount): Promise<TenantIdAndAccount | undefined> {
+interface TenantPick {
+    tenant: TenantIdAndAccount;
+    isManual: boolean;
+}
+
+async function pickTenant(context: IActionContext, subscriptionProvider: AzureSubscriptionProvider, account?: AzureAccount): Promise<TenantPick | undefined> {
     try {
         const picks = await getPicks(subscriptionProvider, account);
         if (picks.length) {
-            return (await context.ui.showQuickPick(picks, {
+            const pick = await context.ui.showQuickPick(picks, {
                 placeHolder: localize('selectTenantPlaceholder', 'Select a Tenant (Directory) to Sign In To'),
                 matchOnDescription: true,
-            })).data;
+            });
+            return { tenant: pick.data, isManual: false };
         }
     } catch (err) {
         if (!isNotSignedInError(err)) {
@@ -29,7 +39,8 @@ async function pickTenant(context: IActionContext, subscriptionProvider: AzureSu
         }
     }
 
-    return promptForTenantId(context);
+    const tenant = await promptForTenantId(context);
+    return tenant ? { tenant, isManual: true } : undefined;
 }
 
 async function getPicks(subscriptionProvider: AzureSubscriptionProvider, account?: AzureAccount): Promise<IAzureQuickPickItem<TenantIdAndAccount>[]> {

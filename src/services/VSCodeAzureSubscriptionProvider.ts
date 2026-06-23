@@ -3,9 +3,10 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzureAccount, AzureTenant, GetTenantsForAccountOptions, VSCodeAzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
+import { AzureAccount, AzureTenant, GetTenantsForAccountOptions, TenantIdAndAccount, VSCodeAzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import { getSelectedTenantAndSubscriptionIds } from '../commands/accounts/selectSubscriptions';
 import { ext } from '../extensionVariables';
+import { getTenantIdForAuthentication } from '../utils/manualSignInTenant';
 import { isTenantFilteredOut } from '../utils/tenantSelection';
 
 /**
@@ -30,6 +31,13 @@ class ResourceGroupsSubscriptionProvider extends VSCodeAzureSubscriptionProvider
         }
 
         return tenants;
+    }
+
+    protected override getSubscriptionContext(tenant: Partial<TenantIdAndAccount>) {
+        return super.getSubscriptionContext({
+            ...tenant,
+            tenantId: getTenantIdForAuthentication(tenant.tenantId),
+        });
     }
 }
 
