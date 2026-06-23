@@ -31,13 +31,11 @@ Plan/design a new Azure-centric app; create requirements/architecture; start a p
 3. **Auto-chain after approval** — immediately invoke `azure-project-scaffold`; never ask the user to invoke it manually. **Generate a frontend HTML/CSS preview** during planning per Step 3.5 (the scaffold agent consumes it as a mock-up but builds the real app with the chosen framework).
 4. **Interactive UI** — use `vscode_askQuestions`, never plain chat; batch unanswered questions into one call.
 
-## Autopilot mode (overrides the gates below)
-**Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/requirements.json` contains `"executionMode": "auto"`. Autopilot only applies on the **re-entry** path (after the requirements form was submitted) — the first pass that writes `.azure/requirements.json` is always guided. When active, run fully unattended:
-- **Skip the frontend preview** (Step 3.5) and the `openPlanView` preview — do NOT write `.azure/.preview-temp/` or fan out page sub-agents.
-- **Skip the approval gate** (Step 3 "Present plan… ask for approval" / the STOP). Set status straight from `Planning` to `Approved` and auto-chain.
-- **Record the mode** — write `executionMode: auto` into `.azure/project-plan.md` (front-matter or a `**Execution Mode**: auto` row) so downstream skills inherit it.
-- **Hand off with the marker** — prefix the `azure-project-scaffold` invocation args with `[AUTOPILOT MODE] `.
-- Never call `vscode_askQuestions`. Plan quality (incl. the Design System section) is unchanged — autopilot suppresses **gates and previews only**.
+## Autopilot is selected on the plan page (this agent always runs guided)
+This agent **always** runs guided: it generates `.azure/project-plan.md` with `Status: Planning`, opens the plan preview, and stops for the user's approval. It does **not** detect, decide, or record autopilot, and never skips the preview or approval gate.
+Autopilot is chosen by the **user** via the **Autopilot toggle on the plan webview**, after the plan is shown. When they approve with it on, the extension records `**Execution Mode**: auto` in `.azure/project-plan.md`, enables global auto-approve, and hands off to the scaffold agent with the `[AUTOPILOT MODE]` marker; every downstream skill then inherits autopilot from the plan file and runs unattended to the end.
+
+There is nothing autopilot-specific for you to do here — just write a correct, complete plan and always emit both the `### Run` and `### Debug` prerequisite sub-tables (§ 5). Never call `vscode_askQuestions` in chat — the only stop is the plan webview approval.
 
 ## Workflow (mandatory order)
 DETECT (Step 1) → GATHER (Step 2) → GENERATE `.azure/project-plan.md` (Step 3) → GENERATE FRONTEND PREVIEW (Step 3.5, if applicable) → approval → AUTO-CHAIN scaffold after approval. Only files allowed: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` — no `services/`, configs, or production code. Planning needs ZERO external file reads except `references/html-preview.md` for Step 3.5; all other context is inlined below.
@@ -323,6 +321,8 @@ When re-invoked with a query mentioning submitted requirements (e.g. *"Requireme
 
 Write `.azure/project-plan.md` from the template below in a **single pass** (fill all sections at once — never section-by-section), then present for approval.
 
+**Before writing, run the prerequisites detection pass** (Section 5) so the `Installed` and `Version` columns reflect what is actually present. Do this in the same pass — no separate gate. Re-run this scan on every rebuild so the status never goes stale or shows an un-scanned value.
+
 #### Plan Template
 
 `.azure/project-plan.md` structure (replace all `{placeholders}`):
@@ -390,7 +390,22 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 ---
 
-## 5. Design System & UI
+## 5. Prerequisites
+
+Identify the required tools, then inventory them by following [prerequisites.md](../shared-references/prerequisites.md). Always produce **both** groups — `### Run` and `### Debug` — as two sub-tables under this section. The plan webview shows the Run group always and the Debug group only when the user turns on the Autopilot toggle, so do not omit either group yourself.
+
+The required tools are derived from the technology stacks and Azure services associated with each service. Map each stack to its chosen tooling, e.g. runtime - Node, package manager - npm, project type - Azure Functions Core Tools (for Azure Functions), etc. The Run vs Debug distinction is defined in [prerequisites.md](../shared-references/prerequisites.md): Run tools are needed to run the project; Debug tools (Docker, Docker Compose, VS Code extensions) are the local-debugging extras.
+
+For each tool, record which planned service(s) need it in the `Service(s)` column (use `*` for global toolchain shared by all services, or list each service explicitly). For a container runtime or orchestrator (Docker, Docker Compose), list the service(s) whose Azure dependencies its emulators stand in for, rather than `*`.
+
+After identifying the required tools, run the detection pass to fill the `Installed` column (✅ / ❌) and detected `Version`. In the `Install` column, record the install command/URL the user would run if the tool is missing.
+
+**You must re-run the detection pass every time this section is generated or the plan is rebuilt** — recompute it whenever the plan changes (e.g. a Runtime edit or an added/removed service). Never leave the `Installed` column as a placeholder, `—`, or unknown value; every row must resolve to ✅ or ❌ from an actual scan. Flag any tool marked ❌ — the user must install it before approving.
+
+---
+
+## 6. Design System & UI
+
 
 > **MANDATORY when `services` contains a `frontend` service.** Skip only when there is no frontend service (derived App Type `API only` / `Background worker`). The plan-preview webview parses this section by title (`s.title.toLowerCase().includes('design system')`) and the scaffold quality contract reads `Component Library:` to decide which real library primitives to render.
 
@@ -440,7 +455,7 @@ For each page above, list 3–6 representative records using that page's primary
 
 ---
 
-## 6. Project Structure
+## 7. Project Structure
 
 ```
 {Generated directory tree for the chosen stack}
@@ -448,7 +463,7 @@ For each page above, list 3–6 representative records using that page's primary
 
 ---
 
-## 7. Route Definitions
+## 8. Route Definitions
 
 | # | Method | Path | Description | Request Body | Response Body | Auth | Status Codes |
 |---|--------|------|-------------|-------------|--------------|------|-------------|
@@ -457,7 +472,7 @@ For each page above, list 3–6 representative records using that page's primary
 
 ---
 
-## 8. Execution Checklist
+## 9. Execution Checklist
 
 > The detailed execution checklist is auto-generated by `azure-project-scaffold` when it begins execution. It copies this section's high-level phases and expands them into step-by-step items with build gates.
 
@@ -480,7 +495,7 @@ For each page above, list 3–6 representative records using that page's primary
 
 ---
 
-## 9. Next Steps
+## 10. Next Steps
 
 1. Run **azure-project-scaffold** to execute this plan
 2. Run **azure-project-test** to add test coverage and validate the build
@@ -505,28 +520,28 @@ For each page above, list 3–6 representative records using that page's primary
 
 ### Step 3.5: Generate Frontend HTML/CSS Preview (parallel sub-agents)
 
-> **Skip entirely** when Section 5 was omitted (i.e. no `frontend` service — derived App Type `API only` / `Background worker`). For all other app types this step is **mandatory** — without it, the plan-preview webview shows a permanent *Generating preview…* spinner and the user has no UI to approve.
+> **Skip entirely** when Section 6 was omitted (i.e. no `frontend` service — derived App Type `API only` / `Background worker`). For all other app types this step is **mandatory** — without it, the plan-preview webview shows a permanent *Generating preview…* spinner and the user has no UI to approve.
 
 **Output location:** `.azure/.preview-temp/` (note the leading dot on the folder name — it's a transient, gitignored scratch space). The scaffold agent reads it as a mock-up reference, then deletes it as the last step of scaffolding (see scaffold skill Step 13).
 
-**Inputs:** the just-written `.azure/project-plan.md` Section 5 (Color Palette, Typography, Pages, Style Direction, Component Library) plus the per-region recipes in [`references/html-preview.md`](references/html-preview.md). Read that reference file **once** at the start of this step.
+**Inputs:** the just-written `.azure/project-plan.md` Section 6 (Color Palette, Typography, Pages, Style Direction, Component Library) plus the per-region recipes in [`references/html-preview.md`](references/html-preview.md). Read that reference file **once** at the start of this step.
 
 #### 3.5a. Write `theme.css` and `manifest.json` (do this BEFORE fan-out)
 
 Both files MUST exist before the plan-preview webview opens, so the controller can render tabs in the loading state. Use the `create_file` tool — it's OS-agnostic and creates parent folders automatically.
 
-**`.azure/.preview-temp/theme.css`** — single shared stylesheet derived from Section 5:
+**`.azure/.preview-temp/theme.css`** — single shared stylesheet derived from Section 6:
 
 ```css
 :root {
-    /* ── Brand colors (from Section 5 palette) ── */
-    --color-primary: {hex from Section 5};
+    /* ── Brand colors (from Section 6 palette) ── */
+    --color-primary: {hex from Section 6};
     --color-on-primary: {white or near-black, whichever contrasts better};
     --color-accent: {hex};
     --color-on-accent: {white or near-black};
 
     /* ── Surfaces (derive from the palette — do NOT assume a light theme) ── */
-    --color-surface: {hex — page background from Section 5};
+    --color-surface: {hex — page background from Section 6};
     --color-surface-raised: {a card/panel tone that reads as raised against surface — #ffffff for a light theme, a step LIGHTER than surface for a dark one};
     --color-surface-sunken: color-mix(in srgb, var(--color-surface) 92%, var(--color-text) 6%);
 
@@ -541,7 +556,7 @@ Both files MUST exist before the plan-preview webview opens, so the controller c
     --color-danger:  #dc2626;
 
     /* ── Typography ── */
-    --font-body: {typography from Section 5}, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-body: {typography from Section 6}, system-ui, -apple-system, "Segoe UI", sans-serif;
     --font-heading: var(--font-body);
     --text-xs: 11px;
     --text-sm: 13px;
@@ -597,11 +612,12 @@ a:hover { text-decoration: underline; }
 
 Paste the full Shared CSS block from `references/html-preview.md` into the same file (header, nav, sidebar, hero, etc. — keep names exactly as the reference defines so the per-page HTML matches).
 
-**`.azure/.preview-temp/manifest.json`** — one entry per page in Section 5's Pages table:
+**`.azure/.preview-temp/manifest.json`** — one entry per page in Section 6's Pages table:
 
 ```json
 {
     "generatedAt": "{ISO timestamp}",
+    "previewStatus": "{ready | generating}",
     "pages": [
         { "slug": "dashboard", "title": "Dashboard", "route": "/", "status": "pending" },
         { "slug": "settings",  "title": "Settings",  "route": "/settings", "status": "pending" }
@@ -609,8 +625,9 @@ Paste the full Shared CSS block from `references/html-preview.md` into the same 
 }
 ```
 
+- `previewStatus` is a top-level field indicating the overall state of the preview set. Valid values: `"generating"` (initial generation or revision in progress), `"ready"` (all preview work is complete). Set it to `"generating"` before starting any preview file writes and to `"ready"` after all pages have been written. **Always update it, both during initial generation and when revising previews after user feedback**.
 - `slug` is the kebab-cased page name (`Photo Upload` → `photo-upload`). It MUST match the eventual filename (`<slug>.html`). Slugs MUST be unique.
-- `route` is the path from Section 5's Pages table verbatim. Default to `/<slug>` when missing.
+- `route` is the path from Section 6's Pages table verbatim. Default to `/<slug>` when missing.
 - `status` starts at `"pending"` for every page. You SHOULD flip it to `"ready"` in step 3.5c after the HTML is written (keeps the manifest accurate), but the webview no longer depends on it — **the presence of a non-empty `<slug>.html` file is what makes a page render**. The manifest only supplies the page list (slug/title/route) and the initial loading tabs.
 
 #### 3.5a-open. Open the plan view NOW — before fanning out
@@ -623,10 +640,10 @@ The instant `theme.css` and `manifest.json` exist, the agent workflow opens the 
 
 Launch one `runSubagent` call per page, **all in a single tool-call batch** (the platform parallelizes independent sub-agent invocations). Cap at **4 concurrent** — if the plan has more than 4 pages, split into batches of 4. Each sub-agent's prompt MUST contain:
 
-1. The page's row from Section 5's Pages table (page name, route, purpose, layout regions).
+1. The page's row from Section 6's Pages table (page name, route, purpose, layout regions).
 2. The Color Palette, Typography, Style Direction, and Component Library values (for visual fidelity hints).
 3. **The app's domain context** — a 1–2 sentence summary of what the app does (from Sections 1–2) plus the relevant entity/data model, so the sub-agent knows what the page is actually about.
-4. **That page's records from Section 5's Sample Content block** — the real, domain-specific rows/values the page must display. This is the shared content contract; the scaffold reproduces the same records.
+4. **That page's records from Section 6's Sample Content block** — the real, domain-specific rows/values the page must display. This is the shared content contract; the scaffold reproduces the same records.
 5. The full contents of `references/html-preview.md`.
 6. The exact output path: `.azure/.preview-temp/<slug>.html`.
 7. A directive: *"Write a single self-contained HTML file linking to `./theme.css`. Use the per-region recipes in the reference. Replace every `{...}` placeholder token in the recipes with the real Sample Content provided above — never generic filler like 'Item 1', 'Recent items', or 'Card title'. Do NOT add a banner claiming the app 'will use' a different library. Do NOT add `<script>` tags — the preview iframe runs sandboxed without scripts. Do NOT inline any CSS — all styling MUST come from `./theme.css`."*
@@ -655,9 +672,23 @@ The webview renders a page the moment its `<slug>.html` file exists — it does 
 - update the manifest after every sub-agent completes (more responsive), or
 - update once at the end after all sub-agents complete (simpler).
 
+**Always set `"previewStatus": "ready"` in the final manifest update** after all pages are written — this is what dismisses the "Generating preview…" overlay in the webview.
+
 The webview's file watcher refreshes on every change under `.azure/.preview-temp/`, so the user sees tabs flip from loading to rendered in near-real-time.
 
-> **✅ Checkpoint**: `.azure/.preview-temp/{theme.css, manifest.json, *.html}` all exist. Every page has a non-empty `<slug>.html` (which is what makes it render; the manifest `status` is best-effort bookkeeping). The plan-preview webview now shows the rendered HTML inside the iframe per page.
+> **✅ Checkpoint**: `.azure/.preview-temp/{theme.css, manifest.json, *.html}` all exist. Every page has a non-empty `<slug>.html` (which is what makes it render; the manifest `status` is best-effort bookkeeping). `manifest.json` has `"previewStatus": "ready"`. The plan-preview webview now shows the rendered HTML inside the iframe per page.
+
+#### 3.5d. Updating previews after user feedback
+
+When the user requests changes to the plan that affect preview pages (e.g. color changes, layout changes, content changes), you MUST update `previewStatus` in `manifest.json` to signal the webview:
+
+1. **Before writing any preview files**: update `manifest.json` with `"previewStatus": "generating"`. This shows the "Generating preview…" overlay immediately.
+2. **Edit the affected files** — `theme.css`, `project-plan.md`, and/or individual `<slug>.html` pages as needed.
+3. **After all preview files are written**: update `manifest.json` with `"previewStatus": "ready"`. This dismisses the overlay.
+
+If the user's feedback only affects the plan text (e.g. renaming a section, adjusting a description) and does **not** require changes to any file in `.azure/.preview-temp/`, do **not** touch `previewStatus` — leave it at `"ready"`. The overlay is driven exclusively by this field; setting it to `"generating"` when no preview work is happening will confuse the user.
+
+The webview watches the entire `.azure/.preview-temp/` folder, so the manifest update is picked up automatically. Skipping the `previewStatus` update when preview files *are* being rewritten will leave the overlay absent during generation, also confusing the user.
 
 ---
 
@@ -702,9 +733,9 @@ The webview's file watcher refreshes on every change under `.azure/.preview-temp
 
 > **Key rule**: Enhancement service constructors MUST NOT throw. Defer config validation to method calls or wrap in try/catch.
 
-### Component Library Defaults (Section 5 of the plan)
+### Component Library Defaults (Section 6 of the plan)
 
-> **Pick the default for the user's frontend framework** unless the user explicitly named a different library. The chosen value goes into Section 5 verbatim as `**Component Library**: {value}` and becomes the load-bearing input for the scaffold quality contract (see scaffold skill `references/frontend-quality-bar.md`).
+> **Pick the default for the user's frontend framework** unless the user explicitly named a different library. The chosen value goes into Section 6 verbatim as `**Component Library**: {value}` and becomes the load-bearing input for the scaffold quality contract (see scaffold skill `references/frontend-quality-bar.md`).
 
 | Frontend framework | Default `Component Library` | Reasonable alternatives | Use the default unless... |
 |---------------|----------------------------|------------------------|---------------------------|
@@ -713,11 +744,11 @@ The webview's file watcher refreshes on every change under `.azure/.preview-temp
 | `Svelte` | **Skeleton UI** | Melt UI + Tailwind | user explicitly names one |
 | `Angular` | **Angular Material** | PrimeNG | user explicitly names one |
 | `None` (plain HTML / Static + API) | **Pico.css** + native form controls | Bulma, water.css | user explicitly names one |
-| `None` + `Background worker` | omit Section 5 entirely | \u2014 | always omit when there is no UI |
+| `None` + `Background worker` | omit Section 6 entirely | \u2014 | always omit when there is no UI |
 
 > **Why this matters**: Without `Component Library:`, the scaffold step treats the wireframe's region tokens (`header`, `hero`, `grid`, ...) as raw layout instructions and produces blocky placeholder `<div>` JSX that LOOKS worse than the plan-preview wireframe. With `Component Library:` set, the scaffold renders each region using real library primitives (cards, tabs, fields, toolbars, message bars) themed by the Color Palette.
 
-> **Plan-preview note**: The plan-preview webview renders Section 5 as a **sandboxed HTML/CSS iframe** loaded from `.azure/.preview-temp/<page>.html`. It deliberately does NOT use any component library, real icons, motion, dark mode, or webfonts — the preview is a *directional sketch* (color story + page regions + density), and the scaffolded app is required to visibly exceed it using whatever `Component Library` is named in the plan. The webview disclosure reads *"Directional mock, not the final UI. The scaffold renders this with **{Component Library}**, real icons, motion, and dark mode — it will look noticeably more polished than the sketch below."* and a `MOCK` ribbon overlays the iframe.
+> **Plan-preview note**: The plan-preview webview renders Section 6 as a **sandboxed HTML/CSS iframe** loaded from `.azure/.preview-temp/<page>.html`. It deliberately does NOT use any component library, real icons, motion, dark mode, or webfonts — the preview is a *directional sketch* (color story + page regions + density), and the scaffolded app is required to visibly exceed it using whatever `Component Library` is named in the plan. The webview disclosure reads *"Directional mock, not the final UI. The scaffold renders this with **{Component Library}**, real icons, motion, and dark mode — it will look noticeably more polished than the sketch below."* and a `MOCK` ribbon overlays the iframe.
 
 ### Error Response Contract
 
@@ -740,7 +771,7 @@ All error responses follow this shape:
 
 > This is a **default convention for a brand-new project**, not a mandate. When the workspace already has a structure, follow it; never assume or impose these exact paths. Treat the names below (`services/functions`, `services/web`, `services/shared`, …) as illustrative roles the agent maps onto the user's actual layout.
 >
-> **Prefer domain-specific names for the deployable apps.** When the project has a clear product name, derive a kebab-case slug and name the Functions backend `services/<project>-api` and the frontend `services/<project>-<type>` (`-portal`/`-app`/`-web`, whichever fits) — e.g. for an office-compliance calendar: `services/office-compliance-api`, `services/office-compliance-portal`. Keep the shared package generic (`services/shared`). Fall back to the generic `functions`/`web` only when there is no clear project name. Whatever you choose, record it in Section 6 and use it consistently across `workspaces`, imports, and `main`/`rootDir`.
+> **Prefer domain-specific names for the deployable apps.** When the project has a clear product name, derive a kebab-case slug and name the Functions backend `services/<project>-api` and the frontend `services/<project>-<type>` (`-portal`/`-app`/`-web`, whichever fits) — e.g. for an office-compliance calendar: `services/office-compliance-api`, `services/office-compliance-portal`. Keep the shared package generic (`services/shared`). Fall back to the generic `functions`/`web` only when there is no clear project name. Whatever you choose, record it in Section 7 and use it consistently across `workspaces`, imports, and `main`/`rootDir`.
 
 ```
 project-root/

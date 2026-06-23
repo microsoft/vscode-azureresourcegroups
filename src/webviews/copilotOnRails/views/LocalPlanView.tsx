@@ -18,6 +18,7 @@ import {
     Tooltip,
 } from "@fluentui/react-components";
 import {
+    ArrowSyncRegular,
     CheckmarkRegular,
     CommentEditRegular,
     DismissRegular,
@@ -49,11 +50,11 @@ mermaid.initialize({
     startOnLoad: false,
     theme: "dark",
     securityLevel: "loose",
-    fontSize: 30,
+    fontSize: 11,
     flowchart: {
-        nodeSpacing: 60,
-        rankSpacing: 80,
-        padding: 20,
+        nodeSpacing: 15,
+        rankSpacing: 25,
+        padding: 6,
         useMaxWidth: false,
     },
 });
@@ -165,6 +166,7 @@ export const LocalPlanView = (): JSX.Element => {
     >(new Map());
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
+    const [isRefreshingPrereqs, setIsRefreshingPrereqs] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
     const { vscodeApi } = useContext(WebviewContext);
 
@@ -205,6 +207,11 @@ export const LocalPlanView = (): JSX.Element => {
                 setDrawerOpen(false);
             } else if (message?.command === "revisionComplete") {
                 setIsAwaitingRevision(false);
+                setIsRefreshingPrereqs(false);
+            } else if (message?.command === "prerequisitesRefreshing") {
+                setIsRefreshingPrereqs(true);
+            } else if (message?.command === "prerequisitesRefreshComplete") {
+                setIsRefreshingPrereqs(false);
             }
         };
         window.addEventListener("message", handler);
@@ -441,6 +448,14 @@ export const LocalPlanView = (): JSX.Element => {
                                     section={section}
                                     collapsible={collapsible}
                                     defaultOpen={defaultOpen}
+                                    onRefreshPrerequisites={
+                                        lower === "prerequisites"
+                                            ? () => vscodeApi.postMessage({ command: "refreshPrerequisites" })
+                                            : undefined
+                                    }
+                                    isRefreshing={
+                                        lower === "prerequisites" && isRefreshingPrereqs
+                                    }
                                 />
                             );
                         })}
@@ -621,25 +636,42 @@ const SectionCard = ({
     section,
     collapsible,
     defaultOpen,
+    onRefreshPrerequisites,
+    isRefreshing,
 }: {
     section: LocalPlanSection;
     collapsible: boolean;
     defaultOpen: boolean;
+    onRefreshPrerequisites?: () => void;
+    isRefreshing?: boolean;
 }): JSX.Element => {
     const [open, setOpen] = useState(defaultOpen);
 
     return (
         <div className="sectionCard">
-            <div
-                className={`sectionHeading ${collapsible ? "clickable" : ""}`}
-                onClick={() => collapsible && setOpen(!open)}
-            >
-                {collapsible && (
-                    <span className={`sectionChevron ${open ? "open" : ""}`}>
-                        ▶
-                    </span>
+            <div className="sectionHeadingRow">
+                <div
+                    className={`sectionHeading ${collapsible ? "clickable" : ""}`}
+                    onClick={() => collapsible && setOpen(!open)}
+                >
+                    {collapsible && (
+                        <span className={`sectionChevron ${open ? "open" : ""}`}>
+                            ▶
+                        </span>
+                    )}
+                    <h2>{section.title}</h2>
+                </div>
+                {onRefreshPrerequisites && (
+                    <Tooltip content={isRefreshing ? "Checking prerequisites…" : "Re-check prerequisites"} relationship="label">
+                        <Button
+                            appearance="subtle"
+                            size="small"
+                            icon={isRefreshing ? <Spinner size="tiny" /> : <ArrowSyncRegular />}
+                            onClick={onRefreshPrerequisites}
+                            disabled={isRefreshing}
+                        />
+                    </Tooltip>
                 )}
-                <h2>{section.title}</h2>
             </div>
             {open && (
                 <div className="sectionContent">

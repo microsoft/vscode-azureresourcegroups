@@ -237,6 +237,28 @@
         color: var(--vscode-descriptionForeground);
     }
 
+    // -------- Preview toolbar (page tabs + Edit box) --------
+    .uiPreviewCard__previewBar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .uiPreviewCard__tabsSpacer {
+        flex: 1;
+    }
+
+    // The Edit button sits in its own box, visually separated from the page
+    // tabs list, and stays pinned to the end of the preview toolbar.
+    .uiPreviewCard__editBox {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        padding-left: 12px;
+        border-left: 1px solid var(--vscode-widget-border);
+    }
+
     // -------- Color picker --------
     .uiPreviewCard__paletteRow {
         display: flex;

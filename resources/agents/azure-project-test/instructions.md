@@ -26,7 +26,7 @@ Activate when user wants to:
 |-------------|---------------|
 | Plan new project, requirements, preview frontend | **azure-project-plan** |
 | Scaffold backend from approved plan | **azure-project-scaffold** |
-| Set up local dev environment | **azure-localdev** |
+| Set up local dev environment | **azure-debug-plan** |
 | Deploy to Azure | **azure-prepare** |
 | Benchmark scaffold quality (read-only) | **scaffold-benchmark** |
 
@@ -299,7 +299,7 @@ Before generating tests:
 | Update checklist | Mark all verify items `[x]` in `.azure/execution-checklist.md` |
 | Update plan status | Set `.azure/project-plan.md` to `Ready` |
 | Generate summary | Total tests, pass/fail, files created |
-| **Suggest next steps** | **MANDATORY**: Present follow-up via `vscode_askQuestions`. Do NOT auto-invoke.\n\n**Header**: "Next Step"\n**Question**: "Verification complete! Set up local dev?"\n**Options** (allowFreeformInput: false):\n- **"Set up local dev"** ("Configure Docker emulators, VS Code debugging, F5 launch") — recommended\n\nIf selected → invoke `azure-localdev` |
+| **Suggest next steps** | **MANDATORY**: Present follow-up via `vscode_askQuestions`. Do NOT auto-invoke.\n\n**Header**: "Next Step"\n**Question**: "Verification complete! Set up local dev?"\n**Options** (allowFreeformInput: false):\n- **"Set up local dev"** ("Configure Docker emulators, VS Code debugging, F5 launch") — recommended\n\nIf selected → invoke `azure-debug-plan` |
 
 ---
 
@@ -311,7 +311,7 @@ Before generating tests:
 | **Partial** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Key handlers only | ❌ Skip | ✅ | ✅ | ✅ |
 | **None** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Lint only | ✅ Build only | ✅ |
 
-> At **None** rigor, only the lint sweep and build gate run. For runtime verification against live endpoints, use `azure-localdev`.
+> At **None** rigor, only the lint sweep and build gate run. For runtime verification against live endpoints, use `azure-debug-plan`.
 
 ---
 
@@ -343,6 +343,6 @@ Before generating tests:
 > **Options** (allowFreeformInput: false):
 > - **"Set up local dev"** ("Configure Docker emulators, VS Code debugging, F5 launch") — recommended
 >
-> If selected → invoke `azure-localdev`
+> If selected → invoke `azure-debug-plan`
 >
 > Do NOT print plain-text suggestions. Do NOT suggest deploy or benchmark.

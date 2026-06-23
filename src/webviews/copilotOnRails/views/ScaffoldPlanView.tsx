@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea, Tooltip } from '@fluentui/react-components';
-import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Switch, Textarea, Tooltip } from '@fluentui/react-components';
+import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, RocketRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
-import { type PlanContent, type PlanData, type PlanSection, type PreviewPage, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
+import { type PlanContent, type PlanData, type PlanSection, type PreviewPage, type PreviewStatus, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 
 const editableOptions: Record<string, string[]> = {
     'Language': ['JavaScript', 'TypeScript', 'Python', 'C# (.NET)'],
@@ -115,8 +115,11 @@ type CellKey = `${number}:${number}:${number}:${number}`;
 const cellKey = (s: number, c: number, r: number, col: number): CellKey => `${s}:${c}:${r}:${col}`;
 
 type FeedbackItem =
+    /** A technology/config change made via a table dropdown (e.g. Runtime: JS → TS). */
     | { id: string; kind: 'dropdown'; cell: CellKey; sectionIdx: number; contentIdx: number; rowIdx: number; colIdx: number; field: string; from: string; to: string }
+    /** A design token change (e.g. palette color, spacing, typography). The `target` field identifies the token (e.g. "palette:primary"). */
     | { id: string; kind: 'designToken'; target: string; field: string; from: string; to: string }
+    /** A general freeform note typed into the feedback drawer. */
     | { id: string; kind: 'freeform'; text: string };
 
 let feedbackIdCounter = 0;
@@ -144,7 +147,7 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
     }
     if (designChanges.length > 0) {
         lines.push(
-            'Design changes (update Section 5 "Design System & UI" in project-plan.md):',
+            'Design changes (update Section 6 "Design System & UI" in project-plan.md):',
             ...designChanges,
             '',
         );
@@ -169,6 +172,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
+    const [previewStatus, setPreviewStatus] = useState<PreviewStatus | undefined>(undefined);
+    const [autopilot, setAutopilot] = useState(false);
     const originalCellValues = useRef<Map<CellKey, string>>(new Map());
     // Same idea for design tokens (palette swatches), keyed by a synthetic
     // target like `palette:Primary`.
@@ -207,6 +212,9 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 originalDesignValues.current.clear();
             } else if (message?.command === 'setPreviewPages') {
                 setPreviewPages(Array.isArray(message.pages) ? message.pages as PreviewPage[] : []);
+                if (typeof message.previewStatus === 'string') {
+                    setPreviewStatus(message.previewStatus as PreviewStatus);
+                }
             } else if (message?.command === 'revisionInProgress') {
                 setIsAwaitingRevision(true);
                 setDrawerOpen(false);
@@ -227,8 +235,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
             setConfirmSubmitOpen(true);
             return;
         }
-        vscodeApi.postMessage({ command: 'approvePlan', data: plan });
-    }, [plan, hasEdits, isAlreadyApproved, vscodeApi]);
+        vscodeApi.postMessage({ command: 'approvePlan', data: plan, autopilot });
+    }, [plan, hasEdits, isAlreadyApproved, autopilot, vscodeApi]);
 
     const mutateCell = useCallback((sectionIdx: number, contentIdx: number, rowIdx: number, colIdx: number, value: string) => {
         setPlan(prev => {
@@ -380,6 +388,14 @@ export const ScaffoldPlanView = (): JSX.Element => {
         setFreeformDraft('');
     }, [freeformDraft]);
 
+    const handleEditPage = useCallback((pageTitle: string) => {
+        // Open the feedback drawer with a note prepopulated for the page so the
+        // user can type their feedback after the "<Page> Page: " prefix.
+        const prefix = `${pageTitle} Page: `;
+        setFreeformDraft(prev => (prev.trim().length > 0 ? `${prev.trimEnd()}\n${prefix}` : prefix));
+        setDrawerOpen(true);
+    }, []);
+
     const handlePaletteChange = useCallback((token: string, _originalHex: string, newHex: string) => {
         // Palette picks are applied live to the preview iframe by `UiPreviewCard`
         // and persisted straight into the plan's palette here — no feedback
@@ -455,6 +471,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const detailSections = sections.filter(s => s.number !== 1 && isServiceStackSection(s));
     const structureSection = sections.find(s => s.title.toLowerCase().includes('project structure'));
     const designSection = sections.find(s => s.title.toLowerCase().includes('design system'));
+    const prerequisitesSection = sections.find(s => s.title.toLowerCase().includes('prerequisite'));
     const draftCount = (freeformDraft.trim() ? 1 : 0);
 
     return (
@@ -471,6 +488,24 @@ export const ScaffoldPlanView = (): JSX.Element => {
                             </div>
                         </div>
                         <div className='headerActions'>
+                            <Tooltip
+                                content='Autopilot runs everything after this plan is approved — scaffold and local debugging setup — without stopping for further approvals, and auto-approves all tool actions. When on, the Debug prerequisites are shown too. You confirm once on approval.'
+                                relationship='label'
+                            >
+                                <Switch
+                                    className='autopilotSwitch'
+                                    checked={autopilot}
+                                    onChange={(_, switchData) => setAutopilot(switchData.checked)}
+                                    disabled={isAwaitingRevision || isAlreadyApproved}
+                                    label={
+                                        <span className='autopilotLabel'>
+                                            <RocketRegular />
+                                            Autopilot
+                                        </span>
+                                    }
+                                    labelPosition='before'
+                                />
+                            </Tooltip>
                             <Tooltip content='Request changes to the plan before approving' relationship='label'>
                                 <Button
                                     appearance='subtle'
@@ -518,6 +553,8 @@ export const ScaffoldPlanView = (): JSX.Element => {
 
                 {overviewSection && <OverviewCard section={overviewSection} created={plan.created && plan.created !== 'Unknown' ? plan.created : undefined} />}
 
+                {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} showDebug={autopilot} />}
+
                 <div className='sectionsRow'>
                     {detailSections.map((section) => {
                         const sectionIdx = sections.indexOf(section);
@@ -539,7 +576,9 @@ export const ScaffoldPlanView = (): JSX.Element => {
                         section={designSection}
                         disabled={isAwaitingRevision}
                         previewPages={previewPages}
+                        previewStatus={previewStatus}
                         onPaletteChange={handlePaletteChange}
+                        onEditPage={handleEditPage}
                     />
                 )}
 
@@ -582,6 +621,19 @@ interface FeedbackDrawerProps {
 
 const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onRemoveItem, onSubmit, onDiscardAll, onClose }: FeedbackDrawerProps): JSX.Element => {
     const hasAny = items.length > 0 || freeformDraft.trim().length > 0;
+    const freeformRef = useRef<HTMLTextAreaElement>(null);
+
+    // Focus the note field when the drawer opens and place the cursor at the end
+    // so the user can type right after a prepopulated "<Page> Page: " prefix.
+    useEffect(() => {
+        const el = freeformRef.current;
+        if (el) {
+            el.focus();
+            const end = el.value.length;
+            el.setSelectionRange(end, end);
+        }
+    }, []);
+
     return (
         <aside className='feedbackDrawer' aria-label='Plan feedback'>
             <div className='drawerHeader'>
@@ -623,6 +675,7 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
 
                 <div className='freeformBlock'>
                     <Textarea
+                        ref={freeformRef}
                         value={freeformDraft}
                         onChange={(_, data) => onFreeformChange(data.value)}
                         placeholder='Add a note for Copilot (e.g. "Prefer a monorepo layout")'
@@ -775,7 +828,12 @@ const SectionCard = ({ section, sectionIdx, disabled, editedCells, onTableCellCh
                 ))}
             </div>
             {isStack && (
-                <button className='showMoreToggle' onClick={() => setExpanded(v => !v)}>
+                <button
+                    type='button'
+                    className='showMoreToggle'
+                    aria-expanded={expanded}
+                    onClick={() => setExpanded(v => !v)}
+                >
                     {expanded ? 'Show less' : 'Show more'}
                 </button>
             )}
@@ -795,6 +853,180 @@ const ProjectStructureCard = ({ section }: { section: PlanSection }): JSX.Elemen
             <h2>{section.title}</h2>
             <div className='treeView'>
                 <TreeNodeItem node={{ name: treeContent.root, isFolder: true, children: treeContent.nodes }} depth={0} defaultOpen={true} />
+            </div>
+        </div>
+    );
+};
+
+// Classifies the value of an "Installed" cell from the agent's detection pass.
+// The planner writes ✅ / ❌ (or yes/no) once it runs the shared prerequisites
+// detection; anything else (e.g. a leftover `{…}` placeholder or `—`) is treated
+// as "unknown" so the card never claims a tool's status it doesn't actually know.
+type InstalledStatus = 'installed' | 'missing' | 'unknown';
+
+function classifyInstalled(cell: string): InstalledStatus {
+    const value = cell.trim().toLowerCase();
+    if (value.includes('✅') || value === 'yes' || value === 'true' || value === 'installed') {
+        return 'installed';
+    }
+    if (value.includes('❌') || value === 'no' || value === 'false' || value === 'missing') {
+        return 'missing';
+    }
+    return 'unknown';
+}
+
+const INSTALLED_STATUS_LABEL: Record<InstalledStatus, string> = {
+    installed: 'Installed',
+    missing: 'Not installed',
+    unknown: 'Unknown',
+};
+
+const InstalledChip = ({ status }: { status: InstalledStatus }): JSX.Element => (
+    <span className={`installedChip installed-${status}`}>
+        <span className={`codicon ${status === 'installed' ? 'codicon-pass-filled' : status === 'missing' ? 'codicon-error' : 'codicon-question'}`} />
+        {INSTALLED_STATUS_LABEL[status]}
+    </span>
+);
+
+interface PrereqGroup {
+    label?: string;
+    isDebug: boolean;
+    tables: Extract<PlanContent, { type: 'table' }>[];
+}
+
+// Groups the Prerequisites tables by their preceding "### Run" / "### Debug"
+// sub-heading so the card can show Run always and Debug only under Autopilot.
+// A plan with no sub-headings (older format) yields a single unlabeled group
+// that is always shown.
+function groupPrereqTables(content: PlanContent[]): PrereqGroup[] {
+    const groups: PrereqGroup[] = [];
+    let current: PrereqGroup | undefined;
+    for (const item of content) {
+        if (item.type === 'subheading') {
+            current = { label: item.text, isDebug: item.text.toLowerCase().includes('debug'), tables: [] };
+            groups.push(current);
+        } else if (item.type === 'table') {
+            if (!current) {
+                current = { isDebug: false, tables: [] };
+                groups.push(current);
+            }
+            current.tables.push(item);
+        }
+    }
+    return groups;
+}
+
+// Renders the "Prerequisites" section — the tooling the user must have installed
+// to run the scaffolded project locally. Unlike the local-debug plan, this is
+// inferred from the chosen technology stacks/services (there is no existing
+// project to scan at planning time). The planner agent runs the shared
+// prerequisites detection pass and records an "Installed" column; this card
+// surfaces that column as ✅/❌ status chips and, when anything is still missing,
+// a "install these before continuing" call-to-action. The Debug group is only
+// shown when Autopilot is on (`showDebug`), since the unattended chain runs all
+// the way through local-debug setup.
+const PrerequisitesCard = ({ section, showDebug }: { section: PlanSection; showDebug: boolean }): JSX.Element => {
+    const content = section.content ?? [];
+    // Prose (paragraphs/blockquotes) is rendered in its original document
+    // position relative to the tables: anything before the first table/subheading
+    // is a leading intro, anything after is a trailing note (e.g. the
+    // plan-template warning blockquote). Template HTML comments (`<!-- … -->`)
+    // that the markdown fallback turned into paragraphs are dropped.
+    const isProse = (
+        c: PlanContent,
+    ): c is Extract<PlanContent, { type: 'blockquote' | 'paragraph' }> =>
+        (c.type === 'blockquote' || c.type === 'paragraph') &&
+        !(c.type === 'paragraph' && c.text.trim().startsWith('<!--'));
+    const firstTableIdx = content.findIndex(c => c.type === 'table' || c.type === 'subheading');
+    const leadingIntro = (firstTableIdx < 0 ? content : content.slice(0, firstTableIdx)).filter(isProse);
+    const trailingIntro = firstTableIdx < 0 ? [] : content.slice(firstTableIdx).filter(isProse);
+    const groups = groupPrereqTables(content);
+    const visibleGroups = groups.filter(g => showDebug || !g.isDebug);
+    const visibleTables = visibleGroups.flatMap(g => g.tables);
+
+    const missingTools = visibleTables.flatMap((table) => {
+        const installedIdx = table.headers.findIndex(h => h.toLowerCase().includes('installed'));
+        const installIdx = table.headers.findIndex(h => h.trim().toLowerCase() === 'install');
+        if (installedIdx < 0) {
+            return [];
+        }
+        return table.rows
+            .filter(row => classifyInstalled(row[installedIdx] ?? '') === 'missing')
+            .map(row => ({
+                name: (row[0] ?? '').trim() || 'Tool',
+                install: installIdx >= 0 ? (row[installIdx] ?? '').trim() : '',
+            }));
+    });
+
+    const renderTable = (table: Extract<PlanContent, { type: 'table' }>, key: number): JSX.Element => {
+        const installedIdx = table.headers.findIndex(h => h.toLowerCase().includes('installed'));
+        const installIdx = table.headers.findIndex(h => h.trim().toLowerCase() === 'install');
+        const visible = (idx: number): boolean => idx !== installIdx;
+        return (
+            <div key={key} className='planTableWrapper'>
+                <table className='planTable'>
+                    <thead>
+                        <tr>{table.headers.map((h, hi) => visible(hi) ? <th key={hi}>{h}</th> : null)}</tr>
+                    </thead>
+                    <tbody>
+                        {table.rows.map((row, ri) => (
+                            <tr key={ri}>{row.map((cell, ci) =>
+                                !visible(ci)
+                                    ? null
+                                    : ci === installedIdx
+                                        ? <td key={ci}><InstalledChip status={classifyInstalled(cell)} /></td>
+                                        : <td key={ci}>{cell}</td>,
+                            )}</tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        );
+    };
+
+    return (
+        <div className='sectionCard prerequisitesCard'>
+            <h2>{section.title}</h2>
+            <div className='sectionContent'>
+                {leadingIntro.map((item, i) =>
+                    item.type === 'blockquote'
+                        ? <div key={i} className='blockquote'>{item.text}</div>
+                        : <p key={i} className='paragraph'>{item.text}</p>,
+                )}
+                {missingTools.length > 0 && (
+                    <div className='prerequisitesCallToAction' role='alert'>
+                        <span className='codicon codicon-warning' />
+                        <div className='prerequisitesCallToActionBody'>
+                            <span className='prerequisitesCallToActionTitle'>
+                                {missingTools.length === 1
+                                    ? '1 prerequisite is not installed. Install it before continuing:'
+                                    : `${missingTools.length} prerequisites are not installed. Install them before continuing:`}
+                            </span>
+                            <ul className='prerequisitesMissingList'>
+                                {missingTools.map((tool, i) => (
+                                    <li key={i}>
+                                        <span className='prerequisitesMissingName'>{tool.name}</span>
+                                        {tool.install && <code className='prerequisitesMissingInstall'>{tool.install}</code>}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                )}
+                {visibleTables.length === 0 && leadingIntro.length === 0 && trailingIntro.length === 0 && (
+                    <p className='paragraph'>No prerequisites identified yet.</p>
+                )}
+                {visibleGroups.map((group, gi) => (
+                    <div key={gi} className='prereqGroup'>
+                        {group.label && <h3 className='prereqGroupLabel'>{group.label}</h3>}
+                        {group.tables.map((table, ti) => renderTable(table, ti))}
+                    </div>
+                ))}
+                {trailingIntro.map((item, i) =>
+                    item.type === 'blockquote'
+                        ? <div key={i} className='blockquote'>{item.text}</div>
+                        : <p key={i} className='paragraph'>{item.text}</p>,
+                )}
             </div>
         </div>
     );
@@ -915,6 +1147,8 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                     </table>
                 </div>
             );
+        case 'subheading':
+            return <h3 className='contentSubheading'>{item.text}</h3>;
         case 'blockquote':
             return <div className='blockquote'>{item.text}</div>;
         case 'paragraph':

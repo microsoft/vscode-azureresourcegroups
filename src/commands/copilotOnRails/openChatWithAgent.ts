@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
+import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
 import { ensureAgentInstructions } from './agentInstructions';
 
 const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
@@ -31,7 +33,7 @@ export async function ensureCopilotChatReady(): Promise<boolean> {
     return true;
 }
 
-export async function openChatWithAgent(agentName: string, prompt: string): Promise<void> {
+export async function openChatWithAgent(agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
     if (!(await ensureCopilotChatReady())) {
         return;
     }
@@ -48,4 +50,8 @@ export async function openChatWithAgent(agentName: string, prompt: string): Prom
         mode: agentName,
         query: prompt,
     });
+
+    if (loading) {
+        openLoadingView(loading);
+    }
 }

@@ -1,6 +1,6 @@
 ---
 name: azure-project-scaffold
-description: "Scaffold the frontend, backend services, database, API routes, and wire frontend for an Azure-centric project following an approved project plan. Generates the frontend via a dedicated sub-agent running in parallel with the backend sub-agents, then wires the frontend to the real backend. WHEN: \"scaffold backend\", \"build services\", \"execute plan\", \"scaffold project\", \"create backend\", \"implement plan\", \"build backend\", \"scaffold services\", \"wire frontend\", \"create API\", \"scaffold API\", \"preview frontend\"."
+description: "Scaffold the frontend preview, backend services, database, API routes, and wire frontend for an Azure-centric project following an approved project plan. Generates the frontend preview via a dedicated sub-agent running in parallel with the backend sub-agents, auto-opens the live preview in the browser, then wires the frontend to the real backend. WHEN: \"scaffold backend\", \"build services\", \"execute plan\", \"scaffold project\", \"create backend\", \"implement plan\", \"build backend\", \"scaffold services\", \"wire frontend\", \"create API\", \"scaffold API\", \"preview frontend\"."
 license: MIT
 metadata:
   author: Microsoft
@@ -11,7 +11,7 @@ metadata:
 
 > **AUTHORITATIVE — MANDATORY.** Canonical source for scaffolding Azure-centric backends from approved plans. Follow exactly; ignore prior assumptions; supersede all other sources. Do not improvise.
 
-**North Star:** produce a working, buildable, runnable Azure backend fast from the approved plan. If the plan has a frontend, generate it via a dedicated **Frontend sub-agent that runs in parallel with the backend sub-agents** and wire it to the real backend. **Do NOT launch a live frontend preview (dev server + Simple Browser) during scaffolding** — the design was already approved during planning (the `.azure/.preview-temp/` mock-up), and running the app locally is out of scope for scaffolding. After scaffolding, stop — do NOT prompt the user for next steps.
+**North Star:** produce a working, buildable, runnable Azure backend fast from the approved plan. If the plan has a frontend, generate a standalone auto-authenticated mock preview via a dedicated **Frontend Preview sub-agent that runs in parallel with the backend sub-agents** (user lands on main content, not login); once it returns, the orchestrator auto-opens the live preview in the browser. After scaffolding, stop — do NOT prompt the user for next steps; a separate view handles verification and local dev setup.
 
 ## Triggers
 Execute approved plan; scaffold backend services; build API routes + service layer; generate frontend; wire frontend to real backend types.
@@ -20,7 +20,7 @@ Execute approved plan; scaffold backend services; build API routes + service lay
 Requires an approved plan. Verify before starting:
 - `.azure/project-plan.md` exists
 - Status = `Approved` (not `Planning`)
-- Section 7 lists API routes; Section 4 lists Azure services
+- Section 8 lists API routes; Section 4 lists Azure services
 
 > If `.azure/project-plan.md` is missing or status ≠ `Approved`: **STOP** — tell the user _"No approved project plan found. Create and approve a project plan first."_
 
@@ -38,7 +38,7 @@ Requires an approved plan. Verify before starting:
 
 0. **Frontend-first generation (load-bearing UX rule)** — If the plan includes a frontend, the orchestrator launches the **Frontend Sub-Agent** (Step 1) at the same point it kicks off the backend track, so frontend generation runs **concurrently** with backend Phase A/B rather than blocking it. The sub-agent generates `services/web/` (mock data, pages, components), builds it, and reports back. **Do NOT launch a live preview** — the agent does **not** start the dev server or open the VS Code Simple Browser during scaffolding. The user already approved the design during planning (the `.azure/.preview-temp/` mock-up), and running the app locally is out of scope for scaffolding. **Do NOT ask the user to approve the UX during scaffolding.** If the plan has no frontend, this rule is satisfied trivially. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md).
 1. **Plan is source of truth** — Read `.azure/project-plan.md` at start. Follow route definitions, service list, types, architecture exactly. Do NOT re-ask user for plan requirements.
-2. **Track progress** — Copy Section 8 (Execution Checklist) from plan into `.azure/execution-checklist.md`. Mark `[ ]` → `[x]` as each step completes — do NOT defer. Plan stays clean as reference; checklist is live tracker. Update plan status: Approved → In Progress → Scaffolded → Ready. Step 13 MUST verify all items checked. If >50% unchecked despite completion, finalization NOT complete.
+2. **Track progress** — Copy Section 9 (Execution Checklist) from plan into `.azure/execution-checklist.md`. Mark `[ ]` → `[x]` as each step completes — do NOT defer. Plan stays clean as reference; checklist is live tracker. Update plan status: Approved → In Progress → Scaffolded → Ready. Step 13 MUST verify all items checked. If >50% unchecked despite completion, finalization NOT complete.
 3. **Build-gate enforcement** — Every phase ends with build check (`tsc` / `npm run build`). If fails, iterate until clean. **Do NOT proceed until code compiles.** Most important rule.
 4. **Azure Functions v4** — Always v4 programming model (Node.js v4, Python v2, .NET isolated). Prioritize Azure services. Runtimes: TypeScript, Python, C#.
 5. **Service abstraction & DI** — All Azure SDK calls behind injectable interfaces. Handlers NEVER import SDKs directly. **CRITICAL: Step 4 MUST produce interface AND concrete implementation per service.** Interface-only = #1 cause of runtime crashes. Concrete impl is what `func start` uses. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
@@ -51,7 +51,7 @@ Requires an approved plan. Verify before starting:
 12. **Mandatory `func start` smoke test** — After all handlers implemented, execute `func start`, verify all functions register, stop. Catches blocking runtime errors (broken imports, constructor crashes) that mocked tests miss. **Do NOT skip.** See [architecture.md](.github/agents/shared-references/architecture.md).
 13. **Auto-initialization** — Registry `getServices()` MUST auto-initialize with concrete implementations when nothing pre-registered. Verified by `func start`. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
 14. **Cross-workspace build safety** — When Functions imports `../shared/`, set `rootDir` to `".."` and **compute `main` field from actual `dist/` output after `tsc`** — never hardcode. With `rootDir: ".."`, handlers compile to `dist/functions/src/functions/X.js`. After build, list `dist/`, verify `main` matches. Run `func start` to confirm. **#1 cause of "build passes but app won't start"**. See [architecture.md](.github/agents/shared-references/architecture.md).
-15. **Frontend quality contract** — If the plan has a frontend, **Section 5 (Design System & UI) of the plan is load-bearing**. Treat each region token in Section 5's Pages table (`header`, `hero`, `grid`, `form`, ...) as layout **intent** — render it using real primitives from the library named in `Component Library:`, themed by the Color Palette. **Reproduce the records from Section 5's Sample Content block** — the scaffolded page MUST show the same entities, names, values, and states the planning preview showed (the preview and the scaffold share this one content contract, so they stay in parity). Seed your mock data from Sample Content, then extend it. **Never produce raw `<div className="card">` placeholders that just mimic the wireframe** — but bespoke, domain-specific components (polaroid frames, ticket stubs, gallery tiles, chat bubbles) that wrap a real library primitive and carry real content + imagery are encouraged, not banned. **Every media-bearing entity MUST render a real image from the mock data, never an empty tinted surface or solid-color block.** **The HTML preview at `.azure/.preview-temp/*.html` is a directional sketch — the scaffolded app MUST visibly exceed it.** If a generated page looks like a re-skin of the static HTML sketch (same flat surfaces, no real icons, no motion, no dark mode, no polished hero, no library elevation), you have failed the bar — go back and apply the Polish floor before claiming the page is complete. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the per-library region-token → primitive mapping, theming contract, icon contract, state-coverage contract, **Polish floor**, and **Polish self-review checklist**. If Section 5 is missing or `Component Library:` is blank, STOP — the plan must be completed before scaffolding.
+15. **Frontend quality contract** — If the plan has a frontend, **Section 6 (Design System & UI) of the plan is load-bearing**. Treat each region token in Section 6's Pages table (`header`, `hero`, `grid`, `form`, ...) as layout **intent** — render it using real primitives from the library named in `Component Library:`, themed by the Color Palette. **Reproduce the records from Section 6's Sample Content block** — the scaffolded page MUST show the same entities, names, values, and states the planning preview showed (the preview and the scaffold share this one content contract, so they stay in parity). Seed your mock data from Sample Content, then extend it. **Never produce raw `<div className="card">` placeholders that just mimic the wireframe** — but bespoke, domain-specific components (polaroid frames, ticket stubs, gallery tiles, chat bubbles) that wrap a real library primitive and carry real content + imagery are encouraged, not banned. **Every media-bearing entity MUST render a real image from the mock data, never an empty tinted surface or solid-color block.** **The HTML preview at `.azure/.preview-temp/*.html` is a directional sketch — the scaffolded app MUST visibly exceed it.** If a generated page looks like a re-skin of the static HTML sketch (same flat surfaces, no real icons, no motion, no dark mode, no polished hero, no library elevation), you have failed the bar — go back and apply the Polish floor before claiming the page is complete. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the per-library region-token → primitive mapping, theming contract, icon contract, state-coverage contract, **Polish floor**, and **Polish self-review checklist**. If Section 6 is missing or `Component Library:` is blank, STOP — re-run `azure-project-plan`.
 
 ---
 
@@ -74,7 +74,7 @@ Requires an approved plan. Verify before starting:
 | **Step 7** (Routes) | `../shared-references/resilience.md`, selected runtime file | |
 | **Step 8** (Errors) | `../shared-references/error-handling.md` (full) | |
 | **Step 9–11** (Health/OpenAPI/Logging) | _(instructions are in this skill, below)_ | |
-| **Step 12** (Wire Frontend) | _(instructions are in this skill, below — uses shared types from Step 6; if Section 5 'Design System & UI' is present, re-read `references/frontend-quality-bar.md`)_ | |
+| **Step 12** (Wire Frontend) | _(instructions are in this skill, below — uses shared types from Step 6; if Section 6 'Design System & UI' is present, re-read `references/frontend-quality-bar.md`)_ | |
 | **Step 13** (Wrap Up) | _(instructions are in this skill, below)_ | |
 
 ### Runtime-Specific Files — Load ONLY ONE
@@ -127,12 +127,12 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 | Task | Details |
 |------|---------|
 | Read `.azure/project-plan.md` | Load complete plan |
-| Validate status | Must be `Approved`. If not, STOP — the plan must be approved before scaffolding. |
+| Validate status | Must be `Approved`. If not, STOP — instruct user to run `azure-project-plan`. |
 | Extract plan details | Routes, services, entity types, language, runtime, framework, and **orchestration** for each service's stack section (`## 2. Backend`, `## 3. Frontend`, …), structure |
-| Extract design contract (if frontend) | If a frontend is planned, read Section 5 (Design System & UI). Extract `Component Library:`, `Style Direction:`, `Typography:`, the Color Palette table, and the Pages table (page → layout regions). **If Section 5 is missing or `Component Library:` is blank, STOP — the plan's design section must be completed before scaffolding. Section 5 is load-bearing for Rule 15 / Step 1 quality bar.** |
-| Read the approved HTML preview (if frontend) | List `.azure/.preview-temp/` if it exists. Read `manifest.json` to get the page list, then read each `<slug>.html` plus `theme.css`. **Treat these files as the visual mock-up that the user already approved during planning.** They are the source of truth for layout, palette translation, and per-page region composition. The scaffolded app must reproduce this look using the framework + library named in the Frontend stack section / Section 5 — NOT by serving the preview HTML itself. If `.azure/.preview-temp/` is missing for a plan that has a frontend, do not fail — just rely on Section 5 alone. |
-| Determine frontend needed | Check if plan includes frontend (SPA + API, Full-stack SSR, Static + API). If yes, Step 1 generates the frontend. |
-| Copy execution checklist | Copy Section 8 into `.azure/execution-checklist.md` |
+| Extract design contract (if frontend) | If a frontend is planned, read Section 6 (Design System & UI). Extract `Component Library:`, `Style Direction:`, `Typography:`, the Color Palette table, and the Pages table (page → layout regions). **If Section 6 is missing or `Component Library:` is blank, STOP — instruct user to re-run `azure-project-plan`. Section 6 is load-bearing for Rule 15 / Step 1 quality bar.** |
+| Read the approved HTML preview (if frontend) | List `.azure/.preview-temp/` if it exists. Read `manifest.json` to get the page list, then read each `<slug>.html` plus `theme.css`. **Treat these files as the visual mock-up that the user already approved during planning.** They are the source of truth for layout, palette translation, and per-page region composition. The scaffolded app must reproduce this look using the framework + library named in the Frontend stack section / Section 6 — NOT by serving the preview HTML itself. If `.azure/.preview-temp/` is missing for a plan that has a frontend, do not fail — just rely on Section 6 alone. |
+| Determine frontend needed | Check if plan includes frontend (SPA + API, Full-stack SSR, Static + API). If yes, Step 1 generates preview. |
+| Copy execution checklist | Copy Section 9 into `.azure/execution-checklist.md` |
 | Update plan status | Set to `In Progress` |
 
 > **✅ Checkpoint**: Plan loaded, status valid, checklist created, status `In Progress`. If frontend planned, `.azure/.preview-temp/` contents loaded into context as visual reference.
@@ -165,17 +165,17 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 > ⚠️ **WORKING DIRECTORY (most-common scaffold failure)**: Every frontend command — `npm install`, `npx vite build`, `npm run build` — MUST run against the **frontend folder** (typically `services/web/`), never the workspace root. **Prefer the working-directory-independent form `npm --prefix services/web run <script>`** — `--prefix` loads the frontend's `package.json` no matter where the shell starts, so it can't accidentally run from the root. When using a binary directly (e.g. `npx vite build`), pass `cwd: "services/web"` on the same terminal call.
 
 **References**:
-- [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the per-library region-token → primitive mapping, theming contract, icon contract, and state-coverage contract. **READ THIS FIRST — it is the contract between the plan's Section 5 and the JSX you ship.**
+- [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) for the per-library region-token → primitive mapping, theming contract, icon contract, and state-coverage contract. **READ THIS FIRST — it is the contract between the plan's Section 6 and the JSX you ship.**
 - [frontend-patterns.md](.github/agents/shared-references/frontend-patterns.md) for patterns and quality bar.
-- [frontend-preview-steps.md](.github/agents/azure-project-scaffold/references/frontend-preview-steps.md) for sub-steps (F1–F4), working directory rules.
+- [frontend-preview-steps.md](.github/agents/azure-project-scaffold/references/frontend-preview-steps.md) for sub-steps (F1–F4), working directory rules, approval loop.
 
 > **✅ Checkpoint**:
 > 1. Frontend builds zero errors (`npm --prefix services/web run build` — cwd-independent; **never** a bare `npx vite build` from the workspace root)
 > 2. No `any` types in `.ts`/`.tsx`
-> 3. Auto-authenticated — mock auth state seeded so the app lands on main content on first load
-> 4. **No dev server, no Simple Browser, no preview** — the scaffold generates and builds the frontend but does NOT launch a live preview during scaffolding.
-> 5. **No UX approval prompt** — the design was already approved during planning via `.azure/.preview-temp/`. Do NOT call `ask_user` for "do you approve this UI?".
-> 6. **Quality bar (Rule 15)**: Every page imports primitives from the library named in plan Section 5's `Component Library:`; the app shell is wrapped in that library's theme provider with a brand ramp derived from Section 5's palette; every icon is a real library icon (no emoji, no SVG placeholders); every `form` region has a visible validation state; every data-bearing page exposes all four states (loading / error / empty / data) via a dev-only toggle. **Use the approved HTML mock-up at `.azure/.preview-temp/<slug>.html` as the layout/visual reference per page** — reproduce the same regions and tonal feel using the real library primitives, not by embedding the HTML. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md).
+> 3. Auto-authenticated — user lands on main content on first load
+> 4. Dev server started with the cwd-independent form (`npm --prefix services/web run dev -- --host`, or `npx vite --host` with `cwd: services/web/`) **and verified to serve actual app content** (not just "ready in N ms" — page must render). Preview opened in VS Code Simple Browser.
+> 5. **No UX approval prompt** — the design was already approved during planning via `.azure/.preview-temp/`. Show the live dev server in Simple Browser and move on; do NOT call `ask_user` for "do you approve this UI?".
+> 6. **Quality bar (Rule 15)**: Every page imports primitives from the library named in plan Section 6's `Component Library:`; the app shell is wrapped in that library's theme provider with a brand ramp derived from Section 6's palette; every icon is a real library icon (no emoji, no SVG placeholders); every `form` region has a visible validation state; every data-bearing page exposes all four states (loading / error / empty / data) via a dev-only toggle. **Use the approved HTML mock-up at `.azure/.preview-temp/<slug>.html` as the layout/visual reference per page** — reproduce the same regions and tonal feel using the real library primitives, not by embedding the HTML. See [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md).
 
 ---
 
@@ -468,7 +468,7 @@ For **each** route in plan:
 | Update checklist | Mark all scaffold items `[x]` in `.azure/execution-checklist.md` (Rule 2). **If >50% unchecked, NOT complete.** |
 | Update plan status | Set to `Scaffolded` |
 | Print completion | List created files, announce: **"Scaffolding complete!"** |
-| **Stop — do NOT suggest next steps** | After announcing completion, **STOP**. Do **NOT** ask the user what to do next. Do **NOT** call `vscode_askQuestions` (or any chat question API), and do **NOT** print plain-text follow-up suggestions. Anything after scaffolding is out of scope for this agent. |
+| **Stop — do NOT suggest next steps** | After announcing completion, **STOP**. Do **NOT** ask the user whether they want to verify the project or set up local dev. Do **NOT** call `vscode_askQuestions` (or any chat question API), and do **NOT** print plain-text follow-up suggestions. A separate view surfaces the "Verify project" / "Set up local dev" choices and invokes `azure-project-test` / `azure-localdev` itself. |
 
 > **✅ Final Checkpoint**:
 > 1. **Build**: `npm run build` every workspace. `dist/` has output. Zero errors.
@@ -476,7 +476,7 @@ For **each** route in plan:
 > 3. **Preview cleanup**: `.azure/.preview-temp/` no longer exists.
 > 4. **Checklist**: All items in `.azure/execution-checklist.md` marked `[x]`.
 > 5. **Status**: `.azure/project-plan.md` = `Scaffolded`.
-> 6. **No follow-up prompt**: Did NOT call `vscode_askQuestions` or print next-step suggestions — anything after scaffolding is out of scope.
+> 6. **No follow-up prompt**: Did NOT call `vscode_askQuestions` or print next-step suggestions — a separate view handles that.
 
 ---
 
@@ -486,8 +486,8 @@ For **each** route in plan:
 
 | Artifact | Location |
 |----------|----------|
-| **Execution Checklist** | `.azure/execution-checklist.md` (live progress tracker — copied from plan Section 8 at start) |
-| Frontend (if applicable) | `services/web/` (with mock data, local types, pages, components — from Step 1) |
+| **Execution Checklist** | `.azure/execution-checklist.md` (live progress tracker — copied from plan Section 9 at start) |
+| Frontend preview (if applicable) | `services/web/` (with mock data, local types, pages, components — from Step 1) |
 | Backend (Functions) | `services/functions/` or user-specified path |
 | Shared types | `services/shared/` |
 | Service abstractions | `services/functions/src/services/` (or equivalent) |
@@ -499,7 +499,7 @@ For **each** route in plan:
 | Functions config | `services/functions/local.settings.json` |
 | Seed data | `services/functions/seeds/` or `data/fixtures/` |
 | Wired frontend (if applicable) | `services/web/` (with real types + API client — from Step 12) |
-| **Next step** | Out of scope — the scaffold agent does NOT prompt for it |
+| **Next step** | Handled by a separate view — the scaffold agent does NOT prompt for it |
 
 ---
 
@@ -517,4 +517,4 @@ For runtime-specific implementation patterns, see [runtimes/](.github/agents/sha
 
 ## Next
 
-> After scaffolding completes, **stop**. Do NOT ask the user what to do next — do NOT call `vscode_askQuestions` (or any chat question API), and do NOT print plain-text follow-up suggestions. Anything after scaffolding is out of scope for this agent.
+> After scaffolding completes, **stop**. Do NOT ask the user what to do next — do NOT call `vscode_askQuestions` (or any chat question API), and do NOT print plain-text suggestions (no "Verify project", no "Set up local dev", no deploy or benchmark). A separate view surfaces those choices and invokes `azure-project-test` / `azure-localdev` itself.
