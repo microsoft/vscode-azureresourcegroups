@@ -31,6 +31,13 @@ export interface PreviewPage {
     status: 'pending' | 'ready';
 }
 
+/**
+ * Top-level status of the preview set written to `manifest.json`.
+ * - `"generating"` — initial generation or revision in progress.
+ * - `"ready"` — all preview work is complete.
+ */
+export type PreviewStatus = 'generating' | 'ready';
+
 export interface PlanParseError {
     message: string;
     fileLabel?: string;
@@ -64,6 +71,7 @@ export interface PageEntry {
 export type PlanContent =
     | { type: 'keyValue'; key: string; value: string }
     | { type: 'table'; headers: string[]; rows: string[][] }
+    | { type: 'subheading'; text: string }
     | { type: 'blockquote'; text: string }
     | { type: 'paragraph'; text: string }
     | { type: 'tree'; root: string; nodes: TreeNode[] }
@@ -164,6 +172,14 @@ function extractSections(lines: string[]): PlanSection[] {
                 i = tree.endIndex;
                 continue;
             }
+        }
+
+        // Parse sub-headings like "### Run" / "### Debug" within a section.
+        const subheadingMatch = line.match(/^#{3,6}\s+(.+)$/);
+        if (subheadingMatch) {
+            currentSection.content.push({ type: 'subheading', text: subheadingMatch[1].trim() });
+            i++;
+            continue;
         }
 
         // Parse tables
@@ -365,7 +381,7 @@ function getTreeDepth(line: string): number {
 }
 
 /**
- * After generic section parsing, look at Section 5 ("Design System & UI") and
+ * After generic section parsing, look at Section 6 ("Design System & UI") and
  * upgrade its tables to the typed `colorPalette` / `pages` content variants the
  * UI preview card reads from. Tables that don't match either shape are left
  * alone as plain `table` content.

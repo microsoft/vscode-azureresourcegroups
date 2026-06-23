@@ -50,11 +50,11 @@ mermaid.initialize({
     startOnLoad: false,
     theme: "dark",
     securityLevel: "loose",
-    fontSize: 30,
+    fontSize: 11,
     flowchart: {
-        nodeSpacing: 60,
-        rankSpacing: 80,
-        padding: 20,
+        nodeSpacing: 15,
+        rankSpacing: 25,
+        padding: 6,
         useMaxWidth: false,
     },
 });

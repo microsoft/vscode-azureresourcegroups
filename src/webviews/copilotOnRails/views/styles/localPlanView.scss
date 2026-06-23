@@ -330,27 +330,27 @@
     }
 
     .mermaidDiagram {
-        display: flex;
-        justify-content: center;
+        display: block;
         padding: 20px;
         background: var(--vscode-textCodeBlock-background);
         border: 1px solid var(--vscode-widget-border);
         border-radius: 4px;
-        overflow: auto;
+        overflow-x: auto;
+        overflow-y: hidden;
 
         svg {
+            display: block;
+            margin: 0 auto;
             width: auto !important;
             max-width: none !important;
             height: auto !important;
-            min-width: 600px;
-            min-height: 400px;
-            font-size: 18px;
+            min-width: min(100%, 500px);
+            font-size: 14px;
         }
 
-        // Scale up mermaid's internal text and shapes
         .nodeLabel,
         .edgeLabel {
-            font-size: 16px !important;
+            font-size: 12px !important;
         }
     }
 

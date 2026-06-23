@@ -5,7 +5,7 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
+import { type PreviewPage, type PreviewStatus } from "../../views/utils/parseScaffoldPlanMarkdown";
 
 /** Workspace-relative path of the per-page HTML preview folder written by the planner agent. */
 export const PREVIEW_FOLDER_RELATIVE_PATH = path.join('.azure', '.preview-temp');
@@ -18,7 +18,13 @@ interface ManifestPage {
 }
 
 interface Manifest {
+    previewStatus?: PreviewStatus;
     pages?: ManifestPage[];
+}
+
+export interface PreviewPagesResult {
+    pages: PreviewPage[];
+    previewStatus?: PreviewStatus;
 }
 
 /**
@@ -37,10 +43,10 @@ interface Manifest {
  * Returns `[]` whenever the folder or manifest is missing — the caller treats
  * that the same as "no preview available". Never throws.
  */
-export async function readPreviewPages(previewFolderUri: vscode.Uri): Promise<PreviewPage[]> {
+export async function readPreviewPages(previewFolderUri: vscode.Uri): Promise<PreviewPagesResult> {
     const manifest = await readManifest(previewFolderUri);
     if (!manifest?.pages?.length) {
-        return [];
+        return { pages: [], previewStatus: manifest?.previewStatus };
     }
 
     const themeCss = await readOptionalText(vscode.Uri.joinPath(previewFolderUri, 'theme.css'));
@@ -71,7 +77,7 @@ export async function readPreviewPages(previewFolderUri: vscode.Uri): Promise<Pr
             pages.push({ slug: entry.slug, title, route, status: 'pending' });
         }
     }
-    return pages;
+    return { pages, previewStatus: manifest.previewStatus };
 }
 
 async function readManifest(previewFolderUri: vscode.Uri): Promise<Manifest | undefined> {

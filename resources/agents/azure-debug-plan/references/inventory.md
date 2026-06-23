@@ -6,67 +6,9 @@ Scan the workspace to populate the plan. For multi-service workspaces, loop over
 
 ## Step 1: Prerequisites
 
-Check only tools relevant to the detected project types and runtimes.
+Identify required tools and then inventory them by following [prerequisites.md](../../shared-references/prerequisites.md).
 
-### Shell Environment Caveats
-
-Subagent shells may run as **non-interactive** processes. On macOS/Linux, non-interactive shells skip user startup files like `~/.bashrc`, `~/.zshrc`, etc. Since some users may configure PATH additions in these interactive-only rc files, those paths are invisible to subagents.
-
-**Before running any version checks**, detect the user's default shell via `$SHELL` and source any relevant rc files to inherit any PATH additions:
-
-```bash
-# macOS / Linux — source the user's rc file silently based on their default shell
-case "$SHELL" in
-  */bash) [ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc" 2>/dev/null >/dev/null ;;
-  */zsh)  [ -f "$HOME/.zshrc" ] && source "$HOME/.zshrc" 2>/dev/null >/dev/null ;;
-  */fish) ;; # fish uses incompatible syntax; rely on fallback PATH approach below
-  *)      [ -f "$HOME/.profile" ] && source "$HOME/.profile" 2>/dev/null >/dev/null ;;
-esac
-```
-
-On **Windows**, PATH is set at the system/user level via the Windows registry. Tools installed via `winget`, `choco`, etc. are available in all shell contexts without sourcing any profile — the missing-PATH problem is primarily a macOS/Linux issue.
-
-### CLI Tool Detection
-
-| Tool | Detection | Required For |
-|------|-----------|-------------|
-| Node.js | `node --version` | node-ts / node-js runtimes |
-| npm | `npm --version` | Node dependency management |
-| .NET SDK | `dotnet --version` | dotnet runtime |
-| Azure Functions Core Tools | `func --version` | Azure Functions projects |
-| Docker | `docker --version` | Running emulators |
-| Docker Compose | `docker compose version` | Orchestrating emulators |
-
-When a tool check fails, use `which`/`where` with fallback paths before reporting it as missing:
-
-```bash
-# macOS/Linux
-which func 2>/dev/null || \
-  find /opt/homebrew/bin /usr/local/bin ~/.npm-global/bin -name "func" 2>/dev/null | head -1
-```
-
-```powershell
-# Windows PowerShell
-Get-Command func -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-```
-
-### VS Code Extensions
-
-Check the extensions filesystem — do **NOT** use `code --list-extensions` (it launches a new VS Code instance). Users may have VS Code, VS Code Insiders, or both — always check all possible locations using `find` (more reliable than piping `ls` through `grep`):
-
-```bash
-# macOS/Linux
-find ~/.vscode/extensions ~/.vscode-insiders/extensions -maxdepth 1 -name "<extension-id-prefix>*" 2>/dev/null
-```
-
-```powershell
-# Windows
-Get-ChildItem "$env:USERPROFILE\.vscode\extensions", "$env:USERPROFILE\.vscode-insiders\extensions" -Filter "<extension-id-prefix>*" -ErrorAction SilentlyContinue
-```
-
-| Extension ID | Provides | Required For |
-|-------------|----------|-------------|
-| `ms-azuretools.vscode-azurefunctions` | Task type `func`, problem matchers | Azure Functions projects |
+The required tools are derived from a scan of the currently opened workspace project — check only the tools and extensions relevant to the detected project types, runtimes, and Azure bindings. Both tool sets defined in prerequisites.md apply here — the **Run** tools (Node.js, .NET SDK, Python, Functions Core Tools, ...) and the **Debug** tools (Docker, Docker Compose, VS Code extensions, ...) — since debugging exercises the full local stack.
 
 ---
 
