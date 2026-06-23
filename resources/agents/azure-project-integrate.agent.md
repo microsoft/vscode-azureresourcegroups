@@ -1,6 +1,6 @@
 ---
 name: azure-project-integrate
-description: Integrate a freshly scaffolded Azure-centric project — wire the frontend to LIVE backend data (replace all mock data), smoke-test the backend so every endpoint responds, create the SQL/PostgreSQL schema migrations (NO seed data), and run the frontend and backend wired together end-to-end. Runs after `azure-project-scaffold`. WHEN "integrate project", "wire to live data", "remove mock data", "smoke test backend", "verify endpoints", "create migrations", "wire frontend and backend", "integrate scaffold", "make the app run".
+description: Integrate a freshly scaffolded Azure-centric project — create the SQL/PostgreSQL schema migrations (NO seed data), smoke-test the backend so every endpoint responds, wire the frontend to LIVE backend data (replace all mock data), and run the frontend and backend wired together end-to-end. Runs after `azure-project-scaffold`. WHEN "integrate project", "wire to live data", "remove mock data", "smoke test backend", "verify endpoints", "create migrations", "wire frontend and backend", "integrate scaffold", "make the app run".
 tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
 model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---

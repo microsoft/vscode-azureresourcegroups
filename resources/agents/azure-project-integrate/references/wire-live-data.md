@@ -18,7 +18,7 @@ Your job is to add the live implementation and repoint that one file. Because pa
 
 ## Goal: no mock data remains in use
 
-After this step, a search of the frontend `src/` for `mock` / `mockData` must find nothing that is still imported. The app fetches everything from the live backend.
+After this step, a search of the frontend `src/` for `mock` / `mockData` / `previewState` must find nothing that is still imported. The app fetches everything from the live backend.
 
 ---
 
@@ -64,7 +64,8 @@ After this step, a search of the frontend `src/` for `mock` / `mockData` must fi
    ```
    That single line (`mockClient` → `liveClient`) is the entire wire-up for the call sites. **No page or hook edits.**
 4. **Remove the mock layer.** Delete `src/api/mockClient.ts` and `src/mocks/*` (and any local duplicated types now sourced from shared). A lingering `import … from './mockClient'` or `from '../mocks'` means the step is not done.
-5. **Rebuild.** `npm --prefix services/web run build` — zero errors, zero `any`. Fix any `.ts`/`.tsx` extension mismatch (JSX must be `.tsx`).
+5. **Remove the Mock State Switcher.** The scaffold always adds a dev-only state switcher (`src/api/previewState.ts` + a fixed-corner Data/Loading/Empty/Error component) that forces the mock client into `loading` / `empty` / `error`. Delete `src/api/previewState.ts`, its corner-switcher component, and every `previewState` import/usage in the mock client, pages, hooks, and app shell. Live data is the only source now — a lingering `import … previewState` or a rendered Data/Loading/Empty/Error switcher means the step is not done.
+6. **Rebuild.** `npm --prefix services/web run build` — zero errors, zero `any`. Fix any `.ts`/`.tsx` extension mismatch (JSX must be `.tsx`).
 
 > **If the scaffold did NOT leave a `src/api/` seam** (older scaffold, or a hand-written frontend): fall back to the call-site approach — find every `import … from '.../mocks'`, replace with a real `api.*` call, preserve the four data states. But first establish the seam (`src/api/index.ts`) so any future change stays a one-file swap.
 
