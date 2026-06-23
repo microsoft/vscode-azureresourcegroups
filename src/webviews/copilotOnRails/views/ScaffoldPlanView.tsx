@@ -797,7 +797,12 @@ const SectionCard = ({ section, sectionIdx, disabled, editedCells, onTableCellCh
                 ))}
             </div>
             {isStack && (
-                <button className='showMoreToggle' onClick={() => setExpanded(v => !v)}>
+                <button
+                    type='button'
+                    className='showMoreToggle'
+                    aria-expanded={expanded}
+                    onClick={() => setExpanded(v => !v)}
+                >
                     {expanded ? 'Show less' : 'Show more'}
                 </button>
             )}
@@ -890,11 +895,21 @@ function groupPrereqTables(content: PlanContent[]): PrereqGroup[] {
 // shown when Autopilot is on (`showDebug`), since the unattended chain runs all
 // the way through local-debug setup.
 const PrerequisitesCard = ({ section, showDebug }: { section: PlanSection; showDebug: boolean }): JSX.Element => {
-    const intro = (section.content ?? []).filter(
-        (c): c is Extract<PlanContent, { type: 'blockquote' | 'paragraph' }> =>
-            c.type === 'blockquote' || c.type === 'paragraph',
-    );
-    const groups = groupPrereqTables(section.content ?? []);
+    const content = section.content ?? [];
+    // Prose (paragraphs/blockquotes) is rendered in its original document
+    // position relative to the tables: anything before the first table/subheading
+    // is a leading intro, anything after is a trailing note (e.g. the
+    // plan-template warning blockquote). Template HTML comments (`<!-- … -->`)
+    // that the markdown fallback turned into paragraphs are dropped.
+    const isProse = (
+        c: PlanContent,
+    ): c is Extract<PlanContent, { type: 'blockquote' | 'paragraph' }> =>
+        (c.type === 'blockquote' || c.type === 'paragraph') &&
+        !(c.type === 'paragraph' && c.text.trim().startsWith('<!--'));
+    const firstTableIdx = content.findIndex(c => c.type === 'table' || c.type === 'subheading');
+    const leadingIntro = (firstTableIdx < 0 ? content : content.slice(0, firstTableIdx)).filter(isProse);
+    const trailingIntro = firstTableIdx < 0 ? [] : content.slice(firstTableIdx).filter(isProse);
+    const groups = groupPrereqTables(content);
     const visibleGroups = groups.filter(g => showDebug || !g.isDebug);
     const visibleTables = visibleGroups.flatMap(g => g.tables);
 
@@ -942,7 +957,7 @@ const PrerequisitesCard = ({ section, showDebug }: { section: PlanSection; showD
         <div className='sectionCard prerequisitesCard'>
             <h2>{section.title}</h2>
             <div className='sectionContent'>
-                {intro.map((item, i) =>
+                {leadingIntro.map((item, i) =>
                     item.type === 'blockquote'
                         ? <div key={i} className='blockquote'>{item.text}</div>
                         : <p key={i} className='paragraph'>{item.text}</p>,
@@ -967,7 +982,7 @@ const PrerequisitesCard = ({ section, showDebug }: { section: PlanSection; showD
                         </div>
                     </div>
                 )}
-                {visibleTables.length === 0 && intro.length === 0 && (
+                {visibleTables.length === 0 && leadingIntro.length === 0 && trailingIntro.length === 0 && (
                     <p className='paragraph'>No prerequisites identified yet.</p>
                 )}
                 {visibleGroups.map((group, gi) => (
@@ -976,6 +991,11 @@ const PrerequisitesCard = ({ section, showDebug }: { section: PlanSection; showD
                         {group.tables.map((table, ti) => renderTable(table, ti))}
                     </div>
                 ))}
+                {trailingIntro.map((item, i) =>
+                    item.type === 'blockquote'
+                        ? <div key={i} className='blockquote'>{item.text}</div>
+                        : <p key={i} className='paragraph'>{item.text}</p>,
+                )}
             </div>
         </div>
     );
@@ -1096,6 +1116,8 @@ const ContentBlock = ({ item, sectionIdx, contentIdx, disabled, editedCells, col
                     </table>
                 </div>
             );
+        case 'subheading':
+            return <h3 className='contentSubheading'>{item.text}</h3>;
         case 'blockquote':
             return <div className='blockquote'>{item.text}</div>;
         case 'paragraph':
