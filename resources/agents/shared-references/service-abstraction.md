@@ -9,7 +9,7 @@
 **Same application code runs against mocks (tests), local emulators (dev), and Azure services (production).** Only difference is which implementation is injected:
 
 - **Tests**: In-memory mock (pre-registered via `setup.ts` / `conftest.py`)
-- **Local dev**: Real SDK pointing to emulator (via local-dev skill's docker-compose)
+- **Local dev**: Real SDK pointing to emulator (via azure-debug-plan skill's docker-compose)
 - **Azure**: Real SDK pointing to Azure services (via managed identity)
 
 Function handlers NEVER import Azure SDKs directly. They receive services via dependency injection.

@@ -20,7 +20,7 @@ Plan/design a new Azure-centric app; create requirements/architecture; start a p
 | User intent | Correct skill |
 |-------------|---------------|
 | Execute plan / scaffold backend | **azure-project-scaffold** |
-| Docker Compose, emulators, VS Code F5 | **azure-localdev** |
+| Docker Compose, emulators, VS Code F5 | **azure-debug-plan** |
 | Add test coverage | **azure-project-test** |
 | Deploy to Azure / generate Bicep/Terraform | **azure-prepare** |
 | Benchmark scaffold quality | **scaffold-benchmark** |
@@ -30,6 +30,7 @@ Plan/design a new Azure-centric app; create requirements/architecture; start a p
 2. **Resilience classification** — classify each service **Essential** (fails without it) or **Enhancement** (succeeds with fallback). See Quick Reference.
 3. **Auto-chain after approval** — immediately invoke `azure-project-scaffold`; never ask the user to invoke it manually. **Generate a frontend HTML/CSS preview** during planning per Step 3.5 (the scaffold agent consumes it as a mock-up but builds the real app with the chosen framework).
 4. **Interactive UI** — use `vscode_askQuestions`, never plain chat; batch unanswered questions into one call.
+5. **Scope = app/service code only** — the plan must describe **only** high-quality application / service code. Do **NOT** plan for, reference, or add checklist items that produce `docker-compose.yml` / Docker / emulator orchestration, **SQL migration files**, **SQL seed / fixture data files**, or **Infrastructure-as-Code** (Bicep / ARM / Terraform / Pulumi / `infra/`). Those are owned by other skills (**azure-debug-plan**, **azure-prepare**). If a relational DB is chosen, the plan still describes the data-access service layer — never schema migrations or seed scripts.
 
 ## Autopilot mode (overrides the gates below)
 **Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/requirements.json` contains `"executionMode": "auto"`. Autopilot only applies on the **re-entry** path (after the requirements form was submitted) — the first pass that writes `.azure/requirements.json` is always guided. When active, run fully unattended:
@@ -108,7 +109,7 @@ Then set **`status`**:
 | `mocha` in devDependencies | Test runner = mocha+chai+sinon |
 | `host.json` exists | Azure Functions already initialized — augment mode |
 | `zod` in dependencies | Validation library = zod |
-| `host.json` + `dotnet-isolated` worker runtime | Runtime = C#; Backend = Azure Functions isolated worker; Orchestration = docker-compose |
+| `host.json` + `dotnet-isolated` worker runtime | Runtime = C#; Backend = Azure Functions isolated worker |
 
 Anything the user stated explicitly in their prompt ("build me a TypeScript Functions API with PostgreSQL") is also `inferred` — don't re-ask.
 
@@ -331,7 +332,6 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 |-----------|-----------|
 | **Runtime** | {TypeScript / Python / C#} |
 | **Backend** | {Azure Functions v4 / Azure Functions v2 / Azure Functions isolated worker} |
-| **Orchestration** | docker-compose |
 | **Frontend** | {React + Vite / Vue + Vite / Angular / Svelte / None} |
 | **Package Manager** | {npm / pnpm / pip / poetry / dotnet} |
 
@@ -432,7 +432,7 @@ For each page above, list 3–6 representative records using that page's primary
 - [ ] Step 2: Foundation (project config, directory structure, build verification)
 - [ ] Step 3: Configuration & Environment (config module, .env, local.settings.json)
 - [ ] Step 4: Service Abstraction Layer (interfaces + concrete implementations + registry)
-- [ ] Step 5: Database Schema & Migrations (if applicable)
+- [ ] Step 5: Data Access (app-code data-access in the service layer — NO SQL migrations or seed files)
 - [ ] Step 6: Shared Types & Validation Schemas
 - [ ] Step 7: API Routes / Functions (one handler per route)
 - [ ] Step 8: Error Handling Middleware
@@ -442,7 +442,7 @@ For each page above, list 3–6 representative records using that page's primary
 - [ ] Step 12: Wire Frontend (if applicable — replace mock data/types with real backend)
 - [ ] Step 13: Wrap Up & Smoke Test
 
-> Scaffold-time concerns (database constraints, collection-to-table mapping, test suite plan, file-by-file generation list) are NOT part of the plan — they are produced by `azure-project-scaffold` from this plan + its own reference docs (`database-integrity.md`, `service-abstraction.md`). The plan only commits to **what** is built; the scaffold handles **how**.
+> Scaffold-time concerns (collection-to-table mapping, test suite plan, file-by-file generation list) are NOT part of the plan — they are produced by `azure-project-scaffold` from this plan + its own reference docs (`database-integrity.md`, `service-abstraction.md`). The plan only commits to **what** is built; the scaffold handles **how**. Note: SQL migrations, seed files, `docker-compose.yml`, and Infrastructure-as-Code are **never** produced (see Rule 5).
 
 ---
 
@@ -450,7 +450,7 @@ For each page above, list 3–6 representative records using that page's primary
 
 1. Run **azure-project-scaffold** to execute this plan
 2. Run **azure-project-test** to add test coverage and validate the build
-3. Run **azure-localdev** for Docker emulators and VS Code debugging
+3. Run **azure-debug-plan** for Docker emulators and VS Code debugging
 4. Run **azure-prepare** → **azure-deploy** when ready to deploy
 ````
 
@@ -735,7 +735,6 @@ project-root/
 │   │   │   ├── services/
 │   │   │   ├── functions/
 │   │   │   └── validation/
-│   │   └── seeds/
 │   ├── web/                        ← Frontend (if applicable)
 │   │   ├── package.json
 │   │   ├── vite.config.ts
@@ -783,7 +782,7 @@ project-root/
 
 > **Automatic**: After plan approved, immediately invokes **azure-project-scaffold**:
 > - Generates frontend preview (if applicable) with auto-open in VS Code Simple Browser
-> - Scaffolds backend (services, handlers, migrations, types)
+> - Scaffolds backend (services, handlers, types)
 > - Auto-invokes **azure-project-test** for test coverage
 >
 > **No user action required** — chain is automatic.

@@ -64,7 +64,7 @@
 | {PostgreSQL} | {Primary data store} | {DATABASE_URL} | {postgresql://localdev:localdevpassword@localhost:5432/appdb} |
 | {Redis} | {Session caching} | {REDIS_URL} | {redis://localhost:6379} |
 
-> _Services listed here are for code and environment configuration. To run these services locally via Docker emulators, use the **local-dev** skill._
+> _Services listed here are for code and environment configuration. To run these services locally via Docker emulators, use the **azure-debug-plan** skill._
 
 ---
 
@@ -200,10 +200,6 @@ project-root/
 │   │   │   │   └── errorHandler.test.ts
 │   │   │   └── validation/         ← Validation schema tests
 │   │   │       └── itemSchema.test.ts
-│   │   └── seeds/                  ← Database seed data
-│   │       ├── seed.ts
-│   │       └── fixtures/
-│   │           └── seed-data.json
 │   ├── web/                        ← Frontend (if applicable)
 │   │   ├── package.json
 │   │   ├── tsconfig.json
@@ -246,32 +242,20 @@ project-root/
 
 ---
 
-## 8. Database Constraints
+## 8. Data Integrity Rules (enforced in app code)
 
-> List all database-level constraints that migrations must enforce. See [database-integrity.md](../../shared-references/database-integrity.md).
+> List the integrity rules the **data-access / service layer** must enforce in application code. **Do NOT plan SQL migration files** — schema/migration management is out of scope (see Rule 5). See [database-integrity.md](../../shared-references/database-integrity.md) for app-code patterns only.
 
-| Table | Constraint Type | Column(s) | Detail |
+| Entity | Rule Type | Field(s) | Detail |
 |-------|----------------|-----------|--------|
-| {users} | UNIQUE | {email} | {Prevent duplicate registration} |
-| {users} | FK | {couple_id → couples.id} | {ON DELETE SET NULL} |
-| {photos} | FK | {couple_id → couples.id} | {ON DELETE CASCADE} |
-| {photos} | INDEX | {couple_id} | {Frequent filter column} |
-| {invites} | CHECK | {status} | {IN ('pending', 'accepted', 'rejected')} |
+| {users} | UNIQUE | {email} | {Reject duplicate registration in the service layer} |
+| {users} | Reference | {couple_id → couples.id} | {Clear reference when couple removed} |
+| {photos} | Reference | {couple_id → couples.id} | {Cascade delete in app logic} |
+| {invites} | Allowed values | {status} | {One of 'pending', 'accepted', 'rejected'} |
 
-> Add/remove rows as needed. Every UNIQUE field, FK relationship, CHECK constraint, and performance index must be listed here.
+> Add/remove rows as needed. These rules are implemented in the concrete data-access service, never as SQL migration constraints.
 
-### 8a. Collection-to-Table Name Mapping
-
-> Document how handler collection names map to SQL table names. The database service's `collectionToTable` function converts collection names used in handler code (e.g., `database.findAll('user')`) to actual SQL table names (e.g., `users`). **Every table in the migration must appear in this mapping.**
-
-| Collection Name (in handler code) | SQL Table Name (in migration) | Mapping Rule |
-|-----------------------------------|-------------------------------|--------------|
-| {`'user'`} | {`users`} | {camelToSnake + pluralize} |
-| {`'couple'`} | {`couples`} | {camelToSnake + pluralize} |
-| {`'invite'`} | {`invites`} | {camelToSnake + pluralize} |
-| {`'photo'`} | {`photos`} | {camelToSnake + pluralize} |
-
-> ⚠️ If you plan to name a table `pairing_invites` but handlers use `database.findAll('invite')`, the mapping produces `invites` — a mismatch. Either rename the table to `invites` or add an explicit override in `collectionToTable`. Document whichever approach you choose.
+> ⚠️ Keep collection names used in handlers (e.g., `database.findAll('invite')`) consistent with the entity names the data-access service expects. If the service's `collectionToTable` mapping would produce a different name, add an explicit override in the service layer and document it here.
 
 ---
 
@@ -342,18 +326,13 @@ project-root/
 - [ ] Write **auto-initialization integration test** (Rule 11): `clearServices()` then `getServices()` — MUST call `getServices()` and assert `.not.toThrow()`. A test that asserts `getServices()` *throws* is WRONG — it proves auto-init is missing. See testing.md Pattern 1.
 - [ ] 🧪 **Test Gate**: All service abstraction tests pass; auto-init test asserts `.not.toThrow()` and passes
 
-#### Step 4: Database Schema & Migrations _(if applicable)_
-- [ ] Create migration scripts (schema up/down)
-- [ ] Include UNIQUE constraints on business-unique fields (per Section 8)
-- [ ] Include FK constraints with ON DELETE behavior (per Section 8)
-- [ ] Include CHECK constraints for enum fields (per Section 8)
-- [ ] Include indexes on frequently-queried columns (per Section 8)
-- [ ] Create seed data fixtures (JSON files with realistic data)
-- [ ] Create seed script (idempotent)
-- [ ] Write migration tests (forward, backward, idempotent)
-- [ ] Write constraint tests (duplicate rejection, FK enforcement)
-- [ ] Write seed data tests (correct row counts, no duplicates)
-- [ ] 🧪 **Test Gate**: All migration, constraint, and seed tests pass
+#### Step 4: Data Access _(if applicable)_
+- [ ] Implement data access inside the concrete database service (no direct DB access in handlers)
+- [ ] Enforce integrity rules from Section 8 in app code (uniqueness, references, allowed values)
+- [ ] Use `database.transaction()` for multi-table writes
+- [ ] Write unit tests for the data-access service (using mocks)
+- [ ] 🧪 **Test Gate**: All data-access service tests pass
+- [ ] 🚫 Do NOT create SQL migration files, seed/fixture scripts, or `docker-compose.yml` (out of scope — see Rule 5)
 
 #### Step 5: Shared Types & Validation
 - [ ] Create entity types in the shared types location (e.g. `services/shared/types/`)
@@ -504,22 +483,9 @@ _(Repeat for every route)_
 
 **When current phase completes:**
 
-1. **Database provisioning** _(if PostgreSQL or other relational DB is used)_ — Before running migrations, the database itself must be created:
-   ```bash
-   # Create the database (one-time setup)
-   createdb {dbname}    # e.g., createdb scrapbook
-   # Or via psql:
-   psql -c "CREATE DATABASE {dbname}"
-   # Then run migrations:
-   npm run db:migrate
-   # Then seed with sample data:
-   npm run db:seed
-   ```
-   > _The **local-dev** skill handles this automatically via Docker. This step is only needed when running PostgreSQL natively._
+1. **Set up local dev environment** — Run the **azure-debug-plan** skill to add the local emulators, VS Code F5 debugging, any database provisioning/schema setup, and `docker-compose.yml`. The service abstraction layer generated here is fully compatible. _(SQL migrations, seed data, and `docker-compose.yml` are intentionally NOT generated by scaffolding — they are owned by azure-debug-plan.)_
 
-2. **Set up local dev environment** — Run the **local-dev** skill to add Docker Compose emulators, VS Code F5 debugging, and `docker-compose.yml`. The service abstraction layer generated here is fully compatible.
-
-3. **Deploy to Azure** — Run **azure-prepare** → **azure-validate** → **azure-deploy**. The service abstraction layer ensures your code works against both local mocks and Azure services — no code changes needed.
+2. **Deploy to Azure** — Run **azure-prepare** → **azure-validate** → **azure-deploy**. The service abstraction layer ensures your code works against both local mocks and Azure services — no code changes needed. _(Infrastructure-as-Code is owned by azure-prepare, never by scaffolding.)_
 
 > **Note**: {If derived from `.azure/plan.md`} This project was configured to use the Azure services from your deployment plan (`.azure/plan.md`). The service abstraction layer generates appropriate interfaces for each planned service.
 ````
