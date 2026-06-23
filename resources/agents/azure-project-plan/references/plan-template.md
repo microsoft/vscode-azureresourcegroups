@@ -13,7 +13,7 @@
 ````markdown
 # Project Plan
 
-**Status**: Planning | Approved | In Progress | Ready
+**Status**: Planning | Approved | In Progress | Awaiting Integration | Integrated
 **Created**: {date}
 **Mode**: NEW | AUGMENT
 
@@ -300,7 +300,7 @@ project-root/
 
 ## 10. Build Phases
 
-> This section is a high-level phase summary. Use it as an outline; do NOT mutate it during execution. There is no separate checklist file — progress is reflected by the plan's `Status:` field (`Planning → Approved → In Progress → Scaffolded → Ready`).
+> This section is a high-level phase summary. Use it as an outline; do NOT mutate it during execution. There is no separate checklist file — progress is reflected by the plan's `Status:` field (`Planning → Approved → In Progress → Awaiting Integration → Integrated`).
 >
 > Each phase has a test gate (🧪). The agent MUST run tests and verify they pass before proceeding. If tests fail, iterate on the code until green.
 
@@ -452,7 +452,7 @@ _(Repeat for every route)_
 - [ ] Run full test suite — ALL tests must pass
 - [ ] Build all workspaces — zero errors
 - [ ] 🧪 **Final Test Gate**: Zero failures across entire project
-- [ ] Update `.azure/project-plan.md` status to `Ready`
+- [ ] Update `.azure/project-plan.md` status to `Awaiting Integration`
 
 ---
 
@@ -542,14 +542,14 @@ _(Repeat for every route)_
 5. **Expand the per-feature steps** with actual feature names from route definitions — Step 6 should have one block per route
 6. **Expand the test suite plan** with actual test files that will be created
 7. **Update the checklist** as each step is completed during execution
-8. **Set status to `Ready`** only after the final test gate passes with zero failures
+8. **Set status to `Awaiting Integration`** only after the final test gate passes with zero failures — it marks the scaffold complete and signals that `azure-project-integrate` must run next (wire live data, remove mock data, create migrations)
 
 ---
 
 ## Status Transitions
 
 ```
-Planning → Approved → In Progress → Scaffolded → Ready (via azure-project-test)
+Planning → Approved → In Progress → Awaiting Integration → Integrated (via azure-project-integrate)
 ```
 
 | Status | Meaning |
@@ -557,5 +557,5 @@ Planning → Approved → In Progress → Scaffolded → Ready (via azure-projec
 | **Planning** | Plan is being created (Phase 1) |
 | **Approved** | User has approved the plan — execution can begin |
 | **In Progress** | Phase 2 execution is underway |
-| **Scaffolded** | All production code generated, builds clean. Tests not yet created. Run `azure-project-test` to add tests and reach Ready. |
-| **Ready** | All tests pass — project is complete and self-validated |
+| **Awaiting Integration** | All production code generated and builds clean, but the frontend still uses **mock data** and there are no migrations. Signals that `azure-project-integrate` must run next to wire live data, smoke-test the backend, and create migrations. |
+| **Integrated** | Frontend wired to live data, backend smoke-tested, migrations applied — project runs end-to-end |
