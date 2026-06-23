@@ -1,28 +1,28 @@
-# Frontend Preview Steps
+# Frontend Steps
 
-> Detailed sub-steps for standalone frontend preview. Read during **Step 1** (Frontend Preview).
+> Detailed sub-steps for generating the standalone frontend. Read during **Step 1** (Frontend).
 
-> **Companion contract**: Before writing any JSX, also read [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md). It defines the load-bearing contract between the plan's Section 5 (Design System & UI) and the JSX you ship — per-library region-token → primitive mapping, theming via the library's brand ramp, real icons, and the four-state coverage gate. The sub-steps below cover *how* to stand up the live preview (working directory, build, verify, open in Simple Browser); the quality bar covers *what* the preview must contain. Design approval already happened during planning via `.azure/.preview-temp/` — Step 1 does **not** re-prompt the user for UX approval.
+> **Companion contract**: Before writing any JSX, also read [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md). It defines the load-bearing contract between the plan's Section 5 (Design System & UI) and the JSX you ship — per-library region-token → primitive mapping, theming via the library's brand ramp, real icons, and the four-state coverage gate. The sub-steps below cover *how* to generate and build the frontend (working directory, build, verify); the quality bar covers *what* the frontend must contain. Design approval already happened during planning via `.azure/.preview-temp/` — Step 1 does **not** re-prompt the user for UX approval, and **does not start a dev server or open a live preview**.
 
 ---
 
 ## ⚠️ ️ WORKING DIRECTORY — READ BEFORE RUNNING ANY COMMAND
 
-**Every frontend command (scaffolder, `npm install`, `npx vite build`, `npx vite`, `npm run dev`, `npm run build`, etc.) MUST be invoked with `cwd` set to the frontend project folder — the directory that contains the frontend's `package.json` and `index.html` (typically `services/web/`). Running these commands from the workspace root is the #1 cause of the "preview is live but the page is blank" failure.**
+**Every frontend command (scaffolder, `npm install`, `npx vite build`, `npm run build`, etc.) MUST be invoked with `cwd` set to the frontend project folder — the directory that contains the frontend's `package.json` and `index.html` (typically `services/web/`). Running these commands from the workspace root is the #1 cause of build failures.**
 
 | ✅ Correct | ❌ Wrong |
 |----------|---------|
-| `run_in_terminal` with `cwd: "services/web"` and command `npx vite --host` | `run_in_terminal` from workspace root running `npx vite --host` |
-| `run_in_terminal` with `cwd: "services/web"` and command `npx vite build` | `cd services/web && npx vite build` chained from another shell that was launched at root, then forgotten on the next command |
+| `run_in_terminal` with `cwd: "services/web"` and command `npx vite build` | `run_in_terminal` from workspace root running `npx vite build` |
+| `run_in_terminal` with `cwd: "services/web"` and command `npm install` | `cd services/web && npx vite build` chained from another shell that was launched at root, then forgotten on the next command |
 | Pass the folder explicitly every time (don't rely on a previous `cd`) | Assume the terminal is still in `services/web/` from an earlier command — the agent runs each command in a fresh shell |
 
 **Rules:**
 
-1. **Prefer a working-directory-independent command** for the frontend's own npm scripts: `npm --prefix <frontend-folder> run <script>` (e.g. `npm --prefix services/web run dev -- --host`). `--prefix` loads the frontend's `package.json` from that folder no matter where the shell starts, so it cannot accidentally run from the workspace root — this is the single most reliable way to avoid the blank-page failure for the dev server.
-2. When you must use a tool/binary directly (e.g. `npx vite` with no `dev` script), pass the frontend folder via the `cwd` parameter of `run_in_terminal` on the **same** call. Do **not** rely on a previous `cd` — each terminal invocation may start at the workspace root.
-3. If the tool doesn't take a `cwd` parameter, prefix every command with `cd <frontend-folder> &&` and put it on the *same* shell call as the build/run command. Never split `cd` and `npx vite` across two separate `run_in_terminal` calls.
+1. **Prefer a working-directory-independent command** for the frontend's own npm scripts: `npm --prefix <frontend-folder> run <script>` (e.g. `npm --prefix services/web run build`). `--prefix` loads the frontend's `package.json` from that folder no matter where the shell starts, so it cannot accidentally run from the workspace root.
+2. When you must use a tool/binary directly (e.g. `npx vite build`), pass the frontend folder via the `cwd` parameter of `run_in_terminal` on the **same** call. Do **not** rely on a previous `cd` — each terminal invocation may start at the workspace root.
+3. If the tool doesn't take a `cwd` parameter, prefix every command with `cd <frontend-folder> &&` and put it on the *same* shell call as the build command. Never split `cd` and `npx vite build` across two separate `run_in_terminal` calls.
 4. The frontend folder is whatever the plan specifies — usually `services/web/`. Confirm by checking that the folder contains both `package.json` and `index.html` (or `vite.config.*`).
-5. **Never claim the preview is live until you have verified it actually serves content** — see the verification gate in F4 below.
+5. **Do NOT start a dev server or open a live preview** — the scaffold builds the frontend but does not run it; see F4 below.
 
 ---
 
@@ -60,44 +60,33 @@
 
 ---
 
-## Sub-step F4: Build & Auto-Open the Live Dev Server (no approval prompt)
+## Sub-step F4: Build & Verify the Frontend (no dev server, no preview)
 
-> 🧭 **ORCHESTRATOR-OWNED STEP.** F1–F3 (generate `services/web/`) are delegated to the **Frontend Preview sub-agent**; **F4 is run by the orchestrator after that sub-agent returns.** The dev server is a long-running background process — a stateless sub-agent must not own it, or it risks being torn down when the sub-agent exits. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md).
+> 🧭 **DO NOT LAUNCH A LIVE PREVIEW.** F1–F3 (generate `services/web/`) and F4 (build + verify) produce a working, buildable frontend. The scaffold **does not start the dev server or open the VS Code Simple Browser** — running the app locally is out of scope for scaffolding. F4 is a build-and-verify gate only.
 
-> ⚠️ **PARALLEL STEP**: Frontend generation (F1–F3, sub-agent) runs **concurrently** with Phase A (Contracts) and Phase B (Backend). Backend derives from **plan's route definitions and entity types**, not frontend preview — independent work streams. Phase A and Phase B may begin immediately after Step 0 (plan validation) while the Frontend sub-agent generates `services/web/`; the orchestrator then runs F4 to open the dev server.
+> ⚠️ **PARALLEL STEP**: Frontend generation + build (F1–F4, sub-agent) runs **concurrently** with Phase A (Contracts) and Phase B (Backend). Backend derives from **plan's route definitions and entity types**, not the frontend — independent work streams. Phase A and Phase B may begin immediately after Step 0 (plan validation) while the Frontend sub-agent generates and builds `services/web/`.
 >
 > **Step 12 (Wire Frontend) is synchronization gate** — requires BOTH:
-> - (a) Frontend dev server live in Simple Browser AND
+> - (a) Frontend generated and builds with zero errors AND
 > - (b) Phase B backend agent completed
 >
-> **Why safe**: Entity types, route definitions, service interfaces all come from approved plan. Frontend preview uses standalone mock types (`services/web/src/types/`) independent of `services/shared/`. Frontend UI changes (layout, styling, components) don't affect backend contracts. Only Step 12 merges both streams by replacing mock types with shared imports.
+> **Why safe**: Entity types, route definitions, service interfaces all come from approved plan. Frontend uses standalone mock types (`services/web/src/types/`) independent of `services/shared/`. Frontend UI changes (layout, styling, components) don't affect backend contracts. Only Step 12 merges both streams by replacing mock types with shared imports.
 
-> ⚠️ ️ **WORKING DIRECTORY** (see also the top of this file): every `npx vite build`, `npx vite`, `npm run dev`, `npm install`, etc. **MUST run against the frontend folder** (e.g. `services/web/`), never the workspace root. **Prefer the working-directory-independent form `npm --prefix services/web run <script>`** (e.g. `npm --prefix services/web run dev -- --host`) — it loads the frontend's `package.json` regardless of where the shell starts. When invoking a binary directly (`npx vite`), pass `cwd: services/web` on the same terminal call; do **not** assume a previous `cd` carried over. Running from the workspace root produces a blank white page (Vite can't find `index.html`) and the dev server will still bind to the port — so it *looks* live but serves nothing useful.
+> ⚠️ ️ **WORKING DIRECTORY** (see also the top of this file): every `npx vite build`, `npm run build`, `npm install`, etc. **MUST run against the frontend folder** (e.g. `services/web/`), never the workspace root. **Prefer the working-directory-independent form `npm --prefix services/web run <script>`** (e.g. `npm --prefix services/web run build`) — it loads the frontend's `package.json` regardless of where the shell starts. When invoking a binary directly (`npx vite build`), pass `cwd: services/web` on the same terminal call; do **not** assume a previous `cd` carried over.
 
-> ⚠️ **NO UX APPROVAL PROMPT.** The user already approved the design during planning via the HTML/CSS mock-up at `.azure/.preview-temp/`. The Simple Browser preview here is **visibility-only** — it lets the user watch the real framework + library come together while backend Phase B finishes. **Do NOT call `ask_user` for "do you approve this UI?"** during scaffolding. The only legitimate user prompt during Step 1 is a hard build/runtime failure that requires their input to resolve.
+> ⚠️ **NO UX APPROVAL PROMPT.** The user already approved the design during planning via the HTML/CSS mock-up at `.azure/.preview-temp/`. **Do NOT call `ask_user` for "do you approve this UI?"** during scaffolding. The only legitimate user prompt during Step 1 is a hard build failure that requires their input to resolve.
 
 ### Procedure
 
 1. **Frontend builds with zero errors.** Build with a **working-directory-independent** command so it can't accidentally run from the workspace root: `npm --prefix <frontend-folder> run build` (e.g. `npm --prefix services/web run build`). `--prefix` resolves the frontend's `package.json` regardless of where the shell starts, so it's immune to the root-launch bug. Only fall back to `npx vite build` with `cwd: <frontend-folder>` if there is no `build` script. **Never run a bare `npx vite build` from the project root.**
 2. No `any` types in `.ts`/`.tsx` files.
-3. Preview is auto-authenticated — if app has login/auth, user lands on main content (not login page) on first load.
-4. **Start dev server — this is the step that shows the UI to the user, and the #1 place this fails by launching from the root.** Use the **working-directory-independent** form so the server cannot bind from the wrong folder:
-   - **Preferred (cwd-independent):** `npm --prefix <frontend-folder> run dev -- --host` — e.g. `npm --prefix services/web run dev -- --host`. `--prefix` makes npm load the frontend's `package.json` and run its `dev` script from that folder no matter where the shell started, so the blank-page-at-root failure cannot happen. Run it async/detached.
-   - **Only if there is no `dev` script:** `npx vite --host` **with `cwd: <frontend-folder>` set on the same `run_in_terminal` call** (e.g. `cwd: "services/web"`). Never rely on a previous `cd`, and never run a bare `npx vite --host` from the workspace root — the server binds to the port and prints `ready in N ms` but serves a blank page.
-   - After launching, **confirm the actual working directory** from the dev-server log: Vite prints the project root / config path it resolved. If it points at the workspace root instead of the frontend folder, kill the server and relaunch with the `--prefix` (or `cwd`) form before proceeding to step 5.
-5. **VERIFICATION GATE — do not skip and do not claim the preview is live until this passes.** Before opening Simple Browser, prove the server actually serves the app:
-   - Capture the dev-server log lines that start with `VITE v` / `Local:` / `Network:` and confirm the URL matches what you're about to open. Vite prints something like `Local: http://localhost:5173/`.
-   - The log line `ready in <N> ms` is **not** enough — Vite reports "ready" even when started from the wrong directory; the page will still be blank.
-   - Fetch the served page once (e.g. via the simple browser, or a quick HTTP request if available) and confirm the response body contains your app's root element / title, **not** an empty `<div id="root"></div>` with no script tags resolved.
-   - If the response is blank or 404s on the entry script, **you ran from the wrong directory.** Kill the server, re-run with `cwd` set to the frontend folder, and re-verify.
-6. **Open preview in VS Code's Simple Browser** using `simpleBrowser.show` command:
-   - Use `run_vscode_command` tool: `simpleBrowser.show` with argument `"http://localhost:{port}/"` (use the port Vite actually printed, not a hard-coded default).
-   - Opens embedded browser tab inside VS Code — no external browser needed.
-7. **Briefly announce** what the user is looking at and that backend work continues in parallel — one short sentence, e.g. *"Your frontend is live in Simple Browser. I'll keep working on the backend; you can check back any time to watch it evolve."* **Then keep working** — no approval question, no waiting loop. The dev server stays up until Step 12 wires it to the real backend.
+3. Frontend is auto-authenticated — if app has login/auth, mock auth state is seeded so the app would land on main content (not a login page) on first load.
+4. **Do NOT start a dev server.** Whatever the framework's dev-server command is (`npm run dev`, `npm start`, `next dev`, `ng serve`, `npx vite --host`, etc.), do not run it. Do not open the Simple Browser. The build (step 1) is the only verification the scaffold performs on the frontend; running it locally is out of scope for scaffolding.
+5. **Briefly note** that the frontend was generated and builds cleanly, and that backend work continues in parallel — one short sentence. **Then keep working** — no approval question, no preview, no waiting loop.
 
-> **CRITICAL**: Do NOT prompt "Would you like to preview?" or "Do you approve this UI?" during scaffolding — the user explicitly opted into this workflow by approving the plan + HTML mock-up. The Simple Browser preview is for visibility; design approval already happened.
+> **CRITICAL**: Do NOT prompt "Would you like to preview?" or "Do you approve this UI?" during scaffolding — design approval already happened during planning via the HTML mock-up.
 >
-> **EQUALLY CRITICAL**: Do NOT say "your preview is live" / "the dev server is running on localhost:5173" until step 5's verification gate has passed. "The terminal printed `ready in 320 ms`" is **not** verification — Vite says that even when launched from the wrong folder, and the resulting page is blank. A blank page is worse than no preview because the user assumes the scaffold is broken.
+> **EQUALLY CRITICAL**: Do NOT start the dev server or claim "your preview is live" during scaffolding. The scaffold's job for the frontend ends at a clean build; launching the app is handled elsewhere.
 
 ### Translating the planning mock-up into real framework code
 
@@ -113,7 +102,7 @@ Do not import the HTML mock-up, embed it via `<iframe>`, or copy CSS class names
 
 ## Frontend Quality Bar
 
-Even in preview mode, frontend MUST meet these standards. The full per-library contract lives in [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) — read it before writing any JSX. Baseline rules enforced here:
+Even before it's wired to the backend, the frontend MUST meet these standards. The full per-library contract lives in [frontend-quality-bar.md](.github/agents/azure-project-scaffold/references/frontend-quality-bar.md) — read it before writing any JSX. Baseline rules enforced here:
 
 - No `any` types (use local type definitions in `services/web/src/types/`)
 - Hooks catch errors and handle loading/error states

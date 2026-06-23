@@ -135,6 +135,7 @@
 
     .sectionsRow {
         display: flex;
+        flex-wrap: wrap;
         gap: 12px;
         align-items: flex-start;
         // Allow side-by-side section cards to stack vertically at high zoom
@@ -171,6 +172,21 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
+        }
+
+        .showMoreToggle {
+            margin-top: 6px;
+            padding: 0;
+            background: none;
+            border: none;
+            color: var(--vscode-textLink-foreground);
+            font-size: 0.75em;
+            cursor: pointer;
+            text-align: left;
+
+            &:hover {
+                text-decoration: underline;
+            }
         }
     }
 
@@ -265,6 +281,7 @@
 
     .planTable {
         width: 100%;
+        table-layout: fixed;
         margin: 2px 0;
         border-collapse: separate;
         border-spacing: 0;
@@ -343,6 +360,21 @@
 
     .planTable td.editedCell {
         box-shadow: inset 2px 0 0 var(--vscode-editorGutter-modifiedBackground, var(--vscode-focusBorder));
+    }
+
+    .supportWarning {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 4px;
+        font-size: 0.78em;
+        line-height: 1.3;
+        color: var(--vscode-editorWarning-foreground, var(--vscode-list-warningForeground));
+
+        svg {
+            flex: 0 0 auto;
+            font-size: 13px;
+        }
     }
 
     .blockquote {

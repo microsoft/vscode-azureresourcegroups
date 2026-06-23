@@ -73,6 +73,24 @@ Each checked row below produces a VS Code debug configuration in the `.vscode/la
 <!-- | [x] | Customer Portal (debug) | Customer Portal | ./web | frontend-spa | node-ts | 20.x | — | -->
 <!-- | [x] | Debug All Services | Debug All Services | | *Compound Config* |||| -->
 
+<!-- Project Type descriptions are shown in a collapsible block so the table stays compact. -->
+<!-- Only include project types that appear in the table above. -->
+
+<details>
+<summary>ℹ️ Project Type Descriptions</summary>
+
+| Project Type | Description |
+|-------------|-------------|
+| {type} | {brief description of what this project type means} |
+
+<!-- Example: -->
+<!-- | functions | Azure Functions — serverless compute with triggers and bindings | -->
+<!-- | frontend-spa | Single-page application served by a dev server (Vite, Next.js, Angular, etc.) | -->
+<!-- | app-service | HTTP server application (Express, Fastify, Flask, ASP.NET, Spring Boot, etc.) | -->
+<!-- | container-app | Containerized application running via Dockerfile | -->
+
+</details>
+
 <!-- If a frontend SPA has a proxy config pointing to a local backend, add a note: -->
 <!-- > ℹ️ **Proxy detected:** Customer Portal proxies requests to Payments API (via `vite.config.ts`). The compound config should start backends before frontends. -->
 
