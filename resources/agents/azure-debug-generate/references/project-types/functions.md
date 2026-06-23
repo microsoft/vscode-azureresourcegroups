@@ -114,6 +114,25 @@ The top-level task uses the VS Code `func` task type provided by the Azure Funct
 
 > **Task label scoping:** All task labels MUST be prefixed with the service ID (e.g., `functions-api: func host start`). This prevents label collisions in multi-service workspaces. See [generate.md § Service ID Derivation](../generate.md).
 
+#### Debug Argument Injection
+
+The Functions host runs your code in a separate **language-worker** process, so the worker must start with the runtime's debug flag. Inject it through the task's `options.env` using the `languageWorkers__<runtime>__arguments` convention, then point a matching `attach` config at the resulting port. Only the env key, the flag value, and the attach `type`/`port` change per runtime — the rest of the `func host start` task stays identical, so new runtimes slot straight into this table.
+
+| Runtime | `options.env` setting | Value to inject | Debug port | `attach` type | Status |
+|---------|-----------------------|-----------------|------------|---------------|--------|
+| node-ts | `languageWorkers__node__arguments` | `--inspect=9229` | 9229 | `node` | ✅ Implemented |
+| node-js | `languageWorkers__node__arguments` | `--inspect=9229` | 9229 | `node` | ✅ Implemented |
+| python  | `languageWorkers__python__arguments` | `-m debugpy --listen 0.0.0.0:9091` | 9091 | `debugpy` | 🔲 Planned |
+| java    | `languageWorkers__java__arguments` | `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005` | 5005 | `java` | 🔲 Planned |
+| dotnet  | _(n/a — see below)_ | _(n/a)_ | _(n/a)_ | `coreclr` | ✅ Implemented |
+
+> **`suspend=y` vs `suspend=n` (java/jdwp).** Use `suspend=n` so the worker starts without waiting for a debugger; switch to `suspend=y` only when you need to debug startup/registration code.
+
+> **dotnet is the exception.** .NET does not use `languageWorkers__*__arguments`. The host spawns a worker that VS Code attaches to via `coreclr`; pass `--dotnet-isolated-debug` to the host (isolated worker) instead of an env-var flag, and supply the literal `processName` in `launch.json`. See [runtimes/dotnet.md](../runtimes/dotnet.md).
+
+> **java remote (Premium/Dedicated) only.** When attaching to a deployed Java app on a Premium or Dedicated plan, set the JDWP string via `JAVA_OPTS` instead of `languageWorkers__java__arguments`. This does not apply to local `func host start`, which always uses `languageWorkers__java__arguments`.
+
+
 **node-ts** (has watch task):
 
 ```json
