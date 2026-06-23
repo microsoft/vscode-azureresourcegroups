@@ -24,3 +24,7 @@ export function addConfiguredTenantScope(scopes: readonly string[], tenant: stri
 
     return Array.from(new Set([...scopes, `VSCODE_TENANT:${normalizedTenant}`]));
 }
+
+export function getTenantIdForAuthentication(tenantId: string | undefined, configuredTenant: string | undefined = getConfiguredAzureTenant()): string | undefined {
+    return normalizeConfiguredTenant(tenantId) ?? normalizeConfiguredTenant(configuredTenant);
+}

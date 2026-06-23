@@ -8,7 +8,7 @@ import type { AzureSubscriptionProvider } from '@microsoft/vscode-azext-azureaut
 import * as vscode from 'vscode';
 import { logIn } from '../src/commands/accounts/logIn';
 import { ext } from '../src/extensionVariables';
-import { addConfiguredTenantScope, normalizeConfiguredTenant } from '../src/utils/azureTenantSetting';
+import { addConfiguredTenantScope, getTenantIdForAuthentication, normalizeConfiguredTenant } from '../src/utils/azureTenantSetting';
 
 suite('azureTenantSetting', () => {
     test('normalizeConfiguredTenant returns undefined for blank tenants', () => {
@@ -43,6 +43,14 @@ suite('azureTenantSetting', () => {
             ),
             ['https://management.azure.com/.default', 'VSCODE_TENANT:contoso.onmicrosoft.com']
         );
+    });
+
+    test('getTenantIdForAuthentication prefers explicit tenant over configured tenant', () => {
+        assert.strictEqual(getTenantIdForAuthentication('subscription-tenant', 'configured-tenant'), 'subscription-tenant');
+    });
+
+    test('getTenantIdForAuthentication falls back to configured tenant', () => {
+        assert.strictEqual(getTenantIdForAuthentication(undefined, 'configured-tenant'), 'configured-tenant');
     });
 
     test('logIn passes configured azure.tenant to subscription provider signIn', async () => {

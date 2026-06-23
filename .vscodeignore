@@ -4,6 +4,7 @@
 .github/**
 .gitignore
 .vscode-test/**
+.playwright-mcp/**
 .vscode/**
 *.tgz
 **/*.gif
@@ -17,6 +18,7 @@ node_modules/**
 out/**
 resources/readme/**
 resources/changelog/**
+pr-assets/**
 src/**
 stats.json
 test-results.xml

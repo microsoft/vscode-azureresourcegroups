@@ -3,9 +3,10 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzureAccount, AzureTenant, GetTenantsForAccountOptions, VSCodeAzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
+import { AzureAccount, AzureTenant, GetTenantsForAccountOptions, SignInOptions, TenantIdAndAccount, VSCodeAzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import { getSelectedTenantAndSubscriptionIds } from '../commands/accounts/selectSubscriptions';
 import { ext } from '../extensionVariables';
+import { getTenantIdForAuthentication } from '../utils/azureTenantSetting';
 import { isTenantFilteredOut } from '../utils/tenantSelection';
 
 /**
@@ -14,6 +15,12 @@ import { isTenantFilteredOut } from '../utils/tenantSelection';
  * the maximum tenants limit, preventing selected tenants from being processed.
  */
 class ResourceGroupsSubscriptionProvider extends VSCodeAzureSubscriptionProvider {
+    public override async signIn(tenant?: TenantIdAndAccount, options?: SignInOptions): Promise<boolean> {
+        const tenantId = getTenantIdForAuthentication(tenant?.tenantId);
+        const tenantForSignIn = tenantId ? { ...tenant, tenantId } as TenantIdAndAccount : tenant;
+        return super.signIn(tenantForSignIn, options);
+    }
+
     public override async getTenantsForAccount(account: AzureAccount, options?: GetTenantsForAccountOptions): Promise<AzureTenant[]> {
         const tenants = await super.getTenantsForAccount(account, options);
 
@@ -30,6 +37,13 @@ class ResourceGroupsSubscriptionProvider extends VSCodeAzureSubscriptionProvider
         }
 
         return tenants;
+    }
+
+    protected override getSubscriptionContext(tenant: Partial<TenantIdAndAccount>) {
+        return super.getSubscriptionContext({
+            ...tenant,
+            tenantId: getTenantIdForAuthentication(tenant.tenantId),
+        });
     }
 }
 
