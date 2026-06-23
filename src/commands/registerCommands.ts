@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { signInToTenant } from '@microsoft/vscode-azext-azureauth';
 import { AzExtTreeItem, IActionContext, isAzExtTreeItem, nonNullValue, openUrl, registerCommand, registerCommandWithTreeNodeUnwrapping, registerErrorHandler, registerReportIssueCommand } from '@microsoft/vscode-azext-utils';
 import { commands } from 'vscode';
 import { askAgentAboutActivityLog } from '../chat/askAgentAboutActivityLog/askAgentAboutActivityLog';
@@ -19,6 +18,7 @@ import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
+import { signInToTenant } from './accounts/signInToTenant';
 import { clearActivities } from './activities/clearActivities';
 import { createResource } from './createResource';
 import { createResourceGroup } from './createResourceGroup';
@@ -102,15 +102,7 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.logIn', (context: IActionContext) => logIn(context, { clearSessionPreference: true }));
     registerCommand('azureTenantsView.addAccount', (context: IActionContext) => logIn(context, { clearSessionPreference: true }));
     registerCommand('azureResourceGroups.selectSubscriptions', (context: IActionContext, options: SelectSubscriptionOptions) => selectSubscriptions(context, options));
-    registerCommand('azureResourceGroups.signInToTenant', async () => {
-        await signInToTenant(await ext.subscriptionProviderFactory());
-        ext.setClearCacheOnNextLoad('tenant');
-        ext.actions.refreshTenantTree();
-        ext.setClearCacheOnNextLoad('azure');
-        ext.actions.refreshAzureTree();
-        ext.setClearCacheOnNextLoad('focus');
-        ext.actions.refreshFocusTree();
-    });
+    registerCommand('azureResourceGroups.signInToTenant', signInToTenant);
 
     registerCommand('azureResourceGroups.createResourceGroup', createResourceGroup);
     registerCommand('azureResourceGroups.deleteResourceGroupV2', deleteResourceGroupV2);
