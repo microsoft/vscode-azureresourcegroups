@@ -125,6 +125,16 @@ function parseContent(lines: string[], start: number, end: number): LocalPlanCon
             continue;
         }
 
+        // Skip HTML comments (e.g. <!-- guidance -->), including multi-line comment blocks —
+        // they're authoring hints in the source markdown, not content to render.
+        if (trimmed.startsWith('<!--')) {
+            while (i < end && !lines[i].includes('-->')) {
+                i++;
+            }
+            if (i < end) { i++; }
+            continue;
+        }
+
         // Skip raw HTML wrappers (e.g. <details>/<summary>) — they're presentation hints
         // for the source markdown, not content the structured view should render.
         if (/^<\/?(details|summary)\b/i.test(trimmed)) {
