@@ -71,10 +71,10 @@ Scan every `function.json` for its `"type"` binding field, **or** scan Python/Ja
 **Node.js (TypeScript & JavaScript):**
 
 ```
-func host start --language-worker -- "--inspect=9229"
+languageWorkers__node__arguments="--inspect=9229" func host start
 ```
 
-> ⚠️ The Azure Functions Core Tools do **not** automatically enable the Node.js debugger. You **must** pass `--language-worker -- "--inspect=9229"` explicitly so the Node worker process opens a debug port for VS Code to attach to. Without this flag, the `attach` configuration connects to nothing.
+> ⚠️ The Azure Functions Core Tools do **not** automatically enable the Node.js debugger. You **must** supply `--inspect=9229` to the Node worker so it opens a debug port for VS Code to attach to. Without it, the `attach` configuration connects to nothing. In the VS Code `func` task, set this via `options.env` (`languageWorkers__node__arguments`) rather than a command-line flag — the env-var form avoids shell/JSON quoting issues and uses the same `languageWorkers__<runtime>__arguments` convention across runtimes.
 
 **dotnet:**
 
@@ -114,13 +114,27 @@ The top-level task uses the VS Code `func` task type provided by the Azure Funct
 
 > **Task label scoping:** All task labels MUST be prefixed with the service ID (e.g., `functions-api: func host start`). This prevents label collisions in multi-service workspaces. See [generate.md § Service ID Derivation](../generate.md).
 
+#### Debug Argument Injection
+
+The Functions host runs your code in a separate **language-worker** process, so the worker must start with the runtime's debug flag. Inject it through the task's `options.env` using the `languageWorkers__<runtime>__arguments` convention, then point a matching `attach` config at the resulting port. Only the env key, the flag value, and the attach `type`/`port` change per runtime — the rest of the `func host start` task stays identical, so new runtimes slot straight into this table.
+
+| Runtime | `options.env` setting | Value to inject | Debug port | `attach` type | Status |
+|---------|-----------------------|-----------------|------------|---------------|--------|
+| node-ts | `languageWorkers__node__arguments` | `--inspect=9229` | 9229 | `node` | ✅ Implemented |
+| node-js | `languageWorkers__node__arguments` | `--inspect=9229` | 9229 | `node` | ✅ Implemented |
+
+
 **node-ts** (has watch task):
 
 ```json
 {
   "type": "func",
   "label": "{service-id}: func host start",
-  "command": "host start --language-worker -- \"--inspect=9229\"",
+  "command": "host start",
+  "options": {
+    "cwd": "${workspaceFolder}/{path-to-functions-project}",
+    "env": { "languageWorkers__node__arguments": "--inspect=9229" }
+  },
   "problemMatcher": "$func-node-watch",
   "isBackground": true,
   "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" },
@@ -136,7 +150,11 @@ The top-level task uses the VS Code `func` task type provided by the Azure Funct
 {
   "type": "func",
   "label": "{service-id}: func host start",
-  "command": "host start --language-worker -- \"--inspect=9229\"",
+  "command": "host start",
+  "options": {
+    "cwd": "${workspaceFolder}/{path-to-functions-project}",
+    "env": { "languageWorkers__node__arguments": "--inspect=9229" }
+  },
   "problemMatcher": "$func-node-watch",
   "isBackground": true,
   "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" },
