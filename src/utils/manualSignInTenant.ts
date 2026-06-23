@@ -18,6 +18,10 @@ export function getManualSignInTenant(): string | undefined {
         return testingManualSignInTenant;
     }
 
+    if (!ext.context) {
+        return undefined;
+    }
+
     return normalizeTenant(ext.context.globalState.get<string>(ManualSignInTenantKey));
 }
 
@@ -34,6 +38,9 @@ export function getTenantIdForAuthentication(tenantId: string | undefined): stri
     return normalizeTenant(tenantId) ?? getManualSignInTenant();
 }
 
-export function resetManualSignInTenantForTests(): void {
+export async function resetManualSignInTenantForTests(): Promise<void> {
     testingManualSignInTenant = undefined;
+    if (ext.context) {
+        await ext.context.globalState.update(ManualSignInTenantKey, undefined);
+    }
 }

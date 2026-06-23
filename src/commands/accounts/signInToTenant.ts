@@ -3,12 +3,18 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzureAccount, AzureSubscriptionProvider, AzureTenant, isNotSignedInError, TenantIdAndAccount } from '@microsoft/vscode-azext-azureauth';
+import { AzureAccount, AzureSubscriptionProvider, AzureTenant, isNotSignedInError, SignInOptions, TenantIdAndAccount } from '@microsoft/vscode-azext-azureauth';
 import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import { setManualSignInTenant } from '../../utils/manualSignInTenant';
 import { localize } from '../../utils/localize';
 
-export async function signInToTenant(context: IActionContext, subscriptionProvider: AzureSubscriptionProvider, account?: AzureAccount): Promise<void> {
+type ManualTenantSignIn = Partial<TenantIdAndAccount> & Pick<TenantIdAndAccount, 'tenantId'>;
+type TenantSignIn = TenantIdAndAccount | ManualTenantSignIn;
+type ManualTenantSubscriptionProvider = Omit<AzureSubscriptionProvider, 'signIn'> & {
+    signIn(tenant?: Partial<TenantIdAndAccount>, options?: SignInOptions): Promise<boolean>;
+};
+
+export async function signInToTenant(context: IActionContext, subscriptionProvider: ManualTenantSubscriptionProvider, account?: AzureAccount): Promise<void> {
     const tenantPick = await pickTenant(context, subscriptionProvider, account);
     if (tenantPick) {
         const signedIn = await subscriptionProvider.signIn(tenantPick.tenant);
@@ -19,11 +25,11 @@ export async function signInToTenant(context: IActionContext, subscriptionProvid
 }
 
 interface TenantPick {
-    tenant: TenantIdAndAccount;
+    tenant: TenantSignIn;
     isManual: boolean;
 }
 
-async function pickTenant(context: IActionContext, subscriptionProvider: AzureSubscriptionProvider, account?: AzureAccount): Promise<TenantPick | undefined> {
+async function pickTenant(context: IActionContext, subscriptionProvider: ManualTenantSubscriptionProvider, account?: AzureAccount): Promise<TenantPick | undefined> {
     try {
         const picks = await getPicks(subscriptionProvider, account);
         if (picks.length) {
@@ -58,19 +64,19 @@ async function getPicks(subscriptionProvider: AzureSubscriptionProvider, account
     return unauthenticatedTenants
         .sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''))
         .map(tenant => ({
-            label: tenant.displayName ?? '',
+            label: tenant.displayName ?? tenant.defaultDomain ?? tenant.tenantId,
             description: `${tenant.tenantId}${isDuplicate(tenant.tenantId) ? ` (${tenant.account.label})` : ''}`,
             detail: tenant.defaultDomain,
             data: tenant,
         }));
 }
 
-async function promptForTenantId(context: IActionContext): Promise<TenantIdAndAccount | undefined> {
+async function promptForTenantId(context: IActionContext): Promise<ManualTenantSignIn | undefined> {
     const tenantId = await context.ui.showInputBox({
         placeHolder: localize('enterTenantIdPlaceholder', 'Tenant ID or domain'),
         prompt: localize('enterTenantIdPrompt', 'Enter the tenant ID or domain to sign in to.'),
         validateInput: value => value?.trim() ? undefined : localize('enterTenantIdValidation', 'Enter a tenant ID or domain.'),
     });
 
-    return tenantId ? { tenantId: tenantId.trim() } as TenantIdAndAccount : undefined;
+    return tenantId ? { tenantId: tenantId.trim() } : undefined;
 }

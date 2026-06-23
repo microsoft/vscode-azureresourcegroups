@@ -8,15 +8,15 @@ import { AzureAccount, AzureSubscriptionProvider, AzureTenant, NotSignedInError,
 import { IActionContext, IAzureQuickPickItem } from '@microsoft/vscode-azext-utils';
 import type * as vscode from 'vscode';
 import { signInToTenant } from '../src/commands/accounts/signInToTenant';
-import { getManualSignInTenant, resetManualSignInTenantForTests } from '../src/utils/manualSignInTenant';
+import { getManualSignInTenant, resetManualSignInTenantForTests, setManualSignInTenant } from '../src/utils/manualSignInTenant';
 
 suite('signInToTenant', () => {
-    setup(() => {
-        resetManualSignInTenantForTests();
+    setup(async () => {
+        await resetManualSignInTenantForTests();
     });
 
-    teardown(() => {
-        resetManualSignInTenantForTests();
+    teardown(async () => {
+        await resetManualSignInTenantForTests();
     });
 
     test('signs in to selected discovered tenant', async () => {
@@ -26,7 +26,7 @@ suite('signInToTenant', () => {
             tenantId: 'tenantId',
             displayName: 'Tenant',
         };
-        let signedInTenant: TenantIdAndAccount | undefined;
+        let signedInTenant: Partial<TenantIdAndAccount> | undefined;
         let inputBoxShown = false;
 
         const context = createTestActionContext({
@@ -53,6 +53,7 @@ suite('signInToTenant', () => {
 
     test('prompts for tenant when no account exists for tenant discovery', async () => {
         let signedInTenantId: string | undefined;
+        let signedInTenantAccount: AzureAccount | undefined;
         let quickPickShown = false;
 
         const context = createTestActionContext({
@@ -68,6 +69,7 @@ suite('signInToTenant', () => {
             },
             signIn: async tenant => {
                 signedInTenantId = tenant?.tenantId;
+                signedInTenantAccount = tenant?.account;
                 return true;
             },
         });
@@ -75,8 +77,70 @@ suite('signInToTenant', () => {
         await signInToTenant(context, provider);
 
         assert.strictEqual(signedInTenantId, 'contoso.onmicrosoft.com');
+        assert.strictEqual(signedInTenantAccount, undefined);
         assert.strictEqual(quickPickShown, false);
         assert.strictEqual(getManualSignInTenant(), 'contoso.onmicrosoft.com');
+    });
+
+    test('uses tenant domain as quick pick label when display name is missing', async () => {
+        const account = createAccount();
+        const discoveredTenant: AzureTenant = {
+            account,
+            tenantId: 'tenantId',
+            defaultDomain: 'contoso.onmicrosoft.com',
+        };
+        let shownLabel: string | undefined;
+
+        const context = createTestActionContext({
+            showQuickPick: async picks => {
+                shownLabel = picks[0].label;
+                return picks[0];
+            },
+            showInputBox: async () => undefined,
+        });
+        const provider = createTestSubscriptionProvider({
+            getAccounts: async () => [account],
+            getUnauthenticatedTenantsForAccount: async () => [discoveredTenant],
+            signIn: async () => true,
+        });
+
+        await signInToTenant(context, provider);
+
+        assert.strictEqual(shownLabel, 'contoso.onmicrosoft.com');
+    });
+
+    test('uses tenant id as quick pick label when display name and domain are missing', async () => {
+        const account = createAccount();
+        const discoveredTenant: AzureTenant = {
+            account,
+            tenantId: 'tenantId',
+        };
+        let shownLabel: string | undefined;
+
+        const context = createTestActionContext({
+            showQuickPick: async picks => {
+                shownLabel = picks[0].label;
+                return picks[0];
+            },
+            showInputBox: async () => undefined,
+        });
+        const provider = createTestSubscriptionProvider({
+            getAccounts: async () => [account],
+            getUnauthenticatedTenantsForAccount: async () => [discoveredTenant],
+            signIn: async () => true,
+        });
+
+        await signInToTenant(context, provider);
+
+        assert.strictEqual(shownLabel, 'tenantId');
+    });
+
+    test('resetManualSignInTenantForTests clears persisted tenant', async () => {
+        await setManualSignInTenant('contoso.onmicrosoft.com');
+
+        await resetManualSignInTenantForTests();
+
+        assert.strictEqual(getManualSignInTenant(), undefined);
     });
 });
 
@@ -103,10 +167,12 @@ function createTestActionContext(options: {
 function createTestSubscriptionProvider(options: {
     getAccounts?: () => Promise<AzureAccount[]>;
     getUnauthenticatedTenantsForAccount?: (account: AzureAccount) => Promise<AzureTenant[]>;
-    signIn: (tenant?: TenantIdAndAccount) => Promise<boolean>;
+    signIn: (tenant?: Partial<TenantIdAndAccount>) => Promise<boolean>;
 }): AzureSubscriptionProvider {
+    const onRefreshSuggested: vscode.Event<RefreshSuggestedEvent> = (_listener, _thisArgs, _disposables) => ({ dispose: () => { /* no-op */ } });
+
     return {
-        onRefreshSuggested: (() => ({ dispose: () => { /* no-op */ } })) as unknown as vscode.Event<RefreshSuggestedEvent>,
+        onRefreshSuggested,
         getAccounts: options.getAccounts ?? (async () => []),
         getUnauthenticatedTenantsForAccount: options.getUnauthenticatedTenantsForAccount ?? (async () => []),
         signIn: options.signIn,
