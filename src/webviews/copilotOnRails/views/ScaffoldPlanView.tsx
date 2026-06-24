@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Switch, Textarea, Tooltip } from '@fluentui/react-components';
-import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, RocketRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { ArrowSyncRegular, CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, RocketRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
@@ -171,6 +171,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const [freeformDraft, setFreeformDraft] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
+    const [isRefreshingPrereqs, setIsRefreshingPrereqs] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
     const [previewStatus, setPreviewStatus] = useState<PreviewStatus | undefined>(undefined);
     const [autopilot, setAutopilot] = useState(false);
@@ -220,6 +221,11 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 setDrawerOpen(false);
             } else if (message?.command === 'revisionComplete') {
                 setIsAwaitingRevision(false);
+                setIsRefreshingPrereqs(false);
+            } else if (message?.command === 'prerequisitesRefreshing') {
+                setIsRefreshingPrereqs(true);
+            } else if (message?.command === 'prerequisitesRefreshComplete') {
+                setIsRefreshingPrereqs(false);
             }
         };
         window.addEventListener('message', handler);
@@ -553,7 +559,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
 
                 {overviewSection && <OverviewCard section={overviewSection} created={plan.created && plan.created !== 'Unknown' ? plan.created : undefined} />}
 
-                {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} showDebug={autopilot} />}
+                {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} showDebug={autopilot} onRefreshPrerequisites={() => vscodeApi.postMessage({ command: 'refreshPrerequisites', autopilot })} isRefreshing={isRefreshingPrereqs} />}
 
                 <div className='sectionsRow'>
                     {detailSections.map((section) => {
@@ -925,7 +931,7 @@ function groupPrereqTables(content: PlanContent[]): PrereqGroup[] {
 // a "install these before continuing" call-to-action. The Debug group is only
 // shown when Autopilot is on (`showDebug`), since the unattended chain runs all
 // the way through local-debug setup.
-const PrerequisitesCard = ({ section, showDebug }: { section: PlanSection; showDebug: boolean }): JSX.Element => {
+const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefreshing }: { section: PlanSection; showDebug: boolean; onRefreshPrerequisites?: () => void; isRefreshing?: boolean }): JSX.Element => {
     const content = section.content ?? [];
     // Prose (paragraphs/blockquotes) is rendered in its original document
     // position relative to the tables: anything before the first table/subheading
@@ -986,7 +992,20 @@ const PrerequisitesCard = ({ section, showDebug }: { section: PlanSection; showD
 
     return (
         <div className='sectionCard prerequisitesCard'>
-            <h2>{section.title}</h2>
+            <div className='sectionHeadingRow'>
+                <h2>{section.title}</h2>
+                {onRefreshPrerequisites && (
+                    <Tooltip content={isRefreshing ? 'Checking prerequisites…' : 'Re-check prerequisites'} relationship='label'>
+                        <Button
+                            appearance='subtle'
+                            size='small'
+                            icon={isRefreshing ? <Spinner size='tiny' /> : <ArrowSyncRegular />}
+                            onClick={onRefreshPrerequisites}
+                            disabled={isRefreshing}
+                        />
+                    </Tooltip>
+                )}
+            </div>
             <div className='sectionContent'>
                 {leadingIntro.map((item, i) =>
                     item.type === 'blockquote'
