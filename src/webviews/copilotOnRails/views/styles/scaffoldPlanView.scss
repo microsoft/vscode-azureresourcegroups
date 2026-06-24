@@ -419,6 +419,11 @@
                 flex-direction: column;
                 gap: 4px;
             }
+
+            .prerequisitesCallToActionHint {
+                font-size: 0.95em;
+                opacity: 0.85;
+            }
         }
 
         .installedChip {

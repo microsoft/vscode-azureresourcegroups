@@ -1013,6 +1013,9 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
                             <span className='prerequisitesCallToActionTitle'>
                                 Install any missing prerequisites before continuing.
                             </span>
+                            <span className='prerequisitesCallToActionHint'>
+                                Already installed, or think a tool was scanned incorrectly? Rescan with the refresh button above.
+                            </span>
                         </div>
                     </div>
                 )}
