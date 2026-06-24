@@ -111,6 +111,16 @@
             border-color: var(--vscode-inputValidation-errorBorder, rgba(241, 76, 76, 0.5));
             color: var(--vscode-inputValidation-errorForeground, var(--vscode-foreground));
         }
+
+        &.banner--warning {
+            background: var(--vscode-inputValidation-warningBackground, rgba(255, 204, 0, 0.12));
+            border-color: var(--vscode-inputValidation-warningBorder, rgba(255, 204, 0, 0.5));
+            color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+
+            >svg {
+                color: var(--vscode-editorWarning-foreground, var(--vscode-list-warningForeground));
+            }
+        }
     }
 
     .sectionHeading {
