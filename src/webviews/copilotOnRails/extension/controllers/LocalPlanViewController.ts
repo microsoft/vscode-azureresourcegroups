@@ -16,6 +16,8 @@ import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
+    private _isRefreshingPrereqs = false;
+    private _refreshPrereqsTimer: ReturnType<typeof setTimeout> | undefined;
 
     constructor(planData: LocalPlanData, sourceFileUri?: vscode.Uri) {
         super(ext.context, 'Local Dev Plan', 'localPlanView', {}, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
@@ -80,15 +82,34 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         return true;
     }
 
+    private clearPrereqsRefresh(): void {
+        if (this._refreshPrereqsTimer) {
+            clearTimeout(this._refreshPrereqsTimer);
+            this._refreshPrereqsTimer = undefined;
+        }
+        if (this._isRefreshingPrereqs) {
+            this._isRefreshingPrereqs = false;
+            void this.panel.webview.postMessage({ command: 'prerequisitesRefreshComplete' });
+        }
+    }
+
     private async refreshPrerequisites(): Promise<void> {
         if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
             return;
         }
+        this._isRefreshingPrereqs = true;
         void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: azureDebugPlanAgent,
             query: 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites table and update the plan file with the current results.',
         });
+        if (this._refreshPrereqsTimer) {
+            clearTimeout(this._refreshPrereqsTimer);
+        }
+        this._refreshPrereqsTimer = setTimeout(() => {
+            this._refreshPrereqsTimer = undefined;
+            this.clearPrereqsRefresh();
+        }, 15_000);
     }
 
     updatePlanData(planData: LocalPlanData, sourceFileUri?: vscode.Uri): void {
@@ -97,6 +118,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         }
         void this.panel.webview.postMessage({ command: 'setLocalPlanData', data: planData });
         void this.panel.webview.postMessage({ command: 'revisionComplete' });
-        void this.panel.webview.postMessage({ command: 'prerequisitesRefreshComplete' });
+        this.clearPrereqsRefresh();
     }
 }

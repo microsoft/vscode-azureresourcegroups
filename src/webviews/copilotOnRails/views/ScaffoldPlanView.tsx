@@ -559,7 +559,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
 
                 {overviewSection && <OverviewCard section={overviewSection} created={plan.created && plan.created !== 'Unknown' ? plan.created : undefined} />}
 
-                {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} showDebug={autopilot} onRefreshPrerequisites={() => vscodeApi.postMessage({ command: 'refreshPrerequisites' })} isRefreshing={isRefreshingPrereqs} />}
+                {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} showDebug={autopilot} onRefreshPrerequisites={() => vscodeApi.postMessage({ command: 'refreshPrerequisites', autopilot })} isRefreshing={isRefreshingPrereqs} />}
 
                 <div className='sectionsRow'>
                     {detailSections.map((section) => {
