@@ -13,8 +13,19 @@ let controller: LocalDevNextStepsViewController | undefined;
 /**
  * Show the post-local-development "what's next" view. Disposes any open
  * loading view first so the next-steps panel takes its place.
+ *
+ * When `hasApiTests` is not explicitly provided, auto-detects by checking
+ * whether `api-test-collections/` contains any files in the workspace.
  */
-export function openLocalDevNextStepsView(config: LocalDevNextStepsViewConfiguration): void {
+export async function openLocalDevNextStepsView(hasApiTests?: boolean): Promise<void> {
+    let apiTestsDetected = hasApiTests === true;
+    if (hasApiTests === undefined) {
+        const results = await vscode.workspace.findFiles('api-test-collections/**/*', undefined, 1);
+        apiTestsDetected = results.length > 0;
+    }
+
+    const config: LocalDevNextStepsViewConfiguration = { hasApiTests: apiTestsDetected };
+
     closeLoadingView();
 
     if (controller) {

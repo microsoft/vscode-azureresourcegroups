@@ -173,7 +173,8 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openRequirementsView', openRequirementsViewFromWorkspace);
     registerCommand('azureResourceGroups.openLocalNextStepsView', (_context: IActionContext, hasApiTests?: boolean) =>
-        openLocalDevNextStepsView({ hasApiTests: hasApiTests === true }));
+        openLocalDevNextStepsView(hasApiTests));
+    registerCommand('azureResourceGroups.debug.openLocalNextStepsView', () => openLocalDevNextStepsView());
     registerCommand('azureResourceGroups.openScaffoldNextStepsView', () => openScaffoldNextStepsView({}));
 
     // Hand-off commands
