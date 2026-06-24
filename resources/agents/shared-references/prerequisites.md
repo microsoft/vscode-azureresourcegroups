@@ -38,10 +38,9 @@ Dependencies that are required to run the project locally. If a run tool is miss
 
 Tooling needed to debug the project locally (not just to run it through the terminal): container tooling for Azure-dependency emulators, plus the VS Code extensions that provide debug integration for each project type.
 
-This table is the **authoritative list** — include every row whose trigger matches the project, and maintainers must add any new debug tool or extension here so it is considered. Some project types require a specific VS Code extension for the debug experience (e.g. Azure Functions needs the Functions extension for its `func` task
-type and problem matchers), so do not infer these from memory — take them from this table.
+This table is the **authoritative list** — include every row whose trigger matches the project, and maintainers must add any new debug tool or extension here so it is considered. Some project types require a specific VS Code extension for the debug experience (e.g. Azure Functions needs the Functions extension for its `func` task type and problem matchers), so do not infer these from memory — take them from this table.
 
-Only the rows in this table are valid prerequisites. Do not add tools that aren't listed here. In particular, never list VS Code itself — the plan is already running inside VS Code, so it is always present — and never list a VS Code extension for an emulator (e.g. an "Azurite Extension"). Emulators run as containers via Docker and Docker Compose, not as extensions; the only debug extensions are the project-type debug-integration extensions in the table below.
+Prefer to use the debug tools listed here. Also, never list VS Code itself — the plan is already running inside VS Code, so it is always present — and never list a VS Code extension for an emulator (e.g. an "Azurite Extension"). Emulators will run as containers via Docker and Docker Compose, not as extensions.
 
 | Tool / Extension | Category | Trigger / Needed for | Detect with |
 |------------------|----------|----------------------|-------------|
@@ -49,7 +48,7 @@ Only the rows in this table are valid prerequisites. Do not add tools that aren'
 | Docker Compose | Orchestrator | Orchestrating emulators | `docker compose version` |
 | `ms-azuretools.vscode-azurefunctions` | VS Code extension | Azure Functions service | extensions filesystem check (Phase 2) |
 
-Always include the any matching VS Code extension when they match a given service; for example, the Azure Functions extension when building an Azure Functions project.
+Always include the any matching VS Code extension when they match a service; for example, the Azure Functions extension should be required when building an Azure Functions project.
 
 ---
 
