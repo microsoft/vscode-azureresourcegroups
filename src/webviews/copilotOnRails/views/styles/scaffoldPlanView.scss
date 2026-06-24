@@ -404,46 +404,20 @@
             padding: 6px 10px;
             font-size: 0.82em;
             border-radius: 4px;
-            color: var(--vscode-inputValidation-warningForeground, var(--vscode-editorWarning-foreground));
+            color: var(--vscode-foreground);
             background: var(--vscode-inputValidation-warningBackground);
             border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
 
             .codicon {
                 flex: 0 0 auto;
                 margin-top: 2px;
+                color: var(--vscode-inputValidation-warningForeground, var(--vscode-editorWarning-foreground));
             }
 
             .prerequisitesCallToActionBody {
                 display: flex;
                 flex-direction: column;
                 gap: 4px;
-            }
-
-            .prerequisitesMissingList {
-                margin: 0;
-                padding-left: 16px;
-                display: flex;
-                flex-direction: column;
-                gap: 2px;
-
-                li {
-                    display: flex;
-                    align-items: baseline;
-                    gap: 6px;
-                    flex-wrap: wrap;
-                }
-
-                .prerequisitesMissingName {
-                    font-weight: 600;
-                }
-
-                .prerequisitesMissingInstall {
-                    font-family: var(--vscode-editor-font-family, monospace);
-                    font-size: 0.95em;
-                    padding: 1px 5px;
-                    border-radius: 3px;
-                    background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.18));
-                }
             }
         }
 
