@@ -21,6 +21,8 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     private sourceFileUri: vscode.Uri | undefined;
     private previewFolderUri: vscode.Uri | undefined;
     private previewWatcher: vscode.Disposable | undefined;
+    private _isRefreshingPrereqs = false;
+    private _refreshPrereqsTimer: ReturnType<typeof setTimeout> | undefined;
 
     constructor(planData: PlanData, sourceFileUri?: vscode.Uri) {
         super(ext.context, 'Project Plan', 'scaffoldPlanView', {}, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
@@ -32,6 +34,10 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         this.panel.onDidDispose(() => {
             this.previewWatcher?.dispose();
             this.previewWatcher = undefined;
+            if (this._refreshPrereqsTimer) {
+                clearTimeout(this._refreshPrereqsTimer);
+                this._refreshPrereqsTimer = undefined;
+            }
         });
 
         this.panel.webview.onDidReceiveMessage((message: { command: string; data?: PlanData; prompt?: string; autopilot?: boolean }) => {
@@ -57,6 +63,9 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                 }
                 case 'openSourceFile':
                     openSourceFileOrWarn(this.sourceFileUri);
+                    break;
+                case 'refreshPrerequisites':
+                    void this.refreshPrerequisites(!!message.autopilot);
                     break;
             }
         });
@@ -154,6 +163,43 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
     }
 
+    private clearPrereqsRefresh(): void {
+        if (this._refreshPrereqsTimer) {
+            clearTimeout(this._refreshPrereqsTimer);
+            this._refreshPrereqsTimer = undefined;
+        }
+        if (this._isRefreshingPrereqs) {
+            this._isRefreshingPrereqs = false;
+            void this.panel.webview.postMessage({ command: 'prerequisitesRefreshComplete' });
+        }
+    }
+
+    private async refreshPrerequisites(autopilot: boolean): Promise<void> {
+        if (!(await ensureAgentInstructions('azure-project-plan'))) {
+            return;
+        }
+
+        this._isRefreshingPrereqs = true;
+        void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
+
+        const query = autopilot
+            ? 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites tables and update the plan file with the current results.'
+            : 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Run Prerequisites table only and update the plan file with the current results.';
+
+        await vscode.commands.executeCommand('workbench.action.chat.open', {
+            mode: 'azure-project-plan',
+            query,
+        });
+
+        if (this._refreshPrereqsTimer) {
+            clearTimeout(this._refreshPrereqsTimer);
+        }
+        this._refreshPrereqsTimer = setTimeout(() => {
+            this._refreshPrereqsTimer = undefined;
+            this.clearPrereqsRefresh();
+        }, 15_000);
+    }
+
     updatePlanData(planData: PlanData, sourceFileUri?: vscode.Uri): void {
         if (sourceFileUri) {
             this.sourceFileUri = sourceFileUri;
@@ -166,6 +212,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
         void this.panel.webview.postMessage({ command: 'setPlanData', data: planData });
         void this.panel.webview.postMessage({ command: 'revisionComplete' });
+        this.clearPrereqsRefresh();
     }
 
     /**

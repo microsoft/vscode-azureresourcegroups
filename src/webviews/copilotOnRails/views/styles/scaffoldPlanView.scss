@@ -368,11 +368,17 @@
     }
 
     .prerequisitesCard {
+        .sectionHeadingRow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
         .planTable {
             width: 100%;
         }
 
-        .prereqGroup + .prereqGroup {
+        .prereqGroup+.prereqGroup {
             margin-top: 10px;
         }
 
@@ -385,8 +391,8 @@
             color: var(--vscode-descriptionForeground);
         }
 
-        .blockquote + .planTableWrapper,
-        .paragraph + .planTableWrapper {
+        .blockquote+.planTableWrapper,
+        .paragraph+.planTableWrapper {
             margin-top: 4px;
         }
 

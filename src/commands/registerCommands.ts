@@ -176,7 +176,8 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.openFrontendPreviewView', (_context: IActionContext, frontendFolder?: string) =>
         openFrontendPreviewView(frontendFolder));
     registerCommand('azureResourceGroups.openLocalNextStepsView', (_context: IActionContext, hasApiTests?: boolean) =>
-        openLocalDevNextStepsView({ hasApiTests: hasApiTests === true }));
+        openLocalDevNextStepsView(hasApiTests));
+    registerCommand('azureResourceGroups.debug.openLocalNextStepsView', () => openLocalDevNextStepsView());
     registerCommand('azureResourceGroups.openScaffoldNextStepsView', () => openScaffoldNextStepsView({}));
 
     // Hand-off commands
