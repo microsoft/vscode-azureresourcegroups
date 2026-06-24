@@ -478,7 +478,6 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const structureSection = sections.find(s => s.title.toLowerCase().includes('project structure'));
     const designSection = sections.find(s => s.title.toLowerCase().includes('design system'));
     const prerequisitesSection = sections.find(s => s.title.toLowerCase().includes('prerequisite'));
-    const draftCount = (freeformDraft.trim() ? 1 : 0);
 
     return (
         <div className={`scaffoldPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
@@ -519,10 +518,10 @@ export const ScaffoldPlanView = (): JSX.Element => {
                                     icon={
                                         <span className='feedbackIconWrapper'>
                                             <CommentEditRegular />
-                                            {hasEdits && (
+                                            {feedbackItems.length > 0 && (
                                                 <CounterBadge
                                                     className='feedbackBadge'
-                                                    count={feedbackItems.length + draftCount}
+                                                    count={feedbackItems.length}
                                                     size='small'
                                                     color='danger'
                                                 />
@@ -530,7 +529,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                                         </span>
                                     }
                                     disabled={isAwaitingRevision}
-                                    onClick={() => setDrawerOpen(v => !v)}
+                                    onClick={() => setDrawerOpen(v => { if (v) { setFreeformDraft(''); } return !v; })}
                                 />
                             </Tooltip>
                             <Tooltip
@@ -600,13 +599,13 @@ export const ScaffoldPlanView = (): JSX.Element => {
                     onRemoveItem={handleRemoveFeedback}
                     onSubmit={handleSubmitFeedback}
                     onDiscardAll={handleDiscardAll}
-                    onClose={() => setDrawerOpen(false)}
+                    onClose={() => { setFreeformDraft(''); setDrawerOpen(false); }}
                 />
             )}
 
             <SubmitEditsDialog
                 open={confirmSubmitOpen}
-                editCount={feedbackItems.length + draftCount}
+                editCount={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
                 onCancel={() => setConfirmSubmitOpen(false)}
                 onSubmit={handleSubmitFeedback}
             />
