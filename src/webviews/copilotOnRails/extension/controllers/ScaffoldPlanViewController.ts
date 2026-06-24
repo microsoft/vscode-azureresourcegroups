@@ -58,6 +58,9 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                 case 'openSourceFile':
                     openSourceFileOrWarn(this.sourceFileUri);
                     break;
+                case 'refreshPrerequisites':
+                    void this.refreshPrerequisites();
+                    break;
             }
         });
     }
@@ -154,6 +157,17 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
     }
 
+    private async refreshPrerequisites(): Promise<void> {
+        if (!(await ensureAgentInstructions('azure-project-plan'))) {
+            return;
+        }
+        void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
+        await vscode.commands.executeCommand('workbench.action.chat.open', {
+            mode: 'azure-project-plan',
+            query: 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites table and update the plan file with the current results.',
+        });
+    }
+
     updatePlanData(planData: PlanData, sourceFileUri?: vscode.Uri): void {
         if (sourceFileUri) {
             this.sourceFileUri = sourceFileUri;
@@ -166,6 +180,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
         void this.panel.webview.postMessage({ command: 'setPlanData', data: planData });
         void this.panel.webview.postMessage({ command: 'revisionComplete' });
+        void this.panel.webview.postMessage({ command: 'prerequisitesRefreshComplete' });
     }
 
     /**
