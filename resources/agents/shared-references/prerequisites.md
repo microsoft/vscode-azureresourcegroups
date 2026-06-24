@@ -92,36 +92,6 @@ which func 2>/dev/null || \
 Get-Command func -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
 ```
 
-### Docker Compose detection
-
-Docker Compose ships as a CLI plugin that Docker discovers through `~/.docker/config.json`. If that file can't be read — a common case in sandboxed shells, where the command prints an `operation not permitted` warning — the plugin lookup fails silently and `docker compose version` reports "not found" even though Compose is installed. Don't mark Docker Compose missing on the first failed `docker compose version`.
-
-The most reliable fix is to point `DOCKER_CONFIG` at a fresh empty directory so Docker never reads the protected `config.json`, then re-run the version check. Only after that — and a direct check of the plugin binary — should you report it as not installed:
-
-```bash
-# macOS/Linux — retry with an isolated config dir, then fall back to the plugin binary
-docker compose version 2>/dev/null \
-  || DOCKER_CONFIG="$(mktemp -d)" docker compose version 2>/dev/null \
-  || docker-compose version 2>/dev/null \
-  || find /opt/homebrew/lib/docker/cli-plugins /usr/local/lib/docker/cli-plugins \
-          /usr/lib/docker/cli-plugins ~/.docker/cli-plugins -name "docker-compose" 2>/dev/null | head -1
-```
-
-```powershell
-# Windows PowerShell — retry with an isolated config dir, then fall back to the plugin binary
-docker compose version 2>$null
-if (-not $?) {
-  $tmp = New-Item -ItemType Directory -Path (Join-Path $env:TEMP ([guid]::NewGuid()))
-  $env:DOCKER_CONFIG = $tmp.FullName
-  docker compose version 2>$null
-}
-if (-not $?) {
-  Get-Command docker-compose -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-}
-```
-
-Only report Docker Compose as not installed when the isolated-config retry, the `docker compose` subcommand, and the standalone binary fallback all come up empty.
-
 ---
 
 ### VS Code extension detection
