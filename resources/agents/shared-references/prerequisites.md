@@ -45,7 +45,7 @@ Prefer to use the debug tools listed here. Also, never list VS Code itself — t
 | Tool / Extension | Category | Trigger / Needed for | Detect with |
 |------------------|----------|----------------------|-------------|
 | Docker | Container runtime | Project has Azure dependencies that run as local emulators | `docker --version` |
-| Docker Compose | Orchestrator | Orchestrating emulators | `docker compose version` (see Docker Compose detection in Phase 2) |
+| Docker Compose | Orchestrator | Orchestrating emulators | `docker compose version` — if detection is inconclusive, fall back to unknown, not missing (see Docker Compose detection in Phase 2) |
 | `ms-azuretools.vscode-azurefunctions` | VS Code extension | Azure Functions service | extensions filesystem check (Phase 2) |
 
 Always include the any matching VS Code extension when they match a service; for example, the Azure Functions extension should be required when building an Azure Functions project.
@@ -56,7 +56,7 @@ Always include the any matching VS Code extension when they match a service; for
 
 For each needed tool, run its detection and record whether it is installed and at what version. Mind any details in the sections below.
 
-Re-run this inventory every time the calling agent (re)builds its plan or the tool set changes — never carry over a stale result or leave a tool's status unknown. Every tool must resolve to installed or not-installed from an actual scan.
+Re-run this inventory every time the calling agent (re)builds its plan or the tool set changes — never carry over a stale result. Every tool must resolve from an actual scan to installed or not-installed — except the few tools whose detection is inherently unreliable (e.g. Docker Compose), which fall back to unknown when their scan is inconclusive rather than being reported as not-installed (see the relevant sections below).
 
 ### Shell environment caveats
 
@@ -97,7 +97,7 @@ Get-Command func -ErrorAction SilentlyContinue | Select-Object -ExpandProperty S
 
 Docker Compose ships as a CLI plugin that Docker discovers through `~/.docker/config.json`. If that file can't be read — a common case in sandboxed shells, where the command prints an `operation not permitted` warning — the plugin lookup fails silently and `docker compose version` reports "not found" even though Compose is installed. Don't mark Docker Compose missing on the first failed `docker compose version`.
 
-The most reliable fix is to point `DOCKER_CONFIG` at a fresh empty directory so Docker never reads the protected `config.json`, then re-run the version check. Only after that — and a direct check of the plugin binary — should you report it as not installed:
+Still attempt detection: point `DOCKER_CONFIG` at a fresh empty directory so Docker never reads the protected `config.json`, re-run the version check, then fall back to the plugin binary:
 
 ```bash
 # macOS/Linux — retry with an isolated config dir, then fall back to the plugin binary
@@ -121,7 +121,7 @@ if (-not $?) {
 }
 ```
 
-Only report Docker Compose as not installed when the isolated-config retry, the `docker compose` subcommand, and the standalone binary fallback all come up empty.
+If any of these succeed, record Docker Compose as installed (`✅`) with the reported version. If they all come up empty the result is **inconclusive, not a confirmed absence** — these checks are too unreliable to assert Compose is missing. So unlike a normal tool (which defaults to not-installed `❌` when its check fails), Docker Compose falls back to an unknown status (`❓`) with version `—`. An unknown status is not counted as a missing tool — it just tells the user to make sure Docker Compose is installed and ready before debugging.
 
 ---
 
