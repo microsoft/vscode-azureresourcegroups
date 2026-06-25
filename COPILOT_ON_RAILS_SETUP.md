@@ -105,4 +105,4 @@ projects toward the supported options below:
 > pick something outside the list above, you may hit rough edges. We plan to expand full
 > support and add these warnings in future builds.
 
-Thanks for testing Copilot on Rails! 🚀
+We appreciate any and all feedback.  Thanks for testing Copilot on Rails! 🚀
