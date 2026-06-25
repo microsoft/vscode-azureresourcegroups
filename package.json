@@ -997,7 +997,7 @@
         "build:esbuild": "node esbuild.mjs",
         "build:webviews": "node esbuild.copilotOnRailsViews.mjs",
         "build:check": "tsc --noEmit",
-        "package": "vsce package --githubBranch main",
+        "package": "vsce package",
         "lint": "eslint --max-warnings 0",
         "test": "vscode-test",
         "all": "npm i && npm run lint && npm run build && npm run package && npm test",
