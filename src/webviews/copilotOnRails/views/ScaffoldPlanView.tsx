@@ -494,7 +494,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                         </div>
                         <div className='headerActions'>
                             <Tooltip
-                                content='Autopilot runs everything after this plan is approved — scaffold and local debugging setup — without stopping for further approvals, and auto-approves all tool actions. When on, the Debug prerequisites are shown too. You confirm once on approval.'
+                                content='When on, Autopilot runs the full plan after you approve it. It auto-approves all tool actions and never stops for further confirmations. The Debug prerequisites are also shown, since Autopilot sets up local debugging too.'
                                 relationship='label'
                             >
                                 <Switch
@@ -951,16 +951,10 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
 
     const missingTools = visibleTables.flatMap((table) => {
         const installedIdx = table.headers.findIndex(h => h.toLowerCase().includes('installed'));
-        const installIdx = table.headers.findIndex(h => h.trim().toLowerCase() === 'install');
         if (installedIdx < 0) {
             return [];
         }
-        return table.rows
-            .filter(row => classifyInstalled(row[installedIdx] ?? '') === 'missing')
-            .map(row => ({
-                name: (row[0] ?? '').trim() || 'Tool',
-                install: installIdx >= 0 ? (row[installIdx] ?? '').trim() : '',
-            }));
+        return table.rows.filter(row => classifyInstalled(row[installedIdx] ?? '') === 'missing');
     });
 
     const renderTable = (table: Extract<PlanContent, { type: 'table' }>, key: number): JSX.Element => {
@@ -1016,18 +1010,11 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
                         <span className='codicon codicon-warning' />
                         <div className='prerequisitesCallToActionBody'>
                             <span className='prerequisitesCallToActionTitle'>
-                                {missingTools.length === 1
-                                    ? '1 prerequisite is not installed. Install it before continuing:'
-                                    : `${missingTools.length} prerequisites are not installed. Install them before continuing:`}
+                                Install any missing prerequisites before continuing.
                             </span>
-                            <ul className='prerequisitesMissingList'>
-                                {missingTools.map((tool, i) => (
-                                    <li key={i}>
-                                        <span className='prerequisitesMissingName'>{tool.name}</span>
-                                        {tool.install && <code className='prerequisitesMissingInstall'>{tool.install}</code>}
-                                    </li>
-                                ))}
-                            </ul>
+                            <span className='prerequisitesCallToActionHint'>
+                                Already installed, or think a tool was scanned incorrectly? Rescan with the refresh button above.
+                            </span>
                         </div>
                     </div>
                 )}
