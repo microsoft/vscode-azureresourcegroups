@@ -10,6 +10,8 @@ Identify required tools and then inventory them by following [prerequisites.md](
 
 The required tools are derived from a scan of the currently opened workspace project — check only the tools and extensions relevant to the detected project types, runtimes, and Azure bindings. Both tool sets defined in prerequisites.md apply here — the **Run** tools (Node.js, .NET SDK, Python, Functions Core Tools, ...) and the **Debug** tools (Docker, Docker Compose, VS Code extensions, ...) — since debugging exercises the full local stack.
 
+For every detected project type, include its VS Code debug-integration extension from the Debug Tools table as its own Debug row (e.g. an Azure Functions project always includes `ms-azuretools.vscode-azurefunctions`) — these extensions are required for the debug experience and are separate from the Run-group CLI/runtime tools, so never omit them.
+
 ---
 
 ## Step 2: Azure Dependencies

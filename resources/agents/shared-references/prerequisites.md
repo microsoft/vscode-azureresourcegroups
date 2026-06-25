@@ -36,19 +36,19 @@ Dependencies that are required to run the project locally. If a run tool is miss
 
 ### Debug Tools
 
-Tooling needed to debug the project locally (not just to run it through the terminal): container tooling for Azure-dependency emulators, plus the VS Code extensions that provide debug integration for each project type.
+Tooling needed to debug the project locally, not just to run it through the terminal. Two independent kinds of entries belong here and both must be evaluated every time: container tooling (Docker, Docker Compose) for any Azure-dependency emulators, and the VS Code debug-integration extension for each detected project type that has a matching row in the table below. The extensions are required for the debug experience — task types, problem matchers, launch integration — even when the project has no Azure emulator dependencies and even when the matching CLI or runtime tool already appears in the Run group.
 
 This table is the **authoritative list** — include every row whose trigger matches the project, and maintainers must add any new debug tool or extension here so it is considered. Some project types require a specific VS Code extension for the debug experience (e.g. Azure Functions needs the Functions extension for its `func` task type and problem matchers), so do not infer these from memory — take them from this table.
 
 Prefer to use the debug tools listed here. Also, never list VS Code itself — the plan is already running inside VS Code, so it is always present — and never list a VS Code extension for an emulator (e.g. an "Azurite Extension"). Emulators will run as containers via Docker and Docker Compose, not as extensions.
 
-| Tool / Extension | Category | Trigger / Needed for | Detect with |
+| Tool / Extension | Category | Trigger When | Detect with |
 |------------------|----------|----------------------|-------------|
 | Docker | Container runtime | Project has Azure dependencies that run as local emulators | `docker --version` |
-| Docker Compose | Orchestrator | Orchestrating emulators | `docker compose version` — if detection is inconclusive, fall back to unknown, not missing (see Docker Compose detection in Phase 2) |
-| `ms-azuretools.vscode-azurefunctions` | VS Code extension | Azure Functions service | extensions filesystem check (Phase 2) |
+| Docker Compose | Orchestrator | Orchestrating emulators | Do not detect — always record as unknown (`❓`), version `—` (see Docker Compose detection in Phase 2) |
+| `ms-azuretools.vscode-azurefunctions` | VS Code extension | Has an Azure Functions service | extensions filesystem check (Phase 2); installed (`✅`) if found, otherwise unknown (`❓`) — never not-installed |
 
-Always include the any matching VS Code extension when they match a service; for example, the Azure Functions extension should be required when building an Azure Functions project.
+Always emit a Debug row for every VS Code extension whose project type is present. Run the Phase 2 filesystem check: if the extension folder is found, record it installed (`✅`); if it is not found, record it as unknown (`❓`), never as not-installed (`❌`) — the folder scan can come up empty in restricted shells even when the extension is installed. Never drop the row just because the extension wasn't found, and never treat it as already covered by a Run tool. For example, an Azure Functions project must include a `ms-azuretools.vscode-azurefunctions` row even though Azure Functions Core Tools already appears under Run — the Core Tools CLI and the extension are separate prerequisites.
 
 ---
 
@@ -56,7 +56,7 @@ Always include the any matching VS Code extension when they match a service; for
 
 For each needed tool, run its detection and record whether it is installed and at what version. Mind any details in the sections below.
 
-Re-run this inventory every time the calling agent (re)builds its plan or the tool set changes — never carry over a stale result. Every tool must resolve from an actual scan to installed or not-installed — except the few tools whose detection is inherently unreliable (e.g. Docker Compose), which fall back to unknown when their scan is inconclusive rather than being reported as not-installed (see the relevant sections below).
+Re-run this inventory every time the calling agent (re)builds its plan or the tool set changes — never carry over a stale result. Most tools resolve from an actual scan to installed or not-installed. Two cases are explicit exceptions and must never be reported as not-installed: Docker Compose is never detected and is always recorded as unknown (`❓`); a VS Code extension is recorded installed when its folder is found and unknown (`❓`) when it is not. See the Docker Compose detection and VS Code extension detection sections below.
 
 ### Shell environment caveats
 
@@ -95,33 +95,9 @@ Get-Command func -ErrorAction SilentlyContinue | Select-Object -ExpandProperty S
 
 ### Docker Compose detection
 
-Docker Compose ships as a CLI plugin that Docker discovers through `~/.docker/config.json`. If that file can't be read — a common case in sandboxed shells, where the command prints an `operation not permitted` warning — the plugin lookup fails silently and `docker compose version` reports "not found" even though Compose is installed. Don't mark Docker Compose missing on the first failed `docker compose version`.
+Do not attempt to detect Docker Compose, and do not run `docker compose version` or any equivalent. Docker Compose ships as a Docker CLI plugin resolved through `~/.docker/config.json`, and that lookup fails silently in sandboxed or non-interactive shells, so the check reports "not found" even when Compose is installed. The result is too unreliable to act on.
 
-Still attempt detection: point `DOCKER_CONFIG` at a fresh empty directory so Docker never reads the protected `config.json`, re-run the version check, then fall back to the plugin binary:
-
-```bash
-# macOS/Linux — retry with an isolated config dir, then fall back to the plugin binary
-docker compose version 2>/dev/null \
-  || DOCKER_CONFIG="$(mktemp -d)" docker compose version 2>/dev/null \
-  || docker-compose version 2>/dev/null \
-  || find /opt/homebrew/lib/docker/cli-plugins /usr/local/lib/docker/cli-plugins \
-          /usr/lib/docker/cli-plugins ~/.docker/cli-plugins -name "docker-compose" 2>/dev/null | head -1
-```
-
-```powershell
-# Windows PowerShell — retry with an isolated config dir, then fall back to the plugin binary
-docker compose version 2>$null
-if (-not $?) {
-  $tmp = New-Item -ItemType Directory -Path (Join-Path $env:TEMP ([guid]::NewGuid()))
-  $env:DOCKER_CONFIG = $tmp.FullName
-  docker compose version 2>$null
-}
-if (-not $?) {
-  Get-Command docker-compose -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-}
-```
-
-If any of these succeed, record Docker Compose as installed (`✅`) with the reported version. If they all come up empty the result is **inconclusive, not a confirmed absence** — these checks are too unreliable to assert Compose is missing. So unlike a normal tool (which defaults to not-installed `❌` when its check fails), Docker Compose falls back to an unknown status (`❓`) with version `—`. An unknown status is not counted as a missing tool — it just tells the user to make sure Docker Compose is installed and ready before debugging.
+Always record Docker Compose as unknown (`❓`) with version `—`. Do not record it as installed (`✅`) or not-installed (`❌`). An unknown status is not counted as a missing tool — it just tells the user to make sure Docker Compose is installed and ready before debugging.
 
 ---
 
@@ -139,4 +115,4 @@ find ~/.vscode/extensions ~/.vscode-insiders/extensions -maxdepth 1 -name "<exte
 Get-ChildItem "$env:USERPROFILE\.vscode\extensions", "$env:USERPROFILE\.vscode-insiders\extensions" -Filter "<extension-id-prefix>*" -ErrorAction SilentlyContinue
 ```
 
-The extensions to check come from the **VS Code debug-integration extensions** table in Phase 1 — that table is the authoritative list. Detect each one with the extensions filesystem check above.
+The extensions to check come from the **VS Code debug-integration extensions** table in Phase 1 — that table is the authoritative list. Detect each one with the extensions filesystem check above. If the check finds the extension folder, record it installed (`✅`); if it finds nothing, record it as unknown (`❓`), never as not-installed (`❌`) — the scan can come up empty in restricted shells even when the extension is installed. An unknown status is not counted as a missing tool.
