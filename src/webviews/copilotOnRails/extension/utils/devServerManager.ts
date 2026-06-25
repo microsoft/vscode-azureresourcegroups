@@ -142,6 +142,7 @@ export async function startDevServer(folder: string, timeoutMs = 90_000): Promis
         shell: true,
         // Lead our own process group on POSIX so killTree can reap children.
         detached: process.platform !== 'win32',
+        // eslint-disable-next-line @typescript-eslint/naming-convention -- these are environment variable names
         env: { ...process.env, FORCE_COLOR: '0', BROWSER: 'none' },
     });
 
