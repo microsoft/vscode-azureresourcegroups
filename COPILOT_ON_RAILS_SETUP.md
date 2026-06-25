@@ -59,14 +59,14 @@ For now, the quickest way to activate it is to open the **Azure** pane.
 
 ## 5. Create a new project with Copilot
 
-1. Open the **Explorer** pane.
-2. Scroll to the bottom and expand the **AZURE PROJECT** section.
-3. Click **Create New Project With Copilot**.
+1. Open an **empty folder** as your workspace. The **AZURE PROJECT** section only appears when an empty workspace is open.
+2. Open the **Explorer** pane.
+3. Scroll to the bottom and expand the **AZURE PROJECT** section.
+4. Click **Create New Project With Copilot**.
 
 ![Azure Project section](docs/images/05-azure-project-section.png)
 
-> ℹ️ The **AZURE PROJECT** section generally appears when you have an **empty workspace**
-> open. If you don't see it, open an empty folder as your workspace and try again.
+> ℹ️ If you don't see the **AZURE PROJECT** section, double-check that your workspace is an empty folder and try again.
 
 ---
 
@@ -91,7 +91,7 @@ projects toward the supported options below:
 
 **Actively supported in this build:**
 
-- **Languages / runtimes:** TypeScript, JavaScript
+- **Languages:** TypeScript, JavaScript
 - **Service types:**
   - Azure Functions
   - Front-end apps
@@ -99,7 +99,7 @@ projects toward the supported options below:
 
 **Not yet fully supported:**
 
-- Other runtimes, languages, service types, and emulators may be selectable, but may not produce consistent output in this build yet.
+- Other languages (and associated runtimes), service types, and emulators may be selectable, but may not produce consistent output in this build yet.
 
 > 🚧 We **haven't added warnings yet** for unsupported or limited-support options — so if you
 > pick something outside the list above, you may hit rough edges. We plan to expand full
