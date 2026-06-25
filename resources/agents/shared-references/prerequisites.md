@@ -38,14 +38,17 @@ Dependencies that are required to run the project locally. If a run tool is miss
 
 Tooling needed to debug the project locally (not just to run it through the terminal): container tooling for Azure-dependency emulators, plus the VS Code extensions that provide debug integration for each project type.
 
-This table is the **authoritative list** — include every row whose trigger matches the project, and maintainers must add any new debug tool or extension here so it is considered. Some project types require a specific VS Code extension for the debug experience (e.g. Azure Functions needs the Functions extension for its `func` task
-type and problem matchers), so do not infer these from memory — take them from this table.
+This table is the **authoritative list** — include every row whose trigger matches the project, and maintainers must add any new debug tool or extension here so it is considered. Some project types require a specific VS Code extension for the debug experience (e.g. Azure Functions needs the Functions extension for its `func` task type and problem matchers), so do not infer these from memory — take them from this table.
+
+Prefer to use the debug tools listed here. Also, never list VS Code itself — the plan is already running inside VS Code, so it is always present — and never list a VS Code extension for an emulator (e.g. an "Azurite Extension"). Emulators will run as containers via Docker and Docker Compose, not as extensions.
 
 | Tool / Extension | Category | Trigger / Needed for | Detect with |
 |------------------|----------|----------------------|-------------|
 | Docker | Container runtime | Project has Azure dependencies that run as local emulators | `docker --version` |
-| Docker Compose | Orchestrator | Orchestrating emulators | `docker compose version` |
-| `ms-azuretools.vscode-azurefunctions` | VS Code extension | Azure Functions service — task type `func`, problem matchers | extensions filesystem check (Phase 2) |
+| Docker Compose | Orchestrator | Orchestrating emulators | `docker compose version` (see Docker Compose detection in Phase 2) |
+| `ms-azuretools.vscode-azurefunctions` | VS Code extension | Azure Functions service | extensions filesystem check (Phase 2) |
+
+Always include the any matching VS Code extension when they match a service; for example, the Azure Functions extension should be required when building an Azure Functions project.
 
 ---
 
@@ -87,6 +90,38 @@ which func 2>/dev/null || \
 # Windows PowerShell
 Get-Command func -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
 ```
+
+---
+
+### Docker Compose detection
+
+Docker Compose ships as a CLI plugin that Docker discovers through `~/.docker/config.json`. If that file can't be read — a common case in sandboxed shells, where the command prints an `operation not permitted` warning — the plugin lookup fails silently and `docker compose version` reports "not found" even though Compose is installed. Don't mark Docker Compose missing on the first failed `docker compose version`.
+
+The most reliable fix is to point `DOCKER_CONFIG` at a fresh empty directory so Docker never reads the protected `config.json`, then re-run the version check. Only after that — and a direct check of the plugin binary — should you report it as not installed:
+
+```bash
+# macOS/Linux — retry with an isolated config dir, then fall back to the plugin binary
+docker compose version 2>/dev/null \
+  || DOCKER_CONFIG="$(mktemp -d)" docker compose version 2>/dev/null \
+  || docker-compose version 2>/dev/null \
+  || find /opt/homebrew/lib/docker/cli-plugins /usr/local/lib/docker/cli-plugins \
+          /usr/lib/docker/cli-plugins ~/.docker/cli-plugins -name "docker-compose" 2>/dev/null | head -1
+```
+
+```powershell
+# Windows PowerShell — retry with an isolated config dir, then fall back to the plugin binary
+docker compose version 2>$null
+if (-not $?) {
+  $tmp = New-Item -ItemType Directory -Path (Join-Path $env:TEMP ([guid]::NewGuid()))
+  $env:DOCKER_CONFIG = $tmp.FullName
+  docker compose version 2>$null
+}
+if (-not $?) {
+  Get-Command docker-compose -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+}
+```
+
+Only report Docker Compose as not installed when the isolated-config retry, the `docker compose` subcommand, and the standalone binary fallback all come up empty.
 
 ---
 
