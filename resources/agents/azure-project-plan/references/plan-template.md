@@ -36,22 +36,22 @@
 <!-- The tools the user must install for this project, derived from the chosen stacks and Azure services. See [§ 5. Prerequisites](../instructions.md#5-prerequisites) in the agent instructions for how to identify and inventory them. -->
 <!-- ALWAYS emit both the ### Run and ### Debug sub-tables. The plan webview shows Run always and Debug only when the user turns on the Autopilot toggle — do not omit either group yourself. -->
 <!-- Service(s): the planned service(s) that need the tool (e.g. `api`, `worker`); use `*` for global toolchain shared by all services. For a container runtime/orchestrator (Docker, Docker Compose), list the service(s) whose Azure dependencies its emulators stand in for. -->
-<!-- Installed/Version come from the detection pass and must be re-run every time this section is (re)generated — never leave a placeholder. -->
+<!-- Installed/Version come from the detection pass and must be re-run every time this section is (re)generated — never leave a placeholder. Use ❓ for a tool whose status can't be reliably detected (e.g. Docker Compose); ❓ is informational and is not counted as missing. -->
 <!-- Install holds the install command/URL; the plan webview hides this column and surfaces it only for ❌ tools in the action callout. -->
 
 ### Run
 
 | Tool / Extension | Category | Service(s) | Installed | Version | Install |
 |------------------|----------|------------|-----------|---------|---------|
-| {name} | {Runtime / Package manager / …} | {service(s) or *} | {✅/❌} | {version or —} | {install URL or command} |
+| {name} | {Runtime / Package manager / …} | {service(s) or *} | {✅/❌/❓} | {version or —} | {install URL or command} |
 
 ### Debug
 
 | Tool / Extension | Category | Service(s) | Installed | Version | Install |
 |------------------|----------|------------|-----------|---------|---------|
-| {name} | {Container runtime / Orchestrator / VS Code extension} | {service(s) whose emulated Azure deps need it, or *} | {✅/❌} | {version or —} | {install URL or command} |
+| {name} | {Container runtime / Orchestrator / VS Code extension} | {service(s) whose emulated Azure deps need it, or *} | {✅/❌/❓} | {version or —} | {install URL or command} |
 
-> ⚠️ Ask the user to install any tools or extensions marked ❌ before approving this plan.
+> ⚠️ Ask the user to install any tools or extensions marked ❌ before approving this plan, and to confirm any marked ❓ (e.g. Docker Compose) are installed and ready.
 
 ---
 
