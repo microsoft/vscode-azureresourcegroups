@@ -58,14 +58,16 @@ async function getAzureActivityLog(actionContext: IActionContext): Promise<{ mes
 
     if (selectedActivityItems.length === 0) {
         return {
-            message: 'No activity log items found.',
+            message:
+                'No activity log items found.',
             activityItems: [],
         };
     }
 
     return {
         message:
-            'Explain the data from the following activity items. Prefer explaining the data more conversationally rather than responding with the raw json data. ' +
+            'Explain the data from the following activity items. ' +
+            'Prefer explaining the data more conversationally rather than responding with the raw json data. ' +
             'The activities provided are in chronological order.',
         activityItems: selectedActivityItems.map(item => JSON.stringify(item)),
     };
