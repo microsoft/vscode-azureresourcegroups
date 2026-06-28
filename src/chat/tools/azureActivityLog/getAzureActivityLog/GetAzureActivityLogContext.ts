@@ -3,12 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { registerLMTool } from '@microsoft/vscode-azext-utils';
-import { GetAzureActivityLog } from './GetAzureActivityLog/GetAzureActivityLog';
+import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { ActivitySelectedCache } from "../../../askAgentAboutActivityLog/ActivitySelectedCache";
 
-export function registerLMTools(): void {
-    // Contextual tools
-    registerLMTool('azureResources_getAzureActivityLog', new GetAzureActivityLog());
-
-    // Functional tools
+export interface GetAzureActivityLogContext extends IActionContext {
+    activitySelectedCache: ActivitySelectedCache;
 }
