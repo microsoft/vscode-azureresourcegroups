@@ -63,5 +63,6 @@
             "Do not translate '@azure'; it is the syntax for addressing the Azure agent.",
             "Do not translate any of the words in the command URL."
         ]
-    }
+    },
+    "azureResourceGroups.copilot.mcp.label": "Copilot Azure Resources Extension Tools"
 }

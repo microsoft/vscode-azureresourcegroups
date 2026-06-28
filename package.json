@@ -98,20 +98,6 @@
                 ]
             }
         ],
-        "languageModelTools": [
-            {
-                "displayName": "Azure Resources: Get Azure Activity Log",
-                "icon": "$(azure)",
-                "inputSchema": {},
-                "modelDescription": "Gets the Azure activity log",
-                "name": "azureResources_getAzureActivityLog",
-                "canBeReferencedInPrompt": true,
-                "toolReferenceName": "azureActivityLog",
-                "tags": [
-                    "azure"
-                ]
-            }
-        ],
         "terminal": {
             "profiles": [
                 {
@@ -893,6 +879,12 @@
                         }
                     }
                 ]
+            }
+        ],
+        "mcpServerDefinitionProviders": [
+            {
+                "id": "vscode-azureresourcegroups.mcp",
+                "label": "%azureResourceGroups.copilot.mcp.label%"
             }
         ]
     },

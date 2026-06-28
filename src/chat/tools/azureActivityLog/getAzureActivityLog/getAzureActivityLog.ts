@@ -18,7 +18,7 @@ const getAzureActivityLogToolName = 'get_azure_activity_log';
 
 export const getAzureActivityLogTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSchema> = {
     name: getAzureActivityLogToolName,
-    description: '...',
+    description: 'Get the Azure activity log from VS Code.',
     annotations: {
         readOnlyHint: true,
         idempotentHint: true,
