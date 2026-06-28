@@ -33,7 +33,7 @@ export const getAzureActivityLogTool: CopilotTool<z.ZodVoid, typeof UnspecifiedO
     }
 };
 
-async function getAzureActivityLog(actionContext: IActionContext) {
+async function getAzureActivityLog(actionContext: IActionContext): Promise<{ instructions: string; activityItems: string[] }> {
     const context: GetAzureActivityLogContext = Object.assign(actionContext, { activitySelectedCache: ActivitySelectedCache.getInstance() });
 
     const convertedActivityItems: ConvertedActivityItem[] = await convertActivityTreeToSimpleObjectArray(context);
