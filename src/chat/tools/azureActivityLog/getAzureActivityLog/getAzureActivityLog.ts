@@ -42,8 +42,11 @@ async function getAzureActivityLog(actionContext: IActionContext) {
     let selectedActivityItems: ConvertedActivityItem[] = convertedActivityItems.filter(item => !(item as ExcludedActivityItem)._exclude);
     logSelectedActivityTelemetry(context, selectedActivityItems);
 
-    // If we weren't able to verify all of the selected items, fallback to providing the entire activity tree
-    if (selectedActivityItems.length !== context.activitySelectedCache.selectionCount) {
+    if (!context.activitySelectedCache.selectionCount) {
+        // If no items were selected (e.g. invoked mcp without using a VS Code command), default to providing the entire activity tree.
+        selectedActivityItems = convertedActivityItems;
+    } else if (selectedActivityItems.length !== context.activitySelectedCache.selectionCount) {
+        // If we weren't able to verify all of the selected items, fallback to providing the entire activity tree
         selectedActivityItems = convertedActivityItems;
 
         const warning: string = l10n.t('Failed to provide some of the selected item(s) to Copilot. Falling back to providing the entire activity log tree.');
