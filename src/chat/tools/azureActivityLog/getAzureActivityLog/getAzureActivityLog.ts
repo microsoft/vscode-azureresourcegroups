@@ -43,7 +43,7 @@ async function getAzureActivityLog(actionContext: IActionContext): Promise<{ mes
     logSelectedActivityTelemetry(context, selectedActivityItems);
 
     if (!context.activitySelectedCache.selectionCount) {
-        // If no items were selected (e.g. invoked mcp without using a VS Code command), default to providing the entire activity tree.
+        // If no items were selected (i.e. invoked mcp without using a VS Code command), default to providing the entire activity tree.
         selectedActivityItems = convertedActivityItems;
     } else if (selectedActivityItems.length !== context.activitySelectedCache.selectionCount) {
         // If we weren't able to verify all of the selected items, fallback to providing the entire activity tree
