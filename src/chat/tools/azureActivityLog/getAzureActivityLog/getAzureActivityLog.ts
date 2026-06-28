@@ -33,7 +33,7 @@ export const getAzureActivityLogTool: CopilotTool<z.ZodVoid, typeof UnspecifiedO
     }
 };
 
-async function getAzureActivityLog(actionContext: IActionContext): Promise<{ instructions: string; activityItems: string[] }> {
+async function getAzureActivityLog(actionContext: IActionContext): Promise<{ message: string; activityItems: string[] }> {
     const context: GetAzureActivityLogContext = Object.assign(actionContext, { activitySelectedCache: ActivitySelectedCache.getInstance() });
 
     const convertedActivityItems: ConvertedActivityItem[] = await convertActivityTreeToSimpleObjectArray(context);
@@ -58,13 +58,13 @@ async function getAzureActivityLog(actionContext: IActionContext): Promise<{ ins
 
     if (selectedActivityItems.length === 0) {
         return {
-            instructions: `No activity log items found.`,
+            message: 'No activity log items found.',
             activityItems: [],
         };
     }
 
     return {
-        instructions:
+        message:
             'Explain the data from the following activity items. Prefer explaining the data more conversationally rather than responding with the raw json data. ' +
             'The activities provided are in chronological order.',
         activityItems: selectedActivityItems.map(item => JSON.stringify(item)),
