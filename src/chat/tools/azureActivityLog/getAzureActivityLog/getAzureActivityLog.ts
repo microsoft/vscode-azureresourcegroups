@@ -7,7 +7,7 @@ import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vs
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import { l10n } from "vscode";
-import { z } from "zod";
+import type { z } from "zod";
 import { ext } from "../../../../extensionVariables";
 import { ActivitySelectedCache } from "../../../askAgentAboutActivityLog/ActivitySelectedCache";
 import { GetAzureActivityLogContext } from "./GetAzureActivityLogContext";
