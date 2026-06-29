@@ -24,7 +24,7 @@ import { registerWorkspaceResourceProvider } from './api/compatibility/registerW
 import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
 import { registerChatStandInParticipantIfNeeded } from './chat/chatStandIn';
-import { registerAzExtTools } from './chat/tools/registerAzExtTools';
+import { registerAzureResourcesTools } from './chat/tools/registerTools';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerActivity } from './commands/activities/registerActivity';
 import { registerActivityLogTree } from './commands/activities/registerActivityLogTree';
@@ -124,7 +124,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
             id: mcpServerId,
             serverLabel: mcpServerLabel,
             serverVersion: ext.version,
-            registerTools: (server) => registerAzExtTools(server),
+            registerTools: (server) => registerAzureResourcesTools(server),
         });
     });
 
