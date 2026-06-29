@@ -334,7 +334,7 @@ export const RequirementsView = (): JSX.Element => {
                 <div className='banner banner--warning' role='note'>
                     <WarningRegular />
                     <div>
-                        <p>Python and .NET backends are a preview feature — may not be compatible and not yet fully supported.</p>
+                        <p>Python and .NET support is limited and may have compatibility issues.</p>
                     </div>
                 </div>
             )}
