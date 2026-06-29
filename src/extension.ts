@@ -122,7 +122,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         registerMcpHttpProvider(context, {
             id: mcpServerId,
             serverLabel: mcpServerLabel,
-            serverVersion: ext.version.value ?? 'Unknown',
+            serverVersion: ext.version.value ?? 'unknown',
             registerTools: (server) => registerAzExtTools(server),
         });
     });
