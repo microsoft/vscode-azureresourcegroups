@@ -5,6 +5,7 @@
 
 import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
+import { settingUtils } from "../../../utils/settingUtils";
 
 /**
  * Autopilot ("YOLO") mode for the create-project workflow.
@@ -76,23 +77,20 @@ let safetyTimer: ReturnType<typeof setTimeout> | undefined;
 let extensionContext: vscode.ExtensionContext | undefined;
 
 function getAutoApproveValue(): unknown {
-    const config = vscode.workspace.getConfiguration(AUTO_APPROVE_SECTION);
-    const inspected = config.inspect(AUTO_APPROVE_KEY);
     // We only ever write at the Global target, so the global value is what we
     // need to preserve and restore.
-    return inspected?.globalValue;
+    return settingUtils.getGlobalSetting<unknown>(AUTO_APPROVE_KEY, AUTO_APPROVE_SECTION);
 }
 
 async function setAutoApproveValue(value: unknown): Promise<void> {
-    const config = vscode.workspace.getConfiguration(AUTO_APPROVE_SECTION);
-    await config.update(AUTO_APPROVE_KEY, value, vscode.ConfigurationTarget.Global);
+    await settingUtils.updateGlobalSetting(AUTO_APPROVE_KEY, value, AUTO_APPROVE_SECTION);
 }
 
 /**
  * Reads the effective (merged) `chat.agent.maxRequests` value, or undefined if unset.
  */
 export function getEffectiveMaxRequests(): number | undefined {
-    return vscode.workspace.getConfiguration(MAX_REQUESTS_SECTION).get<number>(MAX_REQUESTS_KEY);
+    return settingUtils.getWorkspaceSetting<number>(MAX_REQUESTS_KEY, undefined, MAX_REQUESTS_SECTION);
 }
 
 /**
@@ -104,15 +102,22 @@ export function getEffectiveMaxRequests(): number | undefined {
  * effective value is already at least the target.
  */
 export async function raiseWorkspaceMaxRequests(): Promise<void> {
-    if (!vscode.workspace.workspaceFolders?.length) {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    if (!folder) {
         return;
     }
     const current = getEffectiveMaxRequests();
     if (typeof current === 'number' && current >= WORKSPACE_MAX_REQUESTS) {
         return;
     }
-    const config = vscode.workspace.getConfiguration(MAX_REQUESTS_SECTION);
-    await config.update(MAX_REQUESTS_KEY, WORKSPACE_MAX_REQUESTS, vscode.ConfigurationTarget.Workspace);
+    try {
+        await settingUtils.updateWorkspaceSetting(MAX_REQUESTS_KEY, WORKSPACE_MAX_REQUESTS, folder.uri.fsPath, MAX_REQUESTS_SECTION);
+    } catch {
+        // `chat.agent.maxRequests` may not be registered on older VS Code builds,
+        // in which case `update` throws. Bumping the limit is a best-effort
+        // convenience, so swallow the error rather than aborting the autopilot
+        // enable flow (or the guided scaffold launch).
+    }
 }
 
 function showStatusBarItem(): void {
