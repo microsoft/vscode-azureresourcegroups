@@ -18,8 +18,8 @@ let controller: LocalDevNextStepsViewController | undefined;
  * whether `api-test-collections/` contains any files in the workspace.
  */
 export async function openLocalDevNextStepsView(hasApiTests?: boolean): Promise<void> {
-    let apiTestsDetected = hasApiTests === true;
-    if (hasApiTests === undefined) {
+    let apiTestsDetected = !!hasApiTests;
+    if (!apiTestsDetected) {
         const results = await vscode.workspace.findFiles('api-test-collections/**/*', undefined, 1);
         apiTestsDetected = results.length > 0;
     }

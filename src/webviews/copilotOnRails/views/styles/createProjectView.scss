@@ -65,7 +65,7 @@
             border: 1px solid var(--vscode-widget-border, var(--vscode-input-border, var(--vscode-contrastBorder)));
             border-radius: 8px;
             background: var(--vscode-input-background);
-            overflow: hidden;
+            overflow: visible;
             transition: border-color 0.15s ease;
 
             &:focus-within {
@@ -95,6 +95,7 @@
                     background: transparent;
                     padding: 16px 18px;
                     min-height: 140px;
+                    max-height: 80vh;
                     font-size: 0.9em;
                     line-height: 1.6;
                     color: var(--vscode-input-foreground);
