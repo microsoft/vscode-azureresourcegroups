@@ -11,11 +11,18 @@ import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { ext } from "../../../../extensionVariables";
 import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
-import { AUTOPILOT_QUERY_MARKER, enableAutopilot } from "../autopilot";
+import { AUTOPILOT_QUERY_MARKER, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
+
+/**
+ * Below this `chat.agent.maxRequests` ceiling, a guided (non-autopilot) scaffold
+ * run risks pausing partway through on the "Copilot has been working on this
+ * problem for a while" continue prompt. We offer to raise the limit once.
+ */
+const MIN_RECOMMENDED_MAX_REQUESTS = 1000;
 
 export class ScaffoldPlanViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
@@ -103,6 +110,10 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         if (confirmedAutopilot) {
             await this.recordAutopilotMode();
             await enableAutopilot(ext.context);
+        } else {
+            // Autopilot already raises the request limit; for guided runs, warn the
+            // user if their limit is low enough that scaffolding could stall.
+            await this.ensureRequestBudget();
         }
 
         const baseQuery = vscode.l10n.t('I approve the plan.');
@@ -116,6 +127,43 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             stage: 0,
             title: vscode.l10n.t('Scaffolding your project…'),
             message: vscode.l10n.t('Copilot is creating your project files. For progress please view the Copilot chat.'),
+        });
+    }
+
+    /**
+     * For guided runs, warns the user when `chat.agent.maxRequests` is low enough
+     * that scaffolding could stall on the continue prompt, and offers to raise it
+     * once at the Workspace scope. Non-blocking: declining proceeds as-is.
+     */
+    private async ensureRequestBudget(): Promise<void> {
+        const current = getEffectiveMaxRequests();
+        if (typeof current === 'number' && current >= MIN_RECOMMENDED_MAX_REQUESTS) {
+            return;
+        }
+        // A workspace setting can't be written without an open folder, so there's
+        // nothing to offer.
+        if (!vscode.workspace.workspaceFolders?.length) {
+            return;
+        }
+        await callWithTelemetryAndErrorHandling('azureResourceGroups.scaffold.requestBudgetWarning', async (context: IActionContext) => {
+            context.errorHandling.suppressDisplay = true;
+            const yes: vscode.MessageItem = { title: vscode.l10n.t('Yes') };
+            // `isCloseAffordance` relabels the modal's default Cancel button to
+            // "No" (Esc/X still dismisses), and makes that choice resolve
+            // normally instead of throwing UserCancelledError.
+            const no: vscode.MessageItem = { title: vscode.l10n.t('No'), isCloseAffordance: true };
+            const result = await context.ui.showWarningMessage(
+                vscode.l10n.t('Raise the chat request limit for this workspace?'),
+                {
+                    modal: true,
+                    detail: vscode.l10n.t('Your chat request limit (chat.agent.maxRequests) is low, so Copilot may pause partway through scaffolding and ask you to continue. Raise the limit for this workspace so scaffolding can run without interruption?'),
+                },
+                yes,
+                no,
+            );
+            if (result === yes) {
+                await raiseWorkspaceMaxRequests();
+            }
         });
     }
 

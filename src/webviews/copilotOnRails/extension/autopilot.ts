@@ -14,11 +14,14 @@ import * as vscode from "vscode";
  * To make tool actions (file edits, terminal commands) run unattended, we flip
  * VS Code's global `chat.tools.global.autoApprove` setting on for the duration
  * of the run and restore it afterward. We also raise `chat.agent.maxRequests`
- * so the long scaffold -> integrate -> debug chain doesn't stall on the
- * "Copilot has been working on this problem for a while" continue prompt, then
- * restore the user's prior value when the run ends.
+ * to a high ceiling so the long scaffold -> integrate -> debug chain doesn't
+ * stall on the "Copilot has been working on this problem for a while" continue
+ * prompt — but unlike auto-approve, that limit is written at the *Workspace*
+ * scope and intentionally left in place (it isn't a security-sensitive global,
+ * and a freshly scaffolded workspace benefits from the higher ceiling).
  *
- * Because that setting is global and security-sensitive, restoration is layered:
+ * Because the auto-approve setting is global and security-sensitive, its
+ * restoration is layered:
  *  1. A completion watcher restores it the moment the local debug plan reaches
  *     `Status: Implemented` (the end of the chain).
  *  2. A safety deadline restores it after `MAX_RUN_DURATION_MS` even if the
@@ -37,13 +40,13 @@ const MAX_REQUESTS_SECTION = 'chat.agent';
 const MAX_REQUESTS_KEY = 'maxRequests';
 
 /**
- * Request budget granted to a single agent turn while autopilot is active. The
- * unattended chain (scaffold -> integrate -> local debug) makes many tool calls
- * per turn; a high ceiling keeps it from pausing on the "Copilot has been
- * working on this problem for a while" continue prompt that nobody is present
- * to dismiss. Restored to the user's prior value when the run ends.
+ * Request budget written to `chat.agent.maxRequests` at the Workspace scope while
+ * scaffolding. The unattended chain (scaffold -> integrate -> local debug) makes
+ * many tool calls per turn; a high ceiling keeps it from pausing on the "Copilot
+ * has been working on this problem for a while" continue prompt that nobody is
+ * present to dismiss. Persisted in the workspace and intentionally not restored.
  */
-const AUTOPILOT_MAX_REQUESTS = 9999;
+export const WORKSPACE_MAX_REQUESTS = 9999;
 
 /**
  * Maximum wall-clock duration an autopilot run may keep global auto-approve on.
@@ -61,7 +64,6 @@ export const DEBUG_PLAN_GLOB = '.azure/vscode-debug-plan.md';
 /** globalState keys used to survive window reloads mid-run. */
 const STATE_ACTIVE = 'azureResourceGroups.autopilot.active';
 const STATE_PRIOR_VALUE = 'azureResourceGroups.autopilot.priorAutoApprove';
-const STATE_PRIOR_MAX_REQUESTS = 'azureResourceGroups.autopilot.priorMaxRequests';
 /** Epoch ms after which an active run is considered stale and auto-restored. */
 const STATE_DEADLINE = 'azureResourceGroups.autopilot.deadline';
 
@@ -86,16 +88,31 @@ async function setAutoApproveValue(value: unknown): Promise<void> {
     await config.update(AUTO_APPROVE_KEY, value, vscode.ConfigurationTarget.Global);
 }
 
-function getMaxRequestsValue(): unknown {
-    const config = vscode.workspace.getConfiguration(MAX_REQUESTS_SECTION);
-    // We only ever write at the Global target, so the global value is what we
-    // need to preserve and restore.
-    return config.inspect(MAX_REQUESTS_KEY)?.globalValue;
+/**
+ * Reads the effective (merged) `chat.agent.maxRequests` value, or undefined if unset.
+ */
+export function getEffectiveMaxRequests(): number | undefined {
+    return vscode.workspace.getConfiguration(MAX_REQUESTS_SECTION).get<number>(MAX_REQUESTS_KEY);
 }
 
-async function setMaxRequestsValue(value: unknown): Promise<void> {
+/**
+ * Raises `chat.agent.maxRequests` to {@link WORKSPACE_MAX_REQUESTS} at the Workspace
+ * scope so the unattended scaffold -> integrate -> debug chain doesn't stall on the
+ * "Copilot has been working on this problem for a while" continue prompt. The value
+ * is persisted in the workspace and intentionally never restored. No-op when no
+ * workspace folder is open (a workspace setting can't be written) or when the
+ * effective value is already at least the target.
+ */
+export async function raiseWorkspaceMaxRequests(): Promise<void> {
+    if (!vscode.workspace.workspaceFolders?.length) {
+        return;
+    }
+    const current = getEffectiveMaxRequests();
+    if (typeof current === 'number' && current >= WORKSPACE_MAX_REQUESTS) {
+        return;
+    }
     const config = vscode.workspace.getConfiguration(MAX_REQUESTS_SECTION);
-    await config.update(MAX_REQUESTS_KEY, value, vscode.ConfigurationTarget.Global);
+    await config.update(MAX_REQUESTS_KEY, WORKSPACE_MAX_REQUESTS, vscode.ConfigurationTarget.Workspace);
 }
 
 function showStatusBarItem(): void {
@@ -167,7 +184,8 @@ function registerCompletionWatcher(): void {
 
 /**
  * Enables autopilot: records the user's current global auto-approve value, turns
- * the setting on globally, and arms the status-bar item and completion watcher.
+ * the setting on globally, raises the workspace request limit, and arms the
+ * status-bar item and completion watcher.
  */
 export async function enableAutopilot(context: vscode.ExtensionContext): Promise<void> {
     extensionContext = context;
@@ -175,14 +193,15 @@ export async function enableAutopilot(context: vscode.ExtensionContext): Promise
     // Don't clobber a previously-saved prior value if autopilot is already on.
     if (context.globalState.get<boolean>(STATE_ACTIVE) !== true) {
         await context.globalState.update(STATE_PRIOR_VALUE, getAutoApproveValue() ?? null);
-        await context.globalState.update(STATE_PRIOR_MAX_REQUESTS, getMaxRequestsValue() ?? null);
     }
     const deadline = Date.now() + MAX_RUN_DURATION_MS;
     await context.globalState.update(STATE_ACTIVE, true);
     await context.globalState.update(STATE_DEADLINE, deadline);
 
     await setAutoApproveValue(true);
-    await setMaxRequestsValue(AUTOPILOT_MAX_REQUESTS);
+    // The request limit is bumped at the Workspace scope and intentionally left
+    // in place (not restored) — see WORKSPACE_MAX_REQUESTS.
+    await raiseWorkspaceMaxRequests();
     armAutopilot(deadline);
 }
 
@@ -202,11 +221,10 @@ export async function disableAutopilot(): Promise<void> {
         const prior = context.globalState.get<unknown>(STATE_PRIOR_VALUE);
         // `null` means there was no explicit global value, so clear it.
         await setAutoApproveValue(prior === null ? undefined : prior);
-        const priorMaxRequests = context.globalState.get<unknown>(STATE_PRIOR_MAX_REQUESTS);
-        await setMaxRequestsValue(priorMaxRequests === null ? undefined : priorMaxRequests);
+        // Note: `chat.agent.maxRequests` is deliberately NOT restored — it was
+        // written at the Workspace scope and is left in place.
         await context.globalState.update(STATE_ACTIVE, false);
         await context.globalState.update(STATE_PRIOR_VALUE, undefined);
-        await context.globalState.update(STATE_PRIOR_MAX_REQUESTS, undefined);
         await context.globalState.update(STATE_DEADLINE, undefined);
     }
 
