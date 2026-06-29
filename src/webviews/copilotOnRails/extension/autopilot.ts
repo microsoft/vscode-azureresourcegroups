@@ -111,7 +111,7 @@ export async function raiseWorkspaceMaxRequests(): Promise<void> {
         return;
     }
     try {
-        await settingUtils.updateWorkspaceSetting(MAX_REQUESTS_KEY, WORKSPACE_MAX_REQUESTS, folder.uri.fsPath, MAX_REQUESTS_SECTION);
+        await settingUtils.updateWorkspaceSetting(MAX_REQUESTS_KEY, WORKSPACE_MAX_REQUESTS, folder.uri.fsPath, MAX_REQUESTS_SECTION, vscode.ConfigurationTarget.Workspace);
     } catch {
         // `chat.agent.maxRequests` may not be registered on older VS Code builds,
         // in which case `update` throws. Bumping the limit is a best-effort
