@@ -29,7 +29,9 @@
     ],
     "preview": true,
     "activationEvents": [
+        "onStartupFinished",
         "onFileSystem:azureResourceGroups",
+        "onLanguageModelTool:azureResources_getAzureActivityLog",
         "workspaceContains:**/.azure/project-plan.md",
         "workspaceContains:**/.azure/requirements.json",
         "workspaceContains:**/.azure/vscode-debug-plan.md"

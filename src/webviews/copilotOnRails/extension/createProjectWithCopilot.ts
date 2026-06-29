@@ -5,13 +5,39 @@
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
+import { ensureAgentInstructions } from "../../../commands/copilotOnRails/agentInstructions";
+import { ensureCopilotChatReady } from "../../../commands/copilotOnRails/openChatWithAgent";
+import { projectSubmissionState } from "../../../tree/project/projectSubmissionState";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { copilotOnRailsCommandIds } from "./copilotOnRailsCommands";
+import { openLoadingView } from "./openLoadingView";
 
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
 
-export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
+export async function createProjectWithCopilot(_context: IActionContext, projectDescription?: string): Promise<void> {
+    // When invoked from the LM tool with a description, skip the webview and go straight to planning.
+    if (projectDescription) {
+        if (!(await ensureCopilotChatReady())) {
+            return;
+        }
+        if (!(await ensureAgentInstructions('azure-project-plan'))) {
+            return;
+        }
+        await vscode.commands.executeCommand('workbench.action.chat.newChat');
+        await vscode.commands.executeCommand('workbench.action.chat.open', {
+            mode: 'azure-project-plan',
+            query: projectDescription,
+        });
+        projectSubmissionState.setPending();
+        openLoadingView({
+            stage: 0,
+            title: vscode.l10n.t('Gathering project requirements…'),
+            message: vscode.l10n.t('Copilot is analyzing your prompt and preparing the requirements questionnaire.'),
+        });
+        return;
+    }
+
     // Local Development => Deploy
     if (await hasCompletedPhase('.azure/vscode-debug-plan.md', 'implemented')) {
         const choice = await vscode.window.showInformationMessage(
