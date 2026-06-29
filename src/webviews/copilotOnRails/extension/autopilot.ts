@@ -13,7 +13,10 @@ import * as vscode from "vscode";
  * plan -> scaffold -> local-debug chain runs end-to-end without approval gates.
  * To make tool actions (file edits, terminal commands) run unattended, we flip
  * VS Code's global `chat.tools.global.autoApprove` setting on for the duration
- * of the run and restore it afterward.
+ * of the run and restore it afterward. We also raise `chat.agent.maxRequests`
+ * so the long scaffold -> integrate -> debug chain doesn't stall on the
+ * "Copilot has been working on this problem for a while" continue prompt, then
+ * restore the user's prior value when the run ends.
  *
  * Because that setting is global and security-sensitive, restoration is layered:
  *  1. A completion watcher restores it the moment the local debug plan reaches
@@ -29,6 +32,18 @@ import * as vscode from "vscode";
 
 const AUTO_APPROVE_SECTION = 'chat.tools.global';
 const AUTO_APPROVE_KEY = 'autoApprove';
+
+const MAX_REQUESTS_SECTION = 'chat.agent';
+const MAX_REQUESTS_KEY = 'maxRequests';
+
+/**
+ * Request budget granted to a single agent turn while autopilot is active. The
+ * unattended chain (scaffold -> integrate -> local debug) makes many tool calls
+ * per turn; a high ceiling keeps it from pausing on the "Copilot has been
+ * working on this problem for a while" continue prompt that nobody is present
+ * to dismiss. Restored to the user's prior value when the run ends.
+ */
+const AUTOPILOT_MAX_REQUESTS = 9999;
 
 /**
  * Maximum wall-clock duration an autopilot run may keep global auto-approve on.
@@ -46,6 +61,7 @@ export const DEBUG_PLAN_GLOB = '.azure/vscode-debug-plan.md';
 /** globalState keys used to survive window reloads mid-run. */
 const STATE_ACTIVE = 'azureResourceGroups.autopilot.active';
 const STATE_PRIOR_VALUE = 'azureResourceGroups.autopilot.priorAutoApprove';
+const STATE_PRIOR_MAX_REQUESTS = 'azureResourceGroups.autopilot.priorMaxRequests';
 /** Epoch ms after which an active run is considered stale and auto-restored. */
 const STATE_DEADLINE = 'azureResourceGroups.autopilot.deadline';
 
@@ -68,6 +84,18 @@ function getAutoApproveValue(): unknown {
 async function setAutoApproveValue(value: unknown): Promise<void> {
     const config = vscode.workspace.getConfiguration(AUTO_APPROVE_SECTION);
     await config.update(AUTO_APPROVE_KEY, value, vscode.ConfigurationTarget.Global);
+}
+
+function getMaxRequestsValue(): unknown {
+    const config = vscode.workspace.getConfiguration(MAX_REQUESTS_SECTION);
+    // We only ever write at the Global target, so the global value is what we
+    // need to preserve and restore.
+    return config.inspect(MAX_REQUESTS_KEY)?.globalValue;
+}
+
+async function setMaxRequestsValue(value: unknown): Promise<void> {
+    const config = vscode.workspace.getConfiguration(MAX_REQUESTS_SECTION);
+    await config.update(MAX_REQUESTS_KEY, value, vscode.ConfigurationTarget.Global);
 }
 
 function showStatusBarItem(): void {
@@ -147,12 +175,14 @@ export async function enableAutopilot(context: vscode.ExtensionContext): Promise
     // Don't clobber a previously-saved prior value if autopilot is already on.
     if (context.globalState.get<boolean>(STATE_ACTIVE) !== true) {
         await context.globalState.update(STATE_PRIOR_VALUE, getAutoApproveValue() ?? null);
+        await context.globalState.update(STATE_PRIOR_MAX_REQUESTS, getMaxRequestsValue() ?? null);
     }
     const deadline = Date.now() + MAX_RUN_DURATION_MS;
     await context.globalState.update(STATE_ACTIVE, true);
     await context.globalState.update(STATE_DEADLINE, deadline);
 
     await setAutoApproveValue(true);
+    await setMaxRequestsValue(AUTOPILOT_MAX_REQUESTS);
     armAutopilot(deadline);
 }
 
@@ -172,8 +202,11 @@ export async function disableAutopilot(): Promise<void> {
         const prior = context.globalState.get<unknown>(STATE_PRIOR_VALUE);
         // `null` means there was no explicit global value, so clear it.
         await setAutoApproveValue(prior === null ? undefined : prior);
+        const priorMaxRequests = context.globalState.get<unknown>(STATE_PRIOR_MAX_REQUESTS);
+        await setMaxRequestsValue(priorMaxRequests === null ? undefined : priorMaxRequests);
         await context.globalState.update(STATE_ACTIVE, false);
         await context.globalState.update(STATE_PRIOR_VALUE, undefined);
+        await context.globalState.update(STATE_PRIOR_MAX_REQUESTS, undefined);
         await context.globalState.update(STATE_DEADLINE, undefined);
     }
 

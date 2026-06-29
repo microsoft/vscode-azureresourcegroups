@@ -83,7 +83,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     vscode.l10n.t('Approve this plan and run the rest in Autopilot mode?'),
                     {
                         modal: true,
-                        detail: vscode.l10n.t('Autopilot scaffolds and sets up local debugging without stopping for further approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally. You can turn this off any time from the status bar.'),
+                        detail: vscode.l10n.t('Autopilot scaffolds and sets up local debugging without stopping for further approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally, and the chat request limit is raised so the run doesn\'t pause partway through. You can turn this off any time from the status bar.'),
                     },
                     { title: vscode.l10n.t('Enable Autopilot') },
                 );
