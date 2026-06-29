@@ -64,6 +64,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     perfStats ||= { loadStartTime: Date.now(), loadEndTime: Date.now() };
 
     ext.context = context;
+    ext.version = vscode.extensions.getExtension(resourcesExtensionId)?.packageJSON.version;
     ext.outputChannel = createAzExtLogOutputChannel('Azure Resource Groups');
     context.subscriptions.push(ext.outputChannel);
     context.subscriptions.push(setupAzureLogger(ext.outputChannel));
@@ -122,7 +123,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         registerMcpHttpProvider(context, {
             id: mcpServerId,
             serverLabel: mcpServerLabel,
-            serverVersion: ext.version.value ?? 'unknown',
+            serverVersion: ext.version,
             registerTools: (server) => registerAzExtTools(server),
         });
     });

@@ -6,9 +6,8 @@
 import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
 import { AzExtTreeDataProvider, IAzExtLogOutputChannel, IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
 import { AzExtResourceType } from "api/src/AzExtResourceType";
-import { DiagnosticCollection, Disposable, ExtensionContext, extensions, TreeView } from "vscode";
+import { DiagnosticCollection, Disposable, ExtensionContext, TreeView } from "vscode";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
-import { resourcesExtensionId } from "./constants";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
 import { ManagedIdentityBranchDataProvider } from "./managedIdentity/ManagedIdentityBranchDataProvider";
 import { AzureResourcesServiceFactory } from "./services/AzureResourcesService";
@@ -16,7 +15,6 @@ import { TreeDataItem } from "./tree/ResourceGroupsItem";
 import { TreeItemStateStore } from "./tree/TreeItemState";
 import { ActivityLogTreeDataProvider } from "./tree/activityLog/ActivityLogBranchDataProvider";
 import { FocusViewTreeDataProvider } from "./tree/azure/FocusViewTreeDataProvider";
-import { Lazy } from "./utils/lazy";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace extActions {
@@ -33,10 +31,7 @@ export namespace extActions {
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
     export let context: ExtensionContext;
-    export const version = new Lazy<string | undefined>(() => {
-        const extension = extensions.getExtension(resourcesExtensionId);
-        return extension?.packageJSON?.version;
-    });
+    export let version: string;
     // TODO: do we need this? only used by load more command
     export let appResourceTree: AzExtTreeDataProvider;
     export let appResourceTreeView: TreeView<unknown>;
