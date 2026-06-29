@@ -29,7 +29,10 @@ export const getAzureActivityLogTool: CopilotTool<z.ZodVoid, typeof UnspecifiedO
             context.telemetry.properties.sessionId = extras?.sessionId;
             context.telemetry.properties.requestId = extras?.requestId.toString();
             return await getAzureActivityLog(context);
-        }) ?? {};
+        }) ?? {
+            message: l10n.t('Failed to get the Azure activity log.'),
+            activityItems: [],
+        };
     }
 };
 

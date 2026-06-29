@@ -6,8 +6,7 @@
 import { AzureSubscriptionProvider } from "@microsoft/vscode-azext-azureauth";
 import { AzExtTreeDataProvider, IAzExtLogOutputChannel, IExperimentationServiceAdapter } from "@microsoft/vscode-azext-utils";
 import { AzExtResourceType } from "api/src/AzExtResourceType";
-import * as vscode from "vscode";
-import { DiagnosticCollection, Disposable, ExtensionContext, TreeView } from "vscode";
+import { DiagnosticCollection, Disposable, ExtensionContext, extensions, TreeView } from "vscode";
 import { TagFileSystem } from "./commands/tags/TagFileSystem";
 import { resourcesExtensionId } from "./constants";
 import { AzureResourcesApiInternal } from "./hostapi.v2.internal";
@@ -35,7 +34,7 @@ export namespace extActions {
 export namespace ext {
     export let context: ExtensionContext;
     export const version = new Lazy<string | undefined>(() => {
-        const extension = vscode.extensions.getExtension(resourcesExtensionId);
+        const extension = extensions.getExtension(resourcesExtensionId);
         return extension?.packageJSON?.version;
     });
     // TODO: do we need this? only used by load more command
