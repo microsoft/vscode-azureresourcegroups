@@ -7,6 +7,6 @@ import { registerMcpToolWithTelemetry } from "@microsoft/vscode-inproc-mcp/vscod
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getAzureActivityLogTool } from "./azureActivityLog/getAzureActivityLog/getAzureActivityLog";
 
-export function registerAzureResourcesTools(mcpServer: McpServer): void {
+export function registerMcpTools(mcpServer: McpServer): void {
     registerMcpToolWithTelemetry(mcpServer, getAzureActivityLogTool);
 }
