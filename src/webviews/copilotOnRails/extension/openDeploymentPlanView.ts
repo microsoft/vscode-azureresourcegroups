@@ -9,6 +9,7 @@ import type { DeploymentPlanData } from "../views/utils/deploymentPlanTypes";
 import { parseDeploymentPlanMarkdown } from "../views/utils/parseDeploymentPlanMarkdown";
 import { DeploymentPlanViewController } from "./controllers/DeploymentPlanViewController";
 import { closeLoadingView } from "./openLoadingView";
+import { DEPLOYMENT_PLAN_GLOB } from "./planFilePaths";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<DeploymentPlanData, DeploymentPlanViewController>({
@@ -92,7 +93,7 @@ function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | und
 
 export async function openDeploymentPlanViewFromWorkspace(): Promise<void> {
     const selected = await pickWorkspaceFile(
-        '.azure/deployment-plan.md',
+        DEPLOYMENT_PLAN_GLOB,
         vscode.l10n.t('No deployment plan markdown files found in the workspace.'),
     );
     if (selected) {

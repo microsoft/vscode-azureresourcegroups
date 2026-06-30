@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { DEBUG_PLAN_GLOB, DEPLOYMENT_PLAN_GLOB, PROJECT_PLAN_GLOB } from '../../webviews/copilotOnRails/extension/planFilePaths';
 
 /** The furthest stage reached: 0 = project creation, 1 = local dev, 2 = deployment. */
 export type ProjectStage = 0 | 1 | 2;
@@ -19,9 +20,9 @@ export interface ProjectPlanFiles {
 }
 
 const PLAN_FILE_GLOBS = [
-    '.azure/project-plan.md',
-    '.azure/vscode-debug-plan.md',
-    '.azure/deployment-plan.md',
+    PROJECT_PLAN_GLOB,
+    DEBUG_PLAN_GLOB,
+    DEPLOYMENT_PLAN_GLOB,
 ] as const;
 
 export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {

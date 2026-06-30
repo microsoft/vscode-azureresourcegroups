@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { ext } from '../../../extensionVariables';
 import { copilotOnRailsCommandIds } from './copilotOnRailsCommands';
+import { DEBUG_PLAN_GLOB, DEPLOYMENT_PLAN_GLOB, PROJECT_PLAN_GLOB, REQUIREMENTS_GLOB } from './planFilePaths';
 
 /**
  * Tracks where the user is in the "Create with Copilot" flow so an interrupted
@@ -45,11 +46,6 @@ export interface FlowState {
 
 const LAST_PHASE_KEY = 'azureResourceGroups.copilotFlow.lastPhase';
 const PROMPT_DISMISSED_PHASE_KEY = 'azureResourceGroups.copilotFlow.promptDismissedForPhase';
-
-const REQUIREMENTS_GLOB = '.azure/requirements.json';
-const PROJECT_PLAN_GLOB = '.azure/project-plan.md';
-const DEBUG_PLAN_GLOB = '.azure/vscode-debug-plan.md';
-const DEPLOYMENT_PLAN_GLOB = '.azure/deployment-plan.md';
 
 /**
  * Prompt used when resuming an interrupted scaffold. The plan was already

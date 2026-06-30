@@ -7,9 +7,8 @@ import * as vscode from "vscode";
 import { parseRequirementsJson, type RequirementsData } from "../views/utils/parseRequirements";
 import { RequirementsViewController } from "./controllers/RequirementsViewController";
 import { closeLoadingView } from "./openLoadingView";
+import { REQUIREMENTS_GLOB } from "./planFilePaths";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
-
-export const REQUIREMENTS_FILE_GLOB = '.azure/requirements.json';
 
 const host = new SingletonViewHost<RequirementsData, RequirementsViewController>({
     createController: (data, uri) => {
@@ -72,7 +71,7 @@ function tryParse(content: string, sourceFileUri: vscode.Uri | undefined): Requi
 
 export async function openRequirementsViewFromWorkspace(): Promise<void> {
     const selected = await pickWorkspaceFile(
-        REQUIREMENTS_FILE_GLOB,
+        REQUIREMENTS_GLOB,
         vscode.l10n.t('No requirements file found. Expected `.azure/requirements.json` in the workspace.'),
     );
     if (selected) {
@@ -104,7 +103,7 @@ async function reloadRequirements(uri: vscode.Uri): Promise<void> {
  * or changes in the workspace.
  */
 export function registerRequirementsAutoOpen(context: vscode.ExtensionContext): void {
-    const watcher = vscode.workspace.createFileSystemWatcher(REQUIREMENTS_FILE_GLOB);
+    const watcher = vscode.workspace.createFileSystemWatcher(REQUIREMENTS_GLOB);
     const handle = async (uri: vscode.Uri) => {
         if (isRequirementsViewOpen()) {
             // Already open — the per-file watcher handles content reload.
