@@ -76,6 +76,18 @@ function roleSortValue(role: RequirementsServiceRole): number {
     return idx === -1 ? ROLE_ORDER.length : idx;
 }
 
+// Backend language questions live in the 'runtime' category. Python and .NET
+// are still in preview as backend choices, so we surface a soft note when one
+// is selected.
+function isPreviewBackendLanguage(answer: RequirementsAnswer): boolean {
+    const values = Array.isArray(answer) ? answer : [answer];
+    return values.some(value => {
+        if (typeof value !== 'string') { return false; }
+        const normalized = value.toLowerCase();
+        return normalized.includes('python') || normalized.includes('.net') || normalized.includes('c#');
+    });
+}
+
 interface ServiceGroup {
     service: RequirementsService;
     questions: RequirementsQuestion[];
@@ -197,6 +209,23 @@ export const RequirementsView = (): JSX.Element => {
 
     const canSubmit = data !== null && missingRequired.length === 0 && !isSaving;
 
+    const showPreviewBackendNote = useMemo(() => {
+        if (!data) {
+            return false;
+        }
+        return data.questions.some(q => {
+            // Language questions are per-service (`{serviceId}:language`, header
+            // "Language"); only backend/worker services can pick Python or .NET.
+            const isLanguageQuestion = q.id.endsWith(':language') || q.header?.trim() === 'Language';
+            if (!isLanguageQuestion) {
+                return false;
+            }
+            const draftAnswer = drafts[q.id];
+            const effective = draftAnswer === undefined ? q.answer : draftAnswer;
+            return isPreviewBackendLanguage(effective);
+        });
+    }, [data, drafts]);
+
     const handleSubmit = useCallback(() => {
         if (!data || !canSubmit) {
             return;
@@ -297,6 +326,15 @@ export const RequirementsView = (): JSX.Element => {
                     <div>
                         <strong>Couldn't submit requirements.</strong>
                         <p>{saveError}</p>
+                    </div>
+                </div>
+            )}
+
+            {showPreviewBackendNote && (
+                <div className='banner banner--warning' role='note'>
+                    <WarningRegular />
+                    <div>
+                        <p>Python and .NET support is limited and may have compatibility issues.</p>
                     </div>
                 </div>
             )}

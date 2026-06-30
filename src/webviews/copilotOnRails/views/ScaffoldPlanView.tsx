@@ -99,6 +99,33 @@ function isServiceStackSection(section: PlanSection): boolean {
     );
 }
 
+// Collects every Language value selected across the given service stack
+// sections (all columns of each Language row, excluding the row label).
+function collectSelectedLanguages(sections: PlanSection[]): Set<string> {
+    const languages = new Set<string>();
+    for (const section of sections) {
+        for (const content of section.content ?? []) {
+            if (content.type !== 'table') { continue; }
+            const languageRow = content.rows.find(r => r[0]?.trim() === 'Language');
+            if (!languageRow) { continue; }
+            for (let ci = 1; ci < languageRow.length; ci++) {
+                const value = languageRow[ci]?.trim();
+                if (value) { languages.add(value); }
+            }
+        }
+    }
+    return languages;
+}
+
+// Languages that are still in preview when chosen as a service's backend.
+const previewBackendLanguages = new Set<string>(['Python', 'C# (.NET)']);
+
+// True when any service selects a backend language that is still in preview.
+function hasPreviewBackendLanguage(sections: PlanSection[]): boolean {
+    const languages = collectSelectedLanguages(sections);
+    return [...languages].some(lang => previewBackendLanguages.has(lang));
+}
+
 // Plan table rows whose first cell matches one of these labels are hidden from
 // the plan webview during this phase. Orchestration is an internal detail the
 // user shouldn't have to reason about while reviewing the plan (the agent still
@@ -475,6 +502,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const sections = plan.sections ?? [];
     const overviewSection = sections.find(s => s.number === 1);
     const detailSections = sections.filter(s => s.number !== 1 && isServiceStackSection(s));
+    const showPreviewBackendNote = hasPreviewBackendLanguage(detailSections);
     const structureSection = sections.find(s => s.title.toLowerCase().includes('project structure'));
     const designSection = sections.find(s => s.title.toLowerCase().includes('design system'));
     const prerequisitesSection = sections.find(s => s.title.toLowerCase().includes('prerequisite'));
@@ -559,6 +587,13 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 {overviewSection && <OverviewCard section={overviewSection} created={plan.created && plan.created !== 'Unknown' ? plan.created : undefined} />}
 
                 {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} showDebug={autopilot} onRefreshPrerequisites={() => vscodeApi.postMessage({ command: 'refreshPrerequisites', autopilot })} isRefreshing={isRefreshingPrereqs} />}
+
+                {showPreviewBackendNote && (
+                    <div className='compatibilityNote' role='note'>
+                        <WarningRegular />
+                        <span>Python and .NET support is limited and may have compatibility issues.</span>
+                    </div>
+                )}
 
                 <div className='sectionsRow'>
                     {detailSections.map((section) => {

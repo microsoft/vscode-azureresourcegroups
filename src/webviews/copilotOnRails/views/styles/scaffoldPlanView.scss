@@ -565,6 +565,25 @@
         font-size: 0.82em;
     }
 
+    .compatibilityNote {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: var(--vscode-inputValidation-warningBackground, var(--vscode-toolbar-hoverBackground));
+        border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
+        color: var(--vscode-foreground);
+        font-size: 0.8em;
+        line-height: 1.4;
+
+        svg {
+            flex: 0 0 auto;
+            font-size: 15px;
+            color: var(--vscode-editorWarning-foreground, var(--vscode-list-warningForeground));
+        }
+    }
+
     &.revising {
 
         .cellDropdown,
