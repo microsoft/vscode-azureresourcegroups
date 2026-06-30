@@ -98,20 +98,6 @@
                 ]
             }
         ],
-        "languageModelTools": [
-            {
-                "displayName": "Azure Resources: Get Azure Activity Log",
-                "icon": "$(azure)",
-                "inputSchema": {},
-                "modelDescription": "Gets the Azure activity log",
-                "name": "azureResources_getAzureActivityLog",
-                "canBeReferencedInPrompt": true,
-                "toolReferenceName": "azureActivityLog",
-                "tags": [
-                    "azure"
-                ]
-            }
-        ],
         "terminal": {
             "profiles": [
                 {
@@ -894,6 +880,12 @@
                     }
                 ]
             }
+        ],
+        "mcpServerDefinitionProviders": [
+            {
+                "id": "vscode-azureresourcegroups.mcp",
+                "label": "%azureResourceGroups.copilot.mcp.label%"
+            }
         ]
     },
     "scripts": {
@@ -930,6 +922,7 @@
         "@microsoft/vscode-azext-azureauth": "^6.1.0-alpha.2",
         "@microsoft/vscode-azext-azureutils": "^4.3.0",
         "@microsoft/vscode-azext-utils": "^4.1.0",
+        "@microsoft/vscode-inproc-mcp": "^0.3.0",
         "form-data": "^4.0.6",
         "fs-extra": "^11.3.0",
         "jsonc-parser": "^2.2.1",
@@ -937,6 +930,7 @@
         "uuid": "^14.0.0",
         "vscode-nls": "^5.0.1",
         "vscode-uri": "^3.0.7",
-        "ws": "^8.21.0"
+        "ws": "^8.21.0",
+        "zod": "^4.4.3"
     }
 }

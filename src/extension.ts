@@ -7,6 +7,7 @@
 
 import { LocationListStep, registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
 import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { registerMcpHttpProvider } from '@microsoft/vscode-inproc-mcp/vscode';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
@@ -23,7 +24,7 @@ import { registerWorkspaceResourceProvider } from './api/compatibility/registerW
 import { createAzureResourcesHostApi } from './api/createAzureResourcesHostApi';
 import { createWrappedAzureResourcesExtensionApi } from './api/createWrappedAzureResourcesExtensionApi';
 import { registerChatStandInParticipantIfNeeded } from './chat/chatStandIn';
-import { registerLMTools } from './chat/tools/registerLMTools';
+import { registerMcpTools } from './chat/tools/registerMcpTools';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerActivity } from './commands/activities/registerActivity';
 import { registerActivityLogTree } from './commands/activities/registerActivityLogTree';
@@ -32,6 +33,7 @@ import { deleteResourceGroupV2 } from './commands/deleteResourceGroup/v2/deleteR
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
+import { mcpServerId, mcpServerLabel, resourcesExtensionId } from './constants';
 import { registerExportAuthRecordOnSessionChange } from './exportAuthRecord';
 import { ext } from './extensionVariables';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
@@ -62,6 +64,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     perfStats ||= { loadStartTime: Date.now(), loadEndTime: Date.now() };
 
     ext.context = context;
+    ext.version = vscode.extensions.getExtension(resourcesExtensionId)?.packageJSON.version;
     ext.outputChannel = createAzExtLogOutputChannel('Azure Resource Groups');
     context.subscriptions.push(ext.outputChannel);
     context.subscriptions.push(setupAzureLogger(ext.outputChannel));
@@ -90,7 +93,6 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         activateContext.telemetry.properties.isActivationEvent = 'true';
         activateContext.telemetry.measurements.mainFileLoad = (perfStats.loadEndTime - perfStats.loadStartTime) / 1000;
 
-
         ext.subscriptionProviderFactory = getSubscriptionProviderFactory();
 
         ext.tagFS = new TagFileSystem(ext.appResourceTree);
@@ -118,7 +120,12 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         survey(context);
 
         registerChatStandInParticipantIfNeeded(context);
-        registerLMTools();
+        registerMcpHttpProvider(context, {
+            id: mcpServerId,
+            serverLabel: mcpServerLabel,
+            serverVersion: ext.version,
+            registerTools: (server) => registerMcpTools(server),
+        });
     });
 
     const extensionManager = new ResourceGroupsExtensionManager();
@@ -202,7 +209,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         }
     };
 
-    ext.v2.api = v2ApiFactory.createApi({ extensionId: 'ms-azuretools.vscode-azureresourcegroups' });
+    ext.v2.api = v2ApiFactory.createApi({ extensionId: resourcesExtensionId });
     ext.managedIdentityBranchDataProvider = new ManagedIdentityBranchDataProvider();
     ext.v2.api.resources.registerAzureResourceBranchDataProvider(AzExtResourceType.ManagedIdentityUserAssignedIdentities, ext.managedIdentityBranchDataProvider);
 

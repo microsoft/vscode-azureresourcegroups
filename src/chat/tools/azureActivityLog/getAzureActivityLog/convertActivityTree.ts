@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ActivityAttributes, ActivityChildItemBase, ActivityChildType } from "@microsoft/vscode-azext-utils";
-import { ext } from "../../../extensionVariables";
-import { ActivityItem, ActivityStatus } from "../../../tree/activityLog/ActivityItem";
-import { TreeDataItem } from "../../../tree/ResourceGroupsItem";
+import { ext } from "../../../../extensionVariables";
+import { ActivityItem, ActivityStatus } from "../../../../tree/activityLog/ActivityItem";
+import { TreeDataItem } from "../../../../tree/ResourceGroupsItem";
 import { GetAzureActivityLogContext } from "./GetAzureActivityLogContext";
 
 export type ConvertedActivityItem = {
