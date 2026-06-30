@@ -19,26 +19,28 @@ export const StageProgress = ({ currentStage }: StageProgressProps): JSX.Element
     return (
         <div className='stageProgressTop'>
             <div className='stageProgress' role='group' aria-label='Project stages progress'>
-                <div className='stageProgressTrack'>
-                    <div
-                        className='stageProgressFill'
-                        style={{
-                            width: `${stageSegmentPercent}%`,
-                            left: `${currentStageOffsetPercent}%`,
-                        }}
-                    />
-                </div>
+                <div className='stageProgressInner'>
+                    <div className='stageProgressTrack'>
+                        <div
+                            className='stageProgressFill'
+                            style={{
+                                width: `${stageSegmentPercent}%`,
+                                left: `${currentStageOffsetPercent}%`,
+                            }}
+                        />
+                    </div>
 
-                <div className='stageProgressSteps'>
-                    {stages.map((label, idx) => {
-                        const state = idx < currentStage ? 'completed' : idx === currentStage ? 'current' : 'upcoming';
-                        return (
-                            <div key={label} className={`stageProgressStep ${state}`}>
-                                <span className='stageProgressMarker' aria-hidden='true'>{idx + 1}</span>
-                                <span className='stageProgressLabel'>{label}</span>
-                            </div>
-                        );
-                    })}
+                    <div className='stageProgressSteps'>
+                        {stages.map((label, idx) => {
+                            const state = idx < currentStage ? 'completed' : idx === currentStage ? 'current' : 'upcoming';
+                            return (
+                                <div key={label} className={`stageProgressStep ${state}`}>
+                                    <span className='stageProgressMarker' aria-hidden='true'>{idx + 1}</span>
+                                    <span className='stageProgressLabel'>{label}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
         </div>

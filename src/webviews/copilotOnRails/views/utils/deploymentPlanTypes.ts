@@ -16,10 +16,11 @@ export interface DeploymentPlanData {
     location: string;
     locationCode: string;
     availableLocations?: { name: string; code: string }[];
-    mermaidDiagram: string;
+    architecture: { title?: string; table: DeploymentPlanTable }[];
     workspaceScan: DeploymentPlanTable;
     decisions: DeploymentPlanTable;
     resources: DeploymentPlanTable;
+    resourcesHeading?: string;
     parseError?: DeploymentPlanParseError;
 }
 

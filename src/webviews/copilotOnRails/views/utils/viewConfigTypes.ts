@@ -19,7 +19,7 @@ export type DeploymentPlanViewStrings = {
     locationLabel: string;
     selectSubscriptionPlaceholder: string;
     selectLocationPlaceholder: string;
-    architectureDiagramHeading: string;
+    architectureHeading: string;
     workspaceScanHeading: string;
     decisionsHeading: string;
     azureResourcesHeading: string;
@@ -52,7 +52,6 @@ export type DeploymentPlanViewStrings = {
     editsMadeFallbackMessage: string;
     cancelButton: string;
     submitEditsButton: string;
-    noDiagramAvailable: string;
     parseFailureTitle: string;
     parseFailureFallbackMessage: string;
     parseFailureFileLabel: string;

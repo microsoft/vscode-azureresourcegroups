@@ -6,7 +6,6 @@
 import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea, Tooltip } from '@fluentui/react-components';
 import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
-import mermaid from 'mermaid';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import './styles/deploymentPlanView.scss';
@@ -23,18 +22,24 @@ function format(template: string, ...args: string[]): string {
 }
 
 type SkuKey = `sku:${number}`;
+type SettingKey = 'subscription' | 'location';
 
 type FeedbackItem =
     | { id: string; kind: 'dropdown'; cell: SkuKey; rowIdx: number; field: string; from: string; to: string }
+    | { id: string; kind: 'setting'; key: SettingKey; field: string; from: string; to: string }
     | { id: string; kind: 'freeform'; text: string };
 
 let feedbackIdCounter = 0;
 const nextId = (): string => `fb-${++feedbackIdCounter}`;
 
 function buildFeedbackPrompt(items: FeedbackItem[]): string {
-    const changes = items
+    const skuChanges = items
         .filter((i): i is Extract<FeedbackItem, { kind: 'dropdown' }> => i.kind === 'dropdown')
         .map(i => `- Change SKU for ${i.field} from ${i.from} to ${i.to}`);
+    const settingChanges = items
+        .filter((i): i is Extract<FeedbackItem, { kind: 'setting' }> => i.kind === 'setting')
+        .map(i => `- Change ${i.field} from ${i.from} to ${i.to}`);
+    const changes = [...settingChanges, ...skuChanges];
     const notes = items
         .filter((i): i is Extract<FeedbackItem, { kind: 'freeform' }> => i.kind === 'freeform')
         .map(i => `- ${i.text.trim()}`)
@@ -66,6 +71,7 @@ export const DeploymentPlanView = (): JSX.Element => {
     // Used to revert cells when a dropdown feedback item is discarded or the
     // user selects the same value again.
     const originalSkuValues = useRef<Map<SkuKey, string>>(new Map());
+    const originalSettings = useRef<Map<SettingKey, string>>(new Map());
     const { vscodeApi } = useContext(WebviewContext);
 
     const hasEdits = useMemo(
@@ -75,7 +81,7 @@ export const DeploymentPlanView = (): JSX.Element => {
 
     const isAlreadyApproved = useMemo(() => {
         const s = plan?.status?.trim().toLowerCase();
-        return !!s && s !== 'planning' && s !== 'unknown';
+        return s === 'approved';
     }, [plan?.status]);
 
     const editedRows = useMemo(() => {
@@ -98,6 +104,7 @@ export const DeploymentPlanView = (): JSX.Element => {
                 setFeedbackItems([]);
                 setFreeformDraft('');
                 originalSkuValues.current.clear();
+                originalSettings.current.clear();
             } else if (message?.command === 'revisionInProgress') {
                 setIsAwaitingRevision(true);
                 setDrawerOpen(false);
@@ -122,18 +129,54 @@ export const DeploymentPlanView = (): JSX.Element => {
     }, [vscodeApi, plan, hasEdits, isAlreadyApproved]);
 
     const handleSubscriptionChange = useCallback((value: string) => {
+        if (!plan) { return; }
+        const key: SettingKey = 'subscription';
+        const original = originalSettings.current.get(key) ?? plan.subscription;
+        if (!originalSettings.current.has(key)) {
+            originalSettings.current.set(key, plan.subscription);
+        }
+
         setPlan(prev => {
             if (!prev) { return prev; }
             return { ...prev, subscription: value };
         });
         vscodeApi.postMessage({ command: 'subscriptionChanged', data: value });
-    }, [vscodeApi]);
+
+        setFeedbackItems(prev => {
+            const existingIdx = prev.findIndex(i => i.kind === 'setting' && i.key === key);
+            if (value === original) {
+                originalSettings.current.delete(key);
+                if (existingIdx >= 0) {
+                    const next = prev.slice();
+                    next.splice(existingIdx, 1);
+                    return next;
+                }
+                return prev;
+            }
+            const item: FeedbackItem = { id: existingIdx >= 0 ? prev[existingIdx].id : nextId(), kind: 'setting', key, field: 'Subscription', from: original, to: value };
+            if (existingIdx >= 0) {
+                const next = prev.slice();
+                next[existingIdx] = item;
+                return next;
+            }
+            return [...prev, item];
+        });
+    }, [vscodeApi, plan]);
 
     const handleLocationChange = useCallback((value: string) => {
+        if (!plan) { return; }
+        const key: SettingKey = 'location';
+        const locations = plan.availableLocations ?? [];
+        const selected = locations.find(l => l.code === value);
+        const displayValue = selected ? `${selected.name} (${selected.code})` : value;
+        const originalDisplay = plan.location ? `${plan.location} (${plan.locationCode})` : plan.locationCode;
+        const original = originalSettings.current.get(key) ?? originalDisplay;
+        if (!originalSettings.current.has(key)) {
+            originalSettings.current.set(key, originalDisplay);
+        }
+
         setPlan(prev => {
             if (!prev) { return prev; }
-            const locations = prev.availableLocations ?? [];
-            const selected = locations.find(l => l.code === value);
             return {
                 ...prev,
                 location: selected?.name ?? value,
@@ -141,7 +184,27 @@ export const DeploymentPlanView = (): JSX.Element => {
             };
         });
         vscodeApi.postMessage({ command: 'locationChanged', data: value });
-    }, [vscodeApi]);
+
+        setFeedbackItems(prev => {
+            const existingIdx = prev.findIndex(i => i.kind === 'setting' && i.key === key);
+            if (displayValue === original) {
+                originalSettings.current.delete(key);
+                if (existingIdx >= 0) {
+                    const next = prev.slice();
+                    next.splice(existingIdx, 1);
+                    return next;
+                }
+                return prev;
+            }
+            const item: FeedbackItem = { id: existingIdx >= 0 ? prev[existingIdx].id : nextId(), kind: 'setting', key, field: 'Location', from: original, to: displayValue };
+            if (existingIdx >= 0) {
+                const next = prev.slice();
+                next[existingIdx] = item;
+                return next;
+            }
+            return [...prev, item];
+        });
+    }, [vscodeApi, plan]);
 
     const mutateSku = useCallback((rowIdx: number, value: string) => {
         setPlan(prev => {
@@ -209,6 +272,17 @@ export const DeploymentPlanView = (): JSX.Element => {
             if (item?.kind === 'dropdown') {
                 mutateSku(item.rowIdx, item.from);
                 originalSkuValues.current.delete(item.cell);
+            } else if (item?.kind === 'setting') {
+                // Revert the setting to its original value
+                const original = item.from;
+                if (item.key === 'subscription') {
+                    setPlan(p => p ? { ...p, subscription: original } : p);
+                } else if (item.key === 'location') {
+                    // Parse "Name (code)" back to parts
+                    const match = original.match(/^(.+?)\s*\(([^)]+)\)$/);
+                    setPlan(p => p ? { ...p, location: match?.[1] ?? original, locationCode: match?.[2] ?? original } : p);
+                }
+                originalSettings.current.delete(item.key);
             }
             return prev.filter(i => i.id !== id);
         });
@@ -224,16 +298,25 @@ export const DeploymentPlanView = (): JSX.Element => {
     }, [freeformDraft]);
 
     const handleDiscardAll = useCallback(() => {
-        // Revert any cells touched by dropdown feedback items.
+        // Revert any cells touched by dropdown or setting feedback items.
         setFeedbackItems(prev => {
             for (const item of prev) {
                 if (item.kind === 'dropdown') {
                     mutateSku(item.rowIdx, item.from);
+                } else if (item.kind === 'setting') {
+                    const original = item.from;
+                    if (item.key === 'subscription') {
+                        setPlan(p => p ? { ...p, subscription: original } : p);
+                    } else if (item.key === 'location') {
+                        const match = original.match(/^(.+?)\s*\(([^)]+)\)$/);
+                        setPlan(p => p ? { ...p, location: match?.[1] ?? original, locationCode: match?.[2] ?? original } : p);
+                    }
                 }
             }
             return [];
         });
         originalSkuValues.current.clear();
+        originalSettings.current.clear();
         setFreeformDraft('');
     }, [mutateSku]);
 
@@ -388,25 +471,36 @@ export const DeploymentPlanView = (): JSX.Element => {
                     </div>
                 </div>
 
-                <div className='sectionCard'>
-                    <h2>{strings.azureResourcesHeading}</h2>
-                    <ResourcesTable
-                        table={plan.resources}
-                        disabled={isAwaitingRevision}
-                        editedRows={editedRows}
-                        onSkuChange={handleResourceSkuChange}
-                    />
-                </div>
+                {plan.architecture.length > 0 && (
+                    <details className='sectionCard' open>
+                        <summary><h2>{strings.architectureHeading}</h2></summary>
+                        {plan.architecture.map((section, i) => (
+                            <div key={i}>
+                                {section.title && <h3>{section.title}</h3>}
+                                <PlanTable table={section.table} />
+                            </div>
+                        ))}
+                    </details>
+                )}
 
-                <details className='sectionCard' open>
-                    <summary><h2>{strings.architectureDiagramHeading}</h2></summary>
-                    <MermaidDiagram definition={plan.mermaidDiagram} noDiagramAvailableLabel={strings.noDiagramAvailable} />
-                </details>
+                {plan.resources.rows.length > 0 && (
+                    <details className='sectionCard'>
+                        <summary><h2>{plan.resourcesHeading || strings.azureResourcesHeading}</h2></summary>
+                        <ResourcesTable
+                            table={plan.resources}
+                            disabled={isAwaitingRevision}
+                            editedRows={editedRows}
+                            onSkuChange={handleResourceSkuChange}
+                        />
+                    </details>
+                )}
 
-                <details className='sectionCard'>
-                    <summary><h2>{strings.workspaceScanHeading}</h2></summary>
-                    <PlanTable table={plan.workspaceScan} />
-                </details>
+                {plan.workspaceScan.rows.length > 0 && (
+                    <details className='sectionCard'>
+                        <summary><h2>{strings.workspaceScanHeading}</h2></summary>
+                        <PlanTable table={plan.workspaceScan} />
+                    </details>
+                )}
             </div>
 
             {drawerOpen && !isAwaitingRevision && (
@@ -466,7 +560,7 @@ const FeedbackDrawer = ({ strings, items, freeformDraft, onFreeformChange, onAdd
                     <ul className='feedbackList'>
                         {items.map(item => (
                             <li key={item.id} className={`feedbackItem ${item.kind}`}>
-                                {item.kind === 'dropdown' ? (
+                                {item.kind === 'dropdown' || item.kind === 'setting' ? (
                                     <span className='feedbackChipText'>
                                         <strong>{item.field}:</strong> {item.from}
                                         <span className='arrow'> → </span>
@@ -563,77 +657,6 @@ const SubmitEditsDialog = ({ strings, open, editCount, onCancel, onSubmit }: Sub
         </Dialog>
     );
 };
-
-const MermaidDiagram = ({ definition, noDiagramAvailableLabel }: { definition: string; noDiagramAvailableLabel: string }): JSX.Element => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        // If the definition is empty or doesn't look like mermaid syntax, skip rendering
-        if (!definition.trim() || !isMermaidSyntax(definition)) {
-            setError('not-mermaid');
-            return;
-        }
-
-        let cancelled = false;
-
-        mermaid.initialize({
-            startOnLoad: false,
-            theme: 'dark',
-            securityLevel: 'loose',
-            fontFamily: 'var(--vscode-font-family)',
-            flowchart: {
-                curve: 'basis',
-                padding: 20,
-                nodeSpacing: 40,
-                rankSpacing: 50,
-                htmlLabels: true,
-                defaultRenderer: 'elk',
-            },
-            themeVariables: {
-                primaryColor: '#0078d4',
-                primaryTextColor: '#ffffff',
-                primaryBorderColor: '#005a9e',
-                lineColor: '#888888',
-                secondaryColor: '#252526',
-                tertiaryColor: '#1e1e1e',
-                fontSize: '14px',
-                nodeBorder: '2px',
-                clusterBorder: '#555',
-                edgeLabelBackground: '#1e1e1e',
-            },
-        });
-
-        void (async () => {
-            try {
-                const id = `mermaid-${Date.now()}`;
-                const { svg } = await mermaid.render(id, definition);
-                if (!cancelled && containerRef.current) {
-                    containerRef.current.innerHTML = svg;
-                    setError(null);
-                }
-            } catch (e) {
-                if (!cancelled) {
-                    setError(e instanceof Error ? e.message : String(e));
-                }
-            }
-        })();
-
-        return () => { cancelled = true; };
-    }, [definition]);
-
-    if (error || !definition.trim()) {
-        return <pre className='mermaidBlock'><code>{definition || noDiagramAvailableLabel}</code></pre>;
-    }
-
-    return <div className='mermaidRendered' ref={containerRef} />;
-};
-
-const mermaidKeywords = /^\s*(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitGraph|mindmap|timeline|journey)\b/m;
-
-function isMermaidSyntax(text: string): boolean {
-    return mermaidKeywords.test(text);
-}
 
 const PlanTable = ({ table }: { table: DeploymentPlanTable }): JSX.Element => (
     <table className='planTable'>

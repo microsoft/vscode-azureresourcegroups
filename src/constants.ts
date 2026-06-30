@@ -15,3 +15,4 @@ export const hasPendingProjectSubmissionContextKey = 'ms-azuretools.vscode-azure
 export const canFocusContextValue = 'canFocus';
 
 export const azureDebugPlanAgent = 'azure-debug-plan';
+export const azureDeployAgent = 'azure-deploy';

@@ -10,7 +10,6 @@
 .stageProgress {
     display: flex;
     flex-direction: column;
-    gap: 6px;
     padding: 6px 10px;
     border: 1px solid var(--vscode-widget-border);
     border-radius: 8px;
@@ -20,15 +19,22 @@
     overflow-x: auto;
 }
 
+.stageProgressInner {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    // Grow to fit step labels but never shrink below the container width.
+    min-width: 100%;
+    width: max-content;
+}
+
 .stageProgressTrack {
     position: relative;
     height: 3px;
     border-radius: 999px;
     overflow: hidden;
     background: var(--vscode-widget-border);
-    // Track sits above the steps row and should match its scrollable width.
-    min-width: 100%;
-    width: max-content;
+    width: 100%;
 }
 
 .stageProgressFill {
@@ -44,10 +50,7 @@
     display: flex;
     justify-content: space-between;
     gap: 14px;
-    // Don't allow steps to shrink below their natural label width — the
-    // outer .stageProgress scrolls instead.
-    min-width: 100%;
-    width: max-content;
+    width: 100%;
 }
 
 .stageProgressStep {

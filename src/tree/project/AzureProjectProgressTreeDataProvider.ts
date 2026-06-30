@@ -74,10 +74,16 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
             return [];
         }
 
+        // If the user has started a stage via the chat agent but the plan file
+        // hasn't been written yet, use the pending stage so the tree reflects progress.
+        const effectiveStage = projectSubmissionState.isPending
+            ? Math.max(files.currentStage, projectSubmissionState.pendingStage) as typeof files.currentStage
+            : files.currentStage;
+
         return [
-            new ProjectCreationStageItem(files.currentStage, files.hasProjectPlan),
-            new LocalDevelopmentStageItem(files.currentStage, files.hasLocalDevelopmentPlan),
-            new DeploymentStageItem(files.currentStage, files.hasDeploymentPlan),
+            new ProjectCreationStageItem(effectiveStage, files.hasProjectPlan),
+            new LocalDevelopmentStageItem(effectiveStage, files.hasLocalDevelopmentPlan),
+            new DeploymentStageItem(effectiveStage, files.hasDeploymentPlan),
         ];
     }
 }

@@ -344,7 +344,7 @@ async function registerProjectPlanFilesContext(context: vscode.ExtensionContext,
         await vscode.commands.executeCommand('setContext', hasProjectPlanFilesContextKey, files.hasAny);
         await vscode.commands.executeCommand('setContext', isEmptyWorkspaceContextKey, await isWorkspaceEmpty());
 
-        if (files.hasAny) {
+        if (files.hasAny && files.currentStage >= projectSubmissionState.pendingStage) {
             projectSubmissionState.reset();
         }
     };
