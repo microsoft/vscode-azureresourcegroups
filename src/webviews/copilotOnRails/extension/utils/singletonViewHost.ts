@@ -16,6 +16,39 @@ export interface RevealableWebview {
     revealToForeground(viewColumn?: vscode.ViewColumn): void;
 }
 
+// --- Shared flow-view open tracking ----------------------------------------
+
+const onDidChangeFlowViewStateEmitter = new vscode.EventEmitter<void>();
+
+/**
+ * Fires whenever a Copilot-on-Rails flow view (plan / requirements / loading)
+ * opens or closes. Resume affordances listen to this so "Resume" is only offered
+ * when the user isn't already looking at a view that drives the flow.
+ */
+export const onDidChangeFlowViewState = onDidChangeFlowViewStateEmitter.event;
+
+let openFlowViewCount = 0;
+
+/** True while at least one Copilot-on-Rails flow view is currently open. */
+export function isAnyFlowViewOpen(): boolean {
+    return openFlowViewCount > 0;
+}
+
+/**
+ * Registers a webview panel as an active flow view: increments the open count
+ * (firing {@link onDidChangeFlowViewState}) and decrements it again when the
+ * panel is disposed. Call once, right after the panel is created.
+ */
+export function trackFlowView(panel: vscode.WebviewPanel): void {
+    openFlowViewCount++;
+    onDidChangeFlowViewStateEmitter.fire();
+    const sub = panel.onDidDispose(() => {
+        openFlowViewCount = Math.max(0, openFlowViewCount - 1);
+        onDidChangeFlowViewStateEmitter.fire();
+        sub.dispose();
+    });
+}
+
 /** Read a workspace file as a UTF-8 string. */
 export async function readFileText(uri: vscode.Uri): Promise<string> {
     return Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
@@ -101,6 +134,7 @@ export class SingletonViewHost<TData, TController extends RevealableWebview> {
 
         const controller = this.options.createController(data, sourceFileUri);
         this.controller = controller;
+        trackFlowView(controller.panel);
         controller.revealToForeground(vscode.ViewColumn.Active);
         controller.panel.onDidDispose(() => {
             this.controller = undefined;

@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
+import { recordAgentLaunch } from '../../webviews/copilotOnRails/extension/flowState';
 import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
 import { ensureAgentInstructions } from './agentInstructions';
 
@@ -46,6 +47,7 @@ export async function openChatWithAgent(agentName: string, prompt: string, loadi
     // `.azure/*.md` plan files on disk, not chat history, so a clean session keeps each
     // agent's context window focused on its own phase instead of accumulating the entire
     // plan → scaffold → debug conversation.
+    await recordAgentLaunch(agentName);
     await vscode.commands.executeCommand('workbench.action.chat.newChat');
     await vscode.commands.executeCommand('workbench.action.chat.open', {
         mode: agentName,

@@ -19,10 +19,10 @@ Execute approved plan; scaffold backend services; build API routes + service lay
 ## Prerequisites
 Requires an approved plan. Verify before starting:
 - `.azure/project-plan.md` exists
-- Status = `Approved` (not `Planning`)
+- Status = `Approved` **or** `In Progress` (not `Planning`). `In Progress` means a previous scaffold run was interrupted — **resume it, do not restart.** Read the existing plan and continue scaffolding from where it left off; do NOT re-gather requirements or re-request approval.
 - Section 8 lists API routes; Section 4 lists Azure services
 
-> If `.azure/project-plan.md` is missing or status ≠ `Approved`: **STOP** — tell the user _"No approved project plan found. Create and approve a project plan first."_
+> If `.azure/project-plan.md` is missing or status is `Planning`: **STOP** — tell the user _"No approved project plan found. Create and approve a project plan first."_
 
 ## Autopilot mode (overrides approval gates & the Next Step question)
 **Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto` (front-matter or a `**Execution Mode**: auto` row). When active, run fully unattended:
@@ -124,7 +124,7 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 | Task | Details |
 |------|---------|
 | Read `.azure/project-plan.md` | Load complete plan |
-| Validate status | Must be `Approved`. If not, STOP — instruct user to run `azure-project-plan`. |
+| Validate status | Must be `Approved` or `In Progress`. `In Progress` = an interrupted run — resume scaffolding, do not restart. If `Planning` or missing, STOP — instruct user to run `azure-project-plan`. |
 | Extract plan details | Routes, services, entity types, language, runtime, framework, and **orchestration** for each service's stack section (`## 2. Backend`, `## 3. Frontend`, …), structure |
 | Extract design contract (if frontend) | If a frontend is planned, read Section 5 (Design System & UI). Extract `Component Library:`, `Style Direction:`, `Typography:`, the Color Palette table, and the Pages table (page → layout regions). **If Section 5 is missing or `Component Library:` is blank, STOP — the plan's design section must be completed before scaffolding. Section 5 is load-bearing for Rule 13 / Step 1 quality bar.** |
 | Read the approved HTML preview (if frontend) | List `.azure/.preview-temp/` if it exists. Read `manifest.json` to get the page list, then read each `<slug>.html` plus `theme.css`. **Treat these files as the visual mock-up that the user already approved during planning.** They are the source of truth for layout, palette translation, and per-page region composition. The scaffolded app must reproduce this look using the framework + library named in the Frontend stack section / Section 5 — NOT by serving the preview HTML itself. If `.azure/.preview-temp/` is missing for a plan that has a frontend, do not fail — just rely on Section 5 alone. |

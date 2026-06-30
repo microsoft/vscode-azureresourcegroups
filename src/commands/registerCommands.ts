@@ -18,6 +18,7 @@ import { ActivityItem } from '../tree/activityLog/ActivityItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { createProjectWithCopilot } from '../webviews/copilotOnRails/extension/createProjectWithCopilot';
+import { resumeProjectWithCopilot } from '../webviews/copilotOnRails/extension/resumeProjectWithCopilot';
 import { openDeploymentPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openDeploymentPlanView';
 import { openFrontendPreviewView } from '../webviews/copilotOnRails/extension/openFrontendPreviewView';
 import { openLocalDevNextStepsView } from '../webviews/copilotOnRails/extension/openLocalDevNextStepsView';
@@ -169,6 +170,7 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
 
     registerCommand('azureResourceGroups.createProjectWithCopilot', createProjectWithCopilot);
+    registerCommand('azureResourceGroups.resumeProjectWithCopilot', resumeProjectWithCopilot);
     registerCommand('azureResourceGroups.openPlanView', openPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openLocalPlanView', openLocalPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);

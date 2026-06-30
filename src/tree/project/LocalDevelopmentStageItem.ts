@@ -9,6 +9,7 @@ import { DebugConfigurationNode } from './DebugConfigurationNode';
 import { OpenPlanNode } from './OpenPlanNode';
 import { ProgressNode } from './ProgressNode';
 import { getDebugConfigurations } from './projectPlanFiles';
+import { ResumeStageNode } from './ResumeStageNode';
 import { StageNode } from './StageNode';
 import { StateStageNode } from './StateStageNode';
 
@@ -20,6 +21,10 @@ export class LocalDevelopmentStageItem extends StageNode {
     protected readonly iconName = 'terminal';
 
     getChildren(): ProgressNode[] {
+        if (this.resumeCommandId) {
+            return [new ResumeStageNode(this.stageId)];
+        }
+
         if (!this.hasPlanFile) {
             return [new StateStageNode(this.stageId, copilotOnRailsCommandIds.startLocalDevelopment)];
         }

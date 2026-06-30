@@ -20,6 +20,8 @@ export abstract class StageNode implements ProgressNode {
     constructor(
         protected readonly currentStage: number,
         protected readonly hasPlanFile: boolean,
+        /** When set, this stage is the interrupted one and should offer a Resume action. */
+        protected readonly resumeCommandId?: string,
     ) { }
 
     abstract getChildren(): ProgressNode[];

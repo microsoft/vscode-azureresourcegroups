@@ -13,6 +13,7 @@ import { ext } from "../../../../extensionVariables";
 import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { AUTOPILOT_QUERY_MARKER, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { recordPhaseLaunch } from "../flowState";
 import { openLoadingView } from "../openLoadingView";
 import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
@@ -111,6 +112,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             mode: 'azure-project-scaffold',
             query: confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery,
         });
+        await recordPhaseLaunch('scaffold');
         this.panel.dispose();
         openLoadingView({
             stage: 0,
