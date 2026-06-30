@@ -565,22 +565,21 @@
         font-size: 0.82em;
     }
 
-    .compatibilityNote {
+    .sectionTitle {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        border-radius: 6px;
-        background: var(--vscode-inputValidation-warningBackground, var(--vscode-toolbar-hoverBackground));
-        border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
-        color: var(--vscode-foreground);
-        font-size: 0.8em;
-        line-height: 1.4;
+        gap: 6px;
+    }
+
+    .previewWarningIcon {
+        display: inline-flex;
+        align-items: center;
+        color: var(--vscode-editorWarning-foreground, var(--vscode-list-warningForeground));
+        cursor: default;
 
         svg {
             flex: 0 0 auto;
-            font-size: 15px;
-            color: var(--vscode-editorWarning-foreground, var(--vscode-list-warningForeground));
+            font-size: 16px;
         }
     }
 
