@@ -6,6 +6,8 @@
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
+import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
+import { azureDeployAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type DeploymentPlanData } from "../../views/utils/deploymentPlanTypes";
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from "../../views/utils/viewConfigTypes";
@@ -23,11 +25,11 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         locationLabel: vscode.l10n.t('Location'),
         selectSubscriptionPlaceholder: vscode.l10n.t('Select a subscription...'),
         selectLocationPlaceholder: vscode.l10n.t('Select a location...'),
-        architectureDiagramHeading: vscode.l10n.t('Architecture Diagram'),
+        architectureHeading: vscode.l10n.t('Architecture'),
         workspaceScanHeading: vscode.l10n.t('Workspace Scan'),
         decisionsHeading: vscode.l10n.t('Decisions'),
         azureResourcesHeading: vscode.l10n.t('Azure Resources'),
-        approveButton: vscode.l10n.t('Approve'),
+        approveButton: vscode.l10n.t('Approve Plan'),
         feedbackButtonAriaLabel: vscode.l10n.t('Feedback'),
         feedbackButtonTooltip: vscode.l10n.t('Request changes to the plan before approving'),
         approveButtonTooltip: vscode.l10n.t('Approve the plan and continue with Copilot'),
@@ -49,7 +51,6 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         editsMadeFallbackMessage: vscode.l10n.t('Edits were made. Would you like to submit those edits to Copilot?'),
         cancelButton: vscode.l10n.t('Cancel'),
         submitEditsButton: vscode.l10n.t('Submit'),
-        noDiagramAvailable: vscode.l10n.t('No diagram available'),
         parseFailureTitle: vscode.l10n.t('We couldn\u2019t render this plan'),
         parseFailureFallbackMessage: vscode.l10n.t('The deployment plan couldn\u2019t be rendered as a structured view. The generated markdown didn\u2019t match the expected layout.'),
         parseFailureFileLabel: vscode.l10n.t('Plan file'),
@@ -76,18 +77,14 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                     void this.postDeploymentPlanData();
                     break;
                 case 'approve':
-                    this.panel.dispose();
+                    void this.approveAndContinue();
                     break;
                 case 'submitPlanFeedback': {
                     const query = message.prompt?.trim();
                     if (!query) {
                         return;
                     }
-                    void vscode.commands.executeCommand('workbench.action.chat.open', {
-                        mode: 'agent',
-                        query,
-                    });
-                    void this.panel.webview.postMessage({ command: 'revisionInProgress' });
+                    void this.openDeployChat(query, true);
                     break;
                 }
                 case 'openSourceFile':
@@ -95,6 +92,30 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                     break;
             }
         });
+    }
+
+    private async approveAndContinue(): Promise<void> {
+        if (!(await this.openDeployChat('I approve the deployment plan. Continue with generating the infrastructure and deployment artifacts.', false))) {
+            return;
+        }
+        this.panel.dispose();
+    }
+
+    private async openDeployChat(query: string, isFeedback: boolean): Promise<boolean> {
+        if (!(await ensureAgentInstructions(azureDeployAgent))) {
+            return false;
+        }
+        if (!isFeedback) {
+            await vscode.commands.executeCommand('workbench.action.chat.newChat');
+        }
+        await vscode.commands.executeCommand('workbench.action.chat.open', {
+            mode: azureDeployAgent,
+            query,
+        });
+        if (isFeedback) {
+            void this.panel.webview.postMessage({ command: 'revisionInProgress' });
+        }
+        return true;
     }
 
     updateDeploymentPlanData(planData: DeploymentPlanData, sourceFileUri?: vscode.Uri): void {

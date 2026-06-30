@@ -14,7 +14,7 @@ import { type DeploymentPlanData, type DeploymentPlanTable } from "./deploymentP
  */
 const DEPLOYMENT_SECTION_ALIASES = {
     requirements: ['Requirements'],
-    architectureDiagram: ['Architecture Diagram', 'Architecture'],
+    architectureDiagram: ['Architecture Diagram', 'Architecture', 'Azure Architecture'],
     workspaceScan: ['Workspace Scan', 'Components Detected'],
     decisions: ['Decisions', 'Recipe Selection'],
     resources: ['Service Mapping', 'Azure Resources', 'Provisioning Limit Checklist'],
@@ -69,31 +69,41 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
     const sections = extractNamedSections(lines);
 
     // Support alternate section headings for compatibility with user-authored plans
-    const mermaidDiagram = extractMermaidBlock(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.architectureDiagram));
+    const architecture = extractSubSectionTables(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.architectureDiagram));
 
     const workspaceScan = extractTable(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.workspaceScan));
 
     const decisions = extractTable(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.decisions));
 
     const resources = extractTable(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.resources));
+    const resourcesHeading = findSectionHeading(sections, DEPLOYMENT_SECTION_ALIASES.resources);
 
     // Provide placeholder dropdown options when values are unknown
     const availableSubscriptions = subscription === 'Unknown'
         ? ['Visual Studio Enterprise', 'Azure for Students', 'Pay-As-You-Go', 'MSDN Platforms']
         : undefined;
 
-    const availableLocations = locationCode === 'unknown'
-        ? [
-            { name: 'East US', code: 'eastus' },
-            { name: 'East US 2', code: 'eastus2' },
-            { name: 'West US', code: 'westus' },
-            { name: 'West US 2', code: 'westus2' },
-            { name: 'Central US', code: 'centralus' },
-            { name: 'North Europe', code: 'northeurope' },
-            { name: 'West Europe', code: 'westeurope' },
-            { name: 'Southeast Asia', code: 'southeastasia' },
-        ]
-        : undefined;
+    const knownLocations = [
+        { name: 'East US', code: 'eastus' },
+        { name: 'East US 2', code: 'eastus2' },
+        { name: 'West US', code: 'westus' },
+        { name: 'West US 2', code: 'westus2' },
+        { name: 'Central US', code: 'centralus' },
+        { name: 'North Europe', code: 'northeurope' },
+        { name: 'West Europe', code: 'westeurope' },
+        { name: 'Southeast Asia', code: 'southeastasia' },
+    ];
+
+    // If we have a location display name but no code, try to resolve it from known locations
+    let resolvedLocationCode = locationCode;
+    if (resolvedLocationCode === 'unknown' && location !== 'Unknown') {
+        const matched = knownLocations.find(l => l.name.toLowerCase() === location.toLowerCase());
+        if (matched) {
+            resolvedLocationCode = matched.code;
+        }
+    }
+
+    const availableLocations = knownLocations;
 
     return {
         status,
@@ -101,12 +111,13 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
         subscription: subscription === 'Unknown' ? '' : subscription,
         availableSubscriptions,
         location: location === 'Unknown' ? '' : location,
-        locationCode: locationCode === 'unknown' ? '' : locationCode,
+        locationCode: resolvedLocationCode === 'unknown' ? '' : resolvedLocationCode,
         availableLocations,
-        mermaidDiagram,
+        architecture,
         workspaceScan,
         decisions,
         resources,
+        resourcesHeading,
     };
 }
 
@@ -130,6 +141,17 @@ function findSectionByName(sections: Record<string, string[]>, names: readonly s
         }
     }
     return [];
+}
+
+function findSectionHeading(sections: Record<string, string[]>, names: readonly string[]): string | undefined {
+    const normalizedToOriginal = new Map(Object.keys(sections).map(name => [normalizeSectionName(name), name]));
+    for (const name of names) {
+        const original = normalizedToOriginal.get(normalizeSectionName(name));
+        if (original) {
+            return original;
+        }
+    }
+    return undefined;
 }
 
 function normalizeSectionName(name: string): string {
@@ -188,31 +210,33 @@ function extractNamedSections(lines: string[]): Record<string, string[]> {
     return sections;
 }
 
-function extractMermaidBlock(lines: string[]): string {
-    const diagramLines: string[] = [];
-    let inBlock = false;
+/**
+ * Extracts tables from a section that may contain H3 sub-headings.
+ * Each sub-section's heading becomes the `title` and its table rows become a `DeploymentPlanTable`.
+ * Lines before the first H3 that form a table are returned with no title.
+ */
+function extractSubSectionTables(lines: string[]): { title?: string; table: DeploymentPlanTable }[] {
+    const results: { title?: string; lines: string[] }[] = [];
+    let current: { title?: string; lines: string[] } = { lines: [] };
 
     for (const line of lines) {
-        // Match ```mermaid or plain ``` code blocks
-        if (!inBlock && line.trim().match(/^```/)) {
-            inBlock = true;
-            // Skip the opening fence line itself
-            continue;
-        }
-        if (inBlock && line.trim() === '```') {
-            break;
-        }
-        if (inBlock) {
-            diagramLines.push(line);
+        const h3Match = line.match(/^###\s+(?:\d+\.\s+)?(.+)$/);
+        if (h3Match) {
+            if (current.lines.length > 0) {
+                results.push(current);
+            }
+            current = { title: h3Match[1].trim(), lines: [] };
+        } else {
+            current.lines.push(line);
         }
     }
-
-    // If no fenced code block, use all non-empty lines as the diagram text
-    if (diagramLines.length === 0) {
-        return lines.filter(l => l.trim().length > 0).join('\n');
+    if (current.lines.length > 0) {
+        results.push(current);
     }
 
-    return diagramLines.join('\n');
+    return results
+        .map(({ title, lines: sectionLines }) => ({ title, table: extractTable(sectionLines) }))
+        .filter(({ table }) => table.rows.length > 0);
 }
 
 function extractTable(lines: string[]): DeploymentPlanTable {

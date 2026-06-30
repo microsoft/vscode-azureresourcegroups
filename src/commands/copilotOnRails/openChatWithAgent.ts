@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
 import { ensureAgentInstructions } from './agentInstructions';
@@ -52,6 +53,7 @@ export async function openChatWithAgent(agentName: string, prompt: string, loadi
     });
 
     if (loading) {
+        projectSubmissionState.setPending(loading.stage);
         openLoadingView(loading);
     }
 }

@@ -36,9 +36,6 @@ async function openDeploymentPlanViewWithContentAsync(content: string, sourceFil
     const liveSubscriptions = await getAvailableAzureSubscriptions();
     if (liveSubscriptions) {
         planData.availableSubscriptions = liveSubscriptions;
-        if (planData.subscription && !liveSubscriptions.includes(planData.subscription)) {
-            planData.subscription = '';
-        }
     }
 
     host.show(planData, sourceFileUri);
@@ -71,7 +68,7 @@ function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | und
         || (parsed.resources.rows.length === 0
             && parsed.decisions.rows.length === 0
             && parsed.workspaceScan.rows.length === 0
-            && !parsed.mermaidDiagram)) {
+            && parsed.architecture.length === 0)) {
         return {
             status: parsed?.status ?? 'Unknown',
             mode: parsed?.mode ?? 'Unknown',
@@ -80,7 +77,7 @@ function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | und
             location: parsed?.location ?? '',
             locationCode: parsed?.locationCode ?? '',
             availableLocations: parsed?.availableLocations,
-            mermaidDiagram: parsed?.mermaidDiagram ?? '',
+            architecture: parsed?.architecture ?? [],
             workspaceScan: parsed?.workspaceScan ?? { headers: [], rows: [] },
             decisions: parsed?.decisions ?? { headers: [], rows: [] },
             resources: parsed?.resources ?? { headers: [], rows: [] },

@@ -33,12 +33,10 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
     const hasLocalDevelopmentPlan = localDevelopmentPlanFiles.length > 0;
     const hasDeploymentPlan = deploymentPlanFiles.length > 0;
 
-    const projectPlanComplete = hasProjectPlan && await isProjectPlanScaffolded(projectPlanFiles[0]);
-
     let currentStage: ProjectStage = 0;
     if (hasDeploymentPlan) {
         currentStage = 2;
-    } else if (hasLocalDevelopmentPlan || projectPlanComplete) {
+    } else if (hasLocalDevelopmentPlan) {
         currentStage = 1;
     }
 
@@ -49,30 +47,6 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
         hasAny: hasProjectPlan || hasLocalDevelopmentPlan || hasDeploymentPlan,
         currentStage,
     };
-}
-
-// Status values written by the azure-project-scaffold agent that indicate the
-// scaffolding work is finished and we should move the tree forward.
-const PROJECT_PLAN_COMPLETED_STATUSES = new Set(['scaffolded', 'ready']);
-
-/**
- * Returns true when project-plan.md content carries a `Status:` line indicating
- * scaffolding has finished (e.g. `Status: scaffolded`). Tolerates markdown
- * decoration around the status value (`**Status**: _Scaffolded_`).
- */
-function isProjectPlanContentScaffolded(content: string): boolean {
-    const match = content.match(/status[*_~]*\s*:\s*\*{0,2}_{0,2}([A-Za-z][A-Za-z ]*)/i);
-    const value = match?.[1]?.trim().toLowerCase();
-    return value !== undefined && PROJECT_PLAN_COMPLETED_STATUSES.has(value);
-}
-
-async function isProjectPlanScaffolded(uri: vscode.Uri): Promise<boolean> {
-    try {
-        const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
-        return isProjectPlanContentScaffolded(content);
-    } catch {
-        return false;
-    }
 }
 
 /**
