@@ -915,6 +915,18 @@ function classifyInstalled(cell: string): InstalledStatus {
     return 'unknown';
 }
 
+function isDockerCompose(toolName: string): boolean {
+    const name = toolName.trim().toLowerCase();
+    return name.includes('docker compose') || name.includes('docker-compose');
+}
+
+function classifyInstalledForRow(toolName: string, cell: string): InstalledStatus {
+    if (isDockerCompose(toolName)) {
+        return 'unknown';
+    }
+    return classifyInstalled(cell);
+}
+
 const INSTALLED_STATUS_LABEL: Record<InstalledStatus, string> = {
     installed: 'Installed',
     missing: 'Not installed',
@@ -989,12 +1001,16 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
         if (installedIdx < 0) {
             return [];
         }
-        return table.rows.filter(row => classifyInstalled(row[installedIdx] ?? '') === 'missing');
+        const toolIdx = table.headers.findIndex(h => h.toLowerCase().includes('tool'));
+        return table.rows.filter(row =>
+            classifyInstalledForRow(toolIdx >= 0 ? (row[toolIdx] ?? '') : '', row[installedIdx] ?? '') === 'missing',
+        );
     });
 
     const renderTable = (table: Extract<PlanContent, { type: 'table' }>, key: number): JSX.Element => {
         const installedIdx = table.headers.findIndex(h => h.toLowerCase().includes('installed'));
         const installIdx = table.headers.findIndex(h => h.trim().toLowerCase() === 'install');
+        const toolIdx = table.headers.findIndex(h => h.toLowerCase().includes('tool'));
         const visible = (idx: number): boolean => idx !== installIdx;
         return (
             <div key={key} className='planTableWrapper'>
@@ -1008,7 +1024,7 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
                                 !visible(ci)
                                     ? null
                                     : ci === installedIdx
-                                        ? <td key={ci}><InstalledChip status={classifyInstalled(cell)} /></td>
+                                        ? <td key={ci}><InstalledChip status={classifyInstalledForRow(toolIdx >= 0 ? (row[toolIdx] ?? '') : '', cell)} /></td>
                                         : <td key={ci}>{cell}</td>,
                             )}</tr>
                         ))}
