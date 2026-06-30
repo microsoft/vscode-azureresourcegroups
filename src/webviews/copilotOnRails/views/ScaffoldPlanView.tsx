@@ -99,31 +99,22 @@ function isServiceStackSection(section: PlanSection): boolean {
     );
 }
 
-// Collects every Language value selected across the given service stack
-// sections (all columns of each Language row, excluding the row label).
-function collectSelectedLanguages(sections: PlanSection[]): Set<string> {
-    const languages = new Set<string>();
-    for (const section of sections) {
-        for (const content of section.content ?? []) {
-            if (content.type !== 'table') { continue; }
-            const languageRow = content.rows.find(r => r[0]?.trim() === 'Language');
-            if (!languageRow) { continue; }
-            for (let ci = 1; ci < languageRow.length; ci++) {
-                const value = languageRow[ci]?.trim();
-                if (value) { languages.add(value); }
+
+const previewBackendLanguages = new Set<string>(['Python', 'C# (.NET)']);
+
+function previewBackendLanguageForSection(section: PlanSection): string | undefined {
+    for (const content of section.content ?? []) {
+        if (content.type !== 'table') { continue; }
+        const languageRow = content.rows.find(r => r[0]?.trim() === 'Language');
+        if (!languageRow) { continue; }
+        for (let ci = 1; ci < languageRow.length; ci++) {
+            const value = languageRow[ci]?.trim();
+            if (value && previewBackendLanguages.has(value)) {
+                return value === 'C# (.NET)' ? '.NET' : value;
             }
         }
     }
-    return languages;
-}
-
-// Languages that are still in preview when chosen as a service's backend.
-const previewBackendLanguages = new Set<string>(['Python', 'C# (.NET)']);
-
-// True when any service selects a backend language that is still in preview.
-function hasPreviewBackendLanguage(sections: PlanSection[]): boolean {
-    const languages = collectSelectedLanguages(sections);
-    return [...languages].some(lang => previewBackendLanguages.has(lang));
+    return undefined;
 }
 
 // Plan table rows whose first cell matches one of these labels are hidden from
@@ -502,7 +493,6 @@ export const ScaffoldPlanView = (): JSX.Element => {
     const sections = plan.sections ?? [];
     const overviewSection = sections.find(s => s.number === 1);
     const detailSections = sections.filter(s => s.number !== 1 && isServiceStackSection(s));
-    const showPreviewBackendNote = hasPreviewBackendLanguage(detailSections);
     const structureSection = sections.find(s => s.title.toLowerCase().includes('project structure'));
     const designSection = sections.find(s => s.title.toLowerCase().includes('design system'));
     const prerequisitesSection = sections.find(s => s.title.toLowerCase().includes('prerequisite'));
@@ -587,13 +577,6 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 {overviewSection && <OverviewCard section={overviewSection} created={plan.created && plan.created !== 'Unknown' ? plan.created : undefined} />}
 
                 {prerequisitesSection && <PrerequisitesCard section={prerequisitesSection} showDebug={autopilot} onRefreshPrerequisites={() => vscodeApi.postMessage({ command: 'refreshPrerequisites', autopilot })} isRefreshing={isRefreshingPrereqs} />}
-
-                {showPreviewBackendNote && (
-                    <div className='compatibilityNote' role='note'>
-                        <WarningRegular />
-                        <span>Python and .NET support is limited and may have compatibility issues.</span>
-                    </div>
-                )}
 
                 <div className='sectionsRow'>
                     {detailSections.map((section) => {
@@ -848,10 +831,23 @@ const SectionCard = ({ section, sectionIdx, disabled, editedCells, onTableCellCh
     const [expanded, setExpanded] = useState(false);
     const isStack = isServiceStackSection(section);
     const isFrontend = isFrontendSection(section);
+    const previewLanguage = previewBackendLanguageForSection(section);
 
     return (
         <div className='sectionCard'>
-            <h2>{section.title}</h2>
+            <h2 className='sectionTitle'>
+                {section.title}
+                {previewLanguage && (
+                    <Tooltip
+                        content={`${previewLanguage} project support is limited and you may run into compatibility issues.`}
+                        relationship='label'
+                    >
+                        <span className='previewWarningIcon' tabIndex={0} aria-label={`${previewLanguage} project support is limited and you may run into compatibility issues.`}>
+                            <WarningRegular />
+                        </span>
+                    </Tooltip>
+                )}
+            </h2>
             <div className='sectionContent'>
                 {(section.content ?? []).map((item, contentIdx) => (
                     <ContentBlock

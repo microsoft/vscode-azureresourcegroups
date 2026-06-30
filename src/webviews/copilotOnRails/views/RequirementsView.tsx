@@ -76,9 +76,6 @@ function roleSortValue(role: RequirementsServiceRole): number {
     return idx === -1 ? ROLE_ORDER.length : idx;
 }
 
-// Backend language questions live in the 'runtime' category. Python and .NET
-// are still in preview as backend choices, so we surface a soft note when one
-// is selected.
 function isPreviewBackendLanguage(answer: RequirementsAnswer): boolean {
     const values = Array.isArray(answer) ? answer : [answer];
     return values.some(value => {
