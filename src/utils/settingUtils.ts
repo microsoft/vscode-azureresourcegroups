@@ -18,8 +18,6 @@ export namespace settingUtils {
 
     /**
      * Uses ext.prefix 'azureResourceGroups' unless otherwise specified.
-     * When `target` is omitted, VS Code resolves the scope from the provided resource;
-     * pass an explicit `target` (e.g. `ConfigurationTarget.Workspace`) to force it.
      */
     export async function updateWorkspaceSetting<T = string>(section: string, value: T, fsPath: string, prefix: string = ext.prefix, target?: ConfigurationTarget): Promise<void> {
         const projectConfiguration: WorkspaceConfiguration = workspace.getConfiguration(prefix, Uri.file(fsPath));

@@ -8,30 +8,9 @@ import * as vscode from "vscode";
 import { settingUtils } from "../../../utils/settingUtils";
 
 /**
- * Autopilot ("YOLO") mode for the create-project workflow.
- *
- * When the user submits the requirements form with autopilot enabled, the whole
- * plan -> scaffold -> local-debug chain runs end-to-end without approval gates.
- * To make tool actions (file edits, terminal commands) run unattended, we flip
- * VS Code's global `chat.tools.global.autoApprove` setting on for the duration
- * of the run and restore it afterward. We also raise `chat.agent.maxRequests`
- * to a high ceiling so the long scaffold -> integrate -> debug chain doesn't
- * stall on the "Copilot has been working on this problem for a while" continue
- * prompt — but unlike auto-approve, that limit is written at the *Workspace*
- * scope and intentionally left in place (it isn't a security-sensitive global,
- * and a freshly scaffolded workspace benefits from the higher ceiling).
- *
- * Because the auto-approve setting is global and security-sensitive, its
- * restoration is layered:
- *  1. A completion watcher restores it the moment the local debug plan reaches
- *     `Status: Implemented` (the end of the chain).
- *  2. A safety deadline restores it after `MAX_RUN_DURATION_MS` even if the
- *     chain never reaches `Implemented` (failure, stall, or abandoned run), so
- *     auto-approve can never stay on indefinitely.
- *  3. A status-bar item lets the user turn it off manually at any time.
- *  4. On the next activation, a prior active run is either re-armed (if still
- *     within its deadline — covers window reloads mid-run) or restored (if the
- *     deadline has elapsed — covers crashes / abandoned runs).
+ * Autopilot mode for the create-project workflow.
+ * It temporarily enables global chat tool auto-approve and restores it later.
+ * It also raises workspace chat request budget for long unattended runs.
  */
 
 const AUTO_APPROVE_SECTION = 'chat.tools.global';
@@ -40,13 +19,7 @@ const AUTO_APPROVE_KEY = 'autoApprove';
 const MAX_REQUESTS_SECTION = 'chat.agent';
 const MAX_REQUESTS_KEY = 'maxRequests';
 
-/**
- * Request budget written to `chat.agent.maxRequests` at the Workspace scope while
- * scaffolding. The unattended chain (scaffold -> integrate -> local debug) makes
- * many tool calls per turn; a high ceiling keeps it from pausing on the "Copilot
- * has been working on this problem for a while" continue prompt that nobody is
- * present to dismiss. Persisted in the workspace and intentionally not restored.
- */
+/** Workspace request budget used for scaffolding runs. */
 export const WORKSPACE_MAX_REQUESTS = 9999;
 
 /**
@@ -86,20 +59,14 @@ async function setAutoApproveValue(value: unknown): Promise<void> {
     await settingUtils.updateGlobalSetting(AUTO_APPROVE_KEY, value, AUTO_APPROVE_SECTION);
 }
 
-/**
- * Reads the effective (merged) `chat.agent.maxRequests` value, or undefined if unset.
- */
+/** Gets the effective `chat.agent.maxRequests` value. */
 export function getEffectiveMaxRequests(): number | undefined {
     return settingUtils.getWorkspaceSetting<number>(MAX_REQUESTS_KEY, undefined, MAX_REQUESTS_SECTION);
 }
 
 /**
- * Raises `chat.agent.maxRequests` to {@link WORKSPACE_MAX_REQUESTS} at the Workspace
- * scope so the unattended scaffold -> integrate -> debug chain doesn't stall on the
- * "Copilot has been working on this problem for a while" continue prompt. The value
- * is persisted in the workspace and intentionally never restored. No-op when no
- * workspace folder is open (a workspace setting can't be written) or when the
- * effective value is already at least the target.
+ * Raises workspace `chat.agent.maxRequests` to {@link WORKSPACE_MAX_REQUESTS}
+ * when possible. The value is intentionally left in workspace settings.
  */
 export async function raiseWorkspaceMaxRequests(): Promise<void> {
     const folder = vscode.workspace.workspaceFolders?.[0];
@@ -113,10 +80,7 @@ export async function raiseWorkspaceMaxRequests(): Promise<void> {
     try {
         await settingUtils.updateWorkspaceSetting(MAX_REQUESTS_KEY, WORKSPACE_MAX_REQUESTS, folder.uri.fsPath, MAX_REQUESTS_SECTION, vscode.ConfigurationTarget.Workspace);
     } catch {
-        // `chat.agent.maxRequests` may not be registered on older VS Code builds,
-        // in which case `update` throws. Bumping the limit is a best-effort
-        // convenience, so swallow the error rather than aborting the autopilot
-        // enable flow (or the guided scaffold launch).
+        // Best effort: this setting may not exist on older VS Code versions.
     }
 }
 
@@ -204,8 +168,6 @@ export async function enableAutopilot(context: vscode.ExtensionContext): Promise
     await context.globalState.update(STATE_DEADLINE, deadline);
 
     await setAutoApproveValue(true);
-    // The request limit is bumped at the Workspace scope and intentionally left
-    // in place (not restored) — see WORKSPACE_MAX_REQUESTS.
     await raiseWorkspaceMaxRequests();
     armAutopilot(deadline);
 }
@@ -226,8 +188,6 @@ export async function disableAutopilot(): Promise<void> {
         const prior = context.globalState.get<unknown>(STATE_PRIOR_VALUE);
         // `null` means there was no explicit global value, so clear it.
         await setAutoApproveValue(prior === null ? undefined : prior);
-        // Note: `chat.agent.maxRequests` is deliberately NOT restored — it was
-        // written at the Workspace scope and is left in place.
         await context.globalState.update(STATE_ACTIVE, false);
         await context.globalState.update(STATE_PRIOR_VALUE, undefined);
         await context.globalState.update(STATE_DEADLINE, undefined);
