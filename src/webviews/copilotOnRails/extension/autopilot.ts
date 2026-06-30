@@ -5,30 +5,22 @@
 
 import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
+import { settingUtils } from "../../../utils/settingUtils";
 
 /**
- * Autopilot ("YOLO") mode for the create-project workflow.
- *
- * When the user submits the requirements form with autopilot enabled, the whole
- * plan -> scaffold -> local-debug chain runs end-to-end without approval gates.
- * To make tool actions (file edits, terminal commands) run unattended, we flip
- * VS Code's global `chat.tools.global.autoApprove` setting on for the duration
- * of the run and restore it afterward.
- *
- * Because that setting is global and security-sensitive, restoration is layered:
- *  1. A completion watcher restores it the moment the local debug plan reaches
- *     `Status: Implemented` (the end of the chain).
- *  2. A safety deadline restores it after `MAX_RUN_DURATION_MS` even if the
- *     chain never reaches `Implemented` (failure, stall, or abandoned run), so
- *     auto-approve can never stay on indefinitely.
- *  3. A status-bar item lets the user turn it off manually at any time.
- *  4. On the next activation, a prior active run is either re-armed (if still
- *     within its deadline — covers window reloads mid-run) or restored (if the
- *     deadline has elapsed — covers crashes / abandoned runs).
+ * Autopilot mode for the create-project workflow.
+ * It temporarily enables global chat tool auto-approve and restores it later.
+ * It also raises workspace chat request budget for long unattended runs.
  */
 
 const AUTO_APPROVE_SECTION = 'chat.tools.global';
 const AUTO_APPROVE_KEY = 'autoApprove';
+
+const MAX_REQUESTS_SECTION = 'chat.agent';
+const MAX_REQUESTS_KEY = 'maxRequests';
+
+/** Workspace request budget used for scaffolding runs. */
+export const WORKSPACE_MAX_REQUESTS = 9999;
 
 /**
  * Maximum wall-clock duration an autopilot run may keep global auto-approve on.
@@ -58,16 +50,38 @@ let safetyTimer: ReturnType<typeof setTimeout> | undefined;
 let extensionContext: vscode.ExtensionContext | undefined;
 
 function getAutoApproveValue(): unknown {
-    const config = vscode.workspace.getConfiguration(AUTO_APPROVE_SECTION);
-    const inspected = config.inspect(AUTO_APPROVE_KEY);
     // We only ever write at the Global target, so the global value is what we
     // need to preserve and restore.
-    return inspected?.globalValue;
+    return settingUtils.getGlobalSetting<unknown>(AUTO_APPROVE_KEY, AUTO_APPROVE_SECTION);
 }
 
 async function setAutoApproveValue(value: unknown): Promise<void> {
-    const config = vscode.workspace.getConfiguration(AUTO_APPROVE_SECTION);
-    await config.update(AUTO_APPROVE_KEY, value, vscode.ConfigurationTarget.Global);
+    await settingUtils.updateGlobalSetting(AUTO_APPROVE_KEY, value, AUTO_APPROVE_SECTION);
+}
+
+/** Gets the effective `chat.agent.maxRequests` value. */
+export function getEffectiveMaxRequests(): number | undefined {
+    return settingUtils.getWorkspaceSetting<number>(MAX_REQUESTS_KEY, undefined, MAX_REQUESTS_SECTION);
+}
+
+/**
+ * Raises workspace `chat.agent.maxRequests` to {@link WORKSPACE_MAX_REQUESTS}
+ * when possible. The value is intentionally left in workspace settings.
+ */
+export async function raiseWorkspaceMaxRequests(): Promise<void> {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    if (!folder) {
+        return;
+    }
+    const current = getEffectiveMaxRequests();
+    if (typeof current === 'number' && current >= WORKSPACE_MAX_REQUESTS) {
+        return;
+    }
+    try {
+        await settingUtils.updateWorkspaceSetting(MAX_REQUESTS_KEY, WORKSPACE_MAX_REQUESTS, folder.uri.fsPath, MAX_REQUESTS_SECTION, vscode.ConfigurationTarget.Workspace);
+    } catch {
+        // Best effort: this setting may not exist on older VS Code versions.
+    }
 }
 
 function showStatusBarItem(): void {
@@ -139,7 +153,8 @@ function registerCompletionWatcher(): void {
 
 /**
  * Enables autopilot: records the user's current global auto-approve value, turns
- * the setting on globally, and arms the status-bar item and completion watcher.
+ * the setting on globally, raises the workspace request limit, and arms the
+ * status-bar item and completion watcher.
  */
 export async function enableAutopilot(context: vscode.ExtensionContext): Promise<void> {
     extensionContext = context;
@@ -153,6 +168,7 @@ export async function enableAutopilot(context: vscode.ExtensionContext): Promise
     await context.globalState.update(STATE_DEADLINE, deadline);
 
     await setAutoApproveValue(true);
+    await raiseWorkspaceMaxRequests();
     armAutopilot(deadline);
 }
 

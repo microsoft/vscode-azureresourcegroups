@@ -11,11 +11,14 @@ import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { ext } from "../../../../extensionVariables";
 import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
-import { AUTOPILOT_QUERY_MARKER, enableAutopilot } from "../autopilot";
+import { AUTOPILOT_QUERY_MARKER, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
+
+/** Prompt to raise max requests for guided runs below this threshold. */
+const MIN_RECOMMENDED_MAX_REQUESTS = 1000;
 
 export class ScaffoldPlanViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
@@ -72,9 +75,6 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     private async approveAndOpenScaffoldChat(autopilot: boolean): Promise<void> {
-        // Autopilot is chosen on the plan page. Approving with it on requires an
-        // explicit modal confirmation because it enables global auto-approval of
-        // chat tool actions for the rest of the run.
         let confirmedAutopilot = false;
         if (autopilot) {
             confirmedAutopilot = await callWithTelemetryAndErrorHandling('azureResourceGroups.autopilot.confirm', async (context: IActionContext) => {
@@ -83,14 +83,12 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     vscode.l10n.t('Approve this plan and run the rest in Autopilot mode?'),
                     {
                         modal: true,
-                        detail: vscode.l10n.t('Autopilot scaffolds and sets up local debugging without stopping for further approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally. You can turn this off any time from the status bar.'),
+                        detail: vscode.l10n.t('Autopilot scaffolds and sets up local debugging without stopping for further approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally, and the chat request limit is raised so the run doesn\'t pause partway through. You can turn this off any time from the status bar.'),
                     },
                     { title: vscode.l10n.t('Enable Autopilot') },
                 );
                 return true;
             }) ?? false;
-            // Cancelling the modal aborts approval entirely so the user can decide
-            // again (rather than silently falling back to a guided approval).
             if (!confirmedAutopilot) {
                 return;
             }
@@ -103,6 +101,8 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         if (confirmedAutopilot) {
             await this.recordAutopilotMode();
             await enableAutopilot(ext.context);
+        } else {
+            await this.ensureRequestBudget();
         }
 
         const baseQuery = vscode.l10n.t('I approve the plan.');
@@ -116,6 +116,34 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             stage: 0,
             title: vscode.l10n.t('Scaffolding your project…'),
             message: vscode.l10n.t('Copilot is creating your project files. For progress please view the Copilot chat.'),
+        });
+    }
+
+    /** For guided runs, optionally raises `chat.agent.maxRequests`. */
+    private async ensureRequestBudget(): Promise<void> {
+        const current = getEffectiveMaxRequests();
+        if (typeof current === 'number' && current >= MIN_RECOMMENDED_MAX_REQUESTS) {
+            return;
+        }
+        if (!vscode.workspace.workspaceFolders?.length) {
+            return;
+        }
+        await callWithTelemetryAndErrorHandling('azureResourceGroups.scaffold.requestBudgetWarning', async (context: IActionContext) => {
+            context.errorHandling.suppressDisplay = true;
+            const yes: vscode.MessageItem = { title: vscode.l10n.t('Yes') };
+            const no: vscode.MessageItem = { title: vscode.l10n.t('No'), isCloseAffordance: true };
+            const result = await context.ui.showWarningMessage(
+                vscode.l10n.t('Raise the chat request limit for this workspace?'),
+                {
+                    modal: true,
+                    detail: vscode.l10n.t('Your chat request limit (chat.agent.maxRequests) is low, so Copilot may pause partway through scaffolding and ask you to continue. Raise the limit for this workspace so scaffolding can run without interruption?'),
+                },
+                yes,
+                no,
+            );
+            if (result === yes) {
+                await raiseWorkspaceMaxRequests();
+            }
         });
     }
 
