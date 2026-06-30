@@ -591,7 +591,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 {showPreviewBackendNote && (
                     <div className='compatibilityNote' role='note'>
                         <WarningRegular />
-                        <span>Python and .NET support is limited and may have compatibility issues.</span>
+                        <span>Python support is limited and you may run into compatibility issues.</span>
                     </div>
                 )}
 
