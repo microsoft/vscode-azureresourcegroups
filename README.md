@@ -131,6 +131,38 @@ Install these extensions to enable additional resource-specific features.
 * [Azure Spring Apps](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-azurespringcloud)
 * [Azure Logic Apps](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurelogicapps)
 
+## Troubleshooting
+
+### "unable to get local issuer certificate" on a corporate network
+
+If you're on a corporate network that performs HTTPS/SSL inspection (for example Zscaler, Netskope, Cisco Umbrella, or an internal certificate authority), you may see errors like `unable to get local issuer certificate` or `self-signed certificate in certificate chain` in the **Azure Resources** output channel, and resources may fail to load.
+
+This happens because the inspection proxy re-signs TLS traffic with your organization's root CA. Signing in uses VS Code's built-in Microsoft authentication, which respects VS Code's proxy and certificate settings, but the extension's Azure management (ARM) calls run in the extension-host Node.js process, which by default does **not** trust certificates from the operating system store. Node.js therefore rejects the re-signed certificate.
+
+To fix it, tell Node.js and VS Code about your corporate root CA:
+
+1. **Export your corporate root CA** as a PEM (`.pem`/`.crt`) file. Your IT department can provide this, or you can export it from the OS certificate store. If you have multiple CAs, concatenate them into a single PEM file.
+
+2. **Set the `NODE_EXTRA_CA_CERTS` environment variable** to the full path of that file, then restart VS Code so the extension host picks it up:
+
+   - **Windows** (PowerShell, persists for your user):
+     ```powershell
+     setx NODE_EXTRA_CA_CERTS "C:\certs\corp-ca-bundle.pem"
+     ```
+   - **macOS / Linux** (add to your shell profile, e.g. `~/.zshrc` or `~/.bashrc`):
+     ```bash
+     export NODE_EXTRA_CA_CERTS="/etc/ssl/certs/corp-ca-bundle.pem"
+     ```
+
+   > Launch VS Code from an environment where this variable is set (for example, restart it from the terminal or after signing out/in on Windows). Setting it only inside VS Code's integrated terminal is not enough — it must be present in the environment that starts VS Code.
+
+3. **Enable VS Code's system certificate and proxy support** (both are on by default, but confirm they aren't disabled) in **Settings**:
+   - `"http.systemCertificates": true` — use the OS certificate store for VS Code's own requests.
+   - `"http.fetchAdditionalSupport": true` — additional support for fetching through proxies.
+   - `"http.proxy"` — set this if your organization requires an explicit proxy URL.
+
+Setting `NODE_EXTRA_CA_CERTS` is the key step for the extension's Azure management calls (and for Azure CLI / `@azure/identity`-based token requests). See the VS Code [network connections](https://code.visualstudio.com/docs/setup/network) documentation for more on proxy and certificate configuration.
+
 <!-- region exclude-from-marketplace -->
 
 ## Contributing
