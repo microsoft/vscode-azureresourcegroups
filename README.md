@@ -161,7 +161,7 @@ To fix it, tell Node.js and VS Code about your corporate root CA:
    - `"http.fetchAdditionalSupport": true` — additional support for fetching through proxies.
    - `"http.proxy"` — set this if your organization requires an explicit proxy URL.
 
-Setting `NODE_EXTRA_CA_CERTS` is the key step for the extension's Azure management calls (and for Azure CLI / `@azure/identity`-based token requests). See the VS Code [network connections](https://code.visualstudio.com/docs/setup/network) documentation for more on proxy and certificate configuration.
+Which setting fixes what: token sign-in goes through VS Code's built-in Microsoft authentication, so `"http.systemCertificates": true` is what covers it; the extension's Azure management (ARM) calls run in the Node.js extension host and require `NODE_EXTRA_CA_CERTS`. Set both to be safe. See the VS Code [network connections](https://code.visualstudio.com/docs/setup/network) documentation for more on proxy and certificate configuration.
 
 <!-- region exclude-from-marketplace -->
 
