@@ -154,12 +154,12 @@ To fix it, tell Node.js and VS Code about your corporate root CA:
      export NODE_EXTRA_CA_CERTS="/etc/ssl/certs/corp-ca-bundle.pem"
      ```
 
-   > Launch VS Code from an environment where this variable is set (for example, restart it from the terminal or after signing out/in on Windows). Setting it only inside VS Code's integrated terminal is not enough — it must be present in the environment that starts VS Code.
+   > Launch VS Code from an environment where this variable is set (for example, restart it from the terminal or after signing out/in on Windows). Setting it only inside VS Code's integrated terminal is not enough; it must be present in the environment that starts VS Code.
 
 3. **Enable VS Code's system certificate and proxy support** (both are on by default, but confirm they aren't disabled) in **Settings**:
-   - `"http.systemCertificates": true` — use the OS certificate store for VS Code's own requests.
-   - `"http.fetchAdditionalSupport": true` — additional support for fetching through proxies.
-   - `"http.proxy"` — set this if your organization requires an explicit proxy URL.
+   - `"http.systemCertificates": true`: use the OS certificate store for VS Code's own requests.
+   - `"http.fetchAdditionalSupport": true`: additional support for fetching through proxies.
+   - `"http.proxy"`: set this if your organization requires an explicit proxy URL.
 
 Which setting fixes what: token sign-in goes through VS Code's built-in Microsoft authentication, so `"http.systemCertificates": true` is what covers it; the extension's Azure management (ARM) calls run in the Node.js extension host and require `NODE_EXTRA_CA_CERTS`. Set both to be safe. See the VS Code [network connections](https://code.visualstudio.com/docs/setup/network) documentation for more on proxy and certificate configuration.
 
