@@ -97,6 +97,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
             try {
                 await vscode.commands.executeCommand('setContext', 'azureResourceGroups.needsTenantAuth', false);
                 const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ noCache: shouldClearCache });
+                await vscode.commands.executeCommand('setContext', 'azureResourceGroups.isSignedIn', true);
                 this.sendSubscriptionTelemetryIfNeeded(); // Don't send until the above call is done, to avoid cache missing
 
                 context.telemetry.measurements.subscriptionCount = subscriptions.length;
@@ -235,6 +236,7 @@ export class AzureResourceTreeDataProvider extends AzureResourceTreeDataProvider
             } catch (error) {
                 if (isNotSignedInError(error)) {
                     context.telemetry.properties.outcome = 'notSignedIn';
+                    await vscode.commands.executeCommand('setContext', 'azureResourceGroups.isSignedIn', false);
                     return getSignInTreeItems(true);
                 }
 

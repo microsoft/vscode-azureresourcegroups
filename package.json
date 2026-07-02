@@ -460,14 +460,19 @@
                     "group": "navigation@2"
                 },
                 {
+                    "command": "azureResourceGroups.selectSubscriptions",
+                    "when": "view == azureResourceGroups && azureResourceGroups.isSignedIn",
+                    "group": "navigation@3"
+                },
+                {
                     "command": "azureFocusView.refreshTree",
                     "when": "view == azureFocusView",
-                    "group": "navigation@3"
+                    "group": "navigation@4"
                 },
                 {
                     "command": "azureResourceGroups.refreshTree",
                     "when": "view == azureResourceGroups",
-                    "group": "navigation@3"
+                    "group": "navigation@4"
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLog",
