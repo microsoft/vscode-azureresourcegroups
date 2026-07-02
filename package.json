@@ -461,7 +461,7 @@
                 },
                 {
                     "command": "azureResourceGroups.selectSubscriptions",
-                    "when": "view == azureResourceGroups",
+                    "when": "view == azureResourceGroups && azureResourceGroups.isSignedIn",
                     "group": "navigation@3"
                 },
                 {
