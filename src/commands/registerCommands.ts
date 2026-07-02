@@ -177,9 +177,6 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openRequirementsView', openRequirementsViewFromWorkspace);
     registerCommand('azureResourceGroups.openFrontendPreviewView', async (_context: IActionContext, frontendFolder?: string) => {
-        // Opening the preview gate is the deterministic signal that scaffolding
-        // finished with a frontend awaiting the user's UI sign-off — own the
-        // `Awaiting UX Approval` transition here rather than trusting the agent.
         await markFrontendAwaitingUxApproval();
         openFrontendPreviewView(frontendFolder);
     });
@@ -187,9 +184,6 @@ export function registerCommands(): void {
         openLocalDevNextStepsView(hasApiTests));
     registerCommand('azureResourceGroups.debug.openLocalNextStepsView', () => openLocalDevNextStepsView());
     registerCommand('azureResourceGroups.openScaffoldNextStepsView', async () => {
-        // The integrate agent opens this view as its final step, so opening it is
-        // the deterministic signal that integration finished — own the
-        // Integrating → Integrated transition here rather than trusting the agent.
         await markProjectPlanIntegrated();
         openScaffoldNextStepsView({});
     });
@@ -198,8 +192,6 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.downloadAgentInstructions', (context: IActionContext) =>
         downloadAgentInstructions(context));
     registerCommand('azureResourceGroups.startProjectScaffold', async (_context: IActionContext, prompt?: string) => {
-        // Own the Approved → In Progress transition so an interrupted scaffold is
-        // detectable regardless of whether the agent updated the status.
         await markProjectScaffolding();
         await openChatWithAgent('azure-project-scaffold', prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.', {
             stage: 0,
