@@ -1,18 +1,18 @@
-# HTML/CSS Preview — directional sketch recipes
+# HTML/CSS Preview — polished, framework-free page recipes
 
-> **🎨 This preview is a DIRECTIONAL SKETCH, not production UI.**
+> **🎨 This preview is a polished, framework-free HTML/CSS mock-up.**
 >
-> It exists to confirm three things with the user during planning, and **only** these three:
+> It should look like a *finished* product the user could ship — layered elevation, smooth hover and focus states, refined typography, and a confident brand story — built with nothing but HTML and the shared `theme.css`. It confirms three things with the user during planning:
 >
 > 1. **What's on each page** — the regions, in roughly the right order.
 > 2. **The brand color story** — primary/accent ramp and how surfaces feel.
 > 3. **Content density** — list-heavy vs. card-grid vs. hero-led.
 >
-> Things the preview deliberately **does not** attempt: real icons, real fonts, animations, dark mode, polished hero treatments, illustration art, micro-interactions, or production typography hierarchy. Those are the scaffold's job — see [`frontend-quality-bar.md`](../../azure-project-scaffold/references/frontend-quality-bar.md) "Polish floor" — and the scaffolded app MUST visibly out-polish this sketch.
+> The scaffold later goes further with the things only a real framework delivers — a real component library, real icon sets, dark mode, richer motion, and live data (see [`frontend-quality-bar.md`](../../azure-project-scaffold/references/frontend-quality-bar.md) "Polish floor") — but the preview itself must **never** look like a throwaway wireframe. Lean on the `--shadow-*`, `--transition`, and `--focus-ring` tokens and the hover treatments baked into the Shared CSS so every page feels finalized.
 >
-> **Low fidelity is about *polish*, never about *content*.** Every `{...}` placeholder token in the recipes below MUST be replaced with the **real, domain-specific Sample Content** handed to you in your prompt (the page's records from the plan's Section 6 Sample Content block). Render the *same* entities, names, numbers, and states the scaffolded app will show — the preview is a faithful low-fidelity view of the real app, not a generic stand-in. **Never** emit generic filler like "Item 1", "Recent items", "Trending", "Card title", or lorem ipsum. **Never** add a banner or note claiming the app "will use" a different framework or component library — render the content directly with no such disclaimer.
+> **Polish never means inventing content.** Every `{...}` placeholder token in the recipes below MUST be replaced with the **real, domain-specific Sample Content** handed to you in your prompt (the page's records from the plan's Section 6 Sample Content block). Render the *same* entities, names, numbers, and states the scaffolded app will show — the preview is a faithful view of the real app, not a generic stand-in. **Never** emit generic filler like "Item 1", "Recent items", "Trending", "Card title", or lorem ipsum. **Never** add a banner or note claiming the app "will use" a different framework or component library — render the content directly with no such disclaimer.
 >
-> **Audience:** the planner sub-agents that fan out from Step 3.5b. Each sub-agent owns one page and writes a single self-contained HTML file linking to the shared `./theme.css`. **No `<script>` tags** — the preview iframe is sandboxed without scripts. **No inline `<style>`** — all styling MUST come from `./theme.css`. Keep the visual ambition low; the scaffold will exceed it.
+> **Audience:** the planner sub-agents that fan out from Step 3.5b. Each sub-agent owns one page and writes a single self-contained HTML file linking to the shared `./theme.css`. **No `<script>` tags** — the preview iframe is sandboxed without scripts, so all interactivity is pure-CSS (`:hover` / `:focus`). **No inline `<style>`** — all styling MUST come from `./theme.css`. Aim for a finished, shippable feel using the polished primitives below.
 >
 > **Output shape:** every page file is `<!DOCTYPE html>` + `<head>` (charset + title + single `<link rel="stylesheet" href="./theme.css">`) + `<body>` containing the per-region markup below, in the order from the plan's Section 6 Pages table.
 
@@ -20,7 +20,7 @@
 
 ## Shared CSS (paste into `theme.css`)
 
-The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens **plus base body styles**. Append everything below to the same `theme.css` so the per-region HTML below renders as a clean, calm sketch — single elevation tier, no animations, no gradients except the hero, no hover effects. The scaffold raises the visual ambition; this file deliberately does not.
+The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens **plus base body styles**. Append everything below to the same `theme.css` so the per-region HTML renders as a polished, finished-looking page — layered elevation, smooth hover and focus states, and a confident brand story, all in pure CSS. The scaffold goes further with framework-only capabilities (real component library, dark mode, richer motion, live data); this file gives the planning preview a finalized feel without any of them.
 
 ```css
 /* ───── Layout primitives ───── */
@@ -38,7 +38,7 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
 
 .preview-main {
     flex: 1;
-    padding: var(--space-6);
+    padding: var(--space-6) var(--space-7);
     display: flex;
     flex-direction: column;
     gap: var(--space-5);
@@ -57,14 +57,19 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     gap: var(--space-5);
 }
 
-/* ───── Header (flat, no blur, no sticky) ───── */
+/* ───── Header (sticky, subtle elevation + frosted backdrop) ───── */
 .preview-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-4);
-    padding: var(--space-3) var(--space-6);
-    background: var(--color-surface-raised, var(--color-surface));
+    padding: var(--space-3) var(--space-7);
+    background: color-mix(in srgb, var(--color-surface-raised, var(--color-surface)) 86%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
     border-bottom: 1px solid var(--color-border);
 }
 .preview-header__brand {
@@ -72,37 +77,48 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     align-items: center;
     gap: var(--space-3);
     font-weight: 700;
-    font-size: var(--text-base);
+    font-size: var(--text-lg);
+    letter-spacing: -0.01em;
     color: var(--color-text);
 }
 .preview-header__logo {
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-sm);
-    background: var(--color-primary);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
     display: grid;
     place-items: center;
     color: var(--color-on-primary);
     font-weight: 700;
-    font-size: 0.85em;
+    font-size: 0.8em;
+    box-shadow: var(--shadow-sm);
 }
 .preview-header__actions {
     display: flex;
-    gap: var(--space-3);
+    gap: var(--space-1);
     align-items: center;
 }
 .preview-header__action {
     color: var(--color-muted);
     text-decoration: none;
     font-size: var(--text-sm);
+    font-weight: 500;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    transition: color var(--transition), background var(--transition);
+}
+.preview-header__action:hover {
+    color: var(--color-text);
+    background: var(--color-surface-sunken);
+    text-decoration: none;
 }
 
-/* ───── Nav (horizontal, flat) ───── */
+/* ───── Nav (horizontal) ───── */
 .preview-nav {
     display: flex;
     gap: var(--space-1);
-    padding: var(--space-2) var(--space-6);
-    background: var(--color-surface);
+    padding: var(--space-2) var(--space-7);
+    background: var(--color-surface-raised, var(--color-surface));
     border-bottom: 1px solid var(--color-border);
 }
 .preview-nav__link {
@@ -112,6 +128,12 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     font-weight: 500;
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-sm);
+    transition: color var(--transition), background var(--transition);
+}
+.preview-nav__link:hover {
+    color: var(--color-text);
+    background: var(--color-surface-sunken);
+    text-decoration: none;
 }
 .preview-nav__link--active {
     color: var(--color-primary);
@@ -119,12 +141,12 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     font-weight: 600;
 }
 
-/* ───── Sidebar (flat surface, no gradient) ───── */
+/* ───── Sidebar ───── */
 .preview-sidebar {
-    width: 220px;
+    width: 232px;
     flex-shrink: 0;
-    padding: var(--space-4) var(--space-3);
-    background: var(--color-surface-sunken, var(--color-surface));
+    padding: var(--space-5) var(--space-3);
+    background: var(--color-surface-raised, var(--color-surface));
     border-right: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
@@ -135,74 +157,102 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     letter-spacing: 0.06em;
     font-size: var(--text-xs);
     color: var(--color-muted);
-    font-weight: 600;
+    font-weight: 700;
     padding: var(--space-3) var(--space-2) var(--space-1);
 }
 .preview-sidebar__item {
+    display: flex;
+    align-items: center;
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-sm);
     color: var(--color-text);
     text-decoration: none;
     font-size: var(--text-sm);
-    opacity: 0.78;
+    font-weight: 500;
+    opacity: 0.8;
+    transition: background var(--transition), color var(--transition), opacity var(--transition);
+}
+.preview-sidebar__item:hover {
+    background: var(--color-surface-sunken);
+    opacity: 1;
+    text-decoration: none;
 }
 .preview-sidebar__item--active {
-    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
     color: var(--color-primary);
     font-weight: 600;
     opacity: 1;
+    box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
-/* ───── Hero (one gradient — keeps the brand story visible) ───── */
+/* ───── Hero (gradient + soft inner highlight — the brand centerpiece) ───── */
 .preview-hero {
-    padding: var(--space-6);
-    border-radius: var(--radius-md);
+    position: relative;
+    overflow: hidden;
+    padding: var(--space-7);
+    border-radius: var(--radius-lg);
     background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
     color: var(--color-on-primary);
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+    box-shadow: var(--shadow-md);
 }
+.preview-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(120% 120% at 100% 0%, rgba(255, 255, 255, 0.18), transparent 60%);
+    pointer-events: none;
+}
+.preview-hero > * { position: relative; z-index: 1; }
 .preview-hero__eyebrow {
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     font-size: var(--text-xs);
     font-weight: 700;
     opacity: 0.85;
 }
 .preview-hero__title {
-    font-size: var(--text-2xl);
-    font-weight: 700;
-    line-height: 1.15;
-    max-width: 28ch;
+    font-size: var(--text-3xl);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    max-width: 24ch;
 }
 .preview-hero__subtitle {
-    font-size: var(--text-base);
-    max-width: 60ch;
-    opacity: 0.9;
+    font-size: var(--text-lg);
+    max-width: 56ch;
+    opacity: 0.92;
     line-height: 1.5;
 }
 .preview-hero__actions {
     display: flex;
     gap: var(--space-3);
-    margin-top: var(--space-2);
+    margin-top: var(--space-3);
     flex-wrap: wrap;
 }
 
-/* ───── KPI tiles (still useful — communicates "this is a dashboard") ───── */
+/* ───── KPI tiles (subtle lift on hover) ───── */
 .preview-kpi-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: var(--space-3);
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: var(--space-4);
 }
 .preview-kpi {
     background: var(--color-surface-raised, var(--color-surface));
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    padding: var(--space-4);
+    padding: var(--space-4) var(--space-5);
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+.preview-kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 .preview-kpi__label {
     font-size: var(--text-xs);
@@ -212,13 +262,15 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     font-weight: 600;
 }
 .preview-kpi__value {
-    font-size: var(--text-xl);
+    font-size: var(--text-2xl);
     font-weight: 700;
+    letter-spacing: -0.02em;
     color: var(--color-text);
     line-height: 1.1;
 }
 .preview-kpi__delta {
     font-size: var(--text-xs);
+    font-weight: 600;
     color: var(--color-muted);
 }
 
@@ -229,17 +281,19 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     justify-content: space-between;
     gap: var(--space-3);
     padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-border);
 }
 .preview-section-title__h {
-    font-size: var(--text-lg);
+    font-size: var(--text-xl);
     font-weight: 700;
+    letter-spacing: -0.01em;
 }
 .preview-section-title__hint {
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     color: var(--color-muted);
 }
 
-/* ───── Cards (list + grid) — flat, no hover lift ───── */
+/* ───── Cards (list + grid) — soft elevation, gentle hover lift ───── */
 .preview-card-list {
     display: flex;
     flex-direction: column;
@@ -247,21 +301,29 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
 }
 .preview-card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: var(--space-3);
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: var(--space-4);
 }
 .preview-card {
     background: var(--color-surface-raised, var(--color-surface));
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    padding: var(--space-4);
+    padding: var(--space-4) var(--space-5);
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+.preview-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
 }
 .preview-card__title {
     font-size: var(--text-base);
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: -0.01em;
     margin: 0;
 }
 .preview-card__body {
@@ -279,10 +341,10 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     color: var(--color-muted);
 }
 .preview-card__media {
-    height: 96px;
+    height: 132px;
     border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
-    margin-bottom: var(--space-1);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 18%, var(--color-surface)), color-mix(in srgb, var(--color-accent) 22%, var(--color-surface)));
+    margin-bottom: var(--space-2);
 }
 
 /* ───── Status pills / badges ───── */
@@ -309,7 +371,7 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     background: currentColor;
 }
 
-/* ───── Form (flat surface, no focus glow) ───── */
+/* ───── Form (soft elevation + focus ring) ───── */
 .preview-form {
     display: flex;
     flex-direction: column;
@@ -317,7 +379,8 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     background: var(--color-surface-raised, var(--color-surface));
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    padding: var(--space-5);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-sm);
 }
 .preview-form__field {
     display: flex;
@@ -342,6 +405,14 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     font: inherit;
     background: var(--color-surface);
     color: var(--color-text);
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+.preview-form__input:focus,
+.preview-form__textarea:focus,
+.preview-form__select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: var(--focus-ring);
 }
 .preview-form__textarea {
     min-height: 96px;
@@ -354,7 +425,7 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     padding-top: var(--space-2);
 }
 
-/* ───── Buttons (flat — no gradient, no shadow, no hover lift) ───── */
+/* ───── Buttons (clear hierarchy, gentle hover) ───── */
 .preview-btn {
     padding: var(--space-2) var(--space-4);
     border-radius: var(--radius-sm);
@@ -367,27 +438,43 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     align-items: center;
     gap: var(--space-2);
     line-height: 1.2;
+    transition: transform var(--transition), box-shadow var(--transition), background var(--transition), border-color var(--transition);
 }
+.preview-btn:hover { transform: translateY(-1px); }
+.preview-btn:active { transform: translateY(0); }
 .preview-btn--primary {
     background: var(--color-primary);
     color: var(--color-on-primary);
+    box-shadow: var(--shadow-sm);
+}
+.preview-btn--primary:hover {
+    background: color-mix(in srgb, var(--color-primary) 90%, #000);
+    box-shadow: var(--shadow-md);
 }
 .preview-btn--secondary {
     background: var(--color-surface);
     color: var(--color-text);
     border-color: var(--color-border);
 }
+.preview-btn--secondary:hover {
+    background: var(--color-surface-sunken);
+    border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+}
 .preview-btn--ghost {
     background: transparent;
     color: var(--color-text);
 }
+.preview-btn--ghost:hover {
+    background: var(--color-surface-sunken);
+}
 
-/* ───── Table (flat container) ───── */
+/* ───── Table (soft container, row hover) ───── */
 .preview-table-wrap {
     background: var(--color-surface-raised, var(--color-surface));
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     overflow: hidden;
+    box-shadow: var(--shadow-sm);
 }
 .preview-table {
     width: 100%;
@@ -396,7 +483,7 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
 .preview-table th,
 .preview-table td {
     text-align: left;
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-3) var(--space-4);
     font-size: var(--text-sm);
     border-bottom: 1px solid var(--color-border);
 }
@@ -407,6 +494,12 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--color-muted);
+}
+.preview-table tbody tr {
+    transition: background var(--transition);
+}
+.preview-table tbody tr:hover {
+    background: var(--color-surface-sunken);
 }
 .preview-table tr:last-child td { border-bottom: none; }
 
@@ -426,53 +519,56 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     border-bottom: 1px solid var(--color-border);
 }
 .preview-tabs__tab {
-    padding: var(--space-2) var(--space-4);
+    padding: var(--space-3) var(--space-4);
     font-size: var(--text-sm);
-    font-weight: 500;
+    font-weight: 600;
     color: var(--color-muted);
     cursor: pointer;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
+    transition: color var(--transition), border-color var(--transition);
 }
+.preview-tabs__tab:hover { color: var(--color-text); }
 .preview-tabs__tab--active {
     color: var(--color-primary);
     border-bottom-color: var(--color-primary);
-    font-weight: 600;
 }
 
-/* ───── Empty state (flat, dashed border, no illustration) ───── */
+/* ───── Empty state (soft surface, friendly) ───── */
 .preview-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: var(--space-6) var(--space-4);
+    padding: var(--space-7) var(--space-5);
     text-align: center;
     background: var(--color-surface-raised, var(--color-surface));
-    border: 1px dashed var(--color-border);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    gap: var(--space-2);
+    gap: var(--space-3);
+    box-shadow: var(--shadow-sm);
 }
-.preview-empty__title { font-size: var(--text-base); font-weight: 700; }
-.preview-empty__body { color: var(--color-muted); max-width: 40ch; font-size: var(--text-sm); }
+.preview-empty__title { font-size: var(--text-lg); font-weight: 700; }
+.preview-empty__body { color: var(--color-muted); max-width: 40ch; font-size: var(--text-sm); line-height: 1.5; }
 
-/* ───── Modal (flat — preview only, no backdrop overlay) ───── */
+/* ───── Modal (elevated — preview only, no backdrop overlay) ───── */
 .preview-modal {
     max-width: 480px;
     background: var(--color-surface-raised, var(--color-surface));
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: var(--space-5);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
+    box-shadow: var(--shadow-lg);
 }
 .preview-modal__title { font-size: var(--text-lg); font-weight: 700; margin: 0; }
 .preview-modal__body { color: var(--color-muted); font-size: var(--text-sm); margin: 0; }
 
 /* ───── Footer ───── */
 .preview-footer {
-    padding: var(--space-3) var(--space-6);
+    padding: var(--space-4) var(--space-7);
     border-top: 1px solid var(--color-border);
     color: var(--color-muted);
     font-size: var(--text-xs);
@@ -548,7 +644,7 @@ For each layout token in the plan's Pages table, copy the corresponding snippet 
 </section>
 ```
 
-> The `style="color: var(--color-on-primary);"` on the ghost button is the **one** intentional inline-style exception (alongside `modal`) — needed because the ghost variant inherits `--color-text` (dark) which is illegible on the gradient hero. The hero is the **only** place this preview uses a gradient; everywhere else is flat by design.
+> The `style="color: var(--color-on-primary);"` on the ghost button is the **one** intentional inline-style exception (alongside `modal`) — needed because the ghost variant inherits `--color-text` (dark) which is illegible on the gradient hero. The hero is the brand centerpiece; the logo chip and card media thumbnails also lean on subtle gradients, while everything else stays on solid surfaces with soft elevation.
 
 ### `kpi-row` (metric tiles, ideal for dashboards)
 ```html

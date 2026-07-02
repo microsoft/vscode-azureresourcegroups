@@ -13,6 +13,7 @@ import { ext } from "../../../../extensionVariables";
 import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { AUTOPILOT_QUERY_MARKER, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { recordPhaseLaunch } from "../flowState";
 import { openLoadingView } from "../openLoadingView";
 import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
@@ -26,10 +27,12 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     private previewWatcher: vscode.Disposable | undefined;
     private _isRefreshingPrereqs = false;
     private _refreshPrereqsTimer: ReturnType<typeof setTimeout> | undefined;
+    private latestPlanData: PlanData;
 
     constructor(planData: PlanData, sourceFileUri?: vscode.Uri) {
         super(ext.context, 'Project Plan', 'scaffoldPlanView', {}, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
 
+        this.latestPlanData = planData;
         this.sourceFileUri = sourceFileUri;
         this.previewFolderUri = resolvePreviewFolderUri(sourceFileUri);
         this.setupPreviewWatcher();
@@ -46,7 +49,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         this.panel.webview.onDidReceiveMessage((message: { command: string; data?: PlanData; prompt?: string; autopilot?: boolean }) => {
             switch (message.command) {
                 case 'ready':
-                    void this.panel.webview.postMessage({ command: 'setPlanData', data: planData });
+                    void this.panel.webview.postMessage({ command: 'setPlanData', data: this.latestPlanData });
                     void this.postPreviewPages();
                     break;
                 case 'approvePlan':
@@ -111,6 +114,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             mode: 'azure-project-scaffold',
             query: confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery,
         });
+        await recordPhaseLaunch('scaffold');
         this.panel.dispose();
         openLoadingView({
             stage: 0,
@@ -229,6 +233,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     updatePlanData(planData: PlanData, sourceFileUri?: vscode.Uri): void {
+        this.latestPlanData = planData;
         if (sourceFileUri) {
             this.sourceFileUri = sourceFileUri;
             const nextPreviewFolder = resolvePreviewFolderUri(sourceFileUri);

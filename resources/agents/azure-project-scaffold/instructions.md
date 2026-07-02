@@ -19,10 +19,10 @@ Execute approved plan; scaffold backend services; build API routes + service lay
 ## Prerequisites
 Requires an approved plan. Verify before starting:
 - `.azure/project-plan.md` exists
-- Status = `Approved` (not `Planning`)
+- Status = `Approved` **or** `In Progress` (not `Planning`). `In Progress` means a previous scaffold run was interrupted — **resume it, do not restart.** Read the existing plan and continue scaffolding from where it left off; do NOT re-gather requirements or re-request approval.
 - Section 8 lists API routes; Section 4 lists Azure services
 
-> If `.azure/project-plan.md` is missing or status ≠ `Approved`: **STOP** — tell the user _"No approved project plan found. Create and approve a project plan first."_
+> If `.azure/project-plan.md` is missing or status is `Planning`: **STOP** — tell the user _"No approved project plan found. Create and approve a project plan first."_
 
 ## Autopilot mode (overrides approval gates & the Next Step question)
 **Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto` (front-matter or a `**Execution Mode**: auto` row). When active, run fully unattended:
@@ -39,7 +39,7 @@ Requires an approved plan. Verify before starting:
 
 0. **Frontend-first generation (load-bearing UX rule)** — If the plan includes a frontend, the orchestrator launches the **Frontend Sub-Agent** (Step 1) at the same point it kicks off the backend track, so frontend generation runs **concurrently** with backend Phase A/B rather than blocking it. The sub-agent generates `services/web/` (mock data, pages, components), builds it, and reports back. The user already approved the design during planning (the `.azure/.preview-temp/` mock-up), so **do NOT ask the user to approve the UX during scaffolding.** If the plan has no frontend, this rule is satisfied trivially. See [sub-agent-strategy.md](.github/agents/azure-project-scaffold/references/sub-agent-strategy.md).
 1. **Plan is source of truth** — Read `.azure/project-plan.md` at start. Follow route definitions, service list, types, architecture exactly. Do NOT re-ask user for plan requirements.
-2. **Track progress** — Update plan status as you go: Approved → In Progress → Awaiting Integration. Do not defer status updates. (The `azure-project-integrate` agent advances it to `Integrated`.)
+2. **Track progress** — Update plan status as you go: Approved → In Progress → Awaiting UX Approval (or Awaiting Integration when the plan has no frontend). Do not defer status updates. (The `azure-project-integrate` agent advances it Awaiting Integration → Integrating → Integrated.)
 3. **Build-gate enforcement** — Every phase ends with build check (`tsc` / `npm run build`). If fails, iterate until clean. **Do NOT proceed until code compiles.** Most important rule.
 4. **Azure Functions v4** — Always v4 programming model (Node.js v4, Python v2, .NET isolated). Prioritize Azure services. Runtimes: TypeScript, Python, C#.
 5. **Service abstraction & DI** — All Azure SDK calls behind injectable interfaces. Handlers NEVER import SDKs directly. **CRITICAL: Step 4 MUST produce interface AND concrete implementation per service.** Interface-only = #1 cause of runtime crashes. Concrete impl is what the app uses at runtime. See [service-abstraction.md](.github/agents/shared-references/service-abstraction.md).
@@ -124,7 +124,7 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 | Task | Details |
 |------|---------|
 | Read `.azure/project-plan.md` | Load complete plan |
-| Validate status | Must be `Approved`. If not, STOP — instruct user to run `azure-project-plan`. |
+| Validate status | Must be `Approved` or `In Progress`. `In Progress` = an interrupted run — resume scaffolding, do not restart. If `Planning` or missing, STOP — instruct user to run `azure-project-plan`. |
 | Extract plan details | Routes, services, entity types, language, runtime, framework, and **orchestration** for each service's stack section (`## 2. Backend`, `## 3. Frontend`, …), structure |
 | Extract design contract (if frontend) | If a frontend is planned, read Section 5 (Design System & UI). Extract `Component Library:`, `Style Direction:`, `Typography:`, the Color Palette table, and the Pages table (page → layout regions). **If Section 5 is missing or `Component Library:` is blank, STOP — the plan's design section must be completed before scaffolding. Section 5 is load-bearing for Rule 13 / Step 1 quality bar.** |
 | Read the approved HTML preview (if frontend) | List `.azure/.preview-temp/` if it exists. Read `manifest.json` to get the page list, then read each `<slug>.html` plus `theme.css`. **Treat these files as the visual mock-up that the user already approved during planning.** They are the source of truth for layout, palette translation, and per-page region composition. The scaffolded app must reproduce this look using the framework + library named in the Frontend stack section / Section 5 — NOT by serving the preview HTML itself. If `.azure/.preview-temp/` is missing for a plan that has a frontend, do not fail — just rely on Section 5 alone. |
@@ -391,7 +391,7 @@ For **each** route in plan:
 |------|---------|
 | Build all workspaces | `npm run build` in every workspace — zero errors |
 | Clean up the HTML preview | If `.azure/.preview-temp/` exists, delete the whole folder — its contents were a transient mock-up consumed during scaffolding and should not ship in the repo. Use a portable command (see Cross-platform command discipline): `node -e "require('fs').rmSync('.azure/.preview-temp', {recursive: true, force: true})"`. Do **NOT** use `rm -rf` or `Remove-Item -Recurse -Force` directly — those are not cross-platform. |
-| Update plan status | Set to `Awaiting Integration` — signals the scaffold built clean but the frontend still uses mock data and migrations/live wiring are pending (the `azure-project-integrate` agent's job) |
+| Update plan status | **With a frontend (interactive):** set to `Awaiting UX Approval` — signals the scaffold built clean and the frontend preview is now awaiting the user's UI sign-off (the `azure-project-integrate` agent takes over once the user approves). **No frontend, or autopilot:** set to `Awaiting Integration` — there is no UI gate, so integration is the next required step. Either way the frontend still uses mock data and migrations/live wiring are pending (the `azure-project-integrate` agent's job). |
 | Print completion | List created files, announce: **"Scaffolding complete!"** |
 | **Write the integration artifact** | Write `.azure/integration-plan.md` — the hand-off brief the `azure-project-integrate` agent consumes. Include: backend folder + run command + port + health path; frontend folder + build/dev commands + the **API seam to swap** (`services/web/src/api/index.ts` — repoint from `mockClient` to the live client) plus the **mock files to delete** (`src/api/mockClient.ts`, `src/mocks/*`, local mock types, and the dev-only Mock State Switcher `src/api/previewState.ts` + its corner-switcher component); the full API route inventory (method + path) so the live client mirrors the `ApiClient` interface method-for-method; the database type + migration tool + migration directory + connection env vars (state explicitly that **NO seed data** is to be created); the shared-types package + import alias; the service list (Essential vs Enhancement). Keep it concise — paths and commands, not prose. |
 | **Open the frontend preview & UI-approval gate** | **Only when the plan has a frontend AND not in autopilot.** Call `run_vscode_command` with `{ "commandId": "azureResourceGroups.openFrontendPreviewView", "name": "Open Frontend Preview", "skipCheck": true }`. Pass the frontend folder as the command argument when it isn't the default `services/web` (e.g. a product-named app). This opens a webview that starts the frontend dev server and renders the **running app (mock data)** in an iframe, with an **Approve UI** header and a feedback box — mirroring the plan-approval UX. **The webview owns the hand-off**: clicking **Approve UI** triggers `azureResourceGroups.startProjectIntegrate` itself, and the feedback box re-opens this scaffold agent with the user's UI change requests (the dev server hot-reloads as you edit). After opening the gate, **STOP** — do NOT also call `startProjectIntegrate`, do NOT call `vscode_askQuestions`. If the plan has **no frontend**, skip this row and use the direct hand-off row below. |
@@ -400,7 +400,7 @@ For **each** route in plan:
 > **✅ Final Checkpoint**:
 > 1. **Build**: `npm run build` every workspace. `dist/` has output. Zero errors.
 > 2. **Preview cleanup**: `.azure/.preview-temp/` no longer exists.
-> 3. **Status**: `.azure/project-plan.md` = `Awaiting Integration`.
+> 3. **Status**: `.azure/project-plan.md` = `Awaiting UX Approval` (with a frontend) or `Awaiting Integration` (no frontend / autopilot).
 > 4. **Integration artifact**: `.azure/integration-plan.md` written with the integrate agent's brief.
 > 5. **Hand-off**: For a project **with a frontend** (interactive mode), opened the UI-approval gate via `azureResourceGroups.openFrontendPreviewView` and stopped — the gate's **Approve UI** button performs the hand-off. For a **no-frontend** project (or autopilot), started the `azure-project-integrate` session via `azureResourceGroups.startProjectIntegrate`. Either way, did NOT call `vscode_askQuestions` or print next-step suggestions.
 

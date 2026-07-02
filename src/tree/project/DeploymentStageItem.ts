@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from '../../webviews/copilotOnRails/extension/copilotOnRailsCommands';
 import { OpenPlanNode } from './OpenPlanNode';
 import { ProgressNode } from './ProgressNode';
+import { ResumeStageNode } from './ResumeStageNode';
 import { StageNode } from './StageNode';
 import { StateStageNode } from './StateStageNode';
 
@@ -18,6 +19,10 @@ export class DeploymentStageItem extends StageNode {
     protected readonly iconName = 'rocket';
 
     getChildren(): ProgressNode[] {
+        if (this.resumeCommandId) {
+            return [new ResumeStageNode(this.stageId, this.resumeLabel)];
+        }
+
         if (!this.hasPlanFile) {
             return [new StateStageNode(this.stageId, copilotOnRailsCommandIds.startDeployment)];
         }

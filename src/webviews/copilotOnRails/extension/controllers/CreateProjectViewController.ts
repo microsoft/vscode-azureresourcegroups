@@ -12,6 +12,7 @@ import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { recordPhaseLaunch } from "../flowState";
 import { openLoadingView } from "../openLoadingView";
 
 export type { CreateProjectViewControllerType };
@@ -48,6 +49,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
             mode: 'azure-project-plan',
             query,
         });
+        await recordPhaseLaunch('plan');
         projectSubmissionState.setPending();
         openLoadingView({
             stage: 0,

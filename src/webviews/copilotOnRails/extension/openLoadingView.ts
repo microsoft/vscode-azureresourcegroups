@@ -6,6 +6,7 @@
 import * as vscode from "vscode";
 import { type LoadingViewConfiguration } from "../views/utils/viewConfigTypes";
 import { LoadingViewController } from "./controllers/LoadingViewController";
+import { trackFlowView } from "./utils/singletonViewHost";
 
 let controller: LoadingViewController | undefined;
 
@@ -20,6 +21,7 @@ export function openLoadingView(config: LoadingViewConfiguration): void {
     }
 
     controller = new LoadingViewController(config);
+    trackFlowView(controller.panel);
     controller.revealToForeground(vscode.ViewColumn.Active);
     controller.panel.onDidDispose(() => {
         controller = undefined;

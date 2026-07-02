@@ -9,7 +9,10 @@ import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { ext } from "../../../../extensionVariables";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { isFrontendApproved, readPlanStatus } from "../flowState";
+import { PROJECT_PLAN_GLOB } from "../planFilePaths";
 import { type RunningDevServer, startDevServer } from "../utils/devServerManager";
+import { trackFlowView } from "../utils/singletonViewHost";
 
 /** State pushed to the webview to drive the preview surface. */
 type PreviewState =
@@ -50,10 +53,16 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
             this.devServer = undefined;
         });
 
+        // Register as an active flow view so the progress tree treats project
+        // creation as active again while the preview is open (hiding the stage's
+        // "Resume" action) and re-offers Resume once the preview is closed.
+        trackFlowView(this.panel);
+
         this.panel.webview.onDidReceiveMessage((message: IncomingMessage) => {
             switch (message.command) {
                 case 'ready':
                     this.postState();
+                    void this.postApprovedState();
                     return;
                 case 'approveUi':
                     void this.approveAndHandOff();
@@ -117,6 +126,18 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
 
     private postState(): void {
         void this.panel.webview.postMessage({ command: 'setPreviewState', state: this.state });
+    }
+
+    /**
+     * Reflect a prior UI approval persisted in the plan status, so reopening the
+     * preview after approving shows the Approve button already disabled rather
+     * than inviting a second approval.
+     */
+    private async postApprovedState(): Promise<void> {
+        const status = await readPlanStatus(PROJECT_PLAN_GLOB);
+        if (isFrontendApproved(status)) {
+            void this.panel.webview.postMessage({ command: 'setApproved' });
+        }
     }
 
     private submitFeedback(prompt: string | undefined): void {

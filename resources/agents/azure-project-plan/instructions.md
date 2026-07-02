@@ -576,8 +576,16 @@ Both files MUST exist before the plan-preview webview opens, so the controller c
     --space-7: 40px;
     --space-8: 56px;
 
-    /* ── Elevation (preview = single tier; the scaffold uses real component-library elevation) ── */
-    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    /* ── Elevation (layered, soft — gives cards and surfaces a finished feel) ── */
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.07), 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-md: 0 6px 16px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.05);
+    --shadow-lg: 0 16px 36px rgba(15, 23, 42, 0.14), 0 6px 12px rgba(15, 23, 42, 0.07);
+
+    /* ── Motion & focus (pure-CSS interactivity — no JS in the sandboxed iframe) ── */
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --transition: 160ms var(--ease);
+    --focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -587,13 +595,15 @@ body {
     color: var(--color-text);
     font-family: var(--font-body);
     font-size: var(--text-base);
-    line-height: 1.55;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 h1, h2, h3, h4 {
     font-family: var(--font-heading);
     line-height: 1.2;
+    letter-spacing: -0.01em;
     margin: 0;
 }
 a { color: var(--color-primary); text-decoration: none; }
@@ -601,7 +611,7 @@ a:hover { text-decoration: underline; }
 /* Plus the shared component CSS from references/html-preview.md §Shared CSS */
 ```
 
-> **Why so plain?** This stylesheet powers a *directional sketch* — it confirms color story, page regions, and density during planning, nothing more. The scaffold raises the visual ambition (real component library, real icons, motion, dark mode, polished hero treatments). Resist the urge to add depth/shadow tiers/gradients here — that work belongs in the scaffold and is governed by `azure-project-scaffold/references/frontend-quality-bar.md` "Polish floor".
+> **A polished, framework-free preview.** This stylesheet is pure HTML/CSS — no framework, no build step, no JavaScript — yet it should read as a *finished* product, not a wireframe: layered elevation, smooth hover and focus states, refined typography, and a confident brand story. The `--shadow-*`, `--transition`, and `--focus-ring` tokens above (and the hover treatments in the Shared CSS) exist precisely so every page looks finalized. The scaffold still goes further with the things only a real framework can deliver — a real component library, real icon sets, dark mode, richer motion, and live data — but the planning preview itself must never look like a throwaway prototype.
 
 Paste the full Shared CSS block from `references/html-preview.md` into the same file (header, nav, sidebar, hero, etc. — keep names exactly as the reference defines so the per-page HTML matches).
 
@@ -741,7 +751,7 @@ The webview watches the entire `.azure/.preview-temp/` folder, so the manifest u
 
 > **Why this matters**: Without `Component Library:`, the scaffold step treats the wireframe's region tokens (`header`, `hero`, `grid`, ...) as raw layout instructions and produces blocky placeholder `<div>` JSX that LOOKS worse than the plan-preview wireframe. With `Component Library:` set, the scaffold renders each region using real library primitives (cards, tabs, fields, toolbars, message bars) themed by the Color Palette.
 
-> **Plan-preview note**: The plan-preview webview renders Section 6 as a **sandboxed HTML/CSS iframe** loaded from `.azure/.preview-temp/<page>.html`. It deliberately does NOT use any component library, real icons, motion, dark mode, or webfonts — the preview is a *directional sketch* (color story + page regions + density), and the scaffolded app is required to visibly exceed it using whatever `Component Library` is named in the plan. The webview disclosure reads *"Directional mock, not the final UI. The scaffold renders this with **{Component Library}**, real icons, motion, and dark mode — it will look noticeably more polished than the sketch below."* and a `MOCK` ribbon overlays the iframe.
+> **Plan-preview note**: The plan-preview webview renders Section 6 as a **sandboxed HTML/CSS iframe** loaded from `.azure/.preview-temp/<page>.html`, with a small "Preview" tag in the corner. The preview is **pure HTML/CSS with no framework, build step, or JavaScript**, yet it should read as a *finished*, shippable page — layered elevation, smooth hover/focus states, refined typography, a confident brand story. It still does NOT use a real component library, real icon sets, dark mode, richer motion, or live data — those are the scaffold's job, and the scaffolded app goes further using whatever `Component Library` is named in the plan. The preview itself must never look like a throwaway prototype.
 
 ### Error Response Contract
 

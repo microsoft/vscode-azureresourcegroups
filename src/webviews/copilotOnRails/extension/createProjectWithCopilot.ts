@@ -7,13 +7,37 @@ import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { copilotOnRailsCommandIds } from "./copilotOnRailsCommands";
+import { resolveFlowState } from "./flowState";
+import { DEBUG_PLAN_GLOB, PROJECT_PLAN_GLOB } from "./planFilePaths";
 
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
 
 export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
+    // Resume an interrupted run before anything else: if a phase was started but
+    // never finished, drop the user back into it instead of starting over.
+    const flow = await resolveFlowState();
+    if (flow && flow.status !== 'completed') {
+        const resume = vscode.l10n.t('Resume');
+        const startOver = vscode.l10n.t('Start over');
+        const choice = await vscode.window.showInformationMessage(
+            vscode.l10n.t('We detected an in-progress Copilot project session ({0}). How would you like to proceed?', flow.label),
+            { modal: true },
+            resume,
+            startOver,
+        );
+
+        if (choice === resume) {
+            await vscode.commands.executeCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot);
+            return;
+        } else if (choice !== startOver) {
+            return;
+        }
+        // "Start over" falls through to the create view below.
+    }
+
     // Local Development => Deploy
-    if (await hasCompletedPhase('.azure/vscode-debug-plan.md', 'implemented')) {
+    if (await hasCompletedPhase(DEBUG_PLAN_GLOB, 'implemented')) {
         const choice = await vscode.window.showInformationMessage(
             vscode.l10n.t('We detected a previous Copilot session with a completed local debug configuration. Would you like to deploy this project?'),
             { modal: true },
@@ -26,8 +50,9 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
         return;
     }
 
-    // Create => Debug | Deploy
-    if (await hasCompletedPhase('.azure/project-plan.md', 'scaffolded')) {
+    // Create => Debug | Deploy. The plan reaches "Integrated" once scaffolding and
+    // live-data integration are both done — that's a fully scaffolded project.
+    if (await hasCompletedPhase(PROJECT_PLAN_GLOB, 'integrated')) {
         const choice = await vscode.window.showInformationMessage(
             vscode.l10n.t('We detected a previous Copilot session with a fully scaffolded project. How would you like to proceed?'),
             { modal: true },

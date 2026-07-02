@@ -6,7 +6,7 @@
 'use strict';
 
 import { LocationListStep, registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
@@ -61,6 +61,7 @@ import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
+import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
     // the entry point for vscode.dev is this activate, not main.js, so we need to instantiate perfStats here
@@ -79,6 +80,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     await registerProjectPlanFilesContext(context, projectPlanFilesWatcher);
     registerRequirementsAutoOpen(context);
     registerAutopilot(context);
+    registerResumeAffordances(context, projectPlanFilesWatcher);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);
@@ -178,6 +180,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     const azureProjectProgressTreeDataProvider = new AzureProjectProgressTreeDataProvider(context, projectPlanFilesWatcher);
     context.subscriptions.push(vscode.window.registerTreeDataProvider('azureProject', azureProjectProgressTreeDataProvider));
+    registerCommand('azureResourceGroups.refreshProject', () => azureProjectProgressTreeDataProvider.refresh());
 
     const tenantResourcesBranchDataItemCache = new BranchDataItemCache();
     registerTenantTree(context, {

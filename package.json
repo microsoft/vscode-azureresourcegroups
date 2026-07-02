@@ -271,6 +271,12 @@
                 "icon": "$(refresh)"
             },
             {
+                "command": "azureResourceGroups.refreshProject",
+                "title": "%azureResourceGroups.refresh%",
+                "category": "Azure",
+                "icon": "$(refresh)"
+            },
+            {
                 "command": "azureResourceGroups.refresh",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
@@ -562,6 +568,11 @@
                     "command": "azureResourceGroups.refreshTree",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@3"
+                },
+                {
+                    "command": "azureResourceGroups.refreshProject",
+                    "when": "view == azureProject",
+                    "group": "navigation@1"
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLog",

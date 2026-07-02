@@ -11,6 +11,7 @@ import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { recordPhaseLaunch } from "../flowState";
 import { openLoadingView } from "../openLoadingView";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
@@ -78,6 +79,8 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         });
         if (isFeedback) {
             void this.panel.webview.postMessage({ command: 'revisionInProgress' });
+        } else {
+            await recordPhaseLaunch('localDev');
         }
         return true;
     }
