@@ -12,6 +12,13 @@ import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
 import { type PlanContent, type PlanData, type PlanSection, type PreviewPage, type PreviewStatus, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 
+// Plan statuses (lowercased) at or past approval. Once the plan is approved its
+// status advances through the scaffold/integration lifecycle (approved → in
+// progress → awaiting ux approval → awaiting integration → integrating →
+// integrated), so the Approve button stays disabled for all of them rather than
+// re-enabling when the status moves past 'approved'.
+const APPROVED_OR_LATER_STATUSES = ['approved', 'in progress', 'awaiting ux approval', 'awaiting integration', 'integrating', 'integrated', 'scaffolded', 'ready'];
+
 const editableOptions: Record<string, string[]> = {
     'Language': ['JavaScript', 'TypeScript', 'Python', 'C# (.NET)'],
     'Runtime': ['Node', 'Deno', 'Bun', 'CPython', 'PyPy', '.NET'],
@@ -206,7 +213,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
 
     const isAlreadyApproved = useMemo(() => {
         const s = plan?.status?.trim().toLowerCase();
-        return s === 'approved';
+        return s !== undefined && APPROVED_OR_LATER_STATUSES.includes(s);
     }, [plan?.status]);
 
     const editedCells = useMemo(() => {

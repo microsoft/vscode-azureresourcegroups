@@ -31,12 +31,15 @@ export const FrontendPreviewView = (): JSX.Element => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [draft, setDraft] = useState('');
     const [feedbackSent, setFeedbackSent] = useState(false);
+    const [approved, setApproved] = useState(false);
 
     useEffect(() => {
         const handler = (event: MessageEvent): void => {
             const message = event.data;
             if (message?.command === 'setPreviewState') {
                 setPreview(message.state as PreviewState);
+            } else if (message?.command === 'setApproved') {
+                setApproved(true);
             } else if (message?.command === 'feedbackSubmitted') {
                 setFeedbackSent(true);
                 setDrawerOpen(false);
@@ -49,6 +52,7 @@ export const FrontendPreviewView = (): JSX.Element => {
     }, []);
 
     const handleApprove = useCallback(() => {
+        setApproved(true);
         vscodeApi.postMessage({ command: 'approveUi' });
     }, [vscodeApi]);
 
@@ -107,10 +111,10 @@ export const FrontendPreviewView = (): JSX.Element => {
                                 <Button
                                     appearance='primary'
                                     icon={<CheckmarkRegular />}
-                                    disabled={!isReady}
+                                    disabled={!isReady || approved}
                                     onClick={handleApprove}
                                 >
-                                    Approve UI
+                                    {approved ? 'Approved' : 'Approve UI'}
                                 </Button>
                             </Tooltip>
                         </div>

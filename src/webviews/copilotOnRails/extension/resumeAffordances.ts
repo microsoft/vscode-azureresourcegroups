@@ -6,8 +6,8 @@
 import * as vscode from 'vscode';
 import { type ProjectPlanFilesWatcher } from '../../../tree/project/projectPlanFiles';
 import { copilotOnRailsCommandIds } from './copilotOnRailsCommands';
-import { dismissResumePrompt, isResumePromptDismissed, resolveFlowState } from './flowState';
-import { isAnyFlowViewOpen, onDidChangeFlowViewState } from './utils/singletonViewHost';
+import { dismissResumePrompt, isResumePromptDismissed, resolveFlowState, shouldOfferResume } from './flowState';
+import { onDidChangeFlowViewState } from './utils/singletonViewHost';
 
 let statusBarItem: vscode.StatusBarItem | undefined;
 
@@ -39,10 +39,10 @@ async function updateStatusBar(): Promise<void> {
         return;
     }
     // Only offer to resume when an incomplete flow has no view currently driving
-    // it — if the user is already looking at a plan/requirements/loading view,
-    // there is nothing to "resume".
+    // it and no chat session is running it in this window — if the flow is being
+    // driven right now, there is nothing to "resume".
     const flow = await resolveFlowState();
-    if (flow && flow.status !== 'completed' && !isAnyFlowViewOpen()) {
+    if (shouldOfferResume(flow)) {
         statusBarItem.text = `$(debug-continue) ${vscode.l10n.t('Resume project setup')}`;
         statusBarItem.tooltip = vscode.l10n.t('Resume your in-progress Copilot project: {0}', flow.label);
         statusBarItem.show();
@@ -53,7 +53,7 @@ async function updateStatusBar(): Promise<void> {
 
 async function promptToResumeOnActivation(): Promise<void> {
     const flow = await resolveFlowState();
-    if (!flow || flow.status === 'completed' || isAnyFlowViewOpen() || isResumePromptDismissed(flow.phase)) {
+    if (!shouldOfferResume(flow) || isResumePromptDismissed(flow.phase)) {
         return;
     }
 

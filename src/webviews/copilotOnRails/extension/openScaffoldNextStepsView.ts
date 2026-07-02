@@ -5,6 +5,7 @@
 
 import * as vscode from "vscode";
 import { ScaffoldNextStepsViewController } from "./controllers/ScaffoldNextStepsViewController";
+import { markProjectPlanIntegrated } from "./flowState";
 import { closeLoadingView } from "./openLoadingView";
 
 let controller: ScaffoldNextStepsViewController | undefined;
@@ -15,6 +16,7 @@ let controller: ScaffoldNextStepsViewController | undefined;
  */
 export function openScaffoldNextStepsView(config: Record<string, never>): void {
     closeLoadingView();
+    void markProjectPlanIntegrated();
 
     if (controller) {
         controller.updateConfig(config);

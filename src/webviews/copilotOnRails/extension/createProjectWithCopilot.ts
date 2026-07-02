@@ -50,8 +50,9 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
         return;
     }
 
-    // Create => Debug | Deploy
-    if (await hasCompletedPhase(PROJECT_PLAN_GLOB, 'scaffolded')) {
+    // Create => Debug | Deploy. The plan reaches "Integrated" once scaffolding and
+    // live-data integration are both done — that's a fully scaffolded project.
+    if (await hasCompletedPhase(PROJECT_PLAN_GLOB, 'integrated')) {
         const choice = await vscode.window.showInformationMessage(
             vscode.l10n.t('We detected a previous Copilot session with a fully scaffolded project. How would you like to proceed?'),
             { modal: true },

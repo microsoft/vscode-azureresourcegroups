@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { isProjectCreationComplete, readPlanStatus } from '../../webviews/copilotOnRails/extension/flowState';
+import { findFrontendFolder } from '../../webviews/copilotOnRails/extension/frontendFolder';
 import { DEBUG_PLAN_GLOB, DEPLOYMENT_PLAN_GLOB, PROJECT_PLAN_GLOB } from '../../webviews/copilotOnRails/extension/planFilePaths';
 
 /** The furthest stage reached: 0 = project creation, 1 = local dev, 2 = deployment. */
@@ -17,6 +19,8 @@ export interface ProjectPlanFiles {
     hasAny: boolean;
     /** The furthest stage reached. */
     currentStage: ProjectStage;
+    /** True when a scaffolded frontend project exists (its manifest was found). */
+    hasFrontend: boolean;
 }
 
 const PLAN_FILE_GLOBS = [
@@ -33,11 +37,18 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
     const hasProjectPlan = projectPlanFiles.length > 0;
     const hasLocalDevelopmentPlan = localDevelopmentPlanFiles.length > 0;
     const hasDeploymentPlan = deploymentPlanFiles.length > 0;
+    // Only a project that has been planned can have a scaffolded frontend, so
+    // skip the manifest search otherwise.
+    const hasFrontend = hasProjectPlan && (await findFrontendFolder()) !== undefined;
 
     let currentStage: ProjectStage = 0;
     if (hasDeploymentPlan) {
         currentStage = 2;
     } else if (hasLocalDevelopmentPlan) {
+        currentStage = 1;
+    } else if (hasProjectPlan && isProjectCreationComplete(await readPlanStatus(PROJECT_PLAN_GLOB))) {
+        // Project creation is finished (integrated) but local development hasn't
+        // produced a debug plan yet.
         currentStage = 1;
     }
 
@@ -47,6 +58,7 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
         hasDeploymentPlan,
         hasAny: hasProjectPlan || hasLocalDevelopmentPlan || hasDeploymentPlan,
         currentStage,
+        hasFrontend,
     };
 }
 

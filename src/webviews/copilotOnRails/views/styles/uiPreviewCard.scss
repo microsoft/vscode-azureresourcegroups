@@ -124,7 +124,7 @@
         }
     }
 
-    // -------- Browser-chrome frame --------
+    // -------- Preview frame --------
     .uiPreviewCard__frame {
         position: relative;
         border: 1px solid var(--vscode-widget-border);
@@ -136,73 +136,22 @@
         box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
     }
 
-    // Diagonal "MOCK" ribbon overlay — visually frames the iframe as an
-    // intentional sketch rather than a finished UI. Sits above the iframe
-    // but below interactive controls; pointer-events: none keeps the
-    // preview itself clickable in the future if needed.
-    .uiPreviewCard__mockRibbon {
+    // Subtle corner tag marking the iframe as a preview without dominating it.
+    .uiPreviewCard__previewTag {
         position: absolute;
-        top: 22px;
-        right: -38px;
+        top: 8px;
+        right: 8px;
         z-index: 2;
-        transform: rotate(35deg);
         background: var(--vscode-badge-background);
         color: var(--vscode-badge-foreground);
         font-size: 0.65em;
-        font-weight: 700;
-        letter-spacing: 0.18em;
-        padding: 3px 44px;
-        text-align: center;
-        pointer-events: none;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-        opacity: 0.92;
-    }
-
-    .uiPreviewCard__chrome {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: var(--vscode-editorWidget-background);
-        border-bottom: 1px solid var(--vscode-widget-border);
-        padding: 6px 10px;
-    }
-
-    .uiPreviewCard__chromeDot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: var(--vscode-descriptionForeground);
-        opacity: 0.45;
-
-        &:nth-of-type(1) {
-            background: #ff5f57;
-            opacity: 0.85;
-        }
-
-        &:nth-of-type(2) {
-            background: #febc2e;
-            opacity: 0.85;
-        }
-
-        &:nth-of-type(3) {
-            background: #28c840;
-            opacity: 0.85;
-        }
-    }
-
-    .uiPreviewCard__urlPill {
-        flex: 1;
-        margin-left: 8px;
-        background: var(--vscode-input-background);
-        color: var(--vscode-input-foreground);
-        border: 1px solid var(--vscode-input-border, var(--vscode-widget-border));
-        border-radius: 4px;
-        font-size: 0.75em;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
         padding: 2px 8px;
-        font-family: var(--vscode-editor-font-family, monospace);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        border-radius: 4px;
+        pointer-events: none;
+        opacity: 0.85;
     }
 
     .uiPreviewCard__viewport {

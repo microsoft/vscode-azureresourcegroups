@@ -6,7 +6,7 @@
 'use strict';
 
 import { LocationListStep, registerAzureUtilsExtensionVariables, setupAzureLogger } from '@microsoft/vscode-azext-azureutils';
-import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
+import { AzExtTreeDataProvider, AzureExtensionApiFactory, IActionContext, callWithTelemetryAndErrorHandling, createApiProvider, createAzExtLogOutputChannel, createExperimentationService, registerCommand, registerUIExtensionVariables } from '@microsoft/vscode-azext-utils';
 import { AzureSubscription } from 'api/src';
 import { GetApiOptions, apiUtils } from 'api/src/utils/apiUtils';
 import * as vscode from 'vscode';
@@ -180,6 +180,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     const azureProjectProgressTreeDataProvider = new AzureProjectProgressTreeDataProvider(context, projectPlanFilesWatcher);
     context.subscriptions.push(vscode.window.registerTreeDataProvider('azureProject', azureProjectProgressTreeDataProvider));
+    registerCommand('azureResourceGroups.refreshProject', () => azureProjectProgressTreeDataProvider.refresh());
 
     const tenantResourcesBranchDataItemCache = new BranchDataItemCache();
     registerTenantTree(context, {

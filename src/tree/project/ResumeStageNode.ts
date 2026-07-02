@@ -15,6 +15,8 @@ import { ProgressNode } from './ProgressNode';
 export class ResumeStageNode implements ProgressNode {
     constructor(
         private readonly stageId: string,
+        /** Human-readable label of the phase being resumed, shown as the node description. */
+        private readonly resumeLabel?: string,
     ) { }
 
     getChildren(): ProgressNode[] {
@@ -25,8 +27,11 @@ export class ResumeStageNode implements ProgressNode {
         const label = vscode.l10n.t('Resume');
         const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
         item.id = `${this.stageId}.resume`;
+        item.description = this.resumeLabel;
         item.iconPath = new vscode.ThemeIcon('debug-continue');
-        item.tooltip = vscode.l10n.t('Resume this step where you left off');
+        item.tooltip = this.resumeLabel
+            ? vscode.l10n.t('Resume “{0}” where you left off', this.resumeLabel)
+            : vscode.l10n.t('Resume this step where you left off');
         // Always route through the single resume entry point so the resolved
         // flow state (including phase-specific resume prompts/args) is applied,
         // rather than invoking a raw phase command with its default prompt.

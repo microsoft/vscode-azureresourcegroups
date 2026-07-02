@@ -22,6 +22,8 @@ export abstract class StageNode implements ProgressNode {
         protected readonly hasPlanFile: boolean,
         /** When set, this stage is the interrupted one and should offer a Resume action. */
         protected readonly resumeCommandId?: string,
+        /** Human-readable label of the phase being resumed, shown on the Resume node. */
+        protected readonly resumeLabel?: string,
     ) { }
 
     abstract getChildren(): ProgressNode[];

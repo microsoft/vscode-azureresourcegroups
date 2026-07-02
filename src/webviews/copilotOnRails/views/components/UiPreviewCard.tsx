@@ -127,13 +127,7 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
             )}
 
             <div className='uiPreviewCard__frame'>
-                <span className='uiPreviewCard__mockRibbon' aria-hidden='true'>MOCK</span>
-                <div className='uiPreviewCard__chrome'>
-                    <span className='uiPreviewCard__chromeDot' />
-                    <span className='uiPreviewCard__chromeDot' />
-                    <span className='uiPreviewCard__chromeDot' />
-                    <span className='uiPreviewCard__urlPill'>{activePage?.route || '/'}</span>
-                </div>
+                <span className='uiPreviewCard__previewTag' aria-hidden='true'>Preview</span>
                 {isLoading ? (
                     // Show a spinner whenever the preview is being generated (first
                     // load or regeneration) in place of the iframe.

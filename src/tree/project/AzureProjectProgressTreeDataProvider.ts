@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { phaseToStageIndex, resolveFlowState } from '../../webviews/copilotOnRails/extension/flowState';
-import { isAnyFlowViewOpen, onDidChangeFlowViewState } from '../../webviews/copilotOnRails/extension/utils/singletonViewHost';
+import { onDidChangeFlowState, phaseToStageIndex, resolveFlowState, shouldOfferResume } from '../../webviews/copilotOnRails/extension/flowState';
+import { onDidChangeFlowViewState } from '../../webviews/copilotOnRails/extension/utils/singletonViewHost';
 import { DeploymentStageItem } from './DeploymentStageItem';
 import { LocalDevelopmentStageItem } from './LocalDevelopmentStageItem';
 import { ProgressNode } from './ProgressNode';
@@ -37,6 +37,9 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
         // Opening or closing a flow view changes whether a "Resume" action belongs
         // on a stage, so refresh the tree when that happens.
         this.disposables.push(onDidChangeFlowViewState(() => this.refresh()));
+        // Launching (or resuming) a phase makes the flow session active, which
+        // retires the Resume affordance — refresh so the tree reflects it at once.
+        this.disposables.push(onDidChangeFlowState(() => this.refresh()));
 
         this.disposables.push(vscode.workspace.onDidChangeConfiguration((e) => {
             if (e.affectsConfiguration('launch')) {
@@ -86,18 +89,16 @@ export class AzureProjectProgressTreeDataProvider implements vscode.TreeDataProv
             : files.currentStage;
 
         // When an interrupted run is detected, attach the resume command to the
-        // stage it belongs to so that stage offers a "Resume" action. Only do this
-        // when no flow view is currently open — if the user is already looking at
-        // the relevant plan/requirements view, there is nothing to "resume".
+        // stage it belongs to so that stage offers a "Resume" action.
         const flow = await resolveFlowState();
-        const resume = flow && flow.status !== 'completed' && !isAnyFlowViewOpen()
-            ? { stageIndex: phaseToStageIndex(flow.phase), commandId: flow.resumeCommandId }
+        const resume = shouldOfferResume(flow)
+            ? { stageIndex: phaseToStageIndex(flow.phase), commandId: flow.resumeCommandId, label: flow.label }
             : undefined;
 
         return [
-            new ProjectCreationStageItem(effectiveStage, files.hasProjectPlan, resume?.stageIndex === 0 ? resume.commandId : undefined),
-            new LocalDevelopmentStageItem(effectiveStage, files.hasLocalDevelopmentPlan, resume?.stageIndex === 1 ? resume.commandId : undefined),
-            new DeploymentStageItem(effectiveStage, files.hasDeploymentPlan, resume?.stageIndex === 2 ? resume.commandId : undefined),
+            new ProjectCreationStageItem(effectiveStage, files.hasProjectPlan, resume?.stageIndex === 0 ? resume.commandId : undefined, files.hasFrontend, resume?.stageIndex === 0 ? resume.label : undefined),
+            new LocalDevelopmentStageItem(effectiveStage, files.hasLocalDevelopmentPlan, resume?.stageIndex === 1 ? resume.commandId : undefined, resume?.stageIndex === 1 ? resume.label : undefined),
+            new DeploymentStageItem(effectiveStage, files.hasDeploymentPlan, resume?.stageIndex === 2 ? resume.commandId : undefined, resume?.stageIndex === 2 ? resume.label : undefined),
         ];
     }
 }

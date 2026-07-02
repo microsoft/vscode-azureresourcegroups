@@ -20,7 +20,7 @@ export class DeploymentStageItem extends StageNode {
 
     getChildren(): ProgressNode[] {
         if (this.resumeCommandId) {
-            return [new ResumeStageNode(this.stageId)];
+            return [new ResumeStageNode(this.stageId, this.resumeLabel)];
         }
 
         if (!this.hasPlanFile) {

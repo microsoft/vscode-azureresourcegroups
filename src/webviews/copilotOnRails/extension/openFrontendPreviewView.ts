@@ -7,22 +7,26 @@ import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 import { FrontendPreviewViewController } from "./controllers/FrontendPreviewViewController";
+import { findFrontendFolder } from "./frontendFolder";
 import { closeLoadingView } from "./openLoadingView";
 
 let controller: FrontendPreviewViewController | undefined;
-
-/** Default location of the scaffolded frontend, relative to the workspace root. */
-const DEFAULT_FRONTEND_FOLDER = 'services/web';
 
 /**
  * Open the frontend preview + UI-approval webview. Starts the frontend dev
  * server and renders it in an iframe behind an "Approve UI" gate.
  *
  * @param frontendFolder Optional workspace-relative path to the frontend
- *                       project. Defaults to `services/web`.
+ *                       project. When omitted, the frontend is discovered by
+ *                       locating its manifest (the folder name is product-
+ *                       specific, so no fixed path is assumed).
  */
 export function openFrontendPreviewView(frontendFolder?: string): void {
-    const folder = resolveFrontendFolder(frontendFolder);
+    void openFrontendPreviewViewAsync(frontendFolder);
+}
+
+async function openFrontendPreviewViewAsync(frontendFolder?: string): Promise<void> {
+    const folder = await resolveFrontendFolder(frontendFolder);
     if (!folder) {
         return;
     }
@@ -46,24 +50,36 @@ export function isFrontendPreviewViewOpen(): boolean {
 }
 
 /**
- * Resolve the frontend folder against the first workspace folder, validating
- * it contains a `package.json`. Returns `undefined` (after warning) when no
- * workspace is open or the folder isn't a buildable frontend project.
+ * Resolve the frontend folder. An explicit caller-provided path (e.g. from the
+ * scaffold agent) is honored when it contains a `package.json`; otherwise the
+ * frontend is discovered by locating its manifest. Returns `undefined` (after
+ * warning) when no workspace is open or no frontend project can be found.
  */
-function resolveFrontendFolder(frontendFolder: string | undefined): vscode.Uri | undefined {
+async function resolveFrontendFolder(frontendFolder: string | undefined): Promise<vscode.Uri | undefined> {
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
     if (!workspaceRoot) {
         void vscode.window.showWarningMessage(vscode.l10n.t('Open a workspace folder before previewing the frontend.'));
         return undefined;
     }
 
-    const relative = frontendFolder?.trim() || DEFAULT_FRONTEND_FOLDER;
-    const candidate = vscode.Uri.joinPath(workspaceRoot, ...relative.split(/[\\/]+/));
-    if (!fs.existsSync(path.join(candidate.fsPath, 'package.json'))) {
+    const relative = frontendFolder?.trim();
+    if (relative) {
+        const candidate = vscode.Uri.joinPath(workspaceRoot, ...relative.split(/[\\/]+/));
+        if (fs.existsSync(path.join(candidate.fsPath, 'package.json'))) {
+            return candidate;
+        }
         void vscode.window.showWarningMessage(
             vscode.l10n.t('No frontend project found at "{0}". Scaffold a frontend first.', relative),
         );
         return undefined;
     }
-    return candidate;
+
+    const discovered = await findFrontendFolder();
+    if (!discovered) {
+        void vscode.window.showWarningMessage(
+            vscode.l10n.t('No frontend project found in this workspace. Scaffold a frontend first.'),
+        );
+        return undefined;
+    }
+    return discovered;
 }
