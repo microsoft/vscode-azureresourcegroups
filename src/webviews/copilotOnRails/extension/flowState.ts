@@ -57,6 +57,28 @@ const PROMPT_DISMISSED_PHASE_KEY = 'azureResourceGroups.copilotFlow.promptDismis
  */
 const SCAFFOLD_RESUME_PROMPT = 'Resume scaffolding this project. `.azure/project-plan.md` was already approved and its status is now `In Progress` (Approved → In Progress is expected for an interrupted run — treat `In Progress` as a valid, resumable state). Do NOT re-gather requirements or ask for approval again. Read the existing plan and continue scaffolding from where it left off.';
 
+/**
+ * Prompt used when resuming an interrupted integration. Scaffolding is already
+ * finished; `.azure/integration-plan.md` describes the remaining live-data
+ * wiring and the plan sits at `Integrating` (where an interrupted run is
+ * expected to stop). The agent must continue that work rather than re-scaffold
+ * or restart integration from scratch.
+ */
+const INTEGRATE_RESUME_PROMPT = 'Resume integrating this project. The scaffold is complete and `.azure/integration-plan.md` describes the remaining work; the plan status is `Integrating` (an interrupted integration is expected to sit here). Do NOT re-scaffold or restart integration from scratch. Read the integration plan and the current state of the code, then continue from where it left off: finish the schema migrations, wire the frontend to live data (removing the mocks), and run the frontend + backend together end-to-end.';
+
+/**
+ * Builds the prompt for resuming an interrupted local-development setup. The
+ * debug plan already exists, so the agent must continue from its current status
+ * rather than start over — the status is interpolated so the prompt tells the
+ * agent exactly how far along the run is (e.g. approved and mid-generation vs.
+ * still awaiting approval).
+ */
+function localDevResumePrompt(debugPlanStatus: string | undefined): string {
+    const statusClause = debugPlanStatus ? ` Its current status is \`${debugPlanStatus}\`.` : '';
+    return `Resume setting up local development. A debug plan already exists at \`.azure/vscode-debug-plan.md\`.${statusClause} Do NOT start over. Read the existing plan and continue from where it left off: if it still needs the user's approval, present it; if it is approved or partly generated, continue generating and validating the F5 debug configuration until it runs cleanly, then mark the plan \`Implemented\`.`;
+}
+
+
 /** Maps a launched agent name to the flow phase it advances. */
 const AGENT_PHASE: Readonly<Record<string, FlowPhase>> = {
     'azure-project-plan': 'plan',
@@ -209,6 +231,8 @@ export const PLAN_STATUS = {
     planning: 'planning',
     /** project-plan.md / vscode-debug-plan.md: approved, work not yet finished. */
     approved: 'approved',
+    /** project-plan.md: scaffolding is underway (set when the scaffold agent is launched). */
+    inProgress: 'in progress',
     /** project-plan.md: scaffold done, frontend preview shown, awaiting the user's UI sign-off. */
     awaitingUxApproval: 'awaiting ux approval',
     /** project-plan.md: UI approved (or no frontend), live-data integration not yet started. */
@@ -302,25 +326,39 @@ const FLOW_RULES: readonly FlowRule[] = [
             label: vscode.l10n.t('Deployment'),
         }),
     },
-    // Local development complete → deploy next.
+    // Local development complete → surface the next-steps view (which offers
+    // deployment) rather than jumping straight into the deploy agent, so the
+    // user lands on the same "what's next?" summary the debug agent shows.
     {
         matches: (s) => s.debugPlanStatus === PLAN_STATUS.implemented,
         build: () => ({
             phase: 'localDev',
             status: 'completed',
-            resumeCommandId: copilotOnRailsCommandIds.startDeployment,
+            resumeCommandId: copilotOnRailsCommandIds.openLocalNextStepsView,
             label: vscode.l10n.t('Local development complete'),
         }),
     },
-    // Local development plan exists but is not yet implemented.
+    // Local development plan exists but is not yet implemented. If the debug
+    // agent was running in this window (lastPhase === localDev), the run was
+    // interrupted mid-flight — relaunch it with a status-aware "continue" prompt
+    // so it resumes from where it left off instead of restarting. Otherwise the
+    // plan is merely awaiting the user's approval, so reopen the approval view.
     {
         matches: (s) => s.debugPlanStatus !== undefined,
-        build: (s) => ({
-            phase: 'localDev',
-            status: s.lastPhase === 'localDev' ? 'inProgress' : 'awaitingApproval',
-            resumeCommandId: copilotOnRailsCommandIds.openLocalPlanView,
-            label: vscode.l10n.t('Local development setup'),
-        }),
+        build: (s) => s.lastPhase === 'localDev'
+            ? {
+                phase: 'localDev',
+                status: 'inProgress',
+                resumeCommandId: copilotOnRailsCommandIds.startLocalDevelopment,
+                resumeArgs: [localDevResumePrompt(s.debugPlanStatus)],
+                label: vscode.l10n.t('Local development setup'),
+            }
+            : {
+                phase: 'localDev',
+                status: 'awaitingApproval',
+                resumeCommandId: copilotOnRailsCommandIds.openLocalPlanView,
+                label: vscode.l10n.t('Local development setup'),
+            },
     },
     // Scaffold finished and produced a frontend preview that is still awaiting
     // the user's UI sign-off → resume by reopening the preview/approval gate.
@@ -347,14 +385,20 @@ const FLOW_RULES: readonly FlowRule[] = [
             // terminal "integration done" state, so it must fall through to the
             // scaffold-complete rule below rather than re-offer a resume.
             (isScaffoldComplete(s.projectPlanStatus) && s.projectPlanStatus !== PLAN_STATUS.integrated && s.lastPhase === 'integrate'),
-        build: (s) => ({
-            phase: 'integrate',
-            status: s.projectPlanStatus === PLAN_STATUS.awaitingIntegration && s.lastPhase !== 'integrate'
-                ? 'awaitingApproval'
-                : 'inProgress',
-            resumeCommandId: copilotOnRailsCommandIds.startProjectIntegrate,
-            label: vscode.l10n.t('Integrating your project'),
-        }),
+        build: (s) => {
+            // "Awaiting Integration" with no integrate launch yet is a fresh
+            // hand-off (scaffold done, integration not started) — use the
+            // command's default first-run prompt. Any other match is an
+            // interrupted, in-flight integration that must continue, not restart.
+            const isFreshHandoff = s.projectPlanStatus === PLAN_STATUS.awaitingIntegration && s.lastPhase !== 'integrate';
+            return {
+                phase: 'integrate',
+                status: isFreshHandoff ? 'awaitingApproval' : 'inProgress',
+                resumeCommandId: copilotOnRailsCommandIds.startProjectIntegrate,
+                resumeArgs: isFreshHandoff ? undefined : [INTEGRATE_RESUME_PROMPT],
+                label: vscode.l10n.t('Integrating your project'),
+            };
+        },
     },
     // Scaffold + integration complete → local development next.
     {
@@ -366,10 +410,13 @@ const FLOW_RULES: readonly FlowRule[] = [
             label: vscode.l10n.t('Scaffolding complete'),
         }),
     },
-    // Plan exists but scaffolding hasn't finished, and a scaffold/integrate agent
-    // was launched → an interrupted scaffold to resume.
+    // Plan exists but scaffolding hasn't finished → an interrupted scaffold to
+    // resume. The plan's own `In Progress` status is the deterministic signal
+    // (written by the launch command, not the agent); the cached `lastPhase` is
+    // only a fallback for the window where the status write hasn't landed yet.
     {
-        matches: (s) => s.projectPlanStatus !== undefined && (s.lastPhase === 'scaffold' || s.lastPhase === 'integrate'),
+        matches: (s) => s.projectPlanStatus !== undefined &&
+            (s.projectPlanStatus === PLAN_STATUS.inProgress || s.lastPhase === 'scaffold' || s.lastPhase === 'integrate'),
         build: () => ({
             phase: 'scaffold',
             status: 'inProgress',
@@ -436,6 +483,15 @@ async function fileExists(glob: string): Promise<boolean> {
 }
 
 /**
+ * Matches the first `Status:` line in a plan file. Anchored to a line start
+ * (`m` flag) so it can't be fooled by an incidental "status:" elsewhere in the
+ * document, and tolerant of markdown decoration on the label (e.g.
+ * `**Status**:`). Capture group 1 is the label + separator (preserved by
+ * {@link writePlanStatus}); group 2 is the raw value up to end of line.
+ */
+const STATUS_LINE_REGEX = /^([ \t]*\*{0,2}status\*{0,2}[ \t]*:[ \t]*)([^\r\n]*)/im;
+
+/**
  * Reads the lowercased `Status:` value from a plan file, or `undefined` if the
  * file doesn't exist. Tolerates markdown decoration, e.g. `**Status**: _Scaffolded_`.
  */
@@ -450,8 +506,12 @@ export async function readPlanStatus(glob: string): Promise<string | undefined> 
     } catch {
         return undefined;
     }
-    const match = content.match(/status[*_~]*\s*:\s*\*{0,2}_{0,2}([A-Za-z][A-Za-z ]*)/i);
-    return match?.[1]?.trim().toLowerCase();
+    const line = content.match(STATUS_LINE_REGEX);
+    // Group 2 is the raw value (possibly decorated, e.g. `_Scaffolded_` or a
+    // `Planning | Approved | …` template list); take its leading status word(s),
+    // dropping surrounding `*`/`_` decoration and anything past the first word.
+    const value = line?.[2]?.match(/[A-Za-z][A-Za-z ]*/);
+    return value?.[0]?.trim().toLowerCase();
 }
 
 /**
@@ -474,16 +534,30 @@ export async function writePlanStatus(glob: string, newStatus: string): Promise<
     }
     // Replace only the value on the first `Status:` line, keeping the label
     // (and any `**`/`_` decoration around it) exactly as authored.
-    const statusLine = /^([ \t]*\*{0,2}status\*{0,2}[ \t]*:[ \t]*)([^\r\n]*)/im;
-    if (!statusLine.test(content)) {
+    if (!STATUS_LINE_REGEX.test(content)) {
         return false;
     }
-    const updated = content.replace(statusLine, (_full, prefix: string) => `${prefix}${newStatus}`);
+    const updated = content.replace(STATUS_LINE_REGEX, (_full, prefix: string) => `${prefix}${newStatus}`);
     if (updated === content) {
         return false;
     }
     await vscode.workspace.fs.writeFile(uri, Buffer.from(updated, 'utf-8'));
     return true;
+}
+
+/**
+ * Advances a plan file's `Status:` to `newStatus`, but only when its current
+ * status is one of `from`. The guard makes every transition idempotent and
+ * one-directional: it never regresses a later status or clobbers an unrelated
+ * phase, so callers can fire it on a deterministic UI signal without first
+ * re-checking where the plan is. Returns `true` if the file was updated.
+ */
+async function advancePlanStatus(glob: string, from: readonly string[], newStatus: string): Promise<boolean> {
+    const status = await readPlanStatus(glob);
+    if (status !== undefined && from.includes(status)) {
+        return writePlanStatus(glob, newStatus);
+    }
+    return false;
 }
 
 /**
@@ -494,26 +568,49 @@ export async function writePlanStatus(glob: string, newStatus: string): Promise<
  * in-flight integration states so it never clobbers an earlier phase.
  */
 export async function markProjectPlanIntegrated(): Promise<void> {
-    const status = await readPlanStatus(PROJECT_PLAN_GLOB);
-    if (status === PLAN_STATUS.awaitingIntegration || status === PLAN_STATUS.integrating) {
-        await writePlanStatus(PROJECT_PLAN_GLOB, 'Integrated');
-    }
+    await advancePlanStatus(PROJECT_PLAN_GLOB, [PLAN_STATUS.awaitingIntegration, PLAN_STATUS.integrating], 'Integrated');
+}
+
+/**
+ * Marks the project plan `In Progress` when the scaffold agent is launched. The
+ * launch command owns this transition (rather than the agent) so scaffolding is
+ * detectable as in-flight the moment it starts — this is the load-bearing signal
+ * an interrupted-scaffold resume relies on. Only advances from the pre-scaffold
+ * states so it never regresses a plan that is already scaffolding or further.
+ */
+export async function markProjectScaffolding(): Promise<void> {
+    await advancePlanStatus(PROJECT_PLAN_GLOB, [PLAN_STATUS.planning, PLAN_STATUS.approved], 'In Progress');
+}
+
+/**
+ * Marks the project plan `Awaiting UX Approval` when the frontend preview gate
+ * is opened at the end of scaffolding. Opening the preview is the deterministic
+ * signal that the scaffold produced a frontend awaiting the user's sign-off, so
+ * the launch command owns this transition rather than the agent. Only advances
+ * from `In Progress` so reopening the preview after approval never regresses a
+ * later status.
+ */
+export async function markFrontendAwaitingUxApproval(): Promise<void> {
+    await advancePlanStatus(PROJECT_PLAN_GLOB, [PLAN_STATUS.inProgress], 'Awaiting UX Approval');
 }
 
 /**
  * Marks the project plan `Integrating` when the integrate step is launched. The
  * command that starts integration owns this transition (rather than the agent),
- * so the state advances deterministically the moment integration begins. Only
- * advances from the post-scaffold, pre-integrated states so it never regresses
- * an already-`Integrated` plan that is being re-verified.
+ * so the state advances deterministically the moment integration begins. Accepts
+ * every post-scaffold, pre-integrated state — including `In Progress`, the state
+ * of a no-frontend / autopilot run that skips the UI-approval gate — so it never
+ * regresses an already-`Integrated` plan that is being re-verified.
  */
 export async function markProjectIntegrating(): Promise<void> {
-    const status = await readPlanStatus(PROJECT_PLAN_GLOB);
-    if (
-        status === PLAN_STATUS.awaitingUxApproval ||
-        status === PLAN_STATUS.awaitingIntegration ||
-        status === PLAN_STATUS.integrating
-    ) {
-        await writePlanStatus(PROJECT_PLAN_GLOB, 'Integrating');
-    }
+    await advancePlanStatus(
+        PROJECT_PLAN_GLOB,
+        [
+            PLAN_STATUS.inProgress,
+            PLAN_STATUS.awaitingUxApproval,
+            PLAN_STATUS.awaitingIntegration,
+            PLAN_STATUS.integrating,
+        ],
+        'Integrating',
+    );
 }

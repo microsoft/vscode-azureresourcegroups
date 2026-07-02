@@ -4,28 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ProgressNode } from './ProgressNode';
+import { ActionNode } from './ActionNode';
 
-export class StateStageNode implements ProgressNode {
-    constructor(
-        private readonly stageId: string,
-        private readonly startCommandId: string,
-    ) { }
-
-    getChildren(): ProgressNode[] {
-        return [];
-    }
-
-    getTreeItem(): vscode.TreeItem {
-        const label = vscode.l10n.t('Start');
-        const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
-        item.id = `${this.stageId}.start`;
-        item.iconPath = new vscode.ThemeIcon('play-circle');
-        item.tooltip = label;
-        item.command = {
-            command: this.startCommandId,
-            title: '',
-        };
-        return item;
+export class StateStageNode extends ActionNode {
+    constructor(stageId: string, startCommandId: string) {
+        super({
+            stageId,
+            idSuffix: 'start',
+            label: vscode.l10n.t('Start'),
+            icon: 'play-circle',
+            commandId: startCommandId,
+        });
     }
 }

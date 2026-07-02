@@ -176,13 +176,12 @@ Requires a scaffolded project. Verify before starting:
 
 ## STEP 5: Wrap Up
 
-**Goal**: Confirm all four tasks pass, update status, and stop.
+**Goal**: Confirm all four tasks pass, then stop.
 
 | Task | Details |
 |------|---------|
 | Confirm all four checkpoints passed | Migrations applied · backend smoke-tested · frontend on live data · end-to-end verified. |
 | Update the artifact | Mark `.azure/integration-plan.md` items complete (or append a short "Integration results" section: what was migrated, which endpoints passed, the mock files removed, the end-to-end evidence). |
-| Update plan status | Set `.azure/project-plan.md` status to `Integrated`. |
 | Print completion | Summarize: migrations created, endpoints verified, mock layer removed, end-to-end request proven. Announce: **"Integration complete!"** |
 | **Open the Next Steps view, then stop** | Load `run_vscode_command` (via `tool_search`) and call `{ "commandId": "azureResourceGroups.openScaffoldNextStepsView", "name": "Open Project Next Steps View", "skipCheck": true }` to surface the post-integration "What's next?" view. Then **STOP** — the view owns the next hand-off (set up local development, or deploy). Do **NOT** ask the user what to do next; do **NOT** call `vscode_askQuestions`. (Autopilot exception: **skip** this view and hand off to `azureResourceGroups.startLocalDevelopment` per the agent's autopilot rule.) |
 
@@ -191,7 +190,7 @@ Requires a scaffolded project. Verify before starting:
 > 2. Backend host starts, all endpoints register, `GET /api/health` → 200, probes return no schema/runtime `500`s.
 > 3. Frontend builds clean on live data; mock layer removed; no `any`.
 > 4. Frontend + backend ran together; a real `/api/...` request returned live data.
-> 5. `.azure/project-plan.md` = `Integrated`; artifact updated.
+> 5. Artifact updated. (The extension sets `.azure/project-plan.md` to `Integrated` when the Next Steps view opens — you do not write it.)
 > 6. Opened the **Next Steps view** (`azureResourceGroups.openScaffoldNextStepsView`), then stopped — **no follow-up prompt** (autopilot instead hands off to `azure-debug-plan`).
 
 ---
@@ -204,7 +203,7 @@ Requires a scaffolded project. Verify before starting:
 | Real typed API client | `services/web/src/api/client.ts` + seam repoint in `services/web/src/api/index.ts` (or the project's frontend) |
 | Dev proxy config | The frontend dev-server config (e.g. `vite.config.ts`) |
 | Updated artifact | `.azure/integration-plan.md` (results appended) |
-| Plan status | `.azure/project-plan.md` → `Integrated` |
+| Plan status | `.azure/project-plan.md` → `Integrated` (set by the extension when the Next Steps view opens) |
 | **Next step** | Open the Next Steps view via `azureResourceGroups.openScaffoldNextStepsView` (autopilot instead hands off to `azure-debug-plan`) |
 
 ---

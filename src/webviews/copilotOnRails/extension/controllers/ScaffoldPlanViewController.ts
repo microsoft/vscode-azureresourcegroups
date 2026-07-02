@@ -13,7 +13,7 @@ import { ext } from "../../../../extensionVariables";
 import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { AUTOPILOT_QUERY_MARKER, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
-import { recordPhaseLaunch } from "../flowState";
+import { markProjectScaffolding, recordPhaseLaunch } from "../flowState";
 import { openLoadingView } from "../openLoadingView";
 import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
@@ -109,6 +109,10 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
 
         const baseQuery = vscode.l10n.t('I approve the plan.');
+        // Own the Approved → In Progress transition here so scaffolding is
+        // detectable as in-flight the instant it launches, independent of the
+        // agent writing the status itself.
+        await markProjectScaffolding();
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: 'azure-project-scaffold',

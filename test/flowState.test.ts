@@ -68,6 +68,18 @@ suite('flowState.computeFlowState', () => {
         assert.strictEqual(running?.status, 'inProgress');
     });
 
+    test('"in progress" status resolves to scaffold in-progress even without a cached phase', () => {
+        // The scaffold launch command writes `In Progress` deterministically, so
+        // an interrupted scaffold must resume correctly on its own after a reload
+        // has cleared the in-memory lastPhase cache.
+        const flow = computeFlowState(signals({ projectPlanStatus: PLAN_STATUS.inProgress }));
+        assert.ok(flow);
+        assert.strictEqual(flow.phase, 'scaffold');
+        assert.strictEqual(flow.status, 'inProgress');
+        assert.strictEqual(flow.resumeCommandId, copilotOnRailsCommandIds.startProjectScaffold);
+        assert.ok(flow.resumeArgs && flow.resumeArgs.length === 1, 'scaffold resume should pass a continue prompt');
+    });
+
     test('scaffolded => scaffold completed, continues to local development', () => {
         const flow = computeFlowState(signals({ projectPlanStatus: PLAN_STATUS.scaffolded }));
         assert.ok(flow);
@@ -103,6 +115,9 @@ suite('flowState.computeFlowState', () => {
         assert.strictEqual(flow.phase, 'integrate');
         assert.strictEqual(flow.status, 'awaitingApproval');
         assert.strictEqual(flow.resumeCommandId, copilotOnRailsCommandIds.startProjectIntegrate);
+        // A fresh hand-off (integration not yet started) uses the command's
+        // default first-run prompt, not a "continue" prompt.
+        assert.strictEqual(flow.resumeArgs, undefined, 'fresh integrate hand-off should not pass a continue prompt');
     });
 
     test('awaiting integration + integrate launched => integrate in progress', () => {
@@ -110,6 +125,9 @@ suite('flowState.computeFlowState', () => {
         assert.strictEqual(flow?.phase, 'integrate');
         assert.strictEqual(flow?.status, 'inProgress');
         assert.strictEqual(flow?.resumeCommandId, copilotOnRailsCommandIds.startProjectIntegrate);
+        // An interrupted, in-flight integration carries a "continue" prompt so the
+        // agent resumes rather than restarts.
+        assert.ok(flow?.resumeArgs && flow.resumeArgs.length === 1, 'in-progress integrate resume should pass a continue prompt');
     });
 
     test('integrating => integrate in progress (resume mid-integration)', () => {
@@ -120,6 +138,7 @@ suite('flowState.computeFlowState', () => {
         assert.strictEqual(flow.phase, 'integrate');
         assert.strictEqual(flow.status, 'inProgress');
         assert.strictEqual(flow.resumeCommandId, copilotOnRailsCommandIds.startProjectIntegrate);
+        assert.ok(flow.resumeArgs && flow.resumeArgs.length === 1, 'mid-integration resume should pass a continue prompt');
     });
 
     test('integrated => scaffold complete, continues to local development', () => {
@@ -162,14 +181,18 @@ suite('flowState.computeFlowState', () => {
         const flow = computeFlowState(signals({ debugPlanStatus: PLAN_STATUS.approved, lastPhase: 'localDev' }));
         assert.strictEqual(flow?.status, 'inProgress');
         assert.strictEqual(flow?.phase, 'localDev');
+        // An interrupted local-dev run relaunches the agent with a status-aware
+        // "continue" prompt rather than reopening the plan-approval view.
+        assert.strictEqual(flow?.resumeCommandId, copilotOnRailsCommandIds.startLocalDevelopment);
+        assert.ok(flow?.resumeArgs && flow.resumeArgs.length === 1, 'in-progress localDev resume should pass a continue prompt');
     });
 
-    test('debug plan implemented => local dev complete, continues to deploy', () => {
+    test('debug plan implemented => local dev complete, shows next-steps view', () => {
         const flow = computeFlowState(signals({ projectPlanStatus: PLAN_STATUS.scaffolded, debugPlanStatus: PLAN_STATUS.implemented }));
         assert.ok(flow);
         assert.strictEqual(flow.phase, 'localDev');
         assert.strictEqual(flow.status, 'completed');
-        assert.strictEqual(flow.resumeCommandId, copilotOnRailsCommandIds.startDeployment);
+        assert.strictEqual(flow.resumeCommandId, copilotOnRailsCommandIds.openLocalNextStepsView);
     });
 
     test('deployment plan present takes precedence over earlier phases', () => {

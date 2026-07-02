@@ -4,28 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ProgressNode } from './ProgressNode';
+import { ActionNode } from './ActionNode';
 
-export class OpenPlanNode implements ProgressNode {
-    constructor(
-        private readonly stageId: string,
-        private readonly openPlanCommandId: string,
-    ) { }
-
-    getChildren(): ProgressNode[] {
-        return [];
-    }
-
-    getTreeItem(): vscode.TreeItem {
-        const label = vscode.l10n.t('Open plan');
-        const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
-        item.id = `${this.stageId}.openPlan`;
-        item.iconPath = new vscode.ThemeIcon('preview');
-        item.tooltip = label;
-        item.command = {
-            command: this.openPlanCommandId,
-            title: '',
-        };
-        return item;
+export class OpenPlanNode extends ActionNode {
+    constructor(stageId: string, openPlanCommandId: string) {
+        super({
+            stageId,
+            idSuffix: 'openPlan',
+            label: vscode.l10n.t('Open plan'),
+            icon: 'preview',
+            commandId: openPlanCommandId,
+        });
     }
 }

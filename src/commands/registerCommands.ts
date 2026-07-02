@@ -18,7 +18,7 @@ import { ActivityItem } from '../tree/activityLog/ActivityItem';
 import { GroupingItem } from '../tree/azure/grouping/GroupingItem';
 import { TenantTreeItem } from '../tree/tenants/TenantTreeItem';
 import { createProjectWithCopilot } from '../webviews/copilotOnRails/extension/createProjectWithCopilot';
-import { markProjectIntegrating, markProjectPlanIntegrated } from '../webviews/copilotOnRails/extension/flowState';
+import { markFrontendAwaitingUxApproval, markProjectIntegrating, markProjectPlanIntegrated, markProjectScaffolding } from '../webviews/copilotOnRails/extension/flowState';
 import { openDeploymentPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openDeploymentPlanView';
 import { openFrontendPreviewView } from '../webviews/copilotOnRails/extension/openFrontendPreviewView';
 import { openLocalDevNextStepsView } from '../webviews/copilotOnRails/extension/openLocalDevNextStepsView';
@@ -176,30 +176,49 @@ export function registerCommands(): void {
     registerCommand('azureResourceGroups.openLocalPlanView', openLocalPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openRequirementsView', openRequirementsViewFromWorkspace);
-    registerCommand('azureResourceGroups.openFrontendPreviewView', (_context: IActionContext, frontendFolder?: string) =>
-        openFrontendPreviewView(frontendFolder));
+    registerCommand('azureResourceGroups.openFrontendPreviewView', async (_context: IActionContext, frontendFolder?: string) => {
+        // Opening the preview gate is the deterministic signal that scaffolding
+        // finished with a frontend awaiting the user's UI sign-off — own the
+        // `Awaiting UX Approval` transition here rather than trusting the agent.
+        await markFrontendAwaitingUxApproval();
+        openFrontendPreviewView(frontendFolder);
+    });
     registerCommand('azureResourceGroups.openLocalNextStepsView', (_context: IActionContext, hasApiTests?: boolean) =>
         openLocalDevNextStepsView(hasApiTests));
     registerCommand('azureResourceGroups.debug.openLocalNextStepsView', () => openLocalDevNextStepsView());
-    registerCommand('azureResourceGroups.openScaffoldNextStepsView', () => openScaffoldNextStepsView({}));
+    registerCommand('azureResourceGroups.openScaffoldNextStepsView', async () => {
+        // The integrate agent opens this view as its final step, so opening it is
+        // the deterministic signal that integration finished — own the
+        // Integrating → Integrated transition here rather than trusting the agent.
+        await markProjectPlanIntegrated();
+        openScaffoldNextStepsView({});
+    });
 
     // Hand-off commands
     registerCommand('azureResourceGroups.downloadAgentInstructions', (context: IActionContext) =>
         downloadAgentInstructions(context));
-    registerCommand('azureResourceGroups.startProjectScaffold', (_context: IActionContext, prompt?: string) =>
-        openChatWithAgent('azure-project-scaffold', prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.', {
+    registerCommand('azureResourceGroups.startProjectScaffold', async (_context: IActionContext, prompt?: string) => {
+        // Own the Approved → In Progress transition so an interrupted scaffold is
+        // detectable regardless of whether the agent updated the status.
+        await markProjectScaffolding();
+        await openChatWithAgent('azure-project-scaffold', prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.', {
             stage: 0,
             title: l10n.t('Scaffolding your project…'),
             message: l10n.t('Copilot is gathering requirements and preparing your project plan.'),
-        }));
-    registerCommand('azureResourceGroups.startProjectIntegrate', (_context: IActionContext, prompt?: string) =>
-        markProjectIntegrating().then(() => openChatWithAgent('azure-project-integrate', prompt ?? 'The project has been scaffolded. Read `.azure/integration-plan.md`, then integrate the project: create the SQL/PostgreSQL schema migrations (no seed data), smoke-test the backend so every endpoint responds, wire the frontend to live data (remove all mock data), and run the frontend and backend together end-to-end.')));
-    registerCommand('azureResourceGroups.startLocalDevelopment', (_context: IActionContext, prompt?: string) =>
-        markProjectPlanIntegrated().then(() => openChatWithAgent('azure-debug-plan', prompt ?? 'The project has been scaffolded. Now set up the local debugging environment so the user can start building and testing.', {
+        });
+    });
+    registerCommand('azureResourceGroups.startProjectIntegrate', async (_context: IActionContext, prompt?: string) => {
+        await markProjectIntegrating();
+        await openChatWithAgent('azure-project-integrate', prompt ?? 'The project has been scaffolded. Read `.azure/integration-plan.md`, then integrate the project: create the SQL/PostgreSQL schema migrations (no seed data), smoke-test the backend so every endpoint responds, wire the frontend to live data (remove all mock data), and run the frontend and backend together end-to-end.');
+    });
+    registerCommand('azureResourceGroups.startLocalDevelopment', async (_context: IActionContext, prompt?: string) => {
+        await markProjectPlanIntegrated();
+        await openChatWithAgent('azure-debug-plan', prompt ?? 'The project has been scaffolded. Now set up the local debugging environment so the user can start building and testing.', {
             stage: 1,
             title: l10n.t('Setting up local development…'),
             message: l10n.t('Copilot is preparing your local debugging plan.'),
-        })));
+        });
+    });
     registerCommand('azureResourceGroups.startDebugConfiguration', startDebugConfiguration);
     registerCommand('azureResourceGroups.startAzureDebugGenerate', (_context: IActionContext, prompt?: string) =>
         openChatWithAgent('azure-debug-generate', prompt ?? 'The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`.', {

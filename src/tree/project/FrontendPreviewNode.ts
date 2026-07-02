@@ -4,33 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ProgressNode } from './ProgressNode';
+import { ActionNode } from './ActionNode';
 
 /**
  * A child of the Project Creation stage that re-opens the frontend preview
  * webview once the frontend has been scaffolded, so users can view the running
  * app again after the initial approval.
  */
-export class FrontendPreviewNode implements ProgressNode {
-    constructor(
-        private readonly stageId: string,
-        private readonly openFrontendPreviewCommandId: string,
-    ) { }
-
-    getChildren(): ProgressNode[] {
-        return [];
-    }
-
-    getTreeItem(): vscode.TreeItem {
-        const label = vscode.l10n.t('Preview frontend');
-        const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
-        item.id = `${this.stageId}.frontendPreview`;
-        item.iconPath = new vscode.ThemeIcon('browser');
-        item.tooltip = label;
-        item.command = {
-            command: this.openFrontendPreviewCommandId,
-            title: '',
-        };
-        return item;
+export class FrontendPreviewNode extends ActionNode {
+    constructor(stageId: string, openFrontendPreviewCommandId: string) {
+        super({
+            stageId,
+            idSuffix: 'frontendPreview',
+            label: vscode.l10n.t('Preview frontend'),
+            icon: 'browser',
+            commandId: openFrontendPreviewCommandId,
+        });
     }
 }
