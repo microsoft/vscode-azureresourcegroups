@@ -9,8 +9,12 @@ import * as vscode from "vscode";
 import { FrontendPreviewViewController } from "./controllers/FrontendPreviewViewController";
 import { findFrontendFolder } from "./frontendFolder";
 import { closeLoadingView } from "./openLoadingView";
+import { SingletonViewHost } from "./utils/singletonViewHost";
 
-let controller: FrontendPreviewViewController | undefined;
+const host = new SingletonViewHost<vscode.Uri, FrontendPreviewViewController>({
+    createController: (folder) => new FrontendPreviewViewController(folder),
+    // The preview has no updatable data; an already-open panel is simply revealed.
+});
 
 /**
  * Open the frontend preview + UI-approval webview. Starts the frontend dev
@@ -32,21 +36,11 @@ async function openFrontendPreviewViewAsync(frontendFolder?: string): Promise<vo
     }
 
     closeLoadingView();
-
-    if (controller) {
-        controller.revealToForeground(vscode.ViewColumn.Active);
-        return;
-    }
-
-    controller = new FrontendPreviewViewController(folder);
-    controller.revealToForeground(vscode.ViewColumn.Active);
-    controller.panel.onDidDispose(() => {
-        controller = undefined;
-    });
+    host.show(folder);
 }
 
 export function isFrontendPreviewViewOpen(): boolean {
-    return controller !== undefined;
+    return host.isOpen;
 }
 
 /**

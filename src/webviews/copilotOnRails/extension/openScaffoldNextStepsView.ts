@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from "vscode";
 import { ScaffoldNextStepsViewController } from "./controllers/ScaffoldNextStepsViewController";
 import { markProjectPlanIntegrated } from "./flowState";
 import { closeLoadingView } from "./openLoadingView";
+import { SingletonViewHost } from "./utils/singletonViewHost";
 
-let controller: ScaffoldNextStepsViewController | undefined;
+const host = new SingletonViewHost<Record<string, never>, ScaffoldNextStepsViewController>({
+    createController: (config) => new ScaffoldNextStepsViewController(config),
+    updateController: (controller, config) => controller.updateConfig(config),
+});
 
 /**
  * Show the post-scaffolding "what's next" view. Disposes any open
@@ -17,20 +20,9 @@ let controller: ScaffoldNextStepsViewController | undefined;
 export function openScaffoldNextStepsView(config: Record<string, never>): void {
     closeLoadingView();
     void markProjectPlanIntegrated();
-
-    if (controller) {
-        controller.updateConfig(config);
-        controller.revealToForeground(vscode.ViewColumn.Active);
-        return;
-    }
-
-    controller = new ScaffoldNextStepsViewController(config);
-    controller.revealToForeground(vscode.ViewColumn.Active);
-    controller.panel.onDidDispose(() => {
-        controller = undefined;
-    });
+    host.show(config);
 }
 
 export function isScaffoldNextStepsViewOpen(): boolean {
-    return controller !== undefined;
+    return host.isOpen;
 }

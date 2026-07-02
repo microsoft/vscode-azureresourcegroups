@@ -339,12 +339,17 @@ const FLOW_RULES: readonly FlowRule[] = [
         }),
     },
     // Local development plan exists but is not yet implemented. If the debug
-    // agent was running in this window (lastPhase === localDev), the run was
-    // interrupted mid-flight — relaunch it with a status-aware "continue" prompt
-    // so it resumes from where it left off instead of restarting. Otherwise the
-    // plan is merely awaiting the user's approval, so reopen the approval view.
+    // agent was launched for this workspace (lastPhase === localDev), the run
+    // was interrupted mid-flight — relaunch it with a status-aware "continue"
+    // prompt so it resumes from where it left off instead of restarting. The
+    // cached `lastPhase` is matched even when the debug plan has no parseable
+    // status yet (the agent was interrupted before writing one, e.g. it only got
+    // as far as a VS Code debug config), so an interrupted run is still offered a
+    // Resume rather than silently falling through to the scaffold-complete rule.
+    // Otherwise a debug plan exists but wasn't launched here, so it is merely
+    // awaiting the user's approval — reopen the approval view.
     {
-        matches: (s) => s.debugPlanStatus !== undefined,
+        matches: (s) => s.debugPlanStatus !== undefined || s.lastPhase === 'localDev',
         build: (s) => s.lastPhase === 'localDev'
             ? {
                 phase: 'localDev',

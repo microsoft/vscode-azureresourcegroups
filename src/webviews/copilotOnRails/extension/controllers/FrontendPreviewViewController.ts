@@ -12,7 +12,6 @@ import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation
 import { isFrontendApproved, readPlanStatus } from "../flowState";
 import { PROJECT_PLAN_GLOB } from "../planFilePaths";
 import { type RunningDevServer, startDevServer } from "../utils/devServerManager";
-import { trackFlowView } from "../utils/singletonViewHost";
 
 /** State pushed to the webview to drive the preview surface. */
 type PreviewState =
@@ -52,11 +51,6 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
             this.devServer?.dispose();
             this.devServer = undefined;
         });
-
-        // Register as an active flow view so the progress tree treats project
-        // creation as active again while the preview is open (hiding the stage's
-        // "Resume" action) and re-offers Resume once the preview is closed.
-        trackFlowView(this.panel);
 
         this.panel.webview.onDidReceiveMessage((message: IncomingMessage) => {
             switch (message.command) {

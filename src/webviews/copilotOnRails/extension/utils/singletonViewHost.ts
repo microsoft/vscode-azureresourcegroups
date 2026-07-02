@@ -116,7 +116,8 @@ export class SingletonViewHost<TData, TController extends RevealableWebview> {
     constructor(
         private readonly options: {
             readonly createController: (data: TData, sourceFileUri: vscode.Uri | undefined) => TController;
-            readonly updateController: (controller: TController, data: TData, sourceFileUri: vscode.Uri | undefined) => void;
+            /** Optional: omit for views with no updatable data (an open panel is just revealed). */
+            readonly updateController?: (controller: TController, data: TData, sourceFileUri: vscode.Uri | undefined) => void;
         },
     ) { }
 
@@ -125,9 +126,9 @@ export class SingletonViewHost<TData, TController extends RevealableWebview> {
     }
 
     /** Create the controller if needed (or update the existing one), then bring it to the foreground. */
-    show(data: TData, sourceFileUri: vscode.Uri | undefined): void {
+    show(data: TData, sourceFileUri?: vscode.Uri): void {
         if (this.controller) {
-            this.options.updateController(this.controller, data, sourceFileUri);
+            this.options.updateController?.(this.controller, data, sourceFileUri);
             this.controller.revealToForeground(vscode.ViewColumn.Active);
             return;
         }
@@ -147,5 +148,13 @@ export class SingletonViewHost<TData, TController extends RevealableWebview> {
     setWatcher(watcher: vscode.Disposable): void {
         this.watcher?.dispose();
         this.watcher = watcher;
+    }
+
+    /**
+     * Dispose the current controller (and its watcher), if any. Safe to call when
+     * nothing is open — the panel's `onDidDispose` handler clears the state.
+     */
+    close(): void {
+        this.controller?.panel.dispose();
     }
 }

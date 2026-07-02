@@ -187,6 +187,20 @@ suite('flowState.computeFlowState', () => {
         assert.ok(flow?.resumeArgs && flow.resumeArgs.length === 1, 'in-progress localDev resume should pass a continue prompt');
     });
 
+    test('localDev launched but debug plan has no status yet => local dev in progress (interrupted mid-run)', () => {
+        // The debug agent was launched (lastPhase === 'localDev') and got as far
+        // as producing a VS Code debug config, but the window was closed before
+        // the debug plan gained a parseable Status. The cached lastPhase must
+        // still surface a Resume rather than falling through to the
+        // scaffold-complete rule and reporting the stage as done.
+        const flow = computeFlowState(signals({ projectPlanStatus: PLAN_STATUS.integrated, debugPlanStatus: undefined, lastPhase: 'localDev' }));
+        assert.ok(flow);
+        assert.strictEqual(flow.phase, 'localDev');
+        assert.strictEqual(flow.status, 'inProgress');
+        assert.strictEqual(flow.resumeCommandId, copilotOnRailsCommandIds.startLocalDevelopment);
+        assert.ok(flow.resumeArgs && flow.resumeArgs.length === 1, 'interrupted localDev resume should pass a continue prompt');
+    });
+
     test('debug plan implemented => local dev complete, shows next-steps view', () => {
         const flow = computeFlowState(signals({ projectPlanStatus: PLAN_STATUS.scaffolded, debugPlanStatus: PLAN_STATUS.implemented }));
         assert.ok(flow);

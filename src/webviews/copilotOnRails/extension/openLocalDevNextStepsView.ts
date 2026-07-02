@@ -7,8 +7,12 @@ import * as vscode from "vscode";
 import { type LocalDevNextStepsViewConfiguration } from "../views/utils/viewConfigTypes";
 import { LocalDevNextStepsViewController } from "./controllers/LocalDevNextStepsViewController";
 import { closeLoadingView } from "./openLoadingView";
+import { SingletonViewHost } from "./utils/singletonViewHost";
 
-let controller: LocalDevNextStepsViewController | undefined;
+const host = new SingletonViewHost<LocalDevNextStepsViewConfiguration, LocalDevNextStepsViewController>({
+    createController: (config) => new LocalDevNextStepsViewController(config),
+    updateController: (controller, config) => controller.updateConfig(config),
+});
 
 /**
  * Show the post-local-development "what's next" view. Disposes any open
@@ -27,20 +31,9 @@ export async function openLocalDevNextStepsView(hasApiTests?: boolean): Promise<
     const config: LocalDevNextStepsViewConfiguration = { hasApiTests: apiTestsDetected };
 
     closeLoadingView();
-
-    if (controller) {
-        controller.updateConfig(config);
-        controller.revealToForeground(vscode.ViewColumn.Active);
-        return;
-    }
-
-    controller = new LocalDevNextStepsViewController(config);
-    controller.revealToForeground(vscode.ViewColumn.Active);
-    controller.panel.onDidDispose(() => {
-        controller = undefined;
-    });
+    host.show(config);
 }
 
 export function isLocalDevNextStepsViewOpen(): boolean {
-    return controller !== undefined;
+    return host.isOpen;
 }
