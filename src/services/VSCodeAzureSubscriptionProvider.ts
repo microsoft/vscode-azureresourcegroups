@@ -3,10 +3,10 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { AzureAccount, AzureTenant, GetTenantsForAccountOptions, TenantIdAndAccount, VSCodeAzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
+import { AzureAccount, AzureTenant, GetTenantsForAccountOptions, VSCodeAzureSubscriptionProvider } from '@microsoft/vscode-azext-azureauth';
 import { getSelectedTenantAndSubscriptionIds } from '../commands/accounts/selectSubscriptions';
 import { ext } from '../extensionVariables';
-import { getTenantIdForAuthentication } from '../utils/manualSignInTenant';
+import { getConfiguredTenantFallback } from '../utils/azureTenantSetting';
 import { isTenantFilteredOut } from '../utils/tenantSelection';
 
 /**
@@ -16,7 +16,31 @@ import { isTenantFilteredOut } from '../utils/tenantSelection';
  */
 class ResourceGroupsSubscriptionProvider extends VSCodeAzureSubscriptionProvider {
     public override async getTenantsForAccount(account: AzureAccount, options?: GetTenantsForAccountOptions): Promise<AzureTenant[]> {
-        const tenants = await super.getTenantsForAccount(account, options);
+        let tenants: AzureTenant[];
+        try {
+            tenants = await super.getTenantsForAccount(account, options);
+        } catch (error) {
+            // Tenant discovery can fail outright when conditional access blocks the silent
+            // common-endpoint token. Fall back to the configured tenant if there is one;
+            // otherwise surface the original error.
+            const fallback = getConfiguredTenantFallback(account);
+            if (fallback) {
+                this.logForAccount(account, `Tenant discovery failed (${error instanceof Error ? error.message : String(error)}); using configured tenant ${fallback.tenantId}`);
+                return [fallback];
+            }
+            throw error;
+        }
+
+        // Conditional-access bootstrap: when discovery yields no tenants (the account can't
+        // enumerate tenants because conditional access blocks the silent common-endpoint token),
+        // inject the configured tenant so the normal per-tenant sign-in/subscription flow can run.
+        if (tenants.length === 0) {
+            const fallback = getConfiguredTenantFallback(account);
+            if (fallback) {
+                this.logForAccount(account, `Tenant discovery returned no tenants; using configured tenant ${fallback.tenantId}`);
+                return [fallback];
+            }
+        }
 
         // When filtering is enabled, also exclude tenants unchecked in the Accounts & Tenants view.
         // The base class only filters by selectedSubscriptions config; the Tenants view stores its
@@ -31,13 +55,6 @@ class ResourceGroupsSubscriptionProvider extends VSCodeAzureSubscriptionProvider
         }
 
         return tenants;
-    }
-
-    protected override getSubscriptionContext(tenant: Partial<TenantIdAndAccount>) {
-        return super.getSubscriptionContext({
-            ...tenant,
-            tenantId: getTenantIdForAuthentication(tenant.tenantId),
-        });
     }
 }
 

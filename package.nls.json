@@ -5,6 +5,7 @@
     "azureResourceGroups.logIn": "Sign In",
     "azureTenantsView.addAccount": "Add account",
     "azureResourceGroups.signInToTenant": "Sign in to Tenant (Directory)...",
+    "azure.tenant": "The Microsoft Entra tenant (directory) ID or domain to sign in to when normal tenant discovery is blocked by conditional access. Leave empty unless sign-in fails to load resources.",
     "azureResourceGroups.selectSubscriptions": "Select Subscriptions...",
     "azureResourceGroups.createResourceGroup": "Create Resource Group...",
     "azureResourceGroups.createResourceGroupDetail": "The logical grouping for your resources.",
