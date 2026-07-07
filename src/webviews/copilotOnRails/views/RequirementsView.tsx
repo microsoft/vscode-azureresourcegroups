@@ -410,9 +410,10 @@ const QuestionRow = ({
     const isMissing = isAnswerEmpty(draft);
     const heading = question.header ?? question.question;
     const showSubtext = question.header !== undefined && question.question && question.question !== question.header;
+    const isFreeform = inputType === 'text';
 
     return (
-        <li className={`questionRow ${isMissing ? 'questionRow--missing' : ''}`}>
+        <li className={`questionRow ${isMissing ? 'questionRow--missing' : ''} ${isFreeform ? 'questionRow--fill' : ''}`}>
             {!hideHeader && (
                 <div className='questionMeta'>
                     <span className='questionText'>{heading}</span>
@@ -503,6 +504,7 @@ const AnswerInput = ({
     const useTextarea = text.length > 60;
 
     if (useTextarea) {
+        const rows = Math.max(3, Math.min(12, Math.ceil(text.length / 40)));
         return (
             <Textarea
                 size='small'
@@ -510,7 +512,7 @@ const AnswerInput = ({
                 onChange={(_, data) => onChange(data.value)}
                 resize='vertical'
                 className='answerInput answerInput--textarea'
-                rows={3}
+                rows={rows}
             />
         );
     }

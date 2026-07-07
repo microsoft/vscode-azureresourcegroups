@@ -179,6 +179,7 @@ export function registerCommands(): void {
         openLocalDevNextStepsView(hasApiTests));
     registerCommand('azureResourceGroups.debug.openLocalNextStepsView', () => openLocalDevNextStepsView());
     registerCommand('azureResourceGroups.openScaffoldNextStepsView', () => openScaffoldNextStepsView({}));
+    registerCommand('azureResourceGroups.debug.openScaffoldNextStepsView', () => openScaffoldNextStepsView({}));
 
     // Hand-off commands
     registerCommand('azureResourceGroups.downloadAgentInstructions', (context: IActionContext) =>
@@ -190,7 +191,11 @@ export function registerCommands(): void {
             message: l10n.t('Copilot is gathering requirements and preparing your project plan.'),
         }));
     registerCommand('azureResourceGroups.startProjectIntegrate', (_context: IActionContext, prompt?: string) =>
-        openChatWithAgent('azure-project-integrate', prompt ?? 'The project has been scaffolded. Read `.azure/integration-plan.md`, then integrate the project: create the SQL/PostgreSQL schema migrations (no seed data), smoke-test the backend so every endpoint responds, wire the frontend to live data (remove all mock data), and run the frontend and backend together end-to-end.'));
+        openChatWithAgent('azure-project-integrate', prompt ?? 'The project has been scaffolded. Read `.azure/integration-plan.md`, then integrate the project: create the SQL/PostgreSQL schema migrations (no seed data), smoke-test the backend so every endpoint responds, wire the frontend to live data (remove all mock data), and run the frontend and backend together end-to-end.', {
+            stage: 0,
+            title: l10n.t('Integrating your frontend…'),
+            message: l10n.t('Copilot is wiring the frontend to your backend services. For progress please view the Copilot chat.'),
+        }));
     registerCommand('azureResourceGroups.startLocalDevelopment', (_context: IActionContext, prompt?: string) =>
         openChatWithAgent('azure-debug-plan', prompt ?? 'The project has been scaffolded. Now set up the local debugging environment so the user can start building and testing.', {
             stage: 1,

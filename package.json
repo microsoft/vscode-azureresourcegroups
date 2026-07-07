@@ -30,6 +30,7 @@
     "preview": true,
     "activationEvents": [
         "onFileSystem:azureResourceGroups",
+        "onStartupFinished",
         "workspaceContains:**/.azure/project-plan.md",
         "workspaceContains:**/.azure/requirements.json",
         "workspaceContains:**/.azure/vscode-debug-plan.md"
@@ -431,6 +432,11 @@
             {
                 "command": "azureResourceGroups.openScaffoldNextStepsView",
                 "title": "%azureResourceGroups.openScaffoldNextStepsView%",
+                "category": "Azure"
+            },
+            {
+                "command": "azureResourceGroups.debug.openScaffoldNextStepsView",
+                "title": "%azureResourceGroups.debug.openScaffoldNextStepsView%",
                 "category": "Azure"
             }
         ],
