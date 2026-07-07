@@ -9,6 +9,7 @@ import { ViewColumn } from "vscode";
 import { ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { ext } from "../../../../extensionVariables";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { recordAgentLaunch } from "../projectSession";
 
 type ScaffoldAction = 'setupLocal' | 'deploy';
 
@@ -43,6 +44,7 @@ export class ScaffoldNextStepsViewController extends WebviewController<Record<st
                     mode: 'azure-debug-plan',
                     query: vscode.l10n.t('The project has been scaffolded. Now set up the local debugging environment so I can start building and testing.'),
                 });
+                await recordAgentLaunch('azure-debug-plan');
                 return;
             case 'deploy':
                 this.panel.dispose();

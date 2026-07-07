@@ -9,14 +9,18 @@ import * as vscode from 'vscode';
 export type ProjectStage = 0 | 1 | 2;
 
 export interface ProjectPlanFiles {
+    hasRequirements: boolean;
     hasProjectPlan: boolean;
     hasLocalDevelopmentPlan: boolean;
     hasDeploymentPlan: boolean;
-    /** True when any of the plan files exist. */
+    /** True when any project artifact exists (requirements or a plan file). */
     hasAny: boolean;
     /** The furthest stage reached. */
     currentStage: ProjectStage;
 }
+
+/** The requirements file marks the very start of a project, before any plan. */
+const REQUIREMENTS_GLOB = '.azure/requirements.json';
 
 const PLAN_FILE_GLOBS = [
     '.azure/project-plan.md',
@@ -24,11 +28,15 @@ const PLAN_FILE_GLOBS = [
     '.azure/deployment-plan.md',
 ] as const;
 
+/** All artifacts that indicate an in-progress project, for watching. */
+const ALL_PROJECT_FILE_GLOBS = [REQUIREMENTS_GLOB, ...PLAN_FILE_GLOBS] as const;
+
 export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
-    const [projectPlanFiles, localDevelopmentPlanFiles, deploymentPlanFiles] = await Promise.all(
-        PLAN_FILE_GLOBS.map((glob) => vscode.workspace.findFiles(glob, undefined, 1)),
+    const [requirementsFiles, projectPlanFiles, localDevelopmentPlanFiles, deploymentPlanFiles] = await Promise.all(
+        ALL_PROJECT_FILE_GLOBS.map((glob) => vscode.workspace.findFiles(glob, undefined, 1)),
     );
 
+    const hasRequirements = requirementsFiles.length > 0;
     const hasProjectPlan = projectPlanFiles.length > 0;
     const hasLocalDevelopmentPlan = localDevelopmentPlanFiles.length > 0;
     const hasDeploymentPlan = deploymentPlanFiles.length > 0;
@@ -41,10 +49,11 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
     }
 
     return {
+        hasRequirements,
         hasProjectPlan,
         hasLocalDevelopmentPlan,
         hasDeploymentPlan,
-        hasAny: hasProjectPlan || hasLocalDevelopmentPlan || hasDeploymentPlan,
+        hasAny: hasRequirements || hasProjectPlan || hasLocalDevelopmentPlan || hasDeploymentPlan,
         currentStage,
     };
 }
@@ -71,7 +80,7 @@ export class ProjectPlanFilesWatcher implements vscode.Disposable {
             vscode.workspace.onDidRenameFiles(fire),
         );
 
-        for (const glob of PLAN_FILE_GLOBS) {
+        for (const glob of ALL_PROJECT_FILE_GLOBS) {
             const watcher = vscode.workspace.createFileSystemWatcher(glob);
             watcher.onDidCreate(fire);
             watcher.onDidDelete(fire);

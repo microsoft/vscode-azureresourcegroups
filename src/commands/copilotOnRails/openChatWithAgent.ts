@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
+import { recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
 import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
 import { ensureAgentInstructions } from './agentInstructions';
 
@@ -51,6 +52,8 @@ export async function openChatWithAgent(agentName: string, prompt: string, loadi
         mode: agentName,
         query: prompt,
     });
+    // Record the phase we just launched so an interrupted run can be resumed.
+    await recordAgentLaunch(agentName);
 
     if (loading) {
         projectSubmissionState.setPending(loading.stage);

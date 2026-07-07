@@ -12,6 +12,7 @@ import { type RequirementsData, type RequirementsExecutionMode } from "../../vie
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { markRequirementsSubmitted } from "../openRequirementsView";
+import { recordAgentLaunch } from "../projectSession";
 
 interface SubmitMessage {
     command: 'submitRequirements';
@@ -92,6 +93,7 @@ export class RequirementsViewController extends WebviewController<Record<string,
                     mode: 'azure-project-plan',
                     query,
                 });
+                await recordAgentLaunch('azure-project-plan');
             } catch {
                 // Chat may not be available; saving still succeeded.
             }

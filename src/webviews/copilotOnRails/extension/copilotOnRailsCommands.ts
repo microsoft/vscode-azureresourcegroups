@@ -10,6 +10,7 @@
  */
 export const copilotOnRailsCommandIds = {
     createProjectWithCopilot: 'azureResourceGroups.createProjectWithCopilot',
+    resumeProjectWithCopilot: 'azureResourceGroups.resumeProjectWithCopilot',
     startLocalDevelopment: 'azureResourceGroups.startLocalDevelopment',
     startDeployment: 'azureResourceGroups.startDeployment',
     openScaffoldPlanView: 'azureResourceGroups.openPlanView',
