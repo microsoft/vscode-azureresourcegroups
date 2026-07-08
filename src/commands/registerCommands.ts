@@ -171,6 +171,7 @@ export function registerCommands(): void {
 
     registerCommand('azureResourceGroups.createProjectWithCopilot', createProjectWithCopilot);
     registerCommand('azureResourceGroups.resumeProjectWithCopilot', resumeProjectWithCopilot);
+    registerCommand('azureProject.refresh', () => ext.actions.refreshProjectTree());
     registerCommand('azureResourceGroups.openPlanView', openPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openLocalPlanView', openLocalPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);

@@ -179,6 +179,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     const azureProjectProgressTreeDataProvider = new AzureProjectProgressTreeDataProvider(context, projectPlanFilesWatcher);
     context.subscriptions.push(vscode.window.registerTreeDataProvider('azureProject', azureProjectProgressTreeDataProvider));
+    ext.actions.refreshProjectTree = () => azureProjectProgressTreeDataProvider.refresh();
 
     registerResumeAffordances(context, projectPlanFilesWatcher);
 
