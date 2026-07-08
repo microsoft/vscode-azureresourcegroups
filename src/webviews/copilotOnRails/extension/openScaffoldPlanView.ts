@@ -7,6 +7,7 @@ import * as vscode from "vscode";
 import { type PlanData, parseScaffoldPlanMarkdown } from "../views/utils/parseScaffoldPlanMarkdown";
 import { ScaffoldPlanViewController } from "./controllers/ScaffoldPlanViewController";
 import { closeLoadingView } from "./openLoadingView";
+import { handleTrackedViewClosed } from "./projectSession";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<PlanData, ScaffoldPlanViewController>({
@@ -15,6 +16,7 @@ const host = new SingletonViewHost<PlanData, ScaffoldPlanViewController>({
         return new ScaffoldPlanViewController(data, uri);
     },
     updateController: (controller, data, uri) => controller.updatePlanData(data, uri),
+    onDidClose: () => void handleTrackedViewClosed(),
 });
 
 export function isPlanViewOpen(): boolean {

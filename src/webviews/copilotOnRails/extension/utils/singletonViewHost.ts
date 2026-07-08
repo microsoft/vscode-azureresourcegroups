@@ -84,6 +84,8 @@ export class SingletonViewHost<TData, TController extends RevealableWebview> {
         private readonly options: {
             readonly createController: (data: TData, sourceFileUri: vscode.Uri | undefined) => TController;
             readonly updateController: (controller: TController, data: TData, sourceFileUri: vscode.Uri | undefined) => void;
+            /** Invoked when the panel is disposed (e.g. the user closes the view). */
+            readonly onDidClose?: () => void;
         },
     ) { }
 
@@ -106,6 +108,7 @@ export class SingletonViewHost<TData, TController extends RevealableWebview> {
             this.controller = undefined;
             this.watcher?.dispose();
             this.watcher = undefined;
+            this.options.onDidClose?.();
         });
     }
 

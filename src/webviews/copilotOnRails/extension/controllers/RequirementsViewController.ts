@@ -7,12 +7,13 @@ import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
+import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type RequirementsData, type RequirementsExecutionMode } from "../../views/utils/parseRequirements";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { markRequirementsSubmitted } from "../openRequirementsView";
-import { recordAgentLaunch } from "../projectSession";
+import { recordAgentLaunch, suppressTrackedViewCloseOnce } from "../projectSession";
 
 interface SubmitMessage {
     command: 'submitRequirements';
@@ -78,6 +79,8 @@ export class RequirementsViewController extends WebviewController<Record<string,
 
         const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
         if (await ensureAgentInstructions('azure-project-plan')) {
+            // Programmatic hand-off to the plan phase — don't treat this close as the user abandoning the flow.
+            suppressTrackedViewCloseOnce();
             this.panel.dispose();
             openLoadingView({
                 stage: 0,
@@ -93,7 +96,7 @@ export class RequirementsViewController extends WebviewController<Record<string,
                     mode: 'azure-project-plan',
                     query,
                 });
-                await recordAgentLaunch('azure-project-plan');
+                await recordAgentLaunch(azureProjectPlanAgent);
             } catch {
                 // Chat may not be available; saving still succeeded.
             }

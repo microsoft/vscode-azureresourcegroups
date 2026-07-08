@@ -12,6 +12,7 @@ import { ext } from "../../../../extensionVariables";
 import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
+import { suppressTrackedViewCloseOnce } from "../projectSession";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
@@ -54,6 +55,8 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         if (!(await this.openDebugPlanChat('I approve the debug setup plan.', false))) {
             return;
         }
+        // Programmatic hand-off to the local-dev setup phase — don't treat this close as the user abandoning the flow.
+        suppressTrackedViewCloseOnce();
         this.panel.dispose();
         openLoadingView({
             stage: 1,

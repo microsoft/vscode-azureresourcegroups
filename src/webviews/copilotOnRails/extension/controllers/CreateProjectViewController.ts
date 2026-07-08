@@ -8,12 +8,13 @@ import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
-import { recordAgentLaunch } from "../projectSession";
 import { openLoadingView } from "../openLoadingView";
+import { recordAgentLaunch } from "../projectSession";
 
 export type { CreateProjectViewControllerType };
 
@@ -49,7 +50,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
             mode: 'azure-project-plan',
             query,
         });
-        await recordAgentLaunch('azure-project-plan');
+        await recordAgentLaunch(azureProjectPlanAgent);
         projectSubmissionState.setPending();
         openLoadingView({
             stage: 0,

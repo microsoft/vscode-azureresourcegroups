@@ -7,6 +7,7 @@ import * as vscode from "vscode";
 import { type LocalPlanData, parseLocalPlanMarkdown } from "../views/utils/parseLocalPlanMarkdown";
 import { LocalPlanViewController } from "./controllers/LocalPlanViewController";
 import { closeLoadingView } from "./openLoadingView";
+import { handleTrackedViewClosed } from "./projectSession";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<LocalPlanData, LocalPlanViewController>({
@@ -15,6 +16,7 @@ const host = new SingletonViewHost<LocalPlanData, LocalPlanViewController>({
         return new LocalPlanViewController(data, uri);
     },
     updateController: (controller, data, uri) => controller.updatePlanData(data, uri),
+    onDidClose: () => void handleTrackedViewClosed(),
 });
 
 export function isLocalPlanViewOpen(): boolean {

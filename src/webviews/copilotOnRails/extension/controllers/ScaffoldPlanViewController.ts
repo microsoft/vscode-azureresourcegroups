@@ -9,12 +9,13 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
+import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { AUTOPILOT_QUERY_MARKER, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
-import { recordAgentLaunch } from "../projectSession";
+import { recordAgentLaunch, suppressTrackedViewCloseOnce } from "../projectSession";
 import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
@@ -112,7 +113,9 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             mode: 'azure-project-scaffold',
             query: confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery,
         });
-        await recordAgentLaunch('azure-project-scaffold');
+        await recordAgentLaunch(azureProjectScaffoldAgent);
+        // Programmatic hand-off to the scaffold phase — don't treat this close as the user abandoning the flow.
+        suppressTrackedViewCloseOnce();
         this.panel.dispose();
         openLoadingView({
             stage: 0,

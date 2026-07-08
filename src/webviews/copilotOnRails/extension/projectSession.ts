@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { azureDebugGenerateAgent, azureDebugPlanAgent, azureDeployAgent, azureProjectIntegrateAgent, azureProjectPlanAgent, azureProjectScaffoldAgent } from '../../../constants';
 import { ext } from '../../../extensionVariables';
 
 /**
@@ -58,27 +59,27 @@ interface PhaseConfig {
 /** Static configuration for each phase: which agent drives it and its artifacts. */
 const PHASE_CONFIG: Readonly<Record<ProjectPhase, PhaseConfig>> = {
     plan: {
-        agent: 'azure-project-plan',
+        agent: azureProjectPlanAgent,
         label: vscode.l10n.t('Project planning'),
         contextRefs: ['.azure/requirements.json', '.azure/project-plan.md'],
     },
     scaffold: {
-        agent: 'azure-project-scaffold',
+        agent: azureProjectScaffoldAgent,
         label: vscode.l10n.t('Scaffolding'),
         contextRefs: ['.azure/project-plan.md'],
     },
     integrate: {
-        agent: 'azure-project-integrate',
+        agent: azureProjectIntegrateAgent,
         label: vscode.l10n.t('Live-data integration'),
         contextRefs: ['.azure/integration-plan.md', '.azure/project-plan.md'],
     },
     localDev: {
-        agent: 'azure-debug-plan',
+        agent: azureDebugPlanAgent,
         label: vscode.l10n.t('Local development setup'),
         contextRefs: ['.azure/vscode-debug-plan.md'],
     },
     deploy: {
-        agent: 'azure-deploy',
+        agent: azureDeployAgent,
         label: vscode.l10n.t('Deployment'),
         contextRefs: ['.azure/deployment-plan.md'],
     },
@@ -86,12 +87,12 @@ const PHASE_CONFIG: Readonly<Record<ProjectPhase, PhaseConfig>> = {
 
 /** Maps a launched chat agent name to the flow phase it advances. */
 const AGENT_PHASE: Readonly<Record<string, ProjectPhase>> = {
-    'azure-project-plan': 'plan',
-    'azure-project-scaffold': 'scaffold',
-    'azure-project-integrate': 'integrate',
-    'azure-debug-plan': 'localDev',
-    'azure-debug-generate': 'localDev',
-    'azure-deploy': 'deploy',
+    [azureProjectPlanAgent]: 'plan',
+    [azureProjectScaffoldAgent]: 'scaffold',
+    [azureProjectIntegrateAgent]: 'integrate',
+    [azureDebugPlanAgent]: 'localDev',
+    [azureDebugGenerateAgent]: 'localDev',
+    [azureDeployAgent]: 'deploy',
 };
 
 /**
@@ -153,6 +154,43 @@ export async function clearSession(): Promise<void> {
     if (changed) {
         onDidChangeSessionEmitter.fire();
     }
+}
+
+/**
+ * A phase hand-off programmatically closes the current planning/requirements
+ * view before opening the next one. That dispose must NOT be read as the user
+ * abandoning the flow, so callers set this one-shot flag immediately before such
+ * a dispose; it is consumed by the next {@link handleTrackedViewClosed} call.
+ */
+let suppressNextTrackedViewClose = false;
+
+/** Marks the next tracked-view close as a programmatic phase hand-off, not a user close. */
+export function suppressTrackedViewCloseOnce(): void {
+    suppressNextTrackedViewClose = true;
+}
+
+/**
+ * Called when a tracked planning/requirements view (project plan, debug plan, or
+ * requirements) is disposed. Closing one of these views is how the user signals
+ * they're done with the flow, so the session is cleared — unless the dispose was
+ * a programmatic phase hand-off flagged via {@link suppressTrackedViewCloseOnce}.
+ *
+ * NOTE: Ideally closing the active Copilot *chat* session that is driving a phase
+ * would also end the project session. That isn't wired up yet: the flow launches
+ * agents via the fire-and-forget `workbench.action.chat.open` /
+ * `workbench.action.chat.newChat` commands, which return no session handle, and
+ * stable VS Code exposes no event for a chat session being closed/cleared.
+ * Detecting it would require opting into the proposed chat-session API
+ * (`enabledApiProposals`, e.g. `chatSessionsProvider`/`chatProvider`) to capture
+ * a chat session id and observe its disposal — which only runs in Insiders/dev
+ * builds, not stable Marketplace releases. Deferred until a stable API exists.
+ */
+export async function handleTrackedViewClosed(): Promise<void> {
+    if (suppressNextTrackedViewClose) {
+        suppressNextTrackedViewClose = false;
+        return;
+    }
+    await clearSession();
 }
 
 /** True while a create-with-copilot phase is being driven in this window. */
