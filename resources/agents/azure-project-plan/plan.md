@@ -17,7 +17,7 @@ metadata:
 ## PHASE 1: PLANNING — Plan
 ## ═══════════════════════════════════════════════════
 
-> **Enter here on re-entry.** This phase runs after requirements were gathered per [`requirements.md`](requirements.md) and written to `.azure/requirements.json`. Read that file first (Step 2f), treat its `answer` fields as authoritative, then generate the plan below.
+> **Enter here on re-entry.** This phase runs after requirements were gathered per [`requirements.md`](requirements.md) and written to `.azure/requirements.json`. Read that file first, treat its `answer` fields as authoritative, then generate the plan below.
 
 ### Step 3: Generate Plan & Present for Approval
 
@@ -28,7 +28,7 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 > - Every section heading MUST be `## <N>. <Title>` — a number, a period, a space, then the title (e.g. `## 1. Project Overview`, `## 2. Backend — Azure Functions`). Headings without the `N.` number prefix (e.g. `## Overview`, `## Architecture`, `## Services`, `## Data Stores`, `## Authentication`) are **invalid** and will not render.
 > - Metadata at the top MUST be `**Status**:`, `**Created**:`, `**Mode**:` bold key-value rows — not front-matter, not a table.
 > - Do **NOT** add a generic architecture document, a `mermaid` diagram, a standalone `## Authentication` section, or any heading not present in the skeleton. Authentication, data stores, and architecture are captured **inside** the numbered sections (Services Required, the per-service stack sections, Route Definitions), never as their own improvised headings.
-> - The set and order of headings is fixed: `# Project Plan` → `## 1. Project Overview` → one `## N. <Service> — <role>` per service → `## N. Services Required` → `## N. Design System & UI` (frontend only) → `## N. Project Structure` → `## N. Route Definitions` → `## N. Next Steps`. Renumber only; never rename or reshape.
+> - The set and order of headings is fixed: `# Project Plan` → `## 1. Project Overview` → one `## N. <Service> — <role>` per service → `## N. Services Required` → `## N. Prerequisites` → `## N. Design System & UI` (frontend only) → `## N. Project Structure` → `## N. Route Definitions` → `## N. Next Steps`. Renumber only; never rename or reshape.
 
 #### Plan Template
 
@@ -181,7 +181,7 @@ For each page above, list 3–6 representative records using that page's primary
 
 ---
 
-## 8. Next Steps
+## 9. Next Steps
 
 1. Run **azure-project-scaffold** to execute this plan
 2. Run **azure-project-integrate** to wire the frontend to live data, smoke-test the backend, and create the migrations
