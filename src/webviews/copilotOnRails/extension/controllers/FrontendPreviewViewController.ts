@@ -7,6 +7,7 @@ import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
+import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { type RunningDevServer, startDevServer } from "../utils/devServerManager";
@@ -127,7 +128,7 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         // Keep the dev server running so the scaffold agent's edits hot-reload
         // in the iframe while the user watches.
         void vscode.commands.executeCommand('workbench.action.chat.open', {
-            mode: 'azure-project-scaffold',
+            mode: azureProjectScaffoldAgent,
             query,
         });
         void this.panel.webview.postMessage({ command: 'feedbackSubmitted' });

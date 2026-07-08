@@ -93,7 +93,7 @@ export class RequirementsViewController extends WebviewController<Record<string,
                 // requirements file from disk, so a clean context keeps the window focused.
                 await vscode.commands.executeCommand('workbench.action.chat.newChat');
                 await vscode.commands.executeCommand('workbench.action.chat.open', {
-                    mode: 'azure-project-plan',
+                    mode: azureProjectPlanAgent,
                     query,
                 });
                 await recordAgentLaunch(azureProjectPlanAgent);

@@ -42,7 +42,7 @@ export class ScaffoldNextStepsViewController extends WebviewController<Record<st
                 }
                 this.panel.dispose();
                 await vscode.commands.executeCommand('workbench.action.chat.open', {
-                    mode: 'azure-debug-plan',
+                    mode: azureDebugPlanAgent,
                     query: vscode.l10n.t('The project has been scaffolded. Now set up the local debugging environment so I can start building and testing.'),
                 });
                 await recordAgentLaunch(azureDebugPlanAgent);

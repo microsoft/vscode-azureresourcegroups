@@ -110,7 +110,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         const baseQuery = vscode.l10n.t('I approve the plan.');
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand('workbench.action.chat.open', {
-            mode: 'azure-project-scaffold',
+            mode: azureProjectScaffoldAgent,
             query: confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery,
         });
         await recordAgentLaunch(azureProjectScaffoldAgent);
