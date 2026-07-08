@@ -179,7 +179,6 @@ export function registerCommands(): void {
         openLocalDevNextStepsView(hasApiTests));
     registerCommand('azureResourceGroups.debug.openLocalNextStepsView', () => openLocalDevNextStepsView());
     registerCommand('azureResourceGroups.openScaffoldNextStepsView', () => openScaffoldNextStepsView({}));
-    registerCommand('azureResourceGroups.debug.openScaffoldNextStepsView', () => openScaffoldNextStepsView({}));
 
     // Hand-off commands
     registerCommand('azureResourceGroups.downloadAgentInstructions', (context: IActionContext) =>

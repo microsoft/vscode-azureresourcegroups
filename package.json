@@ -433,11 +433,6 @@
                 "command": "azureResourceGroups.openScaffoldNextStepsView",
                 "title": "%azureResourceGroups.openScaffoldNextStepsView%",
                 "category": "Azure"
-            },
-            {
-                "command": "azureResourceGroups.debug.openScaffoldNextStepsView",
-                "title": "%azureResourceGroups.debug.openScaffoldNextStepsView%",
-                "category": "Azure"
             }
         ],
         "viewsContainers": {
