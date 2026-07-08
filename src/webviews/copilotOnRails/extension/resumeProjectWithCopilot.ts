@@ -7,9 +7,10 @@ import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { openChatWithAgent } from '../../../commands/copilotOnRails/openChatWithAgent';
 import { PROJECT_PLAN_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
-import { parseScaffoldPlanMarkdown } from '../views/utils/parseScaffoldPlanMarkdown';
+import { ProjectPlanStatus, statusEquals } from '../views/utils/projectPlanStatus';
 import { openFrontendPreviewView } from './openFrontendPreviewView';
 import { buildResumePrompt, markSessionActiveInWindow, readSessionState, resumeAgentFor } from './projectSession';
+import { readProjectPlanStatus } from './utils/planStatus';
 
 /**
  * Resumes an interrupted "Create with Copilot" run. Reads the single
@@ -54,14 +55,5 @@ export async function resumeProjectWithCopilot(_context: IActionContext): Promis
  * UI-approval gate, but the hand-off to integration has not yet happened.
  */
 async function isAwaitingIntegration(): Promise<boolean> {
-    const [planUri] = await vscode.workspace.findFiles(PROJECT_PLAN_FILE_GLOB, undefined, 1);
-    if (!planUri) {
-        return false;
-    }
-    try {
-        const content = Buffer.from(await vscode.workspace.fs.readFile(planUri)).toString('utf-8');
-        return parseScaffoldPlanMarkdown(content).status.trim().toLowerCase() === 'awaiting integration';
-    } catch {
-        return false;
-    }
+    return statusEquals(await readProjectPlanStatus(PROJECT_PLAN_FILE_GLOB), ProjectPlanStatus.awaitingIntegration);
 }

@@ -13,6 +13,7 @@ import { PROJECT_PLAN_FILE_GLOB } from "../../../../tree/project/projectPlanFile
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { type RunningDevServer, startDevServer } from "../utils/devServerManager";
 import { writeProjectPlanStatus } from "../utils/planStatus";
+import { ProjectPlanStatus } from "../../views/utils/projectPlanStatus";
 
 /** State pushed to the webview to drive the preview surface. */
 type PreviewState =
@@ -144,7 +145,7 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         // phase, so flip the plan status before handing off. This is a
         // deterministic UI signal, so record it in extension code rather than
         // relying on the integrate agent to update it.
-        await writeProjectPlanStatus(PROJECT_PLAN_FILE_GLOB, 'Integrating');
+        await writeProjectPlanStatus(PROJECT_PLAN_FILE_GLOB, ProjectPlanStatus.integrating);
         // Stop the preview server before the integrate agent takes over so it
         // can start its own runtime without port contention.
         this.devServer?.dispose();

@@ -47,3 +47,25 @@ export async function writeProjectPlanStatus(glob: string, newStatus: string): P
     await vscode.workspace.fs.writeFile(uri, Buffer.from(updated, 'utf-8'));
     return true;
 }
+
+/**
+ * Reads the first `Status:` value from the plan file matched by `glob`. Uses the
+ * same regex as {@link writeProjectPlanStatus}, so reads and writes stay
+ * symmetric. Returns the trimmed value, or `undefined` when no file or status
+ * line is found.
+ */
+export async function readProjectPlanStatus(glob: string): Promise<string | undefined> {
+    const [uri] = await vscode.workspace.findFiles(glob, undefined, 1);
+    if (!uri) {
+        return undefined;
+    }
+
+    let content: string;
+    try {
+        content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
+    } catch {
+        return undefined;
+    }
+
+    return STATUS_LINE_REGEX.exec(content)?.[2]?.trim();
+}

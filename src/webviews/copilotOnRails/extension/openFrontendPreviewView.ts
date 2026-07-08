@@ -181,7 +181,7 @@ function planFolderScore(folder: PlanFolder): number {
     if (folder.comment && FRONTEND_PLAN_HINT.test(folder.comment)) {
         score += 2;
     }
-    if (['web', 'frontend', 'client', 'ui'].includes(folder.name.toLowerCase())) {
+    if (FRONTEND_FOLDER_HINTS.includes(folder.name.toLowerCase())) {
         score += 1;
     }
     return score;

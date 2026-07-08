@@ -11,6 +11,7 @@ import { StageProgress } from './components/StageProgress';
 import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
 import { type PlanContent, type PlanData, type PlanSection, type PreviewPage, type PreviewStatus, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
+import { isApprovedOrLater } from './utils/projectPlanStatus';
 
 const editableOptions: Record<string, string[]> = {
     'Language': ['JavaScript', 'TypeScript', 'Python', 'C# (.NET)'],
@@ -205,12 +206,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     );
 
     const isAlreadyApproved = useMemo(() => {
-        const s = plan?.status?.trim().toLowerCase();
-        if (!s) {
-            return false;
-        }
-        const approvedOrLater = ['approved', 'in progress', 'awaiting integration', 'integrating', 'integrated', 'executing', 'implemented'];
-        return approvedOrLater.includes(s);
+        return isApprovedOrLater(plan?.status);
     }, [plan?.status]);
 
     const editedCells = useMemo(() => {
