@@ -7,14 +7,13 @@ import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
-import { ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { ensureCopilotChatReady, launchAgentChat } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
-import { recordAgentLaunch } from "../projectSession";
 
 export type { CreateProjectViewControllerType };
 
@@ -45,12 +44,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
             return;
         }
         this.panel.dispose();
-        await vscode.commands.executeCommand('workbench.action.chat.newChat');
-        await vscode.commands.executeCommand("workbench.action.chat.open", {
-            mode: azureProjectPlanAgent,
-            query,
-        });
-        await recordAgentLaunch(azureProjectPlanAgent);
+        await launchAgentChat(azureProjectPlanAgent, query);
         projectSubmissionState.setPending();
         openLoadingView({
             stage: 0,

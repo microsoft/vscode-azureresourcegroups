@@ -35,6 +35,22 @@ export async function ensureCopilotChatReady(): Promise<boolean> {
     return true;
 }
 
+/**
+ * A fresh session is started for each phase hand-off because agents communicate
+ * through the `.azure/*` plan files on disk, not chat history, so a clean session
+ * keeps each agent's context window focused on its own phase instead of
+ * accumulating the entire plan → scaffold → debug conversation.
+ */
+export async function launchAgentChat(agentName: string, query: string): Promise<void> {
+    await vscode.commands.executeCommand('workbench.action.chat.newChat');
+    await vscode.commands.executeCommand('workbench.action.chat.open', {
+        mode: agentName,
+        query,
+    });
+    // Record the phase we just launched so an interrupted run can be resumed.
+    await recordAgentLaunch(agentName);
+}
+
 export async function openChatWithAgent(agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
     if (!(await ensureCopilotChatReady())) {
         return;
@@ -43,17 +59,7 @@ export async function openChatWithAgent(agentName: string, prompt: string, loadi
     if (!(await ensureAgentInstructions(agentName))) {
         return;
     }
-    // Start a fresh chat session for each phase hand-off. Agents communicate through the
-    // `.azure/*.md` plan files on disk, not chat history, so a clean session keeps each
-    // agent's context window focused on its own phase instead of accumulating the entire
-    // plan → scaffold → debug conversation.
-    await vscode.commands.executeCommand('workbench.action.chat.newChat');
-    await vscode.commands.executeCommand('workbench.action.chat.open', {
-        mode: agentName,
-        query: prompt,
-    });
-    // Record the phase we just launched so an interrupted run can be resumed.
-    await recordAgentLaunch(agentName);
+    await launchAgentChat(agentName, prompt);
 
     if (loading) {
         projectSubmissionState.setPending(loading.stage);
