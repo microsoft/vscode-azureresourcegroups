@@ -6,7 +6,10 @@
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { openChatWithAgent } from '../../../commands/copilotOnRails/openChatWithAgent';
-import { buildResumePrompt, readSessionState, resumeAgentFor } from './projectSession';
+import { PROJECT_PLAN_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
+import { parseScaffoldPlanMarkdown } from '../views/utils/parseScaffoldPlanMarkdown';
+import { openFrontendPreviewView } from './openFrontendPreviewView';
+import { buildResumePrompt, markSessionActiveInWindow, readSessionState, resumeAgentFor } from './projectSession';
 
 /**
  * Resumes an interrupted "Create with Copilot" run. Reads the single
@@ -28,5 +31,37 @@ export async function resumeProjectWithCopilot(_context: IActionContext): Promis
         return;
     }
 
+    // Resuming re-engages the flow in this window, so mark the session active up
+    // front — the resume offer should be dismissed even on paths below that
+    // re-open a view instead of launching a new chat agent.
+    markSessionActiveInWindow();
+
+    // Scaffolding finished at the UI-approval gate: the project is "Awaiting
+    // Integration" but the user hasn't approved the UI yet (its "Approve UI"
+    // button is what hands off to the integrate agent). Re-open the Frontend
+    // Preview so they can approve, rather than resuming a chat session.
+    if (state.phase === 'scaffold' && await isAwaitingIntegration()) {
+        await openFrontendPreviewView();
+        return;
+    }
+
     await openChatWithAgent(resumeAgentFor(state.phase), buildResumePrompt(state));
+}
+
+/**
+ * True when `.azure/project-plan.md` reports the `Awaiting Integration` status —
+ * the point at which the scaffold agent has finished and opened the frontend
+ * UI-approval gate, but the hand-off to integration has not yet happened.
+ */
+async function isAwaitingIntegration(): Promise<boolean> {
+    const [planUri] = await vscode.workspace.findFiles(PROJECT_PLAN_FILE_GLOB, undefined, 1);
+    if (!planUri) {
+        return false;
+    }
+    try {
+        const content = Buffer.from(await vscode.workspace.fs.readFile(planUri)).toString('utf-8');
+        return parseScaffoldPlanMarkdown(content).status.trim().toLowerCase() === 'awaiting integration';
+    } catch {
+        return false;
+    }
 }

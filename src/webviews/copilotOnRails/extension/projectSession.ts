@@ -200,6 +200,19 @@ export function isSessionActiveInWindow(): boolean {
 }
 
 /**
+ * Marks the flow as actively being driven in this window without recording
+ * forward progress. Used when resuming re-engages the user through a non-chat
+ * affordance (e.g. re-opening the Frontend Preview), so the resume offer is
+ * dismissed even though no new phase agent was launched.
+ */
+export function markSessionActiveInWindow(): void {
+    if (!sessionActiveInWindow) {
+        sessionActiveInWindow = true;
+        onDidChangeSessionEmitter.fire();
+    }
+}
+
+/**
  * Whether the resume affordance should be offered: a record exists and the flow
  * is not currently being driven in this window (i.e. it was launched earlier and
  * the window has since been reloaded, or a fresh window opened this workspace).

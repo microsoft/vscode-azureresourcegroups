@@ -9,8 +9,10 @@ import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
+import { PROJECT_PLAN_FILE_GLOB } from "../../../../tree/project/projectPlanFiles";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { type RunningDevServer, startDevServer } from "../utils/devServerManager";
+import { writeProjectPlanStatus } from "../utils/planStatus";
 
 /** State pushed to the webview to drive the preview surface. */
 type PreviewState =
@@ -138,6 +140,11 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         if (!(await ensureAgentInstructions('azure-project-integrate'))) {
             return;
         }
+        // Approving the final UX preview moves the plan into the integration
+        // phase, so flip the plan status before handing off. This is a
+        // deterministic UI signal, so record it in extension code rather than
+        // relying on the integrate agent to update it.
+        await writeProjectPlanStatus(PROJECT_PLAN_FILE_GLOB, 'Integrating');
         // Stop the preview server before the integrate agent takes over so it
         // can start its own runtime without port contention.
         this.devServer?.dispose();

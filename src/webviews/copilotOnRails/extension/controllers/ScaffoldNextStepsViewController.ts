@@ -6,7 +6,6 @@
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import { ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
@@ -38,7 +37,7 @@ export class ScaffoldNextStepsViewController extends WebviewController<Record<st
         switch (action) {
             case 'setupLocal':
                 this.panel.dispose();
-               await vscode.commands.executeCommand(
+                await vscode.commands.executeCommand(
                     'azureResourceGroups.startLocalDevelopment',
                     vscode.l10n.t('The project has been scaffolded. Now set up the local debugging environment so I can start building and testing.'),
                 );

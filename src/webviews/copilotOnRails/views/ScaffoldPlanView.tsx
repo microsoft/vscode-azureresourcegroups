@@ -209,7 +209,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
         if (!s) {
             return false;
         }
-        const approvedOrLater = ['approved', 'in progress', 'awaiting integration', 'integrated', 'executing', 'implemented'];
+        const approvedOrLater = ['approved', 'in progress', 'awaiting integration', 'integrating', 'integrated', 'executing', 'implemented'];
         return approvedOrLater.includes(s);
     }, [plan?.status]);
 
