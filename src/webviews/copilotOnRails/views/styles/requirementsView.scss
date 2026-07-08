@@ -148,6 +148,8 @@
         border-radius: 6px;
         background: transparent;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
 
         .categoryHeader {
             padding: 12px 16px;
@@ -194,6 +196,9 @@
             list-style: none;
             margin: 0;
             padding: 0;
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
         }
 
         .questionRow {
@@ -205,6 +210,23 @@
 
             &:last-child {
                 border-bottom: none;
+            }
+
+            &--fill {
+                flex: 1 1 auto;
+
+                .questionInput {
+                    flex: 1 1 auto;
+                    align-items: stretch;
+                }
+
+                .answerInput--textarea {
+                    height: 100%;
+
+                    textarea {
+                        height: 100%;
+                    }
+                }
             }
 
             .questionMeta {
