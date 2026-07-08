@@ -206,7 +206,11 @@ export const ScaffoldPlanView = (): JSX.Element => {
 
     const isAlreadyApproved = useMemo(() => {
         const s = plan?.status?.trim().toLowerCase();
-        return s === 'approved';
+        if (!s) {
+            return false;
+        }
+        const approvedOrLater = ['approved', 'in progress', 'awaiting integration', 'integrated', 'executing', 'implemented'];
+        return approvedOrLater.includes(s);
     }, [plan?.status]);
 
     const editedCells = useMemo(() => {
