@@ -5,6 +5,7 @@
 
 import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
+import { DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { settingUtils } from "../../../utils/settingUtils";
 
 /**
@@ -33,7 +34,7 @@ const MAX_RUN_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 export const AUTOPILOT_QUERY_MARKER = '[AUTOPILOT MODE]';
 
 /** Glob for the local debug plan whose completion ends an autopilot run. */
-export const DEBUG_PLAN_GLOB = '.azure/vscode-debug-plan.md';
+export const DEBUG_PLAN_GLOB = DEBUG_PLAN_FILE_GLOB;
 
 /** globalState keys used to survive window reloads mid-run. */
 const STATE_ACTIVE = 'azureResourceGroups.autopilot.active';

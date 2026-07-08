@@ -4,13 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import { REQUIREMENTS_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { parseRequirementsJson, type RequirementsData } from "../views/utils/parseRequirements";
 import { RequirementsViewController } from "./controllers/RequirementsViewController";
 import { closeLoadingView } from "./openLoadingView";
 import { handleTrackedViewClosed } from "./projectSession";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
-
-export const REQUIREMENTS_FILE_GLOB = '.azure/requirements.json';
 
 const host = new SingletonViewHost<RequirementsData, RequirementsViewController>({
     createController: (data, uri) => {

@@ -5,6 +5,7 @@
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
+import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { copilotOnRailsCommandIds } from "./copilotOnRailsCommands";
 
@@ -13,7 +14,7 @@ const deploy = vscode.l10n.t('Deploy');
 
 export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
     // Local Development => Deploy
-    if (await hasCompletedPhase('.azure/vscode-debug-plan.md', 'implemented')) {
+    if (await hasCompletedPhase(DEBUG_PLAN_FILE_GLOB, 'implemented')) {
         const choice = await vscode.window.showInformationMessage(
             vscode.l10n.t('We detected a previous Copilot session with a completed local debug configuration. Would you like to deploy this project?'),
             { modal: true },
@@ -27,7 +28,7 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
     }
 
     // Create => Debug | Deploy
-    if (await hasCompletedPhase('.azure/project-plan.md', 'scaffolded')) {
+    if (await hasCompletedPhase(PROJECT_PLAN_FILE_GLOB, 'scaffolded')) {
         const choice = await vscode.window.showInformationMessage(
             vscode.l10n.t('We detected a previous Copilot session with a fully scaffolded project. How would you like to proceed?'),
             { modal: true },

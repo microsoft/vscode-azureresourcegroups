@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { azureDebugGenerateAgent, azureDebugPlanAgent, azureDeployAgent, azureProjectIntegrateAgent, azureProjectPlanAgent, azureProjectScaffoldAgent } from '../../../constants';
 import { ext } from '../../../extensionVariables';
+import { DEBUG_PLAN_FILE_GLOB, DEPLOYMENT_PLAN_FILE_GLOB, INTEGRATION_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB, REQUIREMENTS_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
 
 /**
  * Single, extension-owned source of truth for where the user is in the
@@ -61,27 +62,27 @@ const PHASE_CONFIG: Readonly<Record<ProjectPhase, PhaseConfig>> = {
     plan: {
         agent: azureProjectPlanAgent,
         label: vscode.l10n.t('Project planning'),
-        contextRefs: ['.azure/requirements.json', '.azure/project-plan.md'],
+        contextRefs: [REQUIREMENTS_FILE_GLOB, PROJECT_PLAN_FILE_GLOB],
     },
     scaffold: {
         agent: azureProjectScaffoldAgent,
         label: vscode.l10n.t('Scaffolding'),
-        contextRefs: ['.azure/project-plan.md'],
+        contextRefs: [PROJECT_PLAN_FILE_GLOB],
     },
     integrate: {
         agent: azureProjectIntegrateAgent,
         label: vscode.l10n.t('Live-data integration'),
-        contextRefs: ['.azure/integration-plan.md', '.azure/project-plan.md'],
+        contextRefs: [INTEGRATION_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB],
     },
     localDev: {
         agent: azureDebugPlanAgent,
         label: vscode.l10n.t('Local development setup'),
-        contextRefs: ['.azure/vscode-debug-plan.md'],
+        contextRefs: [DEBUG_PLAN_FILE_GLOB],
     },
     deploy: {
         agent: azureDeployAgent,
         label: vscode.l10n.t('Deployment'),
-        contextRefs: ['.azure/deployment-plan.md'],
+        contextRefs: [DEPLOYMENT_PLAN_FILE_GLOB],
     },
 };
 

@@ -19,17 +19,26 @@ export interface ProjectPlanFiles {
     currentStage: ProjectStage;
 }
 
+/**
+ * Workspace-relative globs for each Copilot-on-Rails project artifact. These are
+ * the single source of truth for the `.azure/*` file locations; other modules
+ * import these constants instead of re-hard-coding the paths.
+ */
 /** The requirements file marks the very start of a project, before any plan. */
-const REQUIREMENTS_GLOB = '.azure/requirements.json';
+export const REQUIREMENTS_FILE_GLOB = '.azure/requirements.json';
+export const PROJECT_PLAN_FILE_GLOB = '.azure/project-plan.md';
+export const INTEGRATION_PLAN_FILE_GLOB = '.azure/integration-plan.md';
+export const DEBUG_PLAN_FILE_GLOB = '.azure/vscode-debug-plan.md';
+export const DEPLOYMENT_PLAN_FILE_GLOB = '.azure/deployment-plan.md';
 
 const PLAN_FILE_GLOBS = [
-    '.azure/project-plan.md',
-    '.azure/vscode-debug-plan.md',
-    '.azure/deployment-plan.md',
+    PROJECT_PLAN_FILE_GLOB,
+    DEBUG_PLAN_FILE_GLOB,
+    DEPLOYMENT_PLAN_FILE_GLOB,
 ] as const;
 
 /** All artifacts that indicate an in-progress project, for watching. */
-const ALL_PROJECT_FILE_GLOBS = [REQUIREMENTS_GLOB, ...PLAN_FILE_GLOBS] as const;
+const ALL_PROJECT_FILE_GLOBS = [REQUIREMENTS_FILE_GLOB, ...PLAN_FILE_GLOBS] as const;
 
 export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
     const [requirementsFiles, projectPlanFiles, localDevelopmentPlanFiles, deploymentPlanFiles] = await Promise.all(
