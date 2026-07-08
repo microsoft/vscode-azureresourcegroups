@@ -6,9 +6,11 @@
 import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { openChatWithAgent } from '../../../commands/copilotOnRails/openChatWithAgent';
-import { PROJECT_PLAN_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
+import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
 import { ProjectPlanStatus, statusEquals } from '../views/utils/projectPlanStatus';
+import { isDebugPlanImplemented } from './autopilot';
 import { openFrontendPreviewView } from './openFrontendPreviewView';
+import { openLocalDevNextStepsView } from './openLocalDevNextStepsView';
 import { buildResumePrompt, markSessionActiveInWindow, readSessionState, resumeAgentFor } from './projectSession';
 import { readProjectPlanStatus } from './utils/planStatus';
 
@@ -46,6 +48,15 @@ export async function resumeProjectWithCopilot(_context: IActionContext): Promis
         return;
     }
 
+    // Local development finished at debug-config generation: the debug plan is
+    // "Implemented" and the flow's next surface is the local-dev "next steps"
+    // view (deploy / iterate / run API tests) that the debug-generate agent opens
+    // on completion — not another debug-plan chat. Re-open that view instead.
+    if (state.phase === 'localDev' && await isDebugConfigImplemented()) {
+        await openLocalDevNextStepsView();
+        return;
+    }
+
     await openChatWithAgent(resumeAgentFor(state.phase), buildResumePrompt(state));
 }
 
@@ -56,4 +67,23 @@ export async function resumeProjectWithCopilot(_context: IActionContext): Promis
  */
 async function isAwaitingIntegration(): Promise<boolean> {
     return statusEquals(await readProjectPlanStatus(PROJECT_PLAN_FILE_GLOB), ProjectPlanStatus.awaitingIntegration);
+}
+
+/**
+ * True when `.azure/vscode-debug-plan.md` reports the `Implemented` status — the
+ * point at which debug-config generation has finished. Uses the same detector as
+ * the autopilot completion watcher so resume agrees with how completion is
+ * signalled everywhere else.
+ */
+async function isDebugConfigImplemented(): Promise<boolean> {
+    const [uri] = await vscode.workspace.findFiles(DEBUG_PLAN_FILE_GLOB, undefined, 1);
+    if (!uri) {
+        return false;
+    }
+    try {
+        const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
+        return isDebugPlanImplemented(content);
+    } catch {
+        return false;
+    }
 }
