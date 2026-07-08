@@ -71,12 +71,28 @@ export async function pickWorkspaceFile(glob: string, noFilesMessage: string): P
 }
 
 /**
+ * All live view hosts, tracked so their file watchers can be torn down as part
+ * of the extension's dispose task (see {@link registerViewHostDisposal}), not
+ * only when the user closes a view.
+ */
+const liveViewHosts = new Set<vscode.Disposable>();
+export function registerViewHostDisposal(context: vscode.ExtensionContext): void {
+    context.subscriptions.push({
+        dispose: () => {
+            for (const host of [...liveViewHosts]) {
+                host.dispose();
+            }
+        },
+    });
+}
+
+/**
  * Manages the lifecycle of a single, reusable webview controller plus the file
  * watcher that keeps it in sync with disk. Every Copilot-on-Rails "open plan
  * view" module shares this skeleton: create-or-update a singleton controller,
  * reveal it, and tear down the watcher when the panel is disposed.
  */
-export class SingletonViewHost<TData, TController extends RevealableWebview> {
+export class SingletonViewHost<TData, TController extends RevealableWebview> implements vscode.Disposable {
     private controller: TController | undefined;
     private watcher: vscode.Disposable | undefined;
 
@@ -87,7 +103,9 @@ export class SingletonViewHost<TData, TController extends RevealableWebview> {
             /** Invoked when the panel is disposed (e.g. the user closes the view). */
             readonly onDidClose?: () => void;
         },
-    ) { }
+    ) {
+        liveViewHosts.add(this);
+    }
 
     get isOpen(): boolean {
         return this.controller !== undefined;
@@ -116,5 +134,17 @@ export class SingletonViewHost<TData, TController extends RevealableWebview> {
     setWatcher(watcher: vscode.Disposable): void {
         this.watcher?.dispose();
         this.watcher = watcher;
+    }
+
+    /**
+     * Tears down the file watcher as part of the extension's dispose task.
+     * Intentionally does not dispose the panel or invoke `onDidClose`, so a
+     * shutdown-triggered teardown never clears the resumable session — that is
+     * reserved for a user actually closing the view.
+     */
+    dispose(): void {
+        this.watcher?.dispose();
+        this.watcher = undefined;
+        liveViewHosts.delete(this);
     }
 }
