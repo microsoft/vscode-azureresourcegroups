@@ -55,6 +55,25 @@ const commonConfig = {
                 });
             },
         },
+        {
+            // Emits the markers that the `$esbuild-watch` problem matcher relies on so
+            // VS Code can detect when the background watch task has finished building.
+            name: 'esbuild-problem-matcher',
+            setup(build) {
+                build.onStart(() => {
+                    console.log('[watch] build started');
+                });
+                build.onEnd((result) => {
+                    result.errors.forEach(({ text, location }) => {
+                        console.error(`✘ [ERROR] ${text}`);
+                        if (location) {
+                            console.error(`    ${location.file}:${location.line}:${location.column}:`);
+                        }
+                    });
+                    console.log('[watch] build finished');
+                });
+            },
+        },
     ],
     logLevel: 'info',
 };

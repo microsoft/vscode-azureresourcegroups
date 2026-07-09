@@ -148,7 +148,7 @@ After identifying the required tools, run the detection pass to fill the `Instal
 
 ### Sample Content
 
-> **Shared content contract — this is what keeps the planning preview and the scaffolded app in parity.** The preview sub-agents (Step 3.5b) and the scaffold agent both read this block and render the **same** records, so the low-fidelity preview faithfully previews what ships instead of generic filler. Author it now, while you have full domain context (Sections 1–4).
+> **Shared content contract — this is what keeps the planning preview and the scaffolded app in parity.** The preview sub-agents (Step 3.5b) and the scaffold agent both read this block and render the **same** records, so the preview faithfully previews what ships instead of generic filler. Author it now, while you have full domain context (Sections 1–4).
 
 For each page above, list 3–6 representative records using that page's primary entity — a short table or bullet list per page, whatever fits the data shape. Use **real values from this app's domain** (real entity names, realistic numbers, real states) — a recipe app lists recipes, an issue tracker lists issues, a storefront lists products. **Never** emit generic placeholders like "Item 1", "Recent items", "Card title", or lorem ipsum. The skeleton below shows the **format**, not the content — replace every `{...}` with your domain's records.
 
@@ -203,7 +203,7 @@ For each page above, list 3–6 representative records using that page's primary
 3. **Render the page previews** — Step 3.5b below: fan out one sub-agent per page. The view is already open; its file watcher flips each page from *Generating preview…* to the rendered HTML as soon as its `<slug>.html` lands.
 4. **Present plan**, ask for approval.
 5. If approved, update status from `Planning` to `Approved`.
-6. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. The scaffold agent treats `.azure/.preview-temp/*.html` as a mock-up reference and translates it into real components using the framework named in the Frontend stack section.
+6. **Immediately invoke `azure-project-scaffold`** (auto-chain). Do NOT ask user to invoke manually. The scaffold agent treats `.azure/.preview-temp/*.html` as a presentation-quality visual spec and translates it into real components using the framework named in the Frontend stack section.
 
 > **❌ STOP** — Do NOT proceed past approval until user approves. Once approved, auto-chain immediately.
 
@@ -213,9 +213,9 @@ For each page above, list 3–6 representative records using that page's primary
 
 > **Skip entirely** when Section 6 was omitted (i.e. no `frontend` service — derived App Type `API only` / `Background worker`). For all other app types this step is **mandatory** — without it, the plan-preview webview shows a permanent *Generating preview…* spinner and the user has no UI to approve.
 
-**Output location:** `.azure/.preview-temp/` (note the leading dot on the folder name — it's a transient, gitignored scratch space). The scaffold agent reads it as a mock-up reference, then deletes it as the last step of scaffolding (see scaffold skill Step 13).
+**Output location:** `.azure/.preview-temp/` (note the leading dot on the folder name — it's a transient, gitignored scratch space). The scaffold agent reads it as a presentation-quality visual spec, then deletes it as the last step of scaffolding (see scaffold skill Step 13).
 
-**Inputs:** the just-written `.azure/project-plan.md` Section 6 (Color Palette, Typography, Pages, Style Direction, Component Library) plus the per-region recipes in [`references/html-preview.md`](references/html-preview.md). Read that reference file **once** at the start of this step — the parent needs its `## Shared CSS` block for `theme.css` (Step 3.5a) and its `## Token → HTML recipes` to hand per-page slices to the sub-agents (Step 3.5b). The sub-agents never receive the Shared CSS.
+**Inputs:** the just-written `.azure/project-plan.md` Section 6 (Color Palette, Typography, Pages, Style Direction, Component Library), the **Shared design-quality principles** in [`../shared-references/frontend-quality-bar.md`](../shared-references/frontend-quality-bar.md) (the fidelity-agnostic contract this preview and the eventual scaffold both satisfy), plus the per-region recipes in [`references/html-preview.md`](references/html-preview.md). Read the html-preview reference **once** at the start of this step — the parent needs its `## Shared CSS` block for `theme.css` (Step 3.5a), its `## Icons` block, and its `## Token → HTML recipes` to hand per-page slices to the sub-agents (Step 3.5b). The sub-agents never receive the Shared CSS.
 
 #### 3.5a. Write `theme.css` and `manifest.json` (do this BEFORE fan-out)
 
@@ -274,8 +274,10 @@ Both files MUST exist before the plan-preview webview opens, so the controller c
     --space-7: 40px;
     --space-8: 56px;
 
-    /* ── Elevation (preview = single tier; the scaffold uses real component-library elevation) ── */
+    /* ── Elevation (multi-tier — gives cards/buttons/menus real depth) ── */
     --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.10);
+    --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.16);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -299,7 +301,7 @@ a:hover { text-decoration: underline; }
 /* Plus the shared component CSS from references/html-preview.md §Shared CSS */
 ```
 
-> **Why so plain?** This stylesheet powers a *directional sketch* — it confirms color story, page regions, and density during planning, nothing more. The scaffold raises the visual ambition (real component library, real icons, motion, dark mode, polished hero treatments). Resist the urge to add depth/shadow tiers/gradients here — that work belongs in the scaffold and is governed by `azure-project-scaffold/references/frontend-quality-bar.md` "Polish floor".
+> **Aim for presentation quality.** This stylesheet powers a **presentation-quality visual spec** — the screen a designer would show a stakeholder to sign off the look. Give it real depth (the multi-tier `--shadow-*` scale), consistent radius, a coherent themed palette, and clear type hierarchy. The `references/html-preview.md` Shared CSS block adds hover/focus transitions, skeleton shimmer, and polished empty/error states on top of these tokens. What the raw-static preview leaves to the scaffold is narrow and specific — real webfonts, JavaScript behavior, and real photos — governed by the shared contract in `shared-references/frontend-quality-bar.md`; everything else should already look finished here.
 
 Paste the full Shared CSS block from `references/html-preview.md` into the same file (header, nav, sidebar, hero, etc. — keep names exactly as the reference defines so the per-page HTML matches).
 
@@ -335,9 +337,10 @@ Launch one `runSubagent` call per page, **all in a single tool-call batch** (the
 2. The Color Palette, Typography, Style Direction, and Component Library values (for visual fidelity hints).
 3. **The app's domain context** — a 1–2 sentence summary of what the app does (from Sections 1–2) plus the relevant entity/data model, so the sub-agent knows what the page is actually about.
 4. **That page's records from Section 6's Sample Content block** — the real, domain-specific rows/values the page must display. This is the shared content contract; the scaffold reproduces the same records.
-5. **Only the region recipes this page needs** — from the `## Token → HTML recipes` section you already read, copy just the recipes for the layout tokens in this page's row, plus the `## Adapting sizing to the domain`, `## Wrapping a full page`, and `## Hard rules` sections. **Do NOT pass the `## Shared CSS` block** (~465 lines) — it was already baked into `theme.css` in Step 3.5a, and sub-agents link to `theme.css` rather than the CSS source. **Do NOT pass recipes for regions this page's layout doesn't name.**
-6. The exact output path: `.azure/.preview-temp/<slug>.html`.
-7. A directive: *"Write a single self-contained HTML file linking to `./theme.css`. Use the per-region recipes provided above, in the order from the page's Layout. Replace every `{...}` placeholder token in the recipes with the real Sample Content provided above — never generic filler like 'Item 1', 'Recent items', or 'Card title'. Do NOT add a banner claiming the app 'will use' a different library. Do NOT add `<script>` tags — the preview iframe runs sandboxed without scripts. Do NOT inline any CSS — all styling MUST come from `./theme.css`."*
+5. **Only the region recipes this page needs** — from the `## Token → HTML recipes` section you already read, copy just the recipes for the layout tokens in this page's row, plus the `## Icons` block (inline-SVG library — every page needs it), the `## Adapting sizing to the domain`, `## Wrapping a full page`, and `## Hard rules` sections. **Do NOT pass the `## Shared CSS` block** (~500 lines) — it was already baked into `theme.css` in Step 3.5a, and sub-agents link to `theme.css` rather than the CSS source. **Do NOT pass recipes for regions this page's layout doesn't name.**
+6. **State assignment (parent decides).** Distribute the three non-data states across the page set so each is depicted **at least once**: pick one data-bearing page to render in its `loading (skeleton)` state, one tab/section to render `empty`, and one page to show the `error (inline banner)`. Pass the matching recipe (and the instruction to use it) only to those assigned sub-agents; every other page renders the populated `data` state.
+7. The exact output path: `.azure/.preview-temp/<slug>.html`.
+8. A directive: *"Write a single self-contained, **presentation-quality** HTML file linking to `./theme.css` — it must look like a finished product screen, not a wireframe. Use the per-region recipes provided above, in the order from the page's Layout. Replace every `{...}` placeholder token with the real Sample Content provided above — never generic filler like 'Item 1', 'Recent items', or 'Card title'. Put a **real inline-SVG icon** (from the `## Icons` block) in every nav item, sidebar item, KPI tile, section-title row, empty state, and primary CTA — no emoji, no glyphs. **Fill every image slot** with a themed substitute (gradient media block, inline SVG, or initials) — never an empty box. Name primary CTAs after their action ('Create project', not 'Submit'). In nav/sidebar, link each **sibling** page with `href="./<sibling-slug>.html"` (the sibling's kebab-cased page name, matching its `<slug>.html`) so cross-page navigation works; the current page's own link uses `href="#"`. Do NOT add a banner claiming the app 'will use' a different library. Do NOT add `<script>` tags or inline `on*=` handlers (they are stripped before rendering). Do NOT inline any CSS — all styling MUST come from `./theme.css` (only the tiny layout shims shown in the recipes are allowed)."*
 
 Expected file shape:
 
@@ -437,9 +440,9 @@ The webview watches the entire `.azure/.preview-temp/` folder, so the manifest u
 | `None` (plain HTML / Static + API) | **Pico.css** + native form controls | Bulma, water.css | user explicitly names one |
 | `None` + `Background worker` | omit Section 6 entirely | \u2014 | always omit when there is no UI |
 
-> **Why this matters**: Without `Component Library:`, the scaffold step treats the wireframe's region tokens (`header`, `hero`, `grid`, ...) as raw layout instructions and produces blocky placeholder `<div>` JSX that LOOKS worse than the plan-preview wireframe. With `Component Library:` set, the scaffold renders each region using real library primitives (cards, tabs, fields, toolbars, message bars) themed by the Color Palette.
+> **Why this matters**: Without `Component Library:`, the scaffold step treats the region tokens (`header`, `hero`, `grid`, ...) as raw layout instructions and produces blocky placeholder `<div>` JSX that LOOKS worse than the presentation-quality plan preview. With `Component Library:` set, the scaffold renders each region using real library primitives (cards, tabs, fields, toolbars, message bars) themed by the Color Palette.
 
-> **Plan-preview note**: The plan-preview webview renders Section 6 as a **sandboxed HTML/CSS iframe** loaded from `.azure/.preview-temp/<page>.html`. It deliberately does NOT use any component library, real icons, motion, dark mode, or webfonts — the preview is a *directional sketch* (color story + page regions + density), and the scaffolded app is required to visibly exceed it using whatever `Component Library` is named in the plan. The webview disclosure reads *"Directional mock, not the final UI. The scaffold renders this with **{Component Library}**, real icons, motion, and dark mode — it will look noticeably more polished than the sketch below."* and a `MOCK` ribbon overlays the iframe.
+> **Plan-preview note**: The plan-preview webview renders Section 6 as a **sandboxed HTML/CSS iframe** loaded from `.azure/.preview-temp/<page>.html`. It is a **presentation-quality** preview — themed palette, real inline-SVG icons, elevation, populated content, and all four data states. What it leaves to the scaffold (raw-static limits) is narrow: real webfonts, JavaScript behavior, and real photos. The scaffolded app reproduces this look with the `Component Library` named in the plan and adds those production-only capabilities — it should look like the same product, brought to life, never less polished than the preview.
 
 ### Error Response Contract
 
