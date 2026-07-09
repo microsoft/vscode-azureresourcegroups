@@ -5,13 +5,48 @@
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
+import { ext } from "../../../extensionVariables";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { copilotOnRailsCommandIds } from "./copilotOnRailsCommands";
 
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
 
+/**
+ * globalState key holding the epoch-ms deadline until which a pending "Create
+ * with Copilot" request should auto-resume after a folder is opened.
+ */
+const PENDING_CREATE_DEADLINE_KEY = 'azureResourceGroups.createProjectWithCopilot.pendingDeadline';
+/** How long a pending create request stays valid across a window reload. */
+const PENDING_CREATE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * If the user previously pressed "Create with Copilot" without an open folder
+ * and chose to open one, re-runs the command once the folder is open. Call this
+ * during activation. No-ops when there's no pending request or it has expired.
+ */
+export async function resumePendingCreateWithCopilot(context: vscode.ExtensionContext): Promise<void> {
+    const deadline = context.globalState.get<number>(PENDING_CREATE_DEADLINE_KEY);
+    if (deadline === undefined) {
+        return;
+    }
+
+    // Consume the flag regardless of outcome so it only ever fires once.
+    await context.globalState.update(PENDING_CREATE_DEADLINE_KEY, undefined);
+
+    const folders = vscode.workspace.workspaceFolders;
+    if (Date.now() > deadline || !folders || folders.length === 0) {
+        return;
+    }
+
+    await vscode.commands.executeCommand(copilotOnRailsCommandIds.createProjectWithCopilot);
+}
+
 export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
+    if (!(await ensureWorkspaceOpen())) {
+        return;
+    }
+
     // Local Development => Deploy
     if (await hasCompletedPhase('.azure/vscode-debug-plan.md', 'implemented')) {
         const choice = await vscode.window.showInformationMessage(
@@ -53,6 +88,37 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
         planButtonLabel: vscode.l10n.t('Plan'),
     });
     controller.revealToForeground();
+}
+
+/**
+ * Ensures there is an open folder/workspace to create the project in. If none is
+ * open, prompts the user to open or create one. Returns true when a workspace is
+ * (already) open and the flow can continue, false otherwise.
+ */
+async function ensureWorkspaceOpen(): Promise<boolean> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (folders && folders.length > 0) {
+        return true;
+    }
+
+    const openFolder = vscode.l10n.t('Open Folder...');
+    const newWindow = vscode.l10n.t('New Empty Window');
+
+    const choice = await vscode.window.showInformationMessage(
+        vscode.l10n.t('Creating a project with Copilot requires an open folder. Open or create an empty folder to continue.'),
+        { modal: true },
+        openFolder,
+        newWindow,
+    );
+
+    if (choice === openFolder) {
+        await ext.context.globalState.update(PENDING_CREATE_DEADLINE_KEY, Date.now() + PENDING_CREATE_TIMEOUT_MS);
+        await vscode.commands.executeCommand('workbench.action.files.openFolder');
+    } else if (choice === newWindow) {
+        await vscode.commands.executeCommand('workbench.action.newWindow');
+    }
+
+    return false;
 }
 
 async function hasCompletedPhase(filePath: string, expectedStatus: string): Promise<boolean> {
