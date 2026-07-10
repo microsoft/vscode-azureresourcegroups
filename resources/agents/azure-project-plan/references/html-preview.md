@@ -10,7 +10,7 @@
 > 2. **The themed look** — brand palette applied through surfaces, badges, buttons, and a real hero; multi-tier elevation; consistent radius; clear type hierarchy.
 > 3. **All four data states** — `data`, `loading` (skeleton), `empty` (icon + CTA), `error` (banner + retry), depicted at least once across the page set.
 >
-> **What this raw-static preview intentionally leaves to the scaffold** (raw-static limits, not a license to look unpolished): real webfonts (use system fonts), JavaScript (no working toggles — states are depicted statically), and real photos (use themed substitutes). Everything else — real inline-SVG icons, gradients, elevation, hover/focus styling, skeleton shimmer — the preview DOES do, and must.
+> **What this raw-static preview intentionally leaves to the scaffold** (raw-static limits, not a license to look unpolished): real webfonts (use system fonts), JavaScript (no working toggles — states are depicted statically), and real photos (use neutral placeholder blocks — a subtle surface + border with a muted icon or initials, **not** a brand-color gradient). Everything else — real inline-SVG icons, elevation, hover/focus styling, skeleton shimmer — the preview DOES do, and must.
 >
 > **Polish is about *treatment*; content is about *the plan*.** Every `{...}` placeholder token in the recipes below MUST be replaced with the **real, domain-specific Sample Content** handed to you in your prompt (the page's records from the plan's Section 6 Sample Content block). Render the *same* entities, names, numbers, and states the scaffolded app will show — the preview is a faithful view of the real app, not a generic stand-in. **Never** emit generic filler like "Item 1", "Recent items", "Trending", "Card title", or lorem ipsum. **Never** add a banner or note claiming the app "will use" a different framework or component library — render the content directly with no such disclaimer.
 >
@@ -298,13 +298,12 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
 .preview-card__media {
     height: 128px;
     border-radius: var(--radius-sm);
-    background:
-        radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--color-accent) 55%, transparent), transparent 60%),
-        linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    background: var(--color-surface-sunken, var(--color-surface));
+    border: 1px solid var(--color-border);
     margin-bottom: var(--space-1);
     display: grid;
     place-items: center;
-    color: var(--color-on-primary);
+    color: color-mix(in srgb, var(--color-text) 32%, transparent);
     overflow: hidden;
 }
 
@@ -576,8 +575,8 @@ The planner's Step 3.5a writes `:root { ... }` with palette + typography tokens 
     place-items: center;
     font-size: var(--text-sm);
     font-weight: 700;
-    color: var(--color-on-primary);
-    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
     flex-shrink: 0;
 }
 
@@ -818,7 +817,7 @@ Every nav item, sidebar item, KPI tile, section-title row, empty state, error ba
 </div>
 ```
 
-> Render **one card per record**, not a fixed three. The grid auto-fills columns, so any count reflows cleanly. The `.preview-card__media` block is a themed gradient standing in for the record's image — drop a representative inline-SVG icon (or the entity's initials) inside it; never leave it empty.
+> Render **one card per record**, not a fixed three. The grid auto-fills columns, so any count reflows cleanly. The `.preview-card__media` block is a **neutral placeholder** standing in for the record's image — a subtle surface tint with a border; drop a representative inline-SVG icon (or the entity's initials) inside it. Keep it neutral (surface + border), **not** a brand-color gradient, so it reads as "a photo goes here" rather than a colored panel that shifts every time the palette changes. Never leave it empty.
 
 
 ### `form`
@@ -1030,7 +1029,7 @@ Pages without a sidebar can put `<section class="preview-main">` directly inside
 
 1. **One `<link rel="stylesheet" href="./theme.css">` only.** The `ScaffoldPlanViewController` rewrites this exact tag into an inline `<style>` block so the iframe is self-contained. Any other stylesheet reference is dropped.
 2. **No `<script>` tags, no inline `on*=` handlers.** Author JavaScript is stripped before the preview renders — the only script that runs is the host's trusted navigation bridge. Do not rely on any JS behavior. **Cross-page navigation DOES work:** a nav/sidebar link with `href="./<sibling-slug>.html"` is turned into a tab switch by the host, so the preview navigates between pages. Every other control (buttons, inputs, tabs, toggles) is visual only.
-3. **No external assets.** No `<img src="https://…">`, no Google Fonts `<link>`, no Font Awesome CDN. Represent imagery with CSS gradients, inline `<svg>`, or initials/icon blocks — never a remote URL and never an empty tinted box. Icons are **inline `<svg>`** (see the `## Icons` recipe), never emoji or remote icon fonts.
+3. **No external assets.** No `<img src="https://…">`, no Google Fonts `<link>`, no Font Awesome CDN. Represent imagery with neutral placeholder blocks (surface + border with a muted icon or initials) — never a remote URL, never a brand-color gradient fill (it overstates the palette's impact), and never an empty tinted box. Icons are **inline `<svg>`** (see the `## Icons` recipe), never emoji or remote icon fonts.
 4. **Inline `style="…"` is allowed only for the small layout shims shown in the recipes above** (flex row wrappers, the hero ghost-button text color, skeleton-line widths, the error-banner Retry `margin-left`). All semantic styling — fonts, palette colors, shadows, spacing scale, elevation, radius — MUST come from `theme.css` so the live palette swatches in the parent webview meaningfully describe what's rendered. Never invent new inline styles to recolor or restyle components.
 5. **File size sanity:** each page HTML should be **< 24 KB**. The richer recipes (KPI rows, status badges, full headers, inline-SVG icons, skeleton/error states) raise the floor; if you're past 24 KB you're inventing content the plan didn't call for.
 6. **Never open these files in a browser or editor tab.** Each `.azure/.preview-temp/*.html` page is consumed *only* by the plan webview's **UI Preview** card, which renders it in a sandboxed iframe. Do not preview it with `simpleBrowser.show`, `vscode.env.openExternal`, a dev/web server, or by opening the `.html` in an editor/preview tab — there is no port or URL, and these files are deleted by the scaffold step.
