@@ -158,6 +158,7 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping("azureResourceGroups.askAgentAboutActivityLogItem", askAgentAboutActivityLog);
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
 
+    // Copilot on Rails
     registerCopilotOnRailsCommands();
 }
 
