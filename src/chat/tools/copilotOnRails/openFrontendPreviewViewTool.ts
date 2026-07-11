@@ -8,11 +8,11 @@ import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
-import { setCopilotToolTelemetry } from "./setCopilotToolTelemetry";
 import { z } from "zod/mini";
+import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
+import { openFrontendPreviewViewCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const openFrontendPreviewViewToolName = 'open_frontend_preview_view';
-const openFrontendPreviewViewCommandId = 'azureResourceGroups.openFrontendPreviewView';
 
 const openFrontendPreviewViewInputSchema = z.object({
     frontendFolder: z.optional(z.string()),
@@ -28,9 +28,9 @@ export const openFrontendPreviewViewTool: CopilotTool<typeof openFrontendPreview
     },
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openFrontendPreviewViewToolName}/execute`, async (context: IActionContext) => {
-            setCopilotToolTelemetry(context, extras);
+            setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(openFrontendPreviewViewCommandId, input.frontendFolder);
+            await vscode.commands.executeCommand(openFrontendPreviewViewCommand, input.frontendFolder);
 
             return { message: l10n.t('Opened the Frontend Preview view.') };
         }) ?? {

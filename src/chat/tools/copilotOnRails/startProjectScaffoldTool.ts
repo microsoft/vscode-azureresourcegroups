@@ -8,11 +8,11 @@ import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
-import { setCopilotToolTelemetry } from "./setCopilotToolTelemetry";
 import { z } from "zod/mini";
+import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
+import { startProjectScaffoldCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const startProjectScaffoldToolName = 'start_project_scaffold';
-const startProjectScaffoldCommandId = 'azureResourceGroups.startProjectScaffold';
 
 const startProjectScaffoldInputSchema = z.object({
     prompt: z.optional(z.string()),
@@ -28,9 +28,9 @@ export const startProjectScaffoldTool: CopilotTool<typeof startProjectScaffoldIn
     },
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startProjectScaffoldToolName}/execute`, async (context: IActionContext) => {
-            setCopilotToolTelemetry(context, extras);
+            setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(startProjectScaffoldCommandId, input.prompt);
+            await vscode.commands.executeCommand(startProjectScaffoldCommand, input.prompt);
 
             return { message: l10n.t('Started the project scaffold agent.') };
         }) ?? {

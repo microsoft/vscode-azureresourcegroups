@@ -8,11 +8,11 @@ import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
-import { setCopilotToolTelemetry } from "./setCopilotToolTelemetry";
 import type { z } from "zod";
+import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
+import { openLocalPlanViewCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const openLocalPlanViewToolName = 'open_local_plan_view';
-const openLocalPlanViewCommandId = 'azureResourceGroups.openLocalPlanView';
 
 export const openLocalPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSchema> = {
     name: openLocalPlanViewToolName,
@@ -23,9 +23,9 @@ export const openLocalPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOut
     },
     execute: async (_, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openLocalPlanViewToolName}/execute`, async (context: IActionContext) => {
-            setCopilotToolTelemetry(context, extras);
+            setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(openLocalPlanViewCommandId);
+            await vscode.commands.executeCommand(openLocalPlanViewCommand);
 
             return { message: l10n.t('Opened the Local Development Plan view.') };
         }) ?? {

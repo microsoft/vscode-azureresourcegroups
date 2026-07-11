@@ -8,11 +8,11 @@ import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
-import { setCopilotToolTelemetry } from "./setCopilotToolTelemetry";
 import { z } from "zod/mini";
+import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
+import { startAzureDebugGenerateCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const startAzureDebugGenerateToolName = 'start_azure_debug_generate';
-const startAzureDebugGenerateCommandId = 'azureResourceGroups.startAzureDebugGenerate';
 
 const startAzureDebugGenerateInputSchema = z.object({
     prompt: z.optional(z.string()),
@@ -28,9 +28,9 @@ export const startAzureDebugGenerateTool: CopilotTool<typeof startAzureDebugGene
     },
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startAzureDebugGenerateToolName}/execute`, async (context: IActionContext) => {
-            setCopilotToolTelemetry(context, extras);
+            setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(startAzureDebugGenerateCommandId, input.prompt);
+            await vscode.commands.executeCommand(startAzureDebugGenerateCommand, input.prompt);
 
             return { message: l10n.t('Started the local development generate agent.') };
         }) ?? {

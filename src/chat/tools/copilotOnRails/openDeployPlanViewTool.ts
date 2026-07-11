@@ -8,11 +8,11 @@ import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
-import { setCopilotToolTelemetry } from "./setCopilotToolTelemetry";
 import type { z } from "zod";
+import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
+import { openDeployPlanViewCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const openDeployPlanViewToolName = 'open_deploy_plan_view';
-const openDeployPlanViewCommandId = 'azureResourceGroups.openDeployPlanView';
 
 export const openDeployPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSchema> = {
     name: openDeployPlanViewToolName,
@@ -23,9 +23,9 @@ export const openDeployPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOu
     },
     execute: async (_, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openDeployPlanViewToolName}/execute`, async (context: IActionContext) => {
-            setCopilotToolTelemetry(context, extras);
+            setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(openDeployPlanViewCommandId);
+            await vscode.commands.executeCommand(openDeployPlanViewCommand);
 
             return { message: l10n.t('Opened the Deployment Plan view.') };
         }) ?? {

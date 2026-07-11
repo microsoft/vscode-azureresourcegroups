@@ -8,11 +8,11 @@ import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
-import { setCopilotToolTelemetry } from "./setCopilotToolTelemetry";
 import type { z } from "zod";
+import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
+import { openScaffoldNextStepsViewCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const openScaffoldNextStepsViewToolName = 'open_scaffold_next_steps_view';
-const openScaffoldNextStepsViewCommandId = 'azureResourceGroups.openScaffoldNextStepsView';
 
 export const openScaffoldNextStepsViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSchema> = {
     name: openScaffoldNextStepsViewToolName,
@@ -23,9 +23,9 @@ export const openScaffoldNextStepsViewTool: CopilotTool<z.ZodVoid, typeof Unspec
     },
     execute: async (_, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openScaffoldNextStepsViewToolName}/execute`, async (context: IActionContext) => {
-            setCopilotToolTelemetry(context, extras);
+            setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(openScaffoldNextStepsViewCommandId);
+            await vscode.commands.executeCommand(openScaffoldNextStepsViewCommand);
 
             return { message: l10n.t('Opened the Next Steps view.') };
         }) ?? {

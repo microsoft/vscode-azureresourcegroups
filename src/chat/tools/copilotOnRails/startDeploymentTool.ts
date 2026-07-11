@@ -8,11 +8,11 @@ import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
-import { setCopilotToolTelemetry } from "./setCopilotToolTelemetry";
 import { z } from "zod/mini";
+import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
+import { startDeploymentCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const startDeploymentToolName = 'start_deployment';
-const startDeploymentCommandId = 'azureResourceGroups.startDeployment';
 
 const startDeploymentInputSchema = z.object({
     prompt: z.optional(z.string()),
@@ -28,9 +28,9 @@ export const startDeploymentTool: CopilotTool<typeof startDeploymentInputSchema,
     },
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startDeploymentToolName}/execute`, async (context: IActionContext) => {
-            setCopilotToolTelemetry(context, extras);
+            setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(startDeploymentCommandId, input.prompt);
+            await vscode.commands.executeCommand(startDeploymentCommand, input.prompt);
 
             return { message: l10n.t('Started the deployment agent.') };
         }) ?? {

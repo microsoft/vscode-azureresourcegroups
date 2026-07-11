@@ -8,11 +8,11 @@ import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
-import { setCopilotToolTelemetry } from "./setCopilotToolTelemetry";
 import { z } from "zod/mini";
+import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
+import { openLocalNextStepsViewCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const openLocalNextStepsViewToolName = 'open_local_next_steps_view';
-const openLocalNextStepsViewCommandId = 'azureResourceGroups.openLocalNextStepsView';
 
 const openLocalNextStepsViewInputSchema = z.object({
     hasApiTests: z.optional(z.boolean()),
@@ -28,9 +28,9 @@ export const openLocalNextStepsViewTool: CopilotTool<typeof openLocalNextStepsVi
     },
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openLocalNextStepsViewToolName}/execute`, async (context: IActionContext) => {
-            setCopilotToolTelemetry(context, extras);
+            setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(openLocalNextStepsViewCommandId, input.hasApiTests);
+            await vscode.commands.executeCommand(openLocalNextStepsViewCommand, input.hasApiTests);
 
             return { message: l10n.t('Opened the local development Next Steps view.') };
         }) ?? {
