@@ -10,7 +10,7 @@ import * as vscode from "vscode";
 import { l10n } from "vscode";
 import type { z } from "zod";
 import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
-import { openPlanViewCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const openPlanViewToolName = 'open_plan_view';
 
@@ -25,7 +25,7 @@ export const openPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSc
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openPlanViewToolName}/execute`, async (context: IActionContext) => {
             setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(openPlanViewCommand);
+            await vscode.commands.executeCommand(copilotOnRailsCommandIds.openScaffoldPlanView);
 
             return { message: l10n.t('Opened the Plan view.') };
         }) ?? {

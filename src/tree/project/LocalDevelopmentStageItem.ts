@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { copilotOnRailsCommandIds } from '../../webviews/copilotOnRails/extension/copilotOnRailsCommands';
+import { copilotOnRailsCommandIds } from '../../commands/copilotOnRails/registerCopilotOnRailsCommands';
 import { DebugConfigurationNode } from './DebugConfigurationNode';
 import { OpenPlanNode } from './OpenPlanNode';
 import { ProgressNode } from './ProgressNode';

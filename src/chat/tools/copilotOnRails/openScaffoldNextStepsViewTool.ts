@@ -10,7 +10,7 @@ import * as vscode from "vscode";
 import { l10n } from "vscode";
 import type { z } from "zod";
 import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
-import { openScaffoldNextStepsViewCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const openScaffoldNextStepsViewToolName = 'open_scaffold_next_steps_view';
 
@@ -25,7 +25,7 @@ export const openScaffoldNextStepsViewTool: CopilotTool<z.ZodVoid, typeof Unspec
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openScaffoldNextStepsViewToolName}/execute`, async (context: IActionContext) => {
             setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(openScaffoldNextStepsViewCommand);
+            await vscode.commands.executeCommand(copilotOnRailsCommandIds.openScaffoldNextStepsView);
 
             return { message: l10n.t('Opened the Next Steps view.') };
         }) ?? {

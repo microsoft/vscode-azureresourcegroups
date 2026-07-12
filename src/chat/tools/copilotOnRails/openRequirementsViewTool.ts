@@ -9,7 +9,7 @@ import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
 import type { z } from "zod";
-import { openRequirementsViewCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
 
 const openRequirementsViewToolName = 'open_requirements_view';
@@ -25,7 +25,7 @@ export const openRequirementsViewTool: CopilotTool<z.ZodVoid, typeof Unspecified
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openRequirementsViewToolName}/execute`, async (context: IActionContext) => {
             setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(openRequirementsViewCommand);
+            await vscode.commands.executeCommand(copilotOnRailsCommandIds.openRequirementsView);
             return { message: l10n.t('Opened the Requirements view. Wait for user input before proceeding.') };
         }) ?? {
             message: l10n.t('Failed to open the Requirements view.'),

@@ -10,7 +10,7 @@ import * as vscode from "vscode";
 import { l10n } from "vscode";
 import { z } from "zod/mini";
 import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
-import { startDeploymentCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const startDeploymentToolName = 'start_deployment';
 
@@ -30,7 +30,7 @@ export const startDeploymentTool: CopilotTool<typeof startDeploymentInputSchema,
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startDeploymentToolName}/execute`, async (context: IActionContext) => {
             setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(startDeploymentCommand, input.prompt);
+            await vscode.commands.executeCommand(copilotOnRailsCommandIds.startDeployment, input.prompt);
 
             return { message: l10n.t('Started the deployment agent.') };
         }) ?? {

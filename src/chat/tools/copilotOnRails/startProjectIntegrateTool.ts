@@ -10,7 +10,7 @@ import * as vscode from "vscode";
 import { l10n } from "vscode";
 import { z } from "zod/mini";
 import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
-import { startProjectIntegrateCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const startProjectIntegrateToolName = 'start_project_integrate';
 
@@ -30,7 +30,7 @@ export const startProjectIntegrateTool: CopilotTool<typeof startProjectIntegrate
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startProjectIntegrateToolName}/execute`, async (context: IActionContext) => {
             setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(startProjectIntegrateCommand, input.prompt);
+            await vscode.commands.executeCommand(copilotOnRailsCommandIds.startProjectIntegrate, input.prompt);
 
             return { message: l10n.t('Started the project integrate agent.') };
         }) ?? {

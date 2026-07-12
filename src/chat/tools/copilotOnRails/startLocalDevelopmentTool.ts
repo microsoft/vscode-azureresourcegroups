@@ -10,7 +10,7 @@ import * as vscode from "vscode";
 import { l10n } from "vscode";
 import { z } from "zod/mini";
 import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
-import { startLocalDevelopmentCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const startLocalDevelopmentToolName = 'start_local_development';
 
@@ -30,7 +30,7 @@ export const startLocalDevelopmentTool: CopilotTool<typeof startLocalDevelopment
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startLocalDevelopmentToolName}/execute`, async (context: IActionContext) => {
             setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(startLocalDevelopmentCommand, input.prompt);
+            await vscode.commands.executeCommand(copilotOnRailsCommandIds.startLocalDevelopment, input.prompt);
 
             return { message: l10n.t('Started the local development agent.') };
         }) ?? {

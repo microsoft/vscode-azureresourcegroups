@@ -6,7 +6,7 @@
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
-import { copilotOnRailsCommandIds } from "./copilotOnRailsCommands";
+import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');

@@ -10,7 +10,7 @@ import * as vscode from "vscode";
 import { l10n } from "vscode";
 import { z } from "zod/mini";
 import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
-import { openFrontendPreviewViewCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const openFrontendPreviewViewToolName = 'open_frontend_preview_view';
 
@@ -30,7 +30,7 @@ export const openFrontendPreviewViewTool: CopilotTool<typeof openFrontendPreview
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openFrontendPreviewViewToolName}/execute`, async (context: IActionContext) => {
             setCopilotOnRailsTelemetry(context, extras);
 
-            await vscode.commands.executeCommand(openFrontendPreviewViewCommand, input.frontendFolder);
+            await vscode.commands.executeCommand(copilotOnRailsCommandIds.openFrontendPreviewView, input.frontendFolder);
 
             return { message: l10n.t('Opened the Frontend Preview view.') };
         }) ?? {
