@@ -9,7 +9,7 @@ import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
 import type { z } from "zod";
-import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
+import { setCopilotOnRailsToolTelemetry } from "../../../commands/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const openLocalPlanViewToolName = 'open_local_plan_view';
@@ -23,10 +23,8 @@ export const openLocalPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOut
     },
     execute: async (_, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openLocalPlanViewToolName}/execute`, async (context: IActionContext) => {
-            setCopilotOnRailsTelemetry(context, extras);
-
+            setCopilotOnRailsToolTelemetry(context, extras);
             await vscode.commands.executeCommand(copilotOnRailsCommandIds.openLocalPlanView);
-
             return { message: l10n.t('Opened the Local Development Plan view.') };
         }) ?? {
             message: l10n.t('Failed to open the Local Development Plan view.'),

@@ -9,8 +9,8 @@ import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
 import type { z } from "zod";
-import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { setCopilotOnRailsToolTelemetry } from "../../../commands/copilotOnRails/copilotOnRailsTelemetryUtils";
 
 const openDeployPlanViewToolName = 'open_deploy_plan_view';
 
@@ -23,7 +23,7 @@ export const openDeployPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOu
     },
     execute: async (_, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openDeployPlanViewToolName}/execute`, async (context: IActionContext) => {
-            setCopilotOnRailsTelemetry(context, extras);
+            setCopilotOnRailsToolTelemetry(context, extras);
 
             await vscode.commands.executeCommand(copilotOnRailsCommandIds.openDeploymentPlanView);
 

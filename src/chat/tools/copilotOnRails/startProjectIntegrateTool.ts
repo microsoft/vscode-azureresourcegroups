@@ -9,7 +9,7 @@ import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
 import { l10n } from "vscode";
 import { z } from "zod/mini";
-import { setCopilotOnRailsTelemetry } from "./setCopilotOnRailsTelemetry";
+import { setCopilotOnRailsToolTelemetry } from "../../../commands/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const startProjectIntegrateToolName = 'start_project_integrate';
@@ -28,7 +28,7 @@ export const startProjectIntegrateTool: CopilotTool<typeof startProjectIntegrate
     },
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startProjectIntegrateToolName}/execute`, async (context: IActionContext) => {
-            setCopilotOnRailsTelemetry(context, extras);
+            setCopilotOnRailsToolTelemetry(context, extras);
 
             await vscode.commands.executeCommand(copilotOnRailsCommandIds.startProjectIntegrate, input.prompt);
 
