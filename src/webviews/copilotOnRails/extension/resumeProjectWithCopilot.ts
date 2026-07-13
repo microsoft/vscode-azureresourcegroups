@@ -8,11 +8,28 @@ import * as vscode from 'vscode';
 import { openChatWithAgent } from '../../../commands/copilotOnRails/openChatWithAgent';
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
 import { ProjectPlanStatus, statusEquals } from '../views/utils/projectPlanStatus';
+import { type LoadingViewConfiguration } from '../views/utils/viewConfigTypes';
 import { isDebugPlanImplemented } from './autopilot';
 import { openFrontendPreviewView } from './openFrontendPreviewView';
 import { openLocalDevNextStepsView } from './openLocalDevNextStepsView';
-import { buildResumePrompt, markSessionActiveInWindow, readSessionState, resumeAgentFor } from './projectSession';
+import { openScaffoldNextStepsView } from './openScaffoldNextStepsView';
+import { buildResumePrompt, markSessionActiveInWindow, type ProjectPhase, readSessionState, resumeAgentFor } from './projectSession';
 import { readProjectPlanStatus } from './utils/planStatus';
+
+/**
+ * The loading view shown when resuming a phase by re-launching its chat agent,
+ * so the user gets the same "Copilot is working" surface as the original launch
+ * instead of a bare chat with no visible progress. Mirrors the loading configs
+ * of the `start*` hand-off commands (stage: 0 = scaffolding, 1 = local dev,
+ * 2 = deployment).
+ */
+const RESUME_LOADING: Readonly<Record<ProjectPhase, LoadingViewConfiguration>> = {
+    plan: { stage: 0, title: vscode.l10n.t('Resuming project planning...'), message: vscode.l10n.t('Copilot is picking your project plan back up where it left off.') },
+    scaffold: { stage: 0, title: vscode.l10n.t('Resuming scaffolding...'), message: vscode.l10n.t('Copilot is picking your project scaffolding back up where it left off.') },
+    integrate: { stage: 0, title: vscode.l10n.t('Resuming integration...'), message: vscode.l10n.t('Copilot is picking your live-data integration back up where it left off.') },
+    localDev: { stage: 1, title: vscode.l10n.t('Resuming local development...'), message: vscode.l10n.t('Copilot is picking your local development setup back up where it left off.') },
+    deploy: { stage: 2, title: vscode.l10n.t('Resuming deployment...'), message: vscode.l10n.t('Copilot is picking your deployment back up where it left off.') },
+};
 
 /**
  * Resumes an interrupted "Create with Copilot" run. Reads the single
@@ -48,6 +65,15 @@ export async function resumeProjectWithCopilot(_context: IActionContext): Promis
         return;
     }
 
+    // Integration finished: the integrate agent advanced the project plan to
+    // "Integrated" and opened the post-integration "next steps" view (set up
+    // local development / deploy). Re-open that view rather than resuming the
+    // integrate chat, which already completed its work.
+    if (state.phase === 'integrate' && await isIntegrationComplete()) {
+        openScaffoldNextStepsView({});
+        return;
+    }
+
     // Local development finished at debug-config generation: the debug plan is
     // "Implemented" and the flow's next surface is the local-dev "next steps"
     // view (deploy / iterate / run API tests) that the debug-generate agent opens
@@ -57,7 +83,7 @@ export async function resumeProjectWithCopilot(_context: IActionContext): Promis
         return;
     }
 
-    await openChatWithAgent(resumeAgentFor(state.phase), buildResumePrompt(state));
+    await openChatWithAgent(resumeAgentFor(state.phase), buildResumePrompt(state), RESUME_LOADING[state.phase]);
 }
 
 /**
@@ -67,6 +93,15 @@ export async function resumeProjectWithCopilot(_context: IActionContext): Promis
  */
 async function isAwaitingIntegration(): Promise<boolean> {
     return statusEquals(await readProjectPlanStatus(PROJECT_PLAN_FILE_GLOB), ProjectPlanStatus.awaitingIntegration);
+}
+
+/**
+ * True when `.azure/project-plan.md` reports the `Integrated` status — the point
+ * at which the integrate agent has finished wiring the frontend to live data and
+ * opened the post-integration "next steps" view.
+ */
+async function isIntegrationComplete(): Promise<boolean> {
+    return statusEquals(await readProjectPlanStatus(PROJECT_PLAN_FILE_GLOB), ProjectPlanStatus.integrated);
 }
 
 /**
