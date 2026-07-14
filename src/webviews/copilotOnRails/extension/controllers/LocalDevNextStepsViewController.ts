@@ -7,6 +7,7 @@ import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { azureDebugGenerateAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type LocalDevNextStepsViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
@@ -51,7 +52,7 @@ export class LocalDevNextStepsViewController extends WebviewController<LocalDevN
                 }
                 this.panel.dispose();
                 await vscode.commands.executeCommand('workbench.action.chat.open', {
-                    mode: 'azure-debug-generate',
+                    mode: azureDebugGenerateAgent,
                     query: vscode.l10n.t('Run the API tests to verify my endpoints.'),
                 });
                 return;

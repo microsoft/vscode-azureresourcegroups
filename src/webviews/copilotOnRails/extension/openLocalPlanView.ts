@@ -4,9 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import { DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { type LocalPlanData, parseLocalPlanMarkdown } from "../views/utils/parseLocalPlanMarkdown";
 import { LocalPlanViewController } from "./controllers/LocalPlanViewController";
 import { closeLoadingView } from "./openLoadingView";
+import { handleTrackedViewClosed } from "./projectSession";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<LocalPlanData, LocalPlanViewController>({
@@ -15,6 +17,7 @@ const host = new SingletonViewHost<LocalPlanData, LocalPlanViewController>({
         return new LocalPlanViewController(data, uri);
     },
     updateController: (controller, data, uri) => controller.updatePlanData(data, uri),
+    onDidClose: () => void handleTrackedViewClosed(),
 });
 
 export function isLocalPlanViewOpen(): boolean {
@@ -55,7 +58,7 @@ function tryParseLocalPlan(content: string, sourceFileUri: vscode.Uri | undefine
 
 export async function openLocalPlanViewFromWorkspace(): Promise<void> {
     const selected = await pickWorkspaceFile(
-        '.azure/vscode-debug-plan.md',
+        DEBUG_PLAN_FILE_GLOB,
         vscode.l10n.t('No local plan markdown files found in the workspace.'),
     );
     if (selected) {
