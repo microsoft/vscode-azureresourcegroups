@@ -60,12 +60,7 @@ async function resolveFrontendFolder(frontendFolder: string | undefined): Promis
         return undefined;
     }
 
-    // Priority: an explicit argument (the scaffold agent passes the real folder
-    // when it opens the preview) > folders we recorded on prior opens, most
-    // recent first (so resume reopens the last one) > folders named by the
-    // scaffold's hand-off artifact (covers resumes where nothing was recorded,
-    // e.g. a fresh window or a project scaffolded before this was tracked) >
-    // the default location.
+
     const candidates = [
         frontendFolder?.trim(),
         ...readFrontendFolders(),

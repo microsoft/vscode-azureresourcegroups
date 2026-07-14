@@ -42,12 +42,6 @@ const PLAN_FILE_GLOBS = [
 const ALL_PROJECT_FILE_GLOBS = [REQUIREMENTS_FILE_GLOB, ...PLAN_FILE_GLOBS] as const;
 
 export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
-    // Order MUST match ALL_PROJECT_FILE_GLOBS: requirements, project plan,
-    // integration plan, debug (local development) plan, deployment plan. The
-    // integration plan has no stage of its own, so its slot is elided — but it
-    // must still be accounted for, otherwise every later result shifts by one
-    // (e.g. the local-dev stage would read the integration plan and wrongly
-    // appear started).
     const [requirementsFiles, projectPlanFiles, , localDevelopmentPlanFiles, deploymentPlanFiles] = await Promise.all(
         ALL_PROJECT_FILE_GLOBS.map((glob) => vscode.workspace.findFiles(glob, undefined, 1)),
     );
