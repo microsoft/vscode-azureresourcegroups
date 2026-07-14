@@ -6,11 +6,10 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import * as vscode from "vscode";
 import { l10n } from "vscode";
 import { z } from "zod/mini";
-import { setCopilotOnRailsToolTelemetry } from "../../../commands/copilotOnRails/copilotOnRailsTelemetryUtils";
-import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
+import { startDeploymentCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const startDeploymentToolName = 'start_deployment';
 
@@ -28,11 +27,10 @@ export const startDeploymentTool: CopilotTool<typeof startDeploymentInputSchema,
     },
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startDeploymentToolName}/execute`, async (context: IActionContext) => {
-            setCopilotOnRailsToolTelemetry(context, extras);
-
-            await vscode.commands.executeCommand(copilotOnRailsCommandIds.startDeployment, input.prompt);
-
-            return { message: l10n.t('Started the deployment agent.') };
+            return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: startDeploymentToolName, extras }, async (corContext) => {
+                await startDeploymentCommand(corContext, input.prompt);
+                return { message: l10n.t('Started the deployment agent.') };
+            });
         }) ?? {
             message: l10n.t('Failed to start the deployment agent.'),
         };

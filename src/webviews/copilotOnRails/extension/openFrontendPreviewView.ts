@@ -6,6 +6,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { FrontendPreviewViewController } from "./controllers/FrontendPreviewViewController";
 import { closeLoadingView } from "./openLoadingView";
 
@@ -21,7 +22,7 @@ const DEFAULT_FRONTEND_FOLDER = 'services/web';
  * @param frontendFolder Optional workspace-relative path to the frontend
  *                       project. Defaults to `services/web`.
  */
-export function openFrontendPreviewView(frontendFolder?: string): void {
+export function openFrontendPreviewView(_context: CopilotOnRailsContext, frontendFolder?: string): void {
     const folder = resolveFrontendFolder(frontendFolder);
     if (!folder) {
         return;

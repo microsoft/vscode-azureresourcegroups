@@ -6,11 +6,10 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import * as vscode from "vscode";
 import { l10n } from "vscode";
 import { z } from "zod/mini";
-import { setCopilotOnRailsToolTelemetry } from "../../../commands/copilotOnRails/copilotOnRailsTelemetryUtils";
-import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
+import { openLocalDevNextStepsView } from "../../../webviews/copilotOnRails/extension/openLocalDevNextStepsView";
 
 const openLocalNextStepsViewToolName = 'open_local_next_steps_view';
 
@@ -28,11 +27,10 @@ export const openLocalNextStepsViewTool: CopilotTool<typeof openLocalNextStepsVi
     },
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openLocalNextStepsViewToolName}/execute`, async (context: IActionContext) => {
-            setCopilotOnRailsToolTelemetry(context, extras);
-
-            await vscode.commands.executeCommand(copilotOnRailsCommandIds.openLocalNextStepsView, input.hasApiTests);
-
-            return { message: l10n.t('Opened the local development Next Steps view.') };
+            return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: openLocalNextStepsViewToolName, extras }, async (corContext) => {
+                await openLocalDevNextStepsView(corContext, input.hasApiTests);
+                return { message: l10n.t('Opened the local development Next Steps view.') };
+            });
         }) ?? {
             message: l10n.t('Failed to open the local development Next Steps view.'),
         };

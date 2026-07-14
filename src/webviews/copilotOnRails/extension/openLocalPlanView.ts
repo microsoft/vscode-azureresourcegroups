@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { type LocalPlanData, parseLocalPlanMarkdown } from "../views/utils/parseLocalPlanMarkdown";
 import { LocalPlanViewController } from "./controllers/LocalPlanViewController";
 import { closeLoadingView } from "./openLoadingView";
@@ -53,7 +54,7 @@ function tryParseLocalPlan(content: string, sourceFileUri: vscode.Uri | undefine
     return parsed;
 }
 
-export async function openLocalPlanViewFromWorkspace(): Promise<void> {
+export async function openLocalPlanViewFromWorkspace(_context: CopilotOnRailsContext): Promise<void> {
     const selected = await pickWorkspaceFile(
         '.azure/vscode-debug-plan.md',
         vscode.l10n.t('No local plan markdown files found in the workspace.'),

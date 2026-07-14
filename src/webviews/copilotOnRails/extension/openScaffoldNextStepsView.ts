@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { ScaffoldNextStepsViewController } from "./controllers/ScaffoldNextStepsViewController";
 import { closeLoadingView } from "./openLoadingView";
 
@@ -13,7 +14,8 @@ let controller: ScaffoldNextStepsViewController | undefined;
  * Show the post-scaffolding "what's next" view. Disposes any open
  * loading view first so the next-steps panel takes its place.
  */
-export function openScaffoldNextStepsView(config: Record<string, never>): void {
+export function openScaffoldNextStepsView(_context: CopilotOnRailsContext): void {
+    const config: Record<string, never> = {};
     closeLoadingView();
 
     if (controller) {

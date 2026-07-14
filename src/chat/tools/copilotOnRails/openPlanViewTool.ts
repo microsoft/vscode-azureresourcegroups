@@ -6,11 +6,10 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import * as vscode from "vscode";
 import { l10n } from "vscode";
 import type { z } from "zod";
-import { setCopilotOnRailsToolTelemetry } from "../../../commands/copilotOnRails/copilotOnRailsTelemetryUtils";
-import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
+import { openPlanViewFromWorkspace } from "../../../webviews/copilotOnRails/extension/openScaffoldPlanView";
 
 const openPlanViewToolName = 'open_plan_view';
 
@@ -23,9 +22,10 @@ export const openPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSc
     },
     execute: async (_, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openPlanViewToolName}/execute`, async (context: IActionContext) => {
-            setCopilotOnRailsToolTelemetry(context, extras);
-            await vscode.commands.executeCommand(copilotOnRailsCommandIds.openScaffoldPlanView);
-            return { message: l10n.t('Opened the Plan view.') };
+            return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: openPlanViewToolName, extras }, async (corContext) => {
+                await openPlanViewFromWorkspace(corContext);
+                return { message: l10n.t('Opened the Plan view.') };
+            });
         }) ?? {
             message: l10n.t('Failed to open the Plan view.'),
         };

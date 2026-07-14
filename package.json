@@ -153,6 +153,11 @@
                 "category": "Azure"
             },
             {
+                "command": "azureResourceGroups.inspectDiagnostics",
+                "title": "Inspect Copilot on Rails Diagnostics",
+                "category": "Azure"
+            },
+            {
                 "command": "azureResourceGroups.downloadAgentInstructions",
                 "title": "Download Azure Agent Instructions",
                 "category": "Azure"

@@ -6,11 +6,10 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import * as vscode from "vscode";
 import { l10n } from "vscode";
 import type { z } from "zod";
-import { setCopilotOnRailsToolTelemetry } from "../../../commands/copilotOnRails/copilotOnRailsTelemetryUtils";
-import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
+import { openScaffoldNextStepsView } from "../../../webviews/copilotOnRails/extension/openScaffoldNextStepsView";
 
 const openScaffoldNextStepsViewToolName = 'open_scaffold_next_steps_view';
 
@@ -23,11 +22,10 @@ export const openScaffoldNextStepsViewTool: CopilotTool<z.ZodVoid, typeof Unspec
     },
     execute: async (_, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openScaffoldNextStepsViewToolName}/execute`, async (context: IActionContext) => {
-            setCopilotOnRailsToolTelemetry(context, extras);
-
-            await vscode.commands.executeCommand(copilotOnRailsCommandIds.openScaffoldNextStepsView);
-
-            return { message: l10n.t('Opened the Next Steps view.') };
+            return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: openScaffoldNextStepsViewToolName, extras }, async (corContext) => {
+                openScaffoldNextStepsView(corContext);
+                return { message: l10n.t('Opened the Next Steps view.') };
+            });
         }) ?? {
             message: l10n.t('Failed to open the Next Steps view.'),
         };

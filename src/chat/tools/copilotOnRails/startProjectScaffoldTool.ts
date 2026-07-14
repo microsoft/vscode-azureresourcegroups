@@ -6,11 +6,10 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import * as vscode from "vscode";
 import { l10n } from "vscode";
 import { z } from "zod/mini";
-import { setCopilotOnRailsToolTelemetry } from "../../../commands/copilotOnRails/copilotOnRailsTelemetryUtils";
-import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
+import { startProjectScaffoldCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 
 const startProjectScaffoldToolName = 'start_project_scaffold';
 
@@ -28,11 +27,10 @@ export const startProjectScaffoldTool: CopilotTool<typeof startProjectScaffoldIn
     },
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startProjectScaffoldToolName}/execute`, async (context: IActionContext) => {
-            setCopilotOnRailsToolTelemetry(context, extras);
-
-            await vscode.commands.executeCommand(copilotOnRailsCommandIds.startProjectScaffold, input.prompt);
-
-            return { message: l10n.t('Started the project scaffold agent.') };
+            return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: startProjectScaffoldToolName, extras }, async (corContext) => {
+                await startProjectScaffoldCommand(corContext, input.prompt);
+                return { message: l10n.t('Started the project scaffold agent.') };
+            });
         }) ?? {
             message: l10n.t('Failed to start the project scaffold agent.'),
         };
