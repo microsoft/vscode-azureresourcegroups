@@ -90,8 +90,6 @@ export class RequirementsViewController extends WebviewController<Record<string,
             });
             const query = vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath);
             try {
-                // The plan agent reads the requirements file from disk, so a fresh
-                // session (started by launchAgentChat) keeps the window focused.
                 await launchAgentChat(azureProjectPlanAgent, query);
             } catch {
                 // Chat may not be available; saving still succeeded.

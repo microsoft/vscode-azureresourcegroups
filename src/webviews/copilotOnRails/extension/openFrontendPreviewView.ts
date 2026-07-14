@@ -4,10 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fs from "fs";
-import * as path from "path";
 import * as vscode from "vscode";
-import { PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
-import { parseScaffoldPlanMarkdown, type PlanData, type TreeNode } from "../views/utils/parseScaffoldPlanMarkdown";
+import { ext } from "../../../extensionVariables";
 import { FrontendPreviewViewController } from "./controllers/FrontendPreviewViewController";
 import { closeLoadingView } from "./openLoadingView";
 
@@ -17,12 +15,19 @@ let controller: FrontendPreviewViewController | undefined;
 const DEFAULT_FRONTEND_FOLDER = 'services/web';
 
 /**
+ * Workspace-memento key holding the frontend folders we've successfully opened
+ * the preview for, most-recently-opened first.
+ */
+const FRONTEND_FOLDERS_KEY = 'azureResourceGroups.copilotOnRails.frontendFolders';
+
+/**
  * Open the frontend preview + UI-approval webview. Starts the frontend dev
  * server and renders it in an iframe behind an "Approve UI" gate.
  *
  * @param frontendFolder Optional workspace-relative path to the frontend
- *                       project. When omitted, the frontend folder is derived
- *                       from the project plan (see {@link resolveFrontendFolder}).
+ *                       project. When omitted, the most recently recorded folder
+ *                       (see {@link FRONTEND_FOLDERS_KEY}) is used, falling back
+ *                       to {@link DEFAULT_FRONTEND_FOLDER}.
  */
 export async function openFrontendPreviewView(frontendFolder?: string): Promise<void> {
     const folder = await resolveFrontendFolder(frontendFolder);
@@ -48,9 +53,6 @@ export function isFrontendPreviewViewOpen(): boolean {
     return controller !== undefined;
 }
 
-/** Folder names (from the project plan's structure tree) that identify the web frontend. */
-const FRONTEND_FOLDER_NAMES = ['web', 'frontend', 'client', 'ui', 'app'];
-
 async function resolveFrontendFolder(frontendFolder: string | undefined): Promise<vscode.Uri | undefined> {
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
     if (!workspaceRoot) {
@@ -59,7 +61,7 @@ async function resolveFrontendFolder(frontendFolder: string | undefined): Promis
 
     const candidates = [
         frontendFolder?.trim(),
-        await frontendFolderFromPlan(),
+        ...readFrontendFolders(),
         DEFAULT_FRONTEND_FOLDER,
     ];
 
@@ -69,6 +71,9 @@ async function resolveFrontendFolder(frontendFolder: string | undefined): Promis
         }
         const candidate = vscode.Uri.joinPath(workspaceRoot, ...relative.split(/[\\/]+/));
         if (hasPackageJson(candidate)) {
+            // Record the folder that actually resolved so a later resume (which
+            // reopens the preview with no argument) finds it directly.
+            await rememberFrontendFolder(relative);
             return candidate;
         }
     }
@@ -76,60 +81,18 @@ async function resolveFrontendFolder(frontendFolder: string | undefined): Promis
     return undefined;
 }
 
-/** A folder node collected from the project plan's structure tree. */
-interface PlanFolder {
-    /** Workspace-relative path segments (root excluded). */
-    readonly segments: string[];
-    readonly name: string;
+/** The recorded frontend folders, most-recently-opened first. */
+function readFrontendFolders(): string[] {
+    return ext.context.workspaceState.get<string[]>(FRONTEND_FOLDERS_KEY) ?? [];
 }
 
-/**
- * Derive the frontend folder from the project plan's folder-structure tree.
- */
-async function frontendFolderFromPlan(): Promise<string | undefined> {
-    const [planUri] = await vscode.workspace.findFiles(PROJECT_PLAN_FILE_GLOB, undefined, 1);
-    if (!planUri) {
-        return undefined;
-    }
-
-    let plan: PlanData;
-    try {
-        plan = parseScaffoldPlanMarkdown(Buffer.from(await vscode.workspace.fs.readFile(planUri)).toString('utf-8'));
-    } catch {
-        return undefined;
-    }
-
-    const frontend = collectPlanFolders(plan)
-        .find((folder) => FRONTEND_FOLDER_NAMES.includes(folder.name.toLowerCase()));
-    return frontend?.segments.join('/');
-}
-
-/** Flatten every folder node across all structure trees in the plan. */
-function collectPlanFolders(plan: PlanData): PlanFolder[] {
-    const folders: PlanFolder[] = [];
-    const walk = (nodes: TreeNode[], prefix: string[]): void => {
-        for (const node of nodes) {
-            if (!node.isFolder) {
-                continue;
-            }
-            const name = node.name.replace(/\/$/, '');
-            const segments = [...prefix, name];
-            folders.push({ segments, name });
-            walk(node.children, segments);
-        }
-    };
-
-    for (const section of plan.sections) {
-        for (const content of section.content) {
-            if (content.type === 'tree') {
-                walk(content.nodes, []);
-            }
-        }
-    }
-    return folders;
+/** Records `relative` as the most-recently-opened frontend, de-duplicated. */
+async function rememberFrontendFolder(relative: string): Promise<void> {
+    const others = readFrontendFolders().filter((folder) => folder !== relative);
+    await ext.context.workspaceState.update(FRONTEND_FOLDERS_KEY, [relative, ...others]);
 }
 
 /** True when `dir` directly contains a `package.json`. */
 function hasPackageJson(dir: vscode.Uri): boolean {
-    return fs.existsSync(path.join(dir.fsPath, 'package.json'));
+    return fs.existsSync(vscode.Uri.joinPath(dir, 'package.json').fsPath);
 }

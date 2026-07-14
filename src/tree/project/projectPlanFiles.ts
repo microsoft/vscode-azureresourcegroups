@@ -33,6 +33,7 @@ export const DEPLOYMENT_PLAN_FILE_GLOB = '.azure/deployment-plan.md';
 
 const PLAN_FILE_GLOBS = [
     PROJECT_PLAN_FILE_GLOB,
+    INTEGRATION_PLAN_FILE_GLOB,
     DEBUG_PLAN_FILE_GLOB,
     DEPLOYMENT_PLAN_FILE_GLOB,
 ] as const;
