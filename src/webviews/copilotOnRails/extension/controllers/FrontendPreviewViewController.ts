@@ -9,6 +9,7 @@ import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { ext } from "../../../../extensionVariables";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { markApprovalPending, recordApproval, recordRevision } from "../telemetry/workflowTelemetry";
 import { type RunningDevServer, startDevServer } from "../utils/devServerManager";
 
 /** State pushed to the webview to drive the preview surface. */
@@ -73,6 +74,7 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         });
 
         void this.launchDevServer();
+        void markApprovalPending();
     }
 
     /**
@@ -124,6 +126,7 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         if (!query) {
             return;
         }
+        void recordRevision();
         // Keep the dev server running so the scaffold agent's edits hot-reload
         // in the iframe while the user watches.
         void vscode.commands.executeCommand('workbench.action.chat.open', {
@@ -137,6 +140,7 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         if (!(await ensureAgentInstructions('azure-project-integrate'))) {
             return;
         }
+        await recordApproval();
         // Stop the preview server before the integrate agent takes over so it
         // can start its own runtime without port contention.
         this.devServer?.dispose();

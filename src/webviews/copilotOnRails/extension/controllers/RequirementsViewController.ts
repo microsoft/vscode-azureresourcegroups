@@ -12,6 +12,7 @@ import { type RequirementsData, type RequirementsExecutionMode } from "../../vie
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { markRequirementsSubmitted } from "../openRequirementsView";
+import { beginPhase } from "../telemetry/workflowTelemetry";
 
 interface SubmitMessage {
     command: 'submitRequirements';
@@ -87,6 +88,7 @@ export class RequirementsViewController extends WebviewController<Record<string,
             try {
                 // Fresh chat session per phase hand-off — the plan agent reads the
                 // requirements file from disk, so a clean context keeps the window focused.
+                await beginPhase('plan', 'azure-project-plan');
                 await vscode.commands.executeCommand('workbench.action.chat.newChat');
                 await vscode.commands.executeCommand('workbench.action.chat.open', {
                     mode: 'azure-project-plan',

@@ -1,5 +1,14 @@
 {
     "hooks": {
+        "PreToolUse": [
+            {
+                "type": "command",
+                "command": "bash --noprofile --norc -c 'cd \"$HOME/.agents/hooks\" && chmod +x ./scripts/diagnostics-pretool.sh && ./scripts/diagnostics-pretool.sh'",
+                "windows": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& { Set-Location (Join-Path $env:USERPROFILE '.agents\\hooks'); & '.\\scripts\\diagnostics-pretool.ps1' }\"",
+                "linux": "bash --noprofile --norc -c 'cd \"$HOME/.agents/hooks\" && chmod +x ./scripts/diagnostics-pretool.sh && ./scripts/diagnostics-pretool.sh'",
+                "osx": "bash --noprofile --norc -c 'cd \"$HOME/.agents/hooks\" && chmod +x ./scripts/diagnostics-pretool.sh && ./scripts/diagnostics-pretool.sh'"
+            }
+        ],
         "PostToolUse": [
             {
                 "type": "command",
@@ -7,6 +16,13 @@
                 "windows": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& { Set-Location (Join-Path $env:USERPROFILE '.agents\\hooks'); & '.\\scripts\\track-telemetry.ps1' }\"",
                 "linux": "bash --noprofile --norc -c 'cd \"$HOME/.agents/hooks\" && chmod +x ./scripts/track-telemetry.sh && ./scripts/track-telemetry.sh'",
                 "osx": "bash --noprofile --norc -c 'cd \"$HOME/.agents/hooks\" && chmod +x ./scripts/track-telemetry.sh && ./scripts/track-telemetry.sh'"
+            },
+            {
+                "type": "command",
+                "command": "bash --noprofile --norc -c 'cd \"$HOME/.agents/hooks\" && chmod +x ./scripts/diagnostics-posttool.sh && ./scripts/diagnostics-posttool.sh'",
+                "windows": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"& { Set-Location (Join-Path $env:USERPROFILE '.agents\\hooks'); & '.\\scripts\\diagnostics-posttool.ps1' }\"",
+                "linux": "bash --noprofile --norc -c 'cd \"$HOME/.agents/hooks\" && chmod +x ./scripts/diagnostics-posttool.sh && ./scripts/diagnostics-posttool.sh'",
+                "osx": "bash --noprofile --norc -c 'cd \"$HOME/.agents/hooks\" && chmod +x ./scripts/diagnostics-posttool.sh && ./scripts/diagnostics-posttool.sh'"
             }
         ]
     }

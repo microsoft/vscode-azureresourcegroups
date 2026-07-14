@@ -16,6 +16,7 @@ import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation
 import { openLoadingView } from "../openLoadingView";
 import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
+import { beginPhase, markApprovalPending, markAutopilot, recordApproval, recordRevision } from "../telemetry/workflowTelemetry";
 
 /** Prompt to raise max requests for guided runs below this threshold. */
 const MIN_RECOMMENDED_MAX_REQUESTS = 1000;
@@ -57,6 +58,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     if (!query) {
                         return;
                     }
+                    void recordRevision();
                     void vscode.commands.executeCommand('workbench.action.chat.open', {
                         mode: 'agent',
                         query,
@@ -72,6 +74,8 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     break;
             }
         });
+
+        void markApprovalPending();
     }
 
     private async approveAndOpenScaffoldChat(autopilot: boolean): Promise<void> {
@@ -106,6 +110,11 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
 
         const baseQuery = vscode.l10n.t('I approve the plan.');
+        await recordApproval();
+        if (confirmedAutopilot) {
+            await markAutopilot();
+        }
+        await beginPhase('scaffold', 'azure-project-scaffold');
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: 'azure-project-scaffold',

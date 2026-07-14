@@ -192,7 +192,7 @@ export async function disableAutopilot(): Promise<void> {
         await context.globalState.update(STATE_PRIOR_VALUE, undefined);
         await context.globalState.update(STATE_DEADLINE, undefined);
     }
-
+    4;
     clearSafetyTimer();
     hideStatusBarItem();
     disposeCompletionWatcher();

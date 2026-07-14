@@ -62,6 +62,8 @@ import { createResourceClient } from './utils/azureClients';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
 import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
+import { installDiagnosticsHooks } from './webviews/copilotOnRails/extension/telemetry/installDiagnosticsHooks';
+import { initializeWorkflowTelemetry } from './webviews/copilotOnRails/extension/telemetry/workflowTelemetry';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
     // the entry point for vscode.dev is this activate, not main.js, so we need to instantiate perfStats here
@@ -80,6 +82,8 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     await registerProjectPlanFilesContext(context, projectPlanFilesWatcher);
     registerRequirementsAutoOpen(context);
     registerAutopilot(context);
+    initializeWorkflowTelemetry(context);
+    void installDiagnosticsHooks();
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);

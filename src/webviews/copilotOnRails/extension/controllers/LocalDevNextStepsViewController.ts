@@ -10,6 +10,7 @@ import { ensureCopilotChatReady } from "../../../../commands/copilotOnRails/open
 import { ext } from "../../../../extensionVariables";
 import { type LocalDevNextStepsViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { beginPhase } from "../telemetry/workflowTelemetry";
 
 type NextStepAction = 'iterate' | 'apiTests' | 'deploy';
 
@@ -50,6 +51,7 @@ export class LocalDevNextStepsViewController extends WebviewController<LocalDevN
                     return;
                 }
                 this.panel.dispose();
+                await beginPhase('debug', 'azure-debug-generate');
                 await vscode.commands.executeCommand('workbench.action.chat.open', {
                     mode: 'azure-debug-generate',
                     query: vscode.l10n.t('Run the API tests to verify my endpoints.'),

@@ -167,6 +167,11 @@
                 "category": "Azure"
             },
             {
+                "command": "azureResourceGroups.showProjectDiagnostics",
+                "title": "Show Project Create Diagnostics",
+                "category": "Azure"
+            },
+            {
                 "command": "azureResourceGroups.downloadAgentInstructions",
                 "title": "Download Azure Agent Instructions",
                 "category": "Azure"

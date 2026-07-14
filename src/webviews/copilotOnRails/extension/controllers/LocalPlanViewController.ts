@@ -12,6 +12,7 @@ import { ext } from "../../../../extensionVariables";
 import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
+import { beginPhase, markApprovalPending, recordApproval, recordRevision } from "../telemetry/workflowTelemetry";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
@@ -37,6 +38,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                     if (!query) {
                         return;
                     }
+                    void recordRevision();
                     void this.openDebugPlanChat(query, true);
                     break;
                 }
@@ -48,9 +50,12 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                     break;
             }
         });
+
+        void markApprovalPending();
     }
 
     private async approveAndOpenDebugPlanChat(): Promise<void> {
+        await recordApproval();
         if (!(await this.openDebugPlanChat('I approve the debug setup plan.', false))) {
             return;
         }
@@ -72,6 +77,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             // it iterates on the plan with the existing conversation.
             await vscode.commands.executeCommand('workbench.action.chat.newChat');
         }
+        await beginPhase('debug', azureDebugPlanAgent);
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: azureDebugPlanAgent,
             query,

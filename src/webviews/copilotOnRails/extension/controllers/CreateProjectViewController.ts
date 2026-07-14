@@ -13,6 +13,7 @@ import { projectSubmissionState } from "../../../../tree/project/projectSubmissi
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
+import { beginPhase } from "../telemetry/workflowTelemetry";
 
 export type { CreateProjectViewControllerType };
 
@@ -43,6 +44,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
             return;
         }
         this.panel.dispose();
+        await beginPhase('requirements', 'azure-project-plan', query);
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand("workbench.action.chat.open", {
             mode: 'azure-project-plan',

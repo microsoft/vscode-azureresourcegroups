@@ -12,6 +12,7 @@ import { ext } from "../../../../extensionVariables";
 import { type DeploymentPlanData } from "../../views/utils/deploymentPlanTypes";
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { beginPhase, markApprovalPending, recordApproval, recordRevision } from "../telemetry/workflowTelemetry";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export type { DeploymentPlanViewConfiguration, DeploymentPlanViewStrings };
@@ -84,6 +85,7 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                     if (!query) {
                         return;
                     }
+                    void recordRevision();
                     void this.openDeployChat(query, true);
                     break;
                 }
@@ -92,9 +94,12 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                     break;
             }
         });
+
+        void markApprovalPending();
     }
 
     private async approveAndContinue(): Promise<void> {
+        await recordApproval();
         if (!(await this.openDeployChat('I approve the deployment plan. Continue with generating the infrastructure and deployment artifacts.', false))) {
             return;
         }
@@ -108,6 +113,7 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
         if (!isFeedback) {
             await vscode.commands.executeCommand('workbench.action.chat.newChat');
         }
+        await beginPhase('deploy', azureDeployAgent);
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: azureDeployAgent,
             query,

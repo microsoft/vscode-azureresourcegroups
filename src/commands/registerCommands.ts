@@ -25,6 +25,7 @@ import { openLocalPlanViewFromWorkspace } from '../webviews/copilotOnRails/exten
 import { openRequirementsViewFromWorkspace } from '../webviews/copilotOnRails/extension/openRequirementsView';
 import { openScaffoldNextStepsView } from '../webviews/copilotOnRails/extension/openScaffoldNextStepsView';
 import { openPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openScaffoldPlanView';
+import { showProjectDiagnostics } from '../webviews/copilotOnRails/extension/telemetry/showProjectDiagnostics';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
@@ -179,6 +180,7 @@ export function registerCommands(): void {
         openLocalDevNextStepsView(hasApiTests));
     registerCommand('azureResourceGroups.debug.openLocalNextStepsView', () => openLocalDevNextStepsView());
     registerCommand('azureResourceGroups.openScaffoldNextStepsView', () => openScaffoldNextStepsView({}));
+    registerCommand('azureResourceGroups.showProjectDiagnostics', showProjectDiagnostics);
 
     // Hand-off commands
     registerCommand('azureResourceGroups.downloadAgentInstructions', (context: IActionContext) =>

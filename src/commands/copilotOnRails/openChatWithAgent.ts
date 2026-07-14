@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
+import { beginPhase, phaseForAgent } from '../../webviews/copilotOnRails/extension/telemetry/workflowTelemetry';
 import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
 import { ensureAgentInstructions } from './agentInstructions';
 
@@ -41,6 +42,11 @@ export async function openChatWithAgent(agentName: string, prompt: string, loadi
     // Make sure the agent's instruction files are present in the workspace before invoking it.
     if (!(await ensureAgentInstructions(agentName))) {
         return;
+    }
+    // Record the phase this agent hand-off begins (no-op for non-workflow agents).
+    const phase = phaseForAgent(agentName);
+    if (phase) {
+        await beginPhase(phase, agentName, prompt);
     }
     // Start a fresh chat session for each phase hand-off. Agents communicate through the
     // `.azure/*.md` plan files on disk, not chat history, so a clean session keeps each
