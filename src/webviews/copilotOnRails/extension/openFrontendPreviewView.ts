@@ -95,14 +95,6 @@ async function rememberFrontendFolder(relative: string): Promise<void> {
     await ext.context.workspaceState.update(FRONTEND_FOLDERS_KEY, [relative, ...others]);
 }
 
-/**
- * Frontend folders named by the scaffold's `.azure/integration-plan.md` hand-off
- * artifact. The artifact is freeform prose, so rather than parse its structure
- * we extract every workspace-relative path token and keep those that are, on
- * disk, an actual frontend project — a folder with a `package.json` AND a
- * frontend entry point. The entry-point check is what distinguishes the frontend
- * from the backend, since both have a `package.json`.
- */
 async function frontendFoldersFromIntegrationPlan(workspaceRoot: vscode.Uri): Promise<string[]> {
     const [uri] = await vscode.workspace.findFiles(INTEGRATION_PLAN_FILE_GLOB, undefined, 1);
     if (!uri) {
