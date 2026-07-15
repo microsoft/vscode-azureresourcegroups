@@ -33,6 +33,17 @@ These instructions cover generation and validation of the debug configuration ar
 
 After running through all phases in the instructions, the plan status in `.azure/vscode-debug-plan.md` should be set to `Implemented`.
 
+## Interruption recovery
+
+If the flow is interrupted for any reason — a terminal command requests a password and the user declines, a tool call fails, a network request times out, or any other error breaks the current step — **do not stop working**. Instead:
+
+1. **Acknowledge** the interruption briefly (one sentence).
+2. **Identify** which step you were on and what remains to be done.
+3. **Continue** from where you left off. Re-read the relevant `.azure/*` artifacts to re-orient yourself if needed.
+4. If the failed action is not essential to the current step (e.g. an optional tool call), skip it and move on.
+5. If the failed action IS essential, try an alternative approach (different command, different tool) before giving up.
+6. **Never** end your turn with just an error message and no next action. Always state what you will do next and then do it.
+
 ### Step 2: Verify and present next steps
 
 **Gate:** Before proceeding, confirm that `.azure/vscode-debug-plan.md` has status `Implemented`. If the status is not `Implemented`, do not proceed — go back and complete the remaining validation steps from the instructions.

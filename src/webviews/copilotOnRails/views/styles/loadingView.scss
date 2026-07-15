@@ -31,3 +31,9 @@
     line-height: 1.5;
     color: var(--vscode-descriptionForeground);
 }
+
+.loadingView .needHelpLink {
+    margin-top: 12px;
+    font-size: 0.85em;
+    cursor: pointer;
+}

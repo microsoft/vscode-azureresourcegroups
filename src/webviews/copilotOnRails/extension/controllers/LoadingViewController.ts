@@ -4,10 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebviewController } from "@microsoft/vscode-azext-webview";
+import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ext } from "../../../../extensionVariables";
 import { type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { copilotOnRailsCommandIds } from "../copilotOnRailsCommands";
 
 /**
  * Transient webview shown while Copilot generates the artifact (requirements,
@@ -16,11 +18,22 @@ import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation
 export class LoadingViewController extends WebviewController<LoadingViewConfiguration> {
     constructor(initialConfig: LoadingViewConfiguration) {
         super(ext.context, initialConfig.title, 'loadingView', initialConfig, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
+
+        this.panel.webview.onDidReceiveMessage((message: { command: string }) => {
+            if (message.command === 'needHelp') {
+                void this.handleNeedHelp();
+            }
+        });
     }
 
     /** Push a new title/message into the running webview without re-creating the panel. */
     updateConfig(config: LoadingViewConfiguration): void {
         this.panel.title = config.title;
         void this.panel.webview.postMessage({ command: 'updateLoadingState', data: config });
+    }
+
+    private async handleNeedHelp(): Promise<void> {
+        this.panel.dispose();
+        await vscode.commands.executeCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot);
     }
 }

@@ -117,6 +117,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             stage: 0,
             title: vscode.l10n.t('Scaffolding your project…'),
             message: vscode.l10n.t('Copilot is creating your project files. For progress please view the Copilot chat.'),
+            showNeedHelp: true,
         });
     }
 

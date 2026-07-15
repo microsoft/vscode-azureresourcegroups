@@ -62,6 +62,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             stage: 1,
             title: vscode.l10n.t('Setting up your local development environment…'),
             message: vscode.l10n.t('Copilot is setting your project up for local development'),
+            showNeedHelp: true,
         });
     }
 
