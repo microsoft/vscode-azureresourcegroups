@@ -84,6 +84,11 @@ export const DeploymentPlanView = (): JSX.Element => {
         return s === 'approved';
     }, [plan?.status]);
 
+    const missingRequiredSelection = useMemo(
+        () => !plan?.subscription?.trim() || !plan?.locationCode?.trim(),
+        [plan?.subscription, plan?.locationCode],
+    );
+
     const editedRows = useMemo(() => {
         const set = new Set<number>();
         for (const item of feedbackItems) {
@@ -118,7 +123,7 @@ export const DeploymentPlanView = (): JSX.Element => {
     }, []);
 
     const handleApprove = useCallback(() => {
-        if (!plan || isAlreadyApproved) {
+        if (!plan || isAlreadyApproved || missingRequiredSelection) {
             return;
         }
         if (hasEdits) {
@@ -126,7 +131,7 @@ export const DeploymentPlanView = (): JSX.Element => {
             return;
         }
         vscodeApi.postMessage({ command: 'approve', data: plan });
-    }, [vscodeApi, plan, hasEdits, isAlreadyApproved]);
+    }, [vscodeApi, plan, hasEdits, isAlreadyApproved, missingRequiredSelection]);
 
     const handleSubscriptionChange = useCallback((value: string) => {
         if (!plan) { return; }
@@ -365,52 +370,53 @@ export const DeploymentPlanView = (): JSX.Element => {
 
     return (
         <div className={`deploymentPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
-            <StageProgress currentStage={2} />
             <div className='planMain'>
-                <div className='planHeader'>
-                    <div className='headerTop'>
-                        <div>
-                            <h1>{strings.title}</h1>
-                            <div className='metadataBadges'>
-                                {plan.status && plan.status !== 'Unknown' && <span className='badge status'>{plan.status}</span>}
-                                {plan.mode && plan.mode !== 'Unknown' && <span className='badge mode'>{plan.mode}</span>}
+                <div className='stickyTop'>
+                    <StageProgress currentStage={2} />
+                    <div className='planHeader'>
+                        <div className='headerTop'>
+                            <div>
+                                <h1>{strings.title}</h1>
+                                <div className='metadataBadges'>
+                                    {plan.status && plan.status !== 'Unknown' && <span className='badge status'>{plan.status}</span>}
+                                </div>
                             </div>
-                        </div>
-                        <div className='headerActions'>
-                            <Tooltip content={strings.feedbackButtonTooltip} relationship='label'>
-                                <Button
-                                    appearance='subtle'
-                                    aria-label={strings.feedbackButtonAriaLabel}
-                                    icon={
-                                        <span className='feedbackIconWrapper'>
-                                            <CommentEditRegular />
-                                            {hasEdits && (
-                                                <CounterBadge
-                                                    className='feedbackBadge'
-                                                    count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
-                                                    size='small'
-                                                    color='danger'
-                                                />
-                                            )}
-                                        </span>
-                                    }
-                                    disabled={isAwaitingRevision}
-                                    onClick={() => setDrawerOpen(v => !v)}
-                                />
-                            </Tooltip>
-                            <Tooltip
-                                content={isAlreadyApproved ? strings.approveButtonAlreadyApprovedTooltip : strings.approveButtonTooltip}
-                                relationship='label'
-                            >
-                                <Button
-                                    appearance='primary'
-                                    icon={<CheckmarkRegular />}
-                                    disabled={isAwaitingRevision || isAlreadyApproved}
-                                    onClick={handleApprove}
+                            <div className='headerActions'>
+                                <Tooltip content={strings.feedbackButtonTooltip} relationship='label'>
+                                    <Button
+                                        appearance='subtle'
+                                        aria-label={strings.feedbackButtonAriaLabel}
+                                        icon={
+                                            <span className='feedbackIconWrapper'>
+                                                <CommentEditRegular />
+                                                {hasEdits && (
+                                                    <CounterBadge
+                                                        className='feedbackBadge'
+                                                        count={feedbackItems.length + (freeformDraft.trim() ? 1 : 0)}
+                                                        size='small'
+                                                        color='danger'
+                                                    />
+                                                )}
+                                            </span>
+                                        }
+                                        disabled={isAwaitingRevision}
+                                        onClick={() => setDrawerOpen(v => !v)}
+                                    />
+                                </Tooltip>
+                                <Tooltip
+                                    content={isAlreadyApproved ? strings.approveButtonAlreadyApprovedTooltip : missingRequiredSelection ? strings.approveButtonMissingSelectionTooltip : strings.approveButtonTooltip}
+                                    relationship='label'
                                 >
-                                    {strings.approveButton}
-                                </Button>
-                            </Tooltip>
+                                    <Button
+                                        appearance='primary'
+                                        icon={<CheckmarkRegular />}
+                                        disabled={isAwaitingRevision || isAlreadyApproved || missingRequiredSelection}
+                                        onClick={handleApprove}
+                                    >
+                                        {strings.approveButton}
+                                    </Button>
+                                </Tooltip>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -424,7 +430,7 @@ export const DeploymentPlanView = (): JSX.Element => {
 
                 <div className='infoCards'>
                     <div className='infoCard'>
-                        <span className='infoLabel'>{strings.subscriptionLabel}</span>
+                        <span className='infoLabel'>{strings.subscriptionLabel}<span className='requiredMarker' aria-hidden='true'> *</span></span>
                         {plan.availableSubscriptions && plan.availableSubscriptions.length > 0 ? (
                             <select
                                 className='cellDropdown'
@@ -447,7 +453,7 @@ export const DeploymentPlanView = (): JSX.Element => {
                         )}
                     </div>
                     <div className='infoCard'>
-                        <span className='infoLabel'>{strings.locationLabel}</span>
+                        <span className='infoLabel'>{strings.locationLabel}<span className='requiredMarker' aria-hidden='true'> *</span></span>
                         {plan.availableLocations && plan.availableLocations.length > 0 ? (
                             <select
                                 className='cellDropdown'
@@ -604,7 +610,8 @@ const FeedbackDrawer = ({ strings, items, freeformDraft, onFreeformChange, onAdd
 
             <div className='drawerFooter'>
                 <Button
-                    appearance='subtle'
+                    className='discardButton'
+                    appearance='outline'
                     disabled={!hasAny}
                     onClick={onDiscardAll}
                 >
