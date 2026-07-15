@@ -5,6 +5,7 @@
 
 import * as vscode from "vscode";
 import { type LocalDevNextStepsViewConfiguration } from "../views/utils/viewConfigTypes";
+import { disableAutopilot } from "./autopilot";
 import { LocalDevNextStepsViewController } from "./controllers/LocalDevNextStepsViewController";
 import { closeLoadingView } from "./openLoadingView";
 
@@ -18,6 +19,8 @@ let controller: LocalDevNextStepsViewController | undefined;
  * whether `api-test-collections/` contains any files in the workspace.
  */
 export async function openLocalDevNextStepsView(hasApiTests?: boolean): Promise<void> {
+    await disableAutopilot();
+
     let apiTestsDetected = !!hasApiTests;
     if (!apiTestsDetected) {
         const results = await vscode.workspace.findFiles('api-test-collections/**/*', undefined, 1);
