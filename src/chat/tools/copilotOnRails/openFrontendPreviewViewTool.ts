@@ -28,7 +28,7 @@ export const openFrontendPreviewViewTool: CopilotTool<typeof openFrontendPreview
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openFrontendPreviewViewToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: openFrontendPreviewViewToolName, extras }, async (corContext) => {
-                openFrontendPreviewView(corContext, input.frontendFolder);
+                await openFrontendPreviewView(corContext, input.frontendFolder);
                 return { message: l10n.t('Opened the Frontend Preview view.') };
             });
         }) ?? {

@@ -45,7 +45,7 @@ Activate when the user (or the scaffold hand-off) wants to:
 
 Requires a scaffolded project. Verify before starting:
 - `.azure/integration-plan.md` exists (the scaffold hand-off artifact). **This is your primary brief.**
-- `.azure/project-plan.md` exists (the original plan — source of truth for routes, services, entities). Its `Status:` should be `Awaiting Integration` — the signal that the scaffold built clean and integration is the next required step. (If it already reads `Integrated`, integration has run before — re-verify rather than redo blindly.)
+- `.azure/project-plan.md` exists (the original plan — source of truth for routes, services, entities). Its `Status:` should be `Integrating` — the signal that the user approved the UI preview and integration is the next required step. (Legacy runs may still read `Awaiting Integration`; treat it the same. If it already reads `Integrated`, integration has run before — re-verify rather than redo blindly.)
 - Production code builds (the scaffold's final gate passed).
 
 > If `.azure/integration-plan.md` is missing: do **not** fail. Fall back to `.azure/project-plan.md` plus a workspace scan to reconstruct the same facts (backend run command, frontend folder, routes, DB type, mock-data files, shared-types location). But always look for the artifact first.

@@ -5,12 +5,12 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
+import { REQUIREMENTS_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { parseRequirementsJson, type RequirementsData } from "../views/utils/parseRequirements";
 import { RequirementsViewController } from "./controllers/RequirementsViewController";
 import { closeLoadingView } from "./openLoadingView";
+import { handleTrackedViewClosed } from "./projectSession";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
-
-export const REQUIREMENTS_FILE_GLOB = '.azure/requirements.json';
 
 const host = new SingletonViewHost<RequirementsData, RequirementsViewController>({
     createController: (data, uri) => {
@@ -18,6 +18,7 @@ const host = new SingletonViewHost<RequirementsData, RequirementsViewController>
         return new RequirementsViewController(data, uri);
     },
     updateController: (controller, data, uri) => controller.updateData(data, uri),
+    onDidClose: () => void handleTrackedViewClosed(),
 });
 
 // The exact content the webview last wrote for a given file. When a watcher

@@ -7,11 +7,14 @@ import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
+import { launchAgentChat } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type RequirementsData, type RequirementsExecutionMode } from "../../views/utils/parseRequirements";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { markRequirementsSubmitted } from "../openRequirementsView";
+import { suppressTrackedViewCloseOnce } from "../projectSession";
 
 interface SubmitMessage {
     command: 'submitRequirements';
@@ -77,6 +80,8 @@ export class RequirementsViewController extends WebviewController<Record<string,
 
         const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
         if (await ensureAgentInstructions('azure-project-plan')) {
+            // Programmatic hand-off to the plan phase — don't treat this close as the user abandoning the flow.
+            suppressTrackedViewCloseOnce();
             this.panel.dispose();
             openLoadingView({
                 stage: 0,
@@ -85,13 +90,7 @@ export class RequirementsViewController extends WebviewController<Record<string,
             });
             const query = vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath);
             try {
-                // Fresh chat session per phase hand-off — the plan agent reads the
-                // requirements file from disk, so a clean context keeps the window focused.
-                await vscode.commands.executeCommand('workbench.action.chat.newChat');
-                await vscode.commands.executeCommand('workbench.action.chat.open', {
-                    mode: 'azure-project-plan',
-                    query,
-                });
+                await launchAgentChat(azureProjectPlanAgent, query);
             } catch {
                 // Chat may not be available; saving still succeeded.
             }

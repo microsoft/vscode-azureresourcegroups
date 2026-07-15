@@ -6,6 +6,7 @@
 import { IActionContext, registerCommand } from '@microsoft/vscode-azext-utils';
 import { l10n } from 'vscode';
 import { azureDebugPlanAgent } from '../../constants';
+import { ext } from '../../extensionVariables';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
 import { callWithDiagnosticsAndTelemetryHandling } from '../../utils/copilotOnRails/copilotOnRailsTelemetryUtils';
 import { createProjectWithCopilot } from '../../webviews/copilotOnRails/extension/createProjectWithCopilot';
@@ -16,6 +17,7 @@ import { openLocalPlanViewFromWorkspace } from '../../webviews/copilotOnRails/ex
 import { openRequirementsViewFromWorkspace } from '../../webviews/copilotOnRails/extension/openRequirementsView';
 import { openScaffoldNextStepsView } from '../../webviews/copilotOnRails/extension/openScaffoldNextStepsView';
 import { openPlanViewFromWorkspace } from '../../webviews/copilotOnRails/extension/openScaffoldPlanView';
+import { resumeProjectWithCopilot } from '../../webviews/copilotOnRails/extension/resumeProjectWithCopilot';
 import { copilotOnRailsCustomAgents, downloadAgentInstructions } from './agentInstructions';
 import { inspectDiagnostics } from './inspectDiagnostics';
 import { openChatWithAgent } from './openChatWithAgent';
@@ -24,6 +26,8 @@ import { startDebugConfiguration } from './startDebugConfiguration';
 export const copilotOnRailsCommandIds = {
     // Phase 0...
     createProjectWithCopilot: 'azureResourceGroups.createProjectWithCopilot',
+    resumeProjectWithCopilot: 'azureResourceGroups.resumeProjectWithCopilot',
+    refreshProjectTree: 'azureProject.refresh',
     downloadAgentInstructions: 'azureResourceGroups.downloadAgentInstructions',
 
     // Phase 1...
@@ -107,6 +111,8 @@ export function startDeploymentCommand(_context: CopilotOnRailsContext, prompt?:
 export function registerCopilotOnRailsCommands(): void {
     // Phase 0: Initialization commands
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.createProjectWithCopilot, createProjectWithCopilot);
+    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot, resumeProjectWithCopilot);
+    registerCommand(copilotOnRailsCommandIds.refreshProjectTree, () => ext.actions.refreshProjectTree());
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.downloadAgentInstructions, downloadAgentInstructions);
 
     // Phase 1: Project scaffolding commands
