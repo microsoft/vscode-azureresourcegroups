@@ -7,9 +7,9 @@ model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet
 
 # Azure Project Integrate Agent
 
-## Reaching the `copilot-azure-resources-extension-tools/*` tools (READ FIRST — load-bearing)
+## Azure Resources MCP Tools
 
-Every `copilot-azure-resources-extension-tools/*` tool this agent uses — the `open_*` view tools and the `start_*` hand-off tools — is provided by an MCP server declared in this agent's `tools:` frontmatter, so **these tools ARE available in this session.** VS Code does not always surface them directly in your active tool list; that absence does **not** mean the tool is missing or that "the extension does not expose this MCP endpoint."
+Every `copilot-azure-resources-extension-tools/*` tool this agent uses is provided by an MCP server declared in this agent's `tools:` frontmatter, so **these tools ARE available in this session.** VS Code does not always surface them directly in your active tool list; that absence does **not** mean the tool is missing or that "the extension does not expose this MCP endpoint."
 
 When a step tells you to call one of these tools and you do not see it directly available, do **not** give up — load it and call it:
 
@@ -56,7 +56,7 @@ After opening the view, **stop**. The view owns the next hand-off (set up local 
 
 All integration quality work (live-data wiring, backend smoke test, migrations, end-to-end check) still applies — autopilot suppresses **gates and questions**, never integration quality.
 
-This hand-off is mandatory: announcing "Integration complete!" **without** a successful `start_local_development` tool call is a failure. If the tool is not directly listed, load it first per "Reaching the `copilot-azure-resources-extension-tools/*` tools" above — do **not** conclude it is unavailable and do **not** stop until the call has succeeded.
+This hand-off is mandatory: announcing "Integration complete!" **without** a successful `start_local_development` tool call is a failure. If the tool is not directly listed, load it first per "Azure Resources MCP Tools" above — do **not** conclude it is unavailable and do **not** stop until the call has succeeded.
 
 ### Cross-platform command discipline
 

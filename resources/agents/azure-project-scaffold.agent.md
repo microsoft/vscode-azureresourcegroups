@@ -7,9 +7,9 @@ model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet
 
 # Azure Project Scaffold Agent
 
-## Reaching the `copilot-azure-resources-extension-tools/*` tools (READ FIRST — load-bearing)
+## Azure Resources MCP Tools
 
-Every `copilot-azure-resources-extension-tools/*` tool this agent uses — the `open_*` view tools and the `start_*` hand-off tools — is provided by an MCP server declared in this agent's `tools:` frontmatter, so **these tools ARE available in this session.** VS Code does not always surface them directly in your active tool list; that absence does **not** mean the tool is missing or that "the extension does not expose this MCP endpoint."
+Every `copilot-azure-resources-extension-tools/*` tool this agent uses is provided by an MCP server declared in this agent's `tools:` frontmatter, so **these tools ARE available in this session.** VS Code does not always surface them directly in your active tool list; that absence does **not** mean the tool is missing or that "the extension does not expose this MCP endpoint."
 
 When a step tells you to call one of these tools and you do not see it directly available, do **not** give up — load it and call it:
 
