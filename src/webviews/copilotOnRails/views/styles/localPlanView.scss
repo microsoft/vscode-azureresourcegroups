@@ -63,7 +63,8 @@
     flex-direction: column;
     gap: 14px;
     padding: 20px 28px;
-    max-width: 780px;
+    width: 100%;
+    box-sizing: border-box;
 
     .planHeader {
         position: sticky;
