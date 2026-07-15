@@ -184,7 +184,7 @@ Requires a scaffolded project. Verify before starting:
 | Update the artifact | Mark `.azure/integration-plan.md` items complete (or append a short "Integration results" section: what was migrated, which endpoints passed, the mock files removed, the end-to-end evidence). |
 | Update plan status | Set `.azure/project-plan.md` status to `Integrated`. |
 | Print completion | Summarize: migrations created, endpoints verified, mock layer removed, end-to-end request proven. Announce: **"Integration complete!"** |
-| **Open the Next Steps view, then stop** | Call the `vscode-azureresourcegroups.mcp/open_scaffold_next_steps_view` tool with no arguments (`{}`) to surface the post-integration "What's next?" view. Then **STOP** — the view owns the next hand-off (set up local development, or deploy). Do **NOT** ask the user what to do next; do **NOT** call `vscode_askQuestions`. (Autopilot exception: **skip** this view and hand off via the `vscode-azureresourcegroups.mcp/start_local_development` tool per the agent's autopilot rule.) |
+| **Open the Next Steps view, then stop** | Call the `open_scaffold_next_steps_view` tool with no arguments (`{}`) to surface the post-integration "What's next?" view. Then **STOP** — the view owns the next hand-off (set up local development, or deploy). Do **NOT** ask the user what to do next; do **NOT** call `vscode_askQuestions`. (Autopilot exception: **skip** this view and hand off via the `start_local_development` tool per the agent's autopilot rule.) |
 
 > **✅ Final Checkpoint**:
 > 1. Migrations exist, are non-empty, apply cleanly — **no seed data**.
@@ -192,7 +192,7 @@ Requires a scaffolded project. Verify before starting:
 > 3. Frontend builds clean on live data; mock layer removed; no `any`.
 > 4. Frontend + backend ran together; a real `/api/...` request returned live data.
 > 5. `.azure/project-plan.md` = `Integrated`; artifact updated.
-> 6. Opened the **Next Steps view** (the `vscode-azureresourcegroups.mcp/open_scaffold_next_steps_view` tool), then stopped — **no follow-up prompt** (autopilot instead hands off to `azure-debug-plan`).
+> 6. Opened the **Next Steps view** (the `open_scaffold_next_steps_view` tool), then stopped — **no follow-up prompt** (autopilot instead hands off to `azure-debug-plan`).
 
 ---
 
@@ -205,10 +205,10 @@ Requires a scaffolded project. Verify before starting:
 | Dev proxy config | The frontend dev-server config (e.g. `vite.config.ts`) |
 | Updated artifact | `.azure/integration-plan.md` (results appended) |
 | Plan status | `.azure/project-plan.md` → `Integrated` |
-| **Next step** | Open the Next Steps view via the `vscode-azureresourcegroups.mcp/open_scaffold_next_steps_view` tool (autopilot instead hands off to `azure-debug-plan`) |
+| **Next step** | Open the Next Steps view via the `open_scaffold_next_steps_view` tool (autopilot instead hands off to `azure-debug-plan`) |
 
 ---
 
 ## Next
 
-> After integration completes, announce **"Integration complete!"**, then open the post-integration **Next Steps view** by calling the `vscode-azureresourcegroups.mcp/open_scaffold_next_steps_view` tool (no arguments). After opening it, **stop** — the view drives the next hand-off (local development or deploy). Do NOT ask the user what to do next — do NOT call `vscode_askQuestions` or print plain-text follow-up suggestions. (Autopilot exception: **skip** the view and hand off via the `vscode-azureresourcegroups.mcp/start_local_development` tool with the `[AUTOPILOT MODE]` marker.)
+> After integration completes, announce **"Integration complete!"**, then open the post-integration **Next Steps view** by calling the `open_scaffold_next_steps_view` tool (no arguments). After opening it, **stop** — the view drives the next hand-off (local development or deploy). Do NOT ask the user what to do next — do NOT call `vscode_askQuestions` or print plain-text follow-up suggestions. (Autopilot exception: **skip** the view and hand off via the `start_local_development` tool with the `[AUTOPILOT MODE]` marker.)

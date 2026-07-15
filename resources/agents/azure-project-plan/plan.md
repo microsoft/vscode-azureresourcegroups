@@ -23,7 +23,7 @@ metadata:
 
 Write `.azure/project-plan.md` from the template below in a **single pass** (fill all sections at once — never section-by-section), then present for approval.
 
-> **🔒 STRUCTURAL CONTRACT — non-negotiable.** The plan-preview webview (opened by the `vscode-azureresourcegroups.mcp/open_plan_view` tool) is a **structured parser**, not a markdown renderer. It only understands the exact skeleton below. If you improvise a different structure, the webview parses **zero sections** and shows the user a *"couldn't render this plan — didn't match the expected layout"* error instead of the plan.
+> **🔒 STRUCTURAL CONTRACT — non-negotiable.** The plan-preview webview (opened by the `open_plan_view` tool) is a **structured parser**, not a markdown renderer. It only understands the exact skeleton below. If you improvise a different structure, the webview parses **zero sections** and shows the user a *"couldn't render this plan — didn't match the expected layout"* error instead of the plan.
 > - **Copy the skeleton below verbatim**, replacing only `{placeholders}`. Do **not** invent your own sections.
 > - Every section heading MUST be `## <N>. <Title>` — a number, a period, a space, then the title (e.g. `## 1. Project Overview`, `## 2. Backend — Azure Functions`). Headings without the `N.` number prefix (e.g. `## Overview`, `## Architecture`, `## Services`, `## Data Stores`, `## Authentication`) are **invalid** and will not render.
 > - Metadata at the top MUST be `**Status**:`, `**Created**:`, `**Mode**:` bold key-value rows — not front-matter, not a table.
@@ -199,7 +199,7 @@ For each page above, list 3–6 representative records using that page's primary
    - There is **no** `mermaid` block and **no** improvised section outside the fixed skeleton.
    - `## 1. Project Overview` exists and contains a `**Goal**:` row, and Section 5 (when a frontend exists) is `## N. Design System & UI` with a `**Component Library**:` row.
 1. **Write the preview scaffolding** — Step 3.5a below: write `.azure/.preview-temp/theme.css` + `manifest.json` (every page `status: "pending"`). Skip this and all of Step 3.5 when there is no `frontend` service (derived App Type `API only` / `Background worker` — no UI to preview).
-2. **Open the plan preview NOW** — the workflow rules in `azure-project-plan.agent.md` call the `vscode-azureresourcegroups.mcp/open_plan_view` tool. Do this **immediately after `manifest.json` exists and before fanning out the page sub-agents**. The webview starts watching `.azure/.preview-temp/` and shows the plan document plus a *Generating preview…* placeholder per page.
+2. **Open the plan preview NOW** — the workflow rules in `azure-project-plan.agent.md` call the `open_plan_view` tool. Do this **immediately after `manifest.json` exists and before fanning out the page sub-agents**. The webview starts watching `.azure/.preview-temp/` and shows the plan document plus a *Generating preview…* placeholder per page.
 3. **Render the page previews** — Step 3.5b below: fan out one sub-agent per page. The view is already open; its file watcher flips each page from *Generating preview…* to the rendered HTML as soon as its `<slug>.html` lands.
 4. **Present plan**, ask for approval.
 5. If approved, update status from `Planning` to `Approved`.
@@ -323,7 +323,7 @@ Paste the full Shared CSS block from `references/html-preview.md` into the same 
 
 #### 3.5a-open. Open the plan view NOW — before fanning out
 
-The instant `theme.css` and `manifest.json` exist, the agent workflow opens the plan view (the `vscode-azureresourcegroups.mcp/open_plan_view` tool, per `azure-project-plan.agent.md` Step C). **Do this before Step 3.5b.** The user immediately sees the plan document plus one *Generating preview…* tab per manifest page, and can read and interact with the plan while the page sub-agents render in the background. Do **not** wait for the sub-agents to finish before the view opens — that delay is exactly the regression this ordering prevents.
+The instant `theme.css` and `manifest.json` exist, the agent workflow opens the plan view (the `open_plan_view` tool, per `azure-project-plan.agent.md` Step C). **Do this before Step 3.5b.** The user immediately sees the plan document plus one *Generating preview…* tab per manifest page, and can read and interact with the plan while the page sub-agents render in the background. Do **not** wait for the sub-agents to finish before the view opens — that delay is exactly the regression this ordering prevents.
 
 > **Embedded webview only** (see agent Hard rule 8): the preview renders *exclusively* inside the plan webview's **UI Preview** card as sandboxed iframes — never `simpleBrowser.show`, `vscode.env.openExternal`, a dev server, or a `.preview-temp/*.html` editor tab. There is no port or URL for the planning preview.
 
