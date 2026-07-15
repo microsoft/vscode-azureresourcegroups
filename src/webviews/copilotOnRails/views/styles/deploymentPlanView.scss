@@ -192,6 +192,49 @@
         border-radius: 8px;
         padding: 14px 18px;
 
+        summary {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+            list-style: none;
+            border-radius: 4px;
+            padding: 4px 6px;
+            margin: -4px -6px 0 -6px;
+
+            &::-webkit-details-marker {
+                display: none;
+            }
+
+            &::before {
+                content: '\25B6';
+                display: inline-block;
+                width: 14px;
+                text-align: center;
+                font-size: 0.6em;
+                color: var(--vscode-foreground);
+                transition: transform 0.15s;
+                flex-shrink: 0;
+            }
+
+            &:hover {
+                background: var(--vscode-list-hoverBackground);
+            }
+
+            h2 {
+                margin: 0;
+            }
+        }
+
+        &[open]>summary {
+            margin-bottom: 8px;
+
+            &::before {
+                transform: rotate(90deg);
+            }
+        }
+
         h2 {
             margin: 0 0 10px 0;
             font-size: 0.85em;
