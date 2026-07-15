@@ -30,6 +30,7 @@
     "preview": true,
     "activationEvents": [
         "onFileSystem:azureResourceGroups",
+        "onStartupFinished",
         "workspaceContains:**/.azure/project-plan.md",
         "workspaceContains:**/.azure/requirements.json",
         "workspaceContains:**/.azure/vscode-debug-plan.md"
@@ -266,6 +267,12 @@
             },
             {
                 "command": "azureResourceGroups.refreshTree",
+                "title": "%azureResourceGroups.refresh%",
+                "category": "Azure",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "azureProject.refresh",
                 "title": "%azureResourceGroups.refresh%",
                 "category": "Azure",
                 "icon": "$(refresh)"
@@ -520,6 +527,10 @@
                 "view": "azureResourceGroups",
                 "contents": "Please sign in to a specific tenant (directory) to continue. \n [Sign in to Tenant (Directory)...](command:azureResourceGroups.signInToTenant)\n[View Accounts & Tenants](command:azureTenantsView.focus)",
                 "when": "azureResourceGroups.needsTenantAuth == true"
+            },
+            {
+                "view": "workbench.explorer.emptyView",
+                "contents": "%azureProject.emptyExplorerWelcomeContent%"
             }
         ],
         "menus": {
@@ -562,6 +573,11 @@
                     "command": "azureResourceGroups.refreshTree",
                     "when": "view == azureResourceGroups",
                     "group": "navigation@3"
+                },
+                {
+                    "command": "azureProject.refresh",
+                    "when": "view == azureProject",
+                    "group": "navigation@1"
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLog",

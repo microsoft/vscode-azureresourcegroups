@@ -25,6 +25,7 @@ import { openLocalPlanViewFromWorkspace } from '../webviews/copilotOnRails/exten
 import { openRequirementsViewFromWorkspace } from '../webviews/copilotOnRails/extension/openRequirementsView';
 import { openScaffoldNextStepsView } from '../webviews/copilotOnRails/extension/openScaffoldNextStepsView';
 import { openPlanViewFromWorkspace } from '../webviews/copilotOnRails/extension/openScaffoldPlanView';
+import { resumeProjectWithCopilot } from '../webviews/copilotOnRails/extension/resumeProjectWithCopilot';
 import { logIn } from './accounts/logIn';
 import { SelectSubscriptionOptions, selectSubscriptions } from './accounts/selectSubscriptions';
 import { clearActivities } from './activities/clearActivities';
@@ -169,6 +170,8 @@ export function registerCommands(): void {
     registerCommandWithTreeNodeUnwrapping<{ id?: string }>("azureResourceGroups.askAgentAboutResource", (context, node) => askAgentAboutResource(context, node));
 
     registerCommand('azureResourceGroups.createProjectWithCopilot', createProjectWithCopilot);
+    registerCommand('azureResourceGroups.resumeProjectWithCopilot', resumeProjectWithCopilot);
+    registerCommand('azureProject.refresh', () => ext.actions.refreshProjectTree());
     registerCommand('azureResourceGroups.openPlanView', openPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openLocalPlanView', openLocalPlanViewFromWorkspace);
     registerCommand('azureResourceGroups.openDeployPlanView', openDeploymentPlanViewFromWorkspace);
@@ -190,7 +193,11 @@ export function registerCommands(): void {
             message: l10n.t('Copilot is gathering requirements and preparing your project plan.'),
         }));
     registerCommand('azureResourceGroups.startProjectIntegrate', (_context: IActionContext, prompt?: string) =>
-        openChatWithAgent('azure-project-integrate', prompt ?? 'The project has been scaffolded. Read `.azure/integration-plan.md`, then integrate the project: create the SQL/PostgreSQL schema migrations (no seed data), smoke-test the backend so every endpoint responds, wire the frontend to live data (remove all mock data), and run the frontend and backend together end-to-end.'));
+        openChatWithAgent('azure-project-integrate', prompt ?? 'The project has been scaffolded. Read `.azure/integration-plan.md`, then integrate the project: create the SQL/PostgreSQL schema migrations (no seed data), smoke-test the backend so every endpoint responds, wire the frontend to live data (remove all mock data), and run the frontend and backend together end-to-end.', {
+            stage: 0,
+            title: l10n.t('Integrating your frontend…'),
+            message: l10n.t('Copilot is wiring the frontend to your backend services. For progress please view the Copilot chat.'),
+        }));
     registerCommand('azureResourceGroups.startLocalDevelopment', (_context: IActionContext, prompt?: string) =>
         openChatWithAgent('azure-debug-plan', prompt ?? 'The project has been scaffolded. Now set up the local debugging environment so the user can start building and testing.', {
             stage: 1,

@@ -60,7 +60,10 @@ import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/Wor
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
+import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
+import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
+import { registerViewHostDisposal } from './webviews/copilotOnRails/extension/utils/singletonViewHost';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
     // the entry point for vscode.dev is this activate, not main.js, so we need to instantiate perfStats here
@@ -79,6 +82,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     await registerProjectPlanFilesContext(context, projectPlanFilesWatcher);
     registerRequirementsAutoOpen(context);
     registerAutopilot(context);
+    registerViewHostDisposal(context);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
     context.subscriptions.push(refreshAzureTreeEmitter);
@@ -126,6 +130,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         }));
 
         registerCommands();
+        void resumePendingCreateWithCopilot(context);
         survey(context);
 
         registerChatStandInParticipantIfNeeded(context);
@@ -178,6 +183,9 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     const azureProjectProgressTreeDataProvider = new AzureProjectProgressTreeDataProvider(context, projectPlanFilesWatcher);
     context.subscriptions.push(vscode.window.registerTreeDataProvider('azureProject', azureProjectProgressTreeDataProvider));
+    ext.actions.refreshProjectTree = () => azureProjectProgressTreeDataProvider.refresh();
+
+    registerResumeAffordances(context, projectPlanFilesWatcher);
 
     const tenantResourcesBranchDataItemCache = new BranchDataItemCache();
     registerTenantTree(context, {
@@ -361,7 +369,7 @@ async function isWorkspaceEmpty(): Promise<boolean> {
     }
 
     // Entries that don't count as "real" project content.
-    const ignored = new Set(['.git', '.vscode', '.azure', '.github', '.agents']);
+    const ignored = new Set(['.git', '.vscode', '.azure', '.github', '.agents', '.DS_Store']);
 
     let readableFolderCount = 0;
 

@@ -7,9 +7,13 @@ import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
+import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
+import { PROJECT_PLAN_FILE_GLOB } from "../../../../tree/project/projectPlanFiles";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { type RunningDevServer, startDevServer } from "../utils/devServerManager";
+import { writeProjectPlanStatus } from "../utils/planStatus";
+import { ProjectPlanStatus } from "../../views/utils/projectPlanStatus";
 
 /** State pushed to the webview to drive the preview surface. */
 type PreviewState =
@@ -127,7 +131,7 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         // Keep the dev server running so the scaffold agent's edits hot-reload
         // in the iframe while the user watches.
         void vscode.commands.executeCommand('workbench.action.chat.open', {
-            mode: 'azure-project-scaffold',
+            mode: azureProjectScaffoldAgent,
             query,
         });
         void this.panel.webview.postMessage({ command: 'feedbackSubmitted' });
@@ -137,6 +141,11 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         if (!(await ensureAgentInstructions('azure-project-integrate'))) {
             return;
         }
+        // Approving the final UX preview moves the plan into the integration
+        // phase, so flip the plan status before handing off. This is a
+        // deterministic UI signal, so record it in extension code rather than
+        // relying on the integrate agent to update it.
+        await writeProjectPlanStatus(PROJECT_PLAN_FILE_GLOB, ProjectPlanStatus.integrating);
         // Stop the preview server before the integrate agent takes over so it
         // can start its own runtime without port contention.
         this.devServer?.dispose();

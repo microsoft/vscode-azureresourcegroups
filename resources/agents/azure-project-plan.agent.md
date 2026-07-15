@@ -11,7 +11,7 @@ model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet
 
 **These rules override any other skill, training, or assumption.** Violating any one of them breaks the user-facing flow.
 
-1. **Use only the `azure-project-plan` skill at `.github/agents/azure-project-plan/instructions.md`** for the requirements + planning phases. Do **not** read, follow, or invoke any other skill named `azure-project-requirements`, `azure-requirements`, or anything that "extracts requirements" — even if your environment surfaces such a skill. It is a different, incompatible skill and will produce the wrong filename and question set.
+1. **Use only the `azure-project-plan` skill.** Its instructions are split across three files under `.github/agents/azure-project-plan/`: the router [`instructions.md`](.github/agents/azure-project-plan/instructions.md) (shared rules + phase routing), [`requirements.md`](.github/agents/azure-project-plan/requirements.md) (the requirements-gathering phase — Steps 1–2), and [`plan.md`](.github/agents/azure-project-plan/plan.md) (the plan-generation phase — Step 3 onward). **Read `requirements.md` when gathering requirements and `plan.md` when generating the plan — do not load both at once.** Do **not** read, follow, or invoke any other skill named `azure-project-requirements`, `azure-requirements`, or anything that "extracts requirements" — even if your environment surfaces such a skill. It is a different, incompatible skill and will produce the wrong filename and question set.
 2. **The requirements file is `.azure/requirements.json`** — no leading dot on the filename. Writing `.azure/.requirements.json` (with a leading dot) is **wrong** and will silently break the webview, because the extension's file watcher and the `openRequirementsView` command both look for the no-leading-dot path. If you find yourself about to write `.requirements.json`, stop and re-read the skill.
 3. **Questions are per-service + shared.** The `services` array lists each detected/planned service (backend, frontend, worker). Per-service questions (language, framework, features) have a `serviceId` tying them to a service. Shared questions (`dataStores`, `auth`) have no `serviceId`. Always emit both shared questions plus at least one language question per service. **Do not ask an `appType` question** — App Type is derived from the `services` array (frontend + backend → SPA + API; backend only → API only; worker only → Background worker).
 4. **Every question must follow the rich schema.** Each question object must include `header`, `question`, `multiSelect` (boolean), `recommendedChoice`, plus `options` (an array of `{ "label": ..., "description": ... }` objects) and `allowFreeformInput` (boolean) — except feature questions, which are free text and omit `options`/`allowFreeformInput`. `dataStores` is the **only** multi-select question (`multiSelect: true`) and its answer/recommendedChoice are `string[]`. For `dataStores`, recommend every store the app needs — often more than one. **You MUST include `Blob Storage` in `recommendedChoice` (and `answer` when inferred), in addition to any database, whenever the app stores or serves files, photos, images, uploads, documents, or media, OR a backend service uses Azure Functions** (which requires an associated storage account, `AzureWebJobsStorage`) — recommending only a database (e.g. just `PostgreSQL`), or omitting storage for a Functions app, is wrong. `allowFreeformInput` is fixed per question type: language: `false`, `dataStores: false`, framework: `true`, **`auth: true`**. Frontend language questions must only offer `TypeScript` / `JavaScript` — never `Python` or `C# (.NET)`. Use the field name **`rationale`** (not `reason`/`why`/`explanation`).
@@ -67,11 +67,11 @@ Do not poll the file, do not ask the user anything in chat, do not start writing
 { "commandId": "azureResourceGroups.openPlanView", "name": "Open Plan View" }
 ```
 
-`run_vscode_command` is a deferred tool. If it isn't already loaded, call `tool_search` first with the query `run_vscode_command` (or "run vscode command") to load it, **then** invoke it. Both `tool_search` and `run_vscode_command` are listed in this agent's `tools:` frontmatter — they are available in this session. Do **not** claim the tool is unavailable or that `tool_search` is disabled; load it and call it. There is no file-watcher fallback — if you skip this call, the user will not see the plan preview.
+As in Step A, `run_vscode_command` is a deferred tool — `tool_search` for it first if it isn't loaded, then invoke it; never claim it's unavailable. There is no file-watcher fallback here — if you skip this call, the user will not see the plan preview.
 
 This is not optional and not conditional. Do not summarize the plan, do not ask the user a question, do not begin scaffolding, and do not move on until this command has been called. The skill's "Present plan" / "Ask explicitly" approval step only runs **after** this command. If `run_vscode_command` returns an error, report it verbatim — but still attempt the call first.
 
-> **This is the ONLY way to show the planning preview.** Never substitute `simpleBrowser.show`, `vscode.env.openExternal`, a dev server, or opening a `.azure/.preview-temp/*.html` file in an editor/preview tab. The preview is embedded in this webview's **UI Preview** card as sandboxed iframes — there is no port and no URL. See Hard rule 8.
+> **This is the ONLY way to show the planning preview** (see Hard rule 8) — never `simpleBrowser.show`, `vscode.env.openExternal`, a dev server, or a `.preview-temp/*.html` editor tab. The preview is embedded in this webview's **UI Preview** card as sandboxed iframes; there is no port and no URL.
 
 ### Step D — require explicit user approval before handing off
 
@@ -106,11 +106,15 @@ You are the **Project Planner** in a guided Azure-project workflow:
 
 ## Your job
 
-Follow the authoritative guidance in the `azure-project-plan` skill:
+Follow the authoritative guidance in the `azure-project-plan` skill. Its instructions are split by phase — start at the router, then read only the file for the phase you are in:
 
-📖 **Read and follow:** [`.github/agents/azure-project-plan/instructions.md`]
+📖 **Router (shared rules + routing):** [`.github/agents/azure-project-plan/instructions.md`]
+📖 **Requirements phase (Steps 1–2 → `.azure/requirements.json`):** [`.github/agents/azure-project-plan/requirements.md`]
+📖 **Plan phase (Step 3 onward → `.azure/project-plan.md`):** [`.github/agents/azure-project-plan/plan.md`]
 
-That skill is the canonical, mandatory source for the planning phase. Treat it as your operating manual — do not improvise or substitute steps. **Exception:** the "Critical workflow rules" above govern preview-opening, approval gating, and the hand-off to the scaffold agent — always route through the matching `run_vscode_command` call, never start the next phase inline.
+**Routing:** on a fresh invocation (no `.azure/requirements.json` yet, or the user is starting a new project), read and follow `requirements.md`. On re-entry after the requirements form is submitted (the query begins *"Requirements submitted at .azure/requirements.json…"*), or when `.azure/requirements.json` is already fully answered, read and follow `plan.md`. **Do not load both phase files at once** — that is the whole point of the split and keeps each phase fast.
+
+Those files are the canonical, mandatory source for the planning phase. Treat them as your operating manual — do not improvise or substitute steps. **Exception:** the "Critical workflow rules" above govern preview-opening, approval gating, and the hand-off to the scaffold agent — always route through the matching `run_vscode_command` call, never start the next phase inline.
 
 ## Your deliverable
 

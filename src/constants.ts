@@ -14,5 +14,9 @@ export const isEmptyWorkspaceContextKey = 'ms-azuretools.vscode-azureresourcegro
 export const hasPendingProjectSubmissionContextKey = 'ms-azuretools.vscode-azureresourcegroups.hasPendingProjectSubmission';
 export const canFocusContextValue = 'canFocus';
 
+export const azureProjectPlanAgent = 'azure-project-plan';
+export const azureProjectScaffoldAgent = 'azure-project-scaffold';
+export const azureProjectIntegrateAgent = 'azure-project-integrate';
 export const azureDebugPlanAgent = 'azure-debug-plan';
+export const azureDebugGenerateAgent = 'azure-debug-generate';
 export const azureDeployAgent = 'azure-deploy';

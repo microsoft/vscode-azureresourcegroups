@@ -4,9 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import { PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { type PlanData, parseScaffoldPlanMarkdown } from "../views/utils/parseScaffoldPlanMarkdown";
 import { ScaffoldPlanViewController } from "./controllers/ScaffoldPlanViewController";
 import { closeLoadingView } from "./openLoadingView";
+import { handleTrackedViewClosed } from "./projectSession";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<PlanData, ScaffoldPlanViewController>({
@@ -15,6 +17,7 @@ const host = new SingletonViewHost<PlanData, ScaffoldPlanViewController>({
         return new ScaffoldPlanViewController(data, uri);
     },
     updateController: (controller, data, uri) => controller.updatePlanData(data, uri),
+    onDidClose: () => void handleTrackedViewClosed(),
 });
 
 export function isPlanViewOpen(): boolean {
@@ -60,7 +63,7 @@ function tryParseScaffoldPlan(content: string, sourceFileUri: vscode.Uri | undef
 
 export async function openPlanViewFromWorkspace(): Promise<void> {
     const selected = await pickWorkspaceFile(
-        '.azure/project-plan.md',
+        PROJECT_PLAN_FILE_GLOB,
         vscode.l10n.t('No plan markdown files found in the workspace.'),
     );
     if (selected) {
