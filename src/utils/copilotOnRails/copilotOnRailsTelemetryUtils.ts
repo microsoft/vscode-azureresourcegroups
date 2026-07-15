@@ -8,7 +8,7 @@ import { ToolExecutionExtras } from "@microsoft/vscode-inproc-mcp";
 import { v4 as uuidv4 } from "uuid";
 import { ext } from "../../extensionVariables";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./CopilotOnRailsContext";
-import { DiagnosticEvent, withDiagnosticEvents } from "./copilotOnRailsLogUtils";
+import { DiagnosticEvent, withDiagnosticEvents } from "./copilotOnRailsDiagnosticUtils";
 
 const projectIdKey: string = 'copilotOnRails.projectId';
 
@@ -16,7 +16,7 @@ const projectIdKey: string = 'copilotOnRails.projectId';
  * Returns the persistent project guid associated with the workspace project.
  * Automatically handles generating and caching one on first use.
  *
- * Note: The project guid is important for stitching together Copilot on Rails telemetry.
+ * Note: The project guid is important for stitching together the full chain of Copilot on Rails telemetry.
  */
 export function getCorProjectId(): string {
     let projectId: string | undefined = ext.context.workspaceState.get(projectIdKey);
@@ -35,19 +35,19 @@ export function getCorProjectId(): string {
  */
 export async function callWithDiagnosticsAndTelemetryHandling<T>(
     context: IActionContext,
-    entryDetails: { type: DiagnosticEvent['type']; name: string; extras?: ToolExecutionExtras },
+    eventDetails: { type: DiagnosticEvent['type']; name: string; extras?: ToolExecutionExtras },
     command: (context: CopilotOnRailsContext) => Promise<T>,
 ): Promise<T> {
     context.telemetry.properties.isCopilotEvent = 'true';
     context.telemetry.properties.corProjectId = getCorProjectId();
 
-    if (entryDetails.extras) {
-        context.telemetry.properties.copilotSessionId = entryDetails.extras.sessionId;
-        context.telemetry.properties.copilotRequestId = entryDetails.extras.requestId.toString();
+    if (eventDetails.extras) {
+        context.telemetry.properties.copilotSessionId = eventDetails.extras.sessionId;
+        context.telemetry.properties.copilotRequestId = eventDetails.extras.requestId.toString();
     }
 
     const corContext: CopilotOnRailsContext = ensureRequiredCopilotOnRailsContext(context);
-    return await withDiagnosticEvents(corContext, { type: entryDetails.type, name: entryDetails.name }, async () => await command(corContext));
+    return await withDiagnosticEvents(corContext, { type: eventDetails.type, name: eventDetails.name }, async () => await command(corContext));
 }
 
 //

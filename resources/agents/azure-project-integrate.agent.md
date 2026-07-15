@@ -1,7 +1,7 @@
 ---
 name: azure-project-integrate
 description: Integrate a freshly scaffolded Azure-centric project — create the SQL/PostgreSQL schema migrations (NO seed data), smoke-test the backend so every endpoint responds, wire the frontend to LIVE backend data (replace all mock data), and run the frontend and backend wired together end-to-end. Runs after `azure-project-scaffold`. WHEN "integrate project", "wire to live data", "remove mock data", "smoke test backend", "verify endpoints", "create migrations", "wire frontend and backend", "integrate scaffold", "make the app run".
-tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
+tools: [vscode, vscode-azureresourcegroups.mcp/*, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
 model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---
 
@@ -28,35 +28,18 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 
 You create **schema migrations only** — `CREATE TABLE`, constraints, indexes, and the migration runner. You must **NOT** generate seed data, fixtures, demo rows, or any file/folder/function named `seed`, `seeds`, `seed-data`, `fixtures`, or similar. If the scaffold left a `seeds/` directory or a `seed.ts`, do **not** extend it and do **not** rely on it. Integration is proven by the app running against an empty-but-correct schema, not by pre-populated data.
 
-### `run_vscode_command` is a deferred tool
-
-When a step asks you to call `run_vscode_command` (e.g. the final hand-off), first call `tool_search` with the query `run_vscode_command` to load it, **then** invoke it. Both `tool_search` and `run_vscode_command` are listed in this agent's `tools:` frontmatter — they are available in this session. Do **not** claim the tool is unavailable.
-
 ### Step 6 — open the Next Steps view, then stop; do NOT prompt for the next step
 
-When integration finishes, announce **"Integration complete!"** with a short summary. Then surface the post-integration "What's next?" view by loading `run_vscode_command` and calling:
-
-```json
-{
-  "commandId": "azureResourceGroups.openScaffoldNextStepsView",
-  "name": "Open Project Next Steps View",
-  "skipCheck": true
-}
-```
+When integration finishes, announce **"Integration complete!"** with a short summary. Then surface the post-integration "What's next?" view by calling the `vscode-azureresourcegroups.mcp/open_scaffold_next_steps_view` tool with no arguments (`{}`).
 
 After opening the view, **stop**. The view owns the next hand-off (set up local development, or deploy) — do **NOT** ask the user what to do next, and do **NOT** call `vscode_askQuestions` (or any chat question API). (Autopilot skips this view — see below.)
 
 ### Autopilot mode (overrides the stop/question gating)
 
-**Autopilot is active when** the invoking chat query begins with the marker `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto` (front-matter or a `**Execution Mode**: auto` row). When autopilot is active, run fully unattended — **no chat questions, no manual approval**. **Skip the Next Steps view** (Step 6) and instead hand off to local development directly by loading `run_vscode_command` and calling:
+**Autopilot is active when** the invoking chat query begins with the marker `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` contains `executionMode: auto` (front-matter or a `**Execution Mode**: auto` row). When autopilot is active, run fully unattended — **no chat questions, no manual approval**. **Skip the Next Steps view** (Step 6) and instead hand off to local development directly by calling the `vscode-azureresourcegroups.mcp/start_local_development` tool with:
 
 ```json
-{
-  "commandId": "azureResourceGroups.startLocalDevelopment",
-  "name": "Start Local Development",
-  "skipCheck": true,
-  "args": ["[AUTOPILOT MODE] The project has been scaffolded and integrated (frontend wired to live data, backend smoke-tested, migrations created). Now set up the local development environment."]
-}
+{ "prompt": "[AUTOPILOT MODE] The project has been scaffolded and integrated (frontend wired to live data, backend smoke-tested, migrations created). Now set up the local development environment." }
 ```
 
 All integration quality work (live-data wiring, backend smoke test, migrations, end-to-end check) still applies — autopilot suppresses **gates and questions**, never integration quality.

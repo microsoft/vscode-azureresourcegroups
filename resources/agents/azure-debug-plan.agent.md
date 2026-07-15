@@ -1,7 +1,7 @@
 ---
 name: azure-debug-plan
 description: Scan an Azure-centric workspace project. Classify its services and dependencies, and produce a local debugging plan covering automated emulator startup, VS Code launch/task configs, and API tests.
-tools: [vscode, run_vscode_command, tool_search, execute, read, browser, edit, search, web, todo]
+tools: [vscode, vscode-azureresourcegroups.mcp/*, tool_search, execute, read, browser, edit, search, web, todo]
 model: [Claude Opus 4.6 (copilot), Claude Opus 4.7 (copilot), Claude Sonnet 4.6 (copilot)]
 target: vscode
 ---
@@ -27,7 +27,7 @@ The steps below are **strictly ordered**. You **must not** start a later step un
 - Step 1: Scan the project and generate a plan.
 - Step 2: Preview the generated plan.
 - Step 3: Iterate and wait for approval.
-- Step 4: Invoke the generation command via `run_vscode_command`.
+- Step 4: Invoke the generation tool `vscode-azureresourcegroups.mcp/start_azure_debug_generate`.
 
 ### Step 1: Scan the project and generate a plan
 
@@ -37,15 +37,11 @@ After you've completed all phases of this instruction set, you should be left wi
 
 ### Step 2: Preview the generated plan
 
-**Action:** Call `run_vscode_command` immediately, before any other output:
-
-```json
-{ "commandId": "azureResourceGroups.openLocalPlanView", "name": "Open Local Development Plan View" }
-```
+**Action:** Call the `vscode-azureresourcegroups.mcp/open_local_plan_view` tool immediately, before any other output. It takes no arguments.
 
 This must happen the instant you finish writing `.azure/vscode-debug-plan.md` to disk — **before** you summarize the plan or ask the user for approval.
 
-`run_vscode_command` is a deferred tool. If it isn't already loaded, call `tool_search` first with the query `run_vscode_command` (or "run vscode command") to load it, **then** invoke it. Both `tool_search` and `run_vscode_command` are listed in this agent's `tools:` frontmatter — they are available in this session. Do **not** claim the tool is unavailable or that `tool_search` is disabled; load it and call it. If you skip this call, the user will not see the plan preview.
+If you skip this call, the user will not see the plan preview.
 
 This is a hard requirement of this agent. The user cannot review the plan without it. If you skip this step, the workflow is broken. Do not ask the user whether to do it — just do it as the very next tool call after the file write completes.
 
@@ -59,15 +55,10 @@ If the user requests changes to the plan, revise `.azure/vscode-debug-plan.md` a
 
 Once the user has explicitly approved the plan, mark the plan status as **Approved**.
 
-Then you MUST call `run_vscode_command` with the following arguments and then **STOP**. Do not do anything else after this call — no summaries, no file reads, no searching for other agents, just call the command that follows and do nothing else.
+Then you MUST call the `vscode-azureresourcegroups.mcp/start_azure_debug_generate` tool with the following input and then **STOP**. Do not do anything else after this call — no summaries, no file reads, no searching for other agents, just call the tool that follows and do nothing else.
 
 ```json
-{
-  "commandId": "azureResourceGroups.startAzureDebugGenerate",
-  "name": "Start Azure Debug Generate",
-  "skipCheck": true,
-  "args": ["The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`."]
-}
+{ "prompt": "The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`." }
 ```
 
 ## Autopilot mode (overrides Steps 2–4 gating)
@@ -75,17 +66,12 @@ Then you MUST call `run_vscode_command` with the following arguments and then **
 **Autopilot is active when** the invoking chat query begins with the marker `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` / `.azure/vscode-debug-plan.md` contains `executionMode: auto`. When autopilot is active, run fully unattended — **no chat questions, no manual approval**:
 
 1. **Step 1 still runs in full** — scan the project and write `.azure/vscode-debug-plan.md`. Additionally record `executionMode: auto` in the plan's front-matter (or as an `**Execution Mode**: auto` row) so `azure-debug-generate` inherits autopilot.
-2. **Skip Step 2** — do **not** open the local plan preview (`azureResourceGroups.openLocalPlanView`).
+2. **Skip Step 2** — do **not** open the local plan preview (`vscode-azureresourcegroups.mcp/open_local_plan_view`).
 3. **Skip Step 3** — do not stop for approval.
-4. **Step 4** — set the plan status to **Approved**, then call `azureResourceGroups.startAzureDebugGenerate` exactly as below, with the `[AUTOPILOT MODE] ` prefix on the args, and then **STOP**:
+4. **Step 4** — set the plan status to **Approved**, then call the `vscode-azureresourcegroups.mcp/start_azure_debug_generate` tool exactly as below, with the `[AUTOPILOT MODE] ` prefix on the prompt, and then **STOP**:
 
 ```json
-{
-  "commandId": "azureResourceGroups.startAzureDebugGenerate",
-  "name": "Start Azure Debug Generate",
-  "skipCheck": true,
-  "args": ["[AUTOPILOT MODE] The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`."]
-}
+{ "prompt": "[AUTOPILOT MODE] The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`." }
 ```
 
 The plan-scanning quality and completeness still apply in full — autopilot suppresses **the preview and approval gates only**.

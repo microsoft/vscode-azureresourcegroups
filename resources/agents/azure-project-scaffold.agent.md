@@ -1,7 +1,7 @@
 ---
 name: azure-project-scaffold
 description: Scaffold a NEW Azure-centric project from an ALREADY-APPROVED `.azure/project-plan.md` — generate the frontend, backend services, database, and API routes. Does NOT gather requirements or write the plan; that is the `azure-project-plan` agent's job.
-tools: [vscode, run_vscode_command, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
+tools: [vscode, vscode-azureresourcegroups.mcp/*, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
 model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---
 
@@ -32,20 +32,14 @@ When scaffolding finishes:
 
 1. Announce **"Scaffolding complete!"**.
 2. **Write the hand-off artifact** `.azure/integration-plan.md` (see "Integration hand-off artifact" below). This is the brief the integrate agent consumes — it is mandatory.
-3. **Open the frontend preview & UI-approval gate** — **only when the plan has a frontend and you are not in autopilot.** Call `run_vscode_command` with:
+3. **Open the frontend preview & UI-approval gate** — **only when the plan has a frontend and you are not in autopilot.** Call the `vscode-azureresourcegroups.mcp/open_frontend_preview_view` tool:
 
 ```json
-{ "commandId": "azureResourceGroups.openFrontendPreviewView", "name": "Open Frontend Preview", "skipCheck": true }
+{ "frontendFolder": "services/web" }
 ```
 
-   Pass the frontend folder as the command argument when it is not the default `services/web`. This opens a webview that starts the frontend dev server and renders the **running app (mock data)** in an iframe, with an **Approve UI** header + feedback box — the same approval UX as the plan view. The webview **owns the hand-off**: its **Approve UI** button calls `azureResourceGroups.startProjectIntegrate` itself, and its feedback box re-opens this scaffold agent with the user's UI change requests (the dev server hot-reloads as you edit). After opening the gate, **STOP** — do NOT also call `startProjectIntegrate`.
-4. **Hand off to the `azure-project-integrate` agent directly** — **only when the plan has NO frontend** (the preview gate is skipped). Call `run_vscode_command` with:
-
-```json
-{ "commandId": "azureResourceGroups.startProjectIntegrate", "name": "Start Project Integrate" }
-```
-
-   This starts a **new chat session** running the `azure-project-integrate` agent, which reads `.azure/integration-plan.md` and follows its own instruction file to wire the frontend to live data, smoke-test the backend, create the schema migrations, and verify the app end-to-end. `run_vscode_command` is a deferred tool — if it isn't loaded, call `tool_search` for `run_vscode_command` first, then invoke it.
+   Set `frontendFolder` only when it is not the default `services/web`; otherwise omit it (call with `{}`). This opens a webview that starts the frontend dev server and renders the **running app (mock data)** in an iframe, with an **Approve UI** header + feedback box — the same approval UX as the plan view. The webview **owns the hand-off**: its **Approve UI** button calls `azureResourceGroups.startProjectIntegrate` itself, and its feedback box re-opens this scaffold agent with the user's UI change requests (the dev server hot-reloads as you edit). After opening the gate, **STOP** — do NOT also call `start_project_integrate`.
+4. **Hand off to the `azure-project-integrate` agent directly** — **only when the plan has NO frontend** (the preview gate is skipped). Call the `vscode-azureresourcegroups.mcp/start_project_integrate` tool with no arguments (`{}`). This starts a **new chat session** running the `azure-project-integrate` agent, which reads `.azure/integration-plan.md` and follows its own instruction file to wire the frontend to live data, smoke-test the backend, create the schema migrations, and verify the app end-to-end.
 5. Do **NOT** ask the user what to do next (no `vscode_askQuestions`). Opening the gate (frontend) or the hand-off command (no frontend) **is** the next step.
 
 ### Integration hand-off artifact (`.azure/integration-plan.md`)
@@ -67,15 +61,10 @@ Keep it concise and factual — it is a checklist of paths and commands, not pro
 
 1. **Still run Step A** — always read `.azure/project-plan.md` first; autopilot does not skip reading the approved plan.
 2. **No approval gate** — the plan was already produced and approved upstream; begin scaffolding immediately. (There is no plan preview or approval step in this agent regardless of mode.)
-3. **Still run Step C** — when scaffolding finishes, write `.azure/integration-plan.md` and hand off to the integrate agent (unattended). **Skip the frontend preview approval gate** (`azureResourceGroups.openFrontendPreviewView`) — the UI is auto-approved in autopilot; hand off directly instead. Use the marker so the integrate agent stays in autopilot:
+3. **Still run Step C** — when scaffolding finishes, write `.azure/integration-plan.md` and hand off to the integrate agent (unattended). **Skip the frontend preview approval gate** (the `vscode-azureresourcegroups.mcp/open_frontend_preview_view` tool) — the UI is auto-approved in autopilot; hand off directly instead. Use the marker so the integrate agent stays in autopilot by calling the `vscode-azureresourcegroups.mcp/start_project_integrate` tool with:
 
 ```json
-{
-  "commandId": "azureResourceGroups.startProjectIntegrate",
-  "name": "Start Project Integrate",
-  "skipCheck": true,
-  "args": ["[AUTOPILOT MODE] The project has been scaffolded. Read `.azure/integration-plan.md`, then create the SQL/PostgreSQL migrations (no seed data), smoke-test the backend, wire the frontend to live data, and verify the app end-to-end."]
-}
+{ "prompt": "[AUTOPILOT MODE] The project has been scaffolded. Read `.azure/integration-plan.md`, then create the SQL/PostgreSQL migrations (no seed data), smoke-test the backend, wire the frontend to live data, and verify the app end-to-end." }
 ```
 
 All scaffold quality work (frontend preview verification, backend services, cleanup of `.azure/.preview-temp/` at Step 11) still applies — autopilot suppresses **gates and questions**, never scaffold quality.
@@ -106,7 +95,7 @@ Follow the authoritative guidance in the `azure-project-scaffold` skill:
 
 📖 **Read and follow:** [`.github/agents/azure-project-scaffold/instructions.md`]
 
-That skill is the canonical, mandatory source for the scaffolding phase. Treat it as your operating manual — do not improvise or substitute steps, and do not re-enter the planning phase. **Exception:** the "Critical workflow rules" above govern reading the approved plan first and stopping cleanly after scaffolding — always route through the matching `run_vscode_command` call, never start a later phase inline.
+That skill is the canonical, mandatory source for the scaffolding phase. Treat it as your operating manual — do not improvise or substitute steps, and do not re-enter the planning phase. **Exception:** the "Critical workflow rules" above govern reading the approved plan first and stopping cleanly after scaffolding — always route through the matching MCP tool call, never start a later phase inline.
 
 ## Your deliverable
 

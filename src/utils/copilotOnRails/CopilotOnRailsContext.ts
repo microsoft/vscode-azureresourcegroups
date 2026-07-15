@@ -9,7 +9,7 @@ export interface CopilotOnRailsContext extends IActionContext {
     /**
      * A stripped down set of properties analagous to `context.telemetry.properties` that are automatically attached to recorded diagnostic events.
      *
-     * **Important**: This separate set of properties exists because it is not always wise to mirror telemetry properties in case of PII concerns.
+     * **Important**: This separate set of properties exists because it is not always wise to mirror telemetry properties in cases of PII concern.
      */
     diagnostics?: { properties: Record<string, unknown> };
 }

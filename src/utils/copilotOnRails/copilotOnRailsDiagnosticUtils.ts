@@ -33,18 +33,18 @@ export function getDiagnosticEvents(): DiagnosticEvent[] {
  */
 export async function withDiagnosticEvents<T>(
     context: CopilotOnRailsContext,
-    entryDetails: Pick<DiagnosticEvent, 'type' | 'name'>,
+    eventDetails: Pick<DiagnosticEvent, 'type' | 'name'>,
     run: () => Promise<T>,
 ): Promise<T> {
     const properties: Record<string, unknown> = ensureRequiredCopilotOnRailsContext(context).diagnostics.properties;
-    recordDiagnosticEvent({ name: entryDetails.name, type: entryDetails.type, status: 'start', properties: { ...properties } });
+    recordDiagnosticEvent({ name: eventDetails.name, type: eventDetails.type, status: 'start', properties: { ...properties } });
 
     try {
         const result: T = await run();
-        recordDiagnosticEvent({ name: entryDetails.name, type: entryDetails.type, status: 'success', properties: { ...properties } });
+        recordDiagnosticEvent({ name: eventDetails.name, type: eventDetails.type, status: 'success', properties: { ...properties } });
         return result;
     } catch (error) {
-        recordDiagnosticEvent({ name: entryDetails.name, type: entryDetails.type, status: 'error', properties: { ...properties, error: maskUserInfo(parseError(error).message, context.valuesToMask) } });
+        recordDiagnosticEvent({ name: eventDetails.name, type: eventDetails.type, status: 'error', properties: { ...properties, error: maskUserInfo(parseError(error).message, context.valuesToMask) } });
         throw error;
     }
 }
