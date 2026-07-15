@@ -31,7 +31,7 @@ Launched right after Step 0 (concurrently with Phase A/B). Owns frontend generat
 
 **Brief handed to the sub-agent** (full context it receives):
 - The approved plan, especially **Section 6 (Design System & UI)**: `Component Library:`, `Style Direction:`, `Typography:`, Color Palette, Pages table.
-- The approved HTML mock-up under `.azure/.preview-temp/` (manifest + per-page `<slug>.html` + `theme.css`) as the directional sketch.
+- The approved HTML preview under `.azure/.preview-temp/` (manifest + per-page `<slug>.html` + `theme.css`) as the presentation-quality visual spec.
 - The three frontend reference docs: `frontend-quality-bar.md`, `frontend-patterns.md`, `frontend-preview-steps.md`.
 
 **Hand-back contract** (what the sub-agent returns):

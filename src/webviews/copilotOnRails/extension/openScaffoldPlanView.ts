@@ -14,11 +14,19 @@ import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, wa
 const host = new SingletonViewHost<PlanData, ScaffoldPlanViewController>({
     createController: (data, uri) => {
         closeLoadingView();
-        return new ScaffoldPlanViewController(data, uri);
+        return new ScaffoldPlanViewController(data, uri, (content) => { lastSelfWrittenPlan = content; });
     },
     updateController: (controller, data, uri) => controller.updatePlanData(data, uri),
     onDidClose: () => void handleTrackedViewClosed(),
 });
+
+/**
+ * The exact plan-markdown content the controller last wrote itself (e.g. when
+ * persisting a palette color pick). The file watcher compares against this to
+ * skip the reload our own write would otherwise trigger — a reload re-posts plan
+ * data and wipes the user's pending feedback edits.
+ */
+let lastSelfWrittenPlan: string | undefined;
 
 export function isPlanViewOpen(): boolean {
     return host.isOpen;
@@ -78,7 +86,13 @@ async function openPlanViewAsync(uri: vscode.Uri): Promise<void> {
 
 async function reloadPlan(uri: vscode.Uri): Promise<void> {
     try {
-        openPlanViewWithContent(await readFileText(uri), uri);
+        const text = await readFileText(uri);
+        // Skip the echo of our own palette-persist write — reloading here would
+        // re-post plan data and clear any pending feedback edits.
+        if (text === lastSelfWrittenPlan) {
+            return;
+        }
+        openPlanViewWithContent(text, uri);
     } catch {
         // File may have been deleted or be momentarily unavailable; ignore.
     }

@@ -71,7 +71,7 @@ export async function readPreviewPages(previewFolderUri: vscode.Uri): Promise<Pr
                 title,
                 route,
                 status: 'ready',
-                html: inlineThemeCss(rawHtml, themeCss),
+                html: preparePreviewHtml(rawHtml, themeCss),
             });
         } else {
             pages.push({ slug: entry.slug, title, route, status: 'pending' });
@@ -100,6 +100,58 @@ async function readOptionalText(uri: vscode.Uri): Promise<string | undefined> {
     } catch {
         return undefined;
     }
+}
+
+/**
+ * Prepare a raw preview page for the sandboxed iframe: strip author-supplied
+ * scripts/handlers, rewrite cross-page links into the host-driven navigation
+ * form, then inline `theme.css` so the page is self-contained under `srcDoc`.
+ */
+function preparePreviewHtml(html: string, themeCss: string | undefined): string {
+    return inlineThemeCss(rewriteInternalLinks(stripAuthorScripts(html)), themeCss);
+}
+
+/**
+ * Remove any author-supplied executable content. The preview iframe runs with
+ * `allow-scripts` so the webview's trusted navigation bridge can drive page
+ * switching — author HTML must never be able to run code, so `<script>` tags,
+ * inline `on*=…` handlers, and `javascript:` URLs are stripped before the HTML
+ * reaches the iframe.
+ */
+function stripAuthorScripts(html: string): string {
+    return html
+        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<script\b[^>]*\/>/gi, '')
+        .replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, '')
+        .replace(/\son[a-z]+\s*=\s*'[^']*'/gi, '')
+        .replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, '')
+        .replace(/javascript:/gi, '#');
+}
+
+/**
+ * Convert cross-page links into a host-driven navigation form. A link to a
+ * sibling preview page (e.g. `href="dashboard.html"`) can't resolve inside an
+ * `about:srcdoc` iframe, so it would navigate to an invalid URL and break the
+ * page. We rewrite such links to an inert `href="#"` carrying
+ * `data-preview-nav="<slug>"`; the trusted bridge turns a click into a tab
+ * switch in the host. In-page `#` anchors are left alone; any other external
+ * link is neutralized to `#` so it can't break the offline iframe.
+ */
+function rewriteInternalLinks(html: string): string {
+    return html.replace(
+        /<a\b([^>]*?)href\s*=\s*["']([^"']*)["']([^>]*)>/gi,
+        (match: string, pre: string, href: string, post: string): string => {
+            const trimmed = href.trim();
+            if (trimmed === '' || trimmed.startsWith('#')) {
+                return match; // in-page anchor — leave as-is
+            }
+            const slugMatch = /(?:^|[/\\])([^/\\]+)\.html?(?:[?#].*)?$/i.exec(trimmed);
+            if (slugMatch) {
+                return `<a ${pre}href="#" data-preview-nav="${slugMatch[1]}"${post}>`;
+            }
+            return `<a ${pre}href="#"${post}>`; // external/unsupported — neutralize
+        },
+    );
 }
 
 /**

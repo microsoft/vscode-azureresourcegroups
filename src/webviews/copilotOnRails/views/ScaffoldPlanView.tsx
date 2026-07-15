@@ -218,6 +218,26 @@ export const ScaffoldPlanView = (): JSX.Element => {
         }
         return set;
     }, [feedbackItems]);
+
+    // Debounced persistence of palette color picks. A pick applies instantly to
+    // the in-memory plan (swatch + preview); the debounced writer saves it back
+    // to `.azure/project-plan.md` so it survives a reopen and the scaffold uses it.
+    const palettePersistTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const pendingPaletteWrites = useRef<Map<string, string>>(new Map());
+
+    const flushPalettePersist = useCallback(() => {
+        if (palettePersistTimer.current !== undefined) {
+            clearTimeout(palettePersistTimer.current);
+            palettePersistTimer.current = undefined;
+        }
+        if (pendingPaletteWrites.current.size === 0) {
+            return;
+        }
+        const changes = Array.from(pendingPaletteWrites.current, ([token, hex]) => ({ token, hex }));
+        pendingPaletteWrites.current.clear();
+        vscodeApi.postMessage({ command: 'persistPaletteColors', changes });
+    }, [vscodeApi]);
+
     useEffect(() => {
         const handler = (event: MessageEvent) => {
             const message = event.data;
@@ -229,6 +249,11 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 setFreeformDraft('');
                 originalCellValues.current.clear();
                 originalDesignValues.current.clear();
+                pendingPaletteWrites.current.clear();
+                if (palettePersistTimer.current !== undefined) {
+                    clearTimeout(palettePersistTimer.current);
+                    palettePersistTimer.current = undefined;
+                }
             } else if (message?.command === 'setPreviewPages') {
                 setPreviewPages(Array.isArray(message.pages) ? message.pages as PreviewPage[] : []);
                 if (typeof message.previewStatus === 'string') {
@@ -252,6 +277,9 @@ export const ScaffoldPlanView = (): JSX.Element => {
     }, []);
 
     const handleApprove = useCallback(() => {
+        // Persist any pending palette pick before approving so the scaffold agent
+        // reads the updated colors from the plan file.
+        flushPalettePersist();
         if (!plan || isAlreadyApproved) {
             return;
         }
@@ -260,7 +288,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
             return;
         }
         vscodeApi.postMessage({ command: 'approvePlan', data: plan, autopilot });
-    }, [plan, hasEdits, isAlreadyApproved, autopilot, vscodeApi]);
+    }, [plan, hasEdits, isAlreadyApproved, autopilot, vscodeApi, flushPalettePersist]);
 
     const mutateCell = useCallback((sectionIdx: number, contentIdx: number, rowIdx: number, colIdx: number, value: string) => {
         setPlan(prev => {
@@ -421,11 +449,20 @@ export const ScaffoldPlanView = (): JSX.Element => {
     }, []);
 
     const handlePaletteChange = useCallback((token: string, _originalHex: string, newHex: string) => {
-        // Palette picks are applied live to the preview iframe by `UiPreviewCard`
-        // and persisted straight into the plan's palette here — no feedback
-        // round-trip, so the recolor is instant.
+        // Apply instantly to the in-memory plan (swatch + live preview recolor)…
         mutatePaletteEntry(token, newHex);
-    }, [mutatePaletteEntry]);
+        // …and persist to `.azure/project-plan.md`, debounced because the color
+        // input fires continuously while the user drags.
+        pendingPaletteWrites.current.set(token, newHex);
+        if (palettePersistTimer.current !== undefined) {
+            clearTimeout(palettePersistTimer.current);
+        }
+        palettePersistTimer.current = setTimeout(flushPalettePersist, 400);
+    }, [mutatePaletteEntry, flushPalettePersist]);
+
+    // Flush any pending palette write when the view unmounts so a pick made just
+    // before closing isn't lost.
+    useEffect(() => () => flushPalettePersist(), [flushPalettePersist]);
 
     const handleDiscardAll = useCallback(() => {
         // Revert any cells touched by dropdown feedback items, plus any palette
@@ -451,6 +488,9 @@ export const ScaffoldPlanView = (): JSX.Element => {
         if (!plan || !hasEdits) {
             return;
         }
+        // Make sure any pending palette pick is saved before the agent rewrites
+        // the plan from the current file.
+        flushPalettePersist();
         const draftTrimmed = freeformDraft.trim();
         const items = draftTrimmed.length > 0
             ? [...feedbackItems, { id: nextId(), kind: 'freeform' as const, text: draftTrimmed }]
@@ -460,7 +500,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
         setIsAwaitingRevision(true);
         setDrawerOpen(false);
         setConfirmSubmitOpen(false);
-    }, [plan, hasEdits, feedbackItems, freeformDraft, vscodeApi]);
+    }, [plan, hasEdits, feedbackItems, freeformDraft, vscodeApi, flushPalettePersist]);
 
     if (!plan) {
         return <div className='scaffoldPlanView'><p>Loading plan...</p></div>;
