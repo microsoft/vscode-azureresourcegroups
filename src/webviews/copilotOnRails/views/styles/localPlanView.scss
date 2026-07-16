@@ -430,6 +430,24 @@
             color: var(--vscode-foreground);
             font-weight: 600;
         }
+
+        .supportWarningCell {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: normal;
+        }
+
+        .supportWarning {
+            display: inline-flex;
+            align-items: center;
+            color: var(--vscode-editorWarning-foreground, var(--vscode-list-warningForeground));
+
+            svg {
+                flex: 0 0 auto;
+                font-size: 14px;
+            }
+        }
     }
 
     .bulletList {
