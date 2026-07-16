@@ -190,8 +190,10 @@ export const LocalPlanView = (): JSX.Element => {
     );
 
     const isAlreadyApproved = useMemo(() => {
-        const s = plan?.status?.trim().toLowerCase();
-        return s === "approved";
+        const s = plan?.status?.trim().toLowerCase().replace(/[*_~`]/g, '');
+        if (!s) { return false; }
+        const unapprovedStatuses = new Set(['planning', 'unknown', 'draft', 'awaiting approval', 'new']);
+        return !unapprovedStatuses.has(s);
     }, [plan?.status]);
 
     useEffect(() => {
