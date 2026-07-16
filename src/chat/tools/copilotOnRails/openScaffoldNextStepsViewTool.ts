@@ -15,7 +15,7 @@ const openScaffoldNextStepsViewToolName = 'open_scaffold_next_steps_view';
 
 export const openScaffoldNextStepsViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSchema> = {
     name: openScaffoldNextStepsViewToolName,
-    description: 'Open the post-integration "What\'s next?" webview, which drives the next hand-off (local development or deploy).',
+    description: 'Open the project scaffold "Next Steps" webview.',
     annotations: {
         openWorldHint: false,
         destructiveHint: false,

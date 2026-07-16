@@ -19,7 +19,7 @@ const startProjectScaffoldInputSchema = z.object({
 
 export const startProjectScaffoldTool: CopilotTool<typeof startProjectScaffoldInputSchema, typeof UnspecifiedOutputSchema> = {
     name: startProjectScaffoldToolName,
-    description: 'Hand off to the `azure-project-scaffold` agent in a new chat session to scaffold the frontend, backend, database, and API routes. Accepts an optional prompt override.',
+    description: 'Hand off to the `azure-project-scaffold` agent to scaffold the frontend, backend, database, and API routes.',
     inputSchema: startProjectScaffoldInputSchema,
     annotations: {
         openWorldHint: false,

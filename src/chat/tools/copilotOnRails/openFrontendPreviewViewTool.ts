@@ -19,7 +19,7 @@ const openFrontendPreviewViewInputSchema = z.object({
 
 export const openFrontendPreviewViewTool: CopilotTool<typeof openFrontendPreviewViewInputSchema, typeof UnspecifiedOutputSchema> = {
     name: openFrontendPreviewViewToolName,
-    description: 'Open the Frontend Preview webview, which starts the frontend dev server (mock data) and renders the running app with an "Approve UI" gate. Its Approve button owns the hand-off to the integrate agent.',
+    description: 'Open the Frontend Preview webview to review and approve the running frontend app.',
     inputSchema: openFrontendPreviewViewInputSchema,
     annotations: {
         openWorldHint: false,

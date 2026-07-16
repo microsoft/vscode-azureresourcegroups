@@ -15,7 +15,7 @@ const openRequirementsViewToolName = 'open_requirements_view';
 
 export const openRequirementsViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSchema> = {
     name: openRequirementsViewToolName,
-    description: 'Open the Copilot-on-Rails Requirements webview to gather project requirements.',
+    description: 'Open the Requirements webview to gather project requirements.',
     annotations: {
         openWorldHint: false,
         destructiveHint: false,

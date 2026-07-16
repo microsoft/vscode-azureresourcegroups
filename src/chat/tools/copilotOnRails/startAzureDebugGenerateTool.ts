@@ -19,7 +19,7 @@ const startAzureDebugGenerateInputSchema = z.object({
 
 export const startAzureDebugGenerateTool: CopilotTool<typeof startAzureDebugGenerateInputSchema, typeof UnspecifiedOutputSchema> = {
     name: startAzureDebugGenerateToolName,
-    description: 'Hand off to the `azure-debug-generate` agent in a new chat session to generate the artifacts specified by `.azure/vscode-debug-plan.md`. Accepts an optional prompt override.',
+    description: 'Hand off to the `azure-debug-generate` agent to generate the artifacts specified by the `azure-debug-plan` agent.',
     inputSchema: startAzureDebugGenerateInputSchema,
     annotations: {
         openWorldHint: false,

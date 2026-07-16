@@ -19,7 +19,7 @@ const startDeploymentInputSchema = z.object({
 
 export const startDeploymentTool: CopilotTool<typeof startDeploymentInputSchema, typeof UnspecifiedOutputSchema> = {
     name: startDeploymentToolName,
-    description: 'Hand off to the `azure-deploy` agent in a new chat session to prepare the project for deployment to Azure (`.azure/deployment-plan.md`, infrastructure, `azure.yaml`, Dockerfiles). Accepts an optional prompt override.',
+    description: 'Hand off to the `azure-deploy` agent to prepare the project for deployment to Azure.',
     inputSchema: startDeploymentInputSchema,
     annotations: {
         openWorldHint: false,

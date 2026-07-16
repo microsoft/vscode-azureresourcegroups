@@ -15,7 +15,7 @@ const openPlanViewToolName = 'open_plan_view';
 
 export const openPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSchema> = {
     name: openPlanViewToolName,
-    description: 'Open the project plan-preview webview that renders `.azure/project-plan.md` and the `.azure/.preview-temp/*.html` pages for user approval.',
+    description: 'Open the Project Plan webview for user approval.',
     annotations: {
         openWorldHint: false,
         destructiveHint: false,

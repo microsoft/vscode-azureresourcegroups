@@ -19,7 +19,7 @@ const openLocalNextStepsViewInputSchema = z.object({
 
 export const openLocalNextStepsViewTool: CopilotTool<typeof openLocalNextStepsViewInputSchema, typeof UnspecifiedOutputSchema> = {
     name: openLocalNextStepsViewToolName,
-    description: 'Open the local development "Next Steps" webview after the local debugging artifacts are generated.',
+    description: 'Open the local development "Next Steps" webview.',
     inputSchema: openLocalNextStepsViewInputSchema,
     annotations: {
         openWorldHint: false,

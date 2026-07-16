@@ -15,7 +15,7 @@ const openLocalPlanViewToolName = 'open_local_plan_view';
 
 export const openLocalPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSchema> = {
     name: openLocalPlanViewToolName,
-    description: 'Open the Local Development Plan webview for user approval of `.azure/vscode-debug-plan.md`.',
+    description: 'Open the Local Development Plan webview for user approval.',
     annotations: {
         openWorldHint: false,
         destructiveHint: false,

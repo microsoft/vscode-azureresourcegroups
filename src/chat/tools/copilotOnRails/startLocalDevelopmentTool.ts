@@ -19,7 +19,7 @@ const startLocalDevelopmentInputSchema = z.object({
 
 export const startLocalDevelopmentTool: CopilotTool<typeof startLocalDevelopmentInputSchema, typeof UnspecifiedOutputSchema> = {
     name: startLocalDevelopmentToolName,
-    description: 'Hand off to the `azure-debug-plan` agent in a new chat session to set up the local debugging environment. Accepts an optional prompt override.',
+    description: 'Hand off to the `azure-debug-plan` agent to set up the local debugging environment.',
     inputSchema: startLocalDevelopmentInputSchema,
     annotations: {
         openWorldHint: false,

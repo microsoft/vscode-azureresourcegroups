@@ -19,7 +19,7 @@ const startProjectIntegrateInputSchema = z.object({
 
 export const startProjectIntegrateTool: CopilotTool<typeof startProjectIntegrateInputSchema, typeof UnspecifiedOutputSchema> = {
     name: startProjectIntegrateToolName,
-    description: 'Hand off to the `azure-project-integrate` agent in a new chat session to wire the frontend to live data, create migrations, and smoke-test the backend. Accepts an optional prompt override.',
+    description: 'Hand off to the `azure-project-integrate` agent to wire the frontend to live data, create migrations, and smoke-test the backend.',
     inputSchema: startProjectIntegrateInputSchema,
     annotations: {
         openWorldHint: false,

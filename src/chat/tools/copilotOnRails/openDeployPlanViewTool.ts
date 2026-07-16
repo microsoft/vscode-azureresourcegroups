@@ -15,7 +15,7 @@ const openDeployPlanViewToolName = 'open_deploy_plan_view';
 
 export const openDeployPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSchema> = {
     name: openDeployPlanViewToolName,
-    description: 'Open the Deployment Plan webview that renders `.azure/deployment-plan.md` for user approval.',
+    description: 'Open the Deployment Plan webview for user approval.',
     annotations: {
         openWorldHint: false,
         destructiveHint: false,
