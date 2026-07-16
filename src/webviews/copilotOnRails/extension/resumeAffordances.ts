@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import { getProjectPlanFiles, type ProjectPlanFilesWatcher } from '../../../tree/project/projectPlanFiles';
-import { copilotOnRailsCommandIds } from './copilotOnRailsCommands';
+import { copilotOnRailsCommandIds } from '../../../commands/copilotOnRails/registerCopilotOnRailsCommands';
 import { clearSession, onDidChangeSession, phaseLabel, readSessionState, shouldOfferResume } from './projectSession';
 
 let statusBarItem: vscode.StatusBarItem | undefined;

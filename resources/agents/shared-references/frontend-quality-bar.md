@@ -4,6 +4,27 @@
 
 ---
 
+## Shared design-quality principles (fidelity-agnostic — the contract BOTH phases share)
+
+> **This section is the single design-quality contract read by _both_ rendering targets:**
+> - **Planning preview** (`azure-project-plan`) — renders these principles as **raw, static HTML/CSS** in `.azure/.preview-temp/` (no framework, no build step, no JavaScript, no network). See the raw-HTML/CSS rendering recipes in [`html-preview.md`](.github/agents/azure-project-plan/references/html-preview.md).
+> - **Scaffold app** (`azure-project-scaffold`) — renders the *same* principles with the **real `Component Library` primitives** from Section 6, using the per-library mapping in the rest of this file, and adds the production-only capabilities the static preview cannot show (real photos, motion, dark mode, webfont, library elevation).
+>
+> Both targets must look like the **same professional product** at two fidelities. The planning preview is **not** a throwaway wireframe — it is a presentation-quality visual specification. The scaffold reproduces it faithfully and must **never regress below it**.
+
+Whatever the rendering target, every page MUST satisfy these six principles:
+
+1. **Presentation quality, not a sketch.** Balanced spacing rhythm, real depth (a multi-tier elevation scale — not a single flat border), consistent corner radius, a coherent themed palette, clear typographic hierarchy, and realistic populated content. The bar is "a screen a designer would show a stakeholder to sign off the look", never a gray boxy wireframe.
+2. **Theme from the brand color.** Derive the whole palette from Section 6's `primary` (plus `accent`/surfaces/text/muted/border). The planning preview expresses these as `:root` CSS custom properties; the scaffold wires them through the library's theme provider. Never ship the library's default brand color or hard-coded hexes in markup.
+3. **Render layout tokens as real structure.** A `header + hero + grid + footer` layout is real regions with real content — never raw placeholder `<div>`s. (Raw HTML/CSS renders styled semantic elements; the scaffold renders real library primitives per the mapping below.)
+4. **All four data states, at least once across the page set.** `data` (populated), `loading` (skeleton), `empty` (illustration/icon + call-to-action), `error` (inline banner + retry). The scaffold makes them reachable live via the Mock State Switcher; the planning preview depicts them statically.
+5. **Real iconography.** Named icons with consistent stroke weight — inline `<svg>` in the static preview, the library's official icon set in the scaffold. **Never** emoji, Unicode glyphs, or `viewBox="0 0 1 1"` placeholder shapes.
+6. **Every image slot is filled.** No empty tinted boxes. The static preview uses **neutral placeholder blocks** (a subtle surface + border with a muted icon or initials) — **not** brand-color gradients, which overstate how much the palette actually drives the design; the scaffold binds real image URLs from the mock data.
+
+> **Fidelity boundary — what only the scaffold does.** The static planning preview intentionally stops at what raw static files can do well: it uses **system fonts** (no remote webfont), **no JavaScript** (so no working theme toggle, no live state switching — states are depicted statically), and **neutral image placeholders** (no real photos). The scaffold adds real webfonts, motion, working dark mode, live four-state switching, and real imagery. That gap is the scaffold's value-add — it is **not** license for the planning preview to look unpolished.
+
+---
+
 ## Core principle
 
 > **Layout tokens are layout INTENT, not implementation.** When the plan's Section 6 says a page's layout is `header + hero + grid + footer`, that does NOT mean produce four `<div>`s with placeholder text. It means **render the equivalent of those regions using the real `Component Library` named in Section 6, themed by the Section 6 Color Palette.**
@@ -20,7 +41,7 @@ If you ever emit JSX like this:
 </div>
 ```
 
-…you have failed the quality bar. That output **looks worse than the plan-preview wireframe** the user already approved, because it strips the library primitives, the theme, the icons, and the state coverage the preview implied. The preview is a promise; this contract is how you keep it.
+…you have failed the quality bar. That output **looks worse than the presentation-quality plan preview** the user already approved, because it strips the theme, the icons, the elevation, and the state coverage the preview shipped. The preview is a promise; this contract is how you keep it.
 
 ---
 
@@ -33,7 +54,7 @@ If you ever emit JSX like this:
 | `Typography:`            | Font family applied at the app shell level.                              |
 | Color Palette table      | Brand ramp / theme tokens — wire through the library's theme provider.   |
 | Pages table (`Layout`)   | Which **library primitives** to compose per page (see mapping below).    |
-| `.azure/.preview-temp/*.html` + `theme.css` | The HTML/CSS **directional sketch** the user approved during planning. Tells you three things only: (1) page regions and rough order, (2) brand color story, (3) content density. The sketch deliberately ships with **no** icons, fonts, motion, dark mode, or polished hero treatments — those are your job. **The scaffold MUST visibly exceed the sketch** (see "Polish floor" below). Do not import, embed, or `<iframe>` it. Folder is deleted in Step 13. |
+| `.azure/.preview-temp/*.html` + `theme.css` | The **presentation-quality static HTML/CSS preview** the user approved during planning. It is a faithful visual spec: page regions and order, the themed palette, real inline-SVG icons, populated content, and all four data states. What it deliberately omits (raw-static limits): real webfonts, motion, working dark mode, and real photos. **Reproduce it faithfully with real library primitives and add only those production-only capabilities** (see "Polish floor" below) — never regress below it. Do not import, embed, or `<iframe>` it. Folder is deleted in Step 13. |
 
 > If Section 6 is missing or `Component Library:` is blank, **STOP**. The plan is incomplete — re-run `azure-project-plan` instead of guessing.
 
@@ -184,7 +205,7 @@ The four states MUST be reachable from the running preview **without code edits 
    - Pico: `--pico-primary` CSS variable.
 2. **Map `surface` / `text` / `muted` / `border`** onto the library's neutral tokens — do not hard-code colors in component JSX. Semantic states (success / warning / error) come from the library's built-in semantic tokens, not from the plan palette.
 3. **Apply `Typography`** at the app shell level (Fluent: `FluentProvider` style override; Vuetify: `<v-app>` font-family; Angular: `--mat-sys-body-large-font`; Skeleton: theme module; Pico: `:root { font-family: … }`).
-4. The plan-preview webview renders a sandboxed **HTML/CSS** mock-up — purely presentational, no JavaScript, no real component library involved. Each page lives at `.azure/.preview-temp/<slug>.html` and shares a single `.azure/.preview-temp/theme.css`. Treat those files as a **directional sketch** — they confirm regions, color story, and density. They are **not** the polish bar. Your scaffolded app MUST out-polish the sketch in every visible dimension: real library primitives, real icons, real webfont, motion, dark mode, four states with illustrations, and library elevation. Do not import, embed, or `<iframe>` the mock-up. `.azure/.preview-temp/` is deleted in Step 13.
+4. The plan-preview webview renders a sandboxed **HTML/CSS** preview — purely presentational, no JavaScript, no real component library involved. Each page lives at `.azure/.preview-temp/<slug>.html` and shares a single `.azure/.preview-temp/theme.css`. Treat those files as a **presentation-quality visual spec** — approved regions, themed palette, real icons, populated content, and all four states. Reproduce that look with real library primitives and **add the production-only capabilities the static files could not include**: real webfont, motion, dark mode, and real imagery. Do not import, embed, or `<iframe>` the preview. `.azure/.preview-temp/` is deleted in Step 13.
 
 ---
 
@@ -197,7 +218,7 @@ The four states MUST be reachable from the running preview **without code edits 
 - [ ] Every data-bearing page exposes all four states (loading / error / empty / data) via a dev-only toggle.
 - [ ] `Style Direction:` is reflected in density and corner radius (e.g. "data-dense" → compact toolbars, tight list rows; "calm and spacious" → generous padding, larger cards).
 - [ ] No `any` types; the four-state contract still holds; auto-auth still works (if applicable).
-- [ ] The scaffolded UI **visibly exceeds** the directional sketch at `.azure/.preview-temp/<slug>.html` — same regions, same primary brand color, same density bias, but with real library primitives, real icons, real webfont, motion, dark mode, and library elevation that the static HTML sketch could not show. If a generated page looks like a re-skin of the sketch, the page has failed the bar.
+- [ ] The scaffolded UI **reproduces the approved preview at `.azure/.preview-temp/<slug>.html` and adds the production-only layer** — same regions, same brand color, same density and populated content, now with real library primitives, real webfont, motion, dark mode, and real imagery the static preview could not include. If a generated page looks **less** polished than the preview, the page has failed the bar.
 
 ---
 
@@ -344,6 +365,6 @@ Run through this 12-item yes/no list for **each page** generated. A "no" on any 
 8. Do density + corner radius tokens reflect Section 6's `Style Direction:` (playful → larger radii; professional → tighter)?
 9. Do all primary CTAs name the action (`Save changes`, `Create project`) — no generic `Submit` / `OK` / `Continue`?
 10. Is the brand ramp derived from Section 6's `primary` (16-step / theme-provider-driven), with both themes sharing it?
-11. Is the layout meaningfully **different from** the static HTML sketch — better elevation, real icons, motion, polished spacing — so a reviewer comparing them would say "yes, this exceeds the mock"?
+11. Does the page **match or exceed** the approved static preview — same regions and content, now with real library elevation, motion, real webfont, and real imagery — so a reviewer comparing them would say "yes, this is the preview, brought to life" (never "this looks worse than the mock")?
 12. Does every region **resolve to a real library primitive** (no zero-effort `<div className="card">Card 1</div>` wireframe stubs)? Bespoke, domain-styled components (polaroid frames, ticket stubs, gallery tiles, chat bubbles) are **encouraged** as long as they wrap or extend a real library primitive and carry real content + imagery — the ban is on empty placeholder `<div>`s that merely re-skin the wireframe, not on domain art direction.
 13. Does every media-bearing entity render a **real image** (from the mock data's image URL), not an empty tinted surface or solid-color block?

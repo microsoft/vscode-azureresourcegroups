@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { setCorProp } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { type LocalDevNextStepsViewConfiguration } from "../views/utils/viewConfigTypes";
 import { disableAutopilot } from "./autopilot";
 import { LocalDevNextStepsViewController } from "./controllers/LocalDevNextStepsViewController";
@@ -18,7 +20,7 @@ let controller: LocalDevNextStepsViewController | undefined;
  * When `hasApiTests` is not explicitly provided, auto-detects by checking
  * whether `api-test-collections/` contains any files in the workspace.
  */
-export async function openLocalDevNextStepsView(hasApiTests?: boolean): Promise<void> {
+export async function openLocalDevNextStepsView(context: CopilotOnRailsContext, hasApiTests?: boolean): Promise<void> {
     await disableAutopilot();
 
     let apiTestsDetected = !!hasApiTests;
@@ -26,6 +28,8 @@ export async function openLocalDevNextStepsView(hasApiTests?: boolean): Promise<
         const results = await vscode.workspace.findFiles('api-test-collections/**/*', undefined, 1);
         apiTestsDetected = results.length > 0;
     }
+
+    setCorProp(context, 'hasApiTests', apiTestsDetected);
 
     const config: LocalDevNextStepsViewConfiguration = { hasApiTests: apiTestsDetected };
 
