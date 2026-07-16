@@ -6,10 +6,10 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import { l10n } from "vscode";
 import { z } from "zod/mini";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { startProjectIntegrateCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { azureProjectIntegrateAgent } from "../../../constants";
 
 const startProjectIntegrateToolName = 'start_project_integrate';
 
@@ -19,7 +19,7 @@ const startProjectIntegrateInputSchema = z.object({
 
 export const startProjectIntegrateTool: CopilotTool<typeof startProjectIntegrateInputSchema, typeof UnspecifiedOutputSchema> = {
     name: startProjectIntegrateToolName,
-    description: 'Hand off to the `azure-project-integrate` agent to wire the frontend to live data, create migrations, and smoke-test the backend.',
+    description: `Hand off to the "${azureProjectIntegrateAgent}" agent to wire the frontend to live data, create migrations, and smoke-test the backend.`,
     inputSchema: startProjectIntegrateInputSchema,
     annotations: {
         openWorldHint: false,
@@ -29,10 +29,10 @@ export const startProjectIntegrateTool: CopilotTool<typeof startProjectIntegrate
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startProjectIntegrateToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: startProjectIntegrateToolName, extras }, async (corContext) => {
                 await startProjectIntegrateCommand(corContext, input.prompt);
-                return { message: l10n.t('Started the project integrate agent.') };
+                return { message: 'Started the project integrate agent.' };
             });
         }) ?? {
-            message: l10n.t('Failed to start the project integrate agent.'),
+            message: 'Failed to start the project integrate agent.',
         };
     }
 };

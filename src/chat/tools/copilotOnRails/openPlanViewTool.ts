@@ -6,8 +6,9 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import { l10n } from "vscode";
 import type { z } from "zod";
+import { azureProjectPlanAgent } from "../../../constants";
+import { PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { openPlanViewFromWorkspace } from "../../../webviews/copilotOnRails/extension/openScaffoldPlanView";
 
@@ -24,10 +25,10 @@ export const openPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSc
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openPlanViewToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: openPlanViewToolName, extras }, async (corContext) => {
                 await openPlanViewFromWorkspace(corContext);
-                return { message: l10n.t('Opened the Plan view.') };
+                return { message: 'Opened the Plan view.' };
             });
         }) ?? {
-            message: l10n.t('Failed to open the Plan view.'),
+            message: `Failed to open the Plan view. Ensure "${PROJECT_PLAN_FILE_GLOB}" exists in the current workspace. You can generate it using the "${azureProjectPlanAgent}" agent.`,
         };
     }
 };

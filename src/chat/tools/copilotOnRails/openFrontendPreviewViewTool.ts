@@ -6,7 +6,6 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import { l10n } from "vscode";
 import { z } from "zod/mini";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { openFrontendPreviewView } from "../../../webviews/copilotOnRails/extension/openFrontendPreviewView";
@@ -29,10 +28,10 @@ export const openFrontendPreviewViewTool: CopilotTool<typeof openFrontendPreview
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openFrontendPreviewViewToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: openFrontendPreviewViewToolName, extras }, async (corContext) => {
                 await openFrontendPreviewView(corContext, input.frontendFolder);
-                return { message: l10n.t('Opened the Frontend Preview view.') };
+                return { message: 'Opened the Frontend Preview view.' };
             });
         }) ?? {
-            message: l10n.t('Failed to open the Frontend Preview view.'),
+            message: 'Failed to open the Frontend Preview view.',
         };
     }
 };

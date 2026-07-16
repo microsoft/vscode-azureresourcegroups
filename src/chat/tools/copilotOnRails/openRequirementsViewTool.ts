@@ -6,8 +6,8 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import { l10n } from "vscode";
 import type { z } from "zod";
+import { REQUIREMENTS_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { openRequirementsViewFromWorkspace } from "../../../webviews/copilotOnRails/extension/openRequirementsView";
 
@@ -24,10 +24,10 @@ export const openRequirementsViewTool: CopilotTool<z.ZodVoid, typeof Unspecified
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openRequirementsViewToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: openRequirementsViewToolName, extras }, async (corContext) => {
                 await openRequirementsViewFromWorkspace(corContext);
-                return { message: l10n.t('Opened the Requirements view. Wait for user input before proceeding.') };
+                return { message: 'Opened the Requirements view. Wait for user input before proceeding.' };
             });
         }) ?? {
-            message: l10n.t('Failed to open the Requirements view.'),
+            message: `Failed to open the Requirements view. Ensure "${REQUIREMENTS_FILE_GLOB}" exists in the current workspace.`,
         };
     }
 };

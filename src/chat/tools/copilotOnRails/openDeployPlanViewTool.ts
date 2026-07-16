@@ -6,8 +6,9 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import { l10n } from "vscode";
 import type { z } from "zod";
+import { azureDeployAgent } from "../../../constants";
+import { DEPLOYMENT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { openDeploymentPlanViewFromWorkspace } from "../../../webviews/copilotOnRails/extension/openDeploymentPlanView";
 
@@ -24,10 +25,10 @@ export const openDeployPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOu
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openDeployPlanViewToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: openDeployPlanViewToolName, extras }, async (corContext) => {
                 await openDeploymentPlanViewFromWorkspace(corContext);
-                return { message: l10n.t('Opened the Deployment Plan view.') };
+                return { message: 'Opened the Deployment Plan view.' };
             });
         }) ?? {
-            message: l10n.t('Failed to open the Deployment Plan view.'),
+            message: `Failed to open the Deployment Plan view. Ensure "${DEPLOYMENT_PLAN_FILE_GLOB}" exists in the current workspace. You can generate it using the "${azureDeployAgent}" agent.`,
         };
     }
 };

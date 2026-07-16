@@ -6,8 +6,9 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import { l10n } from "vscode";
 import type { z } from "zod";
+import { azureDebugPlanAgent } from "../../../constants";
+import { DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { openLocalPlanViewFromWorkspace } from "../../../webviews/copilotOnRails/extension/openLocalPlanView";
 
@@ -24,10 +25,10 @@ export const openLocalPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOut
         return await callWithTelemetryAndErrorHandling(`mcpTool/${openLocalPlanViewToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: openLocalPlanViewToolName, extras }, async (corContext) => {
                 await openLocalPlanViewFromWorkspace(corContext);
-                return { message: l10n.t('Opened the Local Development Plan view.') };
+                return { message: 'Opened the Local Development Plan view.' };
             });
         }) ?? {
-            message: l10n.t('Failed to open the Local Development Plan view.'),
+            message: `Failed to open the Local Development Plan view. Ensure "${DEBUG_PLAN_FILE_GLOB}" exists in the current workspace. You can generate it using the "${azureDebugPlanAgent}" agent.`,
         };
     }
 };

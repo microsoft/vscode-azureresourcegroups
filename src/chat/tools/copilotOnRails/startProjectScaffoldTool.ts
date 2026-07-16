@@ -6,10 +6,10 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
-import { l10n } from "vscode";
 import { z } from "zod/mini";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { startProjectScaffoldCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { azureProjectScaffoldAgent } from "../../../constants";
 
 const startProjectScaffoldToolName = 'start_project_scaffold';
 
@@ -19,7 +19,7 @@ const startProjectScaffoldInputSchema = z.object({
 
 export const startProjectScaffoldTool: CopilotTool<typeof startProjectScaffoldInputSchema, typeof UnspecifiedOutputSchema> = {
     name: startProjectScaffoldToolName,
-    description: 'Hand off to the `azure-project-scaffold` agent to scaffold the frontend, backend, database, and API routes.',
+    description: `Hand off to the "${azureProjectScaffoldAgent}" agent to scaffold the frontend, backend, database, and API routes.`,
     inputSchema: startProjectScaffoldInputSchema,
     annotations: {
         openWorldHint: false,
@@ -29,10 +29,10 @@ export const startProjectScaffoldTool: CopilotTool<typeof startProjectScaffoldIn
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startProjectScaffoldToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: startProjectScaffoldToolName, extras }, async (corContext) => {
                 await startProjectScaffoldCommand(corContext, input.prompt);
-                return { message: l10n.t('Started the project scaffold agent.') };
+                return { message: 'Started the project scaffold agent.' };
             });
         }) ?? {
-            message: l10n.t('Failed to start the project scaffold agent.'),
+            message: 'Failed to start the project scaffold agent.',
         };
     }
 };
