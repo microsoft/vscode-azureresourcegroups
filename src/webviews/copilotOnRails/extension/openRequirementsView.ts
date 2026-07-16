@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { REQUIREMENTS_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { parseRequirementsJson, type RequirementsData } from "../views/utils/parseRequirements";
@@ -71,11 +72,13 @@ function tryParse(content: string, sourceFileUri: vscode.Uri | undefined): Requi
     }
 }
 
-export async function openRequirementsViewFromWorkspace(): Promise<void> {
+export async function openRequirementsViewFromWorkspace(context: IActionContext): Promise<void> {
     const selected = await pickWorkspaceFile(
         REQUIREMENTS_FILE_GLOB,
         vscode.l10n.t('No requirements file found. Expected `.azure/requirements.json` in the workspace.'),
     );
+
+    context.telemetry.properties.requirementsSelected = String(!!selected);
     if (selected) {
         await openRequirementsViewAsync(selected);
     }

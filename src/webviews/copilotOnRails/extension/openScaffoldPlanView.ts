@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { type PlanData, parseScaffoldPlanMarkdown } from "../views/utils/parseScaffoldPlanMarkdown";
 import { ScaffoldPlanViewController } from "./controllers/ScaffoldPlanViewController";
@@ -69,7 +70,7 @@ function tryParseScaffoldPlan(content: string, sourceFileUri: vscode.Uri | undef
     return parsed;
 }
 
-export async function openPlanViewFromWorkspace(): Promise<void> {
+export async function openPlanViewFromWorkspace(_context: CopilotOnRailsContext): Promise<void> {
     const selected = await pickWorkspaceFile(
         PROJECT_PLAN_FILE_GLOB,
         vscode.l10n.t('No plan markdown files found in the workspace.'),

@@ -7,6 +7,7 @@ import * as fs from "fs";
 import * as vscode from "vscode";
 import { ext } from "../../../extensionVariables";
 import { INTEGRATION_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { FrontendPreviewViewController } from "./controllers/FrontendPreviewViewController";
 import { closeLoadingView } from "./openLoadingView";
 
@@ -30,7 +31,7 @@ const FRONTEND_FOLDERS_KEY = 'azureResourceGroups.copilotOnRails.frontendFolders
  *                       (see {@link FRONTEND_FOLDERS_KEY}) is used, falling back
  *                       to {@link DEFAULT_FRONTEND_FOLDER}.
  */
-export async function openFrontendPreviewView(frontendFolder?: string): Promise<void> {
+export async function openFrontendPreviewView(_context: CopilotOnRailsContext, frontendFolder?: string): Promise<void> {
     const folder = await resolveFrontendFolder(frontendFolder);
     if (!folder) {
         return;
