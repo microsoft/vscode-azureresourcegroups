@@ -45,6 +45,10 @@ export async function askAgentAboutActivityLog(context: IActionContext, item?: A
         }
     }
 
+    if (!activitySelectedCache.selectionCount) {
+        return;
+    }
+
     await vscode.commands.executeCommand("workbench.action.chat.newChat");
     await vscode.commands.executeCommand("workbench.action.chat.open", { mode: 'agent', query: genericActivityLogPrompt });
 }

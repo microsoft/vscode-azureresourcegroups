@@ -6,10 +6,10 @@
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
+import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { ext } from "../../../../extensionVariables";
 import { type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
-import { copilotOnRailsCommandIds } from "../copilotOnRailsCommands";
 
 /**
  * Transient webview shown while Copilot generates the artifact (requirements,

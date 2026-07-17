@@ -11,6 +11,7 @@ import { azureDebugGenerateAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type LocalDevNextStepsViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { openLoadingView } from "../openLoadingView";
 
 type NextStepAction = 'iterate' | 'apiTests' | 'deploy';
 
@@ -54,6 +55,11 @@ export class LocalDevNextStepsViewController extends WebviewController<LocalDevN
                 await vscode.commands.executeCommand('workbench.action.chat.open', {
                     mode: azureDebugGenerateAgent,
                     query: vscode.l10n.t('Run the API tests to verify my endpoints.'),
+                });
+                openLoadingView({
+                    stage: 1,
+                    title: vscode.l10n.t('Running your API tests…'),
+                    message: vscode.l10n.t('Copilot is executing the generated API test collection. For progress please view the Copilot chat.'),
                 });
                 return;
             case 'deploy':

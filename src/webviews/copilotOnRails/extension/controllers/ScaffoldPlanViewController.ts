@@ -30,7 +30,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     private _isRefreshingPrereqs = false;
     private _refreshPrereqsTimer: ReturnType<typeof setTimeout> | undefined;
 
-    constructor(planData: PlanData, sourceFileUri?: vscode.Uri) {
+    constructor(planData: PlanData, sourceFileUri?: vscode.Uri, private readonly onSelfWrite?: (content: string) => void) {
         super(ext.context, 'Project Plan', 'scaffoldPlanView', {}, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
 
         this.sourceFileUri = sourceFileUri;
@@ -46,7 +46,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             }
         });
 
-        this.panel.webview.onDidReceiveMessage((message: { command: string; data?: PlanData; prompt?: string; autopilot?: boolean }) => {
+        this.panel.webview.onDidReceiveMessage((message: { command: string; data?: PlanData; prompt?: string; autopilot?: boolean; changes?: { token?: string; hex?: string }[] }) => {
             switch (message.command) {
                 case 'ready':
                     void this.panel.webview.postMessage({ command: 'setPlanData', data: planData });
@@ -54,6 +54,9 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     break;
                 case 'approvePlan':
                     void this.approveAndOpenScaffoldChat(!!message.autopilot);
+                    break;
+                case 'persistPaletteColors':
+                    void this.persistPaletteColors(message.changes);
                     break;
                 case 'submitPlanFeedback': {
                     const query = message.prompt?.trim();
@@ -75,6 +78,35 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     break;
             }
         });
+    }
+
+    /**
+     * Persist palette color picks back into `.azure/project-plan.md` so a changed
+     * color survives a reopen and the scaffold agent uses it. Writes the plan file
+     * directly (no agent round-trip); the self-write notifier suppresses the echo
+     * reload so pending feedback edits are not wiped.
+     */
+    private async persistPaletteColors(changes: { token?: string; hex?: string }[] | undefined): Promise<void> {
+        if (!this.sourceFileUri || !Array.isArray(changes) || changes.length === 0) {
+            return;
+        }
+        const valid = changes.filter(
+            (c): c is { token: string; hex: string } => typeof c?.token === 'string' && typeof c?.hex === 'string',
+        );
+        if (valid.length === 0) {
+            return;
+        }
+        try {
+            const raw = Buffer.from(await vscode.workspace.fs.readFile(this.sourceFileUri)).toString('utf-8');
+            const updated = applyPaletteHexToMarkdown(raw, valid);
+            if (updated === raw) {
+                return;
+            }
+            this.onSelfWrite?.(updated);
+            await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(updated, 'utf-8'));
+        } catch (err) {
+            ext.outputChannel.appendLog(`[ScaffoldPlanView] palette persist failed: ${err instanceof Error ? err.message : String(err)}`);
+        }
     }
 
     private async approveAndOpenScaffoldChat(autopilot: boolean): Promise<void> {
@@ -312,4 +344,80 @@ function resolvePreviewFolderUri(sourceFileUri: vscode.Uri | undefined): vscode.
     }
     const workspaceFsPath = path.dirname(path.dirname(sourceFileUri.fsPath));
     return vscode.Uri.file(path.join(workspaceFsPath, PREVIEW_FOLDER_RELATIVE_PATH));
+}
+
+/** Normalize a hex string to a leading-`#` form. */
+function normalizeHex(hex: string): string {
+    const trimmed = hex.trim();
+    return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+}
+
+/**
+ * Rewrite the hex value(s) in the plan's Color Palette markdown table for the
+ * given tokens, preserving the surrounding table formatting. Returns the content
+ * unchanged when no matching palette table/row is found. Mirrors the parser's
+ * column detection (a header row with a `Token` column and a `Color`/`Hex`/
+ * `Value` column).
+ */
+function applyPaletteHexToMarkdown(content: string, changes: { token: string; hex: string }[]): string {
+    const byToken = new Map<string, string>();
+    for (const change of changes) {
+        if (change.token && change.hex) {
+            byToken.set(change.token, normalizeHex(change.hex));
+        }
+    }
+    if (byToken.size === 0) {
+        return content;
+    }
+
+    const lines = content.split('\n');
+    let tokenCol = -1;
+    let hexCol = -1;
+    let headerIdx = -1;
+    for (let i = 0; i < lines.length; i++) {
+        if (!lines[i].trim().startsWith('|')) {
+            continue;
+        }
+        const headers = splitTableRow(lines[i]).map(cell => cell.trim().toLowerCase());
+        const tIdx = headers.findIndex(h => h === 'token');
+        const hIdx = headers.findIndex(h => h === 'color' || h === 'hex' || h === 'value');
+        if (tIdx >= 0 && hIdx >= 0) {
+            tokenCol = tIdx;
+            hexCol = hIdx;
+            headerIdx = i;
+            break;
+        }
+    }
+    if (headerIdx < 0) {
+        return content;
+    }
+
+    // Body rows begin after the header separator line (`|---|---|`).
+    for (let i = headerIdx + 2; i < lines.length; i++) {
+        if (!lines[i].trim().startsWith('|')) {
+            break;
+        }
+        const cells = splitTableRow(lines[i]);
+        if (tokenCol >= cells.length || hexCol >= cells.length) {
+            continue;
+        }
+        const newHex = byToken.get(cells[tokenCol].trim());
+        if (!newHex) {
+            continue;
+        }
+        cells[hexCol] = cells[hexCol].replace(/#?[0-9a-fA-F]{3,8}/, newHex);
+        lines[i] = rebuildTableRow(lines[i], cells);
+    }
+    return lines.join('\n');
+}
+
+/** Split a markdown table row into its raw inner cells (spacing preserved). */
+function splitTableRow(line: string): string[] {
+    return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|');
+}
+
+/** Reassemble a table row from raw cells, preserving the line's indentation. */
+function rebuildTableRow(originalLine: string, cells: string[]): string {
+    const indent = originalLine.match(/^\s*/)?.[0] ?? '';
+    return `${indent}|${cells.join('|')}|`;
 }

@@ -7,6 +7,15 @@ import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 
+export const copilotOnRailsCustomAgents = {
+    azureProjectPlanCustomAgent: 'azure-project-plan',
+    azureProjectScaffoldCustomAgent: 'azure-project-scaffold',
+    azureProjectIntegrateCustomAgent: 'azure-project-integrate',
+    azureDebugPlanCustomAgent: 'azure-debug-plan',
+    azureDebugGenerateCustomAgent: 'azure-debug-generate',
+    azureDeployCustomAgent: 'azure-deploy',
+} as const;
+
 /** Folder (relative to the workspace root) where instruction folders are downloaded. */
 const WORKSPACE_AGENTS_RELATIVE_PATH = ['.github', 'agents'];
 

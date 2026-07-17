@@ -5,6 +5,7 @@
 
 import * as vscode from "vscode";
 import { ext } from "../../../extensionVariables";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { DEPLOYMENT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import type { DeploymentPlanData } from "../views/utils/deploymentPlanTypes";
 import { parseDeploymentPlanMarkdown } from "../views/utils/parseDeploymentPlanMarkdown";
@@ -91,7 +92,7 @@ function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | und
     return parsed;
 }
 
-export async function openDeploymentPlanViewFromWorkspace(): Promise<void> {
+export async function openDeploymentPlanViewFromWorkspace(_context: CopilotOnRailsContext): Promise<void> {
     const selected = await pickWorkspaceFile(
         DEPLOYMENT_PLAN_FILE_GLOB,
         vscode.l10n.t('No deployment plan markdown files found in the workspace.'),

@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { type IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { openChatWithAgent } from '../../../commands/copilotOnRails/openChatWithAgent';
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
+import { CopilotOnRailsContext } from '../../../utils/copilotOnRails/CopilotOnRailsContext';
 import { ProjectPlanStatus, statusEquals } from '../views/utils/projectPlanStatus';
 import { type LoadingViewConfiguration } from '../views/utils/viewConfigTypes';
 import { isDebugPlanImplemented } from './autopilot';
@@ -42,7 +42,7 @@ const RESUME_LOADING: Readonly<Record<ProjectPhase, LoadingViewConfiguration>> =
  * id, so the reliable equivalent is a new session seeded with the relevant
  * context — which {@link openChatWithAgent} provides via the query.
  */
-export async function resumeProjectWithCopilot(_context: IActionContext): Promise<void> {
+export async function resumeProjectWithCopilot(context: CopilotOnRailsContext): Promise<void> {
     const state = readSessionState();
     if (!state) {
         void vscode.window.showInformationMessage(
@@ -61,7 +61,7 @@ export async function resumeProjectWithCopilot(_context: IActionContext): Promis
     // button is what hands off to the integrate agent). Re-open the Frontend
     // Preview so they can approve, rather than resuming a chat session.
     if (state.phase === 'scaffold' && await isAwaitingIntegration()) {
-        await openFrontendPreviewView();
+        await openFrontendPreviewView(context);
         return;
     }
 
@@ -70,7 +70,7 @@ export async function resumeProjectWithCopilot(_context: IActionContext): Promis
     // local development / deploy). Re-open that view rather than resuming the
     // integrate chat, which already completed its work.
     if (state.phase === 'integrate' && await isIntegrationComplete()) {
-        openScaffoldNextStepsView({});
+        openScaffoldNextStepsView(context);
         return;
     }
 
@@ -79,7 +79,7 @@ export async function resumeProjectWithCopilot(_context: IActionContext): Promis
     // view (deploy / iterate / run API tests) that the debug-generate agent opens
     // on completion — not another debug-plan chat. Re-open that view instead.
     if (state.phase === 'localDev' && await isDebugConfigImplemented()) {
-        await openLocalDevNextStepsView();
+        await openLocalDevNextStepsView(context);
         return;
     }
 

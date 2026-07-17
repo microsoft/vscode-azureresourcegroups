@@ -6,7 +6,7 @@
 import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Switch, Textarea, Tooltip } from '@fluentui/react-components';
 import { ArrowSyncRegular, CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, RocketRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
+import { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
@@ -218,6 +218,26 @@ export const ScaffoldPlanView = (): JSX.Element => {
         }
         return set;
     }, [feedbackItems]);
+
+    // Debounced persistence of palette color picks. A pick applies instantly to
+    // the in-memory plan (swatch + preview); the debounced writer saves it back
+    // to `.azure/project-plan.md` so it survives a reopen and the scaffold uses it.
+    const palettePersistTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const pendingPaletteWrites = useRef<Map<string, string>>(new Map());
+
+    const flushPalettePersist = useCallback(() => {
+        if (palettePersistTimer.current !== undefined) {
+            clearTimeout(palettePersistTimer.current);
+            palettePersistTimer.current = undefined;
+        }
+        if (pendingPaletteWrites.current.size === 0) {
+            return;
+        }
+        const changes = Array.from(pendingPaletteWrites.current, ([token, hex]) => ({ token, hex }));
+        pendingPaletteWrites.current.clear();
+        vscodeApi.postMessage({ command: 'persistPaletteColors', changes });
+    }, [vscodeApi]);
+
     useEffect(() => {
         const handler = (event: MessageEvent) => {
             const message = event.data;
@@ -229,6 +249,11 @@ export const ScaffoldPlanView = (): JSX.Element => {
                 setFreeformDraft('');
                 originalCellValues.current.clear();
                 originalDesignValues.current.clear();
+                pendingPaletteWrites.current.clear();
+                if (palettePersistTimer.current !== undefined) {
+                    clearTimeout(palettePersistTimer.current);
+                    palettePersistTimer.current = undefined;
+                }
             } else if (message?.command === 'setPreviewPages') {
                 setPreviewPages(Array.isArray(message.pages) ? message.pages as PreviewPage[] : []);
                 if (typeof message.previewStatus === 'string') {
@@ -252,6 +277,9 @@ export const ScaffoldPlanView = (): JSX.Element => {
     }, []);
 
     const handleApprove = useCallback(() => {
+        // Persist any pending palette pick before approving so the scaffold agent
+        // reads the updated colors from the plan file.
+        flushPalettePersist();
         if (!plan || isAlreadyApproved) {
             return;
         }
@@ -260,7 +288,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
             return;
         }
         vscodeApi.postMessage({ command: 'approvePlan', data: plan, autopilot });
-    }, [plan, hasEdits, isAlreadyApproved, autopilot, vscodeApi]);
+    }, [plan, hasEdits, isAlreadyApproved, autopilot, vscodeApi, flushPalettePersist]);
 
     const mutateCell = useCallback((sectionIdx: number, contentIdx: number, rowIdx: number, colIdx: number, value: string) => {
         setPlan(prev => {
@@ -421,11 +449,20 @@ export const ScaffoldPlanView = (): JSX.Element => {
     }, []);
 
     const handlePaletteChange = useCallback((token: string, _originalHex: string, newHex: string) => {
-        // Palette picks are applied live to the preview iframe by `UiPreviewCard`
-        // and persisted straight into the plan's palette here — no feedback
-        // round-trip, so the recolor is instant.
+        // Apply instantly to the in-memory plan (swatch + live preview recolor)…
         mutatePaletteEntry(token, newHex);
-    }, [mutatePaletteEntry]);
+        // …and persist to `.azure/project-plan.md`, debounced because the color
+        // input fires continuously while the user drags.
+        pendingPaletteWrites.current.set(token, newHex);
+        if (palettePersistTimer.current !== undefined) {
+            clearTimeout(palettePersistTimer.current);
+        }
+        palettePersistTimer.current = setTimeout(flushPalettePersist, 400);
+    }, [mutatePaletteEntry, flushPalettePersist]);
+
+    // Flush any pending palette write when the view unmounts so a pick made just
+    // before closing isn't lost.
+    useEffect(() => () => flushPalettePersist(), [flushPalettePersist]);
 
     const handleDiscardAll = useCallback(() => {
         // Revert any cells touched by dropdown feedback items, plus any palette
@@ -451,6 +488,9 @@ export const ScaffoldPlanView = (): JSX.Element => {
         if (!plan || !hasEdits) {
             return;
         }
+        // Make sure any pending palette pick is saved before the agent rewrites
+        // the plan from the current file.
+        flushPalettePersist();
         const draftTrimmed = freeformDraft.trim();
         const items = draftTrimmed.length > 0
             ? [...feedbackItems, { id: nextId(), kind: 'freeform' as const, text: draftTrimmed }]
@@ -460,7 +500,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
         setIsAwaitingRevision(true);
         setDrawerOpen(false);
         setConfirmSubmitOpen(false);
-    }, [plan, hasEdits, feedbackItems, freeformDraft, vscodeApi]);
+    }, [plan, hasEdits, feedbackItems, freeformDraft, vscodeApi, flushPalettePersist]);
 
     if (!plan) {
         return <div className='scaffoldPlanView'><p>Loading plan...</p></div>;
@@ -499,70 +539,71 @@ export const ScaffoldPlanView = (): JSX.Element => {
 
     return (
         <div className={`scaffoldPlanView ${drawerOpen ? 'drawerOpen' : ''} ${isAwaitingRevision ? 'revising' : ''}`}>
-            <StageProgress currentStage={0} />
             <div className='planMain'>
-                <div className='planHeader'>
-                    <div className='headerTop'>
-                        <div>
-                            <h1>Project Plan</h1>
-                            <div className='metadataBadges'>
-                                {plan.status && plan.status !== 'Unknown' && <span className='badge'>{plan.status}</span>}
-                                {plan.mode && plan.mode !== 'Unknown' && <span className='badge subtle'>{plan.mode}</span>}
+                <div className='stickyTop'>
+                    <StageProgress currentStage={0} />
+                    <div className='planHeader'>
+                        <div className='headerTop'>
+                            <div>
+                                <h1>Project Plan</h1>
+                                <div className='metadataBadges'>
+                                    {plan.status && plan.status !== 'Unknown' && <span className='badge'>{plan.status}</span>}
+                                </div>
                             </div>
-                        </div>
-                        <div className='headerActions'>
-                            <Tooltip
-                                content='When on, Autopilot runs the full plan after you approve it. It auto-approves all tool actions and never stops for further confirmations. The Debug prerequisites are also shown, since Autopilot sets up local debugging too.'
-                                relationship='label'
-                            >
-                                <Switch
-                                    className='autopilotSwitch'
-                                    checked={autopilot}
-                                    onChange={(_, switchData) => setAutopilot(switchData.checked)}
-                                    disabled={isAwaitingRevision || isAlreadyApproved}
-                                    label={
-                                        <span className='autopilotLabel'>
-                                            <RocketRegular />
-                                            Autopilot
-                                        </span>
-                                    }
-                                    labelPosition='before'
-                                />
-                            </Tooltip>
-                            <Tooltip content='Request changes to the plan before approving' relationship='label'>
-                                <Button
-                                    appearance='subtle'
-                                    aria-label='Feedback'
-                                    icon={
-                                        <span className='feedbackIconWrapper'>
-                                            <CommentEditRegular />
-                                            {feedbackItems.length > 0 && (
-                                                <CounterBadge
-                                                    className='feedbackBadge'
-                                                    count={feedbackItems.length}
-                                                    size='small'
-                                                    color='danger'
-                                                />
-                                            )}
-                                        </span>
-                                    }
-                                    disabled={isAwaitingRevision}
-                                    onClick={() => setDrawerOpen(v => { if (v) { setFreeformDraft(''); } return !v; })}
-                                />
-                            </Tooltip>
-                            <Tooltip
-                                content={isAlreadyApproved ? 'Plan already approved' : 'Approve the plan and continue with Copilot'}
-                                relationship='label'
-                            >
-                                <Button
-                                    appearance='primary'
-                                    icon={<CheckmarkRegular />}
-                                    disabled={isAwaitingRevision || isAlreadyApproved}
-                                    onClick={handleApprove}
+                            <div className='headerActions'>
+                                <Tooltip
+                                    content='When on, Autopilot runs the full plan after you approve it. It auto-approves all tool actions and never stops for further confirmations. The Debug prerequisites are also shown, since Autopilot sets up local debugging too.'
+                                    relationship='label'
                                 >
-                                    Approve Plan
-                                </Button>
-                            </Tooltip>
+                                    <Switch
+                                        className='autopilotSwitch'
+                                        checked={autopilot}
+                                        onChange={(_, switchData) => setAutopilot(switchData.checked)}
+                                        disabled={isAwaitingRevision || isAlreadyApproved}
+                                        label={
+                                            <span className='autopilotLabel'>
+                                                <RocketRegular />
+                                                Autopilot
+                                            </span>
+                                        }
+                                        labelPosition='before'
+                                    />
+                                </Tooltip>
+                                <Tooltip content='Request changes to the plan before approving' relationship='label'>
+                                    <Button
+                                        appearance='subtle'
+                                        aria-label='Feedback'
+                                        icon={
+                                            <span className='feedbackIconWrapper'>
+                                                <CommentEditRegular />
+                                                {feedbackItems.length > 0 && (
+                                                    <CounterBadge
+                                                        className='feedbackBadge'
+                                                        count={feedbackItems.length}
+                                                        size='small'
+                                                        color='danger'
+                                                    />
+                                                )}
+                                            </span>
+                                        }
+                                        disabled={isAwaitingRevision}
+                                        onClick={() => setDrawerOpen(v => { if (v) { setFreeformDraft(''); } return !v; })}
+                                    />
+                                </Tooltip>
+                                <Tooltip
+                                    content={isAlreadyApproved ? 'Plan already approved' : 'Approve the plan and continue with Copilot'}
+                                    relationship='label'
+                                >
+                                    <Button
+                                        appearance='primary'
+                                        icon={<CheckmarkRegular />}
+                                        disabled={isAwaitingRevision || isAlreadyApproved}
+                                        onClick={handleApprove}
+                                    >
+                                        Approve Plan
+                                    </Button>
+                                </Tooltip>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -720,7 +761,8 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
 
             <div className='drawerFooter'>
                 <Button
-                    appearance='subtle'
+                    className='discardButton'
+                    appearance='outline'
                     disabled={!hasAny}
                     onClick={onDiscardAll}
                 >
@@ -732,7 +774,7 @@ const FeedbackDrawer = ({ items, freeformDraft, onFreeformChange, onAddNote, onR
                     disabled={!hasAny}
                     onClick={onSubmit}
                 >
-                    Submit feedback
+                    Submit
                 </Button>
             </div>
         </aside>
@@ -1049,7 +1091,7 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
             <div className='sectionContent'>
                 {leadingIntro.map((item, i) =>
                     item.type === 'blockquote'
-                        ? <div key={i} className='blockquote'>{item.text}</div>
+                        ? <div key={i} className='blockquote'><BlockquoteText text={item.text} /></div>
                         : <p key={i} className='paragraph'>{item.text}</p>,
                 )}
                 {missingTools.length > 0 && (
@@ -1076,11 +1118,25 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
                 ))}
                 {trailingIntro.map((item, i) =>
                     item.type === 'blockquote'
-                        ? <div key={i} className='blockquote'>{item.text}</div>
+                        ? <div key={i} className='blockquote'><BlockquoteText text={item.text} /></div>
                         : <p key={i} className='paragraph'>{item.text}</p>,
                 )}
             </div>
         </div>
+    );
+};
+
+const BlockquoteText = ({ text }: { text: string }): JSX.Element => {
+    const parts = text.split(/\u26A0\uFE0F?/);
+    return (
+        <>
+            {parts.map((part, i) => (
+                <Fragment key={i}>
+                    {i > 0 && <span className='codicon codicon-warning warningIcon' aria-hidden='true' />}
+                    {part}
+                </Fragment>
+            ))}
+        </>
     );
 };
 
