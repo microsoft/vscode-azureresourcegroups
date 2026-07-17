@@ -62,7 +62,7 @@ For each needed tool, run its detection and record whether it is installed and a
 Every prerequisite resolves to exactly **two** states:
 
 - **installed (`✅`)** — a detection positively found the tool (a version command returned, or an app/extension folder exists). Record the version when you have it.
-- **unknown (`❓`)** — the detection did not find it. This does **not** mean the tool is absent: a version manager or a restricted/sandboxed shell can hide an installed tool, and the extension/Compose lookups fail silently in those shells. So a failed probe is inconclusive. A `❓` is informational — it is not counted as a missing tool; it just tells the user to make sure the tool is installed and, for CLI tools, to run a recheck.
+- **unknown (`❓`)** — the detection did not find it. This does **not** mean the tool is absent: a version manager or a restricted/sandboxed shell can hide an installed tool, and the extension/Compose lookups fail silently in those shells. So a failed probe is inconclusive. A `❓` is informational; it just tells the user to double-check the tool is installed and, for CLI tools, to run a recheck.
 
 There is no "not-installed" state — never mark a prerequisite with `❌`. When you cannot positively confirm a tool, it is `❓`.
 
@@ -123,7 +123,7 @@ When the inventory produces any `❓` CLI results, tell the user those tools cou
 
 Do not attempt to detect Docker Compose, and do not run `docker compose version` or any equivalent. Docker Compose ships as a Docker CLI plugin resolved through `~/.docker/config.json`, and that lookup fails silently in sandboxed or non-interactive shells, so the check reports "not found" even when Compose is installed. The result is too unreliable to act on.
 
-Always record Docker Compose as unknown (`❓`) with version `—`. A `❓` is not counted as missing — it just tells the user to make sure Docker Compose is installed and ready before debugging.
+Always record Docker Compose as unknown (`❓`) with version `—`. A `❓` just tells the user to double-check Docker Compose is installed and ready before debugging.
 
 ---
 
