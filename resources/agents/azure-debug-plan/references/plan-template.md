@@ -50,7 +50,7 @@ When editing markdown tables with `replace_string_in_file` or `multi_replace_str
 |------------------|----------|------------|-----------|---------|---------|
 | {name} | {Runtime / Package manager / …} | {service(s) or *} | {✅/❓} | {version or —} | {reference URL} |
 
-> ⚠️ **Action required:** Confirm any tool or extension marked ❓ (e.g. Docker Compose, or a CLI that couldn't be confirmed) is installed and ready before approving this plan — rerun the recheck to confirm CLI tools provided by a version manager.
+> ⚠️ **Action required:** Confirm any tool or extension marked ❓ is installed and ready before approving this plan — rerun the recheck to confirm CLI tools provided by a version manager.
 
 ---
 

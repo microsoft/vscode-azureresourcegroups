@@ -45,7 +45,7 @@ Prefer to use the debug tools listed here. Also, never list VS Code itself — t
 | Tool / Extension | Category | Trigger When | Detect with |
 |------------------|----------|----------------------|-------------|
 | Docker | Container runtime | Project has Azure dependencies that run as local emulators | `docker --version` |
-| Docker Compose | Orchestrator | Orchestrating emulators | Do not detect — always record as unknown (`❓`), version `—` (see Docker Compose detection in Phase 2) |
+| Docker Compose | Orchestrator | Orchestrating emulators | `docker compose version` |
 | Chrome or Edge | Browser | Project has a frontend/SPA project type that debugs in a browser | See Browser detection in Phase 2 — detect Chrome/Edge; if neither is found, fall back by OS |
 | `ms-azuretools.vscode-azurefunctions` | VS Code extension | Has an Azure Functions service | extensions filesystem check (Phase 2); installed (`✅`) if found, otherwise unknown (`❓`) |
 
@@ -90,8 +90,10 @@ Probe each CLI tool (Node.js, npm, pnpm, yarn, Python, pip, `dotnet`, `func`, an
 # actually on PATH, and it keeps a shell greeting or "not found" message from
 # being mistaken for a version. `2>&1` merges stderr because some tools print
 # their version there (e.g. older Python and Java).
-command -v node >/dev/null 2>&1 && node --version 2>&1
+command -v node >/dev/null 2>&1 && echo "node:" && node --version 2>&1
 ```
+
+Reproduce for any tool by substituting its name in all three spots — the `command -v <tool>` gate, the `echo "<tool>:"` label, and the version command. The version flag varies by tool (`--version`, `-v`, `-V`, `version`); use the one from its catalog entry.
 
 **Stage 2 — retry through the user's initialized shell.** If Stage 1 returns nothing, re-run the *same* version command, but this time launch the user's configured default shell (`$SHELL`) as a **login + interactive** shell. This is a single invocation — the `-l` (login) and `-i` (interactive) flags make the shell source the user's startup files as part of starting up, and `-c '<command>'` runs your version command inside that now-initialized environment. There is no separate "start the shell, then send a second command" step; the initialization and the version command happen in one call. That startup is what puts a version manager's shims (fnm, nvm, asdf, mise, Volta) on PATH so the tool becomes visible.
 
@@ -109,7 +111,7 @@ Two guards make this reliable: check `$SHELL` is set and executable first, and g
   "$SHELL" -l -i -c 'command -v node >/dev/null 2>&1 && echo __COR_START__ && node --version 2>&1 && echo __COR_END__'
 ```
 
-For example, to confirm Python the same way, swap the version command:
+For example, to confirm Python the same way, swap the tool name in the `command -v` gate and version command (keep the markers as-is):
 
 ```bash
 [ -n "$SHELL" ] && [ -x "$SHELL" ] && \
@@ -124,14 +126,6 @@ Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty S
 ```
 
 When the inventory produces any `❓` CLI results, tell the user those tools couldn't be confirmed and to run a recheck. The recheck retries detection through the host default shell and can confirm version-manager-provided runtimes the initial sandboxed scan couldn't see; a tool confirmed there flips to `✅`.
-
----
-
-### Docker Compose detection
-
-Do not attempt to detect Docker Compose, and do not run `docker compose version` or any equivalent. Docker Compose ships as a Docker CLI plugin resolved through `~/.docker/config.json`, and that lookup fails silently in sandboxed or non-interactive shells, so the check reports "not found" even when Compose is installed. The result is too unreliable to act on.
-
-Always record Docker Compose as unknown (`❓`) with version `—`. A `❓` just tells the user to double-check Docker Compose is installed and ready before debugging.
 
 ---
 
