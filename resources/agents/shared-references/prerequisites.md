@@ -85,27 +85,35 @@ Probe each CLI tool (Node.js, npm, pnpm, yarn, Python, pip, `dotnet`, `func`, an
 **Stage 1 — direct check.** Run the catalog's version command directly in the current shell.
 
 ```bash
-# macOS/Linux
-node --version 2>/dev/null
+# macOS/Linux — direct probe in the current and likely non-interactive shell.
+# `command -v <tool>` gates the version call so we only run it when the tool is
+# actually on PATH, and it keeps a shell greeting or "not found" message from
+# being mistaken for a version. `2>&1` merges stderr because some tools print
+# their version there (e.g. older Python and Java).
+command -v node >/dev/null 2>&1 && node --version 2>&1
 ```
 
 **Stage 2 — retry through the user's initialized shell.** If Stage 1 returns nothing, re-run the *same* version command, but this time launch the user's configured default shell (`$SHELL`) as a **login + interactive** shell. This is a single invocation — the `-l` (login) and `-i` (interactive) flags make the shell source the user's startup files as part of starting up, and `-c '<command>'` runs your version command inside that now-initialized environment. There is no separate "start the shell, then send a second command" step; the initialization and the version command happen in one call. That startup is what puts a version manager's shims (fnm, nvm, asdf, mise, Volta) on PATH so the tool becomes visible.
 
-Two guards make this reliable: check `$SHELL` is set and executable first, and wrap the output in unique markers so a shell greeting or startup banner can't corrupt the detected version — read only the line between the markers.
+Two guards make this reliable: check `$SHELL` is set and executable first, and gate the version command behind `command -v <tool>` so a shell greeting or startup banner can't be mistaken for a version. Wrap the real output in unique markers and read only the line between them.
 
 ```bash
 # macOS/Linux — retry through the user's own default shell, initialized.
-# `-lic` = login + interactive + run-this-command, all in one invocation.
-# The echo markers stay portable across bash, zsh, and fish.
+# Pass -l -i -c as SEPARATE flags: some shells like fish reject the bundled `-lic` form.
+# `command -v` gates the version command, and 2>&1 keeps versions printed to
+# stderr. A login+interactive shell sources the user's startup files, which can
+# emit greetings/banners/MOTD to stdout; the echo markers fence the real version
+# output so we parse only the line between them and ignore that noise. They stay
+# portable across bash, zsh, fish, etc.
 [ -n "$SHELL" ] && [ -x "$SHELL" ] && \
-  "$SHELL" -lic 'echo __COR_START__; node --version 2>/dev/null; echo __COR_END__' 2>/dev/null
+  "$SHELL" -l -i -c 'command -v node >/dev/null 2>&1 && echo __COR_START__ && node --version 2>&1 && echo __COR_END__'
 ```
 
 For example, to confirm Python the same way, swap the version command:
 
 ```bash
 [ -n "$SHELL" ] && [ -x "$SHELL" ] && \
-  "$SHELL" -lic 'echo __COR_START__; python --version 2>/dev/null; echo __COR_END__' 2>/dev/null
+  "$SHELL" -l -i -c 'command -v python >/dev/null 2>&1 && echo __COR_START__ && python --version 2>&1 && echo __COR_END__'
 ```
 
 Run Stage 2 for every CLI tool that failed Stage 1. On **Windows**, registry-level PATH means Stage 1 is normally enough:

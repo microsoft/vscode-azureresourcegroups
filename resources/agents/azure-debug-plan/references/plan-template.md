@@ -44,11 +44,11 @@ When editing markdown tables with `replace_string_in_file` or `multi_replace_str
 <!-- All required tools and VS Code extensions with install status — list both the Run and Debug tool sets defined in prerequisites.md. -->
 <!-- Service(s): the service(s) that need the tool (e.g. `api`, `worker`); use `*` for global toolchain shared by all services. -->
 <!-- Installed/Version come from the detection pass and must be re-run whenever the whole plan is (re)generated or the tool set changes — never leave a placeholder. Installed is only ✅ (found) or ❓ (couldn't confirm). ❓ is informational — it just prompts the user to double-check the tool is installed. -->
-<!-- Install holds the install command/URL; the plan webview hides this column and surfaces it in the action callout for tools that still need attention. -->
+<!-- Install holds a reference URL the user could use to install the tool; the plan webview hides this column and surfaces it in the action callout for tools that still need attention. -->
 
 | Tool / Extension | Category | Service(s) | Installed | Version | Install |
 |------------------|----------|------------|-----------|---------|---------|
-| {name} | {Runtime / Package manager / …} | {service(s) or *} | {✅/❓} | {version or —} | {install URL or command} |
+| {name} | {Runtime / Package manager / …} | {service(s) or *} | {✅/❓} | {version or —} | {reference URL} |
 
 > ⚠️ **Action required:** Confirm any tool or extension marked ❓ (e.g. Docker Compose, or a CLI that couldn't be confirmed) is installed and ready before approving this plan — rerun the recheck to confirm CLI tools provided by a version manager.
 
