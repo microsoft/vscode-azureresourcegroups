@@ -6,8 +6,10 @@
 
 | Browser | VS Code Debugger Type | Required Extension |
 |---------|----------------------|-------------------|
-| Chrome | `chrome` — default | None — built-in |
+| Chrome | `chrome` | None — built-in |
 | Edge | `msedge` | None — built-in |
+
+Use the browser recorded in the plan's Prerequisites section (see [prerequisites.md](../../../../../shared-references/prerequisites.md) § Browser detection) to pick the `type`.
 
 ---
 
@@ -26,7 +28,7 @@
 
 | Field | Source |
 |-------|--------|
-| `type` | Browser Debugger Type from table above — default to `chrome` |
+| `type` | Browser Debugger Type from table above — matches the browser recorded in the plan's Prerequisites (`chrome` for Chrome, `msedge` for Edge) |
 | `url` | Default Port from [frontend-spa.md § Framework Lookup Table](../frontend-spa.md) |
 | `webRoot` | **Framework root** — see `webRoot` Resolution below |
 | `preLaunchTask` | `{id} dev` — the dev server task from [frontend-spa.md § VS Code Task Configuration](../frontend-spa.md) |

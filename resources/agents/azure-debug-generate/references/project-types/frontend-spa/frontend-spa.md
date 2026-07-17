@@ -22,7 +22,7 @@ Match against these signals to classify a workspace root as a frontend SPA. If t
 
 ## Prerequisites
 
-No project-type-specific tools required. Browser debugging uses VS Code's built-in capabilities. Runtime prerequisites (e.g., Node.js) are listed in `runtimes/{rt}.md § Prerequisites`.
+No VS Code extension is required — browser debugging uses VS Code's built-in adapter. A Chromium-based browser (Chrome or Edge) must be installed, though; that is captured as a Debug prerequisite via [prerequisites.md](../../../../shared-references/prerequisites.md) § Browser detection. Runtime prerequisites (e.g., Node.js) are listed in `runtimes/{rt}.md § Prerequisites`.
 
 ---
 
@@ -88,7 +88,7 @@ Use this table to resolve per-framework values when generating the VS Code confi
 
 ### VS Code Debug Configuration
 
-The request mode is always `launch` (VS Code opens the browser). Default to `chrome` — the user can change the browser in the plan before approval.
+The request mode is always `launch` (VS Code opens the browser). The browser (Chrome or Edge) is the one recorded in the plan's Prerequisites section during the browser detection pass (see [prerequisites.md](../../../../shared-references/prerequisites.md) § Browser detection) — use its debug adapter `type` (`chrome` for Chrome, `msedge` for Edge). The user can change the browser in the plan before approval.
 
 Look up the launch configuration template from the corresponding adapter file in [`debug-adapters/`](debug-adapters/):
 
@@ -171,7 +171,7 @@ Use the `Ready Pattern (begins)` and `Ready Pattern (ends)` columns from the **F
 After generating `launch.json` and `tasks.json`, verify the following were produced correctly:
 
 1. ✅ Dev server task exists in `tasks.json` with a custom `background` problem matcher using the correct begin/end patterns from the Framework Lookup Table
-2. ✅ `launch.json` uses the correct browser debug adapter (e.g., `chrome`) with `"request": "launch"`
+2. ✅ `launch.json` uses the browser debug adapter matching the browser recorded in the plan's Prerequisites (`chrome` or `msedge`) with `"request": "launch"`
 3. ✅ `launch.json` `url` matches the framework's default port from the Framework Lookup Table
 4. ✅ `launch.json` `preLaunchTask` points to the dev server task
 
