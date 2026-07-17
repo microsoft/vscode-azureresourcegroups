@@ -353,67 +353,69 @@ export const LocalPlanView = (): JSX.Element => {
         <div
             className={`localPlanView ${drawerOpen ? "drawerOpen" : ""} ${isAwaitingRevision ? "revising" : ""}`}
         >
-            <StageProgress currentStage={1} />
             <div className="planMain">
-                <div className="planHeader">
-                    <div className="headerTop">
-                        <div>
-                            <h1>{plan.title}</h1>
-                            <div className="metadataBadges">
-                                {plan.status && plan.status !== "Unknown" && (
-                                    <span className="badge">{plan.status}</span>
-                                )}
+                <div className="stickyTop">
+                    <StageProgress currentStage={1} />
+                    <div className="planHeader">
+                        <div className="headerTop">
+                            <div>
+                                <h1>{plan.title}</h1>
+                                <div className="metadataBadges">
+                                    {plan.status && plan.status !== "Unknown" && (
+                                        <span className="badge">{plan.status}</span>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                        <div className="headerActions">
-                            <Tooltip
-                                content="Request changes to the plan before approving"
-                                relationship="label"
-                            >
-                                <Button
-                                    appearance="subtle"
-                                    aria-label="Feedback"
-                                    icon={
-                                        <span className="feedbackIconWrapper">
-                                            <CommentEditRegular />
-                                            {hasEdits && (
-                                                <CounterBadge
-                                                    className="feedbackBadge"
-                                                    count={
-                                                        allItems.length +
-                                                        (freeformDraft.trim()
-                                                            ? 1
-                                                            : 0)
-                                                    }
-                                                    size="small"
-                                                    color="danger"
-                                                />
-                                            )}
-                                        </span>
-                                    }
-                                    disabled={isAwaitingRevision}
-                                    onClick={() => setDrawerOpen((v) => !v)}
-                                />
-                            </Tooltip>
-                            <Tooltip
-                                content={
-                                    isAlreadyApproved
-                                        ? "Plan already approved"
-                                        : "Approve the plan and continue with Copilot"
-                                }
-                                relationship="label"
-                            >
-                                <Button
-                                    appearance="primary"
-                                    icon={<CheckmarkRegular />}
-                                    disabled={
-                                        isAwaitingRevision || isAlreadyApproved
-                                    }
-                                    onClick={handleApprove}
+                            <div className="headerActions">
+                                <Tooltip
+                                    content="Request changes to the plan before approving"
+                                    relationship="label"
                                 >
-                                    Approve Plan
-                                </Button>
-                            </Tooltip>
+                                    <Button
+                                        appearance="subtle"
+                                        aria-label="Feedback"
+                                        icon={
+                                            <span className="feedbackIconWrapper">
+                                                <CommentEditRegular />
+                                                {hasEdits && (
+                                                    <CounterBadge
+                                                        className="feedbackBadge"
+                                                        count={
+                                                            allItems.length +
+                                                            (freeformDraft.trim()
+                                                                ? 1
+                                                                : 0)
+                                                        }
+                                                        size="small"
+                                                        color="danger"
+                                                    />
+                                                )}
+                                            </span>
+                                        }
+                                        disabled={isAwaitingRevision}
+                                        onClick={() => setDrawerOpen((v) => !v)}
+                                    />
+                                </Tooltip>
+                                <Tooltip
+                                    content={
+                                        isAlreadyApproved
+                                            ? "Plan already approved"
+                                            : "Approve the plan and continue with Copilot"
+                                    }
+                                    relationship="label"
+                                >
+                                    <Button
+                                        appearance="primary"
+                                        icon={<CheckmarkRegular />}
+                                        disabled={
+                                            isAwaitingRevision || isAlreadyApproved
+                                        }
+                                        onClick={handleApprove}
+                                    >
+                                        Approve Plan
+                                    </Button>
+                                </Tooltip>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -569,7 +571,8 @@ const FeedbackDrawer = ({
 
             <div className="drawerFooter">
                 <Button
-                    appearance="subtle"
+                    className="discardButton"
+                    appearance="outline"
                     disabled={!hasAny}
                     onClick={onDiscardAll}
                 >
@@ -581,7 +584,7 @@ const FeedbackDrawer = ({
                     disabled={!hasAny}
                     onClick={onSubmit}
                 >
-                    Submit feedback
+                    Submit
                 </Button>
             </div>
         </aside>
@@ -1022,6 +1025,12 @@ function formatInline(text: string): string {
             .replace(
                 /&lt;(\/?(?:details|summary|br))(\s[^&]*?)?\s*\/?&gt;/gi,
                 "<$1$2>",
+            )
+            // Swap the warning emoji for the themed amber warning codicon so it
+            // matches the rest of the UI instead of the OS emoji glyph.
+            .replace(
+                /\u26A0\uFE0F?/g,
+                '<span class="codicon codicon-warning warningIcon" aria-hidden="true"></span>',
             )
     );
 }

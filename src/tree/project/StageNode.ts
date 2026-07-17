@@ -55,7 +55,7 @@ export abstract class StageNode implements ProgressNode {
     private toStageIcon(state: ProgressState): vscode.ThemeIcon {
         switch (state) {
             case 'completed':
-                return new vscode.ThemeIcon('pass-filled');
+                return new vscode.ThemeIcon('pass-filled', new vscode.ThemeColor('testing.iconPassed'));
             case 'current':
                 return new vscode.ThemeIcon(this.iconName);
             default:
