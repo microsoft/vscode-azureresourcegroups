@@ -47,11 +47,11 @@ Prefer to use the debug tools listed here. Also, never list VS Code itself — t
 | Docker | Container runtime | Project has Azure dependencies that run as local emulators | `docker --version` |
 | Docker Compose | Orchestrator | Orchestrating emulators | Do not detect — always record as unknown (`❓`), version `—` (see Docker Compose detection in Phase 2) |
 | Chrome or Edge | Browser | Project has a frontend/SPA project type that debugs in a browser | See Browser detection in Phase 2 — detect Chrome/Edge; if neither is found, fall back by OS |
-| `ms-azuretools.vscode-azurefunctions` | VS Code extension | Has an Azure Functions service | extensions filesystem check (Phase 2); installed (`✅`) if found, otherwise unknown (`❓`) — never not-installed |
+| `ms-azuretools.vscode-azurefunctions` | VS Code extension | Has an Azure Functions service | extensions filesystem check (Phase 2); installed (`✅`) if found, otherwise unknown (`❓`) |
 
-For a frontend project that debugs in a browser, always include a single browser row (Chrome or Edge). Unlike the Docker Compose and VS Code extension rows, the browser resolves to installed (`✅`) or not-installed (`❌`) from a real scan — see Browser detection in Phase 2. Record the **specific browser chosen** (Chrome or Edge) in the row name; the generate phase reads it to pick the frontend debug adapter `type` (`chrome` for Chrome, `msedge` for Edge).
+For a frontend project that debugs in a browser, always include a single browser row (Chrome or Edge). Record the **specific browser chosen** (Chrome or Edge) in the row name; the generate phase reads it to pick the frontend debug adapter `type` (`chrome` for Chrome, `msedge` for Edge). See Browser detection in Phase 2.
 
-Always emit a Debug row for every VS Code extension whose project type is present. Run the Phase 2 filesystem check: if the extension folder is found, record it installed (`✅`); if it is not found, record it as unknown (`❓`), never as not-installed (`❌`) — the folder scan can come up empty in restricted shells even when the extension is installed. Never drop the row just because the extension wasn't found, and never treat it as already covered by a Run tool. For example, an Azure Functions project must include a `ms-azuretools.vscode-azurefunctions` row even though Azure Functions Core Tools already appears under Run — the Core Tools CLI and the extension are separate prerequisites.
+Always emit a Debug row for every VS Code extension whose project type is present. Run the Phase 2 filesystem check: if the extension folder is found, record it installed (`✅`); otherwise record it unknown (`❓`). Never drop the row just because the extension wasn't found, and never treat it as already covered by a Run tool. For example, an Azure Functions project must include a `ms-azuretools.vscode-azurefunctions` row even though Azure Functions Core Tools already appears under Run — the Core Tools CLI and the extension are separate prerequisites.
 
 ---
 
@@ -59,40 +59,63 @@ Always emit a Debug row for every VS Code extension whose project type is presen
 
 For each needed tool, run its detection and record whether it is installed and at what version. Mind any details in the sections below.
 
-Re-run this inventory every time the calling agent (re)builds its plan or the tool set changes — never carry over a stale result. Most tools resolve from an actual scan to installed or not-installed. Two cases are explicit exceptions and must never be reported as not-installed: Docker Compose is never detected and is always recorded as unknown (`❓`); a VS Code extension is recorded installed when its folder is found and unknown (`❓`) when it is not. See the Docker Compose detection and VS Code extension detection sections below.
+Every prerequisite resolves to exactly **two** states:
+
+- **installed (`✅`)** — a detection positively found the tool (a version command returned, or an app/extension folder exists). Record the version when you have it.
+- **unknown (`❓`)** — the detection did not find it. This does **not** mean the tool is absent: a version manager or a restricted/sandboxed shell can hide an installed tool, and the extension/Compose lookups fail silently in those shells. So a failed probe is inconclusive. A `❓` is informational — it is not counted as a missing tool; it just tells the user to make sure the tool is installed and, for CLI tools, to run a recheck.
+
+There is no "not-installed" state — never mark a prerequisite with `❌`. When you cannot positively confirm a tool, it is `❓`.
+
+Re-run this inventory whenever the calling agent builds the plan from scratch or regenerates the whole plan, and whenever the tool set itself changes (a runtime edit, or an added/removed service). Do **not** re-run it for a partial regeneration that doesn't touch the tool set — unless the user explicitly asks to recheck prerequisites. Never carry a stale result across a full rebuild.
 
 ### Shell environment caveats
 
-Subagent shells may run as **non-interactive** processes. On macOS/Linux, non-interactive shells skip user startup files like `~/.bashrc`, `~/.zshrc`, etc. Since some users configure PATH additions in these interactive-only rc files, those paths are invisible to subagents. **Before running any version checks**, detect the user's default shell via `$SHELL` and source any relevant rc files to inherit PATH additions:
+The agent's `bash` probes often run in a **non-interactive or sandboxed** shell that never sourced the user's startup files (`~/.zshrc`, `~/.bashrc`, `~/.config/fish/config.fish`, …). Many users expose Node.js, Python, and other runtimes only through a shell version manager — fnm, nvm, asdf, mise, or Volta — that adds its shims to PATH from those startup files. So a tool the user has installed can be invisible to the first probe.
 
-```bash
-# macOS / Linux — source the user's rc file silently based on their default shell
-case "$SHELL" in
-  */bash) [ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc" 2>/dev/null >/dev/null ;;
-  */zsh)  [ -f "$HOME/.zshrc" ] && source "$HOME/.zshrc" 2>/dev/null >/dev/null ;;
-  */fish) ;; # fish uses incompatible syntax; rely on fallback PATH approach below
-  *)      [ -f "$HOME/.profile" ] && source "$HOME/.profile" 2>/dev/null >/dev/null ;;
-esac
-```
+Do **not** work around this by sourcing another shell's rc file from bash — those files can contain shell-specific syntax bash can't parse. Instead retry through the user's own default shell, initialized (see CLI tool detection). And because a failed probe can't tell "genuinely absent" from "hidden by the environment," a tool that fails detection is `❓`, never `❌`.
 
-On **Windows**, PATH is set at the system/user level via the Windows registry. Tools installed via `winget`, `choco`, etc. are available in all shell contexts without sourcing any profile — the missing-PATH problem is primarily a macOS/Linux issue.
+On **Windows** this rarely applies: PATH is set at the system/user level via the registry, so tools installed with `winget`, `choco`, etc. are visible in every shell without sourcing a profile.
 
 ---
 
 ### CLI tool detection
 
-Run the version command from the catalog. When a tool check fails, use `which`/`where` with fallback paths before reporting it as missing:
+Probe each CLI tool (Node.js, npm, pnpm, yarn, Python, pip, `dotnet`, `func`, and any other CLI in the catalog) in two stages, and **stop at the first success**. Record `✅` with the detected version as soon as either stage returns a version. Only if **both** stages fail do you record `❓`.
+
+**Stage 1 — direct check.** Run the catalog's version command directly in the current shell.
 
 ```bash
 # macOS/Linux
-which func 2>/dev/null || \
-  find /opt/homebrew/bin /usr/local/bin ~/.npm-global/bin -name "func" 2>/dev/null | head -1
+node --version 2>/dev/null
 ```
+
+**Stage 2 — retry through the user's initialized shell.** If Stage 1 returns nothing, re-run the *same* version command, but this time launch the user's configured default shell (`$SHELL`) as a **login + interactive** shell. This is a single invocation — the `-l` (login) and `-i` (interactive) flags make the shell source the user's startup files as part of starting up, and `-c '<command>'` runs your version command inside that now-initialized environment. There is no separate "start the shell, then send a second command" step; the initialization and the version command happen in one call. That startup is what puts a version manager's shims (fnm, nvm, asdf, mise, Volta) on PATH so the tool becomes visible.
+
+Two guards make this reliable: check `$SHELL` is set and executable first, and wrap the output in unique markers so a shell greeting or startup banner can't corrupt the detected version — read only the line between the markers.
+
+```bash
+# macOS/Linux — retry through the user's own default shell, initialized.
+# `-lic` = login + interactive + run-this-command, all in one invocation.
+# The echo markers stay portable across bash, zsh, and fish.
+[ -n "$SHELL" ] && [ -x "$SHELL" ] && \
+  "$SHELL" -lic 'echo __COR_START__; node --version 2>/dev/null; echo __COR_END__' 2>/dev/null
+```
+
+For example, to confirm Python the same way, swap the version command:
+
+```bash
+[ -n "$SHELL" ] && [ -x "$SHELL" ] && \
+  "$SHELL" -lic 'echo __COR_START__; python --version 2>/dev/null; echo __COR_END__' 2>/dev/null
+```
+
+Run Stage 2 for every CLI tool that failed Stage 1. On **Windows**, registry-level PATH means Stage 1 is normally enough:
 
 ```powershell
 # Windows PowerShell
-Get-Command func -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
 ```
+
+When the inventory produces any `❓` CLI results, tell the user those tools couldn't be confirmed and to run a recheck. The recheck retries detection through the host default shell and can confirm version-manager-provided runtimes the initial sandboxed scan couldn't see; a tool confirmed there flips to `✅`.
 
 ---
 
@@ -100,7 +123,7 @@ Get-Command func -ErrorAction SilentlyContinue | Select-Object -ExpandProperty S
 
 Do not attempt to detect Docker Compose, and do not run `docker compose version` or any equivalent. Docker Compose ships as a Docker CLI plugin resolved through `~/.docker/config.json`, and that lookup fails silently in sandboxed or non-interactive shells, so the check reports "not found" even when Compose is installed. The result is too unreliable to act on.
 
-Always record Docker Compose as unknown (`❓`) with version `—`. Do not record it as installed (`✅`) or not-installed (`❌`). An unknown status is not counted as a missing tool — it just tells the user to make sure Docker Compose is installed and ready before debugging.
+Always record Docker Compose as unknown (`❓`) with version `—`. A `❓` is not counted as missing — it just tells the user to make sure Docker Compose is installed and ready before debugging.
 
 ---
 
@@ -118,7 +141,7 @@ find ~/.vscode/extensions ~/.vscode-insiders/extensions -maxdepth 1 -name "<exte
 Get-ChildItem "$env:USERPROFILE\.vscode\extensions", "$env:USERPROFILE\.vscode-insiders\extensions" -Filter "<extension-id-prefix>*" -ErrorAction SilentlyContinue
 ```
 
-The extensions to check come from the **VS Code debug-integration extensions** table in Phase 1 — that table is the authoritative list. Detect each one with the extensions filesystem check above. If the check finds the extension folder, record it installed (`✅`); if it finds nothing, record it as unknown (`❓`), never as not-installed (`❌`) — the scan can come up empty in restricted shells even when the extension is installed. An unknown status is not counted as a missing tool.
+The extensions to check come from the **VS Code debug-integration extensions** table in Phase 1 — that table is the authoritative list. Detect each one with the extensions filesystem check above. If the check finds the extension folder, record it installed (`✅`); if it finds nothing, record it unknown (`❓`) — the scan can come up empty in restricted shells even when the extension is installed.
 
 ---
 
@@ -130,11 +153,9 @@ Detect both, then choose in this order:
 
 1. If **Chrome** is installed, choose Chrome and record it installed (`✅`) with its version if available.
 2. Otherwise if **Edge** is installed, choose Edge and record it installed (`✅`) with its version if available.
-3. If **neither** is installed, fall back by operating system and record the fallback as not-installed (`❌`) with its download URL in the Install column:
+3. If **neither** is detected, fall back by operating system, record the fallback as unknown (`❓`), and put its download URL in the Install column:
    - **Windows** → Edge (`msedge`). Edge ships with Windows and is normally detected as installed in step 2, so this fallback rarely triggers.
    - **macOS / Linux** → Chrome (`chrome`).
-
-Unlike Docker Compose and VS Code extensions, the browser is a normal detection — it resolves to installed (`✅`) or not-installed (`❌`); never record it as unknown (`❓`).
 
 ```bash
 # macOS — installed if the app bundle exists
