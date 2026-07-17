@@ -66,15 +66,20 @@
     width: 100%;
     box-sizing: border-box;
 
-    .planHeader {
+    .stickyTop {
         position: sticky;
         top: 0;
         z-index: 10;
         background: var(--vscode-editor-background);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
         padding-top: 8px;
         padding-bottom: 14px;
         margin-bottom: -14px;
+    }
 
+    .planHeader {
         .headerTop {
             display: flex;
             justify-content: space-between;
@@ -111,8 +116,8 @@
                 font-weight: 600;
                 text-transform: uppercase;
                 letter-spacing: 0.04em;
-                background: var(--vscode-badge-background);
-                color: var(--vscode-badge-foreground);
+                background: var(--vscode-toolbar-hoverBackground);
+                color: var(--vscode-descriptionForeground);
             }
         }
 
@@ -477,14 +482,20 @@
     }
 
     .blockquote {
-        border-left: 3px solid var(--vscode-textBlockQuote-border);
-        padding: 6px 12px;
-        font-size: 0.78em;
+        padding: 8px 12px;
+        margin: 6px 0;
+        font-size: 0.82em;
         color: var(--vscode-descriptionForeground);
-        font-style: italic;
-        border-radius: 0 4px 4px 0;
-        background: var(--vscode-textBlockQuote-background);
         line-height: 1.5;
+        border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border));
+        border-radius: 6px;
+
+        .warningIcon {
+            color: var(--vscode-notificationsWarningIcon-foreground, var(--vscode-editorWarning-foreground));
+            font-size: 1.15em;
+            vertical-align: -0.15em;
+            margin-right: 6px;
+        }
 
         code {
             background: var(--vscode-textCodeBlock-background);
@@ -542,6 +553,16 @@
         // clips the top-right corner of the badge.
         .fui-Button {
             overflow: visible;
+        }
+
+        // Keep the disabled primary (Approve) button visibly blue instead
+        // of graying it out, just dimmed to signal the disabled state.
+        .fui-Button[data-appearance='primary']:disabled,
+        .fui-Button--primary:disabled {
+            background-color: var(--vscode-button-background) !important;
+            color: var(--vscode-button-foreground) !important;
+            border-color: var(--vscode-button-background) !important;
+            opacity: 0.6;
         }
 
         .feedbackIconWrapper {
@@ -682,6 +703,25 @@
             gap: 8px;
             padding: 10px 14px;
             border-top: 1px solid var(--vscode-widget-border);
+
+            // Give the "Discard all" button a clearly visible border and
+            // background so it reads as a button rather than plain text.
+            .discardButton {
+                font-size: var(--vscode-font-size, 13px) !important;
+                font-weight: 600 !important;
+                background-color: var(--vscode-button-secondaryBackground, var(--vscode-button-background)) !important;
+                color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground)) !important;
+                border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-widget-border))) !important;
+
+                &:hover:not(:disabled) {
+                    background-color: var(--vscode-button-secondaryHoverBackground, var(--vscode-toolbar-hoverBackground)) !important;
+                }
+
+                &:disabled {
+                    opacity: 0.5 !important;
+                    cursor: default !important;
+                }
+            }
         }
     }
 }

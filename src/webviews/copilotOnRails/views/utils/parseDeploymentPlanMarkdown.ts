@@ -96,10 +96,13 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
 
     // If we have a location display name but no code, try to resolve it from known locations
     let resolvedLocationCode = locationCode;
+    let resolvedLocation = location;
     if (resolvedLocationCode === 'unknown' && location !== 'Unknown') {
-        const matched = knownLocations.find(l => l.name.toLowerCase() === location.toLowerCase());
+        const needle = location.toLowerCase();
+        const matched = knownLocations.find(l => l.name.toLowerCase() === needle || l.code.toLowerCase() === needle);
         if (matched) {
             resolvedLocationCode = matched.code;
+            resolvedLocation = matched.name;
         }
     }
 
@@ -110,7 +113,7 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
         mode,
         subscription: subscription === 'Unknown' ? '' : subscription,
         availableSubscriptions,
-        location: location === 'Unknown' ? '' : location,
+        location: resolvedLocation === 'Unknown' ? '' : resolvedLocation,
         locationCode: resolvedLocationCode === 'unknown' ? '' : resolvedLocationCode,
         availableLocations,
         architecture,
