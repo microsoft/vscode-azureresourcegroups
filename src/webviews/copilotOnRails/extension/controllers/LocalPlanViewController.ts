@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
+import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -31,14 +34,14 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                     void this.panel.webview.postMessage({ command: 'setLocalPlanData', data: planData });
                     break;
                 case 'approvePlan':
-                    void this.approveAndOpenDebugPlanChat();
+                    void this.approvePlan();
                     break;
                 case 'submitPlanFeedback': {
                     const query = message.prompt?.trim();
                     if (!query) {
                         return;
                     }
-                    void this.openDebugPlanChat(query, true);
+                    void this.trySubmitPlanFeedback(query);
                     break;
                 }
                 case 'openSourceFile':
@@ -51,38 +54,64 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         });
     }
 
-    private async approveAndOpenDebugPlanChat(): Promise<void> {
-        if (!(await this.openDebugPlanChat('I approve the debug setup plan.', false))) {
-            return;
-        }
-        // Programmatic hand-off to the local-dev setup phase — don't treat this close as the user abandoning the flow.
-        suppressTrackedViewCloseOnce();
-        this.panel.dispose();
-        openLoadingView({
-            stage: 1,
-            title: vscode.l10n.t('Setting up your local development environment…'),
-            message: vscode.l10n.t('Copilot is setting your project up for local development'),
+    private ensureAgentInstructionsKey: string = 'ensureAgentInstructions';
+
+    private async approvePlan(): Promise<void> {
+        return await callWithTelemetryAndErrorHandling(`copilotOnRails.submitLocalDebugPlanApproval`, async (actionContext: IActionContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitLocalDebugPlanApproval' }, async (context: CopilotOnRailsContext) => {
+                if (!(await this.trySubmitPlanApproval())) {
+                    setCorProp(context, this.ensureAgentInstructionsKey, false);
+                    return;
+                }
+
+                setCorProp(context, this.ensureAgentInstructionsKey, true);
+                // TODO: We should parse and record generic diagnostics and telemetry on the markdown plan here
+
+                suppressTrackedViewCloseOnce();
+                this.panel.dispose();
+
+                openLoadingView({
+                    stage: 1,
+                    title: vscode.l10n.t('Setting up your local development environment…'),
+                    message: vscode.l10n.t('Copilot is setting your project up for local development'),
+                });
+            });
         });
     }
 
-    private async openDebugPlanChat(query: string, isFeedback: boolean): Promise<boolean> {
+    private async trySubmitPlanApproval(): Promise<boolean> {
         if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
             return false;
         }
-        if (!isFeedback) {
-            // Fresh chat session for the approval hand-off so the next phase starts with a
-            // clean context window. Feedback/revision stays in the current session because
-            // it iterates on the plan with the existing conversation.
-            await vscode.commands.executeCommand('workbench.action.chat.newChat');
-        }
+        // Fresh chat session for the approval hand-off so the next phase starts with a
+        // clean context window.
+        await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: azureDebugPlanAgent,
-            query,
+            query: 'I approve the debug setup plan.',
         });
-        if (isFeedback) {
-            void this.panel.webview.postMessage({ command: 'revisionInProgress' });
-        }
         return true;
+    }
+
+    private async trySubmitPlanFeedback(query: string): Promise<boolean> {
+        return await callWithTelemetryAndErrorHandling(`copilotOnRails.submitLocalDebugPlanFeedback`, async (actionContext: IActionContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitLocalDebugPlanFeedback' }, async (context: CopilotOnRailsContext) => {
+                if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
+                    setCorProp(context, this.ensureAgentInstructionsKey, false);
+                    return false;
+                }
+
+                // Reuse the current session so the agent iterates on the plan with the existing conversation.
+                await vscode.commands.executeCommand('workbench.action.chat.open', {
+                    mode: azureDebugPlanAgent,
+                    query,
+                });
+                void this.panel.webview.postMessage({ command: 'revisionInProgress' });
+
+                setCorProp(context, this.ensureAgentInstructionsKey, true);
+                return true;
+            });
+        }) ?? false;
     }
 
     private clearPrereqsRefresh(): void {

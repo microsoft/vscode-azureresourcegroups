@@ -8,7 +8,7 @@ import { l10n } from 'vscode';
 import { azureDebugPlanAgent } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
-import { callWithDiagnosticsAndTelemetryHandling } from '../../utils/copilotOnRails/copilotOnRailsTelemetryUtils';
+import { callWithDiagnosticsAndTelemetryHandling } from '../../utils/copilotOnRails/telemetryUtils';
 import { createProjectWithCopilot } from '../../webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { openDeploymentPlanViewFromWorkspace } from '../../webviews/copilotOnRails/extension/openDeploymentPlanView';
 import { openFrontendPreviewView } from '../../webviews/copilotOnRails/extension/openFrontendPreviewView';

@@ -8,7 +8,7 @@ import { ToolExecutionExtras } from "@microsoft/vscode-inproc-mcp";
 import { v4 as uuidv4 } from "uuid";
 import { ext } from "../../extensionVariables";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./CopilotOnRailsContext";
-import { DiagnosticEvent, withDiagnosticEvents } from "./copilotOnRailsDiagnosticUtils";
+import { DiagnosticEvent, withDiagnosticEvents } from "./diagnosticUtils";
 
 const projectIdKey: string = 'copilotOnRails.projectId';
 

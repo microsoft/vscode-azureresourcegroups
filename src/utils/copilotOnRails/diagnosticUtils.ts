@@ -70,7 +70,7 @@ export interface DiagnosticEvent {
     /**
      * The tool or command that produced the event.
      */
-    type: 'extensionCommand' | 'mcpTool';
+    type: 'extensionCommand' | 'mcpTool' | 'webviewAction';
     /**
      * Which point in the tool's lifecycle this entry represents.
      */

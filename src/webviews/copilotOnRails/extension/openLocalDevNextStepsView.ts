@@ -5,7 +5,7 @@
 
 import * as vscode from "vscode";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { setCorProp } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
+import { setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { type LocalDevNextStepsViewConfiguration } from "../views/utils/viewConfigTypes";
 import { disableAutopilot } from "./autopilot";
 import { LocalDevNextStepsViewController } from "./controllers/LocalDevNextStepsViewController";

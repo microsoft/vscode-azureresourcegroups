@@ -7,9 +7,9 @@ import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vs
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import { z } from "zod/mini";
-import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { startProjectScaffoldCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { azureProjectScaffoldAgent } from "../../../constants";
+import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/telemetryUtils";
 
 const startProjectScaffoldToolName = 'start_project_scaffold';
 

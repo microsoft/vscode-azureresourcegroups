@@ -5,7 +5,7 @@
 
 import { IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { getDiagnosticEvents } from '../../utils/copilotOnRails/copilotOnRailsDiagnosticUtils';
+import { getDiagnosticEvents } from '../../utils/copilotOnRails/diagnosticUtils';
 
 /**
  * Opens the cached Copilot on Rails diagnostic events in a new JSON editor so they can be
