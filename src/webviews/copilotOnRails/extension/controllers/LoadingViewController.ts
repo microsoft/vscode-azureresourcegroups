@@ -24,6 +24,8 @@ export class LoadingViewController extends WebviewController<LoadingViewConfigur
         this.panel.webview.onDidReceiveMessage((message: { command: string }) => {
             if (message.command === 'needHelp') {
                 void this.handleNeedHelp();
+            } else if (message.command === 'reportIssue') {
+                void vscode.commands.executeCommand('azureResourceGroups.reportIssue');
             }
         });
     }

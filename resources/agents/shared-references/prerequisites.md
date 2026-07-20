@@ -36,7 +36,7 @@ Dependencies that are required to run the project locally. If a run tool is miss
 
 ### Debug Tools
 
-Tooling needed to debug the project locally, not just to run it through the terminal. Two independent kinds of entries belong here and both must be evaluated every time: container tooling (Docker, Docker Compose) for any Azure-dependency emulators, and the VS Code debug-integration extension for each detected project type that has a matching row in the table below. The extensions are required for the debug experience — task types, problem matchers, launch integration — even when the project has no Azure emulator dependencies and even when the matching CLI or runtime tool already appears in the Run group.
+Tooling needed to debug the project locally, not just to run it through the terminal. Three independent kinds of entries belong here and all must be evaluated every time: container tooling (Docker, Docker Compose) for any Azure-dependency emulators; a Chromium-based browser (Chrome or Edge) for any frontend project type that debugs in a browser; and the VS Code debug-integration extension for each detected project type that has a matching row in the table below. The extensions are required for the debug experience — task types, problem matchers, launch integration — even when the project has no Azure emulator dependencies and even when the matching CLI or runtime tool already appears in the Run group.
 
 This table is the **authoritative list** — include every row whose trigger matches the project, and maintainers must add any new debug tool or extension here so it is considered. Some project types require a specific VS Code extension for the debug experience (e.g. Azure Functions needs the Functions extension for its `func` task type and problem matchers), so do not infer these from memory — take them from this table.
 
@@ -46,7 +46,10 @@ Prefer to use the debug tools listed here. Also, never list VS Code itself — t
 |------------------|----------|----------------------|-------------|
 | Docker | Container runtime | Project has Azure dependencies that run as local emulators | `docker --version` |
 | Docker Compose | Orchestrator | Orchestrating emulators | Do not detect — always record as unknown (`❓`), version `—` (see Docker Compose detection in Phase 2) |
+| Chrome or Edge | Browser | Project has a frontend/SPA project type that debugs in a browser | See Browser detection in Phase 2 — detect Chrome/Edge; if neither is found, fall back by OS |
 | `ms-azuretools.vscode-azurefunctions` | VS Code extension | Has an Azure Functions service | extensions filesystem check (Phase 2); installed (`✅`) if found, otherwise unknown (`❓`) — never not-installed |
+
+For a frontend project that debugs in a browser, always include a single browser row (Chrome or Edge). Unlike the Docker Compose and VS Code extension rows, the browser resolves to installed (`✅`) or not-installed (`❌`) from a real scan — see Browser detection in Phase 2. Record the **specific browser chosen** (Chrome or Edge) in the row name; the generate phase reads it to pick the frontend debug adapter `type` (`chrome` for Chrome, `msedge` for Edge).
 
 Always emit a Debug row for every VS Code extension whose project type is present. Run the Phase 2 filesystem check: if the extension folder is found, record it installed (`✅`); if it is not found, record it as unknown (`❓`), never as not-installed (`❌`) — the folder scan can come up empty in restricted shells even when the extension is installed. Never drop the row just because the extension wasn't found, and never treat it as already covered by a Run tool. For example, an Azure Functions project must include a `ms-azuretools.vscode-azurefunctions` row even though Azure Functions Core Tools already appears under Run — the Core Tools CLI and the extension are separate prerequisites.
 
@@ -116,3 +119,39 @@ Get-ChildItem "$env:USERPROFILE\.vscode\extensions", "$env:USERPROFILE\.vscode-i
 ```
 
 The extensions to check come from the **VS Code debug-integration extensions** table in Phase 1 — that table is the authoritative list. Detect each one with the extensions filesystem check above. If the check finds the extension folder, record it installed (`✅`); if it finds nothing, record it as unknown (`❓`), never as not-installed (`❌`) — the scan can come up empty in restricted shells even when the extension is installed. An unknown status is not counted as a missing tool.
+
+---
+
+### Browser detection
+
+Only when the project has a frontend/SPA project type that debugs in a browser. Frontend debugging launches a Chromium-based browser — Chrome or Edge — so detect which one is already installed and record **that** browser. The chosen browser drives the generated debug config `type`: Chrome → `chrome`, Edge → `msedge`.
+
+Detect both, then choose in this order:
+
+1. If **Chrome** is installed, choose Chrome and record it installed (`✅`) with its version if available.
+2. Otherwise if **Edge** is installed, choose Edge and record it installed (`✅`) with its version if available.
+3. If **neither** is installed, fall back by operating system and record the fallback as not-installed (`❌`) with its download URL in the Install column:
+   - **Windows** → Edge (`msedge`). Edge ships with Windows and is normally detected as installed in step 2, so this fallback rarely triggers.
+   - **macOS / Linux** → Chrome (`chrome`).
+
+Unlike Docker Compose and VS Code extensions, the browser is a normal detection — it resolves to installed (`✅`) or not-installed (`❌`); never record it as unknown (`❓`).
+
+```bash
+# macOS — installed if the app bundle exists
+ls -d "/Applications/Google Chrome.app" 2>/dev/null   # Chrome
+ls -d "/Applications/Microsoft Edge.app" 2>/dev/null  # Edge
+```
+
+```bash
+# Linux — installed if any binary resolves
+which google-chrome google-chrome-stable chromium chromium-browser 2>/dev/null   # Chrome / Chromium
+which microsoft-edge microsoft-edge-stable 2>/dev/null                            # Edge
+```
+
+```powershell
+# Windows — installed if any path exists
+Test-Path "$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"  # Chrome
+Test-Path "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe", "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"  # Edge
+```
+
+Download URLs for the Install column: Chrome `https://www.google.com/chrome/`, Edge `https://www.microsoft.com/edge`.

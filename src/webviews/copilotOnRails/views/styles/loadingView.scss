@@ -10,7 +10,7 @@
     padding: 20px 28px;
     box-sizing: border-box;
     width: 100%;
-    min-height: 60vh;
+    min-height: 100vh;
 }
 
 .loadingView .loadingCard {
@@ -36,4 +36,19 @@
     margin-top: 12px;
     font-size: 0.85em;
     cursor: pointer;
+}
+
+.loadingView .loadingFooter {
+    display: flex;
+    justify-content: center;
+    margin-top: auto;
+    padding-top: 16px;
+    padding-bottom: 8px;
+    border-top: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border));
+}
+
+.loadingView .reportIssueButton {
+    // Keep this visually distinct from the teal "resume" text link that also
+    // appears in the loading view, so the two actions don't blend together.
+    flex: 0 0 auto;
 }

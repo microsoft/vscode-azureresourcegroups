@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Link, Spinner } from '@fluentui/react-components';
+import { Button, Link, Spinner } from '@fluentui/react-components';
 import { WebviewContext, useConfiguration } from '@microsoft/vscode-azext-webview/webview';
 import { useContext, useEffect, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
@@ -43,6 +43,10 @@ export const LoadingView = (): JSX.Element => {
         vscodeApi.postMessage({ command: 'needHelp' });
     };
 
+    const handleReportIssue = () => {
+        vscodeApi.postMessage({ command: 'reportIssue' });
+    };
+
     return (
         <div className='loadingView' role='status' aria-live='polite' aria-busy='true'>
             <StageProgress currentStage={config.stage} />
@@ -56,6 +60,15 @@ export const LoadingView = (): JSX.Element => {
                         Something went wrong? Click here to resume.
                     </Link>
                 )}
+            </div>
+            <div className='loadingFooter'>
+                <Button
+                    className='reportIssueButton'
+                    appearance='secondary'
+                    onClick={handleReportIssue}
+                >
+                    Report an Issue
+                </Button>
             </div>
         </div>
     );

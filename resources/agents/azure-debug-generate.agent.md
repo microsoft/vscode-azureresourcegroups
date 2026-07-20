@@ -97,7 +97,7 @@ Preface the options with the following statement:
 
 Adjust the prefacing statement to omit the "run API tests or" portion if API tests were not generated.
 
-Then ask the user what they would like to do next. Check `.azure/vscode-debug-plan.md` to determine whether API test collections were generated (i.e., the plan's Services table includes API test entries marked for generation). Present options conditionally:
+Then ask the user what they would like to do next. Ask this as a plain open chat question (regular chat text) — do **NOT** call `vscode_askQuestions` or any other interactive question API for it. Keep calling the Next Steps view as described above; only the follow-up question itself must stay in chat. Check `.azure/vscode-debug-plan.md` to determine whether API test collections were generated (i.e., the plan's Services table includes API test entries marked for generation). Present options conditionally:
 
 - **Always offer:** "Keep iterating" and "Deploy to Azure"
 - **Only offer "Run API tests"** if the plan included API test collection generation.
