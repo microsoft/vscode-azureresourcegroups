@@ -4,15 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Button, Spinner } from '@fluentui/react-components';
-import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
-import { useContext, useEffect, useState, type JSX } from 'react';
+import { useConfiguration } from '@microsoft/vscode-azext-webview/webview';
+import { useEffect, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import './styles/loadingView.scss';
 import { type LoadingViewConfiguration } from './utils/viewConfigTypes';
 
 export const LoadingView = (): JSX.Element => {
     const initialConfig = useConfiguration<LoadingViewConfiguration>();
-    const { vscodeApi } = useContext(WebviewContext);
     const [config, setConfig] = useState<LoadingViewConfiguration>(initialConfig);
 
     useEffect(() => {
