@@ -32,6 +32,12 @@
     color: var(--vscode-descriptionForeground);
 }
 
+.loadingView .needHelpLink {
+    margin-top: 12px;
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
 .loadingView .loadingFooter {
     display: flex;
     justify-content: center;

@@ -24,11 +24,11 @@ import { readProjectPlanStatus } from './utils/planStatus';
  * 2 = deployment).
  */
 const RESUME_LOADING: Readonly<Record<ProjectPhase, LoadingViewConfiguration>> = {
-    plan: { stage: 0, title: vscode.l10n.t('Resuming project planning...'), message: vscode.l10n.t('Copilot is picking your project plan back up where it left off.') },
-    scaffold: { stage: 0, title: vscode.l10n.t('Resuming scaffolding...'), message: vscode.l10n.t('Copilot is picking your project scaffolding back up where it left off.') },
-    integrate: { stage: 0, title: vscode.l10n.t('Resuming integration...'), message: vscode.l10n.t('Copilot is picking your live-data integration back up where it left off.') },
-    localDev: { stage: 1, title: vscode.l10n.t('Resuming local development...'), message: vscode.l10n.t('Copilot is picking your local development setup back up where it left off.') },
-    deploy: { stage: 2, title: vscode.l10n.t('Resuming deployment...'), message: vscode.l10n.t('Copilot is picking your deployment back up where it left off.') },
+    plan: { stage: 0, title: vscode.l10n.t('Resuming project planning...'), message: vscode.l10n.t('Copilot is picking your project plan back up where it left off.'), showNeedHelp: true },
+    scaffold: { stage: 0, title: vscode.l10n.t('Resuming scaffolding...'), message: vscode.l10n.t('Copilot is picking your project scaffolding back up where it left off.'), showNeedHelp: true },
+    integrate: { stage: 0, title: vscode.l10n.t('Resuming integration...'), message: vscode.l10n.t('Copilot is picking your live-data integration back up where it left off.'), showNeedHelp: true },
+    localDev: { stage: 1, title: vscode.l10n.t('Resuming local development...'), message: vscode.l10n.t('Copilot is picking your local development setup back up where it left off.'), showNeedHelp: true },
+    deploy: { stage: 2, title: vscode.l10n.t('Resuming deployment...'), message: vscode.l10n.t('Copilot is picking your deployment back up where it left off.'), showNeedHelp: true },
 };
 
 /**

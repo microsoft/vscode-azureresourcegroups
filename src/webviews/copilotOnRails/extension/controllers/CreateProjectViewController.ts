@@ -50,6 +50,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
             stage: 0,
             title: vscode.l10n.t('Gathering project requirements…'),
             message: vscode.l10n.t('Copilot is analyzing your prompt and preparing the requirements questionnaire.'),
+            showNeedHelp: true,
         });
     }
 }
