@@ -37,7 +37,7 @@ export class LoadingViewController extends WebviewController<LoadingViewConfigur
     }
 
     private async handleNeedHelp(): Promise<void> {
-        await callWithTelemetryAndErrorHandling('azureResourceGroups.loadingView.needHelp', async (context: IActionContext) => {
+        await callWithTelemetryAndErrorHandling('azureResourceGroups.loadingView.needHelpResume', async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.properties.isCopilotEvent = 'true';
             context.telemetry.properties.corProjectId = getCorProjectId();
