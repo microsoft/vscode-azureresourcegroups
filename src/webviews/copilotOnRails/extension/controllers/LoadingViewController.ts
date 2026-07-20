@@ -3,11 +3,13 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { ext } from "../../../../extensionVariables";
+import { getCorProjectId } from "../../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 
@@ -33,7 +35,12 @@ export class LoadingViewController extends WebviewController<LoadingViewConfigur
     }
 
     private async handleNeedHelp(): Promise<void> {
-        this.panel.dispose();
-        await vscode.commands.executeCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot);
+        await callWithTelemetryAndErrorHandling('azureResourceGroups.loadingView.needHelp', async (context: IActionContext) => {
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.properties.isCopilotEvent = 'true';
+            context.telemetry.properties.corProjectId = getCorProjectId();
+            this.panel.dispose();
+            await vscode.commands.executeCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot);
+        });
     }
 }
