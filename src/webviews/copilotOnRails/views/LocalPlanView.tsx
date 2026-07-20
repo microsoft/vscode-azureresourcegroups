@@ -41,6 +41,10 @@ import {
 import { StageProgress } from "./components/StageProgress";
 import "./styles/localPlanView.scss";
 import {
+    isLimitedSupportDataStore,
+    limitedSupportWarningMessage,
+} from "./utils/emulatorSupport";
+import {
     type LocalPlanContent,
     type LocalPlanData,
     type LocalPlanSection,
@@ -101,25 +105,6 @@ function findGenerateColumnIdx(headers: string[]): number {
 }
 
 const EMULATORS_SECTION = "emulators";
-
-// Data store services whose local emulators only partially replicate the real
-// Azure service. Azure Storage (Azurite) and PostgreSQL have full-fidelity
-// emulators, so they're excluded.
-function isLimitedSupportDataStore(service: string): boolean {
-    const s = service.toLowerCase();
-    // Fully supported data stores — no warning.
-    if (/storage|azurite|postgre/.test(s)) {
-        return false;
-    }
-    // Known data store services whose emulators have limited fidelity.
-    return /cosmos|\bsql\b|mysql|mariadb|redis|cache|mongo|cassandra|gremlin|database|\bdb\b/.test(
-        s,
-    );
-}
-
-function stripInlineMarkdown(text: string): string {
-    return text.replace(/[*`]/g, "").trim();
-}
 
 function sectionSortOrder(title: string): number {
     const lower = title.toLowerCase().trim();
@@ -817,6 +802,8 @@ const DataTable = ({
                             <tr key={ri}>
                                 {row.map((cell, ci) => {
                                     if (ci === serviceColIdx && showWarning) {
+                                        const warningMessage =
+                                            limitedSupportWarningMessage();
                                         return (
                                             <td key={ci}>
                                                 <span className="supportWarningCell">
@@ -829,12 +816,12 @@ const DataTable = ({
                                                     />
                                                     <Tooltip
                                                         relationship="label"
-                                                        content={`Limited emulator support — ${stripInlineMarkdown(serviceLabel)} has no full-fidelity local emulator, so local behavior may differ from Azure.`}
+                                                        content={warningMessage}
                                                     >
                                                         <span
                                                             className="supportWarning"
                                                             tabIndex={0}
-                                                            aria-label={`Limited emulator support — ${stripInlineMarkdown(serviceLabel)} has no full-fidelity local emulator, so local behavior may differ from Azure.`}
+                                                            aria-label={warningMessage}
                                                         >
                                                             <WarningRegular />
                                                         </span>
