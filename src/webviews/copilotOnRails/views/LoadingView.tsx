@@ -3,15 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Spinner } from '@fluentui/react-components';
-import { useConfiguration } from '@microsoft/vscode-azext-webview/webview';
-import { useEffect, useState, type JSX } from 'react';
+import { Button, Spinner } from '@fluentui/react-components';
+import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
+import { useContext, useEffect, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import './styles/loadingView.scss';
 import { type LoadingViewConfiguration } from './utils/viewConfigTypes';
 
 export const LoadingView = (): JSX.Element => {
     const initialConfig = useConfiguration<LoadingViewConfiguration>();
+    const { vscodeApi } = useContext(WebviewContext);
     const [config, setConfig] = useState<LoadingViewConfiguration>(initialConfig);
 
     useEffect(() => {
@@ -25,6 +26,10 @@ export const LoadingView = (): JSX.Element => {
         return () => window.removeEventListener('message', handler);
     }, []);
 
+    const handleReportIssue = () => {
+        // TODO: Matt will handle this
+    };
+
     return (
         <div className='loadingView' role='status' aria-live='polite' aria-busy='true'>
             <StageProgress currentStage={config.stage} />
@@ -33,6 +38,15 @@ export const LoadingView = (): JSX.Element => {
                 {config.message && (
                     <p className='loadingMessage'>{config.message}</p>
                 )}
+            </div>
+            <div className='loadingFooter'>
+                <Button
+                    className='reportIssueButton'
+                    appearance='secondary'
+                    onClick={handleReportIssue}
+                >
+                    Report an Issue
+                </Button>
             </div>
         </div>
     );

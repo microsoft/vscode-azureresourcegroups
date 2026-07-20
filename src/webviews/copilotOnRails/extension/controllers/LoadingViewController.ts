@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WebviewController } from "@microsoft/vscode-azext-webview";
-import { ViewColumn } from "vscode";
+import { commands, ViewColumn } from "vscode";
 import { ext } from "../../../../extensionVariables";
 import { type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
@@ -16,6 +16,12 @@ import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation
 export class LoadingViewController extends WebviewController<LoadingViewConfiguration> {
     constructor(initialConfig: LoadingViewConfiguration) {
         super(ext.context, initialConfig.title, 'loadingView', initialConfig, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
+
+        this.panel.webview.onDidReceiveMessage((message: { command: string }) => {
+            if (message.command === 'reportIssue') {
+                void commands.executeCommand('azureResourceGroups.reportIssue');
+            }
+        });
     }
 
     /** Push a new title/message into the running webview without re-creating the panel. */
