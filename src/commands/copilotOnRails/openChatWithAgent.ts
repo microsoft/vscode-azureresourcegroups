@@ -8,6 +8,8 @@ import { projectSubmissionState } from '../../tree/project/projectSubmissionStat
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
 import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
+import { recordDiagnosticEvent } from '../../utils/copilotOnRails/copilotOnRailsDiagnosticUtils';
+import { phaseForEventName } from '../../utils/copilotOnRails/copilotOnRailsPhaseReport';
 import { ensureAgentInstructions } from './agentInstructions';
 
 const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
@@ -49,6 +51,15 @@ export async function launchAgentChat(agentName: string, query: string): Promise
     });
     // Record the phase we just launched so an interrupted run can be resumed.
     await recordAgentLaunch(agentName);
+
+    // A phase's real work happens inside the handed-off agent, which isn't
+    // otherwise instrumented, and several entry paths (webview plan-approval,
+    // resume) launch agents directly without a `start_*` command. Record a
+    // phase-boundary diagnostic event keyed by the agent name so every phase
+    // shows up in the phase-duration report regardless of how it was entered.
+    if (phaseForEventName(agentName)) {
+        recordDiagnosticEvent({ name: agentName, type: 'extensionCommand', status: 'start', properties: { agentLaunch: true } });
+    }
 }
 
 export async function openChatWithAgent(agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {

@@ -158,6 +158,11 @@
                 "category": "Azure"
             },
             {
+                "command": "azureResourceGroups.inspectPhaseDurations",
+                "title": "Inspect Copilot on Rails Phase Durations",
+                "category": "Azure"
+            },
+            {
                 "command": "azureResourceGroups.downloadAgentInstructions",
                 "title": "Download Azure Agent Instructions",
                 "category": "Azure"

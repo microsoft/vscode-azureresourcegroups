@@ -20,6 +20,7 @@ import { openPlanViewFromWorkspace } from '../../webviews/copilotOnRails/extensi
 import { resumeProjectWithCopilot } from '../../webviews/copilotOnRails/extension/resumeProjectWithCopilot';
 import { copilotOnRailsCustomAgents, downloadAgentInstructions } from './agentInstructions';
 import { inspectDiagnostics } from './inspectDiagnostics';
+import { inspectPhaseDurations } from './inspectPhaseDurations';
 import { openChatWithAgent } from './openChatWithAgent';
 import { startDebugConfiguration } from './startDebugConfiguration';
 
@@ -52,6 +53,7 @@ export const copilotOnRailsCommandIds = {
 
     // Diagnostics...
     inspectDiagnostics: 'azureResourceGroups.inspectDiagnostics',
+    inspectPhaseDurations: 'azureResourceGroups.inspectPhaseDurations',
 } as const;
 
 /**
@@ -137,4 +139,5 @@ export function registerCopilotOnRailsCommands(): void {
 
     // Diagnostics
     registerCommand(copilotOnRailsCommandIds.inspectDiagnostics, inspectDiagnostics);
+    registerCommand(copilotOnRailsCommandIds.inspectPhaseDurations, inspectPhaseDurations);
 }

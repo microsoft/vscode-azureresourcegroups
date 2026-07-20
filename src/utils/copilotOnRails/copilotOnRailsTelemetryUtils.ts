@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from "uuid";
 import { ext } from "../../extensionVariables";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./CopilotOnRailsContext";
 import { DiagnosticEvent, withDiagnosticEvents } from "./copilotOnRailsDiagnosticUtils";
+import { phaseForEventName } from "./copilotOnRailsPhaseReport";
 
 const projectIdKey: string = 'copilotOnRails.projectId';
 
@@ -40,6 +41,10 @@ export async function callWithDiagnosticsAndTelemetryHandling<T>(
 ): Promise<T> {
     context.telemetry.properties.isCopilotEvent = 'true';
     context.telemetry.properties.corProjectId = getCorProjectId();
+    context.telemetry.properties.eventTimestamp = new Date().toISOString();
+    // Stamp the derived workflow phase on every action so per-event telemetry can
+    // reconstruct/validate the phase-duration report's heuristics from real runs.
+    context.telemetry.properties.workflowPhase = phaseForEventName(eventDetails.name) ?? 'none';
 
     if (eventDetails.extras) {
         context.telemetry.properties.copilotSessionId = eventDetails.extras.sessionId;
