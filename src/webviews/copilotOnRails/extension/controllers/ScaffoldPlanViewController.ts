@@ -12,6 +12,7 @@ import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/age
 import { launchAgentChat } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
+import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { AUTOPILOT_QUERY_MARKER, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
@@ -110,46 +111,56 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     private async approveAndOpenScaffoldChat(autopilot: boolean): Promise<void> {
-        let confirmedAutopilot = false;
-        if (autopilot) {
-            confirmedAutopilot = await callWithTelemetryAndErrorHandling('azureResourceGroups.autopilot.confirm', async (context: IActionContext) => {
-                context.errorHandling.suppressDisplay = true;
-                await context.ui.showWarningMessage(
-                    vscode.l10n.t('Approve this plan and run the rest in Autopilot mode?'),
-                    {
-                        modal: true,
-                        detail: vscode.l10n.t('Autopilot scaffolds and sets up local debugging without stopping for further approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally, and the chat request limit is raised so the run doesn\'t pause partway through. You can turn this off any time from the status bar.'),
-                    },
-                    { title: vscode.l10n.t('Enable Autopilot') },
-                );
-                return true;
-            }) ?? false;
-            if (!confirmedAutopilot) {
-                return;
-            }
-        }
+        await callWithTelemetryAndErrorHandling('azureResourceGroups.scaffold.approvePlan', async (context: IActionContext) => {
+            context.errorHandling.suppressDisplay = true;
+            await callWithDiagnosticsAndTelemetryHandling(context, { type: 'extensionCommand', name: 'azureResourceGroups.scaffold.approvePlan' }, async (corContext) => {
+                // Whether the user requested Autopilot on the plan page.
+                setCorProp(corContext, 'autopilotRequested', autopilot);
 
-        if (!(await ensureAgentInstructions('azure-project-scaffold'))) {
-            return;
-        }
+                let confirmedAutopilot = false;
+                if (autopilot) {
+                    confirmedAutopilot = await callWithTelemetryAndErrorHandling('azureResourceGroups.autopilot.confirm', async (confirmContext: IActionContext) => {
+                        confirmContext.errorHandling.suppressDisplay = true;
+                        await confirmContext.ui.showWarningMessage(
+                            vscode.l10n.t('Approve this plan and run the rest in Autopilot mode?'),
+                            {
+                                modal: true,
+                                detail: vscode.l10n.t('Autopilot scaffolds and sets up local debugging without stopping for further approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally, and the chat request limit is raised so the run doesn\'t pause partway through. You can turn this off any time from the status bar.'),
+                            },
+                            { title: vscode.l10n.t('Enable Autopilot') },
+                        );
+                        return true;
+                    }) ?? false;
+                    // Whether the user confirmed the Autopilot modal (i.e. Autopilot actually runs).
+                    setCorProp(corContext, 'autopilotConfirmed', confirmedAutopilot);
+                    if (!confirmedAutopilot) {
+                        return;
+                    }
+                }
 
-        if (confirmedAutopilot) {
-            await this.recordAutopilotMode();
-            await enableAutopilot(ext.context);
-        } else {
-            await this.ensureRequestBudget();
-        }
+                if (!(await ensureAgentInstructions('azure-project-scaffold'))) {
+                    return;
+                }
 
-        const baseQuery = vscode.l10n.t('I approve the plan.');
-        await launchAgentChat(azureProjectScaffoldAgent, confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery);
-        // Programmatic hand-off to the scaffold phase — don't treat this close as the user abandoning the flow.
-        suppressTrackedViewCloseOnce();
-        this.panel.dispose();
-        openLoadingView({
-            stage: 0,
-            title: vscode.l10n.t('Scaffolding your project…'),
-            message: vscode.l10n.t('Copilot is creating your project files. For progress please view the Copilot chat.'),
-            showNeedHelp: true,
+                if (confirmedAutopilot) {
+                    await this.recordAutopilotMode();
+                    await enableAutopilot(ext.context);
+                } else {
+                    await this.ensureRequestBudget();
+                }
+
+                const baseQuery = vscode.l10n.t('I approve the plan.');
+                await launchAgentChat(azureProjectScaffoldAgent, confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery);
+                // Programmatic hand-off to the scaffold phase — don't treat this close as the user abandoning the flow.
+                suppressTrackedViewCloseOnce();
+                this.panel.dispose();
+                openLoadingView({
+                    stage: 0,
+                    title: vscode.l10n.t('Scaffolding your project…'),
+                    message: vscode.l10n.t('Copilot is creating your project files. For progress please view the Copilot chat.'),
+                    showNeedHelp: true,
+                });
+            });
         });
     }
 
