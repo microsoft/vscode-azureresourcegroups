@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
@@ -98,22 +99,26 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     }
 
     private async refreshPrerequisites(): Promise<void> {
-        if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
-            return;
-        }
-        this._isRefreshingPrereqs = true;
-        void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
-        await vscode.commands.executeCommand('workbench.action.chat.open', {
-            mode: azureDebugPlanAgent,
-            query: 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites table and update the plan file with the current results.',
+        await callWithTelemetryAndErrorHandling('azureResourceGroups.localDebugPlan.refreshPrerequisites', async (context: IActionContext) => {
+            context.errorHandling.suppressDisplay = true;
+
+            if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
+                return;
+            }
+            this._isRefreshingPrereqs = true;
+            void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
+            await vscode.commands.executeCommand('workbench.action.chat.open', {
+                mode: azureDebugPlanAgent,
+                query: 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites table and update the plan file with the current results.',
+            });
+            if (this._refreshPrereqsTimer) {
+                clearTimeout(this._refreshPrereqsTimer);
+            }
+            this._refreshPrereqsTimer = setTimeout(() => {
+                this._refreshPrereqsTimer = undefined;
+                this.clearPrereqsRefresh();
+            }, 15_000);
         });
-        if (this._refreshPrereqsTimer) {
-            clearTimeout(this._refreshPrereqsTimer);
-        }
-        this._refreshPrereqsTimer = setTimeout(() => {
-            this._refreshPrereqsTimer = undefined;
-            this.clearPrereqsRefresh();
-        }, 15_000);
     }
 
     updatePlanData(planData: LocalPlanData, sourceFileUri?: vscode.Uri): void {
