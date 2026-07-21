@@ -3,20 +3,43 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as nls from 'vscode-nls';
+
+const localize: nls.LocalizeFunc = nls.loadMessageBundle();
+
+const supportedDataStoreAliases = {
+    azureStorage: ["storage", "azurite"],
+    postgres: ["postgre"],
+} as const;
+
+const limitedSupportDataStoreAliases = {
+    cosmosDb: ["cosmos"],
+    sql: ["sql"],
+    mysql: ["mysql", "mariadb"],
+    redis: ["redis", "cache"],
+    mongo: ["mongo"],
+    cassandra: ["cassandra"],
+    gremlin: ["gremlin"],
+    database: ["database", "db"],
+} as const;
+
 /**
  * Data store services whose local emulators only partially replicate the real
- * Azure service. Azure Storage (Azurite) and PostgreSQL have full-fidelity
- * emulators, so they're excluded. Non-data-store services (e.g. messaging) are
- * intentionally not flagged.
+ * Azure service.
  */
 export function isLimitedSupportDataStore(service: string): boolean {
-    const s = service.toLowerCase();
-    if (/storage|azurite|postgre/.test(s)) {
+    const s = service.trim().toLowerCase();
+
+    const isSupported = Object.values(supportedDataStoreAliases).some((aliases) =>
+        aliases.some((alias) => s.includes(alias)),
+    );
+
+    if (isSupported) {
         return false;
     }
 
-    return /cosmos|\bsql\b|mysql|mariadb|redis|cache|mongo|cassandra|gremlin|database|\bdb\b/.test(
-        s,
+    return Object.values(limitedSupportDataStoreAliases).some((aliases) =>
+        aliases.some((alias) => s.includes(alias)),
     );
 }
 
@@ -25,5 +48,5 @@ export function isLimitedSupportDataStore(service: string): boolean {
  * emulator. Kept in one place so every view surfaces identical wording.
  */
 export function limitedSupportWarningMessage(): string {
-    return 'Limited Support - Emulator support for this service has not yet been fully implemented';
+    return localize('limitedSupportWarning', 'Limited Support - Emulator support for this service has not yet been fully implemented');
 }
