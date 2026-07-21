@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
@@ -32,22 +33,27 @@ export class ScaffoldNextStepsViewController extends WebviewController<Record<st
     }
 
     private async handleAction(action: ScaffoldAction): Promise<void> {
-        switch (action) {
-            case 'setupLocal':
-                this.panel.dispose();
-                await vscode.commands.executeCommand(
-                    'azureResourceGroups.startLocalDevelopment',
-                    vscode.l10n.t('The project has been scaffolded. Now set up the local debugging environment so I can start building and testing.'),
-                );
-                return;
-            case 'deploy':
-                this.panel.dispose();
-                await vscode.commands.executeCommand(
-                    'azureResourceGroups.startDeployment',
-                    vscode.l10n.t('The project has been scaffolded. Now prepare it for deployment to Azure.'),
-                );
-                return;
-        }
+        await callWithTelemetryAndErrorHandling('azureResourceGroups.scaffoldNextSteps.actionSelected', async (context: IActionContext) => {
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.properties.action = action;
+
+            switch (action) {
+                case 'setupLocal':
+                    this.panel.dispose();
+                    await vscode.commands.executeCommand(
+                        'azureResourceGroups.startLocalDevelopment',
+                        vscode.l10n.t('The project has been scaffolded. Now set up the local debugging environment so I can start building and testing.'),
+                    );
+                    return;
+                case 'deploy':
+                    this.panel.dispose();
+                    await vscode.commands.executeCommand(
+                        'azureResourceGroups.startDeployment',
+                        vscode.l10n.t('The project has been scaffolded. Now prepare it for deployment to Azure.'),
+                    );
+                    return;
+            }
+        });
     }
 
     /** Push a new config into the running webview. */
