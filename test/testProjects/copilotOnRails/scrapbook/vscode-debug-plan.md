@@ -5,8 +5,8 @@
 >
 > **Status:** Planning
 > **Execution Mode:** Guided
-> **Created:** 2026-07-20
-> **Last Updated:** 2026-07-20
+> **Created:** 2026-07-21
+> **Last Updated:** 2026-07-21
 
 ---
 
@@ -14,15 +14,15 @@
 
 | Tool / Extension | Category | Service(s) | Installed | Version | Install |
 |------------------|----------|------------|-----------|---------|---------|
-| Node.js | Runtime | * | ✅ | 24.18.0 | `brew install node` |
+| Node.js | Runtime | * | ✅ | v24.18.0 | `brew install node` |
 | npm | Package manager | * | ✅ | 11.16.0 | Bundled with Node.js |
-| Azure Functions Core Tools | Runtime | attendance-api | ✅ | 4.12.1 | `npm install -g azure-functions-core-tools@4` |
-| Docker | Container runtime | attendance-api | ✅ | 29.3.1 | https://docs.docker.com/get-docker/ |
-| Docker Compose | Orchestrator | attendance-api | ❓ | — | https://docs.docker.com/compose/install/ |
-| Chrome | Browser | attendance-portal | ✅ | — | https://www.google.com/chrome/ |
-| `ms-azuretools.vscode-azurefunctions` | VS Code extension | attendance-api | ✅ | 1.22.0 | VS Code Extensions Marketplace |
+| Azure Functions Core Tools | Runtime | scrapbook-api, cleanup-worker | ✅ | 4.12.1 | `brew install azure-functions-core-tools@4` |
+| Docker | Container runtime | scrapbook-api, cleanup-worker | ✅ | 29.3.1 | https://docs.docker.com/desktop/install/mac-install/ |
+| Docker Compose | Orchestrator | scrapbook-api, cleanup-worker | ❓ | — | Bundled with Docker Desktop |
+| Chrome | Browser | scrapbook-web | ✅ | — | https://www.google.com/chrome/ |
+| `ms-azuretools.vscode-azurefunctions` | VS Code extension | scrapbook-api, cleanup-worker | ✅ | 1.22.0 | Install from VS Code Marketplace |
 
-> ⚠️ **Action required:** Install any tools or extensions marked ❌ before approving this plan, and confirm any marked ❓ (e.g. Docker Compose) are installed and ready.
+> ⚠️ **Action required:** Confirm Docker Compose (marked ❓) is installed and ready before approving this plan.
 
 ---
 
@@ -32,8 +32,9 @@ Each checked row below produces a VS Code debug configuration in the `.vscode/la
 
 | Generate | Debug Config Name | Service Label | Service Root | Project Type | Runtime | Version | Azure Dependencies |
 |----------|-------------------|---------------|--------------|--------------|---------|---------|-----|
-| [x] | Attendance API (debug) | Attendance API | ./services/attendance-api | functions | node-ts | 24.x | Azure Storage, PostgreSQL |
-| [x] | Attendance Portal (debug) | Attendance Portal | ./services/attendance-portal | frontend-spa | node-ts | 24.x | — |
+| [x] | Scrapbook API (debug) | Scrapbook API | ./services/scrapbook-api | functions | node-ts | 24.x | Azure Storage, PostgreSQL |
+| [x] | Cleanup Worker (debug) | Cleanup Worker | ./services/cleanup-worker | functions | node-ts | 24.x | Azure Storage, PostgreSQL |
+| [x] | Scrapbook Web (debug) | Scrapbook Web | ./services/scrapbook-web | frontend-spa | node-ts | 24.x | — |
 | [x] | Debug All Services | Debug All Services | | *Compound Config* | | | |
 
 <details>
@@ -46,7 +47,7 @@ Each checked row below produces a VS Code debug configuration in the `.vscode/la
 
 </details>
 
-> ℹ️ **Proxy detected:** Attendance Portal proxies `/api` requests to Attendance API (`http://localhost:7071`) via `vite.config.ts`. The compound config starts backends before frontends.
+> ℹ️ **Proxy detected:** Scrapbook Web proxies `/api` requests to Scrapbook API (`http://localhost:7071`) via `vite.config.ts`. The compound config starts backends before the frontend.
 
 ---
 
@@ -62,20 +63,22 @@ Each checked row below produces a VS Code debug configuration in the `.vscode/la
 
 | Dependent Service | Emulator | Purpose |
 |-------------------|----------|---------|
-| Azure Storage | Azurite Container | Blob/queue/table storage for Azure Functions host runtime (AzureWebJobsStorage) |
-| PostgreSQL | PostgreSQL Container | Relational database for attendance records, compliance rules, and planned entries |
+| Azure Storage | Azurite Container | Blob storage for photo uploads and Azure Functions host runtime (trigger management, lease coordination) |
+| PostgreSQL | PostgreSQL Container | Relational database for users, pairs, photos, and photo labels |
 
 ---
 
 ## Architecture Diagram
 
-During debugging, the Attendance API (Azure Functions) connects to Azurite and PostgreSQL emulators running in Docker containers, while the Attendance Portal (Vite SPA) proxies API requests to the Functions host.
+During local debugging, both Azure Functions services connect to Azurite for blob storage and a PostgreSQL container for data persistence. The Vite dev server proxies API calls to the Scrapbook API function host.
 
 ```mermaid
 graph LR
-    Portal[Attendance Portal<br/>Vite :5173] -->|/api proxy| API[Attendance API<br/>Functions :7071]
+    Web[Scrapbook Web<br/>Vite :5173] -->|/api proxy| API[Scrapbook API<br/>func :7071]
     API --> Azurite[Azurite<br/>:10000-10002]
-    API --> Postgres[PostgreSQL<br/>:5432]
+    API --> Postgres[(PostgreSQL<br/>:5432)]
+    Worker[Cleanup Worker<br/>func :7072] --> Azurite
+    Worker --> Postgres
 ```
 
 ---
@@ -86,7 +89,7 @@ When selected, the generation phase creates automated VS Code tasks that run mig
 
 | Generate | Service | Migration Tool |
 |----------|---------|---------------|
-| [x] | Attendance API | Raw SQL (custom runner: `node migrations/run.js`) |
+| [x] | Scrapbook API | Knex |
 
 ---
 
@@ -96,7 +99,8 @@ When selected, the generation phase produces lightweight, runnable API test scri
 
 | Generate | Service | Description |
 |----------|---------|-------------|
-| [x] | Attendance API | <details><summary>HTTP Endpoints (11)</summary><br>GET /api/health<br>GET /api/attendance<br>POST /api/attendance<br>PUT /api/attendance/{id}<br>DELETE /api/attendance/{id}<br>GET /api/compliance<br>GET /api/compliance/history<br>GET /api/planned<br>POST /api/planned<br>GET /api/rules<br>PUT /api/rules<br><br></details> |
+| [x] | Scrapbook API | <details><summary>HTTP Endpoints (12)</summary><br>GET /api/health<br>GET /api/openapi.json<br>POST /api/pairs<br>GET /api/pairs<br>PATCH /api/pairs/{id}/accept<br>DELETE /api/pairs/{id}<br>POST /api/photos<br>GET /api/photos<br>GET /api/photos/{id}<br>PATCH /api/photos/{id}<br>DELETE /api/photos/{id}<br>GET /api/photos/timeline<br><br></details> |
+| [x] | Cleanup Worker | <details><summary>Triggers (1)</summary><br>timerTrigger — cleanupExpiredPhotos (daily at 2:00 AM UTC)<br><br></details> |
 
 ---
 
