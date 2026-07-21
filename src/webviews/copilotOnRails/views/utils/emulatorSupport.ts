@@ -7,12 +7,12 @@ import * as nls from 'vscode-nls';
 
 const localize: nls.LocalizeFunc = nls.loadMessageBundle();
 
-const supportedDataStoreAliases = {
+/**
+ * Aliases that identify a service as a data store.
+ */
+const dataStoreAliases = {
     azureStorage: ["storage", "azurite"],
     postgres: ["postgre"],
-} as const;
-
-const limitedSupportDataStoreAliases = {
     cosmosDb: ["cosmos"],
     sql: ["sql"],
     mysql: ["mysql", "mariadb"],
@@ -24,23 +24,31 @@ const limitedSupportDataStoreAliases = {
 } as const;
 
 /**
- * Data store services whose local emulators only partially replicate the real
- * Azure service.
+ * Data stores that have full-fidelity local emulator support.
+ */
+const supportedDataStoreAliases = {
+    azureStorage: ["storage", "azurite"],
+    postgres: ["postgre"],
+} as const;
+
+/**
+ * Returns true if the service is a data store that lacks full emulator support.
  */
 export function isLimitedSupportDataStore(service: string): boolean {
     const s = service.trim().toLowerCase();
+
+    const isDataStore = Object.values(dataStoreAliases).some((aliases) =>
+        aliases.some((alias) => s.includes(alias)),
+    );
+    if (!isDataStore) {
+        return false;
+    }
 
     const isSupported = Object.values(supportedDataStoreAliases).some((aliases) =>
         aliases.some((alias) => s.includes(alias)),
     );
 
-    if (isSupported) {
-        return false;
-    }
-
-    return Object.values(limitedSupportDataStoreAliases).some((aliases) =>
-        aliases.some((alias) => s.includes(alias)),
-    );
+    return !isSupported;
 }
 
 /**
