@@ -5,6 +5,7 @@
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
+import { getCorProjectId } from "src/utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
@@ -100,6 +101,8 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
 
     private async refreshPrerequisites(): Promise<void> {
         await callWithTelemetryAndErrorHandling('azureResourceGroups.localDebugPlan.refreshPrerequisites', async (context: IActionContext) => {
+            context.telemetry.properties.isCopilotEvent = 'true';
+            context.telemetry.properties.corProjectId = getCorProjectId();
             context.errorHandling.suppressDisplay = true;
 
             if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
