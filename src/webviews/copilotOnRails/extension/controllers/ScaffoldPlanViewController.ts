@@ -237,29 +237,34 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     private async refreshPrerequisites(autopilot: boolean): Promise<void> {
-        if (!(await ensureAgentInstructions('azure-project-plan'))) {
-            return;
-        }
+        await callWithTelemetryAndErrorHandling('azureResourceGroups.scaffoldPlan.refreshPrerequisites', async (context: IActionContext) => {
+            context.errorHandling.suppressDisplay = true;
+            context.telemetry.properties.autopilot = String(autopilot);
 
-        this._isRefreshingPrereqs = true;
-        void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
+            if (!(await ensureAgentInstructions('azure-project-plan'))) {
+                return;
+            }
 
-        const query = autopilot
-            ? 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites tables and update the plan file with the current results.'
-            : 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Run Prerequisites table only and update the plan file with the current results.';
+            this._isRefreshingPrereqs = true;
+            void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
 
-        await vscode.commands.executeCommand('workbench.action.chat.open', {
-            mode: 'azure-project-plan',
-            query,
+            const query = autopilot
+                ? 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites tables and update the plan file with the current results.'
+                : 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Run Prerequisites table only and update the plan file with the current results.';
+
+            await vscode.commands.executeCommand('workbench.action.chat.open', {
+                mode: 'azure-project-plan',
+                query,
+            });
+
+            if (this._refreshPrereqsTimer) {
+                clearTimeout(this._refreshPrereqsTimer);
+            }
+            this._refreshPrereqsTimer = setTimeout(() => {
+                this._refreshPrereqsTimer = undefined;
+                this.clearPrereqsRefresh();
+            }, 15_000);
         });
-
-        if (this._refreshPrereqsTimer) {
-            clearTimeout(this._refreshPrereqsTimer);
-        }
-        this._refreshPrereqsTimer = setTimeout(() => {
-            this._refreshPrereqsTimer = undefined;
-            this.clearPrereqsRefresh();
-        }, 15_000);
     }
 
     updatePlanData(planData: PlanData, sourceFileUri?: vscode.Uri): void {
