@@ -9,9 +9,8 @@ import { NodeFetchNormalizer } from "./NodeFetchNormalizer";
 
 export async function fetchWithLogging(url: string, init?: RequestInit): Promise<Response> {
     const nodeFetchLogger = new HttpLogger(ext.outputChannel, 'NodeFetch', new NodeFetchNormalizer());
-    const requestInit = addDuplexToRequestInit(init);
-    const request = new Request(url, requestInit);
-    const response = await fetch(url, requestInit);
+    const request = createRequest(url, init);
+    const response = await fetch(request, request.body ? { duplex: request.duplex } : undefined);
     nodeFetchLogger.logRequest(request);
     nodeFetchLogger.logResponse({ response, request, bodyAsText: await response.clone().text() });
     return response;
@@ -22,5 +21,5 @@ export function createRequest(url: string, init?: RequestInit): Request {
 }
 
 function addDuplexToRequestInit(init?: RequestInit): RequestInit | undefined {
-    return init?.body !== undefined && init.body !== null ? { ...init, duplex: 'half' } : init;
+    return init?.body !== undefined && init.body !== null ? { ...init, duplex: init.duplex ?? 'half' } : init;
 }

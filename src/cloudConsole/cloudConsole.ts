@@ -354,12 +354,14 @@ export function createCloudConsole(subscriptionProvider: AzureSubscriptionProvid
             const tenants = await getTenantsForSignedInAccounts(subscriptionProvider, accounts);
             let selectedTenant: TenantIdDescription | undefined = undefined;
 
-            const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ filter: false });
             if (tenants.length === 0) {
                 serverQueue.push({ type: 'log', args: [localize('noAuthenticatedTenants', `Error: No authenticated Azure tenants found.`)] });
                 updateStatus('Disconnected');
                 return;
-            } else if (tenants.length === 1) {
+            }
+
+            const subscriptions = await subscriptionProvider.getAvailableSubscriptions({ filter: false });
+            if (tenants.length === 1) {
                 serverQueue.push({ type: 'log', args: [localize('foundOneTenant', `Found 1 tenant.`)] });
                 // if they have only one tenant, use it
                 selectedTenant = tenants[0];

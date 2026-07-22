@@ -9,19 +9,26 @@ import { ext } from '../src/extensionVariables';
 import { createRequest, fetchWithLogging } from '../src/utils/logging/nodeFetch/nodeFetch';
 
 suite('nodeFetch', () => {
+    let previousOutputChannel: typeof ext.outputChannel;
+    let testOutputChannel: typeof ext.outputChannel;
+
     suiteSetup(() => {
-        ext.outputChannel = createAzExtLogOutputChannel('Node Fetch Tests');
+        previousOutputChannel = ext.outputChannel;
+        testOutputChannel = createAzExtLogOutputChannel('Node Fetch Tests');
+        ext.outputChannel = testOutputChannel;
     });
 
     suiteTeardown(() => {
-        ext.outputChannel.dispose();
+        ext.outputChannel = previousOutputChannel;
+        testOutputChannel.dispose();
     });
 
     test('fetches a request with a body', async () => {
         const originalFetch = globalThis.fetch;
         const url = 'https://example.com';
         globalThis.fetch = async (input, init) => {
-            assert.strictEqual(input, url);
+            assert.ok(input instanceof Request);
+            assert.strictEqual(input.url, url + '/');
             assert.strictEqual(init?.duplex, 'half');
             return new Response();
         };
