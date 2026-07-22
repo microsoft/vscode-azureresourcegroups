@@ -3,16 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Spinner } from '@fluentui/react-components';
-import { useConfiguration } from '@microsoft/vscode-azext-webview/webview';
-import { useEffect, useState, type JSX } from 'react';
+import { Button, Link, Spinner } from '@fluentui/react-components';
+import { WebviewContext, useConfiguration } from '@microsoft/vscode-azext-webview/webview';
+import { useContext, useEffect, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import './styles/loadingView.scss';
 import { type LoadingViewConfiguration } from './utils/viewConfigTypes';
 
+/** Delay before showing the "Need help?" */
+const NEED_HELP_DELAY_MS = 30_000;
+
 export const LoadingView = (): JSX.Element => {
     const initialConfig = useConfiguration<LoadingViewConfiguration>();
     const [config, setConfig] = useState<LoadingViewConfiguration>(initialConfig);
+    const [showNeedHelp, setShowNeedHelp] = useState(false);
+    const { vscodeApi } = useContext(WebviewContext);
 
     useEffect(() => {
         const handler = (event: MessageEvent) => {
@@ -25,6 +30,23 @@ export const LoadingView = (): JSX.Element => {
         return () => window.removeEventListener('message', handler);
     }, []);
 
+    useEffect(() => {
+        if (!config.showNeedHelp) {
+            setShowNeedHelp(false);
+            return;
+        }
+        const timer = setTimeout(() => setShowNeedHelp(true), NEED_HELP_DELAY_MS);
+        return () => clearTimeout(timer);
+    }, [config.showNeedHelp]);
+
+    const handleNeedHelp = () => {
+        vscodeApi.postMessage({ command: 'needHelp' });
+    };
+
+    const handleReportIssue = () => {
+        vscodeApi.postMessage({ command: 'reportIssue' });
+    };
+
     return (
         <div className='loadingView' role='status' aria-live='polite' aria-busy='true'>
             <StageProgress currentStage={config.stage} />
@@ -33,6 +55,20 @@ export const LoadingView = (): JSX.Element => {
                 {config.message && (
                     <p className='loadingMessage'>{config.message}</p>
                 )}
+                {showNeedHelp && (
+                    <Link className='needHelpLink' onClick={handleNeedHelp}>
+                        Something went wrong? Click here to resume.
+                    </Link>
+                )}
+            </div>
+            <div className='loadingFooter'>
+                <Button
+                    className='reportIssueButton'
+                    appearance='secondary'
+                    onClick={handleReportIssue}
+                >
+                    Report an Issue
+                </Button>
             </div>
         </div>
     );

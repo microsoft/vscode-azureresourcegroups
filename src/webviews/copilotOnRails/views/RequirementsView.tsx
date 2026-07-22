@@ -8,6 +8,7 @@ import { CheckboxUncheckedRegular, CheckmarkRegular, SendRegular, WarningRegular
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import './styles/requirementsView.scss';
+import { isLimitedSupportDataStore, limitedSupportWarningMessage } from './utils/emulatorSupport';
 import { inferInputType, isAnswerEmpty, toggleRequirementsOption, type RequirementsAnswer, type RequirementsData, type RequirementsExecutionMode, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice, type RequirementsService, type RequirementsServiceRole } from './utils/parseRequirements';
 
 interface DraftMap {
@@ -428,6 +429,7 @@ const QuestionRow = ({
                     options={question.options}
                     recommendedChoice={question.recommendedChoice}
                     allowFreeformInput={question.allowFreeformInput}
+                    category={question.category}
                     value={draft}
                     onChange={onChange}
                 />
@@ -441,6 +443,7 @@ const AnswerInput = ({
     options,
     recommendedChoice,
     allowFreeformInput,
+    category,
     value,
     onChange,
 }: {
@@ -448,6 +451,7 @@ const AnswerInput = ({
     options: RequirementsOption[] | undefined;
     recommendedChoice: RequirementsRecommendedChoice | undefined;
     allowFreeformInput: boolean | undefined;
+    category: string;
     value: RequirementsAnswer;
     onChange: (next: RequirementsAnswer) => void;
 }): JSX.Element => {
@@ -458,6 +462,7 @@ const AnswerInput = ({
                 options={options}
                 recommendedChoice={recommendedChoice}
                 allowFreeformInput={allowFreeformInput}
+                category={category}
                 value={value}
                 onChange={onChange}
             />
@@ -532,6 +537,7 @@ const OptionsList = ({
     options,
     recommendedChoice,
     allowFreeformInput,
+    category,
     value,
     onChange,
 }: {
@@ -539,6 +545,7 @@ const OptionsList = ({
     options: RequirementsOption[];
     recommendedChoice: RequirementsRecommendedChoice | undefined;
     allowFreeformInput: boolean | undefined;
+    category: string;
     value: RequirementsAnswer;
     onChange: (next: RequirementsAnswer) => void;
 }): JSX.Element => {
@@ -599,12 +606,15 @@ const OptionsList = ({
     };
 
     const showFreeform = allowFreeformInput !== false;
+    const isDataCategory = category === 'data';
 
     return (
         <div className={`optionsList ${multiSelect ? 'optionsList--multi' : 'optionsList--single'}`} role={multiSelect ? 'group' : 'radiogroup'}>
             {options.map((option, idx) => {
                 const isSelected = selected.includes(option.label);
                 const isRecommended = recommendedSet.has(option.label);
+                const showSupportWarning = isDataCategory && isLimitedSupportDataStore(option.label);
+                const warningMessage = showSupportWarning ? limitedSupportWarningMessage() : '';
                 return (
                     <button
                         key={option.label}
@@ -631,6 +641,18 @@ const OptionsList = ({
                                 <span className='optionsList__description'>{option.description}</span>
                             )}
                         </span>
+                        {showSupportWarning && (
+                            <Tooltip relationship='label' content={warningMessage}>
+                                <span
+                                    className='optionsList__supportWarning'
+                                    role='img'
+                                    aria-label={warningMessage}
+                                    onClick={(event) => event.stopPropagation()}
+                                >
+                                    <WarningRegular />
+                                </span>
+                            </Tooltip>
+                        )}
                         {isRecommended && (
                             <span className='optionsList__recommended'>Recommended</span>
                         )}

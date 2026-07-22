@@ -7,8 +7,41 @@ import { maskUserInfo, parseError } from "@microsoft/vscode-azext-utils";
 import { ext } from "../../extensionVariables";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./CopilotOnRailsContext";
 
+// #region prompt
+const promptKey: string = 'copilotOnRails.prompt';
+
+/**
+ * Records the originating project prompt as diagnostics metadata for the current workspace.
+ */
+export function recordPrompt(prompt: string): void {
+    void ext.context.workspaceState.update(promptKey, prompt);
+}
+
+export function getPrompt(): string | undefined {
+    return ext.context.workspaceState.get<string>(promptKey);
+}
+
+// #endregion
+
+// #region createdAt
+const createdAtKey: string = 'copilotOnRails.createdAt';
+
+/**
+ * Stamps the current time for workspace project diagnostics metadata, as an ISO 8601 string, as the moment the project was first prompted.
+ */
+export function recordCreatedAt(): void {
+    void ext.context.workspaceState.update(createdAtKey, new Date().toISOString());
+}
+
+export function getCreatedAt(): string | undefined {
+    return ext.context.workspaceState.get<string>(createdAtKey);
+}
+
+// #endregion
+
+// #region diagnosticEvents
 const maxCachedEvents: number = 50;
-const eventsKey: string = 'copilotOnRails.logs';
+const eventsKey: string = 'copilotOnRails.diagnosticEvents';
 
 /**
  * Appends a new immutable event to the cache, stamping it with the current time and
@@ -49,6 +82,8 @@ export async function withDiagnosticEvents<T>(
     }
 }
 
+// #endregion
+
 /**
  * A discrete, immutable entry describing a single action taken during the Copilot
  * on Rails journey. Entries are append-only and never updated after being written,
@@ -68,7 +103,7 @@ export interface DiagnosticEvent {
      */
     name: string;
     /**
-     * The tool or command that produced the event.
+     * Whether the event was produced by an extension command or an MCP tool.
      */
     type: 'extensionCommand' | 'mcpTool';
     /**
@@ -80,8 +115,30 @@ export interface DiagnosticEvent {
      */
     properties: Record<string, unknown>;
 
-    // Avoid exposing these publically in a draft diagnostics GitHub issue, as doing so would allow us to correlate telemetry back to a user (i.e. it would become PII).
+    // Avoid exposing these publicly in a draft diagnostics GitHub issue, as doing so would allow us to correlate telemetry back to a user (i.e. it would become PII).
     corProjectId?: never;
     copilotSessionId?: never;
     copilotRequestId?: never;
+}
+
+/**
+ * Aggregated diagnostics for a single Copilot on Rails project, pairing the request
+ * that started it with the sequence of {@link DiagnosticEvent}s it produced.
+ *
+ * Like the events it contains, this metadata is never sent to telemetry or submitted
+ * automatically — it should only be used to pre-populate a GitHub issue draft the user first reviews.
+ */
+export interface DiagnosticsMetadata {
+    /**
+     * The originating project prompt.
+     */
+    prompt: string;
+    /**
+     * Date first prompted, as an ISO 8601 string (`.toISOString()`).
+     */
+    createdAt: string;
+    /**
+     * The events recorded over a CoR workspace project's lifetime.
+     */
+    diagnosticEvents: DiagnosticEvent[];
 }

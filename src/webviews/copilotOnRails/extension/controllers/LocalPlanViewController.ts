@@ -3,7 +3,9 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
+import { getCorProjectId } from "src/utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
@@ -62,6 +64,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             stage: 1,
             title: vscode.l10n.t('Setting up your local development environment…'),
             message: vscode.l10n.t('Copilot is setting your project up for local development'),
+            showNeedHelp: true,
         });
     }
 
@@ -97,22 +100,28 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     }
 
     private async refreshPrerequisites(): Promise<void> {
-        if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
-            return;
-        }
-        this._isRefreshingPrereqs = true;
-        void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
-        await vscode.commands.executeCommand('workbench.action.chat.open', {
-            mode: azureDebugPlanAgent,
-            query: 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites table and update the plan file with the current results.',
+        await callWithTelemetryAndErrorHandling('azureResourceGroups.localDebugPlan.refreshPrerequisites', async (context: IActionContext) => {
+            context.telemetry.properties.isCopilotEvent = 'true';
+            context.telemetry.properties.corProjectId = getCorProjectId();
+            context.errorHandling.suppressDisplay = true;
+
+            if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
+                return;
+            }
+            this._isRefreshingPrereqs = true;
+            void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
+            await vscode.commands.executeCommand('workbench.action.chat.open', {
+                mode: azureDebugPlanAgent,
+                query: 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites table and update the plan file with the current results.',
+            });
+            if (this._refreshPrereqsTimer) {
+                clearTimeout(this._refreshPrereqsTimer);
+            }
+            this._refreshPrereqsTimer = setTimeout(() => {
+                this._refreshPrereqsTimer = undefined;
+                this.clearPrereqsRefresh();
+            }, 15_000);
         });
-        if (this._refreshPrereqsTimer) {
-            clearTimeout(this._refreshPrereqsTimer);
-        }
-        this._refreshPrereqsTimer = setTimeout(() => {
-            this._refreshPrereqsTimer = undefined;
-            this.clearPrereqsRefresh();
-        }, 15_000);
     }
 
     updatePlanData(planData: LocalPlanData, sourceFileUri?: vscode.Uri): void {
