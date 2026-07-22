@@ -13,7 +13,7 @@ import { launchAgentChat } from "../../../../commands/copilotOnRails/openChatWit
 import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
-import { AUTOPILOT_QUERY_MARKER, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
+import { AUTOPILOT_QUERY_MARKER, disableAutopilot, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { suppressTrackedViewCloseOnce } from "../projectSession";
@@ -133,15 +133,25 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             return;
         }
 
+        const planBeforeAutopilot = confirmedAutopilot
+            ? await this.recordAutopilotMode()
+            : undefined;
         if (confirmedAutopilot) {
-            await this.recordAutopilotMode();
             await enableAutopilot(ext.context);
         } else {
             await this.ensureRequestBudget();
         }
 
         const baseQuery = vscode.l10n.t('I approve the plan.');
-        await launchAgentChat(azureProjectScaffoldAgent, confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery);
+        if (!(await launchAgentChat(azureProjectScaffoldAgent, confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery))) {
+            if (confirmedAutopilot) {
+                await disableAutopilot();
+                if (planBeforeAutopilot !== undefined && this.sourceFileUri) {
+                    await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(planBeforeAutopilot, 'utf-8'));
+                }
+            }
+            return;
+        }
         // Programmatic hand-off to the scaffold phase — don't treat this close as the user abandoning the flow.
         suppressTrackedViewCloseOnce();
         this.panel.dispose();
@@ -183,9 +193,10 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
 
     /**
      * Records autopilot mode in the plan file for downstream agents to reference.
-     * No-op if the source file is unknown or autopilot is already recorded.
+     * Returns the previous content when the file changed so a failed launch can
+     * restore it. No-ops if the source file is unknown or autopilot is already recorded.
      */
-    private async recordAutopilotMode(): Promise<void> {
+    private async recordAutopilotMode(): Promise<string | undefined> {
         if (!this.sourceFileUri) {
             return;
         }
@@ -202,7 +213,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             if (existingAt >= 0) {
                 lines[existingAt] = row;
                 await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(lines.join('\n'), 'utf-8'));
-                return;
+                return raw;
             }
             // Insert the metadata row next to the existing **Mode**/**Status**
             // header lines; otherwise after the first heading; otherwise at the top.
@@ -219,9 +230,11 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                 lines.splice(insertAt + 1, 0, row);
             }
             await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(lines.join('\n'), 'utf-8'));
+            return raw;
         } catch {
             // Best-effort: if we can't persist the marker, the chat query marker
             // still carries autopilot into the scaffold agent.
+            return undefined;
         }
     }
 

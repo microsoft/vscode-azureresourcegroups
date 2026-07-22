@@ -46,8 +46,10 @@ export class CreateProjectViewController extends WebviewController<CreateProject
         if (!(await ensureAgentInstructions('azure-project-plan'))) {
             return;
         }
+        if (!(await launchAgentChat(azureProjectPlanAgent, query))) {
+            return;
+        }
         this.panel.dispose();
-        await launchAgentChat(azureProjectPlanAgent, query);
         projectSubmissionState.setPending();
         openLoadingView({
             stage: 0,
