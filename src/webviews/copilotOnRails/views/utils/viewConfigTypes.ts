@@ -10,6 +10,8 @@ export type CreateProjectViewControllerType = {
     promptPlaceholder: string;
     hint: string;
     planButtonLabel: string;
+    modelLabel: string;
+    modelOptions: string[];
 }
 
 export type DeploymentPlanViewStrings = {

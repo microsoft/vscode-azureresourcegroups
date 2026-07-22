@@ -6,7 +6,7 @@
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import { ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { buildChatOpenOptions, ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDebugGenerateAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type LocalDevNextStepsViewConfiguration } from "../../views/utils/viewConfigTypes";
@@ -43,19 +43,19 @@ export class LocalDevNextStepsViewController extends WebviewController<LocalDevN
                 }
                 this.panel.dispose();
                 await vscode.commands.executeCommand('workbench.view.debug');
-                await vscode.commands.executeCommand('workbench.action.chat.open', {
+                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
                     query: vscode.l10n.t('I want to keep iterating on my project'),
-                });
+                }));
                 return;
             case 'apiTests':
                 if (!(await ensureCopilotChatReady())) {
                     return;
                 }
                 this.panel.dispose();
-                await vscode.commands.executeCommand('workbench.action.chat.open', {
+                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
                     mode: azureDebugGenerateAgent,
                     query: vscode.l10n.t('Run the API tests to verify my endpoints.'),
-                });
+                }));
                 openLoadingView({
                     stage: 1,
                     title: vscode.l10n.t('Running your API tests…'),

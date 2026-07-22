@@ -87,6 +87,12 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
         promptPlaceholder: vscode.l10n.t('Describe your project...'),
         hint: vscode.l10n.t('Ctrl+Enter to plan'),
         planButtonLabel: vscode.l10n.t('Plan'),
+        modelLabel: vscode.l10n.t('Model'),
+        modelOptions: [
+            'Claude Opus 4.6 (copilot)',
+            'Claude Opus 4.7 (copilot)',
+            'Claude Sonnet 4.6 (copilot)',
+        ],
     });
     controller.revealToForeground();
 }

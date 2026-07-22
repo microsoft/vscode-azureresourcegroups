@@ -9,6 +9,7 @@ import { getCorProjectId } from "src/utils/copilotOnRails/copilotOnRailsTelemetr
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
+import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
@@ -78,10 +79,10 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             // it iterates on the plan with the existing conversation.
             await vscode.commands.executeCommand('workbench.action.chat.newChat');
         }
-        await vscode.commands.executeCommand('workbench.action.chat.open', {
+        await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
             mode: azureDebugPlanAgent,
             query,
-        });
+        }));
         if (isFeedback) {
             void this.panel.webview.postMessage({ command: 'revisionInProgress' });
         }
@@ -110,10 +111,10 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             }
             this._isRefreshingPrereqs = true;
             void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
-            await vscode.commands.executeCommand('workbench.action.chat.open', {
+            await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
                 mode: azureDebugPlanAgent,
                 query: 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites table and update the plan file with the current results.',
-            });
+            }));
             if (this._refreshPrereqsTimer) {
                 clearTimeout(this._refreshPrereqsTimer);
             }

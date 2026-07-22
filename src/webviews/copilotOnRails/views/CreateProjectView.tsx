@@ -15,6 +15,9 @@ export const CreateProjectView = (): JSX.Element => {
     const [prompt, setPrompt] = useState('');
     const { vscodeApi } = useContext(WebviewContext);
     const config = useConfiguration<CreateProjectViewControllerType>();
+    const [selectedModel, setSelectedModel] = useState(config.modelOptions[0] ?? '');
+
+    const displayName = (model: string) => model.replace(/\s*\(copilot\)\s*$/i, '');
 
     const planClicked = () => {
         if (!prompt.trim()) {
@@ -23,6 +26,7 @@ export const CreateProjectView = (): JSX.Element => {
         vscodeApi.postMessage({
             command: 'plan',
             prompt: prompt.trim(),
+            model: selectedModel,
         });
     };
 
@@ -56,7 +60,18 @@ export const CreateProjectView = (): JSX.Element => {
                         resize='vertical'
                     />
                     <div className='promptActions'>
-                        <span className='hint'>{config.hint}</span>
+                        <div className='actionsLeft'>
+                            <select
+                                className='modelDropdown'
+                                value={selectedModel}
+                                onChange={(e) => setSelectedModel(e.target.value)}
+                            >
+                                {config.modelOptions.map((model) => (
+                                    <option key={model} value={model}>{displayName(model)}</option>
+                                ))}
+                            </select>
+                            <span className='hint'>{config.hint}</span>
+                        </div>
                         <div className='buttonGroup'>
                             <Button
                                 appearance='primary'
