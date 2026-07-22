@@ -12,6 +12,7 @@ import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/age
 import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
+import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -19,6 +20,7 @@ import { suppressTrackedViewCloseOnce } from "../projectSession";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
+    private readonly ensureAgentInstructionsKey = 'ensureAgentInstructions';
     private sourceFileUri: vscode.Uri | undefined;
     private _isRefreshingPrereqs = false;
     private _refreshPrereqsTimer: ReturnType<typeof setTimeout> | undefined;
@@ -55,17 +57,24 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     }
 
     private async approveAndOpenDebugPlanChat(): Promise<void> {
-        if (!(await this.openDebugPlanChat('I approve the debug setup plan.', false))) {
-            return;
-        }
-        // Programmatic hand-off to the local-dev setup phase — don't treat this close as the user abandoning the flow.
-        suppressTrackedViewCloseOnce();
-        this.panel.dispose();
-        openLoadingView({
-            stage: 1,
-            title: vscode.l10n.t('Setting up your local development environment…'),
-            message: vscode.l10n.t('Copilot is setting your project up for local development'),
-            showNeedHelp: true,
+        return await callWithTelemetryAndErrorHandling('copilotOnRails.submitLocalDebugPlanApproval', async (actionContext: IActionContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitLocalDebugPlanApproval' }, async (corContext) => {
+                if (!(await this.openDebugPlanChat('I approve the debug setup plan.', false))) {
+                    setCorProp(corContext, this.ensureAgentInstructionsKey, false);
+                    return;
+                }
+
+                setCorProp(corContext, this.ensureAgentInstructionsKey, true);
+
+                suppressTrackedViewCloseOnce();
+                this.panel.dispose();
+                openLoadingView({
+                    stage: 1,
+                    title: vscode.l10n.t('Setting up your local development environment…'),
+                    message: vscode.l10n.t('Copilot is setting your project up for local development'),
+                    showNeedHelp: true,
+                });
+            });
         });
     }
 
