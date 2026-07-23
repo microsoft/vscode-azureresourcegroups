@@ -67,7 +67,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                     return;
                 }
 
-
                 suppressTrackedViewCloseOnce();
                 this.recordPlanTelemetry(context);
                 this.panel.dispose();
