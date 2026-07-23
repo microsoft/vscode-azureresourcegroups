@@ -216,11 +216,6 @@ suite('parseLocalDebugPlanMarkdown query helpers', () => {
         assert.strictEqual(findColumnIndex(['Generate', 'Installed'], 'runtime'), -1);
     });
 
-    test('findColumnIndex with { exact: true } requires the whole header to match', () => {
-        assert.strictEqual(findColumnIndex(['Auto-Generate', 'Generate'], 'Generate', { exact: true }), 1);
-        assert.strictEqual(findColumnIndex(['Auto-Generate'], 'Generate', { exact: true }), -1);
-    });
-
     test('isChecked recognizes a checked box but not an empty or missing one', () => {
         for (const checked of ['[x]', '[X]', '[ x ]']) {
             assert.strictEqual(isChecked(checked), true, checked);

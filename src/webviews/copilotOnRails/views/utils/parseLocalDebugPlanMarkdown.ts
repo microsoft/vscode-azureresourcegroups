@@ -282,15 +282,11 @@ export function findTable(section: LocalPlanSection, anchorHeaders: string[]): L
 }
 
 /**
- * Finds the index of a column by header name. Matches a case-insensitive substring by default;
- * pass `{ exact: true }` to require the whole (trimmed) header to equal `name`.
+ * Finds the index of a column by header name, matching a case-insensitive substring.
  */
-export function findColumnIndex(headers: string[], name: string, options?: { exact?: boolean }): number {
+export function findColumnIndex(headers: string[], name: string): number {
     const needle = name.toLowerCase().trim();
-    return headers.findIndex((header) => {
-        const normalized = header.toLowerCase().trim();
-        return options?.exact ? normalized === needle : normalized.includes(needle);
-    });
+    return headers.findIndex((header) => header.toLowerCase().trim().includes(needle));
 }
 
 /** Whether a table cell represents a checked checkbox (`[x]`). */

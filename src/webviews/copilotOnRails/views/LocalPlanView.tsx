@@ -704,7 +704,7 @@ const ContentBlock = ({
 }): JSX.Element | null => {
     switch (item.type) {
         case "table":
-            if (findColumnIndex(item.headers, "Generate", { exact: true }) >= 0) {
+            if (findColumnIndex(item.headers, "Generate") >= 0) {
                 return (
                     <GenerateCheckboxTable
                         table={item}
@@ -857,7 +857,7 @@ const GenerateCheckboxTable = ({
     sectionTitle: string;
 }): JSX.Element => {
     const { getToggle, setToggle } = useContext(PlanToggleContext);
-    const generateIdx = findColumnIndex(table.headers, "Generate", { exact: true });
+    const generateIdx = findColumnIndex(table.headers, "Generate");
 
     const originalStates = useMemo(
         () => table.rows.map((r) => isChecked(r[generateIdx] ?? "")),
