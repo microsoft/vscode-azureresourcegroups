@@ -9,7 +9,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
-import { launchAgentChat } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { buildChatOpenOptions, launchAgentChat } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
@@ -63,10 +63,10 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     if (!query) {
                         return;
                     }
-                    void vscode.commands.executeCommand('workbench.action.chat.open', {
+                    void buildChatOpenOptions({
                         mode: 'agent',
                         query,
-                    });
+                    }).then((options) => vscode.commands.executeCommand('workbench.action.chat.open', options));
                     void this.panel.webview.postMessage({ command: 'revisionInProgress' });
                     break;
                 }
@@ -265,10 +265,10 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                 ? 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites tables and update the plan file with the current results.'
                 : 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Run Prerequisites table only and update the plan file with the current results.';
 
-            await vscode.commands.executeCommand('workbench.action.chat.open', {
+            await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
                 mode: 'azure-project-plan',
                 query,
-            });
+            }));
 
             if (this._refreshPrereqsTimer) {
                 clearTimeout(this._refreshPrereqsTimer);
