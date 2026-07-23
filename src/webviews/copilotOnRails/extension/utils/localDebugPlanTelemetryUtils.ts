@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { maskUserInfo } from "@microsoft/vscode-azext-utils";
 import { findColumnIndex, findSection, findTable, flattenContent, isChecked, type LocalPlanData, type LocalPlanSection } from "../../views/utils/parseLocalDebugPlanMarkdown";
 
 /**
@@ -28,6 +29,8 @@ export interface LocalDebugPlanTelemetry {
     planExecutionMode: string;
     /** Number of top-level (`##`) sections in the plan. */
     planSectionCount: number;
+    /** Top-level (`##`) section titles in document order, normalized to lowercase tokens and comma-separated. */
+    planSectionTitles: string;
 
     /** Total number of prerequisite rows. */
     prereqTotalCount: number;
@@ -37,6 +40,8 @@ export interface LocalDebugPlanTelemetry {
     prereqUnknownCount: number;
     /** Prerequisites that are VS Code extensions. */
     prereqExtensionCount: number;
+    /** Distinct extension ids (e.g. `ms-azuretools.vscode-azurefunctions`) detected among the prerequisite rows, comma separated. */
+    prereqExtensionIds: string;
 
     /** Non-compound debug configs offered by the plan. */
     debugNonCompoundOfferedCount: number;
@@ -109,6 +114,13 @@ export interface LocalDebugPlanTelemetry {
 export const LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX = 'localDebugPlan.';
 
 /**
+ * Upper bound on the number of section titles emitted in {@link LocalDebugPlanTelemetry.planSectionTitles}.
+ * Titles are model-generated free text, so we cap the emitted list to keep telemetry cardinality and
+ * property length bounded; any titles beyond this limit are dropped.
+ */
+const MAX_SECTION_TITLES = 15;
+
+/**
  * Parses a structured {@link LocalPlanData} into a flat, telemetry-safe {@link LocalDebugPlanTelemetry}
  * summary. This is the single, centralized place that derives telemetry from a debug plan.
  */
@@ -124,11 +136,13 @@ export function getLocalDebugPlanTelemetry(planData: LocalPlanData): LocalDebugP
         planParsedOk: !planData.parseError,
         planExecutionMode: normalizeToken(planData.executionMode) || 'unknown',
         planSectionCount: planData.sections.length,
+        planSectionTitles: getPlanSectionTitles(planData),
 
         prereqTotalCount: prereq.total,
         prereqInstalledCount: prereq.installed,
         prereqUnknownCount: prereq.unknown,
         prereqExtensionCount: prereq.extensions,
+        prereqExtensionIds: prereq.extensionIds,
 
         debugNonCompoundOfferedCount: debug.nonCompoundOffered,
         debugNonCompoundSelectedCount: debug.nonCompoundSelected,
@@ -166,11 +180,24 @@ export function getLocalDebugPlanTelemetry(planData: LocalPlanData): LocalDebugP
 
 //#region Section metrics
 
+/**
+ * Masks and normalizes each top-level (`##`) section title, dropping empties and capping the list at
+ * {@link MAX_SECTION_TITLES} to keep the emitted telemetry property bounded.
+ */
+function getPlanSectionTitles(planData: LocalPlanData): string {
+    return planData.sections
+        .map((section) => normalizeToken(maskUserInfo(section.title, [])))
+        .filter((title) => title !== '')
+        .slice(0, MAX_SECTION_TITLES)
+        .join(',');
+}
+
 function getPrerequisiteMetrics(planData: LocalPlanData): {
     total: number;
     installed: number;
     unknown: number;
     extensions: number;
+    extensionIds: string;
 } {
     const section = findSection(planData, 'Prerequisites');
     const table = section && findTable(section, ['Installed']);
@@ -178,6 +205,8 @@ function getPrerequisiteMetrics(planData: LocalPlanData): {
     let installed = 0;
     let unknown = 0;
     let extensions = 0;
+    // Preserve first-seen order while de-duplicating repeated extension ids.
+    const extensionIds = new Set<string>();
 
     if (table) {
         const installedIdx = findColumnIndex(table.headers, 'Installed');
@@ -193,10 +222,15 @@ function getPrerequisiteMetrics(planData: LocalPlanData): {
                 unknown++;
             }
 
+            // A row is an extension if its category says so or its Tool cell is a recognizable
+            // extension id — the same signal that feeds the id list, so the two never diverge.
             const category = cell(row, categoryIdx).toLowerCase();
-            const tool = cell(row, toolIdx).toLowerCase();
-            if (category.includes('extension') || (tool.includes('.') && tool.includes('`'))) {
+            const extensionId = extractExtensionId(cell(row, toolIdx));
+            if (category.includes('extension') || extensionId) {
                 extensions++;
+                if (extensionId) {
+                    extensionIds.add(extensionId);
+                }
             }
         }
     }
@@ -206,7 +240,23 @@ function getPrerequisiteMetrics(planData: LocalPlanData): {
         installed,
         unknown,
         extensions,
+        extensionIds: [...extensionIds].join(','),
     };
+}
+
+/**
+ * Extracts a VS Code extension id (`publisher.name`) from a Tool/Extension cell. Extension ids are
+ * authored wrapped in backticks (e.g. `` `ms-azuretools.vscode-azurefunctions` ``); returns the
+ * lowercased id only when the backticked value is a recognizable `publisher.name`, otherwise
+ * `undefined`. The backtick requirement avoids false positives from dotted tool names like `Node.js`.
+ */
+function extractExtensionId(tool: string): string | undefined {
+    const backticked = tool.match(/`([^`]+)`/);
+    if (!backticked) {
+        return undefined;
+    }
+    const candidate = backticked[1].trim();
+    return /^[\w-]+\.[\w-]+$/.test(candidate) ? candidate.toLowerCase() : undefined;
 }
 
 function getDebugConfigMetrics(planData: LocalPlanData): {
