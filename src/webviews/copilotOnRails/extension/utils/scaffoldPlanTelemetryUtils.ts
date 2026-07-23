@@ -8,6 +8,9 @@ import { findColumnIndex, findKeyValue, findSection, findTable, type ScaffoldPla
 
 export const SCAFFOLD_PLAN_TELEMETRY_PREFIX = 'projectScaffoldPlan.';
 
+/** Upper bound on the number of section titles emitted in {@link ScaffoldPlanTelemetry.planSectionTitles}. */
+const MAX_SECTION_TITLES = 15;
+
 export interface ScaffoldPlanTelemetry {
     /** Whether the plan markdown parsed into a structured view without error. */
     planParsedOk: boolean;
@@ -130,11 +133,14 @@ function getAppType(planData: ScaffoldPlanData): string {
 }
 
 /**
- * Returns the top-level section titles in document order as a normalized, comma-separated string.
+ * Masks and normalizes each top-level (`##`) section title, dropping empties and capping the list at
+ * {@link MAX_SECTION_TITLES} to keep the emitted telemetry property bounded.
  */
 function getSectionTitles(planData: ScaffoldPlanData): string {
     return planData.sections
         .map((section) => normalizeToken(maskUserInfo(section.title, [])))
+        .filter((title) => title !== '')
+        .slice(0, MAX_SECTION_TITLES)
         .join(',');
 }
 
@@ -226,10 +232,10 @@ function getPrereqTablesBySubheading(section: ScaffoldPlanSection): { run?: Scaf
     for (const content of section.content) {
         if (content.type === 'subheading') {
             const text = content.text.toLowerCase();
-            if (text.includes('run')) {
-                current = 'run';
-            } else if (text.includes('debug')) {
+            if (text.includes('debug')) {
                 current = 'debug';
+            } else if (text.includes('run')) {
+                current = 'run';
             } else {
                 current = undefined;
             }
@@ -264,13 +270,15 @@ function countPrereqTable(content: ScaffoldPlanSection['content'][number] | unde
             unknown++;
         }
 
-        const category = cell(row, categoryIdx).toLowerCase();
-        const toolRaw = cell(row, toolIdx);
-        const tool = toolRaw.toLowerCase();
-        if (category.includes('extension') || (tool.includes('.') && tool.includes('`'))) {
+        // A row is an extension when its Category cell says so or its Tool cell carries a
+        // recognizable extension id. The id feeds off the same check, so count and ids never diverge.
+        const categoryIsExtension = cell(row, categoryIdx).toLowerCase().includes('extension');
+        const extensionId = extractExtensionId(cell(row, toolIdx), categoryIsExtension);
+        if (categoryIsExtension || extensionId) {
             extensions++;
-            // Extension rows carry a backtick-wrapped VS Code extension ID (e.g. `ms-azuretools.vscode-azurefunctions`).
-            addToken(extensionIds, toolRaw.replace(/`/g, ''));
+            if (extensionId) {
+                extensionIds.add(extensionId);
+            }
         }
     }
 
@@ -321,7 +329,7 @@ function getRouteMetrics(planData: ScaffoldPlanData): { count: number; methods: 
  * required Azure service types for a database-like token.
  */
 function hasDatabaseDependency(azureServiceTypes: string): boolean {
-    return /postgres|mysql|mariadb|sqlite|mssql|sql server|\bsql\b|mongo|cosmos|oracle|dynamo|database/.test(azureServiceTypes.toLowerCase());
+    return /\b(?:postgres|mysql|mariadb|sqlite|mssql|sql server|sql|mongo|cosmos|oracle|dynamo|database)/.test(azureServiceTypes.toLowerCase());
 }
 
 //#endregion
@@ -342,6 +350,21 @@ function readComponentTable(table: { headers: string[]; rows: string[][] }): Map
 
 function cell(row: string[], index: number): string {
     return index >= 0 && index < row.length ? row[index] : '';
+}
+
+/**
+ * Extracts a lowercased VS Code extension id (`publisher.name`) from a Tool/Extension cell.
+ * Ids are authored backticked, which distinguishes them from unbackticked dotted tool names like
+ * `Node.js`; the backtick requirement is relaxed when the Category cell confirms an extension.
+ * Returns `undefined` when no single-dot `publisher.name` shape is present.
+ */
+function extractExtensionId(tool: string, categoryConfirmsExtension: boolean): string | undefined {
+    const backticked = tool.match(/`([^`]+)`/);
+    if (!backticked && !categoryConfirmsExtension) {
+        return undefined;
+    }
+    const candidate = (backticked ? backticked[1] : tool).trim();
+    return /^[\w-]+\.[\w-]+$/.test(candidate) ? candidate.toLowerCase() : undefined;
 }
 
 function addToken(set: Set<string>, value: string | undefined): void {

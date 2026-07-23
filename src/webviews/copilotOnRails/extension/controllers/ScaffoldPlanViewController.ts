@@ -27,6 +27,9 @@ import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 /** Prompt to raise max requests for guided runs below this threshold. */
 const MIN_RECOMMENDED_MAX_REQUESTS = 1000;
 
+/** Telemetry property key recording whether agent instructions were successfully ensured. */
+const ENSURE_AGENT_INSTRUCTIONS_KEY = 'ensureAgentInstructions';
+
 export class ScaffoldPlanViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
     private planData: ScaffoldPlanData;
@@ -34,7 +37,6 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     private previewWatcher: vscode.Disposable | undefined;
     private _isRefreshingPrereqs = false;
     private _refreshPrereqsTimer: ReturnType<typeof setTimeout> | undefined;
-    private ensureAgentInstructionsKey: string = 'ensureAgentInstructions';
 
     constructor(planData: ScaffoldPlanData, sourceFileUri?: vscode.Uri, private readonly onSelfWrite?: (content: string) => void) {
         super(ext.context, 'Project Plan', 'scaffoldPlanView', {}, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
@@ -159,11 +161,11 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         setCorProp(context, 'autopilot', confirmedAutopilot);
 
         if (!(await ensureAgentInstructions('azure-project-scaffold'))) {
-            setCorProp(context, this.ensureAgentInstructionsKey, false);
+            setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, false);
             setCorProp(context, 'approvalOutcome', 'agentInstructionsMissing');
             return false;
         }
-        setCorProp(context, this.ensureAgentInstructionsKey, true);
+        setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, true);
 
         const planBeforeAutopilot = confirmedAutopilot
             ? await this.recordAutopilotMode()

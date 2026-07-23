@@ -156,6 +156,66 @@ suite('scaffoldPlanTelemetryUtils', () => {
             assert.strictEqual(telemetry.debugPrereqExtensionIds, 'ms-azuretools.vscode-azurefunctions');
         });
 
+        test('validates extension ids and strips trailing text', () => {
+            const markdown = [
+                '# Project Plan',
+                '**Status**: Planning',
+                '',
+                '## 1. Prerequisites',
+                '',
+                '### Debug',
+                '',
+                '| Tool / Extension | Category | Installed | Version |',
+                '|---|---|---|---|',
+                '| `v1.22.0` | Runtime version | ✅ | — |',
+                '| `ms-azuretools.vscode-docker` (recommended) | VS Code extension | ❓ | — |',
+            ].join('\n');
+
+            const telemetry = getScaffoldPlanTelemetry(parseScaffoldPlanMarkdown(markdown));
+
+            // `v1.22.0` is backticked and dotted but is not a `publisher.name`, so it is not counted.
+            // The real id is validated and emitted without the trailing "(recommended)" text.
+            assert.strictEqual(telemetry.debugPrereqExtensionCount, 1);
+            assert.strictEqual(telemetry.debugPrereqExtensionIds, 'ms-azuretools.vscode-docker');
+        });
+
+        test('captures a category-confirmed extension id even without backticks', () => {
+            const markdown = [
+                '# Project Plan',
+                '**Status**: Planning',
+                '',
+                '## 1. Prerequisites',
+                '',
+                '### Debug',
+                '',
+                '| Tool / Extension | Category | Installed | Version |',
+                '|---|---|---|---|',
+                '| Node.js | Runtime | ✅ | 20 |',
+                '| ms-azuretools.vscode-azurefunctions | VS Code extension | ✅ | 1.22.0 |',
+            ].join('\n');
+
+            const telemetry = getScaffoldPlanTelemetry(parseScaffoldPlanMarkdown(markdown));
+
+            // `Node.js` is dotted but its category is "Runtime", so it is never treated as an extension.
+            // The extension row's Category vouches for it, so its id is captured despite the missing backticks.
+            assert.strictEqual(telemetry.debugPrereqExtensionCount, 1);
+            assert.strictEqual(telemetry.debugPrereqExtensionIds, 'ms-azuretools.vscode-azurefunctions');
+        });
+
+        test('caps and de-duplicates emitted section titles', () => {
+            const lines = ['# Project Plan', '**Status**: Planning', ''];
+            for (let i = 1; i <= 20; i++) {
+                lines.push(`## ${i}. Section ${i}`, '');
+            }
+            const markdown = lines.join('\n');
+
+            const telemetry = getScaffoldPlanTelemetry(parseScaffoldPlanMarkdown(markdown));
+
+            assert.strictEqual(telemetry.planSectionCount, 20);
+            // planSectionTitles is capped at MAX_SECTION_TITLES (15) to bound telemetry length.
+            assert.strictEqual(telemetry.planSectionTitles.split(',').length, 15);
+        });
+
         test('exposes a namespaced telemetry prefix', () => {
             assert.strictEqual(SCAFFOLD_PLAN_TELEMETRY_PREFIX, 'projectScaffoldPlan.');
         });
