@@ -10,7 +10,7 @@ permissions:
 engine: copilot
 inlined-imports: true
 imports:
-  - microsoft/vscode-azuretools/.github/workflows/shared/info-needed-triage.md@alexweininger-shared-info-needed-triage-component
+  - microsoft/vscode-azuretools/.github/workflows/shared/info-needed-triage.md@9c44f023bca9b84554c07f3a622491e1ac7e635d
 timeout-minutes: 10
 ---
 
