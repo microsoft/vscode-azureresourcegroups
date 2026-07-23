@@ -10,7 +10,7 @@ import { ext } from './extensionVariables';
 
 const localize = nls.loadMessageBundle();
 
-const NPS_SURVEY_URL = 'https://www.surveymonkey.com/r/SMQM3DH';
+const NPS_SURVEY_URL = 'https://aka.ms/azcode/survey';
 
 const PROBABILITY = 0.15;
 const SESSION_COUNT_KEY = 'nps/sessionCount';
