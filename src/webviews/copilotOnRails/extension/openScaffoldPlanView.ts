@@ -6,13 +6,13 @@
 import * as vscode from "vscode";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
-import { type PlanData, parseScaffoldPlanMarkdown } from "../views/utils/parseScaffoldPlanMarkdown";
+import { type ScaffoldPlanData, parseScaffoldPlanMarkdown } from "../views/utils/parseScaffoldPlanMarkdown";
 import { ScaffoldPlanViewController } from "./controllers/ScaffoldPlanViewController";
 import { closeLoadingView } from "./openLoadingView";
 import { handleTrackedViewClosed } from "./projectSession";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
-const host = new SingletonViewHost<PlanData, ScaffoldPlanViewController>({
+const host = new SingletonViewHost<ScaffoldPlanData, ScaffoldPlanViewController>({
     createController: (data, uri) => {
         closeLoadingView();
         return new ScaffoldPlanViewController(data, uri, (content) => { lastSelfWrittenPlan = content; });
@@ -42,12 +42,12 @@ export function openPlanViewWithContent(content: string, sourceFileUri?: vscode.
 }
 
 /**
- * Parse the plan markdown, returning a placeholder PlanData with a parseError
+ * Parse the plan markdown, returning a placeholder ScaffoldPlanData with a parseError
  * flag if parsing fails or yields no usable content. The view uses the flag to
  * render a warning banner with an "Open file" button.
  */
-function tryParseScaffoldPlan(content: string, sourceFileUri: vscode.Uri | undefined): PlanData {
-    let parsed: PlanData | undefined;
+function tryParseScaffoldPlan(content: string, sourceFileUri: vscode.Uri | undefined): ScaffoldPlanData {
+    let parsed: ScaffoldPlanData | undefined;
     let errorMessage: string | undefined;
     try {
         parsed = parseScaffoldPlanMarkdown(content);
@@ -60,6 +60,7 @@ function tryParseScaffoldPlan(content: string, sourceFileUri: vscode.Uri | undef
             status: parsed?.status ?? 'Unknown',
             created: parsed?.created ?? 'Unknown',
             mode: parsed?.mode ?? 'Unknown',
+            executionMode: parsed?.executionMode ?? 'Unknown',
             sections: parsed?.sections ?? [],
             parseError: buildParseError(
                 errorMessage ?? vscode.l10n.t("The plan file couldn't be rendered as a structured view. The generated markdown didn't match the expected layout."),

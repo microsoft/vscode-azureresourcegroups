@@ -10,7 +10,7 @@ import { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState
 import { StageProgress } from './components/StageProgress';
 import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
-import { type PlanContent, type PlanData, type PlanSection, type PreviewPage, type PreviewStatus, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
+import { type ScaffoldPlanContent, type ScaffoldPlanData, type ScaffoldPlanSection, type PreviewPage, type PreviewStatus, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
 import { isApprovedOrLater } from './utils/projectPlanStatus';
 
 const editableOptions: Record<string, string[]> = {
@@ -94,7 +94,7 @@ function optionsForField(field: string, language: string | undefined, isFrontend
 // a table with a Language row. Each service (backend, frontend, worker, …) gets
 // its own stack section, and the count is dynamic, so we detect them by shape
 // rather than by a fixed section number.
-function isServiceStackSection(section: PlanSection): boolean {
+function isServiceStackSection(section: ScaffoldPlanSection): boolean {
     return (section.content ?? []).some(
         c => c.type === 'table' && c.rows.some(r => r[0]?.trim() === 'Language'),
     );
@@ -103,7 +103,7 @@ function isServiceStackSection(section: PlanSection): boolean {
 
 const previewBackendLanguages = new Set<string>(['Python', 'C# (.NET)']);
 
-function previewBackendLanguageForSection(section: PlanSection): string | undefined {
+function previewBackendLanguageForSection(section: ScaffoldPlanSection): string | undefined {
     for (const content of section.content ?? []) {
         if (content.type !== 'table') { continue; }
         const languageRow = content.rows.find(r => r[0]?.trim() === 'Language');
@@ -181,7 +181,7 @@ function buildFeedbackPrompt(items: FeedbackItem[], freeform: string): string {
 }
 
 export const ScaffoldPlanView = (): JSX.Element => {
-    const [plan, setPlan] = useState<PlanData | null>(null);
+    const [plan, setPlan] = useState<ScaffoldPlanData | null>(null);
     // HTML/CSS preview pages pushed from the controller via `setPreviewPages`.
     // Lives outside `plan` because it's driven by a file-system watcher on
     // `.azure/.preview-temp/`, not by the plan markdown.
@@ -242,7 +242,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
         const handler = (event: MessageEvent) => {
             const message = event.data;
             if (message?.command === 'setPlanData') {
-                setPlan(message.data as PlanData);
+                setPlan(message.data as ScaffoldPlanData);
                 // New plan data from the controller — either the initial load or a
                 // post-revision refresh. Either way, clear pending feedback state.
                 setFeedbackItems([]);
@@ -328,7 +328,7 @@ export const ScaffoldPlanView = (): JSX.Element => {
     // plan, and add/update/remove the matching feedback item. `content` is the
     // table snapshot the change originated from.
     const applyCellChange = useCallback((
-        content: Extract<PlanContent, { type: 'table' }>,
+        content: Extract<ScaffoldPlanContent, { type: 'table' }>,
         sectionIdx: number,
         contentIdx: number,
         rowIdx: number,
@@ -807,7 +807,7 @@ const SubmitEditsDialog = ({ open, editCount, onCancel, onSubmit }: SubmitEditsD
     </Dialog>
 );
 
-const OverviewCard = ({ section, created }: { section: PlanSection; created?: string }): JSX.Element => {
+const OverviewCard = ({ section, created }: { section: ScaffoldPlanSection; created?: string }): JSX.Element => {
     const goal = section.content?.find(c => c.type === 'keyValue' && c.key === 'Goal') as { type: 'keyValue'; key: string; value: string } | undefined;
     const appType = section.content?.find(c => c.type === 'keyValue' && c.key === 'App Type') as { type: 'keyValue'; key: string; value: string } | undefined;
     const mode = section.content?.find(c => c.type === 'keyValue' && c.key === 'Mode') as { type: 'keyValue'; key: string; value: string } | undefined;
@@ -857,7 +857,7 @@ const OverviewCard = ({ section, created }: { section: PlanSection; created?: st
 };
 
 interface SectionCardProps {
-    section: PlanSection;
+    section: ScaffoldPlanSection;
     sectionIdx: number;
     disabled?: boolean;
     editedCells?: Set<CellKey>;
@@ -865,7 +865,7 @@ interface SectionCardProps {
 }
 
 // True when a section title indicates a frontend service (e.g. "Frontend — Web App").
-function isFrontendSection(section: PlanSection): boolean {
+function isFrontendSection(section: ScaffoldPlanSection): boolean {
     return /\bfrontend\b/i.test(section.title);
 }
 
@@ -919,7 +919,7 @@ const SectionCard = ({ section, sectionIdx, disabled, editedCells, onTableCellCh
     );
 };
 
-const ProjectStructureCard = ({ section }: { section: PlanSection }): JSX.Element => {
+const ProjectStructureCard = ({ section }: { section: ScaffoldPlanSection }): JSX.Element => {
     const treeContent = section.content?.find(c => c.type === 'tree');
 
     if (!treeContent || treeContent.type !== 'tree') {
@@ -981,14 +981,14 @@ const InstalledChip = ({ status }: { status: InstalledStatus }): JSX.Element => 
 interface PrereqGroup {
     label?: string;
     isDebug: boolean;
-    tables: Extract<PlanContent, { type: 'table' }>[];
+    tables: Extract<ScaffoldPlanContent, { type: 'table' }>[];
 }
 
 // Groups the Prerequisites tables by their preceding "### Run" / "### Debug"
 // sub-heading so the card can show Run always and Debug only under Autopilot.
 // A plan with no sub-headings (older format) yields a single unlabeled group
 // that is always shown.
-function groupPrereqTables(content: PlanContent[]): PrereqGroup[] {
+function groupPrereqTables(content: ScaffoldPlanContent[]): PrereqGroup[] {
     const groups: PrereqGroup[] = [];
     let current: PrereqGroup | undefined;
     for (const item of content) {
@@ -1015,7 +1015,7 @@ function groupPrereqTables(content: PlanContent[]): PrereqGroup[] {
 // a "install these before continuing" call-to-action. The Debug group is only
 // shown when Autopilot is on (`showDebug`), since the unattended chain runs all
 // the way through local-debug setup.
-const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefreshing }: { section: PlanSection; showDebug: boolean; onRefreshPrerequisites?: () => void; isRefreshing?: boolean }): JSX.Element => {
+const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefreshing }: { section: ScaffoldPlanSection; showDebug: boolean; onRefreshPrerequisites?: () => void; isRefreshing?: boolean }): JSX.Element => {
     const content = section.content ?? [];
     // Prose (paragraphs/blockquotes) is rendered in its original document
     // position relative to the tables: anything before the first table/subheading
@@ -1023,8 +1023,8 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
     // plan-template warning blockquote). Template HTML comments (`<!-- … -->`)
     // that the markdown fallback turned into paragraphs are dropped.
     const isProse = (
-        c: PlanContent,
-    ): c is Extract<PlanContent, { type: 'blockquote' | 'paragraph' }> =>
+        c: ScaffoldPlanContent,
+    ): c is Extract<ScaffoldPlanContent, { type: 'blockquote' | 'paragraph' }> =>
         (c.type === 'blockquote' || c.type === 'paragraph') &&
         !(c.type === 'paragraph' && c.text.trim().startsWith('<!--'));
     const firstTableIdx = content.findIndex(c => c.type === 'table' || c.type === 'subheading');
@@ -1045,7 +1045,7 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
         );
     });
 
-    const renderTable = (table: Extract<PlanContent, { type: 'table' }>, key: number): JSX.Element => {
+    const renderTable = (table: Extract<ScaffoldPlanContent, { type: 'table' }>, key: number): JSX.Element => {
         const installedIdx = table.headers.findIndex(h => h.toLowerCase().includes('installed'));
         const installIdx = table.headers.findIndex(h => h.trim().toLowerCase() === 'install');
         const toolIdx = table.headers.findIndex(h => h.toLowerCase().includes('tool'));
@@ -1172,7 +1172,7 @@ const TreeNodeItem = ({ node, depth, defaultOpen }: { node: TreeNode; depth: num
 };
 
 interface ContentBlockProps {
-    item: PlanContent;
+    item: ScaffoldPlanContent;
     sectionIdx: number;
     contentIdx: number;
     disabled?: boolean;

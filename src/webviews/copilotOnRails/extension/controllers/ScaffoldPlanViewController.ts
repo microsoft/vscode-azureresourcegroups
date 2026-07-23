@@ -6,18 +6,22 @@
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as path from "path";
+import { getCorProjectId } from "src/utils/copilotOnRails/telemetryUtils";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { launchAgentChat } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
-import { type PlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
+import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { type ScaffoldPlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { AUTOPILOT_QUERY_MARKER, disableAutopilot, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { suppressTrackedViewCloseOnce } from "../projectSession";
 import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
+import { getScaffoldPlanTelemetry, SCAFFOLD_PLAN_TELEMETRY_PREFIX } from "../utils/scaffoldPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 /** Prompt to raise max requests for guided runs below this threshold. */
@@ -25,15 +29,18 @@ const MIN_RECOMMENDED_MAX_REQUESTS = 1000;
 
 export class ScaffoldPlanViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
+    private planData: ScaffoldPlanData;
     private previewFolderUri: vscode.Uri | undefined;
     private previewWatcher: vscode.Disposable | undefined;
     private _isRefreshingPrereqs = false;
     private _refreshPrereqsTimer: ReturnType<typeof setTimeout> | undefined;
+    private ensureAgentInstructionsKey: string = 'ensureAgentInstructions';
 
-    constructor(planData: PlanData, sourceFileUri?: vscode.Uri, private readonly onSelfWrite?: (content: string) => void) {
+    constructor(planData: ScaffoldPlanData, sourceFileUri?: vscode.Uri, private readonly onSelfWrite?: (content: string) => void) {
         super(ext.context, 'Project Plan', 'scaffoldPlanView', {}, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
 
         this.sourceFileUri = sourceFileUri;
+        this.planData = planData;
         this.previewFolderUri = resolvePreviewFolderUri(sourceFileUri);
         this.setupPreviewWatcher();
 
@@ -46,14 +53,14 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             }
         });
 
-        this.panel.webview.onDidReceiveMessage((message: { command: string; data?: PlanData; prompt?: string; autopilot?: boolean; changes?: { token?: string; hex?: string }[] }) => {
+        this.panel.webview.onDidReceiveMessage((message: { command: string; data?: ScaffoldPlanData; prompt?: string; autopilot?: boolean; changes?: { token?: string; hex?: string }[] }) => {
             switch (message.command) {
                 case 'ready':
-                    void this.panel.webview.postMessage({ command: 'setPlanData', data: planData });
+                    void this.panel.webview.postMessage({ command: 'setPlanData', data: this.planData });
                     void this.postPreviewPages();
                     break;
                 case 'approvePlan':
-                    void this.approveAndOpenScaffoldChat(!!message.autopilot);
+                    void this.approvePlan(!!message.autopilot);
                     break;
                 case 'persistPaletteColors':
                     void this.persistPaletteColors(message.changes);
@@ -63,11 +70,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     if (!query) {
                         return;
                     }
-                    void vscode.commands.executeCommand('workbench.action.chat.open', {
-                        mode: 'agent',
-                        query,
-                    });
-                    void this.panel.webview.postMessage({ command: 'revisionInProgress' });
+                    void this.trySubmitPlanFeedback(query);
                     break;
                 }
                 case 'openSourceFile':
@@ -109,29 +112,58 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
     }
 
-    private async approveAndOpenScaffoldChat(autopilot: boolean): Promise<void> {
+    private async approvePlan(autopilot: boolean): Promise<void> {
+        return await callWithTelemetryAndErrorHandling(`copilotOnRails.submitProjectScaffoldPlanApproval`, async (actionContext: IActionContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitProjectScaffoldPlanApproval' }, async (context: CopilotOnRailsContext) => {
+                if (!(await this.trySubmitPlanApproval(context, autopilot))) {
+                    return;
+                }
+
+                suppressTrackedViewCloseOnce();
+                this.recordPlanTelemetry(context);
+                this.panel.dispose();
+
+                openLoadingView({
+                    stage: 0,
+                    title: vscode.l10n.t('Scaffolding your project…'),
+                    message: vscode.l10n.t('Copilot is creating your project files. For progress please view the Copilot chat.'),
+                    showNeedHelp: true,
+                });
+            });
+        });
+    }
+
+    private recordPlanTelemetry(context: CopilotOnRailsContext): void {
+        try {
+            const telemetry = getScaffoldPlanTelemetry(this.planData);
+            for (const [key, value] of Object.entries(telemetry)) {
+                setCorProp(context, `${SCAFFOLD_PLAN_TELEMETRY_PREFIX}${key}`, value);
+            }
+        } catch {
+            // Telemetry extraction must never block the approval flow; swallow any parsing errors.
+            setCorProp(context, `${SCAFFOLD_PLAN_TELEMETRY_PREFIX}parseFailed`, true);
+        }
+    }
+
+    private async trySubmitPlanApproval(context: CopilotOnRailsContext, autopilot: boolean): Promise<boolean> {
         let confirmedAutopilot = false;
         if (autopilot) {
-            confirmedAutopilot = await callWithTelemetryAndErrorHandling('azureResourceGroups.autopilot.confirm', async (context: IActionContext) => {
-                context.errorHandling.suppressDisplay = true;
-                await context.ui.showWarningMessage(
-                    vscode.l10n.t('Approve this plan and run the rest in Autopilot mode?'),
-                    {
-                        modal: true,
-                        detail: vscode.l10n.t('Autopilot scaffolds and sets up local debugging without stopping for further approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally, and the chat request limit is raised so the run doesn\'t pause partway through. You can turn this off any time from the status bar.'),
-                    },
-                    { title: vscode.l10n.t('Enable Autopilot') },
-                );
-                return true;
-            }) ?? false;
+            confirmedAutopilot = await this.confirmAutopilot();
             if (!confirmedAutopilot) {
-                return;
+                // Autopilot was requested but the confirmation dialog was declined.
+                setCorProp(context, 'autopilot', false);
+                setCorProp(context, 'approvalOutcome', 'confirmationDeclined');
+                return false;
             }
         }
+        setCorProp(context, 'autopilot', confirmedAutopilot);
 
         if (!(await ensureAgentInstructions('azure-project-scaffold'))) {
-            return;
+            setCorProp(context, this.ensureAgentInstructionsKey, false);
+            setCorProp(context, 'approvalOutcome', 'agentInstructionsMissing');
+            return false;
         }
+        setCorProp(context, this.ensureAgentInstructionsKey, true);
 
         const planBeforeAutopilot = confirmedAutopilot
             ? await this.recordAutopilotMode()
@@ -150,17 +182,38 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(planBeforeAutopilot, 'utf-8'));
                 }
             }
-            return;
+            setCorProp(context, 'approvalOutcome', 'launchFailed');
+            return false;
         }
-        // Programmatic hand-off to the scaffold phase — don't treat this close as the user abandoning the flow.
-        suppressTrackedViewCloseOnce();
-        this.panel.dispose();
-        openLoadingView({
-            stage: 0,
-            title: vscode.l10n.t('Scaffolding your project…'),
-            message: vscode.l10n.t('Copilot is creating your project files. For progress please view the Copilot chat.'),
-            showNeedHelp: true,
-        });
+        setCorProp(context, 'approvalOutcome', 'submitted');
+        return true;
+    }
+
+    private async confirmAutopilot(): Promise<boolean> {
+        const enableAutopilotTitle = vscode.l10n.t('Enable Autopilot');
+        const result = await vscode.window.showWarningMessage(
+            vscode.l10n.t('Approve this plan and run the rest in Autopilot mode?'),
+            {
+                modal: true,
+                detail: vscode.l10n.t('Autopilot scaffolds and sets up local debugging without stopping for further approvals. While it runs, all chat tool actions (including file edits and terminal commands) are auto-approved globally, and the chat request limit is raised so the run doesn\'t pause partway through. You can turn this off any time from the status bar.'),
+            },
+            enableAutopilotTitle,
+        );
+        return result === enableAutopilotTitle;
+    }
+
+    private async trySubmitPlanFeedback(query: string): Promise<boolean> {
+        return await callWithTelemetryAndErrorHandling(`copilotOnRails.submitProjectScaffoldPlanFeedback`, async (actionContext: IActionContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitProjectScaffoldPlanFeedback' }, async (_context: CopilotOnRailsContext) => {
+                // Reuse the current session so the agent iterates on the plan with the existing conversation.
+                await vscode.commands.executeCommand('workbench.action.chat.open', {
+                    mode: 'agent',
+                    query,
+                });
+                void this.panel.webview.postMessage({ command: 'revisionInProgress' });
+                return true;
+            });
+        }) ?? false;
     }
 
     /** For guided runs, optionally raises `chat.agent.maxRequests`. */
@@ -252,6 +305,8 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     private async refreshPrerequisites(autopilot: boolean): Promise<void> {
         await callWithTelemetryAndErrorHandling('azureResourceGroups.scaffoldPlan.refreshPrerequisites', async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
+            context.telemetry.properties.isCopilotEvent = 'true';
+            context.telemetry.properties.corProjectId = getCorProjectId();
             context.telemetry.properties.autopilot = String(autopilot);
 
             if (!(await ensureAgentInstructions('azure-project-plan'))) {
@@ -280,7 +335,8 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         });
     }
 
-    updatePlanData(planData: PlanData, sourceFileUri?: vscode.Uri): void {
+    updatePlanData(planData: ScaffoldPlanData, sourceFileUri?: vscode.Uri): void {
+        this.planData = planData;
         if (sourceFileUri) {
             this.sourceFileUri = sourceFileUri;
             const nextPreviewFolder = resolvePreviewFolderUri(sourceFileUri);
