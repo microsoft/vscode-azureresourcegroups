@@ -6,8 +6,7 @@
 import { findColumnIndex, findSection, findTable, flattenContent, isChecked, type LocalPlanData, type LocalPlanSection } from "../../views/utils/parseLocalDebugPlanMarkdown";
 
 /**
- * Canonical debug-plan project types (from the azure-debug-plan agent's `project-types.md`). A
- * project type outside this set is still recorded verbatim as an unlisted, limited-support value.
+ * Currently supported debug project types according to the local debug custom agent
  */
 export enum SupportedDebugProjectType {
     Functions = 'functions',
@@ -15,23 +14,13 @@ export enum SupportedDebugProjectType {
 }
 
 /**
- * Canonical debug-plan runtimes (from the azure-debug-plan agent's `runtimes.md`). A runtime outside
- * this set is still recorded verbatim as an unlisted, limited-support value.
+ * Currently supported debug runtimes according to the local debug custom agent
  */
 export enum SupportedDebugRuntime {
     NodeTS = 'node-ts',
     NodeJS = 'node-js',
 }
 
-/**
- * A flat, telemetry-safe summary of a VS Code local debug plan markdown file.
- *
- * Every property is either a count, a boolean, or a low-cardinality categorical value drawn from a
- * fixed vocabulary (project types, runtimes, emulator/orchestrator names, execution mode). For every
- * generatable section we record both what the plan *offered* and what the user *selected* (checked).
- * We intentionally avoid emitting free-form, workspace-derived strings such as service labels, service
- * roots, tool versions, file paths, or migration tool descriptions, since those risk leaking PII.
- */
 export interface LocalDebugPlanTelemetry {
     /** Whether the plan markdown parsed into a structured view without error. */
     planParsedOk: boolean;
@@ -117,9 +106,11 @@ export interface LocalDebugPlanTelemetry {
     convenienceScriptSelectedCount: number;
 }
 
+export const LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX = 'localDebugPlan.';
+
 /**
  * Parses a structured {@link LocalPlanData} into a flat, telemetry-safe {@link LocalDebugPlanTelemetry}
- * summary. This is the single, centralized place that derives diagnostics/telemetry from a debug plan.
+ * summary. This is the single, centralized place that derives telemetry from a debug plan.
  */
 export function getLocalDebugPlanTelemetry(planData: LocalPlanData): LocalDebugPlanTelemetry {
     const prereq = getPrerequisiteMetrics(planData);
@@ -172,9 +163,6 @@ export function getLocalDebugPlanTelemetry(planData: LocalPlanData): LocalDebugP
         convenienceScriptSelectedCount: scripts.selected,
     };
 }
-
-/** Namespace prefix applied to every local debug plan telemetry property key. */
-export const LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX = 'localDebugPlan.';
 
 //#region Section metrics
 
