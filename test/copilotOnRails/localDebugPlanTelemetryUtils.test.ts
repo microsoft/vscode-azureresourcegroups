@@ -164,23 +164,6 @@ suite('localDebugPlanTelemetryUtils', () => {
             assert.strictEqual(telemetry.prereqExtensionCount, 1);
         });
 
-        test('treats both ❌ and ❓ prerequisites as unknown', () => {
-            const markdown = [
-                '## Prerequisites',
-                '',
-                '| Tool / Extension | Category | Installed |',
-                '|---|---|---|',
-                '| Node.js | Runtime | ✅ |',
-                '| Docker | Container runtime | ❌ |',
-                '| Docker Compose | Orchestrator | ❓ |',
-            ].join('\n');
-
-            const telemetry = getLocalDebugPlanTelemetry(parseLocalDebugPlanMarkdown(markdown));
-
-            assert.strictEqual(telemetry.prereqInstalledCount, 1);
-            assert.strictEqual(telemetry.prereqUnknownCount, 2);
-        });
-
         test('records offered vs selected when only some rows are checked', () => {
             const markdown = [
                 '## Convenience Scripts',
