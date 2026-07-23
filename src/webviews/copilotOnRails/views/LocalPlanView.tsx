@@ -41,6 +41,10 @@ import {
 import { StageProgress } from "./components/StageProgress";
 import "./styles/localPlanView.scss";
 import {
+    isLimitedSupportDataStore,
+    limitedSupportWarningMessage,
+} from "./utils/emulatorSupport";
+import {
     findColumnIndex,
     isChecked,
     type LocalPlanContent,
@@ -95,6 +99,8 @@ const DEFAULT_OPEN_SECTIONS = new Set([
     "debug configurations",
     "architecture diagram",
 ]);
+
+const EMULATORS_SECTION = "emulators";
 
 function sectionSortOrder(title: string): number {
     const lower = title.toLowerCase().trim();
@@ -706,7 +712,13 @@ const ContentBlock = ({
                     />
                 );
             }
-            return <DataTable headers={item.headers} rows={item.rows} />;
+            return (
+                <DataTable
+                    headers={item.headers}
+                    rows={item.rows}
+                    sectionTitle={sectionTitle}
+                />
+            );
         case "codeBlock":
             if (item.language?.toLowerCase() === "mermaid") {
                 return <MermaidBlock code={item.code} />;
@@ -739,41 +751,98 @@ const ContentBlock = ({
 const DataTable = ({
     headers,
     rows,
+    sectionTitle,
 }: {
     headers: string[];
     rows: string[][];
-}): JSX.Element => (
-    <div className="dataTableWrapper">
-        <table className="dataTable">
-            <thead>
-                <tr>
-                    {headers.map((h, hi) => (
-                        <th
-                            key={hi}
-                            dangerouslySetInnerHTML={{
-                                __html: formatInline(h),
-                            }}
-                        />
-                    ))}
-                </tr>
-            </thead>
-            <tbody>
-                {rows.map((row, ri) => (
-                    <tr key={ri}>
-                        {row.map((cell, ci) => (
-                            <td
-                                key={ci}
+    sectionTitle?: string;
+}): JSX.Element => {
+    // In the Emulators section, flag data store resources that lack a
+    // full-fidelity local emulator by matching the "Dependent Service" column.
+    const isEmulators =
+        sectionTitle?.toLowerCase().trim() === EMULATORS_SECTION;
+    const serviceColIdx = isEmulators
+        ? (() => {
+            const idx = headers.findIndex((h) =>
+                h.toLowerCase().includes("dependent service"),
+            );
+            return idx >= 0 ? idx : 0;
+        })()
+        : -1;
+
+    return (
+        <div className="dataTableWrapper">
+            <table className="dataTable">
+                <thead>
+                    <tr>
+                        {headers.map((h, hi) => (
+                            <th
+                                key={hi}
                                 dangerouslySetInnerHTML={{
-                                    __html: formatInline(cell),
+                                    __html: formatInline(h),
                                 }}
                             />
                         ))}
                     </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
+                </thead>
+                <tbody>
+                    {rows.map((row, ri) => {
+                        const serviceLabel =
+                            serviceColIdx >= 0
+                                ? (row[serviceColIdx] ?? "")
+                                : "";
+                        const showWarning =
+                            serviceColIdx >= 0 &&
+                            isLimitedSupportDataStore(serviceLabel);
+                        return (
+                            <tr key={ri}>
+                                {row.map((cell, ci) => {
+                                    if (ci === serviceColIdx && showWarning) {
+                                        const warningMessage =
+                                            limitedSupportWarningMessage();
+                                        return (
+                                            <td key={ci}>
+                                                <span className="supportWarningCell">
+                                                    <span
+                                                        dangerouslySetInnerHTML={{
+                                                            __html: formatInline(
+                                                                cell,
+                                                            ),
+                                                        }}
+                                                    />
+                                                    <Tooltip
+                                                        relationship="label"
+                                                        content={warningMessage}
+                                                    >
+                                                        <span
+                                                            className="supportWarning"
+                                                            tabIndex={0}
+                                                            aria-label={warningMessage}
+                                                        >
+                                                            <WarningRegular />
+                                                        </span>
+                                                    </Tooltip>
+                                                </span>
+                                            </td>
+                                        );
+                                    }
+                                    return (
+                                        <td
+                                            key={ci}
+                                            dangerouslySetInnerHTML={{
+                                                __html: formatInline(cell),
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
+};
 
 /**
  * Renders a table whose Generate column contains `[x]`/`[ ]` markdown

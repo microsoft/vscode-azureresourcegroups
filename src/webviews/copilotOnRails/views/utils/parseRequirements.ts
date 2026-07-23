@@ -20,6 +20,7 @@ export type RequirementsExecutionMode = 'guided' | 'auto';
 export interface RequirementsOption {
     label: string;
     description?: string;
+    exclusive?: boolean;
 }
 
 export interface RequirementsQuestion {
@@ -116,7 +117,8 @@ function parseOption(raw: unknown): RequirementsOption | undefined {
             return undefined;
         }
         const description = typeof obj.description === 'string' ? obj.description : undefined;
-        return { label, description };
+        const exclusive = typeof obj.exclusive === 'boolean' ? obj.exclusive : undefined;
+        return { label, description, exclusive };
     }
     return undefined;
 }
@@ -228,4 +230,28 @@ export function isAnswerEmpty(answer: RequirementsAnswer): boolean {
         return answer.length === 0 || answer.every((s) => s.trim().length === 0);
     }
     return false;
+}
+
+export function toggleRequirementsOption(
+    selected: string[],
+    options: RequirementsOption[],
+    label: string,
+): string[] {
+    const clickedOption = options.find(option => option.label === label);
+    if (!clickedOption) {
+        return selected;
+    }
+
+    if (clickedOption.exclusive) {
+        return selected.includes(label) ? [] : [label];
+    }
+
+    const optionLabels = new Set(options.map(option => option.label));
+    const exclusiveLabels = new Set(options.filter(option => option.exclusive).map(option => option.label));
+    const selectedOptions = selected.filter(value => optionLabels.has(value) && !exclusiveLabels.has(value));
+    const customValues = selected.filter(value => !optionLabels.has(value));
+    const nextSelectedOptions = selectedOptions.includes(label)
+        ? selectedOptions.filter(value => value !== label)
+        : [...selectedOptions, label];
+    return [...nextSelectedOptions, ...customValues];
 }

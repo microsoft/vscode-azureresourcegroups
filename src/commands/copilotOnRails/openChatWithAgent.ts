@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
@@ -11,6 +12,10 @@ import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/vie
 import { ensureAgentInstructions } from './agentInstructions';
 
 const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
+const CUSTOM_AGENT_COMMAND_PREFIX = 'workbench.action.chat.open';
+const CUSTOM_AGENT_LOAD_TIMEOUT_MS = 10_000;
+const CUSTOM_AGENT_LOAD_POLL_INTERVAL_MS = 100;
+let agentLaunchInProgress = false;
 
 /**
  * Ensure the GitHub Copilot Chat extension is installed and activated before invoking
@@ -41,14 +46,61 @@ export async function ensureCopilotChatReady(): Promise<boolean> {
  * keeps each agent's context window focused on its own phase instead of
  * accumulating the entire plan → scaffold → debug conversation.
  */
-export async function launchAgentChat(agentName: string, query: string): Promise<void> {
-    await vscode.commands.executeCommand('workbench.action.chat.newChat');
-    await vscode.commands.executeCommand('workbench.action.chat.open', {
-        mode: agentName,
-        query,
-    });
+async function waitForCustomAgentCommand(agentName: string): Promise<string | undefined> {
+    const commandId = `${CUSTOM_AGENT_COMMAND_PREFIX}${agentName}`;
+    const deadline = Date.now() + CUSTOM_AGENT_LOAD_TIMEOUT_MS;
+
+    do {
+        if ((await vscode.commands.getCommands()).includes(commandId)) {
+            return commandId;
+        }
+        await new Promise(resolve => setTimeout(resolve, CUSTOM_AGENT_LOAD_POLL_INTERVAL_MS));
+    } while (Date.now() < deadline);
+
+    return undefined;
+}
+
+export async function launchAgentChat(agentName: string, query: string): Promise<boolean> {
+    if (agentLaunchInProgress) {
+        void vscode.window.showWarningMessage(
+            vscode.l10n.t('Another Copilot agent is still starting. Please wait and try again.'),
+        );
+        return false;
+    }
+
+    agentLaunchInProgress = true;
+    try {
+        // Revealing chat initializes its custom-mode registry. The agent-specific
+        // command appears only after VS Code has finished loading that registry.
+        await vscode.commands.executeCommand('workbench.action.chat.open');
+        const commandId = await waitForCustomAgentCommand(agentName);
+        if (!commandId) {
+            void vscode.window.showErrorMessage(
+                vscode.l10n.t('The "{0}" Copilot agent did not finish loading. Please try again.', agentName),
+            );
+            return false;
+        }
+
+        await vscode.commands.executeCommand('workbench.action.chat.newChat');
+        await vscode.commands.executeCommand(commandId, { query });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        void vscode.window.showErrorMessage(
+            vscode.l10n.t('The "{0}" Copilot agent could not be started: {1}', agentName, message),
+        );
+        return false;
+    } finally {
+        agentLaunchInProgress = false;
+    }
+
     // Record the phase we just launched so an interrupted run can be resumed.
-    await recordAgentLaunch(agentName);
+    try {
+        await recordAgentLaunch(agentName);
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        ext.outputChannel.warn(vscode.l10n.t('Could not record the "{0}" Copilot agent launch: {1}', agentName, message));
+    }
+    return true;
 }
 
 export async function openChatWithAgent(agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
@@ -59,7 +111,9 @@ export async function openChatWithAgent(agentName: string, prompt: string, loadi
     if (!(await ensureAgentInstructions(agentName))) {
         return;
     }
-    await launchAgentChat(agentName, prompt);
+    if (!(await launchAgentChat(agentName, prompt))) {
+        return;
+    }
 
     if (loading) {
         projectSubmissionState.setPending(loading.stage);

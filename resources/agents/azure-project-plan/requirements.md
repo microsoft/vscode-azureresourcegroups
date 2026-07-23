@@ -57,8 +57,8 @@ Infer everything possible from the Step 1 scan; gather the rest through the requ
 
 For each question (shared + per-service), use the Step 1 scan + the user's prompt to fill:
 
-- **`answer`** — the inferred value when confident, else `null` (`[]` for array-typed `dataStores`).
-- **`recommendedChoice`** — always provide one (string for single-select questions, `string[]` for `dataStores`); becomes the **pre-selected** option in the webview, even for `needs_input`. For `dataStores`, recommend **every** store the app needs, not just one — it is a subset and often has more than one entry, and the webview shows a Recommended badge on each (including the `Blob Storage` cases required by the `dataStores` MUST rules below).
+- **`answer`** — the inferred value when confident, else `null` (`[]` for array-typed `dataStores`). When the app needs no datastore, use `["No datastore required"]`, not an empty array.
+- **`recommendedChoice`** — always provide one (string for single-select questions, `string[]` for `dataStores`); becomes the **pre-selected** option in the webview, even for `needs_input`. For `dataStores`, recommend **every** store the app needs, not just one — it is a subset and often has more than one entry. Recommend `["No datastore required"]` when the app needs no datastore. The webview shows a Recommended badge on each selected recommendation (including the `Blob Storage` cases required by the `dataStores` MUST rules below).
 
 Then set **`status`**:
 
@@ -71,6 +71,7 @@ Then set **`status`**:
 | `@azure/storage-blob` import | App uses Blob Storage |
 | App stores files, photos, images, uploads, documents, or media | App uses Blob Storage |
 | Backend service uses Azure Functions | App uses Blob Storage (Functions requires a storage account) |
+| App needs no persistence, file/object storage, queue, or cache, and no service requires an associated storage account | App uses `No datastore required` |
 | `@azure/cosmos` import | App uses CosmosDB |
 | `pg` or `psycopg2` import | App uses PostgreSQL |
 | `redis` or `ioredis` import | App uses Redis |
@@ -129,7 +130,7 @@ These are asked once for the whole project. Always emit all of them:
 
 | # | `id` | `category` | `header` | `question` | Multi-select | Free-form | `options` | Default `recommendedChoice` |
 |---|---|---|---|---|---|---|---|---|
-| 1 | `dataStores` | `data` | Data Stores | Which data stores does your app need? | **yes** | no | `Blob Storage`, `Queue Storage`, `PostgreSQL`, `CosmosDB`, `Redis`, `Azure SQL` | Every store the app needs (often more than one) |
+| 1 | `dataStores` | `data` | Data Stores | Which data stores does your app need? | **yes** | no | `No datastore required` (exclusive), `Blob Storage`, `Queue Storage`, `PostgreSQL`, `CosmosDB`, `Redis`, `Azure SQL` | Every store the app needs (often more than one), or `No datastore required` |
 | 2 | `auth` | `auth` | Authentication | Does your app need authentication? | no | **yes** | `No auth`, `Mock auth middleware`, `Microsoft Entra ID`, `Microsoft Entra External ID`, `Auth0`, `Clerk` | `Mock auth middleware` if user data, else `No auth` |
 
 > The old `appType`, `runtime`, and `frontend` questions are gone. **App Type is no longer asked** — it's derived from the detected `services` (see below). Language and framework are now per-service questions.
@@ -148,7 +149,7 @@ Do **not** emit an `appType` question. Instead, derive the plan's App Type from 
 
 Use this derived value to fill Section 1 of the plan and to decide whether to emit the Frontend / Design System sections.
 
-Each option is `{ label, description }` as before. Include `multiSelect`, `allowFreeformInput`, `recommendedChoice`, `status`, `answer`, and `rationale` on every question.
+Each option is `{ label, description, exclusive? }`. Set `exclusive: true` only on an option that cannot be combined with any other selection. Include `multiSelect`, `allowFreeformInput`, `recommendedChoice`, `status`, `answer`, and `rationale` on every question.
 
 #### 2c. Write `.azure/requirements.json`
 
@@ -219,6 +220,7 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
       "question": "Which data stores does your app need?",
       "multiSelect": true, "allowFreeformInput": false,
       "options": [
+        { "label": "No datastore required", "description": "The app does not persist data or use storage, queues, or caches", "exclusive": true },
         { "label": "Blob Storage", "description": "Store files and images" },
         { "label": "Queue Storage", "description": "Async message queue" },
         { "label": "PostgreSQL", "description": "Relational database" },
@@ -257,6 +259,7 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 - **`allowFreeformInput` is fixed per type:** language `false`, `dataStores` `false`, framework `true`, `auth` **`true`** (always — even when a listed option fits). Omit it for free-text feature questions.
 - **`multiSelect`:** only `dataStores` is `true`; its `answer` and `recommendedChoice` are always `string[]`.
 - **Answers:** `inferred` → fill `answer`; `needs_input` → `answer: null` (`[]` for `dataStores`). Always provide `recommendedChoice`.
+- **No datastore:** `No datastore required` is an exclusive option. When selected or inferred, it must be the only value in `answer` and `recommendedChoice`. Never combine it with a concrete datastore.
 - Use the field name **`rationale`** (not `reason`). Strict JSON — no comments, no trailing commas.
 - **`dataStores` Blob Storage rule (MUST):** include `Blob Storage` in `recommendedChoice` — and in `answer` when the question is `inferred` — alongside any database whenever **either** (a) any service stores or serves files, photos, images, uploads, documents, or media, **or** (b) any backend service uses Azure Functions (which requires an associated storage account, `AzureWebJobsStorage`). A file/photo app — or a Functions app — whose recommendation is only a database is wrong.
 

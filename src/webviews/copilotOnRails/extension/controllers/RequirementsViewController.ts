@@ -80,20 +80,18 @@ export class RequirementsViewController extends WebviewController<Record<string,
 
         const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
         if (await ensureAgentInstructions('azure-project-plan')) {
+            const query = vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath);
+            if (!(await launchAgentChat(azureProjectPlanAgent, query))) {
+                return;
+            }
             // Programmatic hand-off to the plan phase — don't treat this close as the user abandoning the flow.
             suppressTrackedViewCloseOnce();
             this.panel.dispose();
             openLoadingView({
                 stage: 0,
                 title: vscode.l10n.t('Generating your project plan…'),
-                message: vscode.l10n.t('Copilot is using your answers to build .azure/project-plan.md. The plan view will open automatically when it’s ready.'),
+                message: vscode.l10n.t('Copilot is using your answers to build .azure/project-plan.md. The plan view will open automatically when it’s ready.'), showNeedHelp: true,
             });
-            const query = vscode.l10n.t('Requirements submitted at {0} — read the file and continue generating .azure/project-plan.md.', relativePath);
-            try {
-                await launchAgentChat(azureProjectPlanAgent, query);
-            } catch {
-                // Chat may not be available; saving still succeeded.
-            }
         }
     }
 }

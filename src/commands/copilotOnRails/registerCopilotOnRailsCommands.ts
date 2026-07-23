@@ -73,6 +73,7 @@ export function startProjectScaffoldCommand(_context: CopilotOnRailsContext, pro
         stage: 0,
         title: l10n.t('Scaffolding your project…'),
         message: l10n.t('Copilot is gathering requirements and preparing your project plan.'),
+        showNeedHelp: true,
     });
 }
 
@@ -81,6 +82,7 @@ export function startProjectIntegrateCommand(_context: CopilotOnRailsContext, pr
         stage: 0,
         title: l10n.t('Integrating your frontend…'),
         message: l10n.t('Copilot is wiring the frontend to your backend services. For progress please view the Copilot chat.'),
+        showNeedHelp: true,
     });
 }
 
@@ -89,6 +91,7 @@ export function startLocalDevelopmentCommand(_context: CopilotOnRailsContext, pr
         stage: 1,
         title: l10n.t('Setting up local development…'),
         message: l10n.t('Copilot is preparing your local debugging plan.'),
+        showNeedHelp: true,
     });
 }
 
@@ -97,6 +100,7 @@ export function startAzureDebugGenerateCommand(_context: CopilotOnRailsContext, 
         stage: 1,
         title: l10n.t('Generating local development artifacts…'),
         message: l10n.t('Copilot is generating the artifacts from your local debugging plan.'),
+        showNeedHelp: true,
     });
 }
 
@@ -105,6 +109,7 @@ export function startDeploymentCommand(_context: CopilotOnRailsContext, prompt?:
         stage: 2,
         title: l10n.t('Preparing deployment…'),
         message: l10n.t('Copilot is preparing your deployment plan.'),
+        showNeedHelp: true,
     });
 }
 
