@@ -17,7 +17,7 @@ import { type LocalPlanData } from "../../views/utils/parseLocalDebugPlanMarkdow
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { suppressTrackedViewCloseOnce } from "../projectSession";
-import { getLocalDebugPlanTelemetry, LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX, toLocalDebugPlanTelemetryProperties } from "../utils/localDebugPlanTelemetryUtils";
+import { getLocalDebugPlanTelemetry, LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX } from "../utils/localDebugPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
@@ -63,15 +63,13 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     private async approvePlan(): Promise<void> {
         return await callWithTelemetryAndErrorHandling(`copilotOnRails.submitLocalDebugPlanApproval`, async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitLocalDebugPlanApproval' }, async (context: CopilotOnRailsContext) => {
-                if (!(await this.trySubmitPlanApproval())) {
-                    setCorProp(context, this.ensureAgentInstructionsKey, false);
+                if (!(await this.trySubmitPlanApproval(context))) {
                     return;
                 }
 
-                setCorProp(context, this.ensureAgentInstructionsKey, true);
-                this.recordPlanTelemetry(context);
 
                 suppressTrackedViewCloseOnce();
+                this.recordPlanTelemetry(context);
                 this.panel.dispose();
 
                 openLoadingView({
@@ -87,7 +85,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     private recordPlanTelemetry(context: CopilotOnRailsContext): void {
         try {
             const telemetry = getLocalDebugPlanTelemetry(this.planData);
-            for (const [key, value] of Object.entries(toLocalDebugPlanTelemetryProperties(telemetry))) {
+            for (const [key, value] of Object.entries(telemetry)) {
                 setCorProp(context, `${LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX}${key}`, value);
             }
         } catch {
@@ -96,10 +94,12 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         }
     }
 
-    private async trySubmitPlanApproval(): Promise<boolean> {
+    private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
         if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
+            setCorProp(context, this.ensureAgentInstructionsKey, false);
             return false;
         }
+
         // Fresh chat session for the approval hand-off so the next phase starts with a
         // clean context window.
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
@@ -107,6 +107,8 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             mode: azureDebugPlanAgent,
             query: 'I approve the debug setup plan.',
         });
+
+        setCorProp(context, this.ensureAgentInstructionsKey, true);
         return true;
     }
 

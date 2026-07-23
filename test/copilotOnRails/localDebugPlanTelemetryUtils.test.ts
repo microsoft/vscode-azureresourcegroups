@@ -6,7 +6,7 @@
 import assert from 'assert';
 import * as fs from 'fs';
 import { Uri } from 'vscode';
-import { getLocalDebugPlanTelemetry, LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX, LocalDebugPlanTelemetry, SupportedDebugProjectType, SupportedDebugRuntime, toLocalDebugPlanTelemetryProperties } from '../../src/webviews/copilotOnRails/extension/utils/localDebugPlanTelemetryUtils';
+import { getLocalDebugPlanTelemetry, LocalDebugPlanTelemetry, SupportedDebugProjectType, SupportedDebugRuntime } from '../../src/webviews/copilotOnRails/extension/utils/localDebugPlanTelemetryUtils';
 import { parseLocalDebugPlanMarkdown } from '../../src/webviews/copilotOnRails/views/utils/parseLocalDebugPlanMarkdown';
 import { getWorkspaceFolderUri } from '../testUtils';
 import { attendanceProjectFolder, scrapbookProjectFolder } from './parseLocalDebugPlanMarkdown.test';
@@ -238,27 +238,6 @@ suite('localDebugPlanTelemetryUtils', () => {
 
             assert.strictEqual(telemetry.debugProjectTypes, 'background-worker,app-service');
             assert.strictEqual(telemetry.debugRuntimes, 'rust,dotnet');
-        });
-    });
-
-    suite('toLocalDebugPlanTelemetryProperties', () => {
-        test('stringifies every property with bare (unprefixed) keys', () => {
-            const telemetry = loadLocalDebugPlanTelemetry(scrapbookProjectFolder);
-            const properties = toLocalDebugPlanTelemetryProperties(telemetry);
-
-            assert.strictEqual(properties['planExecutionMode'], 'guided');
-            assert.strictEqual(properties['debugNonCompoundSelectedCount'], '3');
-            assert.strictEqual(properties['apiTestHttpEndpointCount'], '12');
-            assert.strictEqual(properties['apiTestTotalCount'], '13');
-            // Per-service project types/runtimes are already comma-separated strings of their values.
-            assert.strictEqual(properties['debugProjectTypes'], 'functions,functions,frontend-spa');
-            assert.strictEqual(properties['debugRuntimes'], 'node-ts,node-ts,node-ts');
-
-            for (const value of Object.values(properties)) {
-                assert.strictEqual(typeof value, 'string');
-            }
-            // Namespacing is the caller's responsibility, so keys are emitted unprefixed here.
-            assert.ok(Object.keys(properties).every((key) => !key.startsWith(LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX)));
         });
     });
 });

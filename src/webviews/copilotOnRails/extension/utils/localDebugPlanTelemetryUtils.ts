@@ -176,18 +176,6 @@ export function getLocalDebugPlanTelemetry(planData: LocalPlanData): LocalDebugP
 /** Namespace prefix applied to every local debug plan telemetry property key. */
 export const LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX = 'localDebugPlan.';
 
-/**
- * Flattens a {@link LocalDebugPlanTelemetry} object into string-valued telemetry properties with bare
- * (unprefixed) keys. Callers are responsible for namespacing keys with {@link LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX}.
- */
-export function toLocalDebugPlanTelemetryProperties(telemetry: LocalDebugPlanTelemetry): Record<string, string> {
-    const properties: Record<string, string> = {};
-    for (const [key, value] of Object.entries(telemetry)) {
-        properties[key] = String(value);
-    }
-    return properties;
-}
-
 //#region Section metrics
 
 function getPrerequisiteMetrics(planData: LocalPlanData): {
