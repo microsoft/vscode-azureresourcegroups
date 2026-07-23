@@ -20,11 +20,13 @@ suite('localDebugPlanTelemetryUtils', () => {
                 planParsedOk: true,
                 planExecutionMode: 'guided',
                 planSectionCount: 8,
+                planSectionTitles: 'prerequisites,debug configurations,orchestrator,emulators,architecture diagram,migrations,api test collections,convenience scripts',
 
                 prereqTotalCount: 7,
                 prereqInstalledCount: 6,
                 prereqUnknownCount: 1,
                 prereqExtensionCount: 1,
+                prereqExtensionIds: 'ms-azuretools.vscode-azurefunctions',
 
                 debugNonCompoundOfferedCount: 3,
                 debugNonCompoundSelectedCount: 3,
@@ -69,11 +71,13 @@ suite('localDebugPlanTelemetryUtils', () => {
                 planParsedOk: true,
                 planExecutionMode: 'auto',
                 planSectionCount: 10,
+                planSectionTitles: 'prerequisites,debug configurations,orchestrator,emulators,architecture diagram,migrations,api test collections,convenience scripts,pre-flight resolution notes,debug configuration checklist',
 
                 prereqTotalCount: 7,
                 prereqInstalledCount: 6,
                 prereqUnknownCount: 1,
                 prereqExtensionCount: 1,
+                prereqExtensionIds: 'ms-azuretools.vscode-azurefunctions',
 
                 debugNonCompoundOfferedCount: 2,
                 debugNonCompoundSelectedCount: 2,
@@ -117,7 +121,9 @@ suite('localDebugPlanTelemetryUtils', () => {
             assert.strictEqual(telemetry.planParsedOk, true);
             assert.strictEqual(telemetry.planExecutionMode, 'unknown');
             assert.strictEqual(telemetry.planSectionCount, 0);
+            assert.strictEqual(telemetry.planSectionTitles, '');
             assert.strictEqual(telemetry.prereqTotalCount, 0);
+            assert.strictEqual(telemetry.prereqExtensionIds, '');
             assert.strictEqual(telemetry.debugNonCompoundOfferedCount, 0);
             assert.strictEqual(telemetry.debugTotalOfferedCount, 0);
             assert.strictEqual(telemetry.debugProjectTypes, '');
@@ -162,6 +168,39 @@ suite('localDebugPlanTelemetryUtils', () => {
             assert.strictEqual(telemetry.prereqInstalledCount, 2);
             assert.strictEqual(telemetry.prereqUnknownCount, 0);
             assert.strictEqual(telemetry.prereqExtensionCount, 1);
+            assert.strictEqual(telemetry.prereqExtensionIds, 'ms-azuretools.vscode-azurefunctions');
+        });
+
+        test('collects extension ids from multiple prerequisite rows', () => {
+            const markdown = [
+                '## Prerequisites',
+                '',
+                '| Tool / Extension | Category | Installed |',
+                '|---|---|---|',
+                '| Node.js | Runtime | ✅ |',
+                '| `ms-azuretools.vscode-azurefunctions` | VS Code extension | ✅ |',
+                '| `ms-azuretools.vscode-docker` | VS Code extension | ❓ |',
+            ].join('\n');
+
+            const telemetry = getLocalDebugPlanTelemetry(parseLocalDebugPlanMarkdown(markdown));
+
+            assert.strictEqual(telemetry.prereqExtensionCount, 2);
+            assert.strictEqual(telemetry.prereqExtensionIds, 'ms-azuretools.vscode-azurefunctions,ms-azuretools.vscode-docker');
+        });
+
+        test('records top-level section titles in document order', () => {
+            const markdown = [
+                '## Prerequisites',
+                '',
+                '## Debug Configurations',
+                '',
+                '## API Test Collections',
+            ].join('\n');
+
+            const telemetry = getLocalDebugPlanTelemetry(parseLocalDebugPlanMarkdown(markdown));
+
+            assert.strictEqual(telemetry.planSectionCount, 3);
+            assert.strictEqual(telemetry.planSectionTitles, 'prerequisites,debug configurations,api test collections');
         });
 
         test('records offered vs selected when only some rows are checked', () => {

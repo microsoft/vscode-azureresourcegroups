@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { maskUserInfo } from "@microsoft/vscode-azext-utils";
 import { findColumnIndex, findSection, findTable, flattenContent, isChecked, type LocalPlanData, type LocalPlanSection } from "../../views/utils/parseLocalDebugPlanMarkdown";
 
 /**
@@ -28,6 +29,8 @@ export interface LocalDebugPlanTelemetry {
     planExecutionMode: string;
     /** Number of top-level (`##`) sections in the plan. */
     planSectionCount: number;
+    /** Top-level (`##`) section titles in document order, normalized to lowercase tokens and comma-separated. */
+    planSectionTitles: string;
 
     /** Total number of prerequisite rows. */
     prereqTotalCount: number;
@@ -37,6 +40,8 @@ export interface LocalDebugPlanTelemetry {
     prereqUnknownCount: number;
     /** Prerequisites that are VS Code extensions. */
     prereqExtensionCount: number;
+    /** Distinct debug-prerequisite VS Code extension IDs (e.g. `ms-azuretools.vscode-azurefunctions`), comma-separated. */
+    prereqExtensionIds: string;
 
     /** Non-compound debug configs offered by the plan. */
     debugNonCompoundOfferedCount: number;
@@ -124,11 +129,13 @@ export function getLocalDebugPlanTelemetry(planData: LocalPlanData): LocalDebugP
         planParsedOk: !planData.parseError,
         planExecutionMode: normalizeToken(planData.executionMode) || 'unknown',
         planSectionCount: planData.sections.length,
+        planSectionTitles: planData.sections.map((section) => normalizeToken(maskUserInfo(section.title, []))).filter((title) => title !== '').join(','),
 
         prereqTotalCount: prereq.total,
         prereqInstalledCount: prereq.installed,
         prereqUnknownCount: prereq.unknown,
         prereqExtensionCount: prereq.extensions,
+        prereqExtensionIds: prereq.extensionIds,
 
         debugNonCompoundOfferedCount: debug.nonCompoundOffered,
         debugNonCompoundSelectedCount: debug.nonCompoundSelected,
@@ -171,6 +178,7 @@ function getPrerequisiteMetrics(planData: LocalPlanData): {
     installed: number;
     unknown: number;
     extensions: number;
+    extensionIds: string;
 } {
     const section = findSection(planData, 'Prerequisites');
     const table = section && findTable(section, ['Installed']);
@@ -178,6 +186,7 @@ function getPrerequisiteMetrics(planData: LocalPlanData): {
     let installed = 0;
     let unknown = 0;
     let extensions = 0;
+    const extensionIds: string[] = [];
 
     if (table) {
         const installedIdx = findColumnIndex(table.headers, 'Installed');
@@ -194,9 +203,13 @@ function getPrerequisiteMetrics(planData: LocalPlanData): {
             }
 
             const category = cell(row, categoryIdx).toLowerCase();
-            const tool = cell(row, toolIdx).toLowerCase();
+            const tool = cell(row, toolIdx);
+            const extensionId = extractExtensionId(tool);
             if (category.includes('extension') || (tool.includes('.') && tool.includes('`'))) {
                 extensions++;
+                if (extensionId) {
+                    extensionIds.push(extensionId);
+                }
             }
         }
     }
@@ -206,7 +219,19 @@ function getPrerequisiteMetrics(planData: LocalPlanData): {
         installed,
         unknown,
         extensions,
+        extensionIds: extensionIds.join(','),
     };
+}
+
+/**
+ * Extracts a VS Code extension id (`publisher.name`) from a Tool/Extension cell. Extension ids are
+ * authored wrapped in backticks (e.g. `` `ms-azuretools.vscode-azurefunctions` ``); returns the
+ * lowercased id when the cell contains a single recognizable id, otherwise `undefined`.
+ */
+function extractExtensionId(tool: string): string | undefined {
+    const backticked = tool.match(/`([^`]+)`/);
+    const candidate = (backticked ? backticked[1] : tool).trim();
+    return /^[\w-]+\.[\w-]+$/.test(candidate) ? candidate.toLowerCase() : undefined;
 }
 
 function getDebugConfigMetrics(planData: LocalPlanData): {
