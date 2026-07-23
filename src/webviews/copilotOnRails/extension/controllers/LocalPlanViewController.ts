@@ -12,14 +12,16 @@ import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
-import { type LocalPlanData } from "../../views/utils/parseLocalPlanMarkdown";
+import { type LocalPlanData } from "../../views/utils/parseLocalDebugPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { suppressTrackedViewCloseOnce } from "../projectSession";
+import { getLocalDebugPlanTelemetry, LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX, toLocalDebugPlanTelemetryProperties } from "../utils/localDebugPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
+    private planData: LocalPlanData;
     private _isRefreshingPrereqs = false;
     private _refreshPrereqsTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -27,6 +29,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         super(ext.context, 'Local Dev Plan', 'localPlanView', {}, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
 
         this.sourceFileUri = sourceFileUri;
+        this.planData = planData;
 
         this.panel.webview.onDidReceiveMessage((message: { command: string; data?: LocalPlanData; prompt?: string }) => {
             switch (message.command) {
@@ -65,7 +68,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 }
 
                 setCorProp(context, this.ensureAgentInstructionsKey, true);
-                // TODO: We should parse and record generic diagnostics and telemetry on the markdown plan here
+                this.recordPlanTelemetry(context);
 
                 suppressTrackedViewCloseOnce();
                 this.panel.dispose();
@@ -77,6 +80,18 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 });
             });
         });
+    }
+
+    private recordPlanTelemetry(context: CopilotOnRailsContext): void {
+        try {
+            const telemetry = getLocalDebugPlanTelemetry(this.planData);
+            for (const [key, value] of Object.entries(toLocalDebugPlanTelemetryProperties(telemetry))) {
+                setCorProp(context, `${LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX}${key}`, value);
+            }
+        } catch {
+            // Telemetry extraction must never block the approval flow; swallow any parsing errors.
+            setCorProp(context, `${LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX}parseFailed`, true);
+        }
     }
 
     private async trySubmitPlanApproval(): Promise<boolean> {
@@ -145,6 +160,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     }
 
     updatePlanData(planData: LocalPlanData, sourceFileUri?: vscode.Uri): void {
+        this.planData = planData;
         if (sourceFileUri) {
             this.sourceFileUri = sourceFileUri;
         }

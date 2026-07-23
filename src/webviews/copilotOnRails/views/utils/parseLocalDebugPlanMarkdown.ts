@@ -6,6 +6,7 @@
 export interface LocalPlanData {
     title: string;
     status: string;
+    executionMode: string;
     headerNote: string;
     sections: LocalPlanSection[];
     parseError?: LocalPlanParseError;
@@ -36,7 +37,7 @@ export type LocalPlanContent =
     | ({ type: 'bulletList'; items: string[] } & SourceRange)
     | ({ type: 'subsection'; title: string; content: LocalPlanContent[] } & SourceRange);
 
-export function parseLocalPlanMarkdown(markdown: string): LocalPlanData {
+export function parseLocalDebugPlanMarkdown(markdown: string): LocalPlanData {
     const lines = markdown.replace(/\r\n/g, '\n').split('\n');
 
     const header = extractHeader(lines);
@@ -45,14 +46,16 @@ export function parseLocalPlanMarkdown(markdown: string): LocalPlanData {
     return {
         title: header.title,
         status: header.status,
+        executionMode: header.executionMode,
         headerNote: header.headerNote,
         sections,
     };
 }
 
-function extractHeader(lines: string[]): { title: string; status: string; headerNote: string; firstSectionIdx: number } {
+function extractHeader(lines: string[]): { title: string; status: string; executionMode: string; headerNote: string; firstSectionIdx: number } {
     let title = 'Local Development Plan';
     let status = 'Unknown';
+    let executionMode = 'Unknown';
     const noteLines: string[] = [];
     let firstSectionIdx = lines.length;
 
@@ -73,8 +76,11 @@ function extractHeader(lines: string[]): { title: string; status: string; header
         if (trimmed.startsWith('>')) {
             const text = trimmed.replace(/^>\s?/, '').trim();
             const statusMatch = text.match(/^\*\*Status:?\*\*:?\s*(.+)$/);
+            const executionModeMatch = text.match(/^\*\*Execution Mode:?\*\*:?\s*(.+)$/);
             if (statusMatch) {
                 status = statusMatch[1].trim();
+            } else if (executionModeMatch) {
+                executionMode = executionModeMatch[1].trim();
             } else if (text) {
                 noteLines.push(text);
             }
@@ -82,7 +88,7 @@ function extractHeader(lines: string[]): { title: string; status: string; header
         }
     }
 
-    return { title, status, headerNote: noteLines.join(' '), firstSectionIdx };
+    return { title, status, executionMode, headerNote: noteLines.join(' '), firstSectionIdx };
 }
 
 function parseSections(lines: string[], startIdx: number): LocalPlanSection[] {
@@ -231,3 +237,65 @@ function parseTableRow(line: string): string[] {
     }
     return parts.map((cell) => cell.trim());
 }
+
+//#region Query helpers
+
+/** A parsed markdown table content block. */
+export type LocalPlanTableContent = Extract<LocalPlanContent, { type: 'table' }>;
+
+/** Finds the first top-level section whose title contains `titleFragment` (case-insensitive). */
+export function findSection(plan: LocalPlanData, titleFragment: string): LocalPlanSection | undefined {
+    const needle = titleFragment.toLowerCase();
+    return plan.sections.find((section) => section.title.toLowerCase().includes(needle));
+}
+
+/** Recursively flattens section content, descending into subsections. */
+export function flattenContent(content: LocalPlanContent[]): LocalPlanContent[] {
+    const flattened: LocalPlanContent[] = [];
+    for (const item of content) {
+        flattened.push(item);
+        if (item.type === 'subsection') {
+            flattened.push(...flattenContent(item.content));
+        }
+    }
+    return flattened;
+}
+
+/** Returns the first table in a section (searching nested subsections), if any. */
+export function firstTable(section: LocalPlanSection): LocalPlanTableContent | undefined {
+    return flattenContent(section.content).find((content): content is LocalPlanTableContent => content.type === 'table');
+}
+
+/** Finds the first table in a section (searching nested subsections) whose headers include every anchor. */
+export function findTable(section: LocalPlanSection, anchorHeaders: string[]): LocalPlanTableContent | undefined {
+    const anchors = anchorHeaders.map((header) => header.toLowerCase());
+    for (const content of flattenContent(section.content)) {
+        if (content.type !== 'table') {
+            continue;
+        }
+        const headers = content.headers.map((header) => header.toLowerCase());
+        if (anchors.every((anchor) => headers.some((header) => header.includes(anchor)))) {
+            return content;
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Finds the index of a column by header name. Matches a case-insensitive substring by default;
+ * pass `{ exact: true }` to require the whole (trimmed) header to equal `name`.
+ */
+export function findColumnIndex(headers: string[], name: string, options?: { exact?: boolean }): number {
+    const needle = name.toLowerCase().trim();
+    return headers.findIndex((header) => {
+        const normalized = header.toLowerCase().trim();
+        return options?.exact ? normalized === needle : normalized.includes(needle);
+    });
+}
+
+/** Whether a table cell represents a checked checkbox (`[x]`). */
+export function isChecked(cell: string): boolean {
+    return /\[\s*x\s*\]/i.test(cell);
+}
+
+//#endregion

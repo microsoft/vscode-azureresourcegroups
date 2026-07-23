@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
-import { type LocalPlanData, parseLocalPlanMarkdown } from "../views/utils/parseLocalPlanMarkdown";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { type LocalPlanData, parseLocalDebugPlanMarkdown } from "../views/utils/parseLocalDebugPlanMarkdown";
 import { LocalPlanViewController } from "./controllers/LocalPlanViewController";
 import { closeLoadingView } from "./openLoadingView";
 import { handleTrackedViewClosed } from "./projectSession";
@@ -37,7 +37,7 @@ function tryParseLocalPlan(content: string, sourceFileUri: vscode.Uri | undefine
     let parsed: LocalPlanData | undefined;
     let errorMessage: string | undefined;
     try {
-        parsed = parseLocalPlanMarkdown(content);
+        parsed = parseLocalDebugPlanMarkdown(content);
     } catch (err) {
         errorMessage = err instanceof Error ? err.message : String(err);
     }
@@ -46,6 +46,7 @@ function tryParseLocalPlan(content: string, sourceFileUri: vscode.Uri | undefine
         return {
             title: parsed?.title ?? 'Local Development Plan',
             status: parsed?.status ?? 'Unknown',
+            executionMode: parsed?.executionMode ?? 'Unknown',
             headerNote: parsed?.headerNote ?? '',
             sections: parsed?.sections ?? [],
             parseError: buildParseError(
