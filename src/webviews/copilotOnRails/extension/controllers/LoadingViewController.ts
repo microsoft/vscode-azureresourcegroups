@@ -9,7 +9,7 @@ import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { ext } from "../../../../extensionVariables";
-import { getCorProjectId } from "../../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
+import { getCorProjectId } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 

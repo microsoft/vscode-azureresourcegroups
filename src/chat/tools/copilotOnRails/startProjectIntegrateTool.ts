@@ -7,9 +7,9 @@ import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vs
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import { z } from "zod/mini";
-import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
 import { startProjectIntegrateCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { azureProjectIntegrateAgent } from "../../../constants";
+import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/telemetryUtils";
 
 const startProjectIntegrateToolName = 'start_project_integrate';
 

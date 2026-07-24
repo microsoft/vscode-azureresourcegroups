@@ -7,7 +7,7 @@ import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vs
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import type { z } from "zod";
-import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/telemetryUtils";
 import { openScaffoldNextStepsView } from "../../../webviews/copilotOnRails/extension/openScaffoldNextStepsView";
 
 const openScaffoldNextStepsViewToolName = 'open_scaffold_next_steps_view';

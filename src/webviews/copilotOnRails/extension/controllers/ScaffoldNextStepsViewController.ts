@@ -8,7 +8,7 @@ import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ext } from "../../../../extensionVariables";
-import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 
 type ScaffoldAction = 'setupLocal' | 'deploy';

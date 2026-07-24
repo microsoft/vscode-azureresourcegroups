@@ -45,10 +45,12 @@ import {
     limitedSupportWarningMessage,
 } from "./utils/emulatorSupport";
 import {
+    findColumnIndex,
+    isChecked,
     type LocalPlanContent,
     type LocalPlanData,
     type LocalPlanSection,
-} from "./utils/parseLocalPlanMarkdown";
+} from "./utils/parseLocalDebugPlanMarkdown";
 
 mermaid.initialize({
     startOnLoad: false,
@@ -97,12 +99,6 @@ const DEFAULT_OPEN_SECTIONS = new Set([
     "debug configurations",
     "architecture diagram",
 ]);
-
-const GENERATE_HEADER = "generate";
-
-function findGenerateColumnIdx(headers: string[]): number {
-    return headers.findIndex((h) => h.toLowerCase().trim() === GENERATE_HEADER);
-}
 
 const EMULATORS_SECTION = "emulators";
 
@@ -708,7 +704,7 @@ const ContentBlock = ({
 }): JSX.Element | null => {
     switch (item.type) {
         case "table":
-            if (findGenerateColumnIdx(item.headers) >= 0) {
+            if (findColumnIndex(item.headers, "Generate") >= 0) {
                 return (
                     <GenerateCheckboxTable
                         table={item}
@@ -861,10 +857,10 @@ const GenerateCheckboxTable = ({
     sectionTitle: string;
 }): JSX.Element => {
     const { getToggle, setToggle } = useContext(PlanToggleContext);
-    const generateIdx = findGenerateColumnIdx(table.headers);
+    const generateIdx = findColumnIndex(table.headers, "Generate");
 
     const originalStates = useMemo(
-        () => table.rows.map((r) => /\[\s*x\s*\]/i.test(r[generateIdx] ?? "")),
+        () => table.rows.map((r) => isChecked(r[generateIdx] ?? "")),
         [table.rows, generateIdx],
     );
 
