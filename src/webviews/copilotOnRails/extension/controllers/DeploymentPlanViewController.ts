@@ -7,6 +7,7 @@ import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
+import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDeployAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { type DeploymentPlanData } from "../../views/utils/deploymentPlanTypes";
@@ -109,10 +110,10 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
         if (!isFeedback) {
             await vscode.commands.executeCommand('workbench.action.chat.newChat');
         }
-        await vscode.commands.executeCommand('workbench.action.chat.open', {
+        await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
             mode: azureDeployAgent,
             query,
-        });
+        }));
         if (isFeedback) {
             void this.panel.webview.postMessage({ command: 'revisionInProgress' });
         }
