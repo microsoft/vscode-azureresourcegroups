@@ -82,6 +82,9 @@ function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | und
             workspaceScan: parsed?.workspaceScan ?? { headers: [], rows: [] },
             decisions: parsed?.decisions ?? { headers: [], rows: [] },
             resources: parsed?.resources ?? { headers: [], rows: [] },
+            requirements: parsed?.requirements,
+            recipe: parsed?.recipe,
+            stack: parsed?.stack,
             parseError: buildParseError(
                 errorMessage ?? renderIssueMessage,
                 sourceFileUri,

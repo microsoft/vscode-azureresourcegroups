@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
@@ -10,12 +11,18 @@ import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/age
 import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDeployAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
+import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type DeploymentPlanData } from "../../views/utils/deploymentPlanTypes";
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { DEPLOYMENT_PLAN_TELEMETRY_PREFIX, getDeploymentPlanTelemetry } from "../utils/deploymentPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export type { DeploymentPlanViewConfiguration, DeploymentPlanViewStrings };
+
+/** Telemetry property key recording whether agent instructions were successfully ensured. */
+const ENSURE_AGENT_INSTRUCTIONS_KEY = 'ensureAgentInstructions';
 
 /** Localized strings rendered by the deployment plan webview. */
 function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
@@ -61,14 +68,14 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
 }
 
 export class DeploymentPlanViewController extends WebviewController<DeploymentPlanViewConfiguration> {
-    private latestPlanData: DeploymentPlanData;
+    private planData: DeploymentPlanData;
     private sourceFileUri: vscode.Uri | undefined;
 
     constructor(planData: DeploymentPlanData, sourceFileUri?: vscode.Uri) {
         const strings = getDeploymentPlanViewStrings();
         super(ext.context, strings.title, 'deploymentPlanView', { strings }, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
 
-        this.latestPlanData = planData;
+        this.planData = planData;
         this.sourceFileUri = sourceFileUri;
 
         void this.postDeploymentPlanData();
@@ -79,14 +86,14 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                     void this.postDeploymentPlanData();
                     break;
                 case 'approve':
-                    void this.approveAndContinue();
+                    void this.approvePlan();
                     break;
                 case 'submitPlanFeedback': {
                     const query = message.prompt?.trim();
                     if (!query) {
                         return;
                     }
-                    void this.openDeployChat(query, true);
+                    void this.trySubmitPlanFeedback(query);
                     break;
                 }
                 case 'openSourceFile':
@@ -96,32 +103,75 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
         });
     }
 
-    private async approveAndContinue(): Promise<void> {
-        if (!(await this.openDeployChat('I approve the deployment plan. Continue with generating the infrastructure and deployment artifacts.', false))) {
-            return;
-        }
-        this.panel.dispose();
+    private async approvePlan(): Promise<void> {
+        await callWithTelemetryAndErrorHandling('copilotOnRails.submitDeploymentPlanApproval', async (actionContext: IActionContext) => {
+            await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDeploymentPlanApproval' }, async (context: CopilotOnRailsContext) => {
+                if (!(await this.trySubmitPlanApproval(context))) {
+                    return;
+                }
+
+                this.recordPlanTelemetry(context);
+                this.panel.dispose();
+            });
+        });
     }
 
-    private async openDeployChat(query: string, isFeedback: boolean): Promise<boolean> {
+    private recordPlanTelemetry(context: CopilotOnRailsContext): void {
+        try {
+            const telemetry = getDeploymentPlanTelemetry(this.planData);
+            for (const [key, value] of Object.entries(telemetry)) {
+                setCorProp(context, `${DEPLOYMENT_PLAN_TELEMETRY_PREFIX}${key}`, value);
+            }
+        } catch {
+            // Telemetry extraction must never block the approval flow; swallow any parsing errors.
+            setCorProp(context, `${DEPLOYMENT_PLAN_TELEMETRY_PREFIX}parseFailed`, true);
+        }
+    }
+
+    private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
         if (!(await ensureAgentInstructions(azureDeployAgent))) {
+            setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, false);
+            setCorProp(context, 'approvalOutcome', 'agentInstructionsMissing');
             return false;
         }
-        if (!isFeedback) {
-            await vscode.commands.executeCommand('workbench.action.chat.newChat');
-        }
+        setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, true);
+
+        // Fresh chat session for the approval hand-off so the next phase starts with a clean context window.
+        await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
             mode: azureDeployAgent,
-            query,
+            query: 'I approve the deployment plan. Continue with generating the infrastructure and deployment artifacts.',
         }));
-        if (isFeedback) {
-            void this.panel.webview.postMessage({ command: 'revisionInProgress' });
-        }
+
+        setCorProp(context, 'approvalOutcome', 'submitted');
         return true;
     }
 
+    private async trySubmitPlanFeedback(query: string): Promise<boolean> {
+        return await callWithTelemetryAndErrorHandling('copilotOnRails.submitDeploymentPlanFeedback', async (actionContext: IActionContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDeploymentPlanFeedback' }, async (context: CopilotOnRailsContext) => {
+                if (!(await ensureAgentInstructions(azureDeployAgent))) {
+                    setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, false);
+                    setCorProp(context, 'feedbackOutcome', 'agentInstructionsMissing');
+                    return false;
+                }
+                setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, true);
+
+                // Reuse the current session so the agent iterates on the plan with the existing conversation.
+                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
+                    mode: azureDeployAgent,
+                    query,
+                }));
+                void this.panel.webview.postMessage({ command: 'revisionInProgress' });
+
+                setCorProp(context, 'feedbackOutcome', 'submitted');
+                return true;
+            });
+        }) ?? false;
+    }
+
     updateDeploymentPlanData(planData: DeploymentPlanData, sourceFileUri?: vscode.Uri): void {
-        this.latestPlanData = planData;
+        this.planData = planData;
         if (sourceFileUri) {
             this.sourceFileUri = sourceFileUri;
         }
@@ -130,6 +180,6 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
     }
 
     private async postDeploymentPlanData(): Promise<void> {
-        await this.panel.webview.postMessage({ command: 'setDeploymentPlanData', data: this.latestPlanData });
+        await this.panel.webview.postMessage({ command: 'setDeploymentPlanData', data: this.planData });
     }
 }
