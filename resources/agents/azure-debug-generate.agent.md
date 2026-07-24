@@ -143,6 +143,12 @@ Then **STOP and wait** for the user to confirm their app is running. Once the us
 
 **Iterate on failures:** If any API tests fail, do not just report the failures and stop. Diagnose the root cause, fix the underlying code, and re-run the failing tests. Keep iterating — fix, re-run, fix, re-run — until all tests pass. This is the whole point of running the API tests: to surface issues and resolve them, not just to report them.
 
+**After all tests pass (or there are no more actionable failures):** Call the `open_local_next_steps_view` tool to reopen the Next Steps view so the user can choose their next action:
+
+```json
+{ "hasApiTests": true }
+```
+
 ---
 
 **Answer: "Deploy to Azure"** →
