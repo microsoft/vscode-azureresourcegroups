@@ -109,6 +109,9 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
         decisions: decisionsCandidate?.table ?? emptyTable(),
         resources: resourcesCandidate?.table ?? emptyTable(),
         resourcesHeading: resourcesCandidate?.heading,
+        requirements,
+        recipe: extractMetadata(lines, 'Selected'),
+        stack: extractMetadata(lines, 'Stack'),
     };
 }
 

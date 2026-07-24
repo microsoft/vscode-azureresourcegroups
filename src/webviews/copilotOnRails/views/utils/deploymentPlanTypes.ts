@@ -21,6 +21,12 @@ export interface DeploymentPlanData {
     decisions: DeploymentPlanTable;
     resources: DeploymentPlanTable;
     resourcesHeading?: string;
+    /** The `Attribute | Value` requirements table (Classification, Scale, Budget, Subscription, Location). */
+    requirements?: DeploymentPlanTable;
+    /** Selected deployment recipe as authored (e.g. `AZD (Bicep)`). */
+    recipe?: string;
+    /** Selected architecture stack as authored (e.g. `Serverless + Static Web Apps`). */
+    stack?: string;
     parseError?: DeploymentPlanParseError;
 }
 

@@ -4,10 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
+import * as fs from 'fs';
+import { Uri } from 'vscode';
+import { type DeploymentPlanData } from '../../src/webviews/copilotOnRails/views/utils/deploymentPlanTypes';
 import {
     getDeploymentPlanRenderIssue,
     parseDeploymentPlanMarkdown,
-} from '../src/webviews/copilotOnRails/views/utils/parseDeploymentPlanMarkdown';
+} from '../../src/webviews/copilotOnRails/views/utils/parseDeploymentPlanMarkdown';
+import { getWorkspaceFolderUri } from '../testUtils';
+
+const attendanceProjectFolder = 'copilotOnRails-attendance';
+const scrapbookProjectFolder = 'copilotOnRails-scrapbook';
 
 suite('parseDeploymentPlanMarkdown', () => {
     test('parses the canonical azure-prepare plan without duplicating Service Mapping', () => {
@@ -151,4 +158,84 @@ Azure Cosmos DB | Serverless | Store application data
         const unsupportedPlan = parseDeploymentPlanMarkdown(unsupportedMarkdown);
         assert.strictEqual(getDeploymentPlanRenderIssue(unsupportedMarkdown, unsupportedPlan), 'missingStructuredSections');
     });
+
+    test('extracts the requirements table, selected recipe, and stack', () => {
+        const plan = parseDeploymentPlanMarkdown(`
+## 2. Requirements
+
+| Attribute | Value |
+|-----------|-------|
+| Classification | Development |
+| Scale | Small |
+| Budget | Cost-Optimized |
+
+## 4. Recipe Selection
+
+**Selected:** AZD (Bicep)
+
+## 5. Architecture
+
+**Stack:** Serverless + Static Web Apps
+`);
+
+        assert.ok(plan.requirements, 'Expected a requirements table');
+        assert.deepStrictEqual(plan.requirements.rows, [
+            ['Classification', 'Development'],
+            ['Scale', 'Small'],
+            ['Budget', 'Cost-Optimized'],
+        ]);
+        assert.strictEqual(plan.recipe, 'AZD (Bicep)');
+        assert.strictEqual(plan.stack, 'Serverless + Static Web Apps');
+    });
+
+    test('leaves recipe and stack undefined when absent', () => {
+        const plan = parseDeploymentPlanMarkdown('## Requirements\n\n| Attribute | Value |\n|--|--|\n| Scale | Small |');
+        assert.strictEqual(plan.recipe, undefined);
+        assert.strictEqual(plan.stack, undefined);
+    });
+
+    suite('project fixtures', () => {
+        test('attendance plan', () => {
+            const plan = loadPlan(attendanceProjectFolder);
+
+            assert.strictEqual(plan.status, 'Planning');
+            assert.strictEqual(plan.subscription, 'AzCode2605');
+            assert.strictEqual(plan.location, 'West US 2');
+            assert.strictEqual(plan.locationCode, 'westus2');
+            assert.strictEqual(plan.recipe, 'AZD (Bicep)');
+            assert.strictEqual(plan.stack, 'Serverless (Functions Flex Consumption + Static Web Apps)');
+            assert.strictEqual(findRow(plan.requirements, 'Budget'), 'Cost-Optimized');
+            assert.deepStrictEqual(plan.workspaceScan.rows.map((r) => r[0]), ['api', 'web', 'shared']);
+            assert.strictEqual(plan.resourcesHeading, 'Service Mapping');
+            assert.strictEqual(plan.resources.rows.length, 4);
+            assert.deepStrictEqual(plan.architecture.map((s) => s.title), ['Supporting Services']);
+            assert.strictEqual(getDeploymentPlanRenderIssue('non-empty', plan), undefined);
+        });
+
+        test('scrapbook plan', () => {
+            const plan = loadPlan(scrapbookProjectFolder);
+
+            assert.strictEqual(plan.subscription, 'AzCode2605');
+            assert.strictEqual(plan.locationCode, 'westus2');
+            assert.strictEqual(plan.recipe, 'AZD (Bicep)');
+            assert.strictEqual(plan.stack, 'Serverless + Static Web Apps');
+            assert.deepStrictEqual(plan.workspaceScan.rows.map((r) => r[0]), [
+                'scrapbook-api',
+                'cleanup-worker',
+                'scrapbook-web',
+                'shared',
+            ]);
+            assert.strictEqual(plan.resources.rows.length, 5);
+            assert.deepStrictEqual(plan.architecture.map((s) => s.title), ['Supporting Services']);
+        });
+    });
 });
+
+function loadPlan(workspaceFolderName: string): DeploymentPlanData {
+    const fixtureUri = Uri.joinPath(getWorkspaceFolderUri(workspaceFolderName), 'deployment-plan.md');
+    return parseDeploymentPlanMarkdown(fs.readFileSync(fixtureUri.fsPath, 'utf8'));
+}
+
+function findRow(table: DeploymentPlanData['requirements'], attribute: string): string | undefined {
+    return table?.rows.find((row) => row[0] === attribute)?.[1];
+}
