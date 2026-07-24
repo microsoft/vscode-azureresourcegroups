@@ -6,6 +6,7 @@
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { REQUIREMENTS_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { getCorProjectId } from "../../../utils/copilotOnRails/telemetryUtils";
 import { parseRequirementsJson, type RequirementsData } from "../views/utils/parseRequirements";
 import { RequirementsViewController } from "./controllers/RequirementsViewController";
 import { closeLoadingView } from "./openLoadingView";
@@ -78,6 +79,8 @@ export async function openRequirementsViewFromWorkspace(context: IActionContext)
         vscode.l10n.t('No requirements file found. Expected `.azure/requirements.json` in the workspace.'),
     );
 
+    context.telemetry.properties.isCopilotEvent = 'true';
+    context.telemetry.properties.corProjectId = getCorProjectId();
     context.telemetry.properties.requirementsSelected = String(!!selected);
     if (selected) {
         await openRequirementsViewAsync(selected);
