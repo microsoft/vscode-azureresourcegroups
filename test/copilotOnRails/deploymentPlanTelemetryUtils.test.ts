@@ -21,7 +21,6 @@ suite('deploymentPlanTelemetryUtils', () => {
             const expected: DeploymentPlanTelemetry = {
                 planParsedOk: true,
                 planStatus: 'planning',
-                planMode: 'unknown',
 
                 subscriptionId: 'AzCode2605',
                 location: 'westus2',
@@ -51,7 +50,6 @@ suite('deploymentPlanTelemetryUtils', () => {
             const expected: DeploymentPlanTelemetry = {
                 planParsedOk: true,
                 planStatus: 'planning',
-                planMode: 'unknown',
 
                 subscriptionId: 'AzCode2605',
                 location: 'westus2',

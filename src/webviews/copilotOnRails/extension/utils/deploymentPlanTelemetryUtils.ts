@@ -12,8 +12,6 @@ export interface DeploymentPlanTelemetry {
     planParsedOk: boolean;
     /** Reported plan status (e.g. `planning`, `validated`, `deployed`). Normalized token, or `unknown`. */
     planStatus: string;
-    /** Reported deployment mode (e.g. `modernize existing`, `new`). Normalized token, or `unknown`. */
-    planMode: string;
 
     /** Target subscription identifier as authored in the plan. Empty when none is selected. */
     subscriptionId: string;
@@ -54,7 +52,6 @@ export function getDeploymentPlanTelemetry(planData: DeploymentPlanData): Deploy
     return {
         planParsedOk: !planData.parseError,
         planStatus: normalizeToken(planData.status) || 'unknown',
-        planMode: normalizeToken(planData.mode) || 'unknown',
 
         subscriptionId: planData.subscription.trim(),
         location: normalizeToken(planData.locationCode) || 'unknown',

@@ -6,12 +6,12 @@
 import * as assert from 'assert';
 import * as fs from 'fs';
 import { Uri } from 'vscode';
-import { type DeploymentPlanData } from '../src/webviews/copilotOnRails/views/utils/deploymentPlanTypes';
+import { type DeploymentPlanData } from '../../src/webviews/copilotOnRails/views/utils/deploymentPlanTypes';
 import {
     getDeploymentPlanRenderIssue,
     parseDeploymentPlanMarkdown,
-} from '../src/webviews/copilotOnRails/views/utils/parseDeploymentPlanMarkdown';
-import { getWorkspaceFolderUri } from './testUtils';
+} from '../../src/webviews/copilotOnRails/views/utils/parseDeploymentPlanMarkdown';
+import { getWorkspaceFolderUri } from '../testUtils';
 
 const attendanceProjectFolder = 'copilotOnRails-attendance';
 const scrapbookProjectFolder = 'copilotOnRails-scrapbook';
