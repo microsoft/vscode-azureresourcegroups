@@ -10,6 +10,9 @@ permissions:
   copilot-requests: write
 engine: copilot
 inlined-imports: true
+tools:
+  github:
+    min-integrity: none
 imports:
   - microsoft/vscode-azuretools/.github/workflows/shared/info-needed-triage.md@main
 timeout-minutes: 10
