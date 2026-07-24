@@ -6,11 +6,11 @@
 import { Button, Spinner, Tooltip } from '@fluentui/react-components';
 import { CommentEditRegular } from '@fluentui/react-icons';
 import { useEffect, useMemo, useState, type JSX } from 'react';
-import { type PaletteEntry, type PlanSection, type PreviewPage, type PreviewStatus } from '../utils/parseScaffoldPlanMarkdown';
+import { type PaletteEntry, type ScaffoldPlanSection, type PreviewPage, type PreviewStatus } from '../utils/parseScaffoldPlanMarkdown';
 
 interface UiPreviewCardProps {
     /** The parsed "Design System & UI" plan section containing palette entries, style direction, and other design tokens. */
-    section: PlanSection;
+    section: ScaffoldPlanSection;
     /** When true, disables interactive controls (e.g. color pickers) while the plan is being revised. */
     disabled?: boolean;
     /**
@@ -236,7 +236,7 @@ export const UiPreviewCard = ({ section, disabled, previewPages, previewStatus, 
     );
 };
 
-function extractPalette(section: PlanSection): PaletteEntry[] {
+function extractPalette(section: ScaffoldPlanSection): PaletteEntry[] {
     for (const item of section.content) {
         if (item.type === 'colorPalette') {
             return item.entries;
@@ -245,7 +245,7 @@ function extractPalette(section: PlanSection): PaletteEntry[] {
     return [];
 }
 
-function extractKeyValue(section: PlanSection, key: string): string | undefined {
+function extractKeyValue(section: ScaffoldPlanSection, key: string): string | undefined {
     for (const item of section.content) {
         if (item.type === 'keyValue' && item.key === key) {
             return item.value;
