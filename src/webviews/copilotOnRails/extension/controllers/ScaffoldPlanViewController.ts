@@ -10,7 +10,7 @@ import { getCorProjectId } from "src/utils/copilotOnRails/telemetryUtils";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
-import { launchAgentChat } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { buildChatOpenOptions, launchAgentChat } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
@@ -208,10 +208,10 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         return await callWithTelemetryAndErrorHandling(`copilotOnRails.submitProjectScaffoldPlanFeedback`, async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitProjectScaffoldPlanFeedback' }, async (_context: CopilotOnRailsContext) => {
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
-                await vscode.commands.executeCommand('workbench.action.chat.open', {
+                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
                     mode: 'agent',
                     query,
-                });
+                }));
                 void this.panel.webview.postMessage({ command: 'revisionInProgress' });
                 return true;
             });
@@ -322,10 +322,10 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                 ? 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites tables and update the plan file with the current results.'
                 : 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Run Prerequisites table only and update the plan file with the current results.';
 
-            await vscode.commands.executeCommand('workbench.action.chat.open', {
+            await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
                 mode: 'azure-project-plan',
                 query,
-            });
+            }));
 
             if (this._refreshPrereqsTimer) {
                 clearTimeout(this._refreshPrereqsTimer);

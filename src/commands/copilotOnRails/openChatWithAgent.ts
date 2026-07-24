@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
-import { recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
+import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
 import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
 import { ensureAgentInstructions } from './agentInstructions';
 
@@ -16,6 +16,40 @@ const CUSTOM_AGENT_COMMAND_PREFIX = 'workbench.action.chat.open';
 const CUSTOM_AGENT_LOAD_TIMEOUT_MS = 10_000;
 const CUSTOM_AGENT_LOAD_POLL_INTERVAL_MS = 100;
 let agentLaunchInProgress = false;
+
+/**
+ * Resolves a user-facing model name (e.g. "Claude Opus 4.7 (copilot)") to a
+ * modelSelector object that VS Code's chat commands expect.
+ */
+async function resolveModelSelector(displayName: string): Promise<{ id?: string; vendor?: string } | undefined> {
+    try {
+        const models = await vscode.lm.selectChatModels();
+        // Try matching by "Name (vendor)" format: e.g. "Claude Opus 4.7 (copilot)"
+        const vendorMatch = displayName.match(/^(.+?)\s*\((\w+)\)\s*$/);
+        if (vendorMatch) {
+            const [, name, vendor] = vendorMatch;
+            const match = models.find(
+                (m) => m.name === name.trim() && m.vendor === vendor,
+            );
+            if (match) {
+                return { id: match.id, vendor: match.vendor };
+            }
+        }
+        // Try matching by name alone
+        const byName = models.find((m) => m.name === displayName);
+        if (byName) {
+            return { id: byName.id, vendor: byName.vendor };
+        }
+        // Try matching by id (in case the caller already has the id)
+        const byId = models.find((m) => m.id === displayName);
+        if (byId) {
+            return { id: byId.id, vendor: byId.vendor };
+        }
+    } catch {
+        // If the lm API isn't available, fall through
+    }
+    return undefined;
+}
 
 /**
  * Ensure the GitHub Copilot Chat extension is installed and activated before invoking
@@ -60,7 +94,7 @@ async function waitForCustomAgentCommand(agentName: string): Promise<string | un
     return undefined;
 }
 
-export async function launchAgentChat(agentName: string, query: string): Promise<boolean> {
+export async function launchAgentChat(agentName: string, query: string, model?: string): Promise<boolean> {
     if (agentLaunchInProgress) {
         void vscode.window.showWarningMessage(
             vscode.l10n.t('Another Copilot agent is still starting. Please wait and try again.'),
@@ -82,7 +116,17 @@ export async function launchAgentChat(agentName: string, query: string): Promise
         }
 
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
-        await vscode.commands.executeCommand(commandId, { query });
+        const resolvedModel = model ?? getSessionModel();
+        if (resolvedModel) {
+            const selector = await resolveModelSelector(resolvedModel);
+            await vscode.commands.executeCommand('workbench.action.chat.open', {
+                mode: agentName,
+                query,
+                ...(selector ? { modelSelector: selector } : {}),
+            });
+        } else {
+            await vscode.commands.executeCommand(commandId, { query });
+        }
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         void vscode.window.showErrorMessage(
@@ -119,4 +163,17 @@ export async function openChatWithAgent(agentName: string, prompt: string, loadi
         projectSubmissionState.setPending(loading.stage);
         openLoadingView(loading);
     }
+}
+
+/**
+ * Builds the options object for a direct `workbench.action.chat.open` call,
+ * automatically including the session's model selection when one is stored.
+ */
+export async function buildChatOpenOptions(options: { mode?: string; query: string }): Promise<{ mode?: string; query: string; modelSelector?: { id?: string; vendor?: string } }> {
+    const model = getSessionModel();
+    if (model) {
+        const selector = await resolveModelSelector(model);
+        return selector ? { ...options, modelSelector: selector } : options;
+    }
+    return options;
 }

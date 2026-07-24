@@ -9,6 +9,7 @@ import { getCorProjectId } from "src/utils/copilotOnRails/telemetryUtils";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
+import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
@@ -21,6 +22,7 @@ import { getLocalDebugPlanTelemetry, LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX } from ".
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
+    private readonly ensureAgentInstructionsKey = 'ensureAgentInstructions';
     private sourceFileUri: vscode.Uri | undefined;
     private planData: LocalPlanData;
     private _isRefreshingPrereqs = false;
@@ -57,8 +59,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             }
         });
     }
-
-    private ensureAgentInstructionsKey: string = 'ensureAgentInstructions';
 
     private async approvePlan(): Promise<void> {
         return await callWithTelemetryAndErrorHandling(`copilotOnRails.submitLocalDebugPlanApproval`, async (actionContext: IActionContext) => {
@@ -102,10 +102,10 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         // Fresh chat session for the approval hand-off so the next phase starts with a
         // clean context window.
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
-        await vscode.commands.executeCommand('workbench.action.chat.open', {
+        await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
             mode: azureDebugPlanAgent,
             query: 'I approve the debug setup plan.',
-        });
+        }));
 
         setCorProp(context, this.ensureAgentInstructionsKey, true);
         return true;
@@ -120,10 +120,10 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 }
 
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
-                await vscode.commands.executeCommand('workbench.action.chat.open', {
+                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
                     mode: azureDebugPlanAgent,
                     query,
-                });
+                }));
                 void this.panel.webview.postMessage({ command: 'revisionInProgress' });
 
                 setCorProp(context, this.ensureAgentInstructionsKey, true);
@@ -154,10 +154,10 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             }
             this._isRefreshingPrereqs = true;
             void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
-            await vscode.commands.executeCommand('workbench.action.chat.open', {
+            await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
                 mode: azureDebugPlanAgent,
                 query: 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites table and update the plan file with the current results.',
-            });
+            }));
             if (this._refreshPrereqsTimer) {
                 clearTimeout(this._refreshPrereqsTimer);
             }
