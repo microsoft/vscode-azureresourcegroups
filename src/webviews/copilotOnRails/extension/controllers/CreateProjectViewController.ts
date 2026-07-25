@@ -11,7 +11,7 @@ import { ensureCopilotChatReady, launchAgentChat } from "../../../../commands/co
 import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
-import { recordCreatedAt, recordPrompt } from "../../../../utils/copilotOnRails/diagnosticUtils";
+import { recordNewPrompt } from "../../../../utils/copilotOnRails/diagnosticUtils";
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -28,8 +28,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
                 switch (message.command) {
                     case 'plan':
                         if (message.prompt) {
-                            recordPrompt(message.prompt);
-                            recordCreatedAt();
+                            recordNewPrompt(message.prompt);
                             void this.openChatWithQuery(message.prompt, message.model);
                         } else {
                             this.panel.dispose();

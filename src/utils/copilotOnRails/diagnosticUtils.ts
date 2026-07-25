@@ -59,6 +59,14 @@ export function getDiagnosticEvents(): DiagnosticEvent[] {
 }
 
 /**
+ * Clears the cached diagnostic events for the current workspace, so a new project
+ * starts with an empty event list.
+ */
+export function clearDiagnosticEvents(): void {
+    void ext.context.workspaceState.update(eventsKey, []);
+}
+
+/**
  * Aggregates the workspace-cached diagnostics (originating prompt, created-at stamp, and
  * recorded events) into a single {@link DiagnosticsMetadata} object.
  *
@@ -98,6 +106,17 @@ export async function withDiagnosticEvents<T>(
 }
 
 // #endregion
+
+/**
+ * Begins a fresh "Create with Copilot" session for the current workspace: records the
+ * new originating prompt, stamps a new created-at time, and starts from an empty
+ * diagnostic events list.
+ */
+export function recordNewPrompt(prompt: string): void {
+    recordPrompt(prompt);
+    recordCreatedAt();
+    clearDiagnosticEvents();
+}
 
 /**
  * A discrete, immutable entry describing a single action taken during the Copilot
