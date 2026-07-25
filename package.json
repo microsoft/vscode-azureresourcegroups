@@ -160,7 +160,8 @@
             {
                 "command": "azureResourceGroups.reportIssueWithDiagnostics",
                 "title": "Report Copilot on Rails Issue with Diagnostics",
-                "category": "Azure"
+                "category": "Azure",
+                "icon": "$(feedback)"
             },
             {
                 "command": "azureResourceGroups.debug.openLoadingView",
@@ -579,6 +580,11 @@
                     "command": "azureProject.refresh",
                     "when": "view == azureProject",
                     "group": "navigation@1"
+                },
+                {
+                    "command": "azureResourceGroups.reportIssueWithDiagnostics",
+                    "when": "view == azureProject",
+                    "group": "navigation@2"
                 },
                 {
                     "command": "azureResourceGroups.askAgentAboutActivityLog",
