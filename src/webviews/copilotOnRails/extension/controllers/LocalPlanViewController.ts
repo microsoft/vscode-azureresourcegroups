@@ -96,6 +96,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
         if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
             setCorProp(context, this.ensureAgentInstructionsKey, false);
+            setCorProp(context, 'approvalOutcome', 'agentInstructionsMissing');
             return false;
         }
 
@@ -108,6 +109,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         }));
 
         setCorProp(context, this.ensureAgentInstructionsKey, true);
+        setCorProp(context, 'approvalOutcome', 'submitted');
         return true;
     }
 
@@ -116,6 +118,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitLocalDebugPlanFeedback' }, async (context: CopilotOnRailsContext) => {
                 if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
                     setCorProp(context, this.ensureAgentInstructionsKey, false);
+                    setCorProp(context, 'feedbackOutcome', 'agentInstructionsMissing');
                     return false;
                 }
 
@@ -127,6 +130,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 void this.panel.webview.postMessage({ command: 'revisionInProgress' });
 
                 setCorProp(context, this.ensureAgentInstructionsKey, true);
+                setCorProp(context, 'feedbackOutcome', 'submitted');
                 return true;
             });
         }) ?? false;
