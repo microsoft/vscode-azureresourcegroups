@@ -51,7 +51,7 @@ export async function callWithDiagnosticsAndTelemetryHandling<T>(
 
     const corContext: CopilotOnRailsContext = ensureRequiredCopilotOnRailsContext(context);
 
-    for (const [key, value] of Object.entries(getSystemSpecTelemetryProperties())) {
+    for (const [key, value] of Object.entries(getSystemTelemetry())) {
         setCorProp(corContext, key, value);
     }
 
@@ -63,8 +63,8 @@ export async function callWithDiagnosticsAndTelemetryHandling<T>(
     return await withDiagnosticEvents(corContext, { type: eventDetails.type, name: eventDetails.name }, async () => await command(corContext));
 }
 
-export function getSystemSpecTelemetryProperties(): Record<string, string> {
-    const properties: Record<string, string> = {
+export function getSystemTelemetry(): Record<string, string> {
+    const systemTelemetry: Record<string, string> = {
         osPlatform: os.platform(),
         osRelease: os.release(),
         osArch: os.arch(),
@@ -74,10 +74,10 @@ export function getSystemSpecTelemetryProperties(): Record<string, string> {
 
     const cpuModel: string | undefined = os.cpus()[0]?.model;
     if (cpuModel) {
-        properties.cpuModel = cpuModel;
+        systemTelemetry.cpuModel = cpuModel;
     }
 
-    return properties;
+    return systemTelemetry;
 }
 
 //
