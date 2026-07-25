@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, registerCommand } from '@microsoft/vscode-azext-utils';
-import { l10n } from 'vscode';
+import { l10n, languages } from 'vscode';
 import { azureDebugPlanAgent } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
@@ -20,6 +20,7 @@ import { openPlanViewFromWorkspace } from '../../webviews/copilotOnRails/extensi
 import { resumeProjectWithCopilot } from '../../webviews/copilotOnRails/extension/resumeProjectWithCopilot';
 import { copilotOnRailsCustomAgents, downloadAgentInstructions } from './agentInstructions';
 import { inspectDiagnostics } from './inspectDiagnostics';
+import { DiagnosticsIssueCodeLensProvider, diagnosticsIssueDocumentSelector, openReportIssueWithDiagnosticsPage, reportIssueWithDiagnostics } from './reportIssueWithDiagnostics';
 import { openChatWithAgent } from './openChatWithAgent';
 import { startDebugConfiguration } from './startDebugConfiguration';
 
@@ -52,6 +53,8 @@ export const copilotOnRailsCommandIds = {
 
     // Diagnostics...
     inspectDiagnostics: 'azureResourceGroups.inspectDiagnostics',
+    reportIssueWithDiagnostics: 'azureResourceGroups.reportIssueWithDiagnostics',
+    reportIssueWithDiagnosticsOpenNewIssue: 'azureResourceGroups.reportIssueWithDiagnostics.openNewIssue',
 } as const;
 
 /**
@@ -142,4 +145,7 @@ export function registerCopilotOnRailsCommands(): void {
 
     // Diagnostics
     registerCommand(copilotOnRailsCommandIds.inspectDiagnostics, inspectDiagnostics);
+    registerCommand(copilotOnRailsCommandIds.reportIssueWithDiagnostics, reportIssueWithDiagnostics);
+    registerCommand(copilotOnRailsCommandIds.reportIssueWithDiagnosticsOpenNewIssue, openReportIssueWithDiagnosticsPage);
+    ext.context.subscriptions.push(languages.registerCodeLensProvider(diagnosticsIssueDocumentSelector, new DiagnosticsIssueCodeLensProvider(copilotOnRailsCommandIds.reportIssueWithDiagnosticsOpenNewIssue)));
 }

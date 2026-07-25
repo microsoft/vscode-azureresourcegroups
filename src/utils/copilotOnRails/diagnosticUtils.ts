@@ -59,6 +59,21 @@ export function getDiagnosticEvents(): DiagnosticEvent[] {
 }
 
 /**
+ * Aggregates the workspace-cached diagnostics (originating prompt, created-at stamp, and
+ * recorded events) into a single {@link DiagnosticsMetadata} object.
+ *
+ * The returned data is only ever surfaced for inspection or to pre-populate a GitHub issue
+ * draft the user reviews - it is never sent to telemetry or submitted automatically.
+ */
+export function getDiagnosticsMetadata(): DiagnosticsMetadata {
+    return {
+        prompt: getPrompt() ?? '',
+        createdAt: getCreatedAt() ?? '',
+        diagnosticEvents: getDiagnosticEvents(),
+    };
+}
+
+/**
  * Records the lifecycle of a single Copilot on Rails action as a sequence of immutable
  * entries.
  *
