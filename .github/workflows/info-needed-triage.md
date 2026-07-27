@@ -9,6 +9,7 @@ permissions:
   issues: read
   copilot-requests: write
 engine: copilot
+model: gpt-5.4
 inlined-imports: true
 tools:
   github:
