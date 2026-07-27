@@ -20,8 +20,8 @@ import { openPlanViewFromWorkspace } from '../../webviews/copilotOnRails/extensi
 import { resumeProjectWithCopilot } from '../../webviews/copilotOnRails/extension/resumeProjectWithCopilot';
 import { copilotOnRailsCustomAgents, downloadAgentInstructions } from './agentInstructions';
 import { inspectDiagnostics } from './inspectDiagnostics';
-import { DiagnosticsIssueCodeLensProvider, diagnosticsIssueDocumentSelector, openReportIssueWithDiagnosticsPage, reportIssueWithDiagnostics } from './reportIssueWithDiagnostics';
 import { openChatWithAgent } from './openChatWithAgent';
+import { createDraftIssue, DiagnosticsIssueCodeLensProvider, diagnosticsIssueDocumentSelector, reviewAndSubmitIssue } from './reportIssue';
 import { startDebugConfiguration } from './startDebugConfiguration';
 
 export const copilotOnRailsCommandIds = {
@@ -51,10 +51,9 @@ export const copilotOnRailsCommandIds = {
     startDeployment: 'azureResourceGroups.startDeployment',
     openDeploymentPlanView: 'azureResourceGroups.openDeployPlanView',
 
-    // Diagnostics...
     inspectDiagnostics: 'azureResourceGroups.inspectDiagnostics',
-    reportIssueWithDiagnostics: 'azureResourceGroups.reportIssueWithDiagnostics',
-    reportIssueWithDiagnosticsOpenNewIssue: 'azureResourceGroups.reportIssueWithDiagnostics.openNewIssue',
+    reportIssue: 'copilotOnRails.reportIssue',
+    reviewAndSubmitIssue: 'copilotOnRails.reportIssue.reviewAndSubmit',
 } as const;
 
 /**
@@ -145,7 +144,7 @@ export function registerCopilotOnRailsCommands(): void {
 
     // Diagnostics
     registerCommand(copilotOnRailsCommandIds.inspectDiagnostics, inspectDiagnostics);
-    registerCommand(copilotOnRailsCommandIds.reportIssueWithDiagnostics, reportIssueWithDiagnostics);
-    registerCommand(copilotOnRailsCommandIds.reportIssueWithDiagnosticsOpenNewIssue, openReportIssueWithDiagnosticsPage);
-    ext.context.subscriptions.push(languages.registerCodeLensProvider(diagnosticsIssueDocumentSelector, new DiagnosticsIssueCodeLensProvider(copilotOnRailsCommandIds.reportIssueWithDiagnosticsOpenNewIssue)));
+    registerCommand(copilotOnRailsCommandIds.reportIssue, createDraftIssue);
+    registerCommand(copilotOnRailsCommandIds.reviewAndSubmitIssue, reviewAndSubmitIssue);
+    ext.context.subscriptions.push(languages.registerCodeLensProvider(diagnosticsIssueDocumentSelector, new DiagnosticsIssueCodeLensProvider(copilotOnRailsCommandIds.reviewAndSubmitIssue)));
 }

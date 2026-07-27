@@ -25,7 +25,7 @@ export class LoadingViewController extends WebviewController<LoadingViewConfigur
             if (message.command === 'needHelp') {
                 void this.handleNeedHelp();
             } else if (message.command === 'reportIssue') {
-                void vscode.commands.executeCommand(copilotOnRailsCommandIds.reportIssueWithDiagnostics);
+                void vscode.commands.executeCommand(copilotOnRailsCommandIds.reportIssue);
             }
         });
     }

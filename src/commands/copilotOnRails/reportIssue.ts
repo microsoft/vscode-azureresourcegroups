@@ -33,7 +33,7 @@ export const diagnosticsIssueDocumentSelector: vscode.DocumentSelector = [
  * document so the user can review, redact, and edit the diagnostics first. A CodeLens pinned to
  * the top of the draft is the only way to proceed to GitHub, and it warns before doing so.
  */
-export async function reportIssueWithDiagnostics(_context: IActionContext): Promise<void> {
+export async function createDraftIssue(_context: IActionContext): Promise<void> {
     const metadata: DiagnosticsMetadata = getDiagnosticsMetadata();
     if (!metadata.prompt && !metadata.createdAt && metadata.diagnosticEvents.length === 0) {
         void vscode.window.showInformationMessage(vscode.l10n.t('No Copilot on Rails diagnostics have been recorded for this workspace yet.'));
@@ -49,10 +49,10 @@ export async function reportIssueWithDiagnostics(_context: IActionContext): Prom
 
 /**
  * Backs the draft's "Open GitHub issue to submit" CodeLens. Kept separate from
- * {@link reportIssueWithDiagnostics} (which only drafts) so the potentially-publishing step is
+ * {@link createDraftIssue} (which only drafts) so the potentially-publishing step is
  * gated behind its own explicit, confirmed action. Warns before opening GitHub.
  */
-export async function openReportIssueWithDiagnosticsPage(context: IActionContext): Promise<void> {
+export async function reviewAndSubmitIssue(context: IActionContext): Promise<void> {
     context.telemetry.properties.isCopilotEvent = 'true';
 
     const proceed: vscode.MessageItem = { title: vscode.l10n.t('Open GitHub') };
