@@ -64,10 +64,6 @@ export function getDiagnosticEvents(): DiagnosticEvent[] {
  * entries.
  *
  * A `start` entry gets added before a `run`, then either a `success` or `error` entry gets automatically appended after it.
- *
- * The timestamps of those entries are mirrored to `context.telemetry.properties.startTimestamp` and
- * `context.telemetry.properties.endTimestamp` so that telemetry and locally cached diagnostics can be
- * lined up against the exact same moments in time.
  */
 export async function withDiagnosticEvents<T>(
     context: CopilotOnRailsContext,
