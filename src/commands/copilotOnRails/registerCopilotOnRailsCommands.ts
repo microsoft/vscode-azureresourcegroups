@@ -43,7 +43,7 @@ export const copilotOnRailsCommandIds = {
     openDeploymentPlanView: corId('openDeploymentPlanView'),
 
     resumeProjectWithCopilot: corId('resumeProjectWithCopilot'),
-    refreshProjectTree: corId('azureProject.refresh'),
+    refreshProjectTree: 'azureProject.refresh',
     inspectDiagnostics: corId('inspectDiagnostics'),
 };
 

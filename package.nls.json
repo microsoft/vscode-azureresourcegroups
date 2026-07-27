@@ -73,7 +73,7 @@
     "copilotOnRails.openDebugNextStepsView": "Open Debug Next Steps View",
     "copilotOnRails.openDeploymentPlanView": "Open Deploy Plan View",
     "copilotOnRails.inspectDiagnostics": "Inspect Copilot on Rails Diagnostics",
-    "copilotOnRails.azureProject.refresh": "Refresh",
+    "azureProject.refresh": "Refresh",
     "azureProject.viewName": "Azure Project",
     "azureProject.welcomeContent": "Use Copilot to plan and create a complete application that's configured for Azure services and setup for local development.\n[Create New Project With Copilot](command:copilotOnRails.createProjectWithCopilot)",
     "azureProject.emptyExplorerWelcomeContent": "Use Copilot to plan and create a complete application that's configured for Azure services and setup for local development.\n[Create New Project With Copilot](command:copilotOnRails.createProjectWithCopilot)",

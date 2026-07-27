@@ -258,8 +258,8 @@
                 "icon": "$(refresh)"
             },
             {
-                "command": "copilotOnRails.azureProject.refresh",
-                "title": "%copilotOnRails.azureProject.refresh%",
+                "command": "azureProject.refresh",
+                "title": "%azureProject.refresh%",
                 "category": "Azure",
                 "icon": "$(refresh)"
             },
@@ -561,7 +561,7 @@
                     "group": "navigation@3"
                 },
                 {
-                    "command": "copilotOnRails.azureProject.refresh",
+                    "command": "azureProject.refresh",
                     "when": "view == azureProject",
                     "group": "navigation@1"
                 },
