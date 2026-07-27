@@ -9,7 +9,7 @@ import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { ext } from "../../../../extensionVariables";
-import { getCorProjectId } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { corId, getCorProjectId } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 
@@ -37,7 +37,7 @@ export class LoadingViewController extends WebviewController<LoadingViewConfigur
     }
 
     private async handleNeedHelp(): Promise<void> {
-        await callWithTelemetryAndErrorHandling('azureResourceGroups.loadingView.needHelpResume', async (context: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('loadingView.needHelpResume'), async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.properties.isCopilotEvent = 'true';
             context.telemetry.properties.corProjectId = getCorProjectId();

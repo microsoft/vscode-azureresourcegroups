@@ -8,6 +8,7 @@ import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { PROJECT_PLAN_FILE_GLOB } from "../../../../tree/project/projectPlanFiles";
@@ -152,6 +153,6 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         this.devServer?.dispose();
         this.devServer = undefined;
         this.panel.dispose();
-        await vscode.commands.executeCommand('azureResourceGroups.startProjectIntegrate');
+        await vscode.commands.executeCommand(copilotOnRailsCommandIds.startProjectIntegrate);
     }
 }

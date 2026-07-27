@@ -27,7 +27,7 @@ const RESUME_LOADING: Readonly<Record<ProjectPhase, LoadingViewConfiguration>> =
     plan: { stage: 0, title: vscode.l10n.t('Resuming project planning...'), message: vscode.l10n.t('Copilot is picking your project plan back up where it left off.'), showNeedHelp: true },
     scaffold: { stage: 0, title: vscode.l10n.t('Resuming scaffolding...'), message: vscode.l10n.t('Copilot is picking your project scaffolding back up where it left off.'), showNeedHelp: true },
     integrate: { stage: 0, title: vscode.l10n.t('Resuming integration...'), message: vscode.l10n.t('Copilot is picking your live-data integration back up where it left off.'), showNeedHelp: true },
-    localDev: { stage: 1, title: vscode.l10n.t('Resuming local development...'), message: vscode.l10n.t('Copilot is picking your local development setup back up where it left off.'), showNeedHelp: true },
+    debug: { stage: 1, title: vscode.l10n.t('Resuming local development...'), message: vscode.l10n.t('Copilot is picking your local development setup back up where it left off.'), showNeedHelp: true },
     deploy: { stage: 2, title: vscode.l10n.t('Resuming deployment...'), message: vscode.l10n.t('Copilot is picking your deployment back up where it left off.'), showNeedHelp: true },
 };
 
@@ -78,7 +78,7 @@ export async function resumeProjectWithCopilot(context: CopilotOnRailsContext): 
     // "Implemented" and the flow's next surface is the local-dev "next steps"
     // view (deploy / iterate / run API tests) that the debug-generate agent opens
     // on completion — not another debug-plan chat. Re-open that view instead.
-    if (state.phase === 'localDev' && await isDebugConfigImplemented()) {
+    if (state.phase === 'debug' && await isDebugConfigImplemented()) {
         await openLocalDevNextStepsView(context);
         return;
     }

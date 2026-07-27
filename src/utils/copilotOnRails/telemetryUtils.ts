@@ -13,6 +13,14 @@ import { readSessionState } from "../../webviews/copilotOnRails/extension/projec
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./CopilotOnRailsContext";
 import { DiagnosticEvent, withDiagnosticEvents } from "./diagnosticUtils";
 
+/**
+ * Builds a standardized Copilot on Rails identifier for command ids and telemetry.
+ * The id will always be prefixed with `copilotOnRails.`.
+ */
+export function corId(name: string): string {
+    return `copilotOnRails.${name}`;
+}
+
 const projectIdKey: string = 'copilotOnRails.projectId';
 
 /**

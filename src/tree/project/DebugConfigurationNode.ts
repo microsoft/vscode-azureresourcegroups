@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { copilotOnRailsCommandIds } from '../../commands/copilotOnRails/registerCopilotOnRailsCommands';
 import { ProgressNode } from './ProgressNode';
 import { DebugConfigurationSummary } from './projectPlanFiles';
 
@@ -31,7 +32,7 @@ export class DebugConfigurationNode implements ProgressNode {
         item.iconPath = new vscode.ThemeIcon('debug-alt');
         item.tooltip = vscode.l10n.t('Start debugging "{0}"', name);
         item.command = {
-            command: 'azureResourceGroups.startDebugConfiguration',
+            command: copilotOnRailsCommandIds.startDebugConfiguration,
             title: '',
             arguments: [folder, name],
         };
