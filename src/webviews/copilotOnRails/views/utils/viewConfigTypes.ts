@@ -10,6 +10,8 @@ export type CreateProjectViewControllerType = {
     promptPlaceholder: string;
     hint: string;
     planButtonLabel: string;
+    modelLabel: string;
+    modelOptions: string[];
 }
 
 export type DeploymentPlanViewStrings = {
@@ -71,6 +73,12 @@ export type LoadingViewConfiguration = {
     title: string;
     /** Optional secondary description shown below the spinner. */
     message?: string;
+    /**
+     * When true, shows a "Need help?" link below the loading message that
+     * triggers the resume-project command for the current phase. Shown after a
+     * brief delay.
+     */
+    showNeedHelp?: boolean;
 };
 
 /**

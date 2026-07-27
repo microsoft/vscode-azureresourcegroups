@@ -148,18 +148,13 @@
         },
         "commands": [
             {
-                "command": "azureResourceGroups.startAzureDebugGenerate",
-                "title": "Start Azure Debug Generate",
+                "command": "copilotOnRails.inspectDiagnostics",
+                "title": "%copilotOnRails.inspectDiagnostics%",
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.inspectDiagnostics",
-                "title": "Inspect Copilot on Rails Diagnostics",
-                "category": "Azure"
-            },
-            {
-                "command": "azureResourceGroups.downloadAgentInstructions",
-                "title": "Download Azure Agent Instructions",
+                "command": "copilotOnRails.downloadAgentInstructions",
+                "title": "%copilotOnRails.downloadAgentInstructions%",
                 "category": "Azure"
             },
             {
@@ -264,7 +259,7 @@
             },
             {
                 "command": "azureProject.refresh",
-                "title": "%azureResourceGroups.refresh%",
+                "title": "%azureProject.refresh%",
                 "category": "Azure",
                 "icon": "$(refresh)"
             },
@@ -397,38 +392,38 @@
                 "title": "%azureResourceGroups.askAzure%"
             },
             {
-                "command": "azureResourceGroups.openPlanView",
-                "title": "%azureResourceGroups.openPlanView%",
+                "command": "copilotOnRails.openScaffoldPlanView",
+                "title": "%copilotOnRails.openScaffoldPlanView%",
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.openLocalPlanView",
-                "title": "%azureResourceGroups.openLocalPlanView%",
+                "command": "copilotOnRails.openDebugPlanView",
+                "title": "%copilotOnRails.openDebugPlanView%",
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.openDeployPlanView",
-                "title": "%azureResourceGroups.openDeployPlanView%",
+                "command": "copilotOnRails.openDeploymentPlanView",
+                "title": "%copilotOnRails.openDeploymentPlanView%",
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.openRequirementsView",
-                "title": "%azureResourceGroups.openRequirementsView%",
+                "command": "copilotOnRails.openRequirementsView",
+                "title": "%copilotOnRails.openRequirementsView%",
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.openFrontendPreviewView",
-                "title": "%azureResourceGroups.openFrontendPreviewView%",
+                "command": "copilotOnRails.openFrontendPreviewView",
+                "title": "%copilotOnRails.openFrontendPreviewView%",
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.openLocalNextStepsView",
-                "title": "%azureResourceGroups.openLocalNextStepsView%",
+                "command": "copilotOnRails.openDebugNextStepsView",
+                "title": "%copilotOnRails.openDebugNextStepsView%",
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.openScaffoldNextStepsView",
-                "title": "%azureResourceGroups.openScaffoldNextStepsView%",
+                "command": "copilotOnRails.openScaffoldNextStepsView",
+                "title": "%copilotOnRails.openScaffoldNextStepsView%",
                 "category": "Azure"
             }
         ],
@@ -715,19 +710,15 @@
             ],
             "commandPalette": [
                 {
-                    "command": "azureResourceGroups.openLocalNextStepsView",
-                    "when": "never"
-                },
-                {
-                    "command": "azureResourceGroups.openScaffoldNextStepsView",
-                    "when": "never"
-                },
-                {
                     "command": "azureResourceGroups.uploadFileCloudConsole",
                     "when": "isWorkspaceTrusted"
                 },
                 {
-                    "command": "azureResourceGroups.startAzureDebugGenerate",
+                    "command": "copilotOnRails.openScaffoldNextStepsView",
+                    "when": "never"
+                },
+                {
+                    "command": "copilotOnRails.openDebugNextStepsView",
                     "when": "never"
                 },
                 {
@@ -779,7 +770,7 @@
                     "when": "never"
                 },
                 {
-                    "command": "azureResourceGroups.openFrontendPreviewView",
+                    "command": "copilotOnRails.openFrontendPreviewView",
                     "when": "never"
                 }
             ],

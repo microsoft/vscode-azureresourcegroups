@@ -7,13 +7,15 @@ import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
+import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { PROJECT_PLAN_FILE_GLOB } from "../../../../tree/project/projectPlanFiles";
+import { ProjectPlanStatus } from "../../views/utils/projectPlanStatus";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { type RunningDevServer, startDevServer } from "../utils/devServerManager";
 import { writeProjectPlanStatus } from "../utils/planStatus";
-import { ProjectPlanStatus } from "../../views/utils/projectPlanStatus";
 
 /** State pushed to the webview to drive the preview surface. */
 type PreviewState =
@@ -130,10 +132,10 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         }
         // Keep the dev server running so the scaffold agent's edits hot-reload
         // in the iframe while the user watches.
-        void vscode.commands.executeCommand('workbench.action.chat.open', {
+        void buildChatOpenOptions({
             mode: azureProjectScaffoldAgent,
             query,
-        });
+        }).then((options) => vscode.commands.executeCommand('workbench.action.chat.open', options));
         void this.panel.webview.postMessage({ command: 'feedbackSubmitted' });
     }
 
@@ -151,6 +153,6 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         this.devServer?.dispose();
         this.devServer = undefined;
         this.panel.dispose();
-        await vscode.commands.executeCommand('azureResourceGroups.startProjectIntegrate');
+        await vscode.commands.executeCommand(copilotOnRailsCommandIds.startProjectIntegrate);
     }
 }

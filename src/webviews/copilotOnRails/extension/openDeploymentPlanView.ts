@@ -8,7 +8,7 @@ import { ext } from "../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { DEPLOYMENT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import type { DeploymentPlanData } from "../views/utils/deploymentPlanTypes";
-import { parseDeploymentPlanMarkdown } from "../views/utils/parseDeploymentPlanMarkdown";
+import { getDeploymentPlanRenderIssue, parseDeploymentPlanMarkdown } from "../views/utils/parseDeploymentPlanMarkdown";
 import { DeploymentPlanViewController } from "./controllers/DeploymentPlanViewController";
 import { closeLoadingView } from "./openLoadingView";
 import { buildParseError, pickWorkspaceFile, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
@@ -65,12 +65,11 @@ function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | und
         errorMessage = err instanceof Error ? err.message : String(err);
     }
 
-    if (errorMessage
-        || !parsed
-        || (parsed.resources.rows.length === 0
-            && parsed.decisions.rows.length === 0
-            && parsed.workspaceScan.rows.length === 0
-            && parsed.architecture.length === 0)) {
+    const renderIssue = parsed ? getDeploymentPlanRenderIssue(content, parsed) : undefined;
+    if (errorMessage || !parsed || renderIssue) {
+        const renderIssueMessage = renderIssue === 'empty'
+            ? vscode.l10n.t('The deployment plan file is empty. Copilot may still be generating it. This view will reload automatically when the file changes.')
+            : vscode.l10n.t('The deployment plan doesn\u2019t contain a supported structured section yet. Add a markdown table under Components Detected, Architecture, Decisions, Azure Resources, or Service Mapping. This view will reload automatically when the file changes.');
         return {
             status: parsed?.status ?? 'Unknown',
             mode: parsed?.mode ?? 'Unknown',
@@ -83,8 +82,11 @@ function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | und
             workspaceScan: parsed?.workspaceScan ?? { headers: [], rows: [] },
             decisions: parsed?.decisions ?? { headers: [], rows: [] },
             resources: parsed?.resources ?? { headers: [], rows: [] },
+            requirements: parsed?.requirements,
+            recipe: parsed?.recipe,
+            stack: parsed?.stack,
             parseError: buildParseError(
-                errorMessage ?? vscode.l10n.t('The deployment plan couldn\u2019t be rendered as a structured view. The generated markdown didn\u2019t match the expected layout.'),
+                errorMessage ?? renderIssueMessage,
                 sourceFileUri,
             ),
         };

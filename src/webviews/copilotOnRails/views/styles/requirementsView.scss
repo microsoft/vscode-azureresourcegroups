@@ -421,6 +421,18 @@
                         white-space: nowrap;
                     }
 
+                    &__supportWarning {
+                        flex: 0 0 auto;
+                        align-self: center;
+                        display: inline-flex;
+                        align-items: center;
+                        color: var(--vscode-editorWarning-foreground, var(--vscode-list-warningForeground));
+
+                        svg {
+                            font-size: 15px;
+                        }
+                    }
+
                     &__customInput {
                         flex: 1 1 auto;
 

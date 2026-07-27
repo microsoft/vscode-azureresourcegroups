@@ -17,7 +17,7 @@ metadata:
 ## PHASE 1: PLANNING — Plan
 ## ═══════════════════════════════════════════════════
 
-> **Enter here on re-entry.** This phase runs after requirements were gathered per [`requirements.md`](requirements.md) and written to `.azure/requirements.json`. Read that file first, treat its `answer` fields as authoritative, then generate the plan below.
+> **Enter here on re-entry.** This phase runs after requirements were gathered per [`requirements.md`](requirements.md) and written to `.azure/requirements.json`. Read that file first, treat its `answer` fields as authoritative, then generate the plan below. If the `dataStores` answer is `["No datastore required"]`, do not add a datastore resource to the plan and never render `No datastore required` as an Azure service; still include any non-datastore services required to host or run the app.
 
 ### Step 3: Generate Plan & Present for Approval
 

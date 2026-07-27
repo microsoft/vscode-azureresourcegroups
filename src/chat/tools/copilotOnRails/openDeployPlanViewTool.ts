@@ -9,7 +9,7 @@ import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import type { z } from "zod";
 import { azureDeployAgent } from "../../../constants";
 import { DEPLOYMENT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
-import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/telemetryUtils";
 import { openDeploymentPlanViewFromWorkspace } from "../../../webviews/copilotOnRails/extension/openDeploymentPlanView";
 
 const openDeployPlanViewToolName = 'open_deploy_plan_view';

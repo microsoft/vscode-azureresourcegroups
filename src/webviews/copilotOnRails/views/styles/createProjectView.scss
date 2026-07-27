@@ -119,10 +119,36 @@
                 border-top: 1px solid var(--vscode-widget-border);
                 background: var(--vscode-editor-background);
 
-                .hint {
-                    font-size: 0.75em;
-                    color: var(--vscode-descriptionForeground);
-                    user-select: none;
+                .actionsLeft {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+
+                    .modelDropdown {
+                        font-size: 0.9em;
+                        color: var(--vscode-foreground);
+                        background: transparent;
+                        border: none;
+                        border-bottom: 1px solid var(--vscode-widget-border);
+                        padding: 2px 4px;
+                        cursor: pointer;
+                        outline: none;
+
+                        &:focus {
+                            border-bottom-color: var(--vscode-focusBorder);
+                        }
+
+                        option {
+                            background: var(--vscode-dropdown-background);
+                            color: var(--vscode-dropdown-foreground);
+                        }
+                    }
+
+                    .hint {
+                        font-size: 0.75em;
+                        color: var(--vscode-descriptionForeground);
+                        user-select: none;
+                    }
                 }
 
                 .buttonGroup {

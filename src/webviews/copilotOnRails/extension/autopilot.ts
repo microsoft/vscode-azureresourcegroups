@@ -36,11 +36,11 @@ const MAX_RUN_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 export const AUTOPILOT_QUERY_MARKER = '[AUTOPILOT MODE]';
 
 /** globalState keys used to survive window reloads mid-run. */
-const STATE_ACTIVE = 'azureResourceGroups.autopilot.active';
-const STATE_PRIOR_VALUE = 'azureResourceGroups.autopilot.priorAutoApprove';
-const STATE_PRIOR_PERMISSION_LEVEL = 'azureResourceGroups.autopilot.priorPermissionLevel';
+const STATE_ACTIVE = 'copilotOnRails.autopilot.active';
+const STATE_PRIOR_VALUE = 'copilotOnRails.autopilot.priorAutoApprove';
+const STATE_PRIOR_PERMISSION_LEVEL = 'copilotOnRails.autopilot.priorPermissionLevel';
 /** Epoch ms after which an active run is considered stale and auto-restored. */
-const STATE_DEADLINE = 'azureResourceGroups.autopilot.deadline';
+const STATE_DEADLINE = 'copilotOnRails.autopilot.deadline';
 
 /** Command id used by the status-bar item to turn autopilot off. */
 export const DISABLE_AUTOPILOT_COMMAND = 'azureResourceGroups.disableAutopilot';

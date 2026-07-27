@@ -8,7 +8,8 @@ import { CheckboxUncheckedRegular, CheckmarkRegular, SendRegular, WarningRegular
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import './styles/requirementsView.scss';
-import { inferInputType, isAnswerEmpty, type RequirementsAnswer, type RequirementsData, type RequirementsExecutionMode, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice, type RequirementsService, type RequirementsServiceRole } from './utils/parseRequirements';
+import { isLimitedSupportDataStore, limitedSupportWarningMessage } from './utils/emulatorSupport';
+import { inferInputType, isAnswerEmpty, toggleRequirementsOption, type RequirementsAnswer, type RequirementsData, type RequirementsExecutionMode, type RequirementsOption, type RequirementsQuestion, type RequirementsRecommendedChoice, type RequirementsService, type RequirementsServiceRole } from './utils/parseRequirements';
 
 interface DraftMap {
     [questionId: string]: RequirementsAnswer;
@@ -428,6 +429,7 @@ const QuestionRow = ({
                     options={question.options}
                     recommendedChoice={question.recommendedChoice}
                     allowFreeformInput={question.allowFreeformInput}
+                    category={question.category}
                     value={draft}
                     onChange={onChange}
                 />
@@ -441,6 +443,7 @@ const AnswerInput = ({
     options,
     recommendedChoice,
     allowFreeformInput,
+    category,
     value,
     onChange,
 }: {
@@ -448,6 +451,7 @@ const AnswerInput = ({
     options: RequirementsOption[] | undefined;
     recommendedChoice: RequirementsRecommendedChoice | undefined;
     allowFreeformInput: boolean | undefined;
+    category: string;
     value: RequirementsAnswer;
     onChange: (next: RequirementsAnswer) => void;
 }): JSX.Element => {
@@ -458,6 +462,7 @@ const AnswerInput = ({
                 options={options}
                 recommendedChoice={recommendedChoice}
                 allowFreeformInput={allowFreeformInput}
+                category={category}
                 value={value}
                 onChange={onChange}
             />
@@ -532,6 +537,7 @@ const OptionsList = ({
     options,
     recommendedChoice,
     allowFreeformInput,
+    category,
     value,
     onChange,
 }: {
@@ -539,10 +545,15 @@ const OptionsList = ({
     options: RequirementsOption[];
     recommendedChoice: RequirementsRecommendedChoice | undefined;
     allowFreeformInput: boolean | undefined;
+    category: string;
     value: RequirementsAnswer;
     onChange: (next: RequirementsAnswer) => void;
 }): JSX.Element => {
     const optionLabels = useMemo(() => options.map(o => o.label), [options]);
+    const exclusiveLabels = useMemo(
+        () => new Set(options.filter(option => option.exclusive).map(option => option.label)),
+        [options],
+    );
     const customInputRef = useRef<HTMLInputElement | null>(null);
     const [isCustomFocused, setIsCustomFocused] = useState(false);
 
@@ -578,12 +589,7 @@ const OptionsList = ({
 
     const handleOptionClick = (label: string) => {
         if (multiSelect) {
-            const optionsSelected = selected.filter(v => optionLabels.includes(v));
-            const customExtras = selected.filter(v => !optionLabels.includes(v));
-            const nextOptionsSelected = optionsSelected.includes(label)
-                ? optionsSelected.filter(v => v !== label)
-                : [...optionsSelected, label];
-            onChange([...nextOptionsSelected, ...customExtras]);
+            onChange(toggleRequirementsOption(selected, options, label));
         } else {
             onChange(label);
         }
@@ -591,7 +597,7 @@ const OptionsList = ({
 
     const handleCustomChange = (text: string) => {
         if (multiSelect) {
-            const optionsSelected = selected.filter(v => optionLabels.includes(v));
+            const optionsSelected = selected.filter(v => optionLabels.includes(v) && !exclusiveLabels.has(v));
             const customValues = text.split(',').map(s => s.trim()).filter(s => s.length > 0);
             onChange([...optionsSelected, ...customValues]);
         } else {
@@ -600,12 +606,15 @@ const OptionsList = ({
     };
 
     const showFreeform = allowFreeformInput !== false;
+    const isDataCategory = category === 'data';
 
     return (
         <div className={`optionsList ${multiSelect ? 'optionsList--multi' : 'optionsList--single'}`} role={multiSelect ? 'group' : 'radiogroup'}>
             {options.map((option, idx) => {
                 const isSelected = selected.includes(option.label);
                 const isRecommended = recommendedSet.has(option.label);
+                const showSupportWarning = isDataCategory && isLimitedSupportDataStore(option.label);
+                const warningMessage = showSupportWarning ? limitedSupportWarningMessage() : '';
                 return (
                     <button
                         key={option.label}
@@ -632,6 +641,18 @@ const OptionsList = ({
                                 <span className='optionsList__description'>{option.description}</span>
                             )}
                         </span>
+                        {showSupportWarning && (
+                            <Tooltip relationship='label' content={warningMessage}>
+                                <span
+                                    className='optionsList__supportWarning'
+                                    role='img'
+                                    aria-label={warningMessage}
+                                    onClick={(event) => event.stopPropagation()}
+                                >
+                                    <WarningRegular />
+                                </span>
+                            </Tooltip>
+                        )}
                         {isRecommended && (
                             <span className='optionsList__recommended'>Recommended</span>
                         )}

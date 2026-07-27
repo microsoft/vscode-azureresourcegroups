@@ -9,7 +9,7 @@ import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import type { z } from "zod";
 import { azureDebugPlanAgent } from "../../../constants";
 import { DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
-import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/copilotOnRailsTelemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/telemetryUtils";
 import { openLocalPlanViewFromWorkspace } from "../../../webviews/copilotOnRails/extension/openLocalPlanView";
 
 const openLocalPlanViewToolName = 'open_local_plan_view';

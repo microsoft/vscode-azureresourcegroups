@@ -11,9 +11,11 @@ import { ensureCopilotChatReady, launchAgentChat } from "../../../../commands/co
 import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
+import { recordCreatedAt, recordPrompt } from "../../../../utils/copilotOnRails/diagnosticUtils";
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
+import { recordModel } from "../projectSession";
 
 export type { CreateProjectViewControllerType };
 
@@ -22,11 +24,13 @@ export class CreateProjectViewController extends WebviewController<CreateProject
         super(ext.context, viewConfig.title, 'createProjectView', viewConfig, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
 
         this.panel.webview.onDidReceiveMessage(
-            (message: { command: string; prompt?: string }) => {
+            (message: { command: string; prompt?: string; model?: string }) => {
                 switch (message.command) {
                     case 'plan':
                         if (message.prompt) {
-                            void this.openChatWithQuery(message.prompt);
+                            recordPrompt(message.prompt);
+                            recordCreatedAt();
+                            void this.openChatWithQuery(message.prompt, message.model);
                         } else {
                             this.panel.dispose();
                         }
@@ -36,20 +40,26 @@ export class CreateProjectViewController extends WebviewController<CreateProject
         );
     }
 
-    private async openChatWithQuery(query: string): Promise<void> {
+    private async openChatWithQuery(query: string, model?: string): Promise<void> {
+        if (model) {
+            await recordModel(model);
+        }
         if (!(await ensureCopilotChatReady())) {
             return;
         }
         if (!(await ensureAgentInstructions('azure-project-plan'))) {
             return;
         }
+        if (!(await launchAgentChat(azureProjectPlanAgent, query, model))) {
+            return;
+        }
         this.panel.dispose();
-        await launchAgentChat(azureProjectPlanAgent, query);
         projectSubmissionState.setPending();
         openLoadingView({
             stage: 0,
             title: vscode.l10n.t('Gathering project requirements…'),
             message: vscode.l10n.t('Copilot is analyzing your prompt and preparing the requirements questionnaire.'),
+            showNeedHelp: true,
         });
     }
 }

@@ -5,80 +5,71 @@
 
 import { type DeploymentPlanData, type DeploymentPlanTable } from "./deploymentPlanTypes";
 
-/**
- * Canonical section heading (first entry) and tolerated aliases for each part
- * of the deployment plan. These MUST stay in sync with the `## …` headings
- * emitted by the deployment-plan template in the azure-deploy skill — keep this
- * as the single source of truth so the parser and the skill template don't drift
- * apart. Aliases exist only to tolerate older or user-authored plans.
- */
 const DEPLOYMENT_SECTION_ALIASES = {
-    requirements: ['Requirements'],
-    architectureDiagram: ['Architecture Diagram', 'Architecture', 'Azure Architecture'],
-    workspaceScan: ['Workspace Scan', 'Components Detected'],
-    decisions: ['Decisions', 'Recipe Selection'],
-    resources: ['Service Mapping', 'Azure Resources', 'Provisioning Limit Checklist'],
+    requirements: ['Requirements', 'Confirmed Requirements', 'Requirements and Constraints'],
+    architecture: ['Architecture Diagram', 'Architecture', 'Azure Architecture', 'Proposed Azure Architecture', 'Target Architecture', 'Architecture Design'],
+    workspaceScan: ['Workspace Scan', 'Components Detected', 'Components', 'Application Analysis', 'Workspace Analysis'],
+    decisions: ['Decisions', 'Recipe Selection', 'Architecture Decisions', 'Key Decisions'],
+    resourceSections: ['Azure Resources', 'Resources to Create', 'Azure Services', 'Infrastructure Components', 'Services and Configuration', 'Provisioning Limit Checklist'],
+    resourceSubsections: ['Service Mapping', 'Resource Inventory & Quota Validation'],
 } as const;
 
+interface MarkdownSubsection {
+    heading: string;
+    lines: string[];
+}
+
+interface MarkdownSection {
+    heading: string;
+    lines: string[];
+    subsections: MarkdownSubsection[];
+}
+
+interface TableCandidate {
+    heading: string;
+    parentHeading?: string;
+    table: DeploymentPlanTable;
+}
+
+export type DeploymentPlanRenderIssue = 'empty' | 'missingStructuredSections';
+
 /**
- * Parses a deployment plan markdown file into DeploymentPlanData.
- *
- * Expected format:
- *
- * **Status**: Awaiting Approval
- * **Mode**: MODERNIZE — deploy existing full-stack app to Azure
- * **Subscription**: meganmott dev
- * **Location**: East US
- * **LocationCode**: eastus
- *
- * ## Architecture Diagram
- * ```mermaid
- * graph TD
- *     ...
- * ```
- *
- * ## Workspace Scan
- * | Component | Technology | Azure Target |
- * |-----------|------------|--------------|
- * | ...       | ...        | ...          |
- *
- * ## Decisions
- * | Decision | Choice | Rationale |
- * |----------|--------|-----------|
- * | ...      | ...    | ...       |
- *
- * ## Azure Resources
- * | Resource | Name pattern | SKU / Tier |
- * |----------|--------------|------------|
- * | ...      | ...          | ...        |
+ * Parses the generated deployment plan into the structured data rendered by the
+ * deployment plan view. Heading aliases cover known templates while table-header
+ * classification tolerates reasonable generated variations.
  */
 export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanData {
     const lines = markdown.replace(/\r\n/g, '\n').split('\n');
-    const requirements = extractAttributeValueTable(findSectionByName(extractNamedSections(lines), DEPLOYMENT_SECTION_ALIASES.requirements));
+    const sections = extractSections(lines);
+    const tableCandidates = extractTableCandidates(sections);
+    const requirements = extractAttributeValueTable(findSection(sections, DEPLOYMENT_SECTION_ALIASES.requirements));
 
     const status = extractMetadata(lines, 'Status') ?? 'Unknown';
     const mode = extractMetadata(lines, 'Mode') ?? 'Unknown';
-    const subscription = extractMetadata(lines, 'Subscription') ?? requirements['Subscription'] ?? 'Unknown';
-    const rawLocation = extractMetadata(lines, 'Location') ?? requirements['Location'] ?? 'Unknown';
+    const subscription = extractMetadata(lines, 'Subscription') ?? findAttribute(requirements, 'Subscription') ?? 'Unknown';
+    const rawLocation = extractMetadata(lines, 'Location') ?? findAttribute(requirements, 'Location') ?? 'Unknown';
 
-    // Parse location: "East US (`eastus`)" → name="East US", code="eastus"
+    // Parse location: "East US (`eastus`)" -> name="East US", code="eastus"
     const locationMatch = rawLocation.match(/^(.+?)\s*\(`?([a-z0-9]+)`?\)\s*$/i);
     const location = locationMatch ? locationMatch[1].trim() : rawLocation;
     const locationCode = locationMatch ? locationMatch[2].trim() : extractMetadata(lines, 'LocationCode') ?? 'unknown';
 
-    const sections = extractNamedSections(lines);
+    const workspaceCandidate = findTableCandidate(
+        tableCandidates,
+        DEPLOYMENT_SECTION_ALIASES.workspaceScan,
+        isWorkspaceTable,
+    );
+    const decisionsCandidate = findTableCandidate(
+        tableCandidates,
+        DEPLOYMENT_SECTION_ALIASES.decisions,
+        isDecisionsTable,
+    );
+    const resourcesCandidate = findResourceTableCandidate(tableCandidates);
+    const architecture = extractArchitectureTables(
+        findSection(sections, DEPLOYMENT_SECTION_ALIASES.architecture),
+        resourcesCandidate,
+    );
 
-    // Support alternate section headings for compatibility with user-authored plans
-    const architecture = extractSubSectionTables(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.architectureDiagram));
-
-    const workspaceScan = extractTable(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.workspaceScan));
-
-    const decisions = extractTable(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.decisions));
-
-    const resources = extractTable(findSectionByName(sections, DEPLOYMENT_SECTION_ALIASES.resources));
-    const resourcesHeading = findSectionHeading(sections, DEPLOYMENT_SECTION_ALIASES.resources);
-
-    // Provide placeholder dropdown options when values are unknown
     const availableSubscriptions = subscription === 'Unknown'
         ? ['Visual Studio Enterprise', 'Azure for Students', 'Pay-As-You-Go', 'MSDN Platforms']
         : undefined;
@@ -94,7 +85,6 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
         { name: 'Southeast Asia', code: 'southeastasia' },
     ];
 
-    // If we have a location display name but no code, try to resolve it from known locations
     let resolvedLocationCode = locationCode;
     let resolvedLocation = location;
     if (resolvedLocationCode === 'unknown' && location !== 'Unknown') {
@@ -106,8 +96,6 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
         }
     }
 
-    const availableLocations = knownLocations;
-
     return {
         status,
         mode,
@@ -115,19 +103,45 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
         availableSubscriptions,
         location: resolvedLocation === 'Unknown' ? '' : resolvedLocation,
         locationCode: resolvedLocationCode === 'unknown' ? '' : resolvedLocationCode,
-        availableLocations,
+        availableLocations: knownLocations,
         architecture,
-        workspaceScan,
-        decisions,
-        resources,
-        resourcesHeading,
+        workspaceScan: workspaceCandidate?.table ?? emptyTable(),
+        decisions: decisionsCandidate?.table ?? emptyTable(),
+        resources: resourcesCandidate?.table ?? emptyTable(),
+        resourcesHeading: resourcesCandidate?.heading,
+        requirements,
+        recipe: extractMetadata(lines, 'Selected'),
+        stack: extractMetadata(lines, 'Stack'),
     };
 }
 
+export function getDeploymentPlanRenderIssue(markdown: string, plan: DeploymentPlanData): DeploymentPlanRenderIssue | undefined {
+    if (markdown.trim().length === 0) {
+        return 'empty';
+    }
+
+    if (plan.resources.rows.length === 0
+        && plan.decisions.rows.length === 0
+        && plan.workspaceScan.rows.length === 0
+        && plan.architecture.length === 0) {
+        return 'missingStructuredSections';
+    }
+
+    return undefined;
+}
+
 function extractMetadata(lines: string[], key: string): string | undefined {
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`^${escapedKey}\\s*:\\s*(.+)$`, 'i');
+
     for (const line of lines) {
-        // Match both **Key**: value and **Key:** value, optionally inside a markdown blockquote.
-        const match = line.match(new RegExp(`^>?\\s*\\*\\*${key}:?\\*\\*:?\\s*(.+)$`));
+        const normalized = line
+            .replace(/^\s*>\s*/, '')
+            .replace(/^\s*#{1,6}\s+/, '')
+            .replace(/^\s*[-*]\s+/, '')
+            .replace(/\*\*/g, '')
+            .trim();
+        const match = normalized.match(pattern);
         if (match) {
             return match[1].trim();
         }
@@ -135,136 +149,246 @@ function extractMetadata(lines: string[], key: string): string | undefined {
     return undefined;
 }
 
-function findSectionByName(sections: Record<string, string[]>, names: readonly string[]): string[] {
-    const normalized = new Map(Object.entries(sections).map(([name, value]) => [normalizeSectionName(name), value]));
-    for (const name of names) {
-        const match = normalized.get(normalizeSectionName(name));
-        if (match) {
-            return match;
-        }
-    }
-    return [];
-}
-
-function findSectionHeading(sections: Record<string, string[]>, names: readonly string[]): string | undefined {
-    const normalizedToOriginal = new Map(Object.keys(sections).map(name => [normalizeSectionName(name), name]));
-    for (const name of names) {
-        const original = normalizedToOriginal.get(normalizeSectionName(name));
-        if (original) {
-            return original;
-        }
-    }
-    return undefined;
-}
-
-function normalizeSectionName(name: string): string {
-    return name.replace(/^\d+\.\s+/, '').trim().toLowerCase();
-}
-
-function extractAttributeValueTable(lines: string[]): Record<string, string> {
-    const table = extractTable(lines);
-    if (table.headers.length < 2) {
-        return {};
-    }
-
-    const values: Record<string, string> = {};
-    for (const row of table.rows) {
-        const key = row[0]?.trim();
-        const value = row[1]?.trim();
-        if (key && value) {
-            values[key] = value;
-        }
-    }
-    return values;
-}
-
-function extractNamedSections(lines: string[]): Record<string, string[]> {
-    const sections: Record<string, string[]> = {};
-    let currentH2: string | undefined;
-    let currentH3: string | undefined;
+function extractSections(lines: string[]): MarkdownSection[] {
+    const sections: MarkdownSection[] = [];
+    let currentSection: MarkdownSection | undefined;
+    let currentSubsection: MarkdownSubsection | undefined;
 
     for (const line of lines) {
-        const h2Match = line.match(/^##\s+(?:\d+\.\s+)?(.+)$/);
+        const h2Match = line.match(/^##\s+(.+)$/);
         if (h2Match) {
-            currentH2 = h2Match[1].trim();
-            currentH3 = undefined;
-            sections[currentH2] = [];
+            currentSection = {
+                heading: cleanSectionHeading(h2Match[1]),
+                lines: [],
+                subsections: [],
+            };
+            sections.push(currentSection);
+            currentSubsection = undefined;
             continue;
         }
 
-        const h3Match = line.match(/^###\s+(?:\d+\.\s+)?(.+)$/);
-        if (h3Match) {
-            currentH3 = h3Match[1].trim();
-            sections[currentH3] = [];
-            if (currentH2) {
-                sections[currentH2].push(line);
-            }
+        const h3Match = line.match(/^###\s+(.+)$/);
+        if (h3Match && currentSection) {
+            currentSubsection = {
+                heading: cleanSectionHeading(h3Match[1]),
+                lines: [],
+            };
+            currentSection.subsections.push(currentSubsection);
             continue;
         }
 
-        if (currentH3) {
-            sections[currentH3].push(line);
-        }
-        if (currentH2) {
-            sections[currentH2].push(line);
+        if (currentSubsection) {
+            currentSubsection.lines.push(line);
+        } else if (currentSection) {
+            currentSection.lines.push(line);
         }
     }
 
     return sections;
 }
 
-/**
- * Extracts tables from a section that may contain H3 sub-headings.
- * Each sub-section's heading becomes the `title` and its table rows become a `DeploymentPlanTable`.
- * Lines before the first H3 that form a table are returned with no title.
- */
-function extractSubSectionTables(lines: string[]): { title?: string; table: DeploymentPlanTable }[] {
-    const results: { title?: string; lines: string[] }[] = [];
-    let current: { title?: string; lines: string[] } = { lines: [] };
+function extractTableCandidates(sections: MarkdownSection[]): TableCandidate[] {
+    const candidates: TableCandidate[] = [];
 
-    for (const line of lines) {
-        const h3Match = line.match(/^###\s+(?:\d+\.\s+)?(.+)$/);
-        if (h3Match) {
-            if (current.lines.length > 0) {
-                results.push(current);
+    for (const section of sections) {
+        for (const table of extractTables(section.lines)) {
+            candidates.push({ heading: section.heading, table });
+        }
+        for (const subsection of section.subsections) {
+            for (const table of extractTables(subsection.lines)) {
+                candidates.push({
+                    heading: subsection.heading,
+                    parentHeading: section.heading,
+                    table,
+                });
             }
-            current = { title: h3Match[1].trim(), lines: [] };
-        } else {
-            current.lines.push(line);
         }
     }
-    if (current.lines.length > 0) {
-        results.push(current);
-    }
 
-    return results
-        .map(({ title, lines: sectionLines }) => ({ title, table: extractTable(sectionLines) }))
-        .filter(({ table }) => table.rows.length > 0);
+    return candidates;
 }
 
-function extractTable(lines: string[]): DeploymentPlanTable {
-    const tableLines = lines.filter(l => l.trim().startsWith('|'));
+function findSection(sections: MarkdownSection[], names: readonly string[]): MarkdownSection | undefined {
+    return sections.find(section => headingMatches(section.heading, names));
+}
 
-    if (tableLines.length < 2) {
-        return { headers: [], rows: [] };
+function findTableCandidate(
+    candidates: TableCandidate[],
+    headingAliases: readonly string[],
+    semanticMatch: (table: DeploymentPlanTable) => boolean,
+): TableCandidate | undefined {
+    return candidates.find(candidate =>
+        headingMatches(candidate.heading, headingAliases)
+        && semanticMatch(candidate.table)
+    )
+        ?? candidates.find(candidate => headingMatches(candidate.heading, headingAliases))
+        ?? candidates.find(candidate => semanticMatch(candidate.table));
+}
+
+function findResourceTableCandidate(candidates: TableCandidate[]): TableCandidate | undefined {
+    const prioritizedHeadings = [
+        ...DEPLOYMENT_SECTION_ALIASES.resourceSubsections,
+        ...DEPLOYMENT_SECTION_ALIASES.resourceSections,
+    ];
+    for (const heading of prioritizedHeadings) {
+        const candidate = candidates.find(item =>
+            headingMatches(item.heading, [heading])
+            && isResourceTable(item.table)
+        );
+        if (candidate) {
+            return candidate;
+        }
+    }
+    return candidates.find(candidate => isResourceTable(candidate.table));
+}
+
+function extractArchitectureTables(
+    section: MarkdownSection | undefined,
+    resourcesCandidate: TableCandidate | undefined,
+): { title?: string; table: DeploymentPlanTable }[] {
+    if (!section) {
+        return [];
     }
 
-    const headers = parseTableRow(tableLines[0]);
+    const architecture: { title?: string; table: DeploymentPlanTable }[] = [];
+    for (const table of extractTables(section.lines)) {
+        if (!isSameTableCandidate(section.heading, undefined, table, resourcesCandidate)) {
+            architecture.push({ table });
+        }
+    }
+    for (const subsection of section.subsections) {
+        for (const table of extractTables(subsection.lines)) {
+            if (!isSameTableCandidate(subsection.heading, section.heading, table, resourcesCandidate)) {
+                architecture.push({ title: subsection.heading, table });
+            }
+        }
+    }
+    return architecture;
+}
 
-    // Skip separator line
-    let dataStart = 1;
-    if (tableLines[dataStart]?.trim().match(/^\|[\s\-:|]+\|$/)) {
-        dataStart = 2;
+function isSameTableCandidate(
+    heading: string,
+    parentHeading: string | undefined,
+    table: DeploymentPlanTable,
+    candidate: TableCandidate | undefined,
+): boolean {
+    return candidate !== undefined
+        && normalizeHeading(candidate.heading) === normalizeHeading(heading)
+        && normalizeHeading(candidate.parentHeading ?? '') === normalizeHeading(parentHeading ?? '')
+        && JSON.stringify(candidate.table) === JSON.stringify(table);
+}
+
+function extractAttributeValueTable(section: MarkdownSection | undefined): DeploymentPlanTable {
+    return section ? extractTables(section.lines)[0] ?? emptyTable() : emptyTable();
+}
+
+function findAttribute(table: DeploymentPlanTable, attribute: string): string | undefined {
+    const normalizedAttribute = normalizeHeader(attribute);
+    const row = table.rows.find(candidate => normalizeHeader(candidate[0] ?? '') === normalizedAttribute);
+    return row?.[1]?.trim();
+}
+
+function isWorkspaceTable(table: DeploymentPlanTable): boolean {
+    const headers = normalizedHeaders(table);
+    return headers.includes('component')
+        && headers.some(header => ['technology', 'type', 'path', 'framework', 'language'].includes(header));
+}
+
+function isDecisionsTable(table: DeploymentPlanTable): boolean {
+    const headers = normalizedHeaders(table);
+    return headers.includes('decision')
+        && headers.some(header => ['choice', 'rationale', 'reason'].includes(header));
+}
+
+function isResourceTable(table: DeploymentPlanTable): boolean {
+    const headers = normalizedHeaders(table);
+    const hasResourceIdentity = headers.some(header =>
+        ['resource', 'resource type', 'azure resource', 'azure service', 'service'].includes(header)
+    );
+    const hasResourceConfiguration = headers.some(header =>
+        header.includes('sku')
+        || ['tier', 'config', 'configuration', 'purpose', 'number to deploy', 'count'].includes(header)
+    );
+    return hasResourceIdentity && hasResourceConfiguration;
+}
+
+function normalizedHeaders(table: DeploymentPlanTable): string[] {
+    return table.headers.map(normalizeHeader);
+}
+
+function normalizeHeader(header: string): string {
+    return header
+        .replace(/[`*_]/g, '')
+        .replace(/\s*\/\s*/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+}
+
+function headingMatches(heading: string, aliases: readonly string[]): boolean {
+    const normalizedHeading = normalizeHeading(heading);
+    return aliases.some(alias => normalizeHeading(alias) === normalizedHeading);
+}
+
+function normalizeHeading(heading: string): string {
+    return stripSectionNumber(heading)
+        .replace(/[`*_]/g, '')
+        .replace(/(?:✅|⚠️|❌|⛔)/gu, '')
+        .trim()
+        .toLowerCase();
+}
+
+function stripSectionNumber(heading: string): string {
+    return heading.replace(/^\d+(?:\.\d+)*[.)]?\s+/, '').trim();
+}
+
+function cleanSectionHeading(heading: string): string {
+    return stripSectionNumber(heading).replace(/[`*_]/g, '').trim();
+}
+
+function extractTables(lines: string[]): DeploymentPlanTable[] {
+    const tables: DeploymentPlanTable[] = [];
+
+    for (let index = 0; index < lines.length - 1; index++) {
+        if (!isTableRow(lines[index]) || !isTableSeparator(lines[index + 1])) {
+            continue;
+        }
+
+        const tableLines = [lines[index], lines[index + 1]];
+        index += 2;
+        while (index < lines.length && isTableRow(lines[index])) {
+            tableLines.push(lines[index]);
+            index++;
+        }
+        index--;
+
+        tables.push({
+            headers: parseTableRow(tableLines[0]),
+            rows: tableLines.slice(2).map(parseTableRow),
+        });
     }
 
-    const rows = tableLines.slice(dataStart).map(parseTableRow);
+    return tables;
+}
 
-    return { headers, rows };
+function isTableRow(line: string): boolean {
+    return line.trim().includes('|');
+}
+
+function isTableSeparator(line: string): boolean {
+    const cells = parseTableRow(line);
+    return cells.length > 0 && cells.every(cell => /^:?-{3,}:?$/.test(cell));
 }
 
 function parseTableRow(line: string): string[] {
     return line
+        .trim()
+        .replace(/^\|/, '')
+        .replace(/\|$/, '')
         .split('|')
-        .slice(1, -1)
         .map(cell => cell.trim().replace(/\*\*/g, ''));
+}
+
+function emptyTable(): DeploymentPlanTable {
+    return { headers: [], rows: [] };
 }

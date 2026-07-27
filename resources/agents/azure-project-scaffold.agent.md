@@ -50,7 +50,7 @@ When scaffolding finishes:
 { "frontendFolder": "services/web" }
 ```
 
-   Set `frontendFolder` only when it is not the default `services/web`; otherwise omit it (call with `{}`). This opens a webview that starts the frontend dev server and renders the **running app (mock data)** in an iframe, with an **Approve UI** header + feedback box — the same approval UX as the plan view. The webview **owns the hand-off**: its **Approve UI** button calls `azureResourceGroups.startProjectIntegrate` itself, and its feedback box re-opens this scaffold agent with the user's UI change requests (the dev server hot-reloads as you edit). After opening the gate, **STOP** — do NOT also call `start_project_integrate`.
+   Set `frontendFolder` only when it is not the default `services/web`; otherwise omit it (call with `{}`). This opens a webview that starts the frontend dev server and renders the **running app (mock data)** in an iframe, with an **Approve UI** header + feedback box — the same approval UX as the plan view. The webview **owns the hand-off**: its **Approve UI** button calls `copilotOnRails.startProjectIntegrate` itself, and its feedback box re-opens this scaffold agent with the user's UI change requests (the dev server hot-reloads as you edit). After opening the gate, **STOP** — do NOT also call `start_project_integrate`.
 4. **Hand off to the `azure-project-integrate` agent directly** — **only when the plan has NO frontend** (the preview gate is skipped). Call the `start_project_integrate` tool with no arguments (`{}`). This starts a **new chat session** running the `azure-project-integrate` agent, which reads `.azure/integration-plan.md` and follows its own instruction file to wire the frontend to live data, smoke-test the backend, create the schema migrations, and verify the app end-to-end.
 5. Do **NOT** ask the user what to do next (no `vscode_askQuestions`). Opening the gate (frontend) or the hand-off command (no frontend) **is** the next step.
 
@@ -112,3 +112,14 @@ That skill is the canonical, mandatory source for the scaffolding phase. Treat i
 ## Your deliverable
 
 A fully scaffolded, buildable Azure project from the already-approved `.azure/project-plan.md` — frontend, backend services, and API routes — plus the `.azure/integration-plan.md` hand-off artifact, and a session started with the `azure-project-integrate` agent to wire the frontend to live data, smoke-test the backend, create the schema migrations, and verify the app end-to-end.
+
+## Interruption recovery
+
+If the flow is interrupted for any reason — a terminal command requests a password and the user declines, a tool call fails, a network request times out, or any other error breaks the current step — **do not stop working**. Instead:
+
+1. **Acknowledge** the interruption briefly (one sentence).
+2. **Identify** which step you were on and what remains to be done.
+3. **Continue** from where you left off. Re-read the relevant `.azure/*` artifacts to re-orient yourself if needed.
+4. If the failed action is not essential to the current step (e.g. an optional tool call), skip it and move on.
+5. If the failed action IS essential, try an alternative approach (different command, different tool) before giving up.
+6. **Never** end your turn with just an error message and no next action. Always state what you will do next and then do it.

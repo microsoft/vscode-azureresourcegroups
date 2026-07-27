@@ -32,7 +32,7 @@ export type ProjectPhase =
     | 'plan'
     | 'scaffold'
     | 'integrate'
-    | 'localDev'
+    | 'debug'
     | 'deploy';
 
 /** The persisted session record. Stored under a single `workspaceState` key. */
@@ -43,6 +43,8 @@ export interface CopilotSessionState {
     updatedAt: number;
     /** Workspace-relative `.azure/*` artifacts to reference when resuming this phase. */
     contextRefs: string[];
+    /** The language model selected by the user on the landing page, threaded across all phases. */
+    model?: string;
 }
 
 /** The single workspaceState key holding {@link CopilotSessionState}. */
@@ -74,7 +76,7 @@ const PHASE_CONFIG: Readonly<Record<ProjectPhase, PhaseConfig>> = {
         label: vscode.l10n.t('Live-data integration'),
         contextRefs: [INTEGRATION_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB],
     },
-    localDev: {
+    debug: {
         agent: azureDebugPlanAgent,
         label: vscode.l10n.t('Local development setup'),
         contextRefs: [DEBUG_PLAN_FILE_GLOB],
@@ -91,8 +93,8 @@ const AGENT_PHASE: Readonly<Record<string, ProjectPhase>> = {
     [azureProjectPlanAgent]: 'plan',
     [azureProjectScaffoldAgent]: 'scaffold',
     [azureProjectIntegrateAgent]: 'integrate',
-    [azureDebugPlanAgent]: 'localDev',
-    [azureDebugGenerateAgent]: 'localDev',
+    [azureDebugPlanAgent]: 'debug',
+    [azureDebugGenerateAgent]: 'debug',
     [azureDeployAgent]: 'deploy',
 };
 
@@ -130,11 +132,29 @@ async function writeSessionState(state: CopilotSessionState | undefined): Promis
  */
 export async function recordPhase(phase: ProjectPhase): Promise<void> {
     sessionActiveInWindow = true;
+    const prev = readSessionState();
     await writeSessionState({
         phase,
         updatedAt: Date.now(),
         contextRefs: PHASE_CONFIG[phase].contextRefs,
+        model: prev?.model,
     });
+}
+
+/** Stores the user's model selection into the session so it persists across phases. */
+export async function recordModel(model: string): Promise<void> {
+    const prev = readSessionState();
+    if (prev) {
+        await writeSessionState({ ...prev, model, updatedAt: Date.now() });
+    } else {
+        // No session yet — store it pre-emptively so the first recordPhase picks it up.
+        await writeSessionState({ phase: 'plan', updatedAt: Date.now(), contextRefs: [], model });
+    }
+}
+
+/** Returns the model the user selected on the landing page, if any. */
+export function getSessionModel(): string | undefined {
+    return readSessionState()?.model;
 }
 
 /** Records a phase launch given the chat agent name. No-op for unknown agents. */

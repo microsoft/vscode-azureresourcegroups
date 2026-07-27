@@ -5,10 +5,10 @@
 
 import { type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
-import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
-import { ext } from "../../../extensionVariables";
-import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { ext } from "../../../extensionVariables";
+import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
@@ -17,7 +17,7 @@ const deploy = vscode.l10n.t('Deploy');
  * globalState key holding the epoch-ms deadline until which a pending "Create
  * with Copilot" request should auto-resume after a folder is opened.
  */
-const PENDING_CREATE_DEADLINE_KEY = 'azureResourceGroups.createProjectWithCopilot.pendingDeadline';
+const PENDING_CREATE_DEADLINE_KEY = 'copilotOnRails.createProjectWithCopilot.pendingDeadline';
 /** How long a pending create request stays valid across a window reload. */
 const PENDING_CREATE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -87,6 +87,12 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
         promptPlaceholder: vscode.l10n.t('Describe your project...'),
         hint: vscode.l10n.t('Ctrl+Enter to plan'),
         planButtonLabel: vscode.l10n.t('Plan'),
+        modelLabel: vscode.l10n.t('Model'),
+        modelOptions: [
+            'Claude Opus 4.6 (copilot)',
+            'Claude Opus 4.7 (copilot)',
+            'Claude Sonnet 4.6 (copilot)',
+        ],
     });
     controller.revealToForeground();
 }

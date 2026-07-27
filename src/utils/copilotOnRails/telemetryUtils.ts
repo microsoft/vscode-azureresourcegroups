@@ -5,10 +5,21 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import { ToolExecutionExtras } from "@microsoft/vscode-inproc-mcp";
+import * as os from "os";
 import { v4 as uuidv4 } from "uuid";
+import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
+import { readSessionState } from "../../webviews/copilotOnRails/extension/projectSession";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./CopilotOnRailsContext";
-import { DiagnosticEvent, withDiagnosticEvents } from "./copilotOnRailsDiagnosticUtils";
+import { DiagnosticEvent, withDiagnosticEvents } from "./diagnosticUtils";
+
+/**
+ * Builds a standardized Copilot on Rails identifier for command ids and telemetry.
+ * The id will always be prefixed with `copilotOnRails.`.
+ */
+export function corId(name: string): string {
+    return `copilotOnRails.${name}`;
+}
 
 const projectIdKey: string = 'copilotOnRails.projectId';
 
@@ -47,7 +58,34 @@ export async function callWithDiagnosticsAndTelemetryHandling<T>(
     }
 
     const corContext: CopilotOnRailsContext = ensureRequiredCopilotOnRailsContext(context);
+
+    for (const [key, value] of Object.entries(getSystemTelemetry())) {
+        setCorProp(corContext, key, value);
+    }
+
+    const copilotModel: string | undefined = readSessionState()?.model;
+    if (copilotModel) {
+        setCorProp(corContext, 'copilotModel', copilotModel);
+    }
+
     return await withDiagnosticEvents(corContext, { type: eventDetails.type, name: eventDetails.name }, async () => await command(corContext));
+}
+
+export function getSystemTelemetry(): Record<string, string> {
+    const systemTelemetry: Record<string, string> = {
+        osPlatform: os.platform(),
+        osRelease: os.release(),
+        osArch: os.arch(),
+        nodeVersion: process.versions.node,
+        vscodeVersion: vscode.version,
+    };
+
+    const cpuModel: string | undefined = os.cpus()[0]?.model;
+    if (cpuModel) {
+        systemTelemetry.cpuModel = cpuModel;
+    }
+
+    return systemTelemetry;
 }
 
 //
