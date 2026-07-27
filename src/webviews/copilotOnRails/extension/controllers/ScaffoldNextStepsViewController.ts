@@ -9,7 +9,7 @@ import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ext } from "../../../../extensionVariables";
 import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
-import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, CopilotOnRailsPhase, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 
 type ScaffoldAction = 'setupLocal' | 'deploy';
@@ -35,9 +35,9 @@ export class ScaffoldNextStepsViewController extends WebviewController<Record<st
     }
 
     private async handleAction(action: ScaffoldAction): Promise<void> {
-        await callWithTelemetryAndErrorHandling('azureResourceGroups.scaffoldNextSteps.actionSelected', async (actionContext: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('nextStepsAction', CopilotOnRailsPhase.Scaffold), async (actionContext: IActionContext) => {
             actionContext.errorHandling.suppressDisplay = true;
-            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'scaffoldNextSteps.actionSelected' }, async (corContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'scaffoldNextStepsAction' }, async (corContext) => {
                 setCorProp(corContext, 'action', action);
 
                 switch (action) {

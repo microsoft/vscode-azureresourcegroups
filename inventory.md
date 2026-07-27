@@ -97,8 +97,8 @@ Explicit telemetry event ids raised from CoR webview controllers.
 helper and the `CopilotOnRailsPhase` enum in `src/utils/copilotOnRails/telemetryUtils.ts`, producing a phase-based
 `copilotOnRails.<phase>.<action>` form. The `phase` is optional — omitting it yields a non-phase `copilotOnRails.<action>`
 id for events that aren't tied to a phase (e.g. diagnostics). Phases (collapsed to three):
-`scaffold`, `debug`, `deploy`. The six three-segment
-`azureResourceGroups.*` ids are **tabled** pending a follow-up decision (see §11).
+`scaffold`, `debug`, `deploy`. The six three-segment `azureResourceGroups.*` ids have now also been
+standardized to `copilotOnRails.<phase>.<action>` (or phase-agnostic) via `corId`.
 
 | Telemetry event id (new value) | Was | File | Standardized? |
 |---|---|---|---|
@@ -109,12 +109,12 @@ id for events that aren't tied to a phase (e.g. diagnostics). Phases (collapsed 
 | `copilotOnRails.debug.submitPlanFeedback` | `copilotOnRails.submitLocalDebugPlanFeedback` | `LocalPlanViewController.ts:117` | ✅ |
 | `copilotOnRails.deploy.submitPlanApproval` | `copilotOnRails.submitDeploymentPlanApproval` | `DeploymentPlanViewController.ts:107` | ✅ |
 | `copilotOnRails.deploy.submitPlanFeedback` | `copilotOnRails.submitDeploymentPlanFeedback` | `DeploymentPlanViewController.ts:151` | ✅ |
-| `azureResourceGroups.loadingView.needHelpResume` *(tabled)* | — | `LoadingViewController.ts:40` | ⏸️ revisit |
-| `azureResourceGroups.scaffoldNextSteps.actionSelected` *(tabled)* | — | `ScaffoldNextStepsViewController.ts:37` | ⏸️ revisit |
-| `azureResourceGroups.scaffold.requestBudgetWarning` *(tabled)* | — | `ScaffoldPlanViewController.ts:232` | ⏸️ revisit |
-| `azureResourceGroups.scaffoldPlan.refreshPrerequisites` *(tabled)* | — | `ScaffoldPlanViewController.ts:310` | ⏸️ revisit |
-| `azureResourceGroups.localDebugPlan.refreshPrerequisites` *(tabled)* | — | `LocalPlanViewController.ts:151` | ⏸️ revisit |
-| `azureResourceGroups.localDevNextSteps.actionSelected` *(tabled)* | — | `LocalDevNextStepsViewController.ts:41` | ⏸️ revisit |
+| `copilotOnRails.loadingView.needHelpResume` | `azureResourceGroups.loadingView.needHelpResume` | `LoadingViewController.ts:40` | ✅ (phase-agnostic) |
+| `copilotOnRails.scaffold.nextStepsAction` | `azureResourceGroups.scaffoldNextSteps.actionSelected` | `ScaffoldNextStepsViewController.ts:37` | ✅ |
+| `copilotOnRails.scaffold.requestBudgetWarning` | `azureResourceGroups.scaffold.requestBudgetWarning` | `ScaffoldPlanViewController.ts:232` | ✅ |
+| `copilotOnRails.scaffold.refreshPrerequisites` | `azureResourceGroups.scaffoldPlan.refreshPrerequisites` | `ScaffoldPlanViewController.ts:310` | ✅ |
+| `copilotOnRails.debug.refreshPrerequisites` | `azureResourceGroups.localDebugPlan.refreshPrerequisites` | `LocalPlanViewController.ts:151` | ✅ |
+| `copilotOnRails.debug.nextStepsAction` | `azureResourceGroups.localDevNextSteps.actionSelected` | `LocalDevNextStepsViewController.ts:41` | ✅ |
 
 ---
 
@@ -125,15 +125,15 @@ These become the `DiagnosticEvent.name` and are recorded in the workspace diagno
 
 | Action name | File | Standardized? |
 |---|---|---|
-| `submitRequirements` | `RequirementsViewController.ts:69` | ❌ |
-| `submitProjectScaffoldPlanApproval` | `ScaffoldPlanViewController.ts:119` | ❌ |
-| `submitProjectScaffoldPlanFeedback` | `ScaffoldPlanViewController.ts:209` | ❌ |
-| `scaffoldNextSteps.actionSelected` | `ScaffoldNextStepsViewController.ts:39` | ❌ |
-| `submitLocalDebugPlanApproval` | `LocalPlanViewController.ts:65` | ❌ |
-| `submitLocalDebugPlanFeedback` | `LocalPlanViewController.ts:118` | ❌ |
-| `localDevNextSteps.actionSelected` | `LocalDevNextStepsViewController.ts:43` | ❌ |
-| `submitDeploymentPlanApproval` | `DeploymentPlanViewController.ts:108` | ❌ |
-| `submitDeploymentPlanFeedback` | `DeploymentPlanViewController.ts:152` | ❌ |
+| `submitRequirements` | `RequirementsViewController.ts:69` | ✅ (unchanged) |
+| `submitScaffoldPlanApproval` | `ScaffoldPlanViewController.ts:119` | ✅ |
+| `submitScaffoldPlanFeedback` | `ScaffoldPlanViewController.ts:209` | ✅ |
+| `scaffoldNextStepsAction` | `ScaffoldNextStepsViewController.ts:40` | ✅ |
+| `submitDebugPlanApproval` | `LocalPlanViewController.ts:65` | ✅ |
+| `submitDebugPlanFeedback` | `LocalPlanViewController.ts:118` | ✅ |
+| `debugNextStepsAction` | `LocalDevNextStepsViewController.ts:44` | ✅ |
+| `submitDeploymentPlanApproval` | `DeploymentPlanViewController.ts:108` | ✅ (unchanged) |
+| `submitDeploymentPlanFeedback` | `DeploymentPlanViewController.ts:152` | ✅ (unchanged) |
 
 `DiagnosticEvent.type` enum values: `extensionCommand` | `mcpTool` | `webviewAction`
 (`src/utils/copilotOnRails/diagnosticUtils.ts:108`).
@@ -168,15 +168,21 @@ Note: `isCopilotEvent` is not CoR-exclusive — it is also set in
 
 | Key | Purpose | File | Standardized? |
 |---|---|---|---|
-| `copilotOnRails.projectId` | Persistent project GUID (source of `corProjectId`) | `telemetryUtils.ts:13` | ✅ |
+| `copilotOnRails.projectId` | Persistent project GUID (source of `corProjectId`) | `telemetryUtils.ts` | ✅ |
 | `copilotOnRails.prompt` | Originating project prompt | `diagnosticUtils.ts:11` | ✅ |
 | `copilotOnRails.createdAt` | ISO timestamp project first prompted | `diagnosticUtils.ts:27` | ✅ |
 | `copilotOnRails.diagnosticEvents` | Cached rolling `DiagnosticEvent[]` (max 50) | `diagnosticUtils.ts:44` | ✅ |
+| `copilotOnRails.autopilot.active` | Autopilot run active flag (workspaceState) | `autopilot.ts:39` | ✅ (renamed from `azureResourceGroups.*`) |
+| `copilotOnRails.autopilot.priorAutoApprove` | Prior global auto-approve value (workspaceState) | `autopilot.ts:40` | ✅ (renamed) |
+| `copilotOnRails.autopilot.priorPermissionLevel` | Prior permission level (workspaceState) | `autopilot.ts:41` | ✅ (renamed) |
+| `copilotOnRails.autopilot.deadline` | Autopilot auto-approve deadline (workspaceState) | `autopilot.ts:43` | ✅ (renamed) |
+| `copilotOnRails.createProjectWithCopilot.pendingDeadline` | Pending-create deadline (globalState) | `createProjectWithCopilot.ts:20` | ✅ (renamed) |
 
 Related constant: `maxCachedEvents = 50` (`diagnosticUtils.ts:43`).
 
-> ⚠️ Cache keys are **persisted in each user's `workspaceState`**. Renaming them is a breaking change
-> for in-flight projects unless a migration is added — see recommendations.
+> ⚠️ Cache keys are **persisted in each user's `workspaceState`/`globalState`**. The five `azureResourceGroups.*`
+> keys were renamed to `copilotOnRails.*` **without a migration** (per decision), so any in-flight state under
+> the old keys is orphaned. Future renames of the remaining keys likewise require a migration to preserve state.
 
 ---
 
@@ -309,31 +315,46 @@ above is primarily about human readability/consistency of the event names themse
 - **§3 Telemetry event ids (2-segment `copilotOnRails.submit*` only)** — reshaped to phase-based
   `copilotOnRails.<phase>.<action>` via the `corId` helper + `CopilotOnRailsPhase` enum.
 
+### Pass 3 — applied (this change)
+- **§2 MCP tool names** — decided to **leave as-is** (clean `snake_case`, model-facing contract referenced in
+  ~50 agent-md spots and already CoR-scoped by their agents). No CoR marker added.
+- **§3 three-segment events** — all six re-prefixed to `copilotOnRails.<phase>.<action>` via `corId`:
+  `loadingView.needHelpResume` (phase-agnostic), `scaffold.nextStepsAction`, `scaffold.requestBudgetWarning`,
+  `scaffold.refreshPrerequisites`, `debug.refreshPrerequisites`, `debug.nextStepsAction`. The old `<area>`
+  segment was dropped except that the two next-steps events fold it into a single `nextStepsAction` action word.
+- **NLS title keys** — the 7 CoR command display-title keys were re-labelled from `azureResourceGroups.*`
+  to match their command ids (`copilotOnRails.<phase>.<name>`) in both `package.json` (`"title": "%...%"`
+  refs) and `package.nls.json` (the key definitions). Visible button text unchanged. Mapping:
+  `openPlanView`→`scaffold.openPlanView`, `openLocalPlanView`→`debug.openPlanView`,
+  `openDeployPlanView`→`deploy.openPlanView`, `openRequirementsView`→`scaffold.openRequirementsView`,
+  `openFrontendPreviewView`→`scaffold.openFrontendPreviewView`,
+  `openLocalNextStepsView`→`debug.openNextStepsView`, `openScaffoldNextStepsView`→`scaffold.openNextStepsView`.
+- **§4 diagnostic action names** — the 9 write-only `DiagnosticEvent.name` strings were standardized to
+  phase-qualified camelCase (kept as short bare names, no `copilotOnRails.` prefix, distinct from the outer
+  telemetry event id): `submitRequirements`, `submitScaffoldPlanApproval`, `submitScaffoldPlanFeedback`,
+  `scaffoldNextStepsAction`, `submitDebugPlanApproval`, `submitDebugPlanFeedback`, `debugNextStepsAction`,
+  `submitDeploymentPlanApproval`, `submitDeploymentPlanFeedback`. (The webview *message* command
+  `submitRequirements` in RequirementsView.tsx/RequirementsViewController is a separate protocol and untouched.)
+- Verified: `tsc --noEmit` clean, ESLint clean on the 5 changed controllers.
+- **§6 state keys** — the five CoR-related keys still under `azureResourceGroups.*` were renamed to the
+  `copilotOnRails.*` namespace (no migration, in-flight state orphaned, per decision): `autopilot.active`,
+  `autopilot.priorAutoApprove`, `autopilot.priorPermissionLevel`, `autopilot.deadline` (workspaceState in
+  `autopilot.ts`), and `createProjectWithCopilot.pendingDeadline` (globalState in `createProjectWithCopilot.ts`).
+  The 4 pre-existing `copilotOnRails.*` cache keys were already standardized.
+- **§5 telemetry properties** — decided to **leave** `autopilot` and `requirementsSelected` as-is (events are
+  already CoR-tagged via `isCopilotEvent` + `corProjectId`).
+- **§7 custom agent ids / folder names** — decided to **leave as-is** (shipped `resources/agents` folder +
+  `.github/agents` workspace-copy contract, referenced across agent `.md` files; like the MCP tool names).
+- **§8 webview view ids** — decided to **leave as-is** (internal panel/routing ids paired between
+  `WebviewRegistry` keys and each controller's `viewType` constructor arg; no telemetry/persistence exposure).
+
 ### Tabled — revisit next
-1. **§2 MCP tool names** (`snake_case`, e.g. `open_plan_view`) and their auto-emitted
-   `mcpTool/<name>/execute` telemetry events — deferred by request; decide on a CoR marker (e.g. `cor_` prefix).
-2. **§3 three-segment `azureResourceGroups.*` events** (6 of them: `loadingView.needHelpResume`,
-   `scaffoldNextSteps.actionSelected`, `scaffold.requestBudgetWarning`, `scaffoldPlan.refreshPrerequisites`,
-   `localDebugPlan.refreshPrerequisites`, `localDevNextSteps.actionSelected`) — these already have a
-   `<area>.<action>` shape; decide whether to re-prefix to `copilotOnRails.<phase>.<action>` and how their
-   existing area segment maps to the phase taxonomy.
-3. **NLS title keys** in `package.json` (`%azureResourceGroups.openPlanView%`, etc.) still use the old
-   namespace. They are display-title lookup keys (resolved from `package.nls.json`), independent of the
-   command id, so they were intentionally left untouched. Rename for consistency if desired (also rename the
-   matching keys in `package.nls.json`).
-4. **§4 Webview/diagnostic action names** (`submitRequirements`, `submitProjectScaffoldPlanApproval`, …) —
-   internal `DiagnosticEvent.name` strings; align with the §3 phase taxonomy if desired.
-5. **§5 Telemetry properties** (`autopilot`, `requirementsSelected`) — no CoR marker; low priority (events
-   are already tagged via `isCopilotEvent`/`corProjectId`).
-6. **§6 Workspace-state cache keys** — already namespaced `copilotOnRails.*`; only rename with a migration.
-7. **§7 Custom agent ids / instruction folder names** — cross-contract with `resources/agents` +
-   `.github/agents`; treat separately from telemetry work.
-8. **§8 Webview view ids** — no CoR marker.
+_All inventory sections have been reviewed; nothing remains tabled._
 
 ### Related findings (not renamed)
 - `azureResourceGroups.debug.openLoadingView` is **declared in `package.json` but has no handler** registered
   in `src/` and is not part of `copilotOnRailsCommandIds`. Likely an orphan/leftover — confirm and either wire
   it up or remove it (and rename to `copilotOnRails.*` at that time).
-- `azureResourceGroups.createProjectWithCopilot.pendingDeadline`
+- `copilotOnRails.createProjectWithCopilot.pendingDeadline`
   (`src/webviews/copilotOnRails/extension/createProjectWithCopilot.ts:20`) is a **globalState key**, not a
-  command id. Left as-is (falls under §6-style cache-key handling).
+  command id. Renamed from `azureResourceGroups.*` to `copilotOnRails.*` as part of §6 (no migration).

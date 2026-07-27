@@ -403,37 +403,37 @@
             },
             {
                 "command": "copilotOnRails.scaffold.openPlanView",
-                "title": "%azureResourceGroups.openPlanView%",
+                "title": "%copilotOnRails.scaffold.openPlanView%",
                 "category": "Azure"
             },
             {
                 "command": "copilotOnRails.debug.openPlanView",
-                "title": "%azureResourceGroups.openLocalPlanView%",
+                "title": "%copilotOnRails.debug.openPlanView%",
                 "category": "Azure"
             },
             {
                 "command": "copilotOnRails.deploy.openPlanView",
-                "title": "%azureResourceGroups.openDeployPlanView%",
+                "title": "%copilotOnRails.deploy.openPlanView%",
                 "category": "Azure"
             },
             {
                 "command": "copilotOnRails.scaffold.openRequirementsView",
-                "title": "%azureResourceGroups.openRequirementsView%",
+                "title": "%copilotOnRails.scaffold.openRequirementsView%",
                 "category": "Azure"
             },
             {
                 "command": "copilotOnRails.scaffold.openFrontendPreviewView",
-                "title": "%azureResourceGroups.openFrontendPreviewView%",
+                "title": "%copilotOnRails.scaffold.openFrontendPreviewView%",
                 "category": "Azure"
             },
             {
                 "command": "copilotOnRails.debug.openNextStepsView",
-                "title": "%azureResourceGroups.openLocalNextStepsView%",
+                "title": "%copilotOnRails.debug.openNextStepsView%",
                 "category": "Azure"
             },
             {
                 "command": "copilotOnRails.scaffold.openNextStepsView",
-                "title": "%azureResourceGroups.openScaffoldNextStepsView%",
+                "title": "%copilotOnRails.scaffold.openNextStepsView%",
                 "category": "Azure"
             }
         ],

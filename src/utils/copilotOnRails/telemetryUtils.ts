@@ -17,7 +17,11 @@ export enum CopilotOnRailsPhase {
 }
 
 /**
- * Builds a standardized Copilot on Rails identifier (e.g. command ids / telemetry ids)
+ * Builds a standardized Copilot on Rails identifier (e.g. command ids / telemetry ids).
+ *
+ * The id is always prefixed with `copilotOnRails`. When a {@link CopilotOnRailsPhase} is
+ * provided, the phase is inserted between the prefix and `name` (e.g. `copilotOnRails.<phase>.<name>`);
+ * otherwise the id is phase-agnostic (e.g. `copilotOnRails.<name>`).
  */
 export function corId(name: string, phase?: CopilotOnRailsPhase): string {
     return phase ? `copilotOnRails.${phase}.${name}` : `copilotOnRails.${name}`;

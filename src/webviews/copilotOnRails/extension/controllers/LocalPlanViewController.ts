@@ -62,7 +62,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
 
     private async approvePlan(): Promise<void> {
         return await callWithTelemetryAndErrorHandling(corId('submitPlanApproval', CopilotOnRailsPhase.Debug), async (actionContext: IActionContext) => {
-            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitLocalDebugPlanApproval' }, async (context: CopilotOnRailsContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDebugPlanApproval' }, async (context: CopilotOnRailsContext) => {
                 if (!(await this.trySubmitPlanApproval(context))) {
                     return;
                 }
@@ -115,7 +115,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
 
     private async trySubmitPlanFeedback(query: string): Promise<boolean> {
         return await callWithTelemetryAndErrorHandling(corId('submitPlanFeedback', CopilotOnRailsPhase.Debug), async (actionContext: IActionContext) => {
-            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitLocalDebugPlanFeedback' }, async (context: CopilotOnRailsContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDebugPlanFeedback' }, async (context: CopilotOnRailsContext) => {
                 if (!(await ensureAgentInstructions(azureDebugPlanAgent))) {
                     setCorProp(context, this.ensureAgentInstructionsKey, false);
                     setCorProp(context, 'feedbackOutcome', 'agentInstructionsMissing');
@@ -148,7 +148,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     }
 
     private async refreshPrerequisites(): Promise<void> {
-        await callWithTelemetryAndErrorHandling('azureResourceGroups.localDebugPlan.refreshPrerequisites', async (context: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('refreshPrerequisites', CopilotOnRailsPhase.Debug), async (context: IActionContext) => {
             context.telemetry.properties.isCopilotEvent = 'true';
             context.telemetry.properties.corProjectId = getCorProjectId();
             context.errorHandling.suppressDisplay = true;
