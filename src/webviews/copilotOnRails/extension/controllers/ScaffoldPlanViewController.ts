@@ -206,13 +206,15 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
 
     private async trySubmitPlanFeedback(query: string): Promise<boolean> {
         return await callWithTelemetryAndErrorHandling(`copilotOnRails.submitProjectScaffoldPlanFeedback`, async (actionContext: IActionContext) => {
-            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitProjectScaffoldPlanFeedback' }, async (_context: CopilotOnRailsContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitProjectScaffoldPlanFeedback' }, async (context: CopilotOnRailsContext) => {
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
                 await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
                     mode: 'agent',
                     query,
                 }));
                 void this.panel.webview.postMessage({ command: 'revisionInProgress' });
+
+                setCorProp(context, 'feedbackOutcome', 'submitted');
                 return true;
             });
         }) ?? false;
