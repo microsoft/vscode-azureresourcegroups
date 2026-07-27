@@ -27,6 +27,10 @@ export function getCorProjectId(): string {
     return projectId;
 }
 
+export function resetCorProjectId(): void {
+    ext.context.workspaceState.update(projectIdKey, undefined);
+}
+
 /**
  * Prepares a {@link CopilotOnRailsContext} and runs a provided `command` inside the Copilot on Rails
  * diagnostic-event lifecycle. This is the single entrypoint-agnostic wrapper. Both the extension-command

@@ -10,9 +10,6 @@ import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./Co
 // #region prompt
 const promptKey: string = 'copilotOnRails.prompt';
 
-/**
- * Records the originating project prompt as diagnostics metadata for the current workspace.
- */
 export function recordPrompt(prompt: string): void {
     void ext.context.workspaceState.update(promptKey, prompt);
 }
@@ -106,17 +103,6 @@ export async function withDiagnosticEvents<T>(
 }
 
 // #endregion
-
-/**
- * Begins a fresh "Create with Copilot" session for the current workspace: records the
- * new originating prompt, stamps a new created-at time, and starts from an empty
- * diagnostic events list.
- */
-export function recordNewPrompt(prompt: string): void {
-    recordPrompt(prompt);
-    recordCreatedAt();
-    clearDiagnosticEvents();
-}
 
 /**
  * A discrete, immutable entry describing a single action taken during the Copilot
