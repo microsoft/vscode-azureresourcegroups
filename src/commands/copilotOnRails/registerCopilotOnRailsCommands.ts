@@ -104,8 +104,8 @@ export function startAzureDebugGenerateCommand(_context: CopilotOnRailsContext, 
     });
 }
 
-export function startDeploymentCommand(_context: CopilotOnRailsContext, prompt?: string): Promise<void> {
-    return openChatWithAgent(copilotOnRailsCustomAgents.azureDeployCustomAgent, prompt ?? 'Prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`.', {
+export async function startDeploymentCommand(_context: CopilotOnRailsContext, prompt?: string): Promise<void> {
+    await openChatWithAgent(copilotOnRailsCustomAgents.azureDeployCustomAgent, prompt ?? 'Prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`.', {
         stage: 2,
         title: l10n.t('Preparing deployment…'),
         message: l10n.t('Copilot is preparing your deployment plan.'),

@@ -4,12 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { azureDeployAgent } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
 import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
 import { ensureAgentInstructions } from './agentInstructions';
+import { ensureAzureDeploymentPrerequisites } from './deploymentPrerequisites';
 
 const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
 const CUSTOM_AGENT_COMMAND_PREFIX = 'workbench.action.chat.open';
@@ -117,16 +119,11 @@ export async function launchAgentChat(agentName: string, query: string, model?: 
 
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
         const resolvedModel = model ?? getSessionModel();
-        if (resolvedModel) {
-            const selector = await resolveModelSelector(resolvedModel);
-            await vscode.commands.executeCommand('workbench.action.chat.open', {
-                mode: agentName,
-                query,
-                ...(selector ? { modelSelector: selector } : {}),
-            });
-        } else {
-            await vscode.commands.executeCommand(commandId, { query });
-        }
+        const selector = resolvedModel ? await resolveModelSelector(resolvedModel) : undefined;
+        await vscode.commands.executeCommand(commandId, {
+            query,
+            ...(selector ? { modelSelector: selector } : {}),
+        });
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         void vscode.window.showErrorMessage(
@@ -148,6 +145,9 @@ export async function launchAgentChat(agentName: string, query: string, model?: 
 }
 
 export async function openChatWithAgent(agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
+    if (agentName === azureDeployAgent && !(await ensureAzureDeploymentPrerequisites())) {
+        return;
+    }
     if (!(await ensureCopilotChatReady())) {
         return;
     }

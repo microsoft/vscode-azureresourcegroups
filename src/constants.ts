@@ -6,6 +6,7 @@
 import { l10n } from 'vscode';
 
 export const resourcesExtensionId: string = 'ms-azuretools.vscode-azureresourcegroups';
+export const gitHubCopilotForAzureExtensionId = 'ms-azuretools.vscode-azure-github-copilot';
 export const azureResourceProviderId: string = 'vscode-azureresourcegroups.azureResourceProvider';
 export const contributesKey = 'x-azResources';
 // every group id has a groupBySetting/value format, so just following it
