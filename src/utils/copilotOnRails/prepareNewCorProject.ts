@@ -3,17 +3,30 @@
  *  Licensed under the MIT License. See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { clearDiagnosticEvents, recordCreatedAt, recordPrompt } from "./diagnosticUtils";
-import { resetCorProjectId } from "./telemetryUtils";
+import { ext } from "../../extensionVariables";
+import { projectSubmissionState } from "../../tree/project/projectSubmissionState";
+import { disableAutopilot } from "../../webviews/copilotOnRails/extension/autopilot";
+import { recordCreatedAt, recordPrompt } from "./diagnosticUtils";
 
 /**
- * Prepares a new Copilot on Rails project to be run in the current workspace. Issues a new
- * `corProjectId` so telemetry isn't stitched to the previous attempt, records the
- * originating prompt, stamps the created-at time, and clears diagnostic events.
+ * Prepares a new Copilot on Rails project to be run in the current workspace
+ * Must be called *before* any new-project state is recorded to wipe any cached data.
  */
-export function prepareNewCorProject(prompt: string): void {
-    resetCorProjectId();
+export async function prepareNewCorProject(prompt: string): Promise<void> {
+    await clearCorWorkspaceState();
+    await disableAutopilot();
+    projectSubmissionState.reset();
+
     recordPrompt(prompt);
     recordCreatedAt();
-    clearDiagnosticEvents();
+}
+
+const corStateKeyPattern: RegExp = /copilotOnRails/i;
+
+async function clearCorWorkspaceState(): Promise<void> {
+    for (const key of ext.context.workspaceState.keys()) {
+        if (corStateKeyPattern.test(key)) {
+            await ext.context.workspaceState.update(key, undefined);
+        }
+    }
 }

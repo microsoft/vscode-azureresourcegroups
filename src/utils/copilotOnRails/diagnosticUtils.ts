@@ -56,14 +56,6 @@ export function getDiagnosticEvents(): DiagnosticEvent[] {
 }
 
 /**
- * Clears the cached diagnostic events for the current workspace, so a new project
- * starts with an empty event list.
- */
-export function clearDiagnosticEvents(): void {
-    void ext.context.workspaceState.update(eventsKey, []);
-}
-
-/**
  * Aggregates the workspace-cached diagnostics (originating prompt, created-at stamp, and
  * recorded events) into a single {@link DiagnosticsMetadata} object.
  *

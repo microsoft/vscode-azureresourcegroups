@@ -28,8 +28,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
                 switch (message.command) {
                     case 'plan':
                         if (message.prompt) {
-                            prepareNewCorProject(message.prompt);
-                            void this.openChatWithQuery(message.prompt, message.model);
+                            void this.planProject(message.prompt, message.model);
                         } else {
                             this.panel.dispose();
                         }
@@ -37,6 +36,15 @@ export class CreateProjectViewController extends WebviewController<CreateProject
                 }
             }
         );
+    }
+
+    /**
+     * Resets any leftover workspace state from a previous project before launching the
+     * planning agent, so the two attempts don't get conflated.
+     */
+    private async planProject(prompt: string, model?: string): Promise<void> {
+        await prepareNewCorProject(prompt);
+        await this.openChatWithQuery(prompt, model);
     }
 
     private async openChatWithQuery(query: string, model?: string): Promise<void> {
