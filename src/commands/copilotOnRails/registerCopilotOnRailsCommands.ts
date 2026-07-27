@@ -37,7 +37,6 @@ export const copilotOnRailsCommandIds = {
     openLocalPlanView: corId('openPlanView', CopilotOnRailsPhase.Debug),
     startAzureDebugGenerate: corId('startAzureDebugGenerate', CopilotOnRailsPhase.Debug),
     openLocalNextStepsView: corId('openNextStepsView', CopilotOnRailsPhase.Debug),
-    debugOpenLocalNextStepsView: corId('debugOpenLocalNextStepsView', CopilotOnRailsPhase.Debug),
     startDebugConfiguration: corId('startDebugConfiguration', CopilotOnRailsPhase.Debug),
 
     startDeployment: corId('startDeployment', CopilotOnRailsPhase.Deploy),
@@ -123,7 +122,6 @@ export function registerCopilotOnRailsCommands(): void {
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.openLocalPlanView, openLocalPlanViewFromWorkspace);
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.startAzureDebugGenerate, startAzureDebugGenerateCommand);
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.openLocalNextStepsView, openLocalDevNextStepsView);
-    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.debugOpenLocalNextStepsView, openLocalDevNextStepsView);
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.startDebugConfiguration, startDebugConfiguration);
 
     // Phase 3: Deployment commands

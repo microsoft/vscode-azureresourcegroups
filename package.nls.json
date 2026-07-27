@@ -71,7 +71,6 @@
     "copilotOnRails.scaffold.openNextStepsView": "Open Scaffold Next Steps View",
     "copilotOnRails.debug.openPlanView": "Open Debug Plan View",
     "copilotOnRails.debug.openNextStepsView": "Open Debug Next Steps View",
-    "copilotOnRails.debug.openLoadingView": "Open Debug Loading View",
     "copilotOnRails.deploy.openPlanView": "Open Deploy Plan View",
     "copilotOnRails.inspectDiagnostics": "Inspect Copilot on Rails Diagnostics",
     "azureProject.viewName": "Azure Project",

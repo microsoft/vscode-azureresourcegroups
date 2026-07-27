@@ -153,11 +153,6 @@
                 "category": "Azure"
             },
             {
-                "command": "copilotOnRails.debug.openLoadingView",
-                "title": "%copilotOnRails.debug.openLoadingView%",
-                "category": "Azure"
-            },
-            {
                 "command": "copilotOnRails.scaffold.downloadAgentInstructions",
                 "title": "%copilotOnRails.scaffold.downloadAgentInstructions%",
                 "category": "Azure"
