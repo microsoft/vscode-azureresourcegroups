@@ -7,8 +7,8 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microso
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import { ext } from "../../../../extensionVariables";
 import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { ext } from "../../../../extensionVariables";
 import { callWithDiagnosticsAndTelemetryHandling, CopilotOnRailsPhase, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 

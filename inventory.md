@@ -352,7 +352,7 @@ above is primarily about human readability/consistency of the event names themse
 _All inventory sections have been reviewed; nothing remains tabled._
 
 ### Related findings (not renamed)
-- `azureResourceGroups.debug.openLoadingView` is **declared in `package.json` but has no handler** registered
+- `copilotOnRails.debug.openLoadingView` is **declared in `package.json` but has no handler** registered
   in `src/` and is not part of `copilotOnRailsCommandIds`. Likely an orphan/leftover — confirm and either wire
   it up or remove it (and rename to `copilotOnRails.*` at that time).
 - `copilotOnRails.createProjectWithCopilot.pendingDeadline`

@@ -148,23 +148,18 @@
         },
         "commands": [
             {
-                "command": "copilotOnRails.debug.startAzureDebugGenerate",
-                "title": "Start Azure Debug Generate",
-                "category": "Azure"
-            },
-            {
                 "command": "copilotOnRails.inspectDiagnostics",
-                "title": "Inspect Copilot on Rails Diagnostics",
+                "title": "%copilotOnRails.inspectDiagnostics%",
                 "category": "Azure"
             },
             {
-                "command": "azureResourceGroups.debug.openLoadingView",
-                "title": "Debug: Open Copilot on Rails Loading View",
+                "command": "copilotOnRails.debug.openLoadingView",
+                "title": "%copilotOnRails.debug.openLoadingView%",
                 "category": "Azure"
             },
             {
                 "command": "copilotOnRails.scaffold.downloadAgentInstructions",
-                "title": "Download Azure Agent Instructions",
+                "title": "%copilotOnRails.scaffold.downloadAgentInstructions%",
                 "category": "Azure"
             },
             {
@@ -729,10 +724,6 @@
                 },
                 {
                     "command": "copilotOnRails.debug.openNextStepsView",
-                    "when": "never"
-                },
-                {
-                    "command": "copilotOnRails.debug.startAzureDebugGenerate",
                     "when": "never"
                 },
                 {
