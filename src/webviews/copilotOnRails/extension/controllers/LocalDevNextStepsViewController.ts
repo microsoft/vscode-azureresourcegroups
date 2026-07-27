@@ -8,6 +8,7 @@ import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { buildChatOpenOptions, ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { azureDebugGenerateAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
@@ -72,7 +73,7 @@ export class LocalDevNextStepsViewController extends WebviewController<LocalDevN
                     case 'deploy':
                         this.panel.dispose();
                         await vscode.commands.executeCommand(
-                            'azureResourceGroups.startDeployment',
+                            copilotOnRailsCommandIds.startDeployment,
                             vscode.l10n.t('The local development environment is set up and verified. Now prepare the project for deployment to Azure.'),
                         );
                         return;

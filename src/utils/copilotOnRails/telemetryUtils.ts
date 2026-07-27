@@ -10,6 +10,19 @@ import { ext } from "../../extensionVariables";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./CopilotOnRailsContext";
 import { DiagnosticEvent, withDiagnosticEvents } from "./diagnosticUtils";
 
+export enum CopilotOnRailsPhase {
+    Scaffold = 'scaffold',
+    Debug = 'debug',
+    Deploy = 'deploy',
+}
+
+/**
+ * Builds a standardized Copilot on Rails identifier (e.g. command ids / telemetry ids)
+ */
+export function corId(name: string, phase?: CopilotOnRailsPhase): string {
+    return phase ? `copilotOnRails.${phase}.${name}` : `copilotOnRails.${name}`;
+}
+
 const projectIdKey: string = 'copilotOnRails.projectId';
 
 /**

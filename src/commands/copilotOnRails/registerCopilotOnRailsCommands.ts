@@ -8,7 +8,7 @@ import { l10n } from 'vscode';
 import { azureDebugPlanAgent } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
-import { callWithDiagnosticsAndTelemetryHandling } from '../../utils/copilotOnRails/telemetryUtils';
+import { callWithDiagnosticsAndTelemetryHandling, CopilotOnRailsPhase, corId } from '../../utils/copilotOnRails/telemetryUtils';
 import { createProjectWithCopilot } from '../../webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { openDeploymentPlanViewFromWorkspace } from '../../webviews/copilotOnRails/extension/openDeploymentPlanView';
 import { openFrontendPreviewView } from '../../webviews/copilotOnRails/extension/openFrontendPreviewView';
@@ -24,35 +24,29 @@ import { openChatWithAgent } from './openChatWithAgent';
 import { startDebugConfiguration } from './startDebugConfiguration';
 
 export const copilotOnRailsCommandIds = {
-    // Phase 0...
-    createProjectWithCopilot: 'azureResourceGroups.createProjectWithCopilot',
-    resumeProjectWithCopilot: 'azureResourceGroups.resumeProjectWithCopilot',
-    refreshProjectTree: 'azureProject.refresh',
-    downloadAgentInstructions: 'azureResourceGroups.downloadAgentInstructions',
+    createProjectWithCopilot: corId('createProjectWithCopilot', CopilotOnRailsPhase.Scaffold),
+    downloadAgentInstructions: corId('downloadAgentInstructions', CopilotOnRailsPhase.Scaffold),
+    openRequirementsView: corId('openRequirementsView', CopilotOnRailsPhase.Scaffold),
+    openScaffoldPlanView: corId('openPlanView', CopilotOnRailsPhase.Scaffold),
+    startProjectScaffold: corId('startProjectScaffold', CopilotOnRailsPhase.Scaffold),
+    openFrontendPreviewView: corId('openFrontendPreviewView', CopilotOnRailsPhase.Scaffold),
+    startProjectIntegrate: corId('startProjectIntegrate', CopilotOnRailsPhase.Scaffold),
+    openScaffoldNextStepsView: corId('openNextStepsView', CopilotOnRailsPhase.Scaffold),
 
-    // Phase 1...
-    openRequirementsView: 'azureResourceGroups.openRequirementsView',
-    openScaffoldPlanView: 'azureResourceGroups.openPlanView',
-    startProjectScaffold: 'azureResourceGroups.startProjectScaffold',
-    openFrontendPreviewView: 'azureResourceGroups.openFrontendPreviewView',
-    startProjectIntegrate: 'azureResourceGroups.startProjectIntegrate',
-    openScaffoldNextStepsView: 'azureResourceGroups.openScaffoldNextStepsView',
+    startLocalDevelopment: corId('startLocalDevelopment', CopilotOnRailsPhase.Debug),
+    openLocalPlanView: corId('openPlanView', CopilotOnRailsPhase.Debug),
+    startAzureDebugGenerate: corId('startAzureDebugGenerate', CopilotOnRailsPhase.Debug),
+    openLocalNextStepsView: corId('openNextStepsView', CopilotOnRailsPhase.Debug),
+    debugOpenLocalNextStepsView: corId('debugOpenLocalNextStepsView', CopilotOnRailsPhase.Debug),
+    startDebugConfiguration: corId('startDebugConfiguration', CopilotOnRailsPhase.Debug),
 
-    // Phase 2...
-    startLocalDevelopment: 'azureResourceGroups.startLocalDevelopment',
-    openLocalPlanView: 'azureResourceGroups.openLocalPlanView',
-    startAzureDebugGenerate: 'azureResourceGroups.startAzureDebugGenerate',
-    openLocalNextStepsView: 'azureResourceGroups.openLocalNextStepsView',
-    debugOpenLocalNextStepsView: 'azureResourceGroups.debug.openLocalNextStepsView',
-    startDebugConfiguration: 'azureResourceGroups.startDebugConfiguration',
+    startDeployment: corId('startDeployment', CopilotOnRailsPhase.Deploy),
+    openDeploymentPlanView: corId('openPlanView', CopilotOnRailsPhase.Deploy),
 
-    // Phase 3...
-    startDeployment: 'azureResourceGroups.startDeployment',
-    openDeploymentPlanView: 'azureResourceGroups.openDeployPlanView',
-
-    // Diagnostics...
-    inspectDiagnostics: 'azureResourceGroups.inspectDiagnostics',
-} as const;
+    resumeProjectWithCopilot: corId('resumeProjectWithCopilot'),
+    refreshProjectTree: corId('azureProject.refresh'),
+    inspectDiagnostics: corId('inspectDiagnostics'),
+};
 
 /**
  * Registers a Copilot on Rails extension command, wrapping it in the shared
@@ -114,13 +108,9 @@ export function startDeploymentCommand(_context: CopilotOnRailsContext, prompt?:
 }
 
 export function registerCopilotOnRailsCommands(): void {
-    // Phase 0: Initialization commands
-    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.createProjectWithCopilot, createProjectWithCopilot);
-    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot, resumeProjectWithCopilot);
-    registerCommand(copilotOnRailsCommandIds.refreshProjectTree, () => ext.actions.refreshProjectTree());
-    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.downloadAgentInstructions, downloadAgentInstructions);
-
     // Phase 1: Project scaffolding commands
+    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.createProjectWithCopilot, createProjectWithCopilot);
+    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.downloadAgentInstructions, downloadAgentInstructions);
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.openRequirementsView, openRequirementsViewFromWorkspace);
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.openScaffoldPlanView, openPlanViewFromWorkspace);
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.startProjectScaffold, startProjectScaffoldCommand);
@@ -140,6 +130,7 @@ export function registerCopilotOnRailsCommands(): void {
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.startDeployment, startDeploymentCommand);
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.openDeploymentPlanView, openDeploymentPlanViewFromWorkspace);
 
-    // Diagnostics
+    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot, resumeProjectWithCopilot);
+    registerCommand(copilotOnRailsCommandIds.refreshProjectTree, () => ext.actions.refreshProjectTree());
     registerCommand(copilotOnRailsCommandIds.inspectDiagnostics, inspectDiagnostics);
 }
