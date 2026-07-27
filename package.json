@@ -259,7 +259,7 @@
             },
             {
                 "command": "copilotOnRails.azureProject.refresh",
-                "title": "%azureResourceGroups.refresh%",
+                "title": "%copilotOnRails.azureProject.refresh%",
                 "category": "Azure",
                 "icon": "$(refresh)"
             },
