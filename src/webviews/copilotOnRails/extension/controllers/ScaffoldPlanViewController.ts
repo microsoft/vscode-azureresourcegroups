@@ -14,7 +14,7 @@ import { buildChatOpenOptions, launchAgentChat } from "../../../../commands/copi
 import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { callWithDiagnosticsAndTelemetryHandling, CopilotOnRailsPhase, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type PreviewPage, type ScaffoldPlanData } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { AUTOPILOT_QUERY_MARKER, disableAutopilot, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
@@ -115,7 +115,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     private async approvePlan(autopilot: boolean): Promise<void> {
-        return await callWithTelemetryAndErrorHandling(corId('submitPlanApproval', CopilotOnRailsPhase.Scaffold), async (actionContext: IActionContext) => {
+        return await callWithTelemetryAndErrorHandling(corId('submitScaffoldPlanApproval'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitScaffoldPlanApproval' }, async (context: CopilotOnRailsContext) => {
                 if (!(await this.trySubmitPlanApproval(context, autopilot))) {
                     return;
@@ -205,7 +205,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     private async trySubmitPlanFeedback(query: string): Promise<boolean> {
-        return await callWithTelemetryAndErrorHandling(corId('submitPlanFeedback', CopilotOnRailsPhase.Scaffold), async (actionContext: IActionContext) => {
+        return await callWithTelemetryAndErrorHandling(corId('submitScaffoldPlanFeedback'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitScaffoldPlanFeedback' }, async (context: CopilotOnRailsContext) => {
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
                 await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
@@ -229,7 +229,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         if (!vscode.workspace.workspaceFolders?.length) {
             return;
         }
-        await callWithTelemetryAndErrorHandling(corId('requestBudgetWarning', CopilotOnRailsPhase.Scaffold), async (context: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('requestBudgetWarning'), async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
             const yes: vscode.MessageItem = { title: vscode.l10n.t('Yes') };
             const no: vscode.MessageItem = { title: vscode.l10n.t('No'), isCloseAffordance: true };
@@ -307,7 +307,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     private async refreshPrerequisites(autopilot: boolean): Promise<void> {
-        await callWithTelemetryAndErrorHandling(corId('refreshPrerequisites', CopilotOnRailsPhase.Scaffold), async (context: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('refreshScaffoldPrerequisites'), async (context: IActionContext) => {
             context.errorHandling.suppressDisplay = true;
             context.telemetry.properties.isCopilotEvent = 'true';
             context.telemetry.properties.corProjectId = getCorProjectId();

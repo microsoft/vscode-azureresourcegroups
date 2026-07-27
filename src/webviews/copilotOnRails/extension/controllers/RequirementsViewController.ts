@@ -12,7 +12,7 @@ import { launchAgentChat } from "../../../../commands/copilotOnRails/openChatWit
 import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { callWithDiagnosticsAndTelemetryHandling, CopilotOnRailsPhase, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type RequirementsData, type RequirementsExecutionMode } from "../../views/utils/parseRequirements";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -65,7 +65,7 @@ export class RequirementsViewController extends WebviewController<Record<string,
     }
 
     private async handleSubmit(data: RequirementsData): Promise<void> {
-        return await callWithTelemetryAndErrorHandling(corId('submitRequirements', CopilotOnRailsPhase.Scaffold), async (actionContext: IActionContext) => {
+        return await callWithTelemetryAndErrorHandling(corId('submitRequirements'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitRequirements' }, async (context: CopilotOnRailsContext) => {
                 this.requirementsData = data;
                 this.recordRequirementsTelemetry(context);

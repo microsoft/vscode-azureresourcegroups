@@ -10,21 +10,12 @@ import { ext } from "../../extensionVariables";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./CopilotOnRailsContext";
 import { DiagnosticEvent, withDiagnosticEvents } from "./diagnosticUtils";
 
-export enum CopilotOnRailsPhase {
-    Scaffold = 'scaffold',
-    Debug = 'debug',
-    Deploy = 'deploy',
-}
-
 /**
- * Builds a standardized Copilot on Rails identifier (e.g. command ids / telemetry ids).
- *
- * The id is always prefixed with `copilotOnRails`. When a {@link CopilotOnRailsPhase} is
- * provided, the phase is inserted between the prefix and `name` (e.g. `copilotOnRails.<phase>.<name>`);
- * otherwise the id is phase-agnostic (e.g. `copilotOnRails.<name>`).
+ * Builds a standardized Copilot on Rails identifier for command ids and telemetry.
+ * The id will always be prefixed with `copilotOnRails.`.
  */
-export function corId(name: string, phase?: CopilotOnRailsPhase): string {
-    return phase ? `copilotOnRails.${phase}.${name}` : `copilotOnRails.${name}`;
+export function corId(name: string): string {
+    return `copilotOnRails.${name}`;
 }
 
 const projectIdKey: string = 'copilotOnRails.projectId';

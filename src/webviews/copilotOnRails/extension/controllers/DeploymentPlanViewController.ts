@@ -12,7 +12,7 @@ import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openCh
 import { azureDeployAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { callWithDiagnosticsAndTelemetryHandling, CopilotOnRailsPhase, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type DeploymentPlanData } from "../../views/utils/deploymentPlanTypes";
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
@@ -104,7 +104,7 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
     }
 
     private async approvePlan(): Promise<void> {
-        await callWithTelemetryAndErrorHandling(corId('submitPlanApproval', CopilotOnRailsPhase.Deploy), async (actionContext: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('submitDeploymentPlanApproval'), async (actionContext: IActionContext) => {
             await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDeploymentPlanApproval' }, async (context: CopilotOnRailsContext) => {
                 if (!(await this.trySubmitPlanApproval(context))) {
                     return;
@@ -148,7 +148,7 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
     }
 
     private async trySubmitPlanFeedback(query: string): Promise<boolean> {
-        return await callWithTelemetryAndErrorHandling(corId('submitPlanFeedback', CopilotOnRailsPhase.Deploy), async (actionContext: IActionContext) => {
+        return await callWithTelemetryAndErrorHandling(corId('submitDeploymentPlanFeedback'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDeploymentPlanFeedback' }, async (context: CopilotOnRailsContext) => {
                 if (!(await ensureAgentInstructions(azureDeployAgent))) {
                     setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, false);

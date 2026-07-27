@@ -8,7 +8,7 @@ import { l10n } from 'vscode';
 import { azureDebugPlanAgent } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
-import { callWithDiagnosticsAndTelemetryHandling, CopilotOnRailsPhase, corId } from '../../utils/copilotOnRails/telemetryUtils';
+import { callWithDiagnosticsAndTelemetryHandling, corId } from '../../utils/copilotOnRails/telemetryUtils';
 import { createProjectWithCopilot } from '../../webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { openDeploymentPlanViewFromWorkspace } from '../../webviews/copilotOnRails/extension/openDeploymentPlanView';
 import { openFrontendPreviewView } from '../../webviews/copilotOnRails/extension/openFrontendPreviewView';
@@ -24,23 +24,23 @@ import { openChatWithAgent } from './openChatWithAgent';
 import { startDebugConfiguration } from './startDebugConfiguration';
 
 export const copilotOnRailsCommandIds = {
-    createProjectWithCopilot: corId('createProjectWithCopilot', CopilotOnRailsPhase.Scaffold),
-    downloadAgentInstructions: corId('downloadAgentInstructions', CopilotOnRailsPhase.Scaffold),
-    openRequirementsView: corId('openRequirementsView', CopilotOnRailsPhase.Scaffold),
-    openScaffoldPlanView: corId('openPlanView', CopilotOnRailsPhase.Scaffold),
-    startProjectScaffold: corId('startProjectScaffold', CopilotOnRailsPhase.Scaffold),
-    openFrontendPreviewView: corId('openFrontendPreviewView', CopilotOnRailsPhase.Scaffold),
-    startProjectIntegrate: corId('startProjectIntegrate', CopilotOnRailsPhase.Scaffold),
-    openScaffoldNextStepsView: corId('openNextStepsView', CopilotOnRailsPhase.Scaffold),
+    createProjectWithCopilot: corId('createProjectWithCopilot'),
+    downloadAgentInstructions: corId('downloadAgentInstructions'),
+    openRequirementsView: corId('openRequirementsView'),
+    openScaffoldPlanView: corId('openScaffoldPlanView'),
+    startProjectScaffold: corId('startProjectScaffold'),
+    openFrontendPreviewView: corId('openFrontendPreviewView'),
+    startProjectIntegrate: corId('startProjectIntegrate'),
+    openScaffoldNextStepsView: corId('openScaffoldNextStepsView'),
 
-    startLocalDevelopment: corId('startLocalDevelopment', CopilotOnRailsPhase.Debug),
-    openLocalPlanView: corId('openPlanView', CopilotOnRailsPhase.Debug),
-    startAzureDebugGenerate: corId('startAzureDebugGenerate', CopilotOnRailsPhase.Debug),
-    openLocalNextStepsView: corId('openNextStepsView', CopilotOnRailsPhase.Debug),
-    startDebugConfiguration: corId('startDebugConfiguration', CopilotOnRailsPhase.Debug),
+    startLocalDevelopment: corId('startLocalDevelopment'),
+    openDebugPlanView: corId('openDebugPlanView'),
+    startAzureDebugGenerate: corId('startAzureDebugGenerate'),
+    openDebugNextStepsView: corId('openDebugNextStepsView'),
+    startDebugConfiguration: corId('startDebugConfiguration'),
 
-    startDeployment: corId('startDeployment', CopilotOnRailsPhase.Deploy),
-    openDeploymentPlanView: corId('openPlanView', CopilotOnRailsPhase.Deploy),
+    startDeployment: corId('startDeployment'),
+    openDeploymentPlanView: corId('openDeploymentPlanView'),
 
     resumeProjectWithCopilot: corId('resumeProjectWithCopilot'),
     refreshProjectTree: corId('azureProject.refresh'),
@@ -119,9 +119,9 @@ export function registerCopilotOnRailsCommands(): void {
 
     // Phase 2: Local debug / development commands
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.startLocalDevelopment, startLocalDevelopmentCommand);
-    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.openLocalPlanView, openLocalPlanViewFromWorkspace);
+    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.openDebugPlanView, openLocalPlanViewFromWorkspace);
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.startAzureDebugGenerate, startAzureDebugGenerateCommand);
-    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.openLocalNextStepsView, openLocalDevNextStepsView);
+    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.openDebugNextStepsView, openLocalDevNextStepsView);
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.startDebugConfiguration, startDebugConfiguration);
 
     // Phase 3: Deployment commands

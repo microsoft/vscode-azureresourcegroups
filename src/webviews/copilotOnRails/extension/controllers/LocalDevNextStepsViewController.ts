@@ -11,7 +11,7 @@ import { buildChatOpenOptions, ensureCopilotChatReady } from "../../../../comman
 import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { azureDebugGenerateAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
-import { callWithDiagnosticsAndTelemetryHandling, CopilotOnRailsPhase, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type LocalDevNextStepsViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -39,7 +39,7 @@ export class LocalDevNextStepsViewController extends WebviewController<LocalDevN
     }
 
     private async handleAction(action: NextStepAction): Promise<void> {
-        await callWithTelemetryAndErrorHandling(corId('nextStepsAction', CopilotOnRailsPhase.Debug), async (actionContext: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('debugNextStepsAction'), async (actionContext: IActionContext) => {
             actionContext.errorHandling.suppressDisplay = true;
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'debugNextStepsAction' }, async (corContext) => {
                 setCorProp(corContext, 'action', action);
