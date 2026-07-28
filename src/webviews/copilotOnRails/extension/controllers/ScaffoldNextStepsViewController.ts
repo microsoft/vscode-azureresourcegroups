@@ -7,8 +7,9 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microso
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
+import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { ext } from "../../../../extensionVariables";
-import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 
 type ScaffoldAction = 'setupLocal' | 'deploy';
@@ -34,23 +35,23 @@ export class ScaffoldNextStepsViewController extends WebviewController<Record<st
     }
 
     private async handleAction(action: ScaffoldAction): Promise<void> {
-        await callWithTelemetryAndErrorHandling('azureResourceGroups.scaffoldNextSteps.actionSelected', async (actionContext: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('scaffoldNextStepsAction'), async (actionContext: IActionContext) => {
             actionContext.errorHandling.suppressDisplay = true;
-            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'scaffoldNextSteps.actionSelected' }, async (corContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'scaffoldNextStepsAction' }, async (corContext) => {
                 setCorProp(corContext, 'action', action);
 
                 switch (action) {
                     case 'setupLocal':
                         this.panel.dispose();
                         await vscode.commands.executeCommand(
-                            'azureResourceGroups.startLocalDevelopment',
+                            copilotOnRailsCommandIds.startLocalDevelopment,
                             vscode.l10n.t('The project has been scaffolded. Now set up the local debugging environment so I can start building and testing.'),
                         );
                         return;
                     case 'deploy':
                         this.panel.dispose();
                         await vscode.commands.executeCommand(
-                            'azureResourceGroups.startDeployment',
+                            copilotOnRailsCommandIds.startDeployment,
                             vscode.l10n.t('The project has been scaffolded. Now prepare it for deployment to Azure.'),
                         );
                         return;

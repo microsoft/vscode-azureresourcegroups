@@ -57,7 +57,7 @@ Scan dependencies, detect configuration, and generate the plan directly. The use
 | 5 | **Detect migrations** — Scan for migration files, dependencies, and scripts | [migrations.md](references/migrations.md) |
 | 6 | **Inventory API test opportunities** — List HTTP endpoints and triggers per service | [inventory.md](references/inventory.md) § Step 3 |
 | 7 | **Write plan** — Generate `.azure/vscode-debug-plan.md` from scan results. Fill all sections completely. | [plan-template.md](references/plan-template.md) |
-| 8 | **Present plan** — Show plan to user and ask for approval. Highlight missing prerequisites. The user can edit the plan directly before approving. On approval, update status to `Approved`. | `.azure/vscode-debug-plan.md` |
+| 8 | **Present plan** — Show plan to user and ask for approval. Highlight any ❓ prerequisites to double-check. The user can edit the plan directly before approving. On approval, update status to `Approved`. | `.azure/vscode-debug-plan.md` |
 
 ---
 

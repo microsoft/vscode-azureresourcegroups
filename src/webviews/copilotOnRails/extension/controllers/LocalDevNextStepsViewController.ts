@@ -8,9 +8,10 @@ import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { buildChatOpenOptions, ensureCopilotChatReady } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { azureDebugGenerateAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
-import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type LocalDevNextStepsViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -38,9 +39,9 @@ export class LocalDevNextStepsViewController extends WebviewController<LocalDevN
     }
 
     private async handleAction(action: NextStepAction): Promise<void> {
-        await callWithTelemetryAndErrorHandling('azureResourceGroups.localDevNextSteps.actionSelected', async (actionContext: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('debugNextStepsAction'), async (actionContext: IActionContext) => {
             actionContext.errorHandling.suppressDisplay = true;
-            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'localDevNextSteps.actionSelected' }, async (corContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'debugNextStepsAction' }, async (corContext) => {
                 setCorProp(corContext, 'action', action);
 
                 switch (action) {
@@ -72,7 +73,7 @@ export class LocalDevNextStepsViewController extends WebviewController<LocalDevN
                     case 'deploy':
                         this.panel.dispose();
                         await vscode.commands.executeCommand(
-                            'azureResourceGroups.startDeployment',
+                            copilotOnRailsCommandIds.startDeployment,
                             vscode.l10n.t('The local development environment is set up and verified. Now prepare the project for deployment to Azure.'),
                         );
                         return;

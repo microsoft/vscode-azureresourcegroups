@@ -5,6 +5,7 @@
 
 import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
+import { ext } from "../../../extensionVariables";
 import { DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { settingUtils } from "../../../utils/settingUtils";
 
@@ -36,11 +37,11 @@ const MAX_RUN_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 export const AUTOPILOT_QUERY_MARKER = '[AUTOPILOT MODE]';
 
 /** globalState keys used to survive window reloads mid-run. */
-const STATE_ACTIVE = 'azureResourceGroups.autopilot.active';
-const STATE_PRIOR_VALUE = 'azureResourceGroups.autopilot.priorAutoApprove';
-const STATE_PRIOR_PERMISSION_LEVEL = 'azureResourceGroups.autopilot.priorPermissionLevel';
+const STATE_ACTIVE = 'copilotOnRails.autopilot.active';
+const STATE_PRIOR_VALUE = 'copilotOnRails.autopilot.priorAutoApprove';
+const STATE_PRIOR_PERMISSION_LEVEL = 'copilotOnRails.autopilot.priorPermissionLevel';
 /** Epoch ms after which an active run is considered stale and auto-restored. */
-const STATE_DEADLINE = 'azureResourceGroups.autopilot.deadline';
+const STATE_DEADLINE = 'copilotOnRails.autopilot.deadline';
 
 /** Command id used by the status-bar item to turn autopilot off. */
 export const DISABLE_AUTOPILOT_COMMAND = 'azureResourceGroups.disableAutopilot';
@@ -49,6 +50,13 @@ let statusBarItem: vscode.StatusBarItem | undefined;
 let completionWatcher: vscode.FileSystemWatcher | undefined;
 let safetyTimer: ReturnType<typeof setTimeout> | undefined;
 let extensionContext: vscode.ExtensionContext | undefined;
+
+export function isAutopilotActive(): boolean {
+    if (ext.context.globalState.get<boolean>(STATE_ACTIVE) !== true) {
+        return false;
+    }
+    return Date.now() < (ext.context.globalState.get<number>(STATE_DEADLINE) ?? 0);
+}
 
 function getAutoApproveValue(): unknown {
     // We only ever write at the Global target, so the global value is what we
@@ -206,7 +214,7 @@ export async function disableAutopilot(): Promise<void> {
         const priorPermission = context.globalState.get<unknown>(STATE_PRIOR_PERMISSION_LEVEL);
         await setPermissionLevelValue(priorPermission === null ? undefined : priorPermission);
 
-        await context.globalState.update(STATE_ACTIVE, false);
+        await context.globalState.update(STATE_ACTIVE, undefined);
         await context.globalState.update(STATE_PRIOR_VALUE, undefined);
         await context.globalState.update(STATE_PRIOR_PERMISSION_LEVEL, undefined);
         await context.globalState.update(STATE_DEADLINE, undefined);

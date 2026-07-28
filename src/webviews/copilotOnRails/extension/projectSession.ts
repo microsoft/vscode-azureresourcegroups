@@ -32,7 +32,7 @@ export type ProjectPhase =
     | 'plan'
     | 'scaffold'
     | 'integrate'
-    | 'localDev'
+    | 'debug'
     | 'deploy';
 
 /** The persisted session record. Stored under a single `workspaceState` key. */
@@ -76,7 +76,7 @@ const PHASE_CONFIG: Readonly<Record<ProjectPhase, PhaseConfig>> = {
         label: vscode.l10n.t('Live-data integration'),
         contextRefs: [INTEGRATION_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB],
     },
-    localDev: {
+    debug: {
         agent: azureDebugPlanAgent,
         label: vscode.l10n.t('Local development setup'),
         contextRefs: [DEBUG_PLAN_FILE_GLOB],
@@ -93,8 +93,8 @@ const AGENT_PHASE: Readonly<Record<string, ProjectPhase>> = {
     [azureProjectPlanAgent]: 'plan',
     [azureProjectScaffoldAgent]: 'scaffold',
     [azureProjectIntegrateAgent]: 'integrate',
-    [azureDebugPlanAgent]: 'localDev',
-    [azureDebugGenerateAgent]: 'localDev',
+    [azureDebugPlanAgent]: 'debug',
+    [azureDebugGenerateAgent]: 'debug',
     [azureDeployAgent]: 'deploy',
 };
 

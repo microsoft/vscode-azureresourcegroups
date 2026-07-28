@@ -17,7 +17,7 @@ const deploy = vscode.l10n.t('Deploy');
  * globalState key holding the epoch-ms deadline until which a pending "Create
  * with Copilot" request should auto-resume after a folder is opened.
  */
-const PENDING_CREATE_DEADLINE_KEY = 'azureResourceGroups.createProjectWithCopilot.pendingDeadline';
+const PENDING_CREATE_DEADLINE_KEY = 'copilotOnRails.createProjectWithCopilot.pendingDeadline';
 /** How long a pending create request stays valid across a window reload. */
 const PENDING_CREATE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
