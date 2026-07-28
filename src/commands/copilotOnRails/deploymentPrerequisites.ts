@@ -54,8 +54,8 @@ export async function ensureAzureDeploymentPrerequisites(context: CopilotOnRails
     const message = copilotForAzure
         ? vscode.l10n.t('Deployment requires the "{0}" skill from GitHub Copilot for Azure. Install the skill to continue?', azurePrepareSkillName)
         : vscode.l10n.t('Deployment requires the GitHub Copilot for Azure extension and its "{0}" skill. Install the extension to continue?', azurePrepareSkillName);
+
     const choice = await vscode.window.showWarningMessage(message, { modal: true }, install);
-    setCorProp(context, 'copilotForAzureInstallPromptAccepted', choice === install);
     if (choice !== install) {
         setCorProp(context, 'ensureDeploymentPrereqOutcome', hasExtension ? 'installSkillDeclined' : 'installExtensionDeclined');
         return false;
