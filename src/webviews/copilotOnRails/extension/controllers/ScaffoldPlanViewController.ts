@@ -194,6 +194,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             if (confirmedAutopilot) {
                 await disableAutopilot();
             }
+            // Undo the approval because scaffolding did not start, leaving the plan ready to retry.
             if (planBeforeApproval !== undefined && this.sourceFileUri) {
                 await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(planBeforeApproval, 'utf-8'));
                 this.onSelfWrite?.(planBeforeApproval);
