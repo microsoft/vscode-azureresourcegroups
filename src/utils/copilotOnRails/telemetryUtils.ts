@@ -99,7 +99,7 @@ export function setCorProp(context: CopilotOnRailsContext, key: string, value: u
 }
 
 /**
- * Call this to set both the diagnostics and telemetry properties.
+ * Call this automatically handle setting both the diagnostics and telemetry error message.
  */
 export function setCorErrorProp(context: CopilotOnRailsContext, key: string, errorMessage: string): void {
     ensureRequiredCopilotOnRailsContext(context).diagnostics.properties[key] = errorMessage;
