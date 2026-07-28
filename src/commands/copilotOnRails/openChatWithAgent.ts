@@ -185,9 +185,9 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
 }
 
 export async function openChatWithAgent(context: CopilotOnRailsContext, agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
-    const openChatWithAgentOutcomeKey = 'openChatWithAgentOutcome';
     setCorProp(context, 'chatAgentName', agentName);
 
+    const openChatWithAgentOutcomeKey = 'openChatWithAgentOutcome';
     if (agentName === azureDeployAgent) {
         if (!await ensureAzureDeploymentPrerequisites(context)) {
             setCorProp(context, openChatWithAgentOutcomeKey, 'deploymentPrerequisitesMissing');
