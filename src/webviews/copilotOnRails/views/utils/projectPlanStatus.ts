@@ -11,6 +11,8 @@
  * status string literals.
  */
 export const ProjectPlanStatus = {
+    /** User approved the generated project plan. */
+    approved: 'Approved',
     /** Scaffold finished; awaiting the user's UI approval before integration. */
     awaitingIntegration: 'Awaiting Integration',
     /** User approved the UI; the integrate phase is in progress. */

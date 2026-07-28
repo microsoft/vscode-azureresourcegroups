@@ -13,6 +13,46 @@ import * as vscode from 'vscode';
  */
 const STATUS_LINE_REGEX = /^(\*\*Status\*\*:[ \t]*)([^\r\n]*)/m;
 
+/** Replaces only the canonical status metadata value in plan markdown. */
+export function replaceProjectPlanStatus(content: string, newStatus: string): string | undefined {
+    if (!STATUS_LINE_REGEX.test(content)) {
+        return undefined;
+    }
+    return content.replace(STATUS_LINE_REGEX, (_full, prefix: string) => `${prefix}${newStatus}`);
+}
+
+/**
+ * Overwrites the status metadata row in one specific plan file. Returns the
+ * original content when the status changed so callers can roll the write back.
+ */
+export async function writeProjectPlanStatusAtUri(uri: vscode.Uri, newStatus: string): Promise<string | undefined> {
+    let content: string;
+    try {
+        content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
+    } catch {
+        return undefined;
+    }
+
+    const updated = replaceProjectPlanStatus(content, newStatus);
+    if (updated === undefined) {
+        return undefined;
+    }
+    if (updated === content) {
+        return content;
+    }
+
+    try {
+        await vscode.workspace.fs.writeFile(uri, Buffer.from(updated, 'utf-8'));
+        const persisted = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
+        if (STATUS_LINE_REGEX.exec(persisted)?.[2]?.trim() !== newStatus) {
+            return undefined;
+        }
+    } catch {
+        return undefined;
+    }
+    return content;
+}
+
 /**
  * Overwrites the value of the `**Status**:` metadata row of the plan file matched
  * by `glob`, preserving the label. Used to make plan-state transitions that must
@@ -25,25 +65,8 @@ export async function writeProjectPlanStatus(glob: string, newStatus: string): P
     if (!uri) {
         return false;
     }
-
-    let content: string;
-    try {
-        content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
-    } catch {
-        return false;
-    }
-
-    if (!STATUS_LINE_REGEX.test(content)) {
-        return false;
-    }
-    // Replace only the value on the `**Status**:` line, keeping the label exactly.
-    const updated = content.replace(STATUS_LINE_REGEX, (_full, prefix: string) => `${prefix}${newStatus}`);
-    if (updated === content) {
-        return false;
-    }
-
-    await vscode.workspace.fs.writeFile(uri, Buffer.from(updated, 'utf-8'));
-    return true;
+    const previous = await writeProjectPlanStatusAtUri(uri, newStatus);
+    return previous !== undefined && STATUS_LINE_REGEX.exec(previous)?.[2]?.trim() !== newStatus;
 }
 
 /**
