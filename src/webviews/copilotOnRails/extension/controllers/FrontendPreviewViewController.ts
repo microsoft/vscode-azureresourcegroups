@@ -14,7 +14,7 @@ import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { PROJECT_PLAN_FILE_GLOB } from "../../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { ProjectPlanStatus } from "../../views/utils/projectPlanStatus";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { type RunningDevServer, startDevServer } from "../utils/devServerManager";
@@ -133,7 +133,7 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         if (!query) {
             return;
         }
-        await callWithTelemetryAndErrorHandling('copilotOnRails.submitFrontendPreviewFeedback', async (actionContext: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('submitFrontendPreviewFeedback'), async (actionContext: IActionContext) => {
             actionContext.errorHandling.suppressDisplay = true;
             await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitFrontendPreviewFeedback' }, async (context: CopilotOnRailsContext) => {
                 // Keep the dev server running so the scaffold agent's edits hot-reload
@@ -150,7 +150,7 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
     }
 
     private async approveAndHandOff(): Promise<void> {
-        await callWithTelemetryAndErrorHandling('copilotOnRails.approveFrontendPreview', async (actionContext: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('approveFrontendPreview'), async (actionContext: IActionContext) => {
             await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'approveFrontendPreview' }, async (context: CopilotOnRailsContext) => {
                 setCorProp(context, 'devServerStatus', this.state.status);
 

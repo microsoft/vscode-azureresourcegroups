@@ -14,7 +14,7 @@ import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { recordCreatedAt, recordPrompt } from "../../../../utils/copilotOnRails/diagnosticUtils";
-import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -44,7 +44,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
     }
 
     private async openChatWithQuery(query: string, model?: string): Promise<void> {
-        await callWithTelemetryAndErrorHandling('copilotOnRails.createProjectSubmitPrompt', async (actionContext: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('createProjectSubmitPrompt'), async (actionContext: IActionContext) => {
             await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'createProjectSubmitPrompt' }, async (context: CopilotOnRailsContext) => {
                 setCorProp(context, 'modelSelectedInView', !!model);
                 if (model) {
