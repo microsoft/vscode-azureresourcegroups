@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, type IActionContext, parseError } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
@@ -12,7 +12,7 @@ import { launchAgentChat } from "../../../../commands/copilotOnRails/openChatWit
 import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorErrorProp, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type RequirementsData, type RequirementsExecutionMode } from "../../views/utils/parseRequirements";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -30,9 +30,6 @@ interface ReadyMessage {
 }
 
 type IncomingMessage = SubmitMessage | ReadyMessage;
-
-/** Telemetry property key recording whether agent instructions were successfully ensured. */
-const ENSURE_AGENT_INSTRUCTIONS_KEY = 'ensureAgentInstructions';
 
 export class RequirementsViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
@@ -70,8 +67,9 @@ export class RequirementsViewController extends WebviewController<Record<string,
                 this.requirementsData = data;
                 this.recordRequirementsTelemetry(context);
 
+                const submissionOutcomeKey = 'submissionOutcome';
                 if (!this.sourceFileUri) {
-                    setCorProp(context, 'submissionOutcome', 'noSourceFile');
+                    setCorProp(context, submissionOutcomeKey, 'noSourceFile');
                     void this.panel.webview.postMessage({
                         command: 'submitError',
                         error: vscode.l10n.t('The requirements file location is unknown, so the answers could not be saved.'),
@@ -88,7 +86,8 @@ export class RequirementsViewController extends WebviewController<Record<string,
                     await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(serialized, 'utf-8'));
                 } catch (err) {
                     const message = err instanceof Error ? err.message : String(err);
-                    setCorProp(context, 'submissionOutcome', 'writeFailed');
+                    setCorProp(context, submissionOutcomeKey, 'writeFailed');
+                    setCorErrorProp(context, 'submissionWriteError', parseError(err).message);
                     void this.panel.webview.postMessage({ command: 'submitError', error: message });
                     return;
                 }
@@ -96,20 +95,18 @@ export class RequirementsViewController extends WebviewController<Record<string,
                 void this.panel.webview.postMessage({ command: 'submitComplete' });
 
                 const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
-                if (!(await ensureAgentInstructions('azure-project-plan'))) {
-                    setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, false);
-                    setCorProp(context, 'submissionOutcome', 'agentInstructionsMissing');
+                if (!(await ensureAgentInstructions(context, 'azure-project-plan'))) {
+                    setCorProp(context, submissionOutcomeKey, 'agentInstructionsMissing');
                     return;
                 }
-                setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, true);
 
                 const query = vscode.l10n.t('Requirements submitted at {0} \u2014 read the file and continue generating .azure/project-plan.md.', relativePath);
-                if (!(await launchAgentChat(azureProjectPlanAgent, query))) {
-                    setCorProp(context, 'submissionOutcome', 'launchFailed');
+                if (!(await launchAgentChat(context, azureProjectPlanAgent, query))) {
+                    setCorProp(context, submissionOutcomeKey, 'launchFailed');
                     return;
                 }
 
-                setCorProp(context, 'submissionOutcome', 'submitted');
+                setCorProp(context, submissionOutcomeKey, 'submitted');
                 // Programmatic hand-off to the plan phase \u2014 don't treat this close as the user abandoning the flow.
                 suppressTrackedViewCloseOnce();
                 this.panel.dispose();

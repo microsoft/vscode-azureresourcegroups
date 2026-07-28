@@ -3,10 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { parseError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { azureDeployAgent } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
+import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
+import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
 import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
@@ -59,20 +62,35 @@ async function resolveModelSelector(displayName: string): Promise<{ id?: string;
  * (`chatAgents`) are not registered until that extension activates, so opening chat
  * with a `mode` referring to one of them silently no-ops if we don't wait.
  */
-export async function ensureCopilotChatReady(): Promise<boolean> {
-    const ext = vscode.extensions.getExtension(COPILOT_CHAT_EXTENSION_ID);
-    if (!ext) {
+export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Promise<boolean> {
+    const copilotChatExtension = vscode.extensions.getExtension(COPILOT_CHAT_EXTENSION_ID);
+    setCorProp(context, 'copilotChatInstalled', !!copilotChatExtension);
+    setCorProp(context, 'copilotChatVersion', (copilotChatExtension?.packageJSON as { version?: string } | undefined)?.version ?? 'none');
+
+    const ensureCopilotChatOutcomeKey = 'ensureCopilotChatOutcome';
+    if (!copilotChatExtension) {
+        setCorProp(context, ensureCopilotChatOutcomeKey, 'notInstalled');
         void vscode.window.showErrorMessage(
             vscode.l10n.t('GitHub Copilot Chat is required to continue. Please install the GitHub Copilot Chat extension and try again.'),
         );
         return false;
     }
-    if (!ext.isActive) {
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Starting GitHub Copilot Chat...') },
-            async () => { await ext.activate(); },
-        );
+
+    if (!copilotChatExtension.isActive) {
+        try {
+            await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Starting GitHub Copilot Chat...') },
+                async () => { await copilotChatExtension.activate(); },
+            );
+            setCorProp(context, ensureCopilotChatOutcomeKey, 'activated');
+        } catch (error) {
+            setCorProp(context, ensureCopilotChatOutcomeKey, 'activationFailed');
+            setCorErrorProp(context, 'ensureCopilotChatError', parseError(error).message);
+            throw error;
+        }
+        return true;
     }
+    setCorProp(context, ensureCopilotChatOutcomeKey, 'alreadyActive');
     return true;
 }
 
@@ -96,8 +114,12 @@ async function waitForCustomAgentCommand(agentName: string): Promise<string | un
     return undefined;
 }
 
-export async function launchAgentChat(agentName: string, query: string, model?: string): Promise<boolean> {
+export async function launchAgentChat(context: CopilotOnRailsContext, agentName: string, query: string, model?: string): Promise<boolean> {
+    setCorProp(context, 'chatQueryLength', query.length);
+
+    const chatLaunchOutcomeKey = 'chatLaunchOutcome';
     if (agentLaunchInProgress) {
+        setCorProp(context, chatLaunchOutcomeKey, 'alreadyInProgress');
         void vscode.window.showWarningMessage(
             vscode.l10n.t('Another Copilot agent is still starting. Please wait and try again.'),
         );
@@ -109,8 +131,15 @@ export async function launchAgentChat(agentName: string, query: string, model?: 
         // Revealing chat initializes its custom-mode registry. The agent-specific
         // command appears only after VS Code has finished loading that registry.
         await vscode.commands.executeCommand('workbench.action.chat.open');
+
+        const waitStart = Date.now();
         const commandId = await waitForCustomAgentCommand(agentName);
+        const agentWaitMs = Date.now() - waitStart;
+        context.telemetry.measurements.chatAgentCommandWaitMs = agentWaitMs;
+        ensureRequiredCopilotOnRailsContext(context).diagnostics.properties.chatAgentCommandWaitMs = agentWaitMs;
+
         if (!commandId) {
+            setCorProp(context, chatLaunchOutcomeKey, 'agentCommandTimeout');
             void vscode.window.showErrorMessage(
                 vscode.l10n.t('The "{0}" Copilot agent did not finish loading. Please try again.', agentName),
             );
@@ -118,14 +147,21 @@ export async function launchAgentChat(agentName: string, query: string, model?: 
         }
 
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
+
         const resolvedModel = model ?? getSessionModel();
+        setCorProp(context, 'chatModelSelectionSource', model ? 'newlySelected' : (getSessionModel() ? 'previouslySelected' : 'default'));
+
         const selector = resolvedModel ? await resolveModelSelector(resolvedModel) : undefined;
+        setCorProp(context, 'chatModelResolved', !!selector);
+
         await vscode.commands.executeCommand(commandId, {
             query,
             ...(selector ? { modelSelector: selector } : {}),
         });
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        setCorProp(context, chatLaunchOutcomeKey, 'error');
+        setCorErrorProp(context, 'chatLaunchError', message);
         void vscode.window.showErrorMessage(
             vscode.l10n.t('The "{0}" Copilot agent could not be started: {1}', agentName, message),
         );
@@ -137,31 +173,47 @@ export async function launchAgentChat(agentName: string, query: string, model?: 
     // Record the phase we just launched so an interrupted run can be resumed.
     try {
         await recordAgentLaunch(agentName);
+        setCorProp(context, 'chatAgentLaunchRecorded', true);
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        setCorProp(context, 'chatAgentLaunchRecorded', false);
+        setCorErrorProp(context, 'chatAgentLaunchRecordError', message);
         ext.outputChannel.warn(vscode.l10n.t('Could not record the "{0}" Copilot agent launch: {1}', agentName, message));
     }
+    setCorProp(context, chatLaunchOutcomeKey, 'chatLaunched');
     return true;
 }
 
-export async function openChatWithAgent(agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
+export async function openChatWithAgent(context: CopilotOnRailsContext, agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
+    setCorProp(context, 'chatAgentName', agentName);
+
+    const openChatWithAgentOutcomeKey = 'openChatWithAgentOutcome';
     if (agentName === azureDeployAgent) {
-        if (!(await ensureAzureDeploymentPrerequisites())) {
+        if (!await ensureAzureDeploymentPrerequisites(context)) {
+            setCorProp(context, openChatWithAgentOutcomeKey, 'deploymentPrerequisitesMissing');
             return;
         }
     } else {
-        if (!(await ensureAgentInstructions(agentName))) {
+        if (!await ensureAgentInstructions(context, agentName)) {
+            setCorProp(context, openChatWithAgentOutcomeKey, 'agentInstructionsMissing');
             return;
         }
     }
-    if (!(await ensureCopilotChatReady())) {
-        return;
-    }
-    if (!(await launchAgentChat(agentName, prompt))) {
+
+    if (!(await ensureCopilotChatReady(context))) {
+        setCorProp(context, openChatWithAgentOutcomeKey, 'copilotChatNotReady');
         return;
     }
 
+    if (!(await launchAgentChat(context, agentName, prompt))) {
+        setCorProp(context, openChatWithAgentOutcomeKey, 'chatlaunchFailed');
+        return;
+    }
+
+    setCorProp(context, openChatWithAgentOutcomeKey, 'launched');
+
     if (loading) {
+        setCorProp(context, 'openChatLoadingStage', loading.stage);
         projectSubmissionState.setPending(loading.stage);
         openLoadingView(loading);
     }
@@ -171,10 +223,17 @@ export async function openChatWithAgent(agentName: string, prompt: string, loadi
  * Builds the options object for a direct `workbench.action.chat.open` call,
  * automatically including the session's model selection when one is stored.
  */
-export async function buildChatOpenOptions(options: { mode?: string; query: string }): Promise<{ mode?: string; query: string; modelSelector?: { id?: string; vendor?: string } }> {
+export async function buildChatOpenOptions(context: CopilotOnRailsContext, options: { mode?: string; query: string }): Promise<{ mode?: string; query: string; modelSelector?: { id?: string; vendor?: string } }> {
+    setCorProp(context, 'chatQueryLength', options.query.length);
+    if (options.mode) {
+        setCorProp(context, 'chatAgentName', options.mode);
+    }
+
     const model = getSessionModel();
+    setCorProp(context, 'chatModelSelectionSource', model ? 'previouslySelected' : 'default');
     if (model) {
         const selector = await resolveModelSelector(model);
+        setCorProp(context, 'chatModelResolved', !!selector);
         return selector ? { ...options, modelSelector: selector } : options;
     }
     return options;

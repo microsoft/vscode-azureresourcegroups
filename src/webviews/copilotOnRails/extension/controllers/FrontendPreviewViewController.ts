@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
@@ -12,6 +13,8 @@ import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/re
 import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { PROJECT_PLAN_FILE_GLOB } from "../../../../tree/project/projectPlanFiles";
+import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { ProjectPlanStatus } from "../../views/utils/projectPlanStatus";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { type RunningDevServer, startDevServer } from "../utils/devServerManager";
@@ -65,7 +68,7 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
                     void this.approveAndHandOff();
                     return;
                 case 'submitUiFeedback':
-                    this.submitFeedback(message.prompt);
+                    void this.submitFeedback(message.prompt);
                     return;
                 case 'retry':
                     void this.launchDevServer();
@@ -125,34 +128,50 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         void this.panel.webview.postMessage({ command: 'setPreviewState', state: this.state });
     }
 
-    private submitFeedback(prompt: string | undefined): void {
+    private async submitFeedback(prompt: string | undefined): Promise<void> {
         const query = prompt?.trim();
         if (!query) {
             return;
         }
-        // Keep the dev server running so the scaffold agent's edits hot-reload
-        // in the iframe while the user watches.
-        void buildChatOpenOptions({
-            mode: azureProjectScaffoldAgent,
-            query,
-        }).then((options) => vscode.commands.executeCommand('workbench.action.chat.open', options));
-        void this.panel.webview.postMessage({ command: 'feedbackSubmitted' });
+        await callWithTelemetryAndErrorHandling(corId('submitFrontendPreviewFeedback'), async (actionContext: IActionContext) => {
+            actionContext.errorHandling.suppressDisplay = true;
+            await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitFrontendPreviewFeedback' }, async (context: CopilotOnRailsContext) => {
+                // Keep the dev server running so the scaffold agent's edits hot-reload
+                // in the iframe while the user watches.
+                const options = await buildChatOpenOptions(context, {
+                    mode: azureProjectScaffoldAgent,
+                    query,
+                });
+                await vscode.commands.executeCommand('workbench.action.chat.open', options);
+                void this.panel.webview.postMessage({ command: 'feedbackSubmitted' });
+                setCorProp(context, 'feedbackOutcome', 'submitted');
+            });
+        });
     }
 
     private async approveAndHandOff(): Promise<void> {
-        if (!(await ensureAgentInstructions('azure-project-integrate'))) {
-            return;
-        }
-        // Approving the final UX preview moves the plan into the integration
-        // phase, so flip the plan status before handing off. This is a
-        // deterministic UI signal, so record it in extension code rather than
-        // relying on the integrate agent to update it.
-        await writeProjectPlanStatus(PROJECT_PLAN_FILE_GLOB, ProjectPlanStatus.integrating);
-        // Stop the preview server before the integrate agent takes over so it
-        // can start its own runtime without port contention.
-        this.devServer?.dispose();
-        this.devServer = undefined;
-        this.panel.dispose();
-        await vscode.commands.executeCommand(copilotOnRailsCommandIds.startProjectIntegrate);
+        await callWithTelemetryAndErrorHandling(corId('approveFrontendPreview'), async (actionContext: IActionContext) => {
+            await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'approveFrontendPreview' }, async (context: CopilotOnRailsContext) => {
+                setCorProp(context, 'devServerStatus', this.state.status);
+
+                const approvalOutcomeKey = 'approvalOutcome';
+                if (!(await ensureAgentInstructions(context, 'azure-project-integrate'))) {
+                    setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
+                    return;
+                }
+                // Approving the final UX preview moves the plan into the integration
+                // phase, so flip the plan status before handing off. This is a
+                // deterministic UI signal, so record it in extension code rather than
+                // relying on the integrate agent to update it.
+                await writeProjectPlanStatus(PROJECT_PLAN_FILE_GLOB, ProjectPlanStatus.integrating);
+                // Stop the preview server before the integrate agent takes over so it
+                // can start its own runtime without port contention.
+                this.devServer?.dispose();
+                this.devServer = undefined;
+                this.panel.dispose();
+                setCorProp(context, approvalOutcomeKey, 'submitted');
+                await vscode.commands.executeCommand(copilotOnRailsCommandIds.startProjectIntegrate);
+            });
+        });
     }
 }
