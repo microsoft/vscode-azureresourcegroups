@@ -115,9 +115,9 @@ async function waitForCustomAgentCommand(agentName: string): Promise<string | un
 }
 
 export async function launchAgentChat(context: CopilotOnRailsContext, agentName: string, query: string, model?: string): Promise<boolean> {
-    const chatLaunchOutcomeKey = 'chatLaunchOutcome';
     setCorProp(context, 'chatQueryLength', query.length);
 
+    const chatLaunchOutcomeKey = 'chatLaunchOutcome';
     if (agentLaunchInProgress) {
         setCorProp(context, chatLaunchOutcomeKey, 'alreadyInProgress');
         void vscode.window.showWarningMessage(
