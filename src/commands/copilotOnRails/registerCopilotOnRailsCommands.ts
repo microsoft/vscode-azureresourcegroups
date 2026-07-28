@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IActionContext, registerCommand } from '@microsoft/vscode-azext-utils';
-import { l10n, languages } from 'vscode';
+import { l10n } from 'vscode';
 import { azureDebugPlanAgent } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
@@ -21,7 +21,7 @@ import { resumeProjectWithCopilot } from '../../webviews/copilotOnRails/extensio
 import { copilotOnRailsCustomAgents, downloadAgentInstructions } from './agentInstructions';
 import { inspectDiagnostics } from './inspectDiagnostics';
 import { openChatWithAgent } from './openChatWithAgent';
-import { createDraftIssue, DiagnosticsIssueCodeLensProvider, diagnosticsIssueDocumentSelector, reviewAndSubmitIssue } from './reportIssue';
+import { reportIssue } from './reportIssue';
 import { startDebugConfiguration } from './startDebugConfiguration';
 
 export const copilotOnRailsCommandIds = {
@@ -47,7 +47,6 @@ export const copilotOnRailsCommandIds = {
     refreshProjectTree: 'azureProject.refresh',
     inspectDiagnostics: corId('inspectDiagnostics'),
     reportIssue: corId('reportIssue'),
-    reviewAndSubmitIssue: corId('reportIssue.reviewAndSubmit'),
 };
 
 /**
@@ -134,7 +133,5 @@ export function registerCopilotOnRailsCommands(): void {
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot, resumeProjectWithCopilot);
     registerCommand(copilotOnRailsCommandIds.refreshProjectTree, () => ext.actions.refreshProjectTree());
     registerCommand(copilotOnRailsCommandIds.inspectDiagnostics, inspectDiagnostics);
-    registerCommand(copilotOnRailsCommandIds.reportIssue, createDraftIssue);
-    registerCommand(copilotOnRailsCommandIds.reviewAndSubmitIssue, reviewAndSubmitIssue);
-    ext.context.subscriptions.push(languages.registerCodeLensProvider(diagnosticsIssueDocumentSelector, new DiagnosticsIssueCodeLensProvider(copilotOnRailsCommandIds.reviewAndSubmitIssue)));
+    registerCommand(copilotOnRailsCommandIds.reportIssue, reportIssue);
 }

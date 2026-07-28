@@ -720,6 +720,10 @@
                     "when": "isWorkspaceTrusted"
                 },
                 {
+                    "command": "copilotOnRails.reportIssue",
+                    "when": "never"
+                },
+                {
                     "command": "copilotOnRails.openScaffoldNextStepsView",
                     "when": "never"
                 },
