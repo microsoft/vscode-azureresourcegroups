@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
 import { homedir } from 'node:os';
+import * as vscode from 'vscode';
 import { gitHubCopilotForAzureExtensionId } from '../../constants';
 
 const azurePrepareSkillName = 'azure-prepare';

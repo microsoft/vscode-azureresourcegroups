@@ -151,8 +151,8 @@ export async function openChatWithAgent(agentName: string, prompt: string, loadi
     if (!(await ensureCopilotChatReady())) {
         return;
     }
-    // Make sure the agent's instruction files are present in the workspace before invoking it.
-    if (!(await ensureAgentInstructions(agentName))) {
+    // Deployment uses the azure-prepare skill instead of the workspace scaffold/debug instructions.
+    if (agentName !== azureDeployAgent && !(await ensureAgentInstructions(agentName))) {
         return;
     }
     if (!(await launchAgentChat(agentName, prompt))) {
