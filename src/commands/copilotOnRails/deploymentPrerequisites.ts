@@ -37,7 +37,6 @@ async function hasAzurePrepareSkill(): Promise<boolean> {
 }
 
 export async function ensureAzureDeploymentPrerequisites(context: CopilotOnRailsContext): Promise<boolean> {
-    const ensurePrereqsOutcomeKey = 'ensureDeploymentPrereqOutcome';
     let copilotForAzure = vscode.extensions.getExtension(gitHubCopilotForAzureExtensionId);
     const hasExtension = !!copilotForAzure;
     const hasSkill = await hasAzurePrepareSkill();
@@ -46,6 +45,7 @@ export async function ensureAzureDeploymentPrerequisites(context: CopilotOnRails
     setCorProp(context, 'copilotForAzureExtensionVersion', (copilotForAzure?.packageJSON as { version?: string } | undefined)?.version ?? 'none');
     setCorProp(context, 'copilotForAzureSkillInstalled', hasSkill);
 
+    const ensurePrereqsOutcomeKey = 'ensureDeploymentPrereqOutcome';
     if (hasExtension && hasSkill) {
         setCorProp(context, ensurePrereqsOutcomeKey, 'alreadyInstalledExtensionAndSkill');
         return true;
