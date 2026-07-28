@@ -13,6 +13,7 @@ model: gpt-5.4
 inlined-imports: true
 tools:
   github:
+    toolsets: [issues, repos]
     min-integrity: none
 imports:
   - microsoft/vscode-azuretools/.github/workflows/shared/info-needed-triage.md@main
