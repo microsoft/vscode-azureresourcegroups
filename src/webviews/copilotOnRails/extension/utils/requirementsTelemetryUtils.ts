@@ -109,7 +109,7 @@ function getDataStores(questions: RequirementsQuestion[]): string {
 
 function hasDatabase(questions: RequirementsQuestion[]): boolean {
     const stores = getDataStores(questions);
-    return /\b(?:postgres|mysql|mariadb|sqlite|mssql|sql server|sql|mongo|cosmos|oracle|database|azure sql)\b/.test(stores);
+    return /\b(?:postgres|mysql|mariadb|sqlite|mssql|sql server|sql|mongo|cosmos|oracle|database|azure sql)/.test(stores);
 }
 
 function getAuth(questions: RequirementsQuestion[]): string {

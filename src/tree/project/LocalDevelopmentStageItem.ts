@@ -27,7 +27,7 @@ export class LocalDevelopmentStageItem extends StageNode {
         const debugConfigs = getDebugConfigurations();
 
         if (debugConfigs.length === 0) {
-            return [new OpenPlanNode(this.stageId, copilotOnRailsCommandIds.openLocalPlanView)];
+            return [new OpenPlanNode(this.stageId, copilotOnRailsCommandIds.openDebugPlanView)];
         }
 
         return debugConfigs.map((config) => new DebugConfigurationNode(this.stageId, config));

@@ -12,7 +12,7 @@ import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openCh
 import { azureDebugPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type LocalPlanData } from "../../views/utils/parseLocalDebugPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -59,8 +59,8 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     }
 
     private async approvePlan(): Promise<void> {
-        return await callWithTelemetryAndErrorHandling(`copilotOnRails.submitLocalDebugPlanApproval`, async (actionContext: IActionContext) => {
-            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitLocalDebugPlanApproval' }, async (context: CopilotOnRailsContext) => {
+        return await callWithTelemetryAndErrorHandling(corId('submitDebugPlanApproval'), async (actionContext: IActionContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDebugPlanApproval' }, async (context: CopilotOnRailsContext) => {
                 if (!(await this.trySubmitPlanApproval(context))) {
                     return;
                 }
@@ -110,8 +110,8 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     }
 
     private async trySubmitPlanFeedback(query: string): Promise<boolean> {
-        return await callWithTelemetryAndErrorHandling(`copilotOnRails.submitLocalDebugPlanFeedback`, async (actionContext: IActionContext) => {
-            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitLocalDebugPlanFeedback' }, async (context: CopilotOnRailsContext) => {
+        return await callWithTelemetryAndErrorHandling(corId('submitDebugPlanFeedback'), async (actionContext: IActionContext) => {
+            return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDebugPlanFeedback' }, async (context: CopilotOnRailsContext) => {
                 if (!(await ensureAgentInstructions(context, azureDebugPlanAgent))) {
                     setCorProp(context, 'feedbackOutcome', 'agentInstructionsMissing');
                     return false;
@@ -142,9 +142,9 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     }
 
     private async refreshPrerequisites(): Promise<void> {
-        await callWithTelemetryAndErrorHandling('azureResourceGroups.localDebugPlan.refreshPrerequisites', async (actionContext: IActionContext) => {
+        await callWithTelemetryAndErrorHandling(corId('refreshDebugPrerequisites'), async (actionContext: IActionContext) => {
             actionContext.errorHandling.suppressDisplay = true;
-            await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'localDebugPlan.refreshPrerequisites' }, async (context: CopilotOnRailsContext) => {
+            await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'refreshDebugPrerequisites' }, async (context: CopilotOnRailsContext) => {
                 if (!(await ensureAgentInstructions(context, azureDebugPlanAgent))) {
                     setCorProp(context, 'refreshOutcome', 'agentInstructionsMissing');
                     return;
