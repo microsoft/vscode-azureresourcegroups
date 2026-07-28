@@ -52,7 +52,7 @@ let safetyTimer: ReturnType<typeof setTimeout> | undefined;
 let extensionContext: vscode.ExtensionContext | undefined;
 
 export function isAutopilotActive(): boolean {
-    if (!ext.context || ext.context.globalState.get<boolean>(STATE_ACTIVE) !== true) {
+    if (ext.context.globalState.get<boolean>(STATE_ACTIVE) !== true) {
         return false;
     }
     return Date.now() < (ext.context.globalState.get<number>(STATE_DEADLINE) ?? 0);
