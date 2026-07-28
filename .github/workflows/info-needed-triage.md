@@ -6,7 +6,7 @@ on:
     types: [opened, reopened]
   workflow_dispatch:
     inputs:
-      issue-number:
+      issue_number:
         description: "Issue number to triage"
         required: true
   roles: all
@@ -33,14 +33,14 @@ timeout-minutes: 10
 
 # Info Needed Triage
 
-Triage issue #${{ github.event.issue.number || inputs.issue-number }} using the
+Triage issue #${{ github.event.issue.number || inputs.issue_number }} using the
 shared "Info Needed Triage Agent" instructions imported above.
 
 This workflow runs in two ways: automatically when an issue is opened or reopened
 (the issue is in `github.event.issue`), or manually via `workflow_dispatch` with
-an `issue-number` input. On a `workflow_dispatch` run `github.event.issue` is
+an `issue_number` input. On a `workflow_dispatch` run `github.event.issue` is
 empty, so always resolve the target issue number from
-`${{ github.event.issue.number || inputs.issue-number }}` and read that issue with
+`${{ github.event.issue.number || inputs.issue_number }}` and read that issue with
 the GitHub issues tools first before deciding.
 
 Apply the `info-needed` label and post one tailored comment when the issue is an
