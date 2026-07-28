@@ -144,20 +144,21 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext, autopilot: boolean): Promise<boolean> {
+        const approvalOutcomeKey = 'approvalOutcome';
         let confirmedAutopilot = false;
         if (autopilot) {
             confirmedAutopilot = await this.confirmAutopilot();
             if (!confirmedAutopilot) {
                 // Autopilot was requested but the confirmation dialog was declined.
                 setCorProp(context, 'autopilot', false);
-                setCorProp(context, 'approvalOutcome', 'confirmationDeclined');
+                setCorProp(context, approvalOutcomeKey, 'confirmationDeclined');
                 return false;
             }
         }
         setCorProp(context, 'autopilot', confirmedAutopilot);
 
         if (!(await ensureAgentInstructions(context, 'azure-project-scaffold'))) {
-            setCorProp(context, 'approvalOutcome', 'agentInstructionsMissing');
+            setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
             return false;
         }
 
@@ -178,10 +179,10 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(planBeforeAutopilot, 'utf-8'));
                 }
             }
-            setCorProp(context, 'approvalOutcome', 'launchFailed');
+            setCorProp(context, approvalOutcomeKey, 'launchFailed');
             return false;
         }
-        setCorProp(context, 'approvalOutcome', 'submitted');
+        setCorProp(context, approvalOutcomeKey, 'submitted');
         return true;
     }
 
@@ -306,8 +307,9 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'refreshScaffoldPrerequisites' }, async (context: CopilotOnRailsContext) => {
                 setCorProp(context, 'autopilot', autopilot);
 
+                const refreshOutcomeKey = 'refreshOutcome';
                 if (!(await ensureAgentInstructions(context, 'azure-project-plan'))) {
-                    setCorProp(context, 'refreshOutcome', 'agentInstructionsMissing');
+                    setCorProp(context, refreshOutcomeKey, 'agentInstructionsMissing');
                     return;
                 }
 
@@ -322,7 +324,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                     mode: 'azure-project-plan',
                     query,
                 }));
-                setCorProp(context, 'refreshOutcome', 'submitted');
+                setCorProp(context, refreshOutcomeKey, 'submitted');
 
                 if (this._refreshPrereqsTimer) {
                     clearTimeout(this._refreshPrereqsTimer);

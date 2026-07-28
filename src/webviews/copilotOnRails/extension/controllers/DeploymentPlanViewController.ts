@@ -126,8 +126,9 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
     }
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
+        const approvalOutcomeKey = 'approvalOutcome';
         if (!(await ensureAgentInstructions(context, azureDeployAgent))) {
-            setCorProp(context, 'approvalOutcome', 'agentInstructionsMissing');
+            setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
             return false;
         }
 
@@ -138,15 +139,16 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
             query: 'I approve the deployment plan. Continue with generating the infrastructure and deployment artifacts.',
         }));
 
-        setCorProp(context, 'approvalOutcome', 'submitted');
+        setCorProp(context, approvalOutcomeKey, 'submitted');
         return true;
     }
 
     private async trySubmitPlanFeedback(query: string): Promise<boolean> {
         return await callWithTelemetryAndErrorHandling(corId('submitDeploymentPlanFeedback'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDeploymentPlanFeedback' }, async (context: CopilotOnRailsContext) => {
+                const feedbackOutcomeKey = 'feedbackOutcome';
                 if (!(await ensureAgentInstructions(context, azureDeployAgent))) {
-                    setCorProp(context, 'feedbackOutcome', 'agentInstructionsMissing');
+                    setCorProp(context, feedbackOutcomeKey, 'agentInstructionsMissing');
                     return false;
                 }
 
@@ -157,7 +159,7 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                 }));
                 void this.panel.webview.postMessage({ command: 'revisionInProgress' });
 
-                setCorProp(context, 'feedbackOutcome', 'submitted');
+                setCorProp(context, feedbackOutcomeKey, 'submitted');
                 return true;
             });
         }) ?? false;

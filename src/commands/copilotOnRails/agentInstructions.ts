@@ -101,9 +101,10 @@ async function writeVersionStamp(agentsRoot: vscode.Uri): Promise<void> {
  * No-ops (returns `true`) when no workspace is open.
  */
 export async function ensureAgentInstructions(context: CopilotOnRailsContext, agentName: string): Promise<boolean> {
+    const ensureAgentInstructionsOutcomeKey = 'ensureAgentInstructionsOutcome';
     const agentsRoot = getWorkspaceAgentsRoot();
     if (!agentsRoot) {
-        setCorProp(context, 'ensureAgentInstructionsOutcome', 'noWorkspace');
+        setCorProp(context, ensureAgentInstructionsOutcomeKey, 'noWorkspace');
         return true;
     }
 
@@ -123,10 +124,10 @@ export async function ensureAgentInstructions(context: CopilotOnRailsContext, ag
         if ((await readVersionStamp(agentsRoot)) !== getExtensionVersion()) {
             await copyInstructionFolders(agentInstructionFolders, agentsRoot);
             await writeVersionStamp(agentsRoot);
-            setCorProp(context, 'ensureAgentInstructionsOutcome', 'refreshedStale');
+            setCorProp(context, ensureAgentInstructionsOutcomeKey, 'refreshedStale');
             return true;
         }
-        setCorProp(context, 'ensureAgentInstructionsOutcome', 'upToDate');
+        setCorProp(context, ensureAgentInstructionsOutcomeKey, 'upToDate');
         return true;
     }
 
@@ -140,7 +141,7 @@ export async function ensureAgentInstructions(context: CopilotOnRailsContext, ag
         download,
     );
     if (choice !== download) {
-        setCorProp(context, 'ensureAgentInstructionsOutcome', 'downloadDeclined');
+        setCorProp(context, ensureAgentInstructionsOutcomeKey, 'downloadDeclined');
         return false;
     }
 
@@ -148,7 +149,7 @@ export async function ensureAgentInstructions(context: CopilotOnRailsContext, ag
     // missing folders, so present-but-stale folders are refreshed at the same time.
     await copyInstructionFolders(agentInstructionFolders, agentsRoot);
     await writeVersionStamp(agentsRoot);
-    setCorProp(context, 'ensureAgentInstructionsOutcome', 'downloaded');
+    setCorProp(context, ensureAgentInstructionsOutcomeKey, 'downloaded');
     return true;
 }
 

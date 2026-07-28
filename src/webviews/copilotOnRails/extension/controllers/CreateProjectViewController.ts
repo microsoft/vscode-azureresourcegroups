@@ -50,19 +50,21 @@ export class CreateProjectViewController extends WebviewController<CreateProject
                 if (model) {
                     await recordModel(model);
                 }
+
+                const submissionOutcomeKey = 'submissionOutcome';
                 if (!(await ensureCopilotChatReady(context))) {
-                    setCorProp(context, 'submissionOutcome', 'copilotChatNotReady');
+                    setCorProp(context, submissionOutcomeKey, 'copilotChatNotReady');
                     return;
                 }
                 if (!(await ensureAgentInstructions(context, 'azure-project-plan'))) {
-                    setCorProp(context, 'submissionOutcome', 'agentInstructionsMissing');
+                    setCorProp(context, submissionOutcomeKey, 'agentInstructionsMissing');
                     return;
                 }
                 if (!(await launchAgentChat(context, azureProjectPlanAgent, query, model))) {
-                    setCorProp(context, 'submissionOutcome', 'launchFailed');
+                    setCorProp(context, submissionOutcomeKey, 'launchFailed');
                     return;
                 }
-                setCorProp(context, 'submissionOutcome', 'submitted');
+                setCorProp(context, submissionOutcomeKey, 'submitted');
                 this.panel.dispose();
                 projectSubmissionState.setPending();
                 openLoadingView({

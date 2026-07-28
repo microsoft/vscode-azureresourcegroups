@@ -153,8 +153,10 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
         await callWithTelemetryAndErrorHandling('copilotOnRails.approveFrontendPreview', async (actionContext: IActionContext) => {
             await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'approveFrontendPreview' }, async (context: CopilotOnRailsContext) => {
                 setCorProp(context, 'devServerStatus', this.state.status);
+
+                const approvalOutcomeKey = 'approvalOutcome';
                 if (!(await ensureAgentInstructions(context, 'azure-project-integrate'))) {
-                    setCorProp(context, 'approvalOutcome', 'agentInstructionsMissing');
+                    setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
                     return;
                 }
                 // Approving the final UX preview moves the plan into the integration
@@ -167,7 +169,7 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
                 this.devServer?.dispose();
                 this.devServer = undefined;
                 this.panel.dispose();
-                setCorProp(context, 'approvalOutcome', 'submitted');
+                setCorProp(context, approvalOutcomeKey, 'submitted');
                 await vscode.commands.executeCommand(copilotOnRailsCommandIds.startProjectIntegrate);
             });
         });

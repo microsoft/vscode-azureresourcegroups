@@ -92,8 +92,9 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     }
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
+        const approvalOutcomeKey = 'approvalOutcome';
         if (!(await ensureAgentInstructions(context, azureDebugPlanAgent))) {
-            setCorProp(context, 'approvalOutcome', 'agentInstructionsMissing');
+            setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
             return false;
         }
 
@@ -105,15 +106,16 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             query: 'I approve the debug setup plan.',
         }));
 
-        setCorProp(context, 'approvalOutcome', 'submitted');
+        setCorProp(context, approvalOutcomeKey, 'submitted');
         return true;
     }
 
     private async trySubmitPlanFeedback(query: string): Promise<boolean> {
+        const feedbackOutcomeKey = 'feedbackOutcome';
         return await callWithTelemetryAndErrorHandling(corId('submitDebugPlanFeedback'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDebugPlanFeedback' }, async (context: CopilotOnRailsContext) => {
                 if (!(await ensureAgentInstructions(context, azureDebugPlanAgent))) {
-                    setCorProp(context, 'feedbackOutcome', 'agentInstructionsMissing');
+                    setCorProp(context, feedbackOutcomeKey, 'agentInstructionsMissing');
                     return false;
                 }
 
@@ -124,7 +126,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 }));
                 void this.panel.webview.postMessage({ command: 'revisionInProgress' });
 
-                setCorProp(context, 'feedbackOutcome', 'submitted');
+                setCorProp(context, feedbackOutcomeKey, 'submitted');
                 return true;
             });
         }) ?? false;
@@ -145,17 +147,20 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         await callWithTelemetryAndErrorHandling(corId('refreshDebugPrerequisites'), async (actionContext: IActionContext) => {
             actionContext.errorHandling.suppressDisplay = true;
             await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'refreshDebugPrerequisites' }, async (context: CopilotOnRailsContext) => {
+                const refreshOutcomeKey = 'refreshOutcome';
                 if (!(await ensureAgentInstructions(context, azureDebugPlanAgent))) {
-                    setCorProp(context, 'refreshOutcome', 'agentInstructionsMissing');
+                    setCorProp(context, refreshOutcomeKey, 'agentInstructionsMissing');
                     return;
                 }
+
                 this._isRefreshingPrereqs = true;
                 void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
                 await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
                     mode: azureDebugPlanAgent,
                     query: 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites table and update the plan file with the current results.',
                 }));
-                setCorProp(context, 'refreshOutcome', 'submitted');
+
+                setCorProp(context, refreshOutcomeKey, 'submitted');
                 if (this._refreshPrereqsTimer) {
                     clearTimeout(this._refreshPrereqsTimer);
                 }

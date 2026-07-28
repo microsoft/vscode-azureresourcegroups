@@ -67,8 +67,9 @@ export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Pr
     setCorProp(context, 'copilotChatInstalled', !!copilotChatExtension);
     setCorProp(context, 'copilotChatVersion', (copilotChatExtension?.packageJSON as { version?: string } | undefined)?.version ?? 'none');
 
+    const ensureCopilotChatOutcomeKey = 'ensureCopilotChatOutcome';
     if (!copilotChatExtension) {
-        setCorProp(context, 'ensureCopilotChatOutcome', 'notInstalled');
+        setCorProp(context, ensureCopilotChatOutcomeKey, 'notInstalled');
         void vscode.window.showErrorMessage(
             vscode.l10n.t('GitHub Copilot Chat is required to continue. Please install the GitHub Copilot Chat extension and try again.'),
         );
@@ -81,15 +82,15 @@ export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Pr
                 { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Starting GitHub Copilot Chat...') },
                 async () => { await copilotChatExtension.activate(); },
             );
-            setCorProp(context, 'ensureCopilotChatOutcome', 'activated');
+            setCorProp(context, ensureCopilotChatOutcomeKey, 'activated');
         } catch (error) {
-            setCorProp(context, 'ensureCopilotChatOutcome', 'activationFailed');
+            setCorProp(context, ensureCopilotChatOutcomeKey, 'activationFailed');
             setCorErrorProp(context, 'ensureCopilotChatError', parseError(error).message);
             throw error;
         }
         return true;
     }
-    setCorProp(context, 'ensureCopilotChatOutcome', 'alreadyActive');
+    setCorProp(context, ensureCopilotChatOutcomeKey, 'alreadyActive');
     return true;
 }
 
@@ -114,10 +115,11 @@ async function waitForCustomAgentCommand(agentName: string): Promise<string | un
 }
 
 export async function launchAgentChat(context: CopilotOnRailsContext, agentName: string, query: string, model?: string): Promise<boolean> {
+    const chatLaunchOutcomeKey = 'chatLaunchOutcome';
     setCorProp(context, 'chatQueryLength', query.length);
 
     if (agentLaunchInProgress) {
-        setCorProp(context, 'chatLaunchOutcome', 'alreadyInProgress');
+        setCorProp(context, chatLaunchOutcomeKey, 'alreadyInProgress');
         void vscode.window.showWarningMessage(
             vscode.l10n.t('Another Copilot agent is still starting. Please wait and try again.'),
         );
@@ -137,7 +139,7 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
         ensureRequiredCopilotOnRailsContext(context).diagnostics.properties.chatAgentCommandWaitMs = agentWaitMs;
 
         if (!commandId) {
-            setCorProp(context, 'chatLaunchOutcome', 'agentCommandTimeout');
+            setCorProp(context, chatLaunchOutcomeKey, 'agentCommandTimeout');
             void vscode.window.showErrorMessage(
                 vscode.l10n.t('The "{0}" Copilot agent did not finish loading. Please try again.', agentName),
             );
@@ -158,7 +160,7 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
         });
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        setCorProp(context, 'chatLaunchOutcome', 'error');
+        setCorProp(context, chatLaunchOutcomeKey, 'error');
         setCorErrorProp(context, 'chatLaunchError', message);
         void vscode.window.showErrorMessage(
             vscode.l10n.t('The "{0}" Copilot agent could not be started: {1}', agentName, message),
@@ -178,36 +180,37 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
         setCorErrorProp(context, 'chatAgentLaunchRecordError', message);
         ext.outputChannel.warn(vscode.l10n.t('Could not record the "{0}" Copilot agent launch: {1}', agentName, message));
     }
-    setCorProp(context, 'chatLaunchOutcome', 'chatLaunched');
+    setCorProp(context, chatLaunchOutcomeKey, 'chatLaunched');
     return true;
 }
 
 export async function openChatWithAgent(context: CopilotOnRailsContext, agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
+    const openChatWithAgentOutcomeKey = 'openChatWithAgentOutcome';
     setCorProp(context, 'chatAgentName', agentName);
 
     if (agentName === azureDeployAgent) {
         if (!await ensureAzureDeploymentPrerequisites(context)) {
-            setCorProp(context, 'openChatWithAgentOutcome', 'deploymentPrerequisitesMissing');
+            setCorProp(context, openChatWithAgentOutcomeKey, 'deploymentPrerequisitesMissing');
             return;
         }
     } else {
         if (!await ensureAgentInstructions(context, agentName)) {
-            setCorProp(context, 'openChatWithAgentOutcome', 'agentInstructionsMissing');
+            setCorProp(context, openChatWithAgentOutcomeKey, 'agentInstructionsMissing');
             return;
         }
     }
 
     if (!(await ensureCopilotChatReady(context))) {
-        setCorProp(context, 'openChatWithAgentOutcome', 'copilotChatNotReady');
+        setCorProp(context, openChatWithAgentOutcomeKey, 'copilotChatNotReady');
         return;
     }
 
     if (!(await launchAgentChat(context, agentName, prompt))) {
-        setCorProp(context, 'openChatWithAgentOutcome', 'chatlaunchFailed');
+        setCorProp(context, openChatWithAgentOutcomeKey, 'chatlaunchFailed');
         return;
     }
 
-    setCorProp(context, 'openChatWithAgentOutcome', 'launched');
+    setCorProp(context, openChatWithAgentOutcomeKey, 'launched');
 
     if (loading) {
         setCorProp(context, 'openChatLoadingStage', loading.stage);

@@ -67,8 +67,9 @@ export class RequirementsViewController extends WebviewController<Record<string,
                 this.requirementsData = data;
                 this.recordRequirementsTelemetry(context);
 
+                const submissionOutcomeKey = 'submissionOutcome';
                 if (!this.sourceFileUri) {
-                    setCorProp(context, 'submissionOutcome', 'noSourceFile');
+                    setCorProp(context, submissionOutcomeKey, 'noSourceFile');
                     void this.panel.webview.postMessage({
                         command: 'submitError',
                         error: vscode.l10n.t('The requirements file location is unknown, so the answers could not be saved.'),
@@ -85,7 +86,7 @@ export class RequirementsViewController extends WebviewController<Record<string,
                     await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(serialized, 'utf-8'));
                 } catch (err) {
                     const message = err instanceof Error ? err.message : String(err);
-                    setCorProp(context, 'submissionOutcome', 'writeFailed');
+                    setCorProp(context, submissionOutcomeKey, 'writeFailed');
                     setCorErrorProp(context, 'submissionWriteError', parseError(err).message);
                     void this.panel.webview.postMessage({ command: 'submitError', error: message });
                     return;
@@ -95,17 +96,17 @@ export class RequirementsViewController extends WebviewController<Record<string,
 
                 const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
                 if (!(await ensureAgentInstructions(context, 'azure-project-plan'))) {
-                    setCorProp(context, 'submissionOutcome', 'agentInstructionsMissing');
+                    setCorProp(context, submissionOutcomeKey, 'agentInstructionsMissing');
                     return;
                 }
 
                 const query = vscode.l10n.t('Requirements submitted at {0} \u2014 read the file and continue generating .azure/project-plan.md.', relativePath);
                 if (!(await launchAgentChat(context, azureProjectPlanAgent, query))) {
-                    setCorProp(context, 'submissionOutcome', 'launchFailed');
+                    setCorProp(context, submissionOutcomeKey, 'launchFailed');
                     return;
                 }
 
-                setCorProp(context, 'submissionOutcome', 'submitted');
+                setCorProp(context, submissionOutcomeKey, 'submitted');
                 // Programmatic hand-off to the plan phase \u2014 don't treat this close as the user abandoning the flow.
                 suppressTrackedViewCloseOnce();
                 this.panel.dispose();

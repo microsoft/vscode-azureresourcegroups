@@ -37,6 +37,7 @@ async function hasAzurePrepareSkill(): Promise<boolean> {
 }
 
 export async function ensureAzureDeploymentPrerequisites(context: CopilotOnRailsContext): Promise<boolean> {
+    const ensurePrereqsOutcomeKey = 'ensureDeploymentPrereqOutcome';
     let copilotForAzure = vscode.extensions.getExtension(gitHubCopilotForAzureExtensionId);
     const hasExtension = !!copilotForAzure;
     const hasSkill = await hasAzurePrepareSkill();
@@ -46,7 +47,7 @@ export async function ensureAzureDeploymentPrerequisites(context: CopilotOnRails
     setCorProp(context, 'copilotForAzureSkillInstalled', hasSkill);
 
     if (hasExtension && hasSkill) {
-        setCorProp(context, 'ensureDeploymentPrereqOutcome', 'alreadyInstalledExtensionAndSkill');
+        setCorProp(context, ensurePrereqsOutcomeKey, 'alreadyInstalledExtensionAndSkill');
         return true;
     }
 
@@ -57,7 +58,7 @@ export async function ensureAzureDeploymentPrerequisites(context: CopilotOnRails
 
     const choice = await vscode.window.showWarningMessage(message, { modal: true }, install);
     if (choice !== install) {
-        setCorProp(context, 'ensureDeploymentPrereqOutcome', hasExtension ? 'installSkillDeclined' : 'installExtensionDeclined');
+        setCorProp(context, ensurePrereqsOutcomeKey, hasExtension ? 'installSkillDeclined' : 'installExtensionDeclined');
         return false;
     }
 
@@ -77,13 +78,13 @@ export async function ensureAzureDeploymentPrerequisites(context: CopilotOnRails
             await vscode.commands.executeCommand(installAzureSkillsLocallyCommandId);
         }
         if (await hasAzurePrepareSkill()) {
-            setCorProp(context, 'ensureDeploymentPrereqOutcome', hasExtension ? 'installedSkill' : (hasSkill ? 'installedExtension' : 'installedExtensionAndSkill'));
+            setCorProp(context, ensurePrereqsOutcomeKey, hasExtension ? 'installedSkill' : (hasSkill ? 'installedExtension' : 'installedExtensionAndSkill'));
             return true;
         }
-        setCorProp(context, 'ensureDeploymentPrereqOutcome', 'installSkillFailed');
+        setCorProp(context, ensurePrereqsOutcomeKey, 'installSkillFailed');
     } catch (error) {
         // The install command rejects when installation is canceled or fails.
-        setCorProp(context, 'ensureDeploymentPrereqOutcome', installing === 'extension' ? 'installExtensionFailed' : 'installSkillFailed');
+        setCorProp(context, ensurePrereqsOutcomeKey, installing === 'extension' ? 'installExtensionFailed' : 'installSkillFailed');
         setCorErrorProp(context, 'ensureDeploymentPrereqError', parseError(error).message);
     }
 
