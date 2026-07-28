@@ -46,21 +46,21 @@ export class LocalDevNextStepsViewController extends WebviewController<LocalDevN
 
                 switch (action) {
                     case 'iterate':
-                        if (!(await ensureCopilotChatReady())) {
+                        if (!(await ensureCopilotChatReady(corContext))) {
                             return;
                         }
                         this.panel.dispose();
                         await vscode.commands.executeCommand('workbench.view.debug');
-                        await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
+                        await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(corContext, {
                             query: vscode.l10n.t('I want to keep iterating on my project'),
                         }));
                         return;
                     case 'apiTests':
-                        if (!(await ensureCopilotChatReady())) {
+                        if (!(await ensureCopilotChatReady(corContext))) {
                             return;
                         }
                         this.panel.dispose();
-                        await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
+                        await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(corContext, {
                             mode: azureDebugGenerateAgent,
                             query: vscode.l10n.t('Run the API tests to verify my endpoints.'),
                         }));

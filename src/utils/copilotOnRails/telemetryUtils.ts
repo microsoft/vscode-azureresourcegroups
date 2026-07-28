@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { IActionContext, maskUserInfo } from "@microsoft/vscode-azext-utils";
 import { ToolExecutionExtras } from "@microsoft/vscode-inproc-mcp";
 import * as os from "os";
 import { v4 as uuidv4 } from "uuid";
@@ -91,7 +91,6 @@ export function getSystemTelemetry(): Record<string, string> {
     return systemTelemetry;
 }
 
-//
 /**
  * Call this to set both the diagnostics and telemetry properties.
  *
@@ -100,4 +99,12 @@ export function getSystemTelemetry(): Record<string, string> {
 export function setCorProp(context: CopilotOnRailsContext, key: string, value: unknown): void {
     ensureRequiredCopilotOnRailsContext(context).diagnostics.properties[key] = value;
     context.telemetry.properties[key] = String(value);
+}
+
+/**
+ * Call this automatically handle setting both the diagnostics and telemetry error message.
+ */
+export function setCorErrorProp(context: CopilotOnRailsContext, key: string, errorMessage: string): void {
+    ensureRequiredCopilotOnRailsContext(context).diagnostics.properties[key] = errorMessage;
+    context.telemetry.properties[key] = maskUserInfo(errorMessage, context.valuesToMask);
 }

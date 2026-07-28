@@ -61,8 +61,8 @@ function registerCopilotOnRailsCommand<A extends unknown[]>(
     );
 }
 
-export function startProjectScaffoldCommand(_context: CopilotOnRailsContext, prompt?: string): Promise<void> {
-    return openChatWithAgent(copilotOnRailsCustomAgents.azureProjectScaffoldCustomAgent, prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.', {
+export function startProjectScaffoldCommand(context: CopilotOnRailsContext, prompt?: string): Promise<void> {
+    return openChatWithAgent(context, copilotOnRailsCustomAgents.azureProjectScaffoldCustomAgent, prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.', {
         stage: 0,
         title: l10n.t('Scaffolding your project…'),
         message: l10n.t('Copilot is gathering requirements and preparing your project plan.'),
@@ -70,8 +70,8 @@ export function startProjectScaffoldCommand(_context: CopilotOnRailsContext, pro
     });
 }
 
-export function startProjectIntegrateCommand(_context: CopilotOnRailsContext, prompt?: string): Promise<void> {
-    return openChatWithAgent(copilotOnRailsCustomAgents.azureProjectIntegrateCustomAgent, prompt ?? 'The project has been scaffolded. Read `.azure/integration-plan.md`, then integrate the project: create the SQL/PostgreSQL schema migrations (no seed data), smoke-test the backend so every endpoint responds, wire the frontend to live data (remove all mock data), and run the frontend and backend together end-to-end.', {
+export function startProjectIntegrateCommand(context: CopilotOnRailsContext, prompt?: string): Promise<void> {
+    return openChatWithAgent(context, copilotOnRailsCustomAgents.azureProjectIntegrateCustomAgent, prompt ?? 'The project has been scaffolded. Read `.azure/integration-plan.md`, then integrate the project: create the SQL/PostgreSQL schema migrations (no seed data), smoke-test the backend so every endpoint responds, wire the frontend to live data (remove all mock data), and run the frontend and backend together end-to-end.', {
         stage: 0,
         title: l10n.t('Integrating your frontend…'),
         message: l10n.t('Copilot is wiring the frontend to your backend services. For progress please view the Copilot chat.'),
@@ -79,8 +79,8 @@ export function startProjectIntegrateCommand(_context: CopilotOnRailsContext, pr
     });
 }
 
-export function startLocalDevelopmentCommand(_context: CopilotOnRailsContext, prompt?: string): Promise<void> {
-    return openChatWithAgent(azureDebugPlanAgent, prompt ?? 'The project has been scaffolded. Now set up the local debugging environment so the user can start building and testing.', {
+export function startLocalDevelopmentCommand(context: CopilotOnRailsContext, prompt?: string): Promise<void> {
+    return openChatWithAgent(context, azureDebugPlanAgent, prompt ?? 'The project has been scaffolded. Now set up the local debugging environment so the user can start building and testing.', {
         stage: 1,
         title: l10n.t('Setting up local development…'),
         message: l10n.t('Copilot is preparing your local debugging plan.'),
@@ -88,8 +88,8 @@ export function startLocalDevelopmentCommand(_context: CopilotOnRailsContext, pr
     });
 }
 
-export function startAzureDebugGenerateCommand(_context: CopilotOnRailsContext, prompt?: string): Promise<void> {
-    return openChatWithAgent(copilotOnRailsCustomAgents.azureDebugGenerateCustomAgent, prompt ?? 'The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`.', {
+export function startAzureDebugGenerateCommand(context: CopilotOnRailsContext, prompt?: string): Promise<void> {
+    return openChatWithAgent(context, copilotOnRailsCustomAgents.azureDebugGenerateCustomAgent, prompt ?? 'The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`.', {
         stage: 1,
         title: l10n.t('Generating local development artifacts…'),
         message: l10n.t('Copilot is generating the artifacts from your local debugging plan.'),
@@ -97,8 +97,8 @@ export function startAzureDebugGenerateCommand(_context: CopilotOnRailsContext, 
     });
 }
 
-export async function startDeploymentCommand(_context: CopilotOnRailsContext, prompt?: string): Promise<void> {
-    await openChatWithAgent(copilotOnRailsCustomAgents.azureDeployCustomAgent, prompt ?? 'Prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`.', {
+export async function startDeploymentCommand(context: CopilotOnRailsContext, prompt?: string): Promise<void> {
+    await openChatWithAgent(context, copilotOnRailsCustomAgents.azureDeployCustomAgent, prompt ?? 'Prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`.', {
         stage: 2,
         title: l10n.t('Preparing deployment…'),
         message: l10n.t('Copilot is preparing your deployment plan.'),

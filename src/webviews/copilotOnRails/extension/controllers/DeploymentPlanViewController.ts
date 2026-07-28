@@ -7,6 +7,7 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microso
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
+import { ensureAzureDeploymentPrerequisites } from "../../../../commands/copilotOnRails/deploymentPrerequisites";
 import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDeployAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
@@ -125,28 +126,40 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
     }
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
+        const approvalOutcomeKey = 'approvalOutcome';
+        if (!(await ensureAzureDeploymentPrerequisites(context))) {
+            setCorProp(context, approvalOutcomeKey, 'deploymentPrerequisitesMissing');
+            return false;
+        }
+
         // Fresh chat session for the approval hand-off so the next phase starts with a clean context window.
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
-        await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
+        await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
             mode: azureDeployAgent,
             query: 'I approve the deployment plan. Continue with generating the infrastructure and deployment artifacts.',
         }));
 
-        setCorProp(context, 'approvalOutcome', 'submitted');
+        setCorProp(context, approvalOutcomeKey, 'submitted');
         return true;
     }
 
     private async trySubmitPlanFeedback(query: string): Promise<boolean> {
         return await callWithTelemetryAndErrorHandling(corId('submitDeploymentPlanFeedback'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDeploymentPlanFeedback' }, async (context: CopilotOnRailsContext) => {
+                const feedbackOutcomeKey = 'feedbackOutcome';
+                if (!(await ensureAzureDeploymentPrerequisites(context))) {
+                    setCorProp(context, feedbackOutcomeKey, 'deploymentPrerequisitesMissing');
+                    return false;
+                }
+
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
-                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
+                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
                     mode: azureDeployAgent,
                     query,
                 }));
                 void this.panel.webview.postMessage({ command: 'revisionInProgress' });
 
-                setCorProp(context, 'feedbackOutcome', 'submitted');
+                setCorProp(context, feedbackOutcomeKey, 'submitted');
                 return true;
             });
         }) ?? false;

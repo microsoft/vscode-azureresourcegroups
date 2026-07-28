@@ -6,7 +6,6 @@
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as path from "path";
-import { getCorProjectId } from "src/utils/copilotOnRails/telemetryUtils";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
@@ -26,9 +25,6 @@ import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 /** Prompt to raise max requests for guided runs below this threshold. */
 const MIN_RECOMMENDED_MAX_REQUESTS = 1000;
-
-/** Telemetry property key recording whether agent instructions were successfully ensured. */
-const ENSURE_AGENT_INSTRUCTIONS_KEY = 'ensureAgentInstructions';
 
 export class ScaffoldPlanViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
@@ -148,24 +144,23 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext, autopilot: boolean): Promise<boolean> {
+        const approvalOutcomeKey = 'approvalOutcome';
         let confirmedAutopilot = false;
         if (autopilot) {
             confirmedAutopilot = await this.confirmAutopilot();
             if (!confirmedAutopilot) {
                 // Autopilot was requested but the confirmation dialog was declined.
                 setCorProp(context, 'autopilot', false);
-                setCorProp(context, 'approvalOutcome', 'confirmationDeclined');
+                setCorProp(context, approvalOutcomeKey, 'confirmationDeclined');
                 return false;
             }
         }
         setCorProp(context, 'autopilot', confirmedAutopilot);
 
-        if (!(await ensureAgentInstructions('azure-project-scaffold'))) {
-            setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, false);
-            setCorProp(context, 'approvalOutcome', 'agentInstructionsMissing');
+        if (!(await ensureAgentInstructions(context, 'azure-project-scaffold'))) {
+            setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
             return false;
         }
-        setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, true);
 
         const planBeforeAutopilot = confirmedAutopilot
             ? await this.recordAutopilotMode()
@@ -177,17 +172,17 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
 
         const baseQuery = vscode.l10n.t('I approve the plan.');
-        if (!(await launchAgentChat(azureProjectScaffoldAgent, confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery))) {
+        if (!(await launchAgentChat(context, azureProjectScaffoldAgent, confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery))) {
             if (confirmedAutopilot) {
                 await disableAutopilot();
                 if (planBeforeAutopilot !== undefined && this.sourceFileUri) {
                     await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(planBeforeAutopilot, 'utf-8'));
                 }
             }
-            setCorProp(context, 'approvalOutcome', 'launchFailed');
+            setCorProp(context, approvalOutcomeKey, 'launchFailed');
             return false;
         }
-        setCorProp(context, 'approvalOutcome', 'submitted');
+        setCorProp(context, approvalOutcomeKey, 'submitted');
         return true;
     }
 
@@ -208,7 +203,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         return await callWithTelemetryAndErrorHandling(corId('submitScaffoldPlanFeedback'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitScaffoldPlanFeedback' }, async (context: CopilotOnRailsContext) => {
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
-                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
+                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
                     mode: 'agent',
                     query,
                 }));
@@ -307,35 +302,38 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     private async refreshPrerequisites(autopilot: boolean): Promise<void> {
-        await callWithTelemetryAndErrorHandling(corId('refreshScaffoldPrerequisites'), async (context: IActionContext) => {
-            context.errorHandling.suppressDisplay = true;
-            context.telemetry.properties.isCopilotEvent = 'true';
-            context.telemetry.properties.corProjectId = getCorProjectId();
-            context.telemetry.properties.autopilot = String(autopilot);
+        await callWithTelemetryAndErrorHandling(corId('refreshScaffoldPrerequisites'), async (actionContext: IActionContext) => {
+            actionContext.errorHandling.suppressDisplay = true;
+            await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'refreshScaffoldPrerequisites' }, async (context: CopilotOnRailsContext) => {
+                setCorProp(context, 'autopilot', autopilot);
 
-            if (!(await ensureAgentInstructions('azure-project-plan'))) {
-                return;
-            }
+                const refreshOutcomeKey = 'refreshOutcome';
+                if (!(await ensureAgentInstructions(context, 'azure-project-plan'))) {
+                    setCorProp(context, refreshOutcomeKey, 'agentInstructionsMissing');
+                    return;
+                }
 
-            this._isRefreshingPrereqs = true;
-            void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
+                this._isRefreshingPrereqs = true;
+                void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
 
-            const query = autopilot
-                ? 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites tables and update the plan file with the current results.'
-                : 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Run Prerequisites table only and update the plan file with the current results.';
+                const query = autopilot
+                    ? 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites tables and update the plan file with the current results.'
+                    : 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Run Prerequisites table only and update the plan file with the current results.';
 
-            await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
-                mode: 'azure-project-plan',
-                query,
-            }));
+                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
+                    mode: 'azure-project-plan',
+                    query,
+                }));
+                setCorProp(context, refreshOutcomeKey, 'submitted');
 
-            if (this._refreshPrereqsTimer) {
-                clearTimeout(this._refreshPrereqsTimer);
-            }
-            this._refreshPrereqsTimer = setTimeout(() => {
-                this._refreshPrereqsTimer = undefined;
-                this.clearPrereqsRefresh();
-            }, 15_000);
+                if (this._refreshPrereqsTimer) {
+                    clearTimeout(this._refreshPrereqsTimer);
+                }
+                this._refreshPrereqsTimer = setTimeout(() => {
+                    this._refreshPrereqsTimer = undefined;
+                    this.clearPrereqsRefresh();
+                }, 15_000);
+            });
         });
     }
 

@@ -3,6 +3,7 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
+import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
@@ -11,7 +12,9 @@ import { ensureCopilotChatReady, launchAgentChat } from "../../../../commands/co
 import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
+import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { recordCreatedAt, recordPrompt } from "../../../../utils/copilotOnRails/diagnosticUtils";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -41,25 +44,36 @@ export class CreateProjectViewController extends WebviewController<CreateProject
     }
 
     private async openChatWithQuery(query: string, model?: string): Promise<void> {
-        if (model) {
-            await recordModel(model);
-        }
-        if (!(await ensureCopilotChatReady())) {
-            return;
-        }
-        if (!(await ensureAgentInstructions('azure-project-plan'))) {
-            return;
-        }
-        if (!(await launchAgentChat(azureProjectPlanAgent, query, model))) {
-            return;
-        }
-        this.panel.dispose();
-        projectSubmissionState.setPending();
-        openLoadingView({
-            stage: 0,
-            title: vscode.l10n.t('Gathering project requirements…'),
-            message: vscode.l10n.t('Copilot is analyzing your prompt and preparing the requirements questionnaire.'),
-            showNeedHelp: true,
+        await callWithTelemetryAndErrorHandling(corId('createProjectSubmitPrompt'), async (actionContext: IActionContext) => {
+            await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'createProjectSubmitPrompt' }, async (context: CopilotOnRailsContext) => {
+                setCorProp(context, 'modelSelectedInView', !!model);
+                if (model) {
+                    await recordModel(model);
+                }
+
+                const submissionOutcomeKey = 'submissionOutcome';
+                if (!(await ensureCopilotChatReady(context))) {
+                    setCorProp(context, submissionOutcomeKey, 'copilotChatNotReady');
+                    return;
+                }
+                if (!(await ensureAgentInstructions(context, 'azure-project-plan'))) {
+                    setCorProp(context, submissionOutcomeKey, 'agentInstructionsMissing');
+                    return;
+                }
+                if (!(await launchAgentChat(context, azureProjectPlanAgent, query, model))) {
+                    setCorProp(context, submissionOutcomeKey, 'launchFailed');
+                    return;
+                }
+                setCorProp(context, submissionOutcomeKey, 'submitted');
+                this.panel.dispose();
+                projectSubmissionState.setPending();
+                openLoadingView({
+                    stage: 0,
+                    title: vscode.l10n.t('Gathering project requirements…'),
+                    message: vscode.l10n.t('Copilot is analyzing your prompt and preparing the requirements questionnaire.'),
+                    showNeedHelp: true,
+                });
+            });
         });
     }
 }
