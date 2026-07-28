@@ -21,7 +21,7 @@ import { AUTOPILOT_QUERY_MARKER, disableAutopilot, enableAutopilot, getEffective
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { suppressTrackedViewCloseOnce } from "../projectSession";
-import { writeProjectPlanStatusAtUri } from "../utils/planStatus";
+import { replaceProjectPlanStatus, writeProjectPlanStatusAtUri } from "../utils/planStatus";
 import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
 import { getScaffoldPlanTelemetry, SCAFFOLD_PLAN_TELEMETRY_PREFIX } from "../utils/scaffoldPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
@@ -174,7 +174,10 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
             : undefined;
         setCorProp(context, 'statusWriteSucceeded', planBeforeApproval !== undefined);
         if (planBeforeApproval !== undefined) {
-            this.onSelfWrite?.(planBeforeApproval.replace(/^(\*\*Status\*\*:[ \t]*)([^\r\n]*)/m, `$1${ProjectPlanStatus.approved}`));
+            const approvedPlan = replaceProjectPlanStatus(planBeforeApproval, ProjectPlanStatus.approved);
+            if (approvedPlan !== undefined) {
+                this.onSelfWrite?.(approvedPlan);
+            }
         }
 
         if (confirmedAutopilot) {
