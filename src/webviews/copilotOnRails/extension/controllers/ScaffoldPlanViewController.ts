@@ -16,10 +16,12 @@ import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type PreviewPage, type ScaffoldPlanData } from "../../views/utils/parseScaffoldPlanMarkdown";
+import { ProjectPlanStatus } from "../../views/utils/projectPlanStatus";
 import { AUTOPILOT_QUERY_MARKER, disableAutopilot, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { suppressTrackedViewCloseOnce } from "../projectSession";
+import { writeProjectPlanStatusAtUri } from "../utils/planStatus";
 import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
 import { getScaffoldPlanTelemetry, SCAFFOLD_PLAN_TELEMETRY_PREFIX } from "../utils/scaffoldPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
@@ -167,9 +169,17 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
         setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, true);
 
-        const planBeforeAutopilot = confirmedAutopilot
-            ? await this.recordAutopilotMode()
+        const planBeforeApproval = this.sourceFileUri
+            ? await writeProjectPlanStatusAtUri(this.sourceFileUri, ProjectPlanStatus.approved)
             : undefined;
+        setCorProp(context, 'statusWriteSucceeded', planBeforeApproval !== undefined);
+        if (planBeforeApproval !== undefined) {
+            this.onSelfWrite?.(planBeforeApproval.replace(/^(\*\*Status\*\*:[ \t]*)([^\r\n]*)/m, `$1${ProjectPlanStatus.approved}`));
+        }
+
+        if (confirmedAutopilot) {
+            await this.recordAutopilotMode();
+        }
         if (confirmedAutopilot) {
             await enableAutopilot(ext.context);
         } else {
@@ -180,9 +190,10 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         if (!(await launchAgentChat(azureProjectScaffoldAgent, confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery))) {
             if (confirmedAutopilot) {
                 await disableAutopilot();
-                if (planBeforeAutopilot !== undefined && this.sourceFileUri) {
-                    await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(planBeforeAutopilot, 'utf-8'));
-                }
+            }
+            if (planBeforeApproval !== undefined && this.sourceFileUri) {
+                await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(planBeforeApproval, 'utf-8'));
+                this.onSelfWrite?.(planBeforeApproval);
             }
             setCorProp(context, 'approvalOutcome', 'launchFailed');
             return false;
