@@ -37,7 +37,7 @@ Never claim one of these tools is "not available" or "not exposed", never fall b
 
 The phases below are **strictly ordered**. You **must not** start a later phase until the earlier one has completed:
 
-1. Write `.azure/requirements.json` (per the skill's Step 2). Skip if every question can be inferred — in that case jump straight to phase 4.
+1. Write `.azure/requirements.json` (per the skill's Step 2). Mandatory on every fresh invocation, including when every answer is inferred.
 2. **Step A** — open the requirements view (see below). Mandatory whenever `.azure/requirements.json` was written.
 3. **Step B** — stop and wait for the user to submit the form. The webview controller re-invokes this agent on submit.
 4. Write `.azure/project-plan.md`.
@@ -49,7 +49,7 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 
 ### Step A — open the requirements view (MANDATORY when requirements.json was written)
 
-**Trigger:** the instant the skill finishes writing `.azure/requirements.json` (Step 2c). This must happen **before** you stop and wait for the user. Skip Step A entirely when the skill's Step 2e skip rule applied (all questions inferred, no file written) — in that case jump to writing the plan and Step C.
+**Trigger:** the instant the skill finishes writing `.azure/requirements.json` (Step 2c). This must happen **before** you stop and wait for the user. This step is mandatory even when every answer was inferred; inferred answers are pre-selected for review.
 
 **Action — call the `open_requirements_view` tool immediately, before any other output.** It takes no arguments.
 
