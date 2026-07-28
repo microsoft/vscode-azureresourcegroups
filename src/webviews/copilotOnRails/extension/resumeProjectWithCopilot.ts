@@ -83,7 +83,7 @@ export async function resumeProjectWithCopilot(context: CopilotOnRailsContext): 
         return;
     }
 
-    await openChatWithAgent(resumeAgentFor(state.phase), buildResumePrompt(state), RESUME_LOADING[state.phase]);
+    await openChatWithAgent(context, resumeAgentFor(state.phase), buildResumePrompt(state), RESUME_LOADING[state.phase]);
 }
 
 /**

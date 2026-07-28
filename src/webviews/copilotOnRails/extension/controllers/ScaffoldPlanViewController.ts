@@ -6,7 +6,6 @@
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as path from "path";
-import { getCorProjectId } from "src/utils/copilotOnRails/telemetryUtils";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
@@ -15,7 +14,7 @@ import { azureProjectScaffoldAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
-import { type ScaffoldPlanData, type PreviewPage } from "../../views/utils/parseScaffoldPlanMarkdown";
+import { type PreviewPage, type ScaffoldPlanData } from "../../views/utils/parseScaffoldPlanMarkdown";
 import { AUTOPILOT_QUERY_MARKER, disableAutopilot, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -26,9 +25,6 @@ import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 /** Prompt to raise max requests for guided runs below this threshold. */
 const MIN_RECOMMENDED_MAX_REQUESTS = 1000;
-
-/** Telemetry property key recording whether agent instructions were successfully ensured. */
-const ENSURE_AGENT_INSTRUCTIONS_KEY = 'ensureAgentInstructions';
 
 export class ScaffoldPlanViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
@@ -160,12 +156,10 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
         setCorProp(context, 'autopilot', confirmedAutopilot);
 
-        if (!(await ensureAgentInstructions('azure-project-scaffold'))) {
-            setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, false);
+        if (!(await ensureAgentInstructions(context, 'azure-project-scaffold'))) {
             setCorProp(context, 'approvalOutcome', 'agentInstructionsMissing');
             return false;
         }
-        setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, true);
 
         const planBeforeAutopilot = confirmedAutopilot
             ? await this.recordAutopilotMode()
@@ -177,7 +171,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
 
         const baseQuery = vscode.l10n.t('I approve the plan.');
-        if (!(await launchAgentChat(azureProjectScaffoldAgent, confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery))) {
+        if (!(await launchAgentChat(context, azureProjectScaffoldAgent, confirmedAutopilot ? `${AUTOPILOT_QUERY_MARKER} ${baseQuery}` : baseQuery))) {
             if (confirmedAutopilot) {
                 await disableAutopilot();
                 if (planBeforeAutopilot !== undefined && this.sourceFileUri) {
@@ -208,7 +202,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         return await callWithTelemetryAndErrorHandling(`copilotOnRails.submitProjectScaffoldPlanFeedback`, async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitProjectScaffoldPlanFeedback' }, async (context: CopilotOnRailsContext) => {
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
-                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
+                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
                     mode: 'agent',
                     query,
                 }));
@@ -307,35 +301,37 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
     }
 
     private async refreshPrerequisites(autopilot: boolean): Promise<void> {
-        await callWithTelemetryAndErrorHandling('azureResourceGroups.scaffoldPlan.refreshPrerequisites', async (context: IActionContext) => {
-            context.errorHandling.suppressDisplay = true;
-            context.telemetry.properties.isCopilotEvent = 'true';
-            context.telemetry.properties.corProjectId = getCorProjectId();
-            context.telemetry.properties.autopilot = String(autopilot);
+        await callWithTelemetryAndErrorHandling('copilotOnRails.scaffoldPlan.refreshPrerequisites', async (actionContext: IActionContext) => {
+            actionContext.errorHandling.suppressDisplay = true;
+            await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'scaffoldPlan.refreshPrerequisites' }, async (context: CopilotOnRailsContext) => {
+                setCorProp(context, 'autopilot', autopilot);
 
-            if (!(await ensureAgentInstructions('azure-project-plan'))) {
-                return;
-            }
+                if (!(await ensureAgentInstructions(context, 'azure-project-plan'))) {
+                    setCorProp(context, 'refreshOutcome', 'agentInstructionsMissing');
+                    return;
+                }
 
-            this._isRefreshingPrereqs = true;
-            void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
+                this._isRefreshingPrereqs = true;
+                void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
 
-            const query = autopilot
-                ? 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites tables and update the plan file with the current results.'
-                : 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Run Prerequisites table only and update the plan file with the current results.';
+                const query = autopilot
+                    ? 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Prerequisites tables and update the plan file with the current results.'
+                    : 'Re-check the prerequisites section only. Re-run the installed/version checks for every tool and extension in the Run Prerequisites table only and update the plan file with the current results.';
 
-            await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
-                mode: 'azure-project-plan',
-                query,
-            }));
+                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
+                    mode: 'azure-project-plan',
+                    query,
+                }));
+                setCorProp(context, 'refreshOutcome', 'submitted');
 
-            if (this._refreshPrereqsTimer) {
-                clearTimeout(this._refreshPrereqsTimer);
-            }
-            this._refreshPrereqsTimer = setTimeout(() => {
-                this._refreshPrereqsTimer = undefined;
-                this.clearPrereqsRefresh();
-            }, 15_000);
+                if (this._refreshPrereqsTimer) {
+                    clearTimeout(this._refreshPrereqsTimer);
+                }
+                this._refreshPrereqsTimer = setTimeout(() => {
+                    this._refreshPrereqsTimer = undefined;
+                    this.clearPrereqsRefresh();
+                }, 15_000);
+            });
         });
     }
 

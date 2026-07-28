@@ -21,9 +21,6 @@ import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export type { DeploymentPlanViewConfiguration, DeploymentPlanViewStrings };
 
-/** Telemetry property key recording whether agent instructions were successfully ensured. */
-const ENSURE_AGENT_INSTRUCTIONS_KEY = 'ensureAgentInstructions';
-
 /** Localized strings rendered by the deployment plan webview. */
 function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
     return {
@@ -129,16 +126,14 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
     }
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
-        if (!(await ensureAgentInstructions(azureDeployAgent))) {
-            setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, false);
+        if (!(await ensureAgentInstructions(context, azureDeployAgent))) {
             setCorProp(context, 'approvalOutcome', 'agentInstructionsMissing');
             return false;
         }
-        setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, true);
 
         // Fresh chat session for the approval hand-off so the next phase starts with a clean context window.
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
-        await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
+        await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
             mode: azureDeployAgent,
             query: 'I approve the deployment plan. Continue with generating the infrastructure and deployment artifacts.',
         }));
@@ -150,15 +145,13 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
     private async trySubmitPlanFeedback(query: string): Promise<boolean> {
         return await callWithTelemetryAndErrorHandling('copilotOnRails.submitDeploymentPlanFeedback', async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDeploymentPlanFeedback' }, async (context: CopilotOnRailsContext) => {
-                if (!(await ensureAgentInstructions(azureDeployAgent))) {
-                    setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, false);
+                if (!(await ensureAgentInstructions(context, azureDeployAgent))) {
                     setCorProp(context, 'feedbackOutcome', 'agentInstructionsMissing');
                     return false;
                 }
-                setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, true);
 
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
-                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
+                await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
                     mode: azureDeployAgent,
                     query,
                 }));

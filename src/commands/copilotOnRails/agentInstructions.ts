@@ -6,6 +6,8 @@
 import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
+import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
+import { setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
 
 export const copilotOnRailsCustomAgents = {
     azureProjectPlanCustomAgent: 'azure-project-plan',
@@ -98,9 +100,10 @@ async function writeVersionStamp(agentsRoot: vscode.Uri): Promise<void> {
  *
  * No-ops (returns `true`) when no workspace is open.
  */
-export async function ensureAgentInstructions(agentName: string): Promise<boolean> {
+export async function ensureAgentInstructions(context: CopilotOnRailsContext, agentName: string): Promise<boolean> {
     const agentsRoot = getWorkspaceAgentsRoot();
     if (!agentsRoot) {
+        setCorProp(context, 'ensureAgentInstructionsOutcome', 'noWorkspace');
         return true;
     }
 
@@ -110,14 +113,20 @@ export async function ensureAgentInstructions(agentName: string): Promise<boolea
             missingFolders.push(folder);
         }
     }
+    setCorProp(context, 'agentInstructionsMissingCount', missingFolders.length);
+    setCorProp(context, 'agentInstructionsMissingFolders', missingFolders.join(','));
 
     if (missingFolders.length === 0) {
+        // Todo: Come up with a more robust update system
         // All folders present — refresh silently if they were written by a different
         // extension version (stale instructions are a silent correctness hazard).
         if ((await readVersionStamp(agentsRoot)) !== getExtensionVersion()) {
             await copyInstructionFolders(agentInstructionFolders, agentsRoot);
             await writeVersionStamp(agentsRoot);
+            setCorProp(context, 'ensureAgentInstructionsOutcome', 'refreshedStale');
+            return true;
         }
+        setCorProp(context, 'ensureAgentInstructionsOutcome', 'upToDate');
         return true;
     }
 
@@ -131,6 +140,7 @@ export async function ensureAgentInstructions(agentName: string): Promise<boolea
         download,
     );
     if (choice !== download) {
+        setCorProp(context, 'ensureAgentInstructionsOutcome', 'downloadDeclined');
         return false;
     }
 
@@ -138,6 +148,7 @@ export async function ensureAgentInstructions(agentName: string): Promise<boolea
     // missing folders, so present-but-stale folders are refreshed at the same time.
     await copyInstructionFolders(agentInstructionFolders, agentsRoot);
     await writeVersionStamp(agentsRoot);
+    setCorProp(context, 'ensureAgentInstructionsOutcome', 'downloaded');
     return true;
 }
 

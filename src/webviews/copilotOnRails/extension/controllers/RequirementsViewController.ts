@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
+import { callWithTelemetryAndErrorHandling, type IActionContext, parseError } from "@microsoft/vscode-azext-utils";
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
@@ -12,7 +12,7 @@ import { launchAgentChat } from "../../../../commands/copilotOnRails/openChatWit
 import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { callWithDiagnosticsAndTelemetryHandling, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
+import { callWithDiagnosticsAndTelemetryHandling, setCorErrorProp, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type RequirementsData, type RequirementsExecutionMode } from "../../views/utils/parseRequirements";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -30,9 +30,6 @@ interface ReadyMessage {
 }
 
 type IncomingMessage = SubmitMessage | ReadyMessage;
-
-/** Telemetry property key recording whether agent instructions were successfully ensured. */
-const ENSURE_AGENT_INSTRUCTIONS_KEY = 'ensureAgentInstructions';
 
 export class RequirementsViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
@@ -89,6 +86,7 @@ export class RequirementsViewController extends WebviewController<Record<string,
                 } catch (err) {
                     const message = err instanceof Error ? err.message : String(err);
                     setCorProp(context, 'submissionOutcome', 'writeFailed');
+                    setCorErrorProp(context, 'submissionWriteError', parseError(err).message);
                     void this.panel.webview.postMessage({ command: 'submitError', error: message });
                     return;
                 }
@@ -96,15 +94,13 @@ export class RequirementsViewController extends WebviewController<Record<string,
                 void this.panel.webview.postMessage({ command: 'submitComplete' });
 
                 const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
-                if (!(await ensureAgentInstructions('azure-project-plan'))) {
-                    setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, false);
+                if (!(await ensureAgentInstructions(context, 'azure-project-plan'))) {
                     setCorProp(context, 'submissionOutcome', 'agentInstructionsMissing');
                     return;
                 }
-                setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, true);
 
                 const query = vscode.l10n.t('Requirements submitted at {0} \u2014 read the file and continue generating .azure/project-plan.md.', relativePath);
-                if (!(await launchAgentChat(azureProjectPlanAgent, query))) {
+                if (!(await launchAgentChat(context, azureProjectPlanAgent, query))) {
                     setCorProp(context, 'submissionOutcome', 'launchFailed');
                     return;
                 }

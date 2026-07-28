@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IActionContext } from "@microsoft/vscode-azext-utils";
+import { IActionContext, maskUserInfo } from "@microsoft/vscode-azext-utils";
 import { ToolExecutionExtras } from "@microsoft/vscode-inproc-mcp";
 import { v4 as uuidv4 } from "uuid";
 import { ext } from "../../extensionVariables";
@@ -50,7 +50,6 @@ export async function callWithDiagnosticsAndTelemetryHandling<T>(
     return await withDiagnosticEvents(corContext, { type: eventDetails.type, name: eventDetails.name }, async () => await command(corContext));
 }
 
-//
 /**
  * Call this to set both the diagnostics and telemetry properties.
  *
@@ -59,4 +58,12 @@ export async function callWithDiagnosticsAndTelemetryHandling<T>(
 export function setCorProp(context: CopilotOnRailsContext, key: string, value: unknown): void {
     ensureRequiredCopilotOnRailsContext(context).diagnostics.properties[key] = value;
     context.telemetry.properties[key] = String(value);
+}
+
+/**
+ * Call this to set both the diagnostics and telemetry properties.
+ */
+export function setCorErrorProp(context: CopilotOnRailsContext, key: string, errorMessage: string): void {
+    ensureRequiredCopilotOnRailsContext(context).diagnostics.properties[key] = errorMessage;
+    context.telemetry.properties[key] = maskUserInfo(errorMessage, context.valuesToMask);
 }

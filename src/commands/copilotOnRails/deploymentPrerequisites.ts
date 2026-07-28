@@ -3,9 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
+import { parseError } from '@microsoft/vscode-azext-utils';
 import { homedir } from 'node:os';
+import * as vscode from 'vscode';
 import { gitHubCopilotForAzureExtensionId } from '../../constants';
+import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
+import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
 
 const azurePrepareSkillName = 'azure-prepare';
 const skillFileName = 'SKILL.md';
@@ -33,10 +36,17 @@ async function hasAzurePrepareSkill(): Promise<boolean> {
     return false;
 }
 
-export async function ensureAzureDeploymentPrerequisites(): Promise<boolean> {
+export async function ensureAzureDeploymentPrerequisites(context: CopilotOnRailsContext): Promise<boolean> {
     let copilotForAzure = vscode.extensions.getExtension(gitHubCopilotForAzureExtensionId);
+    const hasExtension = !!copilotForAzure;
     const hasSkill = await hasAzurePrepareSkill();
-    if (copilotForAzure && hasSkill) {
+
+    setCorProp(context, 'copilotForAzureExtensionInstalled', hasExtension);
+    setCorProp(context, 'copilotForAzureExtensionVersion', (copilotForAzure?.packageJSON as { version?: string } | undefined)?.version ?? 'none');
+    setCorProp(context, 'copilotForAzureSkillInstalled', hasSkill);
+
+    if (hasExtension && hasSkill) {
+        setCorProp(context, 'ensureDeploymentPrereqOutcome', 'alreadyInstalledExtensionAndSkill');
         return true;
     }
 
@@ -45,10 +55,13 @@ export async function ensureAzureDeploymentPrerequisites(): Promise<boolean> {
         ? vscode.l10n.t('Deployment requires the "{0}" skill from GitHub Copilot for Azure. Install the skill to continue?', azurePrepareSkillName)
         : vscode.l10n.t('Deployment requires the GitHub Copilot for Azure extension and its "{0}" skill. Install the extension to continue?', azurePrepareSkillName);
     const choice = await vscode.window.showWarningMessage(message, { modal: true }, install);
+    setCorProp(context, 'copilotForAzureInstallPromptAccepted', choice === install);
     if (choice !== install) {
+        setCorProp(context, 'ensureDeploymentPrereqOutcome', hasExtension ? 'installSkillDeclined' : 'installExtensionDeclined');
         return false;
     }
 
+    let installing = hasExtension ? 'skill' : 'extension';
     try {
         if (!copilotForAzure) {
             await vscode.commands.executeCommand('workbench.extensions.installExtension', gitHubCopilotForAzureExtensionId);
@@ -57,16 +70,21 @@ export async function ensureAzureDeploymentPrerequisites(): Promise<boolean> {
         if (!copilotForAzure) {
             throw new Error('GitHub Copilot for Azure was not installed.');
         }
-
         await copilotForAzure.activate();
+
+        installing = 'skill';
         if (!(await hasAzurePrepareSkill())) {
             await vscode.commands.executeCommand(installAzureSkillsLocallyCommandId);
         }
         if (await hasAzurePrepareSkill()) {
+            setCorProp(context, 'ensureDeploymentPrereqOutcome', hasExtension ? 'installedSkill' : (hasSkill ? 'installedExtension' : 'installedExtensionAndSkill'));
             return true;
         }
-    } catch {
+        setCorProp(context, 'ensureDeploymentPrereqOutcome', 'installSkillFailed');
+    } catch (error) {
         // The install command rejects when installation is canceled or fails.
+        setCorProp(context, 'ensureDeploymentPrereqOutcome', installing === 'extension' ? 'installExtensionFailed' : 'installSkillFailed');
+        setCorErrorProp(context, 'ensureDeploymentPrereqError', parseError(error).message);
     }
 
     void vscode.window.showErrorMessage(
