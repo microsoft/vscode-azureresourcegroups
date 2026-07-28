@@ -9,6 +9,7 @@ import * as os from "os";
 import { v4 as uuidv4 } from "uuid";
 import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
+import { isAutopilotActive } from "../../webviews/copilotOnRails/extension/autopilot";
 import { readSessionState } from "../../webviews/copilotOnRails/extension/projectSession";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./CopilotOnRailsContext";
 import { DiagnosticEvent, withDiagnosticEvents } from "./diagnosticUtils";
@@ -67,6 +68,8 @@ export async function callWithDiagnosticsAndTelemetryHandling<T>(
     if (copilotModel) {
         setCorProp(corContext, 'copilotModel', copilotModel);
     }
+
+    setCorProp(corContext, 'autopilot', isAutopilotActive());
 
     return await withDiagnosticEvents(corContext, { type: eventDetails.type, name: eventDetails.name }, async () => await command(corContext));
 }
