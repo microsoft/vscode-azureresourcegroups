@@ -10,12 +10,11 @@ permissions:
   copilot-requests: write
 engine: copilot
 model: gpt-5.4
-strict: false
 inlined-imports: true
 tools:
   github:
+    toolsets: [issues, repos]
     min-integrity: none
-    private-to-public-flows: allow
 imports:
   - microsoft/vscode-azuretools/.github/workflows/shared/info-needed-triage.md@main
 timeout-minutes: 10
