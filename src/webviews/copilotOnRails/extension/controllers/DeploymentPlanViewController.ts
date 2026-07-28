@@ -7,7 +7,6 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microso
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDeployAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
@@ -20,9 +19,6 @@ import { DEPLOYMENT_PLAN_TELEMETRY_PREFIX, getDeploymentPlanTelemetry } from "..
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export type { DeploymentPlanViewConfiguration, DeploymentPlanViewStrings };
-
-/** Telemetry property key recording whether agent instructions were successfully ensured. */
-const ENSURE_AGENT_INSTRUCTIONS_KEY = 'ensureAgentInstructions';
 
 /** Localized strings rendered by the deployment plan webview. */
 function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
@@ -129,13 +125,6 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
     }
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
-        if (!(await ensureAgentInstructions(azureDeployAgent))) {
-            setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, false);
-            setCorProp(context, 'approvalOutcome', 'agentInstructionsMissing');
-            return false;
-        }
-        setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, true);
-
         // Fresh chat session for the approval hand-off so the next phase starts with a clean context window.
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
@@ -150,13 +139,6 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
     private async trySubmitPlanFeedback(query: string): Promise<boolean> {
         return await callWithTelemetryAndErrorHandling(corId('submitDeploymentPlanFeedback'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDeploymentPlanFeedback' }, async (context: CopilotOnRailsContext) => {
-                if (!(await ensureAgentInstructions(azureDeployAgent))) {
-                    setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, false);
-                    setCorProp(context, 'feedbackOutcome', 'agentInstructionsMissing');
-                    return false;
-                }
-                setCorProp(context, ENSURE_AGENT_INSTRUCTIONS_KEY, true);
-
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
                 await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions({
                     mode: azureDeployAgent,
