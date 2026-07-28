@@ -21,6 +21,7 @@ import { resumeProjectWithCopilot } from '../../webviews/copilotOnRails/extensio
 import { copilotOnRailsCustomAgents, downloadAgentInstructions } from './agentInstructions';
 import { inspectDiagnostics } from './inspectDiagnostics';
 import { openChatWithAgent } from './openChatWithAgent';
+import { reportIssue } from './reportIssue';
 import { startDebugConfiguration } from './startDebugConfiguration';
 
 export const copilotOnRailsCommandIds = {
@@ -45,6 +46,7 @@ export const copilotOnRailsCommandIds = {
     resumeProjectWithCopilot: corId('resumeProjectWithCopilot'),
     refreshProjectTree: 'azureProject.refresh',
     inspectDiagnostics: corId('inspectDiagnostics'),
+    reportIssue: corId('reportIssue'),
 };
 
 /**
@@ -131,4 +133,5 @@ export function registerCopilotOnRailsCommands(): void {
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot, resumeProjectWithCopilot);
     registerCommand(copilotOnRailsCommandIds.refreshProjectTree, () => ext.actions.refreshProjectTree());
     registerCommand(copilotOnRailsCommandIds.inspectDiagnostics, inspectDiagnostics);
+    registerCommand(copilotOnRailsCommandIds.reportIssue, reportIssue);
 }

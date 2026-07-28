@@ -10,9 +10,6 @@ import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./Co
 // #region prompt
 const promptKey: string = 'copilotOnRails.prompt';
 
-/**
- * Records the originating project prompt as diagnostics metadata for the current workspace.
- */
 export function recordPrompt(prompt: string): void {
     void ext.context.workspaceState.update(promptKey, prompt);
 }
@@ -57,6 +54,21 @@ export function recordDiagnosticEvent(event: Omit<DiagnosticEvent, 'timestamp'>)
 
 export function getDiagnosticEvents(): DiagnosticEvent[] {
     return ext.context.workspaceState.get<DiagnosticEvent[]>(eventsKey, []);
+}
+
+/**
+ * Aggregates the workspace-cached diagnostics (originating prompt, created-at stamp, and
+ * recorded events) into a single {@link DiagnosticsMetadata} object.
+ *
+ * The returned data is only ever surfaced for inspection or to pre-populate a GitHub issue
+ * draft the user reviews - it is never sent to telemetry or submitted automatically.
+ */
+export function getDiagnosticsMetadata(): DiagnosticsMetadata {
+    return {
+        prompt: getPrompt() ?? '',
+        createdAt: getCreatedAt() ?? '',
+        diagnosticEvents: getDiagnosticEvents(),
+    };
 }
 
 /**

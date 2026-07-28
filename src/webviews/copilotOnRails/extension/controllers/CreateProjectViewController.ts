@@ -13,7 +13,7 @@ import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { recordCreatedAt, recordPrompt } from "../../../../utils/copilotOnRails/diagnosticUtils";
+import { prepareNewCorProject } from "../../../../utils/copilotOnRails/prepareNewCorProject";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
@@ -31,9 +31,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
                 switch (message.command) {
                     case 'plan':
                         if (message.prompt) {
-                            recordPrompt(message.prompt);
-                            recordCreatedAt();
-                            void this.openChatWithQuery(message.prompt, message.model);
+                            void this.planProject(message.prompt, message.model);
                         } else {
                             this.panel.dispose();
                         }
@@ -41,6 +39,15 @@ export class CreateProjectViewController extends WebviewController<CreateProject
                 }
             }
         );
+    }
+
+    /**
+     * Resets any leftover workspace state from a previous project before launching the
+     * planning agent, so the two attempts don't get conflated.
+     */
+    private async planProject(prompt: string, model?: string): Promise<void> {
+        await prepareNewCorProject(prompt);
+        await this.openChatWithQuery(prompt, model);
     }
 
     private async openChatWithQuery(query: string, model?: string): Promise<void> {

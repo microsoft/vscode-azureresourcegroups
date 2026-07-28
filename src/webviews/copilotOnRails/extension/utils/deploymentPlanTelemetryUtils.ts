@@ -13,8 +13,6 @@ export interface DeploymentPlanTelemetry {
     /** Reported plan status (e.g. `planning`, `validated`, `deployed`). Normalized token, or `unknown`. */
     planStatus: string;
 
-    /** Target subscription name as authored in the plan. Empty when none is selected. */
-    subscriptionName: string;
     /** Target Azure location (e.g. `westus2`). */
     location: string;
 
@@ -53,7 +51,6 @@ export function getDeploymentPlanTelemetry(planData: DeploymentPlanData): Deploy
         planParsedOk: !planData.parseError,
         planStatus: normalizeToken(planData.status) || 'unknown',
 
-        subscriptionName: planData.subscription.trim(),
         location: normalizeToken(planData.locationCode) || 'unknown',
 
         classification: findAttribute(planData.requirements, 'Classification'),

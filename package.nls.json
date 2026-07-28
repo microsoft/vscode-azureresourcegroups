@@ -27,6 +27,7 @@
     "azureResourceGroups.deleteConfirmation.EnterName": "Prompts with an input box where you enter the resource group name to delete.",
     "azureResourceGroups.deleteConfirmation.ClickButton": "Prompts with a warning dialog where you click a button to delete.",
     "azureResourceGroups.reportIssue": "Report Issue...",
+    "copilotOnRails.reportIssue": "Report Issue",
     "azureResourceGroups.showHiddenTypes": "Show some ancillary resources that are created/managed by Azure infrastructure. Displaying them is typically useful when you want to clean up your resource groups or subscriptions.",
     "ms-azuretools.getStarted": "Get Started...",
     "ms-azuretools.helpAndFeedback": "Help and Feedback",

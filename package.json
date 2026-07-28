@@ -153,6 +153,12 @@
                 "category": "Azure"
             },
             {
+                "command": "copilotOnRails.reportIssue",
+                "title": "%copilotOnRails.reportIssue%",
+                "category": "Azure",
+                "icon": "$(feedback)"
+            },
+            {
                 "command": "copilotOnRails.downloadAgentInstructions",
                 "title": "%copilotOnRails.downloadAgentInstructions%",
                 "category": "Azure"
@@ -277,11 +283,6 @@
             {
                 "command": "azureResourceGroups.viewProperties",
                 "title": "%azureResourceGroups.viewProperties%",
-                "category": "Azure"
-            },
-            {
-                "command": "azureResourceGroups.reportIssue",
-                "title": "%azureResourceGroups.reportIssue%",
                 "category": "Azure"
             },
             {
@@ -566,6 +567,11 @@
                     "group": "navigation@1"
                 },
                 {
+                    "command": "copilotOnRails.reportIssue",
+                    "when": "view == azureProject",
+                    "group": "navigation@2"
+                },
+                {
                     "command": "azureResourceGroups.askAgentAboutActivityLog",
                     "when": "view == azureActivityLog",
                     "group": "navigation@1"
@@ -712,6 +718,10 @@
                 {
                     "command": "azureResourceGroups.uploadFileCloudConsole",
                     "when": "isWorkspaceTrusted"
+                },
+                {
+                    "command": "copilotOnRails.reportIssue",
+                    "when": "never"
                 },
                 {
                     "command": "copilotOnRails.openScaffoldNextStepsView",

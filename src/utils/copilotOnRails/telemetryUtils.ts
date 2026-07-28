@@ -105,6 +105,7 @@ export function setCorProp(context: CopilotOnRailsContext, key: string, value: u
  * Call this automatically handle setting both the diagnostics and telemetry error message.
  */
 export function setCorErrorProp(context: CopilotOnRailsContext, key: string, errorMessage: string): void {
-    ensureRequiredCopilotOnRailsContext(context).diagnostics.properties[key] = errorMessage;
-    context.telemetry.properties[key] = maskUserInfo(errorMessage, context.valuesToMask);
+    const maskedMessage = maskUserInfo(errorMessage, context.valuesToMask);
+    ensureRequiredCopilotOnRailsContext(context).diagnostics.properties[key] = maskedMessage;
+    context.telemetry.properties[key] = maskedMessage;
 }
