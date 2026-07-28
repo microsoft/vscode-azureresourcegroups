@@ -22,7 +22,6 @@ suite('deploymentPlanTelemetryUtils', () => {
                 planParsedOk: true,
                 planStatus: 'planning',
 
-                subscriptionName: 'AzCode2605',
                 location: 'westus2',
 
                 classification: 'development',
@@ -51,7 +50,6 @@ suite('deploymentPlanTelemetryUtils', () => {
                 planParsedOk: true,
                 planStatus: 'planning',
 
-                subscriptionName: 'AzCode2605',
                 location: 'westus2',
 
                 classification: 'development',
@@ -87,7 +85,6 @@ suite('deploymentPlanTelemetryUtils', () => {
             const telemetry = getDeploymentPlanTelemetry(parseDeploymentPlanMarkdown(''));
 
             assert.strictEqual(telemetry.planStatus, 'unknown');
-            assert.strictEqual(telemetry.subscriptionName, '');
             assert.strictEqual(telemetry.location, 'unknown');
             assert.strictEqual(telemetry.recipe, 'unknown');
             assert.strictEqual(telemetry.stack, 'unknown');
