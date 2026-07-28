@@ -145,14 +145,16 @@ export async function launchAgentChat(agentName: string, query: string, model?: 
 }
 
 export async function openChatWithAgent(agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
-    if (agentName === azureDeployAgent && !(await ensureAzureDeploymentPrerequisites())) {
-        return;
+    if (agentName === azureDeployAgent) {
+        if (!(await ensureAzureDeploymentPrerequisites())) {
+            return;
+        }
+    } else {
+        if (!(await ensureAgentInstructions(agentName))) {
+            return;
+        }
     }
     if (!(await ensureCopilotChatReady())) {
-        return;
-    }
-    // Deployment uses the azure-prepare skill instead of the workspace scaffold/debug instructions.
-    if (agentName !== azureDeployAgent && !(await ensureAgentInstructions(agentName))) {
         return;
     }
     if (!(await launchAgentChat(agentName, prompt))) {
