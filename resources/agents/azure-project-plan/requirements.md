@@ -269,9 +269,9 @@ Write the file at `.azure/requirements.json` (no leading dot on the filename —
 
 Once the file is written, **stop**. Do NOT print the JSON, summarize inferences, ask anything in chat, or proceed to plan generation. The agent's workflow rules open the requirements webview after this write; the user fills the `needs_input` questions and clicks **Submit**. The requirements controller writes the file back (statuses → `confirmed`) and re-invokes this agent saying the requirements are ready.
 
-#### 2e. Skip rule — only when the prompt is fully unambiguous
+#### 2e. Requirements review is mandatory
 
-If the prompt was extremely explicit (e.g. *"Azure Functions TypeScript API with PostgreSQL — no frontend, no auth, routes GET /widgets and POST /widgets"*) and every question is `inferred` in Step 2a, you **may** skip writing `.azure/requirements.json` and go straight to plan generation ([`plan.md`](plan.md), Step 3). When in doubt, **write the file** — review is fast and cheap.
+Always write `.azure/requirements.json` and hand it off to the requirements webview, even when the prompt is fully unambiguous and every question is `inferred` in Step 2a. Inferred answers are pre-selected so review remains quick, but the user must still have an opportunity to confirm or change them before plan generation.
 
 #### 2f. Re-entry — reading the answered file
 
