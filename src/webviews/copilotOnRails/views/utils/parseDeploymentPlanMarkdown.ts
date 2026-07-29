@@ -46,7 +46,8 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
 
     const status = extractMetadata(lines, 'Status') ?? 'Unknown';
     const mode = extractMetadata(lines, 'Mode') ?? 'Unknown';
-    const subscription = extractMetadata(lines, 'Subscription') ?? findAttribute(requirements, 'Subscription') ?? 'Unknown';
+    const rawSubscription = extractMetadata(lines, 'Subscription') ?? findAttribute(requirements, 'Subscription') ?? 'Unknown';
+    const subscription = stripAnnotation(rawSubscription);
     const rawLocation = extractMetadata(lines, 'Location') ?? findAttribute(requirements, 'Location') ?? 'Unknown';
 
     // Parse location: "East US (`eastus`)" -> name="East US", code="eastus"
@@ -79,10 +80,27 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
         { name: 'East US 2', code: 'eastus2' },
         { name: 'West US', code: 'westus' },
         { name: 'West US 2', code: 'westus2' },
+        { name: 'West US 3', code: 'westus3' },
         { name: 'Central US', code: 'centralus' },
+        { name: 'South Central US', code: 'southcentralus' },
+        { name: 'North Central US', code: 'northcentralus' },
+        { name: 'West Central US', code: 'westcentralus' },
+        { name: 'Canada Central', code: 'canadacentral' },
+        { name: 'Canada East', code: 'canadaeast' },
         { name: 'North Europe', code: 'northeurope' },
         { name: 'West Europe', code: 'westeurope' },
+        { name: 'UK South', code: 'uksouth' },
+        { name: 'UK West', code: 'ukwest' },
+        { name: 'East Asia', code: 'eastasia' },
         { name: 'Southeast Asia', code: 'southeastasia' },
+        { name: 'Japan East', code: 'japaneast' },
+        { name: 'Japan West', code: 'japanwest' },
+        { name: 'Australia East', code: 'australiaeast' },
+        { name: 'Australia Southeast', code: 'australiasoutheast' },
+        { name: 'Brazil South', code: 'brazilsouth' },
+        { name: 'Korea Central', code: 'koreacentral' },
+        { name: 'South Africa North', code: 'southafricanorth' },
+        { name: 'Sweden Central', code: 'swedencentral' },
     ];
 
     let resolvedLocationCode = locationCode;
@@ -93,6 +111,10 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
         if (matched) {
             resolvedLocationCode = matched.code;
             resolvedLocation = matched.name;
+        } else if (/^[a-z][a-z0-9]+$/.test(needle)) {
+            // Looks like a valid Azure region code not in our list — accept it as-is
+            resolvedLocationCode = needle;
+            knownLocations.push({ name: needle, code: needle });
         }
     }
 
@@ -286,6 +308,11 @@ function findAttribute(table: DeploymentPlanTable, attribute: string): string | 
     const normalizedAttribute = normalizeHeader(attribute);
     const row = table.rows.find(candidate => normalizeHeader(candidate[0] ?? '') === normalizedAttribute);
     return row?.[1]?.trim();
+}
+
+/** Strips trailing LLM-generated annotations (e.g. "⚠️ ...note...") from a metadata value. */
+function stripAnnotation(value: string): string {
+    return value.replace(/\s*[\u26A0\u2705\u274C\u2139\u{1F4A1}\u{1F6A8}]\uFE0F?\s.*/su, '').trim() || value;
 }
 
 function isWorkspaceTable(table: DeploymentPlanTable): boolean {

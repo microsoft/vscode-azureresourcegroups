@@ -85,6 +85,16 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                 case 'approve':
                     void this.approvePlan();
                     break;
+                case 'subscriptionChanged':
+                    if (typeof message.data === 'string') {
+                        this.planData.subscription = message.data;
+                    }
+                    break;
+                case 'locationChanged':
+                    if (typeof message.data === 'string') {
+                        this.planData.locationCode = message.data;
+                    }
+                    break;
                 case 'submitPlanFeedback': {
                     const query = message.prompt?.trim();
                     if (!query) {

@@ -5,8 +5,8 @@
 
 import * as vscode from "vscode";
 import { ext } from "../../../extensionVariables";
-import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { DEPLOYMENT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import type { DeploymentPlanData } from "../views/utils/deploymentPlanTypes";
 import { getDeploymentPlanRenderIssue, parseDeploymentPlanMarkdown } from "../views/utils/parseDeploymentPlanMarkdown";
 import { DeploymentPlanViewController } from "./controllers/DeploymentPlanViewController";
