@@ -25,11 +25,23 @@
 
 ---
 
+## ⚠️ Preview compatibility — the "Approve UI" iframe MUST be able to load your dev server
+
+After scaffolding, the flow opens an **Approve UI** preview (the `open_frontend_preview_view` tool). That tool **starts your frontend's dev server for you** and renders it inside a **VS Code webview iframe**; the user clicks **Approve UI** there to continue to integration. If that iframe can't load the running app, the user is **stuck** — the app can be "live" in a normal browser window yet the preview shows a blank surface or never leaves "Starting…", and **Approve UI never enables**. Scaffold the frontend so the preview can always load it:
+
+- **Make the dev server embeddable + reachable.** In `vite.config` set `server: { host: true, allowedHosts: true, strictPort: false }` (Angular: `ng serve --host 0.0.0.0 --disable-host-check`; Next.js: `next dev -H 0.0.0.0`). `host: true` lets the webview / forwarded port (remote, Codespaces, Dev Container, SSH) reach it; `allowedHosts: true` stops the dev server 403-blocking the forwarded/webview origin; `strictPort: false` lets the preview bind a free port instead of erroring when the default is taken. See [architecture.md](.github/agents/shared-references/architecture.md) → Frontend Dev Server Configuration.
+- **Keep the `dev`/`start` script a real server.** It must launch a server that prints `http://localhost:<port>/` (plain `vite`, `next dev`, `ng serve`) — never `vite build --watch` or a build-only script. The preview waits for that URL before it enables **Approve UI**; a script that never serves leaves it on "Starting…" until it times out.
+- **Never frame-bust the dev server.** No `X-Frame-Options` header from the dev server and no `<meta http-equiv="Content-Security-Policy" content="… frame-ancestors …">` in `index.html`. Those let a top-level browser tab load the app but block embedding in the webview iframe — the exact "works in my browser, blank in the preview" trap.
+- **Do not run a competing dev server.** The `open_frontend_preview_view` tool owns the single dev server; the scaffold only *builds* (`npm run build`, per F4). Do **not** start your own `npm run dev`, and do **not** scaffold a VS Code task that auto-starts the dev server on folder open — a second server contends for the port, so the preview's own server can fail to bind and error out while the other server is what shows "live" in the browser.
+
+---
+
 ## Sub-step F1: Initialize Frontend Project
 
 | Task | Details |
 |------|---------|
 | Initialize frontend project | React + Vite / Vue + Vite / Angular / Svelte (per plan) |
+| **Make the dev server preview-embeddable** | In `vite.config` set `server: { host: true, allowedHosts: true, strictPort: false }` (Angular: `ng serve --host 0.0.0.0 --disable-host-check`; Next.js: `next dev -H 0.0.0.0`). Keep the `dev` script a plain server (`vite`), and keep `X-Frame-Options` / `frame-ancestors` CSP out of `index.html`. This is what lets the **Approve UI** preview load your app in its webview iframe (the `/api` proxy is added later by the integrate agent). See the **Preview compatibility** callout above. |
 | Create the frontend folder | Use the path the plan specifies (e.g. `services/web/`); follow the user's existing structure when one exists. Standard structure matching plan's frontend framework |
 | Create local type definitions | Define entity types locally in the frontend's types folder (e.g. `services/web/src/types/`) — standalone mock types for now |
 | **Define the `ApiClient` interface** | In the seam folder `services/web/src/api/types.ts`, declare an `ApiClient` interface with **one method per endpoint in the plan's API route inventory (Section 7)**, named and typed from the route contract (e.g. `listItems(): Promise<Item[]>`, `getItem(id: string): Promise<Item>`, `createItem(input: CreateItemRequest): Promise<Item>`). This interface is the **stable seam** both the mock and the future live client implement — it is what makes integration a one-file swap. |

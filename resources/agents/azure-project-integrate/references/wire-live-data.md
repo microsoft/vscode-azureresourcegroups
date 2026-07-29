@@ -80,9 +80,12 @@ Point the dev server's `/api` proxy at the backend host from Step 2.
 ```ts
 export default defineConfig({
   server: {
+    host: true,          // preserve preview compatibility (webview iframe / forwarded host)
+    allowedHosts: true,  // dev-only: don't 403-block the webview / forwarded origin
+    strictPort: false,
     proxy: { '/api': { target: 'http://localhost:7071', changeOrigin: true } },
   },
 });
 ```
 
-For other frameworks use their equivalent proxy config (Next.js `rewrites`, Angular `proxy.conf.json`). Keep the target in sync with the backend port the artifact documents.
+**Keep** the `host` / `allowedHosts` / `strictPort` settings the scaffold added — they let the frontend load inside a webview iframe and forwarded (remote / Codespaces) hosts; only add the `proxy` entry. For other frameworks use their equivalent proxy config (Next.js `rewrites`, Angular `proxy.conf.json`). Keep the target in sync with the backend port the artifact documents.
