@@ -26,7 +26,8 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 1. Write `.azure/deployment-plan.md` (the `azure-prepare` skill calls this the deployment plan).
 2. **Step A** — open the deployment plan preview (see below). Mandatory.
 3. **Step B** — wait for the user's explicit approval of the deployment plan. Mandatory.
-4. Generate the deployment artifacts (infra, `azure.yaml`, Dockerfiles, etc.) as directed by the `azure-prepare` skill.
+4. Generate the deployment artifacts (infra, `azure.yaml`, Dockerfiles, etc.) as directed by the `azure-prepare` skill, following the **azure.yaml hook rules** below.
+5. **Step C** — validate the artifacts with `azd package` before declaring the deployment ready. Mandatory.
 
 ### Step A — open the deployment plan preview (MANDATORY, do not skip)
 
@@ -41,6 +42,33 @@ This is not optional and not conditional. Do not summarize the plan, do not ask 
 ### Step B — require explicit user approval before generating artifacts
 
 After Step A, **stop and wait** for explicit user approval of the deployment plan. Do **not** begin generating Bicep/Terraform/`azure.yaml`/Dockerfiles until the user confirms. Treat anything other than a clear approval (e.g. questions, edits, "looks good but…") as not-yet-approved.
+
+### azure.yaml hook rules (avoid the deploy retry loop)
+
+`azd` validates `azure.yaml` hooks strictly. A malformed hook makes **every** `azd package` / `azd deploy` fail with a schema error, and retrying without fixing the hook produces an infinite failure loop (the artifacts never build, so a Functions app reports "no functions"). When you write or edit hooks in `azure.yaml`, obey these rules — do **not** improvise:
+
+1. **`shell` must be exactly `sh` or `pwsh`.** Never `powershell`, `bash`, `cmd`, `python`, or anything else. `shell: powershell` fails with `The 'powershell' kind is not supported for hook '<name>'.` — use `pwsh`.
+2. **Inline `run:` scripts are allowed only for shell hooks (`sh`/`pwsh`).** Any other kind fails with `Inline scripts are only supported for shell hooks.` If you need a non-shell/language hook, write the script to a file and set `run:` to that file path (e.g. `run: ./hooks/prepackage.js`).
+3. **Prefer azd's built-in build over hooks.** For a service whose `language:` azd already builds (`js`, `ts`, `python`, `dotnet`, etc.), do **not** add a `prepackage` hook to run `npm run build` — azd runs the build for you. Only add a build hook when the build genuinely is not covered by `language:`.
+4. **Make hooks cross-platform.** When a hook must differ per OS, use `windows:` / `posix:` sub-keys, each with a valid `shell` (`pwsh` for `windows:`, `sh` for `posix:`), rather than a single OS-specific shell.
+
+```yaml
+# ✅ correct — cross-platform, valid shells, file-based for non-shell logic
+hooks:
+  postprovision:
+    posix:
+      shell: sh
+      run: ./scripts/seed-data.sh
+    windows:
+      shell: pwsh
+      run: ./scripts/seed-data.ps1
+```
+
+### Step C — validate the generated artifacts before declaring success (MANDATORY)
+
+After generating `azure.yaml` and the infra, **run `azd package`** (from the workspace root) to validate the manifest and confirm the app's build output is produced (for a Functions app, that the host actually discovers functions). Do **not** report the deployment as ready — and do **not** enter a retry-`azd deploy` loop — until `azd package` succeeds.
+
+If `azd package` (or a later `azd` step) fails with a hook error such as `The '<x>' kind is not supported for hook` or `Inline scripts are only supported for shell hooks`, the fix is the `azure.yaml` hook itself (see the rules above), **not** re-running the same command. Correct the hook, then re-validate. Never retry the identical failing command more than once without changing the underlying artifact.
 
 ---
 
