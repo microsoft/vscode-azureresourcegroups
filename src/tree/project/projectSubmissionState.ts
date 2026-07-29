@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { hasPendingProjectSubmissionContextKey } from '../../constants';
+import { azureProjectFocusCommandId } from '../../constants';
 import { type ProjectStage } from './projectPlanFiles';
 
 /**
@@ -38,7 +38,7 @@ class ProjectSubmissionState {
         }
         this._isPending = true;
         this._pendingStage = newStage;
-        void vscode.commands.executeCommand('setContext', hasPendingProjectSubmissionContextKey, true);
+        void vscode.commands.executeCommand(azureProjectFocusCommandId);
         this._emitter.fire();
     }
 
@@ -48,7 +48,6 @@ class ProjectSubmissionState {
         }
         this._isPending = false;
         this._pendingStage = 0;
-        void vscode.commands.executeCommand('setContext', hasPendingProjectSubmissionContextKey, false);
         this._emitter.fire();
     }
 }

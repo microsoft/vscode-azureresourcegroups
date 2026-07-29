@@ -3,48 +3,18 @@
 *  Licensed under the MIT License. See License.md in the project root for license information.
 *--------------------------------------------------------------------------------------------*/
 
-import { type IActionContext } from "@microsoft/vscode-azext-utils";
+import { UserCancelledError, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
-import { ext } from "../../../extensionVariables";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
+import { writePendingCreateMarker } from "./resumePendingCreateWithCopilot";
 
 const localDev = vscode.l10n.t('Local Development');
 const deploy = vscode.l10n.t('Deploy');
 
-/**
- * globalState key holding the epoch-ms deadline until which a pending "Create
- * with Copilot" request should auto-resume after a folder is opened.
- */
-const PENDING_CREATE_DEADLINE_KEY = 'copilotOnRails.createProjectWithCopilot.pendingDeadline';
-/** How long a pending create request stays valid across a window reload. */
-const PENDING_CREATE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
-
-/**
- * If the user previously pressed "Create with Copilot" without an open folder
- * and chose to open one, re-runs the command once the folder is open. Call this
- * during activation. No-ops when there's no pending request or it has expired.
- */
-export async function resumePendingCreateWithCopilot(context: vscode.ExtensionContext): Promise<void> {
-    const deadline = context.globalState.get<number>(PENDING_CREATE_DEADLINE_KEY);
-    if (deadline === undefined) {
-        return;
-    }
-
-    // Consume the flag regardless of outcome so it only ever fires once.
-    await context.globalState.update(PENDING_CREATE_DEADLINE_KEY, undefined);
-
-    const folders = vscode.workspace.workspaceFolders;
-    if (Date.now() > deadline || !folders || folders.length === 0) {
-        return;
-    }
-
-    await vscode.commands.executeCommand(copilotOnRailsCommandIds.createProjectWithCopilot);
-}
-
 export async function createProjectWithCopilot(_context: IActionContext): Promise<void> {
-    if (!(await ensureWorkspaceOpen())) {
+    if (!(await ensureFreshWorkspace())) {
         return;
     }
 
@@ -98,33 +68,62 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
 }
 
 /**
- * Ensures there is an open folder/workspace to create the project in. If none is
- * open, prompts the user to open or create one. Returns true when a workspace is
- * (already) open and the flow can continue, false otherwise.
+ * Ensures the flow starts from a suitable blank slate.
+ * If no folder is open, or the open folder already contains project content, we offer the
+ * native folder picker and reopen VS Code on the chosen folder.
+ *
+ * Returns true when the flow can continue in the current window, false when
+ * we're reopening on a different folder (in which case the flow resumes
+ * automatically via the pending-create marker). Throws if the user cancels or
+ * picks a folder that isn't empty.
  */
-async function ensureWorkspaceOpen(): Promise<boolean> {
-    const folders = vscode.workspace.workspaceFolders;
-    if (folders && folders.length > 0) {
+async function ensureFreshWorkspace(): Promise<boolean> {
+    const currentFolder = vscode.workspace.workspaceFolders?.[0];
+
+    if (await isWorkspaceEmpty()) {
         return true;
     }
 
-    const openFolder = vscode.l10n.t('Open Folder...');
-    const newWindow = vscode.l10n.t('New Empty Window');
-
-    const choice = await vscode.window.showInformationMessage(
-        vscode.l10n.t('Creating a project with Copilot requires an open folder. Open or create an empty folder to continue.'),
-        { modal: true },
-        openFolder,
-        newWindow,
+    // Warn before the picker so the empty-folder requirement doesn't come as a
+    // surprise, and so the user learns about it before we throw on a bad pick.
+    const browse = vscode.l10n.t('Browse...');
+    const choice = await vscode.window.showWarningMessage(
+        vscode.l10n.t('Creating a project with Copilot requires an empty folder.'),
+        {
+            modal: true,
+            detail: currentFolder
+                ? vscode.l10n.t('"{0}" already contains files. Choose an empty folder to build in — VS Code will reopen there and pick this flow back up.', folderName(currentFolder.uri))
+                : vscode.l10n.t('Choose an empty folder to build in — VS Code will reopen there and pick this flow back up.'),
+        },
+        browse,
     );
 
-    if (choice === openFolder) {
-        await ext.context.globalState.update(PENDING_CREATE_DEADLINE_KEY, Date.now() + PENDING_CREATE_TIMEOUT_MS);
-        await vscode.commands.executeCommand('workbench.action.files.openFolder');
-    } else if (choice === newWindow) {
-        await vscode.commands.executeCommand('workbench.action.newWindow');
+    if (choice !== browse) {
+        throw new UserCancelledError('selectProjectFolder');
     }
 
+    const picked = await vscode.window.showOpenDialog({
+        canSelectFiles: false,
+        canSelectFolders: true,
+        canSelectMany: false,
+        openLabel: vscode.l10n.t('Select Folder'),
+        title: vscode.l10n.t('Select an empty folder for your new project'),
+        // Start one level up from the current folder, since the whole point is
+        // to land somewhere other than where we are.
+        defaultUri: currentFolder ? vscode.Uri.joinPath(currentFolder.uri, '..') : undefined,
+    });
+
+    const target = picked?.[0];
+    if (!target) {
+        throw new UserCancelledError('selectProjectFolder');
+    }
+
+    if (!(await isFolderEmpty(target))) {
+        throw new Error(vscode.l10n.t('"{0}" already contains files. Creating a project with Copilot requires an empty folder.', folderName(target)));
+    }
+
+    await writePendingCreateMarker(target);
+    await vscode.commands.executeCommand('vscode.openFolder', target);
     return false;
 }
 
@@ -137,4 +136,27 @@ async function hasCompletedPhase(filePath: string, expectedStatus: string): Prom
     const content = Buffer.from(await vscode.workspace.fs.readFile(files[0])).toString('utf-8');
     // [*_~]* allows markdown formatting (bold, italic, strikethrough) around "status"
     return new RegExp(`status[*_~]*\\s*:\\s*${expectedStatus}`, 'i').test(content);
+}
+
+/** Display name of a folder uri, for user-facing messages. */
+function folderName(uri: vscode.Uri): string {
+    return uri.path.split('/').filter(Boolean).pop() ?? uri.fsPath;
+}
+
+/** Entries that don't count as real project content when checking for a blank slate. */
+const IGNORED_ENTRIES = new Set(['.git', '.DS_Store']);
+
+async function isFolderEmpty(folder: vscode.Uri): Promise<boolean> {
+    try {
+        const entries = await vscode.workspace.fs.readDirectory(folder);
+        return entries.every(([name]) => IGNORED_ENTRIES.has(name));
+    } catch {
+        return false;
+    }
+}
+
+async function isWorkspaceEmpty(): Promise<boolean> {
+    // Copilot on Rails isn't really intended for use with multi-root
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    return folder ? await isFolderEmpty(folder.uri) : false;
 }
