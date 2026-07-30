@@ -75,47 +75,11 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
         ? ['Visual Studio Enterprise', 'Azure for Students', 'Pay-As-You-Go', 'MSDN Platforms']
         : undefined;
 
-    const knownLocations = [
-        { name: 'East US', code: 'eastus' },
-        { name: 'East US 2', code: 'eastus2' },
-        { name: 'West US', code: 'westus' },
-        { name: 'West US 2', code: 'westus2' },
-        { name: 'West US 3', code: 'westus3' },
-        { name: 'Central US', code: 'centralus' },
-        { name: 'South Central US', code: 'southcentralus' },
-        { name: 'North Central US', code: 'northcentralus' },
-        { name: 'West Central US', code: 'westcentralus' },
-        { name: 'Canada Central', code: 'canadacentral' },
-        { name: 'Canada East', code: 'canadaeast' },
-        { name: 'North Europe', code: 'northeurope' },
-        { name: 'West Europe', code: 'westeurope' },
-        { name: 'UK South', code: 'uksouth' },
-        { name: 'UK West', code: 'ukwest' },
-        { name: 'East Asia', code: 'eastasia' },
-        { name: 'Southeast Asia', code: 'southeastasia' },
-        { name: 'Japan East', code: 'japaneast' },
-        { name: 'Japan West', code: 'japanwest' },
-        { name: 'Australia East', code: 'australiaeast' },
-        { name: 'Australia Southeast', code: 'australiasoutheast' },
-        { name: 'Brazil South', code: 'brazilsouth' },
-        { name: 'Korea Central', code: 'koreacentral' },
-        { name: 'South Africa North', code: 'southafricanorth' },
-        { name: 'Sweden Central', code: 'swedencentral' },
-    ];
-
     let resolvedLocationCode = locationCode;
-    let resolvedLocation = location;
-    if (resolvedLocationCode === 'unknown' && location !== 'Unknown') {
-        const needle = location.toLowerCase();
-        const matched = knownLocations.find(l => l.name.toLowerCase() === needle || l.code.toLowerCase() === needle);
-        if (matched) {
-            resolvedLocationCode = matched.code;
-            resolvedLocation = matched.name;
-        } else if (/^[a-z][a-z0-9]+$/.test(needle)) {
-            // Looks like a valid Azure region code not in our list — accept it as-is
-            resolvedLocationCode = needle;
-            knownLocations.push({ name: needle, code: needle });
-        }
+    const resolvedLocation = location;
+    if (resolvedLocationCode === 'unknown' && location !== 'Unknown' && /^[a-z][a-z0-9]+$/.test(location.toLowerCase())) {
+        // The location was authored as a bare Azure region code (e.g. `eastus`).
+        resolvedLocationCode = location.toLowerCase();
     }
 
     return {
@@ -125,7 +89,6 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
         availableSubscriptions,
         location: resolvedLocation === 'Unknown' ? '' : resolvedLocation,
         locationCode: resolvedLocationCode === 'unknown' ? '' : resolvedLocationCode,
-        availableLocations: knownLocations,
         architecture,
         workspaceScan: workspaceCandidate?.table ?? emptyTable(),
         decisions: decisionsCandidate?.table ?? emptyTable(),
