@@ -60,8 +60,9 @@ export async function callWithDiagnosticsAndTelemetryHandling<T>(
 
     const corContext: CopilotOnRailsContext = ensureRequiredCopilotOnRailsContext(context);
 
-    for (const [key, value] of Object.entries(getSystemTelemetry())) {
-        setCorProp(corContext, key, value);
+    // Intentionally telemetry only since this data was already cached on the worspace level for diagnostics
+    for (const [key, value] of Object.entries(getSystemInfo())) {
+        context.telemetry.properties[key] = value;
     }
 
     const copilotModel: string | undefined = readSessionState()?.model;
@@ -74,8 +75,8 @@ export async function callWithDiagnosticsAndTelemetryHandling<T>(
     return await withDiagnosticEvents(corContext, { type: eventDetails.type, name: eventDetails.name }, async () => await command(corContext));
 }
 
-export function getSystemTelemetry(): Record<string, string> {
-    const systemTelemetry: Record<string, string> = {
+export function getSystemInfo(): Record<string, string> {
+    const systemInfo: Record<string, string> = {
         osPlatform: os.platform(),
         osRelease: os.release(),
         osArch: os.arch(),
@@ -85,10 +86,10 @@ export function getSystemTelemetry(): Record<string, string> {
 
     const cpuModel: string | undefined = os.cpus()[0]?.model;
     if (cpuModel) {
-        systemTelemetry.cpuModel = cpuModel;
+        systemInfo.cpuModel = cpuModel;
     }
 
-    return systemTelemetry;
+    return systemInfo;
 }
 
 /**
