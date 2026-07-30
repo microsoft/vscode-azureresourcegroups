@@ -84,8 +84,6 @@ async function ensureFreshWorkspace(): Promise<boolean> {
         return true;
     }
 
-    // Warn before the picker so the empty-folder requirement doesn't come as a
-    // surprise, and so the user learns about it before we throw on a bad pick.
     const browse = vscode.l10n.t('Browse...');
     const choice = await vscode.window.showWarningMessage(
         vscode.l10n.t('Creating a project with Copilot requires an empty folder.'),
