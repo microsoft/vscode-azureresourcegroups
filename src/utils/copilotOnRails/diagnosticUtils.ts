@@ -36,6 +36,22 @@ export function getCreatedAt(): string | undefined {
 
 // #endregion
 
+// #region systemInfo
+const systemInfoKey: string = 'copilotOnRails.systemInfo';
+
+/**
+ * Records the machine/runtime information for the workspace project as diagnostics metadata.
+ */
+export function recordSystemInfo(systemInfo: Record<string, string>): void {
+    void ext.context.workspaceState.update(systemInfoKey, systemInfo);
+}
+
+export function getRecordedSystemInfo(): Record<string, string> {
+    return ext.context.workspaceState.get<Record<string, string>>(systemInfoKey, {});
+}
+
+// #endregion
+
 // #region diagnosticEvents
 const maxCachedEvents: number = 50;
 const eventsKey: string = 'copilotOnRails.diagnosticEvents';
@@ -57,8 +73,8 @@ export function getDiagnosticEvents(): DiagnosticEvent[] {
 }
 
 /**
- * Aggregates the workspace-cached diagnostics (originating prompt, created-at stamp, and
- * recorded events) into a single {@link DiagnosticsMetadata} object.
+ * Aggregates the workspace-cached diagnostics and other important information
+ * into a single {@link DiagnosticsMetadata} object.
  *
  * The returned data is only ever surfaced for inspection or to pre-populate a GitHub issue
  * draft the user reviews - it is never sent to telemetry or submitted automatically.
@@ -67,6 +83,7 @@ export function getDiagnosticsMetadata(): DiagnosticsMetadata {
     return {
         prompt: getPrompt() ?? '',
         createdAt: getCreatedAt() ?? '',
+        systemInfo: getRecordedSystemInfo(),
         diagnosticEvents: getDiagnosticEvents(),
     };
 }
@@ -153,6 +170,10 @@ export interface DiagnosticsMetadata {
      * Date first prompted, as an ISO 8601 string (`.toISOString()`).
      */
     createdAt: string;
+    /**
+     * The machine/runtime information captured when the project was first created.
+     */
+    systemInfo: Record<string, string>;
     /**
      * The events recorded over a CoR workspace project's lifetime.
      */
