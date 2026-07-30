@@ -9,6 +9,7 @@ import * as vscode from "vscode";
 import { ext } from "../../../extensionVariables";
 import { DEPLOYMENT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { corId } from "../../../utils/copilotOnRails/telemetryUtils";
 import type { DeploymentPlanData } from "../views/utils/deploymentPlanTypes";
 import { getDeploymentPlanRenderIssue, parseDeploymentPlanMarkdown } from "../views/utils/parseDeploymentPlanMarkdown";
 import { DeploymentPlanViewController } from "./controllers/DeploymentPlanViewController";
@@ -74,7 +75,7 @@ async function getAvailableAzureSubscriptions(): Promise<string[] | undefined> {
 }
 
 async function getAvailableAzureLocations(): Promise<{ name: string; code: string }[] | undefined> {
-    return await callWithTelemetryAndErrorHandling('copilotOnRails.deploymentPlan.getLocations', async (context: IActionContext) => {
+    return await callWithTelemetryAndErrorHandling(corId('deploymentPlan.getLocations'), async (context: IActionContext) => {
         context.errorHandling.rethrow = false;
         context.telemetry.suppressIfSuccessful = true;
 
