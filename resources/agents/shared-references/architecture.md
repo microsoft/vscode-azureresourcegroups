@@ -376,9 +376,9 @@ import { toPublicUser } from '../utils/toPublicUser.js';
 
 ---
 
-## Frontend Proxy Configuration
+## Frontend Dev Server Configuration (proxy + preview compatibility)
 
-When frontend included, dev server must proxy `/api` to Functions host:
+When a frontend is included, its dev server must (a) proxy `/api` to the Functions host **and** (b) be embeddable in the scaffold's **Approve UI** preview, which starts this dev server and renders it inside a **VS Code webview iframe** (forwarding the port in remote / Codespaces / Dev Container / SSH sessions). Miss (b) and the preview hangs on "Starting…" or renders blank even though the app opens fine in a normal browser — the user is then **stuck at the approval gate**.
 
 ### Vite (React, Vue, Svelte)
 
@@ -386,6 +386,11 @@ When frontend included, dev server must proxy `/api` to Functions host:
 // vite.config.ts
 export default defineConfig({
   server: {
+    // (b) Preview compatibility — let the webview iframe / forwarded host load the app.
+    host: true,          // bind 0.0.0.0 so the webview / port-forwarder can reach it
+    allowedHosts: true,  // dev-only: don't 403-block the webview / forwarded origin
+    strictPort: false,   // let the preview bind a free port if the default is taken
+    // (a) Proxy /api to the Functions host.
     proxy: {
       '/api': {
         target: 'http://localhost:7071',
@@ -407,6 +412,10 @@ export default defineConfig({
   }
 }
 ```
+
+> For Angular, also serve with host binding + host-check disabled so the preview iframe can load it (`ng serve --host 0.0.0.0 --disable-host-check`, or the equivalent `serve` options in `angular.json`). For Next.js, bind all interfaces (`next dev -H 0.0.0.0`). The goal is identical to Vite's `host: true` + `allowedHosts: true`.
+
+> **Do NOT frame-bust the dev server.** Never send `X-Frame-Options` from the dev server and never add a `<meta http-equiv="Content-Security-Policy" content="… frame-ancestors …">` to `index.html`. Those let a normal browser tab load the app but block it from being embedded in the preview's webview iframe — the exact "works in my browser, blank in the preview" trap.
 
 ---
 
