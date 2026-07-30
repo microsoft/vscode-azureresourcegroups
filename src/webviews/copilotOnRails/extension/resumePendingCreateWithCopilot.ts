@@ -25,10 +25,6 @@ import { azureProjectFocusCommandId } from '../../../constants';
 /** Workspace-relative path of the marker. Must stay in sync with the `workspaceContains` activation event in package.json. */
 export const PENDING_CREATE_SENTINEL_PATH = '.azure/.pending-create';
 
-/**
- * How long a pending create request stays valid. Generous enough to cover a slow
- * window reload, short enough that a marker orphaned by a crash is ignored.
- */
 const PENDING_CREATE_TIMEOUT_MS = 10 * 60 * 1000;
 
 interface PendingCreateMarker {
@@ -40,11 +36,6 @@ function sentinelUri(folder: vscode.Uri): vscode.Uri {
     return vscode.Uri.joinPath(folder, ...PENDING_CREATE_SENTINEL_PATH.split('/'));
 }
 
-/**
- * Records that the user asked to create a project in `folder`, so the flow can
- * resume automatically once VS Code reopens on it. Failures are non-fatal: the
- * user can still start the flow manually from the Azure Project view.
- */
 export async function writePendingCreateMarker(folder: vscode.Uri): Promise<void> {
     const marker: PendingCreateMarker = { createdAt: Date.now() };
     try {
@@ -55,12 +46,6 @@ export async function writePendingCreateMarker(folder: vscode.Uri): Promise<void
     }
 }
 
-/**
- * Consumes the pending-create marker in the open workspace, if any. Returns true
- * when a valid, unexpired marker was found, meaning the caller should resume the
- * create flow. The marker (and the `.azure` folder, when we created it solely to
- * hold the marker) is always removed so this fires at most once.
- */
 async function consumePendingCreateMarker(): Promise<boolean> {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
@@ -111,7 +96,7 @@ async function deleteMarkerAndEmptyAzureFolder(folder: vscode.Uri, marker: vscod
             await vscode.workspace.fs.delete(azureFolder);
         }
     } catch {
-        // Best effort only.
+        // Best effort attempt
     }
 }
 
@@ -123,8 +108,6 @@ async function deleteMarkerAndEmptyAzureFolder(folder: vscode.Uri, marker: vscod
  */
 export async function resumePendingCreateWithCopilot(): Promise<void> {
     if (await consumePendingCreateMarker()) {
-        // Expand the (collapsed by default) Azure Project view so the resumed
-        // flow is visibly picked up in the new window.
         await vscode.commands.executeCommand(azureProjectFocusCommandId);
         await vscode.commands.executeCommand(copilotOnRailsCommandIds.createProjectWithCopilot);
     }
