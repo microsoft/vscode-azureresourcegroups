@@ -13,10 +13,10 @@ export const contributesKey = 'x-azResources';
 export const ungroupedId = 'group/ungrouped';
 export const showHiddenTypesSettingKey = 'showHiddenTypes';
 export const hasFocusedGroupContextKey = 'ms-azuretools.vscode-azureresourcegroups.hasFocusedGroup';
-export const hasProjectPlanFilesContextKey = 'ms-azuretools.vscode-azureresourcegroups.hasProjectPlanFiles';
-export const isEmptyWorkspaceContextKey = 'ms-azuretools.vscode-azureresourcegroups.isEmptyWorkspace';
-export const hasPendingProjectSubmissionContextKey = 'ms-azuretools.vscode-azureresourcegroups.hasPendingProjectSubmission';
 export const canFocusContextValue = 'canFocus';
+
+export const azureProjectId = 'azureProject';
+export const azureProjectFocusCommandId = `${azureProjectId}.focus`;
 
 export const azureProjectPlanAgent = 'azure-project-plan';
 export const azureProjectScaffoldAgent = 'azure-project-scaffold';

@@ -33,7 +33,7 @@ import { deleteResourceGroupV2 } from './commands/deleteResourceGroup/v2/deleteR
 import { registerCommands } from './commands/registerCommands';
 import { TagFileSystem } from './commands/tags/TagFileSystem';
 import { registerTagDiagnostics } from './commands/tags/registerTagDiagnostics';
-import { hasProjectPlanFilesContextKey, isEmptyWorkspaceContextKey, mcpServerId, mcpServerLabel, resourcesExtensionId } from './constants';
+import { azureProjectId, mcpServerId, mcpServerLabel, resourcesExtensionId } from './constants';
 import { registerExportAuthRecordOnSessionChange } from './exportAuthRecord';
 import { ext } from './extensionVariables';
 import { AzureResourcesApiInternal } from './hostapi.v2.internal';
@@ -51,8 +51,8 @@ import { DefaultAzureResourceBranchDataProvider } from './tree/azure/DefaultAzur
 import { registerAzureTree } from './tree/azure/registerAzureTree';
 import { registerFocusTree } from './tree/azure/registerFocusTree';
 import { AzureProjectProgressTreeDataProvider } from './tree/project/AzureProjectProgressTreeDataProvider';
-import { ProjectPlanFilesWatcher, getProjectPlanFiles } from './tree/project/projectPlanFiles';
-import { projectSubmissionState } from './tree/project/projectSubmissionState';
+import { ProjectPlanFilesWatcher } from './tree/project/projectPlanFiles';
+import { registerProjectSubmissionStateWatcher } from './tree/project/registerProjectSubmissionStateWatcher';
 import { TenantDefaultBranchDataProvider } from './tree/tenants/TenantDefaultBranchDataProvider';
 import { TenantResourceBranchDataProviderManager } from './tree/tenants/TenantResourceBranchDataProviderManager';
 import { registerTenantTree } from './tree/tenants/registerTenantTree';
@@ -61,7 +61,7 @@ import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/Wor
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
-import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/createProjectWithCopilot';
+import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/resumePendingCreateWithCopilot';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
 import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
 import { registerViewHostDisposal } from './webviews/copilotOnRails/extension/utils/singletonViewHost';
@@ -79,9 +79,10 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
     registerUIExtensionVariables(ext);
     registerAzureUtilsExtensionVariables(ext);
-    const projectPlanFilesWatcher = new ProjectPlanFilesWatcher();
-    context.subscriptions.push(projectPlanFilesWatcher);
-    await registerProjectPlanFilesContext(context, projectPlanFilesWatcher);
+
+    const corPlanFilesWatcher = new ProjectPlanFilesWatcher();
+    context.subscriptions.push(corPlanFilesWatcher);
+    registerProjectSubmissionStateWatcher(context, corPlanFilesWatcher);
     registerRequirementsAutoOpen(context);
     registerAutopilot(context);
     registerViewHostDisposal(context);
@@ -131,7 +132,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         }));
 
         registerCommands();
-        void resumePendingCreateWithCopilot(context);
+        void resumePendingCreateWithCopilot();
         survey(context);
 
         registerChatStandInParticipantIfNeeded(context);
@@ -187,11 +188,11 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
         refreshEvent: refreshWorkspaceTreeEmitter.event,
     });
 
-    const azureProjectProgressTreeDataProvider = new AzureProjectProgressTreeDataProvider(context, projectPlanFilesWatcher);
-    context.subscriptions.push(vscode.window.registerTreeDataProvider('azureProject', azureProjectProgressTreeDataProvider));
+    const azureProjectProgressTreeDataProvider = new AzureProjectProgressTreeDataProvider(context, corPlanFilesWatcher);
+    context.subscriptions.push(vscode.window.registerTreeDataProvider(azureProjectId, azureProjectProgressTreeDataProvider));
     ext.actions.refreshProjectTree = () => azureProjectProgressTreeDataProvider.refresh();
 
-    registerResumeAffordances(context, projectPlanFilesWatcher);
+    registerResumeAffordances(context, corPlanFilesWatcher);
 
     const tenantResourcesBranchDataItemCache = new BranchDataItemCache();
     registerTenantTree(context, {
@@ -349,48 +350,4 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 export function deactivate(): void {
     ext.diagnosticWatcher?.dispose();
     void disableAutopilot();
-}
-
-async function registerProjectPlanFilesContext(context: vscode.ExtensionContext, planFilesWatcher: ProjectPlanFilesWatcher): Promise<void> {
-    const update = async (): Promise<void> => {
-        const files = await getProjectPlanFiles();
-
-        await vscode.commands.executeCommand('setContext', hasProjectPlanFilesContextKey, files.hasAny);
-        await vscode.commands.executeCommand('setContext', isEmptyWorkspaceContextKey, await isWorkspaceEmpty());
-
-        if (files.hasAny && files.currentStage >= projectSubmissionState.pendingStage) {
-            projectSubmissionState.reset();
-        }
-    };
-
-    context.subscriptions.push(planFilesWatcher.onDidChange(() => void update()));
-
-    await update();
-}
-
-async function isWorkspaceEmpty(): Promise<boolean> {
-    const folders = vscode.workspace.workspaceFolders;
-    if (!folders || folders.length === 0) {
-        return false;
-    }
-
-    // Entries that don't count as "real" project content.
-    const ignored = new Set(['.git', '.vscode', '.azure', '.github', '.agents', '.DS_Store']);
-
-    let readableFolderCount = 0;
-
-    for (const folder of folders) {
-        try {
-            const entries = await vscode.workspace.fs.readDirectory(folder.uri);
-            readableFolderCount += 1;
-            const meaningful = entries.filter(([name]) => !ignored.has(name));
-            if (meaningful.length > 0) {
-                return false;
-            }
-        } catch {
-            // Ignore unreadable folders (e.g. permission errors)
-        }
-    }
-
-    return readableFolderCount > 0;
 }

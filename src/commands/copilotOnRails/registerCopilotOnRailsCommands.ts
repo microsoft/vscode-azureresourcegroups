@@ -5,7 +5,7 @@
 
 import { IActionContext, registerCommand } from '@microsoft/vscode-azext-utils';
 import { l10n } from 'vscode';
-import { azureDebugPlanAgent } from '../../constants';
+import { azureDebugPlanAgent, azureProjectId } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
 import { callWithDiagnosticsAndTelemetryHandling, corId } from '../../utils/copilotOnRails/telemetryUtils';
@@ -44,7 +44,7 @@ export const copilotOnRailsCommandIds = {
     openDeploymentPlanView: corId('openDeploymentPlanView'),
 
     resumeProjectWithCopilot: corId('resumeProjectWithCopilot'),
-    refreshProjectTree: 'azureProject.refresh',
+    refreshProjectTree: `${azureProjectId}.refresh`,
     inspectDiagnostics: corId('inspectDiagnostics'),
     reportIssue: corId('reportIssue'),
 };

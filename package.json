@@ -30,7 +30,7 @@
     "preview": true,
     "activationEvents": [
         "onFileSystem:azureResourceGroups",
-        "onStartupFinished",
+        "workspaceContains:**/.azure/.pending-create",
         "workspaceContains:**/.azure/project-plan.md",
         "workspaceContains:**/.azure/requirements.json",
         "workspaceContains:**/.azure/vscode-debug-plan.md"
@@ -486,8 +486,7 @@
                 {
                     "id": "azureProject",
                     "name": "%azureProject.viewName%",
-                    "visibility": "visible",
-                    "when": "ms-azuretools.vscode-azureresourcegroups.hasProjectPlanFiles == true || ms-azuretools.vscode-azureresourcegroups.hasPendingProjectSubmission == true || ms-azuretools.vscode-azureresourcegroups.isEmptyWorkspace == true"
+                    "visibility": "collapsed"
                 }
             ]
         },
