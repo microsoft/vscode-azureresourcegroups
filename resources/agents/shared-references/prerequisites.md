@@ -62,7 +62,7 @@ For each needed tool, run its detection and record whether it is installed and a
 Every prerequisite resolves to exactly **two** states:
 
 - **installed (`✅`)** — a detection positively found the tool (a version command returned, or an app/extension folder exists). Record the version when you have it.
-- **unknown (`❓`)** — the detection did not find it. This does **not** mean the tool is absent: a version manager or a restricted/sandboxed shell can hide an installed tool, and the extension/Compose lookups fail silently in those shells. So a failed probe is inconclusive. A `❓` is informational; it just tells the user to double-check the tool is installed and, for CLI tools, to run a recheck.
+- **unknown (`❓`)** — the detection did not find it. This does **not** mean the tool is absent: a version manager or a restricted/sandboxed shell can hide an installed tool, and the extension/Compose lookups fail silently in those shells. So a failed probe is inconclusive. A `❓` is informational; it just tells the user to double-check the tool is installed and, for CLI tools, to run a recheck. **Never record a version for a `❓` row** — leave the `Version` cell as `—`. An unconfirmed version is meaningless; the user simply needs the latest or a stable release.
 
 There is no "not-installed" state — never mark a prerequisite with `❌`. When you cannot positively confirm a tool, it is `❓`.
 

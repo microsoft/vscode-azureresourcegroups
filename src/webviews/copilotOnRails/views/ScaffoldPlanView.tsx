@@ -1049,6 +1049,7 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
         const installedIdx = table.headers.findIndex(h => h.toLowerCase().includes('installed'));
         const installIdx = table.headers.findIndex(h => h.trim().toLowerCase() === 'install');
         const toolIdx = table.headers.findIndex(h => h.toLowerCase().includes('tool'));
+        const versionIdx = table.headers.findIndex(h => h.trim().toLowerCase() === 'version');
         const visible = (idx: number): boolean => idx !== installIdx;
         return (
             <div key={key} className='planTableWrapper'>
@@ -1057,15 +1058,20 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
                         <tr>{table.headers.map((h, hi) => visible(hi) ? <th key={hi}>{h}</th> : null)}</tr>
                     </thead>
                     <tbody>
-                        {table.rows.map((row, ri) => (
-                            <tr key={ri}>{row.map((cell, ci) =>
-                                !visible(ci)
-                                    ? null
-                                    : ci === installedIdx
-                                        ? <td key={ci}><InstalledChip status={classifyInstalledForRow(toolIdx >= 0 ? (row[toolIdx] ?? '') : '', cell)} /></td>
-                                        : <td key={ci}>{cell}</td>,
-                            )}</tr>
-                        ))}
+                        {table.rows.map((row, ri) => {
+                            const status = classifyInstalledForRow(toolIdx >= 0 ? (row[toolIdx] ?? '') : '', row[installedIdx] ?? '');
+                            return (
+                                <tr key={ri}>{row.map((cell, ci) =>
+                                    !visible(ci)
+                                        ? null
+                                        : ci === installedIdx
+                                            ? <td key={ci}><InstalledChip status={status} /></td>
+                                            // A version we couldn't tie to a confirmed install is meaningless —
+                                            // the user just needs the latest/stable build — so blank it out.
+                                            : <td key={ci}>{ci === versionIdx && status !== 'installed' ? '' : cell}</td>,
+                                )}</tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

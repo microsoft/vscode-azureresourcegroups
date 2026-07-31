@@ -101,6 +101,7 @@ const DEFAULT_OPEN_SECTIONS = new Set([
 ]);
 
 const EMULATORS_SECTION = "emulators";
+const PREREQUISITES_SECTION = "prerequisites";
 
 function sectionSortOrder(title: string): number {
     const lower = title.toLowerCase().trim();
@@ -770,6 +771,23 @@ const DataTable = ({
         })()
         : -1;
 
+    // In the Prerequisites section, a version is only meaningful next to a
+    // confirmed install (✅). When the install status is unknown (❓) the
+    // detected version can't be trusted — the user just needs the latest or a
+    // stable build — so the Version cell is blanked out.
+    const isPrereqs =
+        sectionTitle?.toLowerCase().trim() === PREREQUISITES_SECTION;
+    const installedColIdx = isPrereqs
+        ? headers.findIndex((h) => h.toLowerCase().includes("installed"))
+        : -1;
+    const versionColIdx = isPrereqs
+        ? headers.findIndex((h) => h.toLowerCase().trim() === "version")
+        : -1;
+    const hideVersion = (row: string[]): boolean =>
+        installedColIdx >= 0 &&
+        versionColIdx >= 0 &&
+        !(row[installedColIdx] ?? "").includes("✅");
+
     return (
         <div className="dataTableWrapper">
             <table className="dataTable">
@@ -794,6 +812,7 @@ const DataTable = ({
                         const showWarning =
                             serviceColIdx >= 0 &&
                             isLimitedSupportDataStore(serviceLabel);
+                        const blankVersion = hideVersion(row);
                         return (
                             <tr key={ri}>
                                 {row.map((cell, ci) => {
@@ -830,7 +849,11 @@ const DataTable = ({
                                         <td
                                             key={ci}
                                             dangerouslySetInnerHTML={{
-                                                __html: formatInline(cell),
+                                                __html:
+                                                    ci === versionColIdx &&
+                                                        blankVersion
+                                                        ? ""
+                                                        : formatInline(cell),
                                             }}
                                         />
                                     );
