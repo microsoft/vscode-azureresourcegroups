@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { ext } from "../../../extensionVariables";
 import { PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { type ScaffoldPlanData, parseScaffoldPlanMarkdown } from "../views/utils/parseScaffoldPlanMarkdown";
 import { ScaffoldPlanViewController } from "./controllers/ScaffoldPlanViewController";
 import { closeLoadingView } from "./openLoadingView";
@@ -84,6 +85,7 @@ export async function openPlanViewFromWorkspace(_context: CopilotOnRailsContext)
 async function openPlanViewAsync(uri: vscode.Uri): Promise<void> {
     openPlanViewWithContent(await readFileText(uri), uri);
     host.setWatcher(watchSingleFile(uri, () => void reloadPlan(uri)));
+    ext.actions.refreshProjectTree();
 }
 
 async function reloadPlan(uri: vscode.Uri): Promise<void> {
