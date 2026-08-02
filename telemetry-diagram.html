@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Copilot on Rails - Telemetry Flow</title>
+<style>
+  :root { --ink:#1b1f24; --muted:#6b7280; --line:#d7dbe0; --bg:#f6f7f9; --panel:#ffffff; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color:var(--ink); background:var(--bg); }
+  header { padding:16px 22px; background:var(--panel); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+  header h1 { margin:0; font-size:17px; font-weight:650; }
+  .legend { margin-top:9px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  .lg { font-size:12px; color:var(--muted); display:inline-flex; align-items:center; gap:6px; }
+  .sw { width:12px; height:12px; border-radius:3px; display:inline-block; }
+  .layout { display:flex; align-items:flex-start; }
+  .canvas { flex:1; overflow:auto; padding:16px 20px 60px; }
+  .canvas svg { width:100%; height:auto; display:block; }
+  svg text { font-family: "Times New Roman", Times, serif; }
+  .zebra { fill:#000000; opacity:.022; }
+  .lane { fill:#ffffff; stroke:#d4dae2; stroke-width:1.2; }
+  .lane-cap { fill:#eef2fb; stroke:none; }
+  .lane-glyph { text-anchor:middle; font-size:19px; font-family:-apple-system,"Segoe UI",sans-serif; }
+  .lane-name { text-anchor:middle; font-size:19px; fill:#1b1f24; font-weight:600; font-family:-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .mname { text-anchor:middle; font-size:16.5px; }
+  .seq-bg { fill:#ffffff; stroke-width:1.4; }
+  .seq { text-anchor:middle; font-size:11.5px; font-weight:600; font-family:-apple-system,"Segoe UI",sans-serif; }
+  .band { fill:transparent; }
+  .msg { cursor:pointer; }
+  .msg .band { transition:fill .08s ease; }
+  .msg:hover .band { fill:rgba(59,91,219,.06); }
+  .msg.sel .band { fill:rgba(59,91,219,.13); }
+  .msg:focus { outline:none; }
+  .msg:focus .band { fill:rgba(59,91,219,.10); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Copilot on Rails - Telemetry Flow</h1>
+  <div class="legend"><span class="lg"><span class="sw" style="background:#e8590c"></span>extensionCommand</span><span class="lg"><span class="sw" style="background:#3b5bdb"></span>mcpTool</span><span class="lg"><span class="sw" style="background:#2f9e44"></span>webviewAction</span></div>
+</header>
+<div class="layout">
+  <div class="canvas"><svg id="diagram" xmlns="http://www.w3.org/2000/svg" width="1230" height="1894" viewBox="0 0 1230 1894">
+<defs>
+<marker id="ari-extensionCommand" markerWidth="12" markerHeight="12" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,3.5 L0,7 Z" fill="#e8590c"/></marker>
+<marker id="ari-mcpTool" markerWidth="12" markerHeight="12" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,3.5 L0,7 Z" fill="#3b5bdb"/></marker>
+<marker id="ari-webviewAction" markerWidth="12" markerHeight="12" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,3.5 L0,7 Z" fill="#2f9e44"/></marker>
+<marker id="ari-_fallback" markerWidth="12" markerHeight="12" refX="9" refY="3.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,3.5 L0,7 Z" fill="#5c5f66"/></marker>
+<filter id="laneShadow" x="-20%" y="-6%" width="140%" height="112%"><feDropShadow dx="0" dy="1.5" stdDeviation="3" flood-color="#0b1a3a" flood-opacity="0.10"/></filter>
+</defs>
+<rect class="zebra" x="0" y="100" width="1230" height="58"/>
+<rect class="zebra" x="0" y="216" width="1230" height="58"/>
+<rect class="zebra" x="0" y="332" width="1230" height="58"/>
+<rect class="zebra" x="0" y="448" width="1230" height="58"/>
+<rect class="zebra" x="0" y="564" width="1230" height="58"/>
+<rect class="zebra" x="0" y="680" width="1230" height="58"/>
+<rect class="zebra" x="0" y="796" width="1230" height="58"/>
+<rect class="zebra" x="0" y="912" width="1230" height="58"/>
+<rect class="zebra" x="0" y="1028" width="1230" height="58"/>
+<rect class="zebra" x="0" y="1144" width="1230" height="58"/>
+<rect class="zebra" x="0" y="1260" width="1230" height="58"/>
+<rect class="zebra" x="0" y="1376" width="1230" height="58"/>
+<rect class="zebra" x="0" y="1492" width="1230" height="58"/>
+<rect class="zebra" x="0" y="1608" width="1230" height="58"/>
+<rect class="zebra" x="0" y="1724" width="1230" height="58"/>
+<g class="lane-col">
+<rect x="36" y="26" width="168" height="1842" rx="12" class="lane" filter="url(#laneShadow)"/>
+<path d="M36,86 L36,38 Q36,26 48,26 L192,26 Q204,26 204,38 L204,86 Z" class="lane-cap"/>
+<path d="M36,1808 L204,1808 L204,1856 Q204,1868 192,1868 L48,1868 Q36,1868 36,1856 Z" class="lane-cap"/>
+<text x="120" y="51" class="lane-glyph">🧩</text>
+<text x="120" y="72" class="lane-name">Extension</text>
+<text x="120" y="1833" class="lane-glyph">🧩</text>
+<text x="120" y="1854" class="lane-name">Extension</text>
+</g>
+<g class="lane-col">
+<rect x="366" y="26" width="168" height="1842" rx="12" class="lane" filter="url(#laneShadow)"/>
+<path d="M366,86 L366,38 Q366,26 378,26 L522,26 Q534,26 534,38 L534,86 Z" class="lane-cap"/>
+<path d="M366,1808 L534,1808 L534,1856 Q534,1868 522,1868 L378,1868 Q366,1868 366,1856 Z" class="lane-cap"/>
+<text x="450" y="51" class="lane-glyph">🖥</text>
+<text x="450" y="72" class="lane-name">Webview</text>
+<text x="450" y="1833" class="lane-glyph">🖥</text>
+<text x="450" y="1854" class="lane-name">Webview</text>
+</g>
+<g class="lane-col">
+<rect x="696" y="26" width="168" height="1842" rx="12" class="lane" filter="url(#laneShadow)"/>
+<path d="M696,86 L696,38 Q696,26 708,26 L852,26 Q864,26 864,38 L864,86 Z" class="lane-cap"/>
+<path d="M696,1808 L864,1808 L864,1856 Q864,1868 852,1868 L708,1868 Q696,1868 696,1856 Z" class="lane-cap"/>
+<text x="780" y="51" class="lane-glyph">🔌</text>
+<text x="780" y="72" class="lane-name">MCP Server</text>
+<text x="780" y="1833" class="lane-glyph">🔌</text>
+<text x="780" y="1854" class="lane-name">MCP Server</text>
+</g>
+<g class="lane-col">
+<rect x="1026" y="26" width="168" height="1842" rx="12" class="lane" filter="url(#laneShadow)"/>
+<path d="M1026,86 L1026,38 Q1026,26 1038,26 L1182,26 Q1194,26 1194,38 L1194,86 Z" class="lane-cap"/>
+<path d="M1026,1808 L1194,1808 L1194,1856 Q1194,1868 1182,1868 L1038,1868 Q1026,1868 1026,1856 Z" class="lane-cap"/>
+<text x="1110" y="51" class="lane-glyph">💬</text>
+<text x="1110" y="72" class="lane-name">Copilot Chat</text>
+<text x="1110" y="1833" class="lane-glyph">💬</text>
+<text x="1110" y="1854" class="lane-name">Copilot Chat</text>
+</g>
+<g class="msg" data-idx="0" data-ref="0" tabindex="0">
+<rect class="band" x="0" y="100" width="1230" height="58"/>
+<line x1="450" y1="144" x2="1110" y2="144" stroke="#2f9e44" stroke-width="2" marker-end="url(#ari-webviewAction)"/>
+<circle class="seq-bg" cx="433" cy="144" r="10.5" style="stroke:#2f9e44"/><text class="seq" x="433" y="148" style="fill:#2f9e44">1</text>
+<text class="mname" x="780" y="134" fill="#2f9e44">copilotOnRails.createProjectWithCopilot</text>
+</g>
+<g class="msg" data-idx="1" data-ref="1" tabindex="0">
+<rect class="band" x="0" y="158" width="1230" height="58"/>
+<line x1="450" y1="202" x2="1110" y2="202" stroke="#2f9e44" stroke-width="2" marker-end="url(#ari-webviewAction)"/>
+<circle class="seq-bg" cx="433" cy="202" r="10.5" style="stroke:#2f9e44"/><text class="seq" x="433" y="206" style="fill:#2f9e44">2</text>
+<text class="mname" x="780" y="192" fill="#2f9e44">copilotOnRails.createProjectSubmitPrompt</text>
+</g>
+<g class="msg" data-idx="2" data-ref="2" tabindex="0">
+<rect class="band" x="0" y="216" width="1230" height="58"/>
+<line x1="450" y1="260" x2="1110" y2="260" stroke="#2f9e44" stroke-width="2" marker-end="url(#ari-webviewAction)"/>
+<circle class="seq-bg" cx="433" cy="260" r="10.5" style="stroke:#2f9e44"/><text class="seq" x="433" y="264" style="fill:#2f9e44">3</text>
+<text class="mname" x="780" y="250" fill="#2f9e44">copilotOnRails.createProjectSubmitPrompt</text>
+</g>
+<g class="msg" data-idx="3" data-ref="3" tabindex="0">
+<rect class="band" x="0" y="274" width="1230" height="58"/>
+<line x1="450" y1="318" x2="1110" y2="318" stroke="#2f9e44" stroke-width="2" marker-end="url(#ari-webviewAction)"/>
+<circle class="seq-bg" cx="433" cy="318" r="10.5" style="stroke:#2f9e44"/><text class="seq" x="433" y="322" style="fill:#2f9e44">4</text>
+<text class="mname" x="780" y="308" fill="#2f9e44">copilotOnRails.createProjectSubmitPrompt</text>
+</g>
+<g class="msg" data-idx="4" data-ref="4" tabindex="0">
+<rect class="band" x="0" y="332" width="1230" height="58"/>
+<line x1="450" y1="376" x2="1110" y2="376" stroke="#2f9e44" stroke-width="2" marker-end="url(#ari-webviewAction)"/>
+<circle class="seq-bg" cx="433" cy="376" r="10.5" style="stroke:#2f9e44"/><text class="seq" x="433" y="380" style="fill:#2f9e44">5</text>
+<text class="mname" x="780" y="366" fill="#2f9e44">copilotOnRails.createProjectSubmitPrompt</text>
+</g>
+<g class="msg" data-idx="5" data-ref="5" tabindex="0">
+<rect class="band" x="0" y="390" width="1230" height="58"/>
+<line x1="1110" y1="434" x2="780" y2="434" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="1127" cy="434" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="1127" y="438" style="fill:#3b5bdb">6</text>
+<text class="mname" x="945" y="424" fill="#3b5bdb">mcpTool/open_requirements_view</text>
+</g>
+<g class="msg exec" data-idx="6" data-ref="6" tabindex="0">
+<rect class="band" x="0" y="448" width="1230" height="58"/>
+<line x1="780" y1="492" x2="450" y2="492" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="797" cy="492" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="797" y="496" style="fill:#3b5bdb">7</text>
+<text class="mname" x="615" y="482" fill="#3b5bdb">mcpTool/open_requirements_view/execute</text>
+</g>
+<g class="msg" data-idx="7" data-ref="7" tabindex="0">
+<rect class="band" x="0" y="506" width="1230" height="58"/>
+<line x1="450" y1="550" x2="1110" y2="550" stroke="#2f9e44" stroke-width="2" marker-end="url(#ari-webviewAction)"/>
+<circle class="seq-bg" cx="433" cy="550" r="10.5" style="stroke:#2f9e44"/><text class="seq" x="433" y="554" style="fill:#2f9e44">8</text>
+<text class="mname" x="780" y="540" fill="#2f9e44">copilotOnRails.submitRequirements</text>
+</g>
+<g class="msg" data-idx="8" data-ref="8" tabindex="0">
+<rect class="band" x="0" y="564" width="1230" height="58"/>
+<line x1="1110" y1="608" x2="780" y2="608" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="1127" cy="608" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="1127" y="612" style="fill:#3b5bdb">9</text>
+<text class="mname" x="945" y="598" fill="#3b5bdb">mcpTool/open_plan_view</text>
+</g>
+<g class="msg exec" data-idx="9" data-ref="9" tabindex="0">
+<rect class="band" x="0" y="622" width="1230" height="58"/>
+<line x1="780" y1="666" x2="450" y2="666" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="797" cy="666" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="797" y="670" style="fill:#3b5bdb">10</text>
+<text class="mname" x="615" y="656" fill="#3b5bdb">mcpTool/open_plan_view/execute</text>
+</g>
+<g class="msg" data-idx="10" data-ref="10" tabindex="0">
+<rect class="band" x="0" y="680" width="1230" height="58"/>
+<line x1="450" y1="724" x2="1110" y2="724" stroke="#2f9e44" stroke-width="2" marker-end="url(#ari-webviewAction)"/>
+<circle class="seq-bg" cx="433" cy="724" r="10.5" style="stroke:#2f9e44"/><text class="seq" x="433" y="728" style="fill:#2f9e44">11</text>
+<text class="mname" x="780" y="714" fill="#2f9e44">copilotOnRails.submitScaffoldPlanApproval</text>
+</g>
+<g class="msg" data-idx="11" data-ref="11" tabindex="0">
+<rect class="band" x="0" y="738" width="1230" height="58"/>
+<line x1="1110" y1="782" x2="780" y2="782" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="1127" cy="782" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="1127" y="786" style="fill:#3b5bdb">12</text>
+<text class="mname" x="945" y="772" fill="#3b5bdb">mcpTool/start_project_integrate</text>
+</g>
+<g class="msg exec" data-idx="12" data-ref="12" tabindex="0">
+<rect class="band" x="0" y="796" width="1230" height="58"/>
+<line x1="780" y1="840" x2="450" y2="840" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="797" cy="840" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="797" y="844" style="fill:#3b5bdb">13</text>
+<text class="mname" x="615" y="830" fill="#3b5bdb">mcpTool/start_project_integrate/execute</text>
+</g>
+<g class="msg" data-idx="13" data-ref="13" tabindex="0">
+<rect class="band" x="0" y="854" width="1230" height="58"/>
+<line x1="1110" y1="898" x2="780" y2="898" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="1127" cy="898" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="1127" y="902" style="fill:#3b5bdb">14</text>
+<text class="mname" x="945" y="888" fill="#3b5bdb">mcpTool/start_local_development</text>
+</g>
+<g class="msg exec" data-idx="14" data-ref="14" tabindex="0">
+<rect class="band" x="0" y="912" width="1230" height="58"/>
+<line x1="780" y1="956" x2="450" y2="956" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="797" cy="956" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="797" y="960" style="fill:#3b5bdb">15</text>
+<text class="mname" x="615" y="946" fill="#3b5bdb">mcpTool/start_local_development/execute</text>
+</g>
+<g class="msg" data-idx="15" data-ref="15" tabindex="0">
+<rect class="band" x="0" y="970" width="1230" height="58"/>
+<line x1="1110" y1="1014" x2="780" y2="1014" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="1127" cy="1014" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="1127" y="1018" style="fill:#3b5bdb">16</text>
+<text class="mname" x="945" y="1004" fill="#3b5bdb">mcpTool/start_azure_debug_generate</text>
+</g>
+<g class="msg exec" data-idx="16" data-ref="16" tabindex="0">
+<rect class="band" x="0" y="1028" width="1230" height="58"/>
+<line x1="780" y1="1072" x2="450" y2="1072" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="797" cy="1072" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="797" y="1076" style="fill:#3b5bdb">17</text>
+<text class="mname" x="615" y="1062" fill="#3b5bdb">mcpTool/start_azure_debug_generate/execute</text>
+</g>
+<g class="msg" data-idx="17" data-ref="17" tabindex="0">
+<rect class="band" x="0" y="1086" width="1230" height="58"/>
+<line x1="1110" y1="1130" x2="780" y2="1130" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="1127" cy="1130" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="1127" y="1134" style="fill:#3b5bdb">18</text>
+<text class="mname" x="945" y="1120" fill="#3b5bdb">mcpTool/open_local_next_steps_view</text>
+</g>
+<g class="msg exec" data-idx="18" data-ref="18" tabindex="0">
+<rect class="band" x="0" y="1144" width="1230" height="58"/>
+<line x1="780" y1="1188" x2="450" y2="1188" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="797" cy="1188" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="797" y="1192" style="fill:#3b5bdb">19</text>
+<text class="mname" x="615" y="1178" fill="#3b5bdb">mcpTool/open_local_next_steps_view/execute</text>
+</g>
+<g class="msg" data-idx="19" data-ref="19" tabindex="0">
+<rect class="band" x="0" y="1202" width="1230" height="58"/>
+<line x1="450" y1="1246" x2="1110" y2="1246" stroke="#2f9e44" stroke-width="2" marker-end="url(#ari-webviewAction)"/>
+<circle class="seq-bg" cx="433" cy="1246" r="10.5" style="stroke:#2f9e44"/><text class="seq" x="433" y="1250" style="fill:#2f9e44">20</text>
+<text class="mname" x="780" y="1236" fill="#2f9e44">copilotOnRails.debugNextStepsAction (apiTests)</text>
+</g>
+<g class="msg" data-idx="20" data-ref="20" tabindex="0">
+<rect class="band" x="0" y="1260" width="1230" height="58"/>
+<line x1="120" y1="1304" x2="1110" y2="1304" stroke="#e8590c" stroke-width="2" marker-end="url(#ari-extensionCommand)"/>
+<circle class="seq-bg" cx="103" cy="1304" r="10.5" style="stroke:#e8590c"/><text class="seq" x="103" y="1308" style="fill:#e8590c">21</text>
+<text class="mname" x="615" y="1294" fill="#e8590c">copilotOnRails.startDebugConfiguration</text>
+</g>
+<g class="msg" data-idx="21" data-ref="21" tabindex="0">
+<rect class="band" x="0" y="1318" width="1230" height="58"/>
+<line x1="120" y1="1362" x2="1110" y2="1362" stroke="#e8590c" stroke-width="2" marker-end="url(#ari-extensionCommand)"/>
+<circle class="seq-bg" cx="103" cy="1362" r="10.5" style="stroke:#e8590c"/><text class="seq" x="103" y="1366" style="fill:#e8590c">22</text>
+<text class="mname" x="615" y="1352" fill="#e8590c">copilotOnRails.startDebugConfiguration</text>
+</g>
+<g class="msg" data-idx="22" data-ref="22" tabindex="0">
+<rect class="band" x="0" y="1376" width="1230" height="58"/>
+<line x1="1110" y1="1420" x2="780" y2="1420" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="1127" cy="1420" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="1127" y="1424" style="fill:#3b5bdb">23</text>
+<text class="mname" x="945" y="1410" fill="#3b5bdb">mcpTool/open_local_next_steps_view</text>
+</g>
+<g class="msg exec" data-idx="23" data-ref="23" tabindex="0">
+<rect class="band" x="0" y="1434" width="1230" height="58"/>
+<line x1="780" y1="1478" x2="450" y2="1478" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="797" cy="1478" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="797" y="1482" style="fill:#3b5bdb">24</text>
+<text class="mname" x="615" y="1468" fill="#3b5bdb">mcpTool/open_local_next_steps_view/execute</text>
+</g>
+<g class="msg" data-idx="24" data-ref="24" tabindex="0">
+<rect class="band" x="0" y="1492" width="1230" height="58"/>
+<line x1="450" y1="1536" x2="120" y2="1536" stroke="#2f9e44" stroke-width="2" marker-end="url(#ari-webviewAction)"/>
+<circle class="seq-bg" cx="467" cy="1536" r="10.5" style="stroke:#2f9e44"/><text class="seq" x="467" y="1540" style="fill:#2f9e44">25</text>
+<text class="mname" x="285" y="1526" fill="#2f9e44">copilotOnRails.debugNextStepsAction (deploy)</text>
+</g>
+<g class="msg" data-idx="25" data-ref="25" tabindex="0">
+<rect class="band" x="0" y="1550" width="1230" height="58"/>
+<line x1="120" y1="1594" x2="1110" y2="1594" stroke="#e8590c" stroke-width="2" marker-end="url(#ari-extensionCommand)"/>
+<circle class="seq-bg" cx="103" cy="1594" r="10.5" style="stroke:#e8590c"/><text class="seq" x="103" y="1598" style="fill:#e8590c">26</text>
+<text class="mname" x="615" y="1584" fill="#e8590c">copilotOnRails.startDeployment</text>
+</g>
+<g class="msg" data-idx="26" data-ref="26" tabindex="0">
+<rect class="band" x="0" y="1608" width="1230" height="58"/>
+<line x1="1110" y1="1652" x2="780" y2="1652" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="1127" cy="1652" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="1127" y="1656" style="fill:#3b5bdb">27</text>
+<text class="mname" x="945" y="1642" fill="#3b5bdb">mcpTool/open_deploy_plan_view</text>
+</g>
+<g class="msg exec" data-idx="27" data-ref="27" tabindex="0">
+<rect class="band" x="0" y="1666" width="1230" height="58"/>
+<line x1="780" y1="1710" x2="450" y2="1710" stroke="#3b5bdb" stroke-width="2" marker-end="url(#ari-mcpTool)"/>
+<circle class="seq-bg" cx="797" cy="1710" r="10.5" style="stroke:#3b5bdb"/><text class="seq" x="797" y="1714" style="fill:#3b5bdb">28</text>
+<text class="mname" x="615" y="1700" fill="#3b5bdb">mcpTool/open_deploy_plan_view/execute</text>
+</g>
+<g class="msg" data-idx="28" data-ref="28" tabindex="0">
+<rect class="band" x="0" y="1724" width="1230" height="58"/>
+<line x1="450" y1="1768" x2="1110" y2="1768" stroke="#2f9e44" stroke-width="2" marker-end="url(#ari-webviewAction)"/>
+<circle class="seq-bg" cx="433" cy="1768" r="10.5" style="stroke:#2f9e44"/><text class="seq" x="433" y="1772" style="fill:#2f9e44">29</text>
+<text class="mname" x="780" y="1758" fill="#2f9e44">copilotOnRails.submitDeploymentPlanApproval</text>
+</g>
+</svg></div>
+</div>
+<script>
+document.querySelectorAll('.msg').forEach(g=>{
+  const select = ()=>{
+    document.querySelectorAll('.msg.sel').forEach(m=>m.classList.remove('sel'));
+    g.classList.add('sel');
+  };
+  g.addEventListener('click', select);
+  g.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); select(); }});
+});
+</script>
+</body>
+</html>
