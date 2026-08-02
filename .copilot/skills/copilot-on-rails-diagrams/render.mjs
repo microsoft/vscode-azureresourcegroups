@@ -148,7 +148,7 @@ export function buildSvg(steps) {
 }
 
 export function buildHtml(steps, title) {
-  const { svg } = buildSvg(steps);
+  const { svg, width, height } = buildSvg(steps);
   const legend = Object.entries(TYPE_COLOR)
     .map(
       ([t, c]) =>
@@ -156,7 +156,7 @@ export function buildHtml(steps, title) {
     )
     .join("");
 
-  return `<!doctype html>
+  const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
@@ -213,4 +213,5 @@ document.querySelectorAll('.msg').forEach(g=>{
 </body>
 </html>
 `;
+  return { html, width, height };
 }

@@ -114,7 +114,9 @@ const outPath = process.argv[3] || "diagnostics.html";
 const raw = JSON.parse(readFileSync(srcPath, "utf8"));
 const items = collapseOccurrences(raw.diagnosticEvents || []);
 const steps = buildSteps(items);
-writeFileSync(outPath, buildHtml(steps, "Copilot on Rails - Diagnostics Flow"));
+const { html, width, height } = buildHtml(steps, "Copilot on Rails - Diagnostics Flow");
+writeFileSync(outPath, html);
 console.log(`wrote ${outPath}: ${items.length} events, ${steps.length} arrows`);
+console.log(`  diagram ${width}x${height}px  ->  render 1:1 with --window-size=${width},${height}`);
 for (const st of steps)
   console.log(`  ${String(st.src).padEnd(12)} -> ${String(st.tgt).padEnd(12)} ${st.label}`);

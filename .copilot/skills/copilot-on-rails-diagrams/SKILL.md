@@ -38,14 +38,19 @@ node seqtelemetry.mjs <path-to-telemetry-file> [out.html]
 ```
 
 Each writes a single self-contained `.html` (inline SVG, no external assets) and
-prints a routing table to stdout for a fast sanity check.
+prints a routing table plus the diagram's native pixel size to stdout, e.g.
+`diagram 1230x1894px  ->  render 1:1 with --window-size=1230,1894`.
 
-To rasterize a PNG preview (headless Chrome, macOS path shown):
+To rasterize a PNG preview (headless Chrome, macOS path shown), size the window
+to the exact `--window-size=WxH` the generator printed. The SVG is responsive
+(`width:100%`), so a wider window upscales it and stretches the height past the
+frame, clipping the bottom arrows - always use the printed native dimensions:
 
 ```bash
+# use the WxH the generator printed for --window-size (native, 1:1)
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --headless --disable-gpu --hide-scrollbars \
-  --force-device-scale-factor=2 --window-size=1500,2160 \
+  --force-device-scale-factor=2 --window-size=1230,1894 \
   --screenshot=preview.png "file://$PWD/diagnostics.html"
 ```
 

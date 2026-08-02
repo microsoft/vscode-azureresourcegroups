@@ -125,7 +125,9 @@ const srcPath = process.argv[2] || "telemetry.txt";
 const outPath = process.argv[3] || "telemetry.html";
 const events = orderByStart(reorderExecutes(parseTelemetry(readFileSync(srcPath, "utf8"))));
 const steps = buildSteps(events);
-writeFileSync(outPath, buildHtml(steps, "Copilot on Rails - Telemetry Flow"));
+const { html, width, height } = buildHtml(steps, "Copilot on Rails - Telemetry Flow");
+writeFileSync(outPath, html);
 console.log(`wrote ${outPath}: ${events.length} events, ${steps.length} arrows`);
+console.log(`  diagram ${width}x${height}px  ->  render 1:1 with --window-size=${width},${height}`);
 for (const st of steps)
   console.log(`  ${String(st.src).padEnd(12)} -> ${String(st.tgt).padEnd(12)} ${st.label}`);
