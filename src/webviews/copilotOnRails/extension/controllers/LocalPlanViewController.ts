@@ -15,14 +15,13 @@ import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotO
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type LocalPlanData } from "../../views/utils/parseLocalDebugPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { armDebugPlanImplementedWatcher } from "../debugPlanImplementedWatcher";
 import { openLoadingView } from "../openLoadingView";
 import { suppressTrackedViewCloseOnce } from "../projectSession";
-import { recordLocalDebugPlanTelemetry } from "../utils/localDebugPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
-    private planData: LocalPlanData;
     private _isRefreshingPrereqs = false;
     private _refreshPrereqsTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -30,7 +29,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         super(ext.context, 'Local Dev Plan', 'localPlanView', {}, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
 
         this.sourceFileUri = sourceFileUri;
-        this.planData = planData;
 
         this.panel.webview.onDidReceiveMessage((message: { command: string; data?: LocalPlanData; prompt?: string }) => {
             switch (message.command) {
@@ -66,7 +64,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 }
 
                 suppressTrackedViewCloseOnce();
-                recordLocalDebugPlanTelemetry(context, this.planData);
+                await armDebugPlanImplementedWatcher();
                 this.panel.dispose();
 
                 openLoadingView({
@@ -161,7 +159,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     }
 
     updatePlanData(planData: LocalPlanData, sourceFileUri?: vscode.Uri): void {
-        this.planData = planData;
         if (sourceFileUri) {
             this.sourceFileUri = sourceFileUri;
         }

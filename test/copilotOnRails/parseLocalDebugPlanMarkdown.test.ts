@@ -13,6 +13,7 @@ import {
     firstTable,
     flattenContent,
     isChecked,
+    isDebugPlanImplemented,
     type LocalPlanData,
     type LocalPlanSection,
     type LocalPlanTableContent,
@@ -222,6 +223,25 @@ suite('parseLocalDebugPlanMarkdown query helpers', () => {
         }
         for (const unchecked of ['[ ]', '[]', '', 'x']) {
             assert.strictEqual(isChecked(unchecked), false, unchecked);
+        }
+    });
+
+    test('isDebugPlanImplemented tolerates markdown formatting around the status line', () => {
+        for (const implemented of [
+            '> **Status:** Implemented',
+            'Status: Implemented',
+            '**Status**: implemented',
+            '# Azure Debug Plan\n\n> **Status:** IMPLEMENTED\n',
+        ]) {
+            assert.strictEqual(isDebugPlanImplemented(implemented), true, implemented);
+        }
+        for (const notImplemented of [
+            '> **Status:** Approved',
+            'Status: Planning',
+            'The team implemented the feature',
+            '',
+        ]) {
+            assert.strictEqual(isDebugPlanImplemented(notImplemented), false, notImplemented);
         }
     });
 });

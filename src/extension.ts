@@ -61,6 +61,7 @@ import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/Wor
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
+import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/extension/debugPlanImplementedWatcher';
 import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/resumePendingCreateWithCopilot';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
 import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
@@ -85,6 +86,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     registerProjectSubmissionStateWatcher(context, corPlanFilesWatcher);
     registerRequirementsAutoOpen(context);
     registerAutopilot(context);
+    registerDebugPlanImplementedWatcher(context);
     registerViewHostDisposal(context);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();

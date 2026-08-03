@@ -52,6 +52,18 @@ export function parseLocalDebugPlanMarkdown(markdown: string): LocalPlanData {
     };
 }
 
+/**
+ * Returns true when the debug plan markdown reports the `Implemented` status — the point at which
+ * debug-config generation has finished. Deliberately tolerant of markdown formatting around the
+ * status line, e.g. `> **Status:** Implemented`, `Status: Implemented`, `**Status**: implemented`.
+ *
+ * Kept here (rather than derived from a full parse) so every completion check — resume, autopilot,
+ * and the implemented-telemetry watcher — reads "implemented" from one shared, format-tolerant source.
+ */
+export function isDebugPlanImplemented(content: string): boolean {
+    return /status\b[^a-z0-9]{0,8}implemented\b/i.test(content);
+}
+
 function extractHeader(lines: string[]): { title: string; status: string; executionMode: string; headerNote: string; firstSectionIdx: number } {
     let title = 'Local Development Plan';
     let status = 'Unknown';

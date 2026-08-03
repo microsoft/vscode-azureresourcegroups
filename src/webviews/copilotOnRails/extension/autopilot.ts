@@ -10,9 +10,9 @@ import { DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { settingUtils } from "../../../utils/settingUtils";
-import { parseLocalDebugPlanMarkdown, type LocalPlanData } from "../views/utils/parseLocalDebugPlanMarkdown";
+import { isDebugPlanImplemented, parseLocalDebugPlanMarkdown } from "../views/utils/parseLocalDebugPlanMarkdown";
 import { isApprovedOrLater } from "../views/utils/projectPlanStatus";
-import { recordLocalDebugPlanTelemetry } from "./utils/localDebugPlanTelemetryUtils";
+import { armDebugPlanImplementedWatcher } from "./debugPlanImplementedWatcher";
 
 /**
  * Autopilot mode for the create-project workflow.
@@ -48,10 +48,9 @@ const STATE_PRIOR_PERMISSION_LEVEL = 'copilotOnRails.autopilot.priorPermissionLe
 /** Epoch ms after which an active run is considered stale and auto-restored. */
 const STATE_DEADLINE = 'copilotOnRails.autopilot.deadline';
 /**
- * Workspace-scoped flag set once per autopilot run after the implied debug-plan approval telemetry
+ * Set once per run after the implied debug-plan approval telemetry
  * has been recorded (i.e. once the plan reaches `Approved`), so an unattended run emits the approval
- * action exactly once even across window reloads and repeated file-watcher events. Scoped to the
- * workspace since it tracks that workspace's plan file.
+ * action exactly once even across window reloads and repeated file-watcher events.
  */
 const STATE_DEBUG_APPROVAL_RECORDED = 'copilotOnRails.autopilot.debugPlanApprovalRecorded';
 
@@ -157,18 +156,12 @@ function scheduleSafetyTimer(deadline: number): void {
 function armAutopilot(deadline: number): void {
     debugPlanApprovalRecorded = extensionContext?.workspaceState.get<boolean>(STATE_DEBUG_APPROVAL_RECORDED) === true;
     showStatusBarItem();
-    registerCompletionWatcher();
+    registerDebugCompletionWatcher();
     scheduleSafetyTimer(deadline);
 }
 
 /** Returns true when the debug plan file content indicates the chain is finished. */
-export function isDebugPlanImplemented(content: string): boolean {
-    // Tolerates markdown formatting around the status line, e.g.
-    // `> **Status:** Implemented`, `Status: Implemented`, `**Status**: implemented`.
-    return /status\b[^a-z0-9]{0,8}implemented\b/i.test(content);
-}
-
-function registerCompletionWatcher(): void {
+function registerDebugCompletionWatcher(): void {
     disposeCompletionWatcher();
     completionWatcher = vscode.workspace.createFileSystemWatcher(DEBUG_PLAN_FILE_GLOB);
     const check = async (uri: vscode.Uri): Promise<void> => {
@@ -178,16 +171,11 @@ function registerCompletionWatcher(): void {
         } catch {
             return;
         }
-        // The plan reaching `Approved` during an unattended run is the auto-approval moment that
-        // stands in for the manual approval the user would otherwise give in the local plan view, so
-        // record that approval action before checking whether the chain has finished. We parse the
-        // plan header once and gate on its canonical status via `isApprovedOrLater`, sharing the same
-        // status vocabulary as the rest of the flow. A still-drafting plan (`Planning` / `Unknown`
-        // status) is ignored so we never capture an incomplete draft.
-        const planData = parseLocalDebugPlanMarkdown(content);
-        if (isApprovedOrLater(planData.status)) {
-            await recordAutopilotDebugPlanApproval(planData);
+
+        if (!debugPlanApprovalRecorded && isApprovedOrLater(parseLocalDebugPlanMarkdown(content).status)) {
+            await recordAutopilotDebugPlanApproval();
         }
+
         if (isDebugPlanImplemented(content)) {
             await disableAutopilot();
         }
@@ -206,21 +194,27 @@ function registerCompletionWatcher(): void {
  * (guarded in-memory and via {@link STATE_DEBUG_APPROVAL_RECORDED}) at the point the plan reaches
  * `Approved`, and never when a manual approval would have fired, since it only runs while autopilot
  * is active.
+ *
+ * The rich plan snapshot is intentionally *not* recorded here. It is captured later, once the plan
+ * reaches `Implemented`, by {@link armDebugPlanImplementedWatcher} - at which point the plan reflects
+ * what was actually built rather than what was merely offered. Arming here mirrors the manual
+ * approval path so both flows capture the implemented snapshot the same way.
  */
-async function recordAutopilotDebugPlanApproval(planData: LocalPlanData): Promise<void> {
+async function recordAutopilotDebugPlanApproval(): Promise<void> {
     const context = extensionContext;
     if (!context || !isAutopilotActive() || debugPlanApprovalRecorded) {
         return;
     }
-    // Latch synchronously first so overlapping create/change events can't double-count.
+
     debugPlanApprovalRecorded = true;
     await context.workspaceState.update(STATE_DEBUG_APPROVAL_RECORDED, true);
+
+    await armDebugPlanImplementedWatcher();
 
     await callWithTelemetryAndErrorHandling(corId('submitDebugPlanApproval'), async (actionContext: IActionContext) => {
         actionContext.errorHandling.suppressDisplay = true;
         await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDebugPlanApproval' }, (corContext: CopilotOnRailsContext) => {
             setCorProp(corContext, 'approvalOutcome', 'submitted');
-            recordLocalDebugPlanTelemetry(corContext, planData);
             return Promise.resolve();
         });
     });
