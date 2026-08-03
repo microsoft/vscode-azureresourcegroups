@@ -37,7 +37,7 @@ let extensionContext: vscode.ExtensionContext | undefined;
 let implementedRecorded = false;
 
 /**
- * Wires up the implemented plan watcher and reconciles any run that
+ * Wires up the implemented plan watcher and resumes any run that
  * was already in flight when the window (re)loaded: if the telemetry was already recorded there is
  * nothing to do; if the plan is already `Implemented` it records immediately; otherwise, if the plan
  * is approved-or-later, it re-arms so the pending `Implemented` transition is still captured.
@@ -46,15 +46,11 @@ export function registerDebugPlanImplementedWatcher(context: vscode.ExtensionCon
     extensionContext = context;
     implementedRecorded = context.workspaceState.get<boolean>(STATE_IMPLEMENTED_RECORDED) === true;
     context.subscriptions.push({ dispose: () => disposeWatcher() });
-    void reconcile();
+    void syncToCurrentPlanState();
 }
 
 /**
- * Arms the watcher at the point the plan is approved. Approval is the "new run" boundary, so the
- * persisted record flag is cleared first - this is what lets a re-approval (a re-run, or a
- * regenerated plan) be captured again. Because the plan may already be `Implemented` by the time we
- * arm (a fast autopilot run, or re-arming after a reload), the current content is checked eagerly
- * rather than relying on a future change event that may never fire.
+ * Arms an implemented watcher after the plan is approved.
  */
 export async function armDebugPlanImplementedWatcher(): Promise<void> {
     if (!extensionContext) {
@@ -64,15 +60,16 @@ export async function armDebugPlanImplementedWatcher(): Promise<void> {
     implementedRecorded = false;
     await extensionContext.workspaceState.update(STATE_IMPLEMENTED_RECORDED, undefined);
 
-    armWatcher();
-
     const content = await readDebugPlan();
     if (content !== undefined && isDebugPlanImplemented(content)) {
         await recordImplemented(content);
+        return;
     }
+
+    armImplementedWatcher();
 }
 
-async function reconcile(): Promise<void> {
+async function syncToCurrentPlanState(): Promise<void> {
     if (implementedRecorded) {
         return;
     }
@@ -86,11 +83,11 @@ async function reconcile(): Promise<void> {
         return;
     }
     if (isApprovedOrLater(parseLocalDebugPlanMarkdown(content).status)) {
-        armWatcher();
+        armImplementedWatcher();
     }
 }
 
-function armWatcher(): void {
+function armImplementedWatcher(): void {
     if (watcher) {
         return;
     }
