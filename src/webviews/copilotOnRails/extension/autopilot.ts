@@ -11,7 +11,7 @@ import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRa
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { settingUtils } from "../../../utils/settingUtils";
 import { parseLocalDebugPlanMarkdown } from "../views/utils/parseLocalDebugPlanMarkdown";
-import { recordLocalDebugPlanApprovalTelemetry } from "./utils/localDebugPlanTelemetryUtils";
+import { recordLocalDebugPlanTelemetry } from "./utils/localDebugPlanTelemetryUtils";
 
 /**
  * Autopilot mode for the create-project workflow.
@@ -230,7 +230,7 @@ async function recordAutopilotDebugPlanApproval(content: string): Promise<void> 
         actionContext.errorHandling.suppressDisplay = true;
         await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDebugPlanApproval' }, (corContext: CopilotOnRailsContext) => {
             setCorProp(corContext, 'approvalOutcome', 'submitted');
-            recordLocalDebugPlanApprovalTelemetry(corContext, parseLocalDebugPlanMarkdown(content));
+            recordLocalDebugPlanTelemetry(corContext, parseLocalDebugPlanMarkdown(content));
             return Promise.resolve();
         });
     });

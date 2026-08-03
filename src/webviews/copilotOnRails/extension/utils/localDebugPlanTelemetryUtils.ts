@@ -180,16 +180,7 @@ export function getLocalDebugPlanTelemetry(planData: LocalPlanData): LocalDebugP
     };
 }
 
-/**
- * Records the PII-safe debug-plan summary properties that the "submit debug plan approval" action emits.
- *
- * This is the single implementation shared by both approval paths: the manual local-plan-view approval
- * ({@link LocalPlanViewController}) and the autopilot auto-approval. Callers own opening the
- * `submitDebugPlanApproval` telemetry action and setting `approvalOutcome`; this only derives and stamps
- * the plan summary props. Any parsing error is swallowed and flagged via a `parseFailed` property so
- * telemetry never blocks the approval flow.
- */
-export function recordLocalDebugPlanApprovalTelemetry(context: CopilotOnRailsContext, planData: LocalPlanData): void {
+export function recordLocalDebugPlanTelemetry(context: CopilotOnRailsContext, planData: LocalPlanData): void {
     try {
         const telemetry = getLocalDebugPlanTelemetry(planData);
         for (const [key, value] of Object.entries(telemetry)) {
