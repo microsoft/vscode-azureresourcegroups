@@ -14,21 +14,17 @@ import { recordLocalDebugPlanTelemetry } from "./utils/localDebugPlanTelemetryUt
 
 /**
  * Records the rich {@link recordLocalDebugPlanTelemetry} snapshot once the debug plan reaches
- * `Implemented`, rather than at approval time. At approval the plan only reflects what was
- * *offered/selected*; once implemented it reflects what was actually built (configs generated,
- * checkboxes ticked, prerequisites installed, migrations/API-test collections created), so this is
- * the point with the most to inspect.
+ * `Implemented`.
  *
  * The watcher is single-shot per run: it self-disposes the moment the implemented telemetry is
  * recorded, guarded by an in-memory flag (against overlapping create/change events) and a persisted
  * {@link STATE_IMPLEMENTED_RECORDED} flag (so the event fires at most once even across window
- * reloads). Approval is the "new run" boundary - {@link armDebugPlanImplementedWatcher} clears the
- * persisted flag and re-arms so a re-approval or regenerated plan is captured again.
+ * reloads).
  */
 
 /**
- * workspaceState key set once the implemented telemetry has been recorded for the current run, so
- * the event fires at most once and survives window reloads. Cleared at approval to open a new run.
+ * `workspaceState` key set once the implemented telemetry has been recorded for the current run, so
+ * the event fires at most once and survives window reloads.
  */
 const STATE_IMPLEMENTED_RECORDED = 'copilotOnRails.debugPlan.implementedRecorded';
 
@@ -36,13 +32,12 @@ let watcher: vscode.FileSystemWatcher | undefined;
 let extensionContext: vscode.ExtensionContext | undefined;
 /**
  * In-process copy of the persisted {@link STATE_IMPLEMENTED_RECORDED} flag, so overlapping
- * create/change watcher events (and the eager check on arm) can't each record before the persisted
- * write completes.
+ * create/change watcher events can't each record before the persisted write completes.
  */
 let implementedRecorded = false;
 
 /**
- * Wires up the implemented-telemetry watcher for the extension lifetime and reconciles any run that
+ * Wires up the implemented plan watcher and reconciles any run that
  * was already in flight when the window (re)loaded: if the telemetry was already recorded there is
  * nothing to do; if the plan is already `Implemented` it records immediately; otherwise, if the plan
  * is approved-or-later, it re-arms so the pending `Implemented` transition is still captured.
@@ -141,10 +136,9 @@ async function recordImplemented(content: string): Promise<void> {
 
     await callWithTelemetryAndErrorHandling(corId('recordDebugPlanImplemented'), async (actionContext: IActionContext) => {
         actionContext.errorHandling.suppressDisplay = true;
-        // `webviewAction` mirrors the debug-plan telemetry family (see the autopilot approval path);
-        // this milestone is file-driven, but keeping the type consistent lets the debug-plan events
-        // aggregate together. The shared wrapper stamps `autopilot`, so auto vs. manual stays distinct.
-        await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'recordDebugPlanImplemented' }, (corContext: CopilotOnRailsContext) => {
+        // This milestone is file-driven (extension-initiated), so it's an `extensionAction` rather
+        // than a `webviewAction`. The shared wrapper stamps `autopilot`, so auto vs. manual stays distinct.
+        await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'extensionAction', name: 'recordDebugPlanImplemented' }, (corContext: CopilotOnRailsContext) => {
             recordLocalDebugPlanTelemetry(corContext, planData);
             return Promise.resolve();
         });

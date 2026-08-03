@@ -195,7 +195,7 @@ function registerDebugCompletionWatcher(): void {
  * `Approved`, and never when a manual approval would have fired, since it only runs while autopilot
  * is active.
  *
- * The rich plan snapshot is intentionally *not* recorded here. It is captured later, once the plan
+ * The plan parsing telemetry is intentionally *not* recorded here. It is captured later, once the plan
  * reaches `Implemented` to allow us to capture the full plan after the agent is done with it.
  */
 async function recordAutopilotDebugPlanApproval(): Promise<void> {
@@ -211,7 +211,7 @@ async function recordAutopilotDebugPlanApproval(): Promise<void> {
 
     await callWithTelemetryAndErrorHandling(corId('submitDebugPlanApproval'), async (actionContext: IActionContext) => {
         actionContext.errorHandling.suppressDisplay = true;
-        await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDebugPlanApproval' }, (corContext: CopilotOnRailsContext) => {
+        await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'extensionAction', name: 'submitDebugPlanApproval' }, (corContext: CopilotOnRailsContext) => {
             setCorProp(corContext, 'approvalOutcome', 'submitted');
             return Promise.resolve();
         });

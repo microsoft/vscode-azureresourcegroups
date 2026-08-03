@@ -136,9 +136,9 @@ export interface DiagnosticEvent {
      */
     name: string;
     /**
-     * Whether the event was produced by an extension command, an MCP tool, or a webview action.
+     * Whether the event was produced by the extension, an MCP tool, or a webview action.
      */
-    type: 'extensionCommand' | 'mcpTool' | 'webviewAction';
+    type: 'extensionAction' | 'mcpTool' | 'webviewAction';
     /**
      * Which point in the tool's lifecycle this entry represents.
      */
