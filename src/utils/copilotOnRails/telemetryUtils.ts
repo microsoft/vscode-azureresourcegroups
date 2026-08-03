@@ -11,6 +11,7 @@ import * as vscode from "vscode";
 import { ext } from "../../extensionVariables";
 import { isAutopilotActive } from "../../webviews/copilotOnRails/extension/autopilot";
 import { readSessionState } from "../../webviews/copilotOnRails/extension/projectSession";
+import { settingUtils } from "../settingUtils";
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from "./CopilotOnRailsContext";
 import { DiagnosticEvent, withDiagnosticEvents } from "./diagnosticUtils";
 
@@ -71,6 +72,15 @@ export async function callWithDiagnosticsAndTelemetryHandling<T>(
     }
 
     setCorProp(corContext, 'autopilot', isAutopilotActive());
+
+    // Record the current approval posture so every command/tool event captures
+    // whether chat actions are auto-approved. Reads the same settings autopilot
+    // toggles (see autopilot.ts): the global chat auto-approve setting and the
+    // default chat permission level.
+    const approvalsAutoApprove: unknown = settingUtils.getGlobalSetting<unknown>('autoApprove', 'chat.tools.global');
+    const approvalsPermissionLevel: unknown = vscode.workspace.getConfiguration('chat.permissions').inspect('default')?.globalValue;
+    setCorProp(corContext, 'approvalsAutoApprove', approvalsAutoApprove);
+    setCorProp(corContext, 'approvalsPermissionLevel', approvalsPermissionLevel);
 
     return await withDiagnosticEvents(corContext, { type: eventDetails.type, name: eventDetails.name }, async () => await command(corContext));
 }
