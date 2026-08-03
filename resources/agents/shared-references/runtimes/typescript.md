@@ -91,6 +91,8 @@ npm install
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
+    "clean": "rimraf dist",
+    "prestart": "npm run clean && npm run build",
     "start": "func start",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -104,6 +106,7 @@ npm install
   },
   "devDependencies": {
     "typescript": "^5.0.0",
+    "rimraf": "^5.0.0",
     "vitest": "^1.0.0"
   }
 }
@@ -115,7 +118,7 @@ npm install
 > The deployed unit for a TS Functions app is the **compiled `dist/`**, not the TypeScript source. `azd` compiles locally (`npm install` + `npm run build`) and packages the output. The server (Kudu/Oryx) then runs `npm install --omit=dev` (production deps only). If the deployed `package.json` still triggers a build, Oryx runs `npm run build` **without** `typescript` (a `devDependency`) and fails with `tsc: not found`. Scaffold the project so the artifact stands alone:
 > - **Dependency split is load-bearing.** Every package imported by runtime code (`dist/**/*.js`) MUST be in `dependencies`; build-only tooling (`typescript`, `@types/*`, test runners, bundlers) MUST be in `devDependencies`. A production install (`--omit=dev`) must satisfy every `require`/`import` in `dist/`.
 > - **Compiled output must be self-sufficient.** `dist/` must never import from `src/` or need a rebuild to run. The `main` field points at compiled `.js` (Rule 12), never a `.ts` entry.
-> - **Prefer disabling the server build over stripping scripts.** The robust deploy config ships the prebuilt `dist/` and turns the platform build **off** (`SCM_DO_BUILD_DURING_DEPLOYMENT=false` / `azd` `host: function` remote build disabled). Do **not** rely on `prepackage`/`postpackage` hooks that temporarily delete `build`/`watch`/`clean` from `package.json` — that treats the symptom (an unwanted server rebuild) instead of the cause. The deploy agent owns the deploy config; the scaffold's job is to guarantee the split above so a prebuilt artifact deploys cleanly.
+> - **Prefer disabling the server build over stripping scripts.** The robust deploy config ships the prebuilt `dist/` and turns the platform build **off** (`SCM_DO_BUILD_DURING_DEPLOYMENT=false` / `azd` `host: function` remote build disabled). Do **not** rely on `prepackage`/`postpackage` hooks that temporarily delete the build scripts (`build`, `watch`, `clean`, `prestart`) from `package.json` — that treats the symptom (an unwanted server rebuild) instead of the cause. The deploy agent owns the deploy config; the scaffold's job is to guarantee the split above so a prebuilt artifact deploys cleanly.
 > - **Native modules stay external.** Packages with compiled native addons (`bcrypt`, `sharp`, `better-sqlite3`, Prisma engines, …) are OS/arch-specific. Keep them in `dependencies` (installed on the Linux host), never bundle their binaries from a Windows/macOS build.
 
 ---
