@@ -6,8 +6,9 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
+import * as vscode from "vscode";
 import { z } from "zod/mini";
-import { startProjectIntegrateCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { azureProjectIntegrateAgent } from "../../../constants";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/telemetryUtils";
 
@@ -27,8 +28,8 @@ export const startProjectIntegrateTool: CopilotTool<typeof startProjectIntegrate
     },
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startProjectIntegrateToolName}/execute`, async (context: IActionContext) => {
-            return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: startProjectIntegrateToolName, extras }, async (corContext) => {
-                await startProjectIntegrateCommand(corContext, input.prompt);
+            return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: startProjectIntegrateToolName, extras }, async () => {
+                await vscode.commands.executeCommand(copilotOnRailsCommandIds.startProjectIntegrate, input.prompt);
                 return { message: 'Started the project integrate agent.' };
             });
         }) ?? {

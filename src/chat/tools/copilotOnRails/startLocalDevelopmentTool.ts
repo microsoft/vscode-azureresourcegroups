@@ -6,8 +6,9 @@
 import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vscode-azext-utils";
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
+import * as vscode from "vscode";
 import { z } from "zod/mini";
-import { startLocalDevelopmentCommand } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
+import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { azureDebugPlanAgent } from "../../../constants";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/telemetryUtils";
 
@@ -27,8 +28,8 @@ export const startLocalDevelopmentTool: CopilotTool<typeof startLocalDevelopment
     },
     execute: async (input, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startLocalDevelopmentToolName}/execute`, async (context: IActionContext) => {
-            return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: startLocalDevelopmentToolName, extras }, async (corContext) => {
-                await startLocalDevelopmentCommand(corContext, input.prompt);
+            return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: startLocalDevelopmentToolName, extras }, async () => {
+                await vscode.commands.executeCommand(copilotOnRailsCommandIds.startLocalDevelopment, input.prompt);
                 return { message: 'Started the local development agent.' };
             });
         }) ?? {
