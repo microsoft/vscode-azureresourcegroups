@@ -3,11 +3,15 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ext } from "../../../extensionVariables";
 import { DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { settingUtils } from "../../../utils/settingUtils";
+import { parseLocalDebugPlanMarkdown } from "../views/utils/parseLocalDebugPlanMarkdown";
+import { getLocalDebugPlanTelemetry, LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX } from "./utils/localDebugPlanTelemetryUtils";
 
 /**
  * Autopilot mode for the create-project workflow.
@@ -42,6 +46,12 @@ const STATE_PRIOR_VALUE = 'copilotOnRails.autopilot.priorAutoApprove';
 const STATE_PRIOR_PERMISSION_LEVEL = 'copilotOnRails.autopilot.priorPermissionLevel';
 /** Epoch ms after which an active run is considered stale and auto-restored. */
 const STATE_DEADLINE = 'copilotOnRails.autopilot.deadline';
+/**
+ * Set once per autopilot run after the implied debug-plan approval telemetry has been
+ * recorded, so an unattended run emits the approval action exactly once even across
+ * window reloads and repeated file-watcher events.
+ */
+const STATE_APPROVAL_RECORDED = 'copilotOnRails.autopilot.debugPlanApprovalRecorded';
 
 /** Command id used by the status-bar item to turn autopilot off. */
 export const DISABLE_AUTOPILOT_COMMAND = 'azureResourceGroups.disableAutopilot';
@@ -50,6 +60,8 @@ let statusBarItem: vscode.StatusBarItem | undefined;
 let completionWatcher: vscode.FileSystemWatcher | undefined;
 let safetyTimer: ReturnType<typeof setTimeout> | undefined;
 let extensionContext: vscode.ExtensionContext | undefined;
+/** In-memory mirror of {@link STATE_APPROVAL_RECORDED} guarding against rapid re-entrant watcher events. */
+let debugPlanApprovalRecorded = false;
 
 export function isAutopilotActive(): boolean {
     if (ext.context.globalState.get<boolean>(STATE_ACTIVE) !== true) {
@@ -141,6 +153,7 @@ function scheduleSafetyTimer(deadline: number): void {
 
 /** Arms the user-facing run aids: status bar, completion watcher, safety timeout. */
 function armAutopilot(deadline: number): void {
+    debugPlanApprovalRecorded = extensionContext?.globalState.get<boolean>(STATE_APPROVAL_RECORDED) === true;
     showStatusBarItem();
     registerCompletionWatcher();
     scheduleSafetyTimer(deadline);
@@ -163,12 +176,58 @@ function registerCompletionWatcher(): void {
         } catch {
             return;
         }
+        // The debug plan file appearing during an unattended run stands in for the manual
+        // approval the user would otherwise give in the local plan view, so record that
+        // approval action before checking whether the chain has finished.
+        await recordAutopilotDebugPlanApproval(content);
         if (isDebugPlanImplemented(content)) {
             await disableAutopilot();
         }
     };
     completionWatcher.onDidCreate((uri) => void check(uri));
     completionWatcher.onDidChange((uri) => void check(uri));
+}
+
+/**
+ * Records the "submit debug plan approval" telemetry action on the autopilot path.
+ *
+ * In autopilot the plan is auto-approved via VS Code's global chat auto-approve, so the manual
+ * approval UI action in the local plan view never fires. This emits the same event through the
+ * same telemetry wrapper the manual approval uses - the shared wrapper stamps `autopilot: true`,
+ * so the auto-approved event stays distinguishable from a manual one. Fires at most once per run
+ * (guarded in-memory and via {@link STATE_APPROVAL_RECORDED}) and never when a manual approval
+ * would have fired, since it only runs while autopilot is active.
+ */
+async function recordAutopilotDebugPlanApproval(content: string): Promise<void> {
+    const context = extensionContext;
+    if (!context || !isAutopilotActive() || debugPlanApprovalRecorded) {
+        return;
+    }
+    // Latch synchronously first so overlapping create/change events can't double-count.
+    debugPlanApprovalRecorded = true;
+    await context.globalState.update(STATE_APPROVAL_RECORDED, true);
+
+    await callWithTelemetryAndErrorHandling(corId('submitDebugPlanApproval'), async (actionContext: IActionContext) => {
+        actionContext.errorHandling.suppressDisplay = true;
+        await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDebugPlanApproval' }, (corContext: CopilotOnRailsContext) => {
+            setCorProp(corContext, 'approvalOutcome', 'submitted');
+            recordAutopilotDebugPlanTelemetry(corContext, content);
+            return Promise.resolve();
+        });
+    });
+}
+
+/** Records the same PII-safe plan summary the manual approval emits, from the raw plan markdown. */
+function recordAutopilotDebugPlanTelemetry(context: CopilotOnRailsContext, content: string): void {
+    try {
+        const telemetry = getLocalDebugPlanTelemetry(parseLocalDebugPlanMarkdown(content));
+        for (const [key, value] of Object.entries(telemetry)) {
+            setCorProp(context, `${LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX}${key}`, value);
+        }
+    } catch {
+        // Telemetry extraction must never block the run; swallow any parsing errors.
+        setCorProp(context, `${LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX}parseFailed`, true);
+    }
 }
 
 /**
@@ -183,6 +242,7 @@ export async function enableAutopilot(context: vscode.ExtensionContext): Promise
     if (context.globalState.get<boolean>(STATE_ACTIVE) !== true) {
         await context.globalState.update(STATE_PRIOR_VALUE, getAutoApproveValue() ?? null);
         await context.globalState.update(STATE_PRIOR_PERMISSION_LEVEL, getPermissionLevelValue() ?? null);
+        await context.globalState.update(STATE_APPROVAL_RECORDED, undefined);
     }
     const deadline = Date.now() + MAX_RUN_DURATION_MS;
     await context.globalState.update(STATE_ACTIVE, true);
@@ -218,7 +278,10 @@ export async function disableAutopilot(): Promise<void> {
         await context.globalState.update(STATE_PRIOR_VALUE, undefined);
         await context.globalState.update(STATE_PRIOR_PERMISSION_LEVEL, undefined);
         await context.globalState.update(STATE_DEADLINE, undefined);
+        await context.globalState.update(STATE_APPROVAL_RECORDED, undefined);
     }
+
+    debugPlanApprovalRecorded = false;
 
     clearSafetyTimer();
     hideStatusBarItem();
