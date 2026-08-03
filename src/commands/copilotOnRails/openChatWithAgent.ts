@@ -185,10 +185,6 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
 }
 
 export async function openChatWithAgent(context: CopilotOnRailsContext, agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
-    // Record the extension-command -> Copilot chat handoff so telemetry always
-    // captures which custom agent a command hands back to.
-    setCorProp(context, 'chatHandoffAction', 'openChatWithAgent');
-    setCorProp(context, 'chatHandoffAgent', agentName);
     setCorProp(context, 'chatAgentName', agentName);
 
     const openChatWithAgentOutcomeKey = 'openChatWithAgentOutcome';
