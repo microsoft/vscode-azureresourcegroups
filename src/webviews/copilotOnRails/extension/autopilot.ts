@@ -11,7 +11,7 @@ import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRa
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { settingUtils } from "../../../utils/settingUtils";
 import { parseLocalDebugPlanMarkdown } from "../views/utils/parseLocalDebugPlanMarkdown";
-import { recordLocalDebugPlanApprovalTelemetry } from "./utils/localDebugPlanApprovalTelemetry";
+import { recordLocalDebugPlanApprovalTelemetry } from "./utils/localDebugPlanTelemetryUtils";
 
 /**
  * Autopilot mode for the create-project workflow.

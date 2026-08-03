@@ -17,7 +17,7 @@ import { type LocalPlanData } from "../../views/utils/parseLocalDebugPlanMarkdow
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { suppressTrackedViewCloseOnce } from "../projectSession";
-import { recordLocalDebugPlanApprovalTelemetry } from "../utils/localDebugPlanApprovalTelemetry";
+import { recordLocalDebugPlanApprovalTelemetry } from "../utils/localDebugPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
