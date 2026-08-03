@@ -17,7 +17,7 @@ import { type LocalPlanData } from "../../views/utils/parseLocalDebugPlanMarkdow
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { suppressTrackedViewCloseOnce } from "../projectSession";
-import { getLocalDebugPlanTelemetry, LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX } from "../utils/localDebugPlanTelemetryUtils";
+import { recordLocalDebugPlanApprovalTelemetry } from "../utils/localDebugPlanApprovalTelemetry";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export class LocalPlanViewController extends WebviewController<Record<string, never>> {
@@ -66,7 +66,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 }
 
                 suppressTrackedViewCloseOnce();
-                this.recordPlanTelemetry(context);
+                recordLocalDebugPlanApprovalTelemetry(context, this.planData);
                 this.panel.dispose();
 
                 openLoadingView({
@@ -77,18 +77,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 });
             });
         });
-    }
-
-    private recordPlanTelemetry(context: CopilotOnRailsContext): void {
-        try {
-            const telemetry = getLocalDebugPlanTelemetry(this.planData);
-            for (const [key, value] of Object.entries(telemetry)) {
-                setCorProp(context, `${LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX}${key}`, value);
-            }
-        } catch {
-            // Telemetry extraction must never block the approval flow; swallow any parsing errors.
-            setCorProp(context, `${LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX}parseFailed`, true);
-        }
     }
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
