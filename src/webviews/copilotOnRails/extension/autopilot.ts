@@ -187,8 +187,8 @@ function registerDebugCompletionWatcher(): void {
 /**
  * Records the "submit debug plan approval" telemetry action on the autopilot path.
  *
- * In autopilot the plan is auto-approved via VS Code's global chat auto-approve, so the manual
- * approval UI action in the local plan view never fires. This emits the same event through the
+ * In autopilot the plan is auto-approved, so the manual
+ * approval UI action in the local plan view never fires. This ensures the same event through the
  * same telemetry wrapper the manual approval uses - the shared wrapper stamps `autopilot: true`,
  * so the auto-approved event stays distinguishable from a manual one. Fires at most once per run
  * (guarded in-memory and via {@link STATE_DEBUG_APPROVAL_RECORDED}) at the point the plan reaches
@@ -196,9 +196,7 @@ function registerDebugCompletionWatcher(): void {
  * is active.
  *
  * The rich plan snapshot is intentionally *not* recorded here. It is captured later, once the plan
- * reaches `Implemented`, by {@link armDebugPlanImplementedWatcher} - at which point the plan reflects
- * what was actually built rather than what was merely offered. Arming here mirrors the manual
- * approval path so both flows capture the implemented snapshot the same way.
+ * reaches `Implemented` to allow us to capture the full plan after the agent is done with it.
  */
 async function recordAutopilotDebugPlanApproval(): Promise<void> {
     const context = extensionContext;
