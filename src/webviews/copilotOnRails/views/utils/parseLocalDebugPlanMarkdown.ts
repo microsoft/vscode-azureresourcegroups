@@ -53,15 +53,49 @@ export function parseLocalDebugPlanMarkdown(markdown: string): LocalPlanData {
 }
 
 /**
+ * Canonical `Status:` values for `.azure/vscode-debug-plan.md`, as defined by the `azure-debug-plan`
+ * and `azure-debug-generate` custom agents — see the plan template's
+ * `> **Status:** {Planning | Approved | Executing | Implemented}` metadata line. Compared
+ * case-insensitively, so callers don't depend on the casing the agent writes.
+ */
+export const LocalDebugPlanStatus = {
+    /** Plan drafted; awaiting the user's approval. */
+    planning: 'Planning',
+    /** User approved the plan; debug-config generation can begin. */
+    approved: 'Approved',
+    /** Debug-config generation is in progress. */
+    executing: 'Executing',
+    /** Debug-config generation finished — the terminal status. */
+    implemented: 'Implemented',
+} as const;
+
+export type LocalDebugPlanStatusValue = typeof LocalDebugPlanStatus[keyof typeof LocalDebugPlanStatus];
+
+/**
+ * Matches a `> **Label:** value` metadata row in the plan header, tolerating the markdown
+ * variations that show up in practice: an optional leading blockquote `>`, optional bold markers,
+ * and the colon sitting either inside or outside the bold (`**Status:**`, `**Status**:`, `Status:`).
+ * A colon is required so prose lines that merely mention the label aren't mistaken for metadata.
+ * Capture group 1 is the raw value up to end of line.
+ */
+const STATUS_METADATA_REGEX = /^\s*>?\s*\**Status[:*]*:[:*]*\s*(.+)$/i;
+const EXECUTION_MODE_METADATA_REGEX = /^\s*>?\s*\**Execution Mode[:*]*:[:*]*\s*(.+)$/i;
+
+/**
  * Returns true when the debug plan markdown reports the `Implemented` status — the point at which
- * debug-config generation has finished. Deliberately tolerant of markdown formatting around the
- * status line, e.g. `> **Status:** Implemented`, `Status: Implemented`, `**Status**: implemented`.
+ * debug-config generation has finished.
  *
  * Kept here (rather than derived from a full parse) so every completion check — resume, autopilot,
- * and the implemented-telemetry watcher — reads "implemented" from one shared, format-tolerant source.
+ * and the implemented-telemetry watcher — reads "implemented" from one shared source. It reuses the
+ * same {@link STATUS_METADATA_REGEX} the header parser uses to identify the status line, so the
+ * status-line shape isn't duplicated, and compares the value case-insensitively against the terminal
+ * {@link LocalDebugPlanStatus.implemented}.
  */
 export function isDebugPlanImplemented(content: string): boolean {
-    return /status\b[^a-z0-9]{0,8}implemented\b/i.test(content);
+    return content.split(/\r?\n/).some((line) => {
+        const value = line.match(STATUS_METADATA_REGEX)?.[1]?.trim();
+        return value?.toLowerCase() === LocalDebugPlanStatus.implemented.toLowerCase();
+    });
 }
 
 function extractHeader(lines: string[]): { title: string; status: string; executionMode: string; headerNote: string; firstSectionIdx: number } {
@@ -87,8 +121,8 @@ function extractHeader(lines: string[]): { title: string; status: string; execut
 
         if (trimmed.startsWith('>')) {
             const text = trimmed.replace(/^>\s?/, '').trim();
-            const statusMatch = text.match(/^\*\*Status:?\*\*:?\s*(.+)$/);
-            const executionModeMatch = text.match(/^\*\*Execution Mode:?\*\*:?\s*(.+)$/);
+            const statusMatch = text.match(STATUS_METADATA_REGEX);
+            const executionModeMatch = text.match(EXECUTION_MODE_METADATA_REGEX);
             if (statusMatch) {
                 status = statusMatch[1].trim();
             } else if (executionModeMatch) {
