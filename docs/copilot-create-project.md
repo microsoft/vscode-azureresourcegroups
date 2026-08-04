@@ -175,7 +175,7 @@ generate the plan.
 
 ## Stage 3 — Review & approve the plan
 
-The plan agent writes `.azure/project-plan.md` (with `Status: Planning`) and opens the **Plan preview** view.
+The plan agent writes `.azure/project-plan.md` (with `**Status**: Planning`) and opens the **Plan preview** view.
 For apps with a UI, the preview also renders one **UI Preview** card per screen (each a sandboxed HTML
 mock‑up) so you can see the proposed layout before any code is written. Read the plan, then **approve** it (or
 type feedback to revise it).
