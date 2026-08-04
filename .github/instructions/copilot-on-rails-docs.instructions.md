@@ -37,7 +37,7 @@ touches the UI, **tell the developer which images to refresh** and why:
   the affected file(s) and say in one line what changed.
 - **Added a brand-new screen or state**: add the matching `📷` placeholder (the blockquote plus its centered
   `<p align="center"><img …></p>` reference — images in this doc are centered, not raw `![]()`) and a
-  **capture checklist** entry (Part 6), then tell the dev it needs a first capture.
+  screenshot references section, then tell the dev it needs a first capture.
 - **Removed a screen**: delete its placeholder and checklist entry, and note the removal.
 - Never delete an existing placeholder just because its PNG is still missing — the images are captured
   separately from the prose.

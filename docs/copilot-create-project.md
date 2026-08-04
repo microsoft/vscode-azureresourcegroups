@@ -188,7 +188,7 @@ type feedback to revise it).
   <img src="images/copilot-create-project/05-plan-preview-ui-cards.png" alt="Plan preview — UI Preview card" />
 </p>
 
-Approving flips the plan to `Status: Approved` and hands off to **`azure-project-scaffold`** via the
+Approving flips the plan to `**Status**: Approved` and hands off to **`azure-project-scaffold`** via the
 `start_project_scaffold` tool.
 
 ## Stage 4 — Scaffold & approve the UI
@@ -466,7 +466,7 @@ Collect before escalating a bug:
 2. The **Inspect Diagnostics** JSON (redacted), or the pasted `Diagnostics data` block from the issue.
 3. Which **stage** failed (plan / scaffold / integrate / debug / deploy) and the last successful hand‑off.
 4. The relevant `.azure/*` artifact(s) for that stage.
-5. Whether **autopilot** was active (`[AUTOPILOT MODE]` marker or `executionMode: auto`).
+5. Whether **autopilot** was active (`[AUTOPILOT MODE]` marker or `**Execution Mode**: auto`).
 6. Screenshots of the failing view.
 
 ---
