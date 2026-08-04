@@ -359,7 +359,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | Path | Written by | Contents |
 | --- | --- | --- |
 | `.azure/requirements.json` | plan agent | Structured requirements answers (statuses: inferred / needs_input / confirmed). |
-| `.azure/project-plan.md` | plan agent | The plan. `Status:` moves `Planning` → `Approved`; may carry `executionMode: auto`. |
+| `.azure/project-plan.md` | plan agent | The plan. `**Status**:` moves `Planning` → `Approved`; may include `**Execution Mode**: auto`. |
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |
 | `.azure/integration-plan.md` | scaffold agent | Brief the integrate agent consumes. |
 | `.azure/vscode-debug-plan.md` | debug‑plan agent | The local debug configuration plan. |
