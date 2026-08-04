@@ -285,9 +285,8 @@ Development → Deploy) and their status.
 
 Autopilot runs the whole pipeline **unattended** — no approval gates, no Next Steps prompts. It activates when
 the invoking chat query begins with the marker `[AUTOPILOT MODE]`, **or** when `.azure/project-plan.md`
-records `executionMode: auto` (front‑matter or an `**Execution Mode**: auto` row). In autopilot, agents hand
-off directly (e.g. scaffold → `start_project_integrate` → `start_local_development`) and skip the Frontend
-preview and Next Steps views.
+includes an `**Execution Mode**: auto` metadata row. In autopilot, agents hand off directly (e.g. scaffold →
+`start_project_integrate` → `start_local_development`) and skip the Frontend preview and Next Steps views.
 
 ---
 
