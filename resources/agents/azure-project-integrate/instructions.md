@@ -17,8 +17,14 @@ metadata:
 
 1. **Migrations** — create the SQL / PostgreSQL schema migrations so the database tables exist. **No seed data.**
 2. **Backend smoke test** — start the backend and verify every endpoint registers and responds.
-3. **Wire frontend to LIVE data** — replace every mock data source in the frontend with real, typed API calls.
+3. **Wire frontend to LIVE data** — replace every mock data source in the frontend with real, typed API calls while preserving the plan's production API topology.
 4. **End-to-end wire-up** — run the frontend and backend together and verify they communicate.
+
+> **Local proxy is not a production topology.** The dev server may proxy `/api` to the local backend, but that proves only local connectivity. Read `Production API Topology`, `Frontend API Base`, and `CORS Owner` from the plan's Services Required section. For a same-origin linked backend, the live client may use `/api`. For a cross-origin backend, use the framework's public build-time environment variable (for example, `VITE_API_BASE`) and make production fail clearly when it is absent; never silently fall back to `/api` in production. Integration records this contract for deployment but does not invent Azure hostnames or configure cloud CORS.
+
+> **No stubbed identity may remain.** When the backend enforces a caller identity, wire the live client to the real source named in the plan's `Identity Transport` row and let a missing identity surface as a genuine `401`. Never invent a constant to silence an auth error (e.g. hardcoding `x-user-id: default-user`) — that is the auth equivalent of a lingering mock import: it ships a security hole and every caller collapses to one user. If the plan says `Anonymous`, send nothing. Integration wires and verifies identity locally; it does not provision the cloud identity resource (Entra app / SWA auth) — that is deploy's job, recorded in the hand-off.
+
+> **Local infra values are dev-only.** Any connection string / endpoint you use to smoke-test (the local `DATABASE_URL`, storage emulator, cache) is a **development** value. Never present it as the production value or let it flow to deploy as a shippable default — the plan's `Production Source` column says where the real value comes from (usually `Infra output` / `Managed identity`). Flag each such value in the deploy hand-off so deploy provisions it rather than shipping a placeholder.
 
 > ⛔ **NEVER create seed data.** No `seed`, `seeds`, `seed-data`, `fixtures`, demo rows, or any file/folder/function named after seeding. You create **schema only**. Integration is proven by the app running against an empty-but-correct schema. If the scaffold left a `seeds/` directory, ignore it — do not extend it, do not depend on it, do not run it.
 
@@ -133,7 +139,9 @@ Requires a scaffolded project. Verify before starting:
 | Replace local types with shared types | Point `src/api/types.ts` at the shared package (e.g. `import type { PublicUser } from '@app/shared'`); delete the frontend's duplicated entity types. The `ApiClient` shape is unchanged. **No `any` types.** |
 | Build the live client | Add `src/api/client.ts` — a second implementation of the **same `ApiClient` interface** (typed `: ApiClient`), method-for-method against the route inventory, base URL from env. |
 | **Swap the seam (one file)** | Edit `src/api/index.ts` so `api` points at the live client (`mockClient` → `liveClient`). This single line wires every page/hook to live data — **no page or hook edits**. |
-| Configure the dev proxy | Point the dev server's `/api` proxy at the backend host (e.g. `http://localhost:7071`) so the frontend reaches live endpoints in development. |
+| Preserve the production topology | Same-origin linked backend: `/api` is valid. Cross-origin backend: require the framework's public API base variable in production and allow `/api` only during local development through the dev proxy. Add the variable to the frontend's `.env.example` without a deployed hostname or secret. |
+| Wire identity (no stub) | If the plan's `Identity Transport` is not `Anonymous`, populate the caller identity in the live client from that real source and let a missing identity return a genuine `401`. Do NOT hardcode a constant identity (e.g. `x-user-id: default-user`) to silence an auth error. Record the cloud identity resource deploy must provision in the hand-off. |
+| Configure the dev proxy | Point the dev server's `/api` proxy at the backend host (e.g. `http://localhost:7071`) so the frontend reaches live endpoints in development. This proxy is local-only and must not be treated as production routing. |
 | Remove the mock layer | Delete `src/api/mockClient.ts` and `src/mocks/*` (and local types now sourced from shared). A lingering `import … from './mockClient'` or `'../mocks'` = NOT done. |
 | **Remove the Mock State Switcher** | Delete the dev-only state switcher the scaffold added: `src/api/previewState.ts`, its corner-switcher component, and every `previewState` import/usage in the mock client, pages, hooks, and app shell. Live data is the only source now — the forced `loading`/`empty`/`error` override must be gone. A lingering `import … previewState` or a rendered Data/Loading/Empty/Error switcher = NOT done. |
 | Keep correct file extensions | JSX (`<Component />`) MUST be `.tsx`; pure TS `.ts`. |
@@ -149,6 +157,8 @@ Requires a scaffolded project. Verify before starting:
 > - The Mock State Switcher (`src/api/previewState.ts` + corner switcher component) is deleted and no longer imported anywhere.
 > - The seam (`src/api/index.ts`) points at the live client; pages/hooks were not edited.
 > - The dev proxy targets the backend host.
+> - The client matches the plan's production API topology; a cross-origin production build cannot silently fall back to `/api`.
+> - Identity is sent from the plan's real `Identity Transport` source (or nothing when `Anonymous`); no hardcoded stub identity remains.
 
 ---
 
@@ -163,6 +173,7 @@ Requires a scaffolded project. Verify before starting:
 | Verify a live request path | Confirm the frontend successfully fetches from the backend — inspect the dev-server/host logs for a real `/api/...` request returning `200` (or load a page via the browser tool and confirm live data renders, not a mock placeholder). At least one page MUST display data that came from the running backend. |
 | Verify a write path (if applicable) | If the app has a create/update flow, exercise one and confirm the backend receives it and the frontend reflects the result. |
 | Capture evidence | Record the request/response (path, status) that proves frontend → backend wiring works. |
+| Record the deployment hand-off | Append a **Deploy must resolve** section to `.azure/integration-plan.md` — the breadcrumb trail of everything that works locally but is NOT production-ready. Include: the production API topology + public API base variable (if any) + backend CORS owner; the identity transport the client now sends and the cloud identity resource deploy must provision; and every env var whose value is dev-only (from the plan's `Production Source` column — e.g. `DATABASE_URL` = `Infra output`). State explicitly that the local proxy + local DB evidence does not verify deployed routing, auth, or data. |
 | Shut down cleanly | Stop both processes after verifying. |
 
 **Reference**: [end-to-end.md](.github/agents/azure-project-integrate/references/end-to-end.md) for running both processes concurrently cross-platform and reading the evidence.

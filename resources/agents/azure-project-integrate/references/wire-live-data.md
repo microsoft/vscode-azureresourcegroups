@@ -34,7 +34,13 @@ After this step, a search of the frontend `src/` for `mock` / `mockData` / `prev
    import type { ApiClient } from './types';
    import type { PublicUser, CreateUserRequest } from '@app/shared';
 
-   const BASE = import.meta.env.VITE_API_BASE ?? '/api';
+   // Cross-origin production topology: local development uses the Vite proxy,
+   // while production must receive the deployed backend URL at build time.
+   const configuredBase = import.meta.env.VITE_API_BASE;
+   if (import.meta.env.PROD && !configuredBase) {
+     throw new Error('VITE_API_BASE is required for the production build');
+   }
+   const BASE = configuredBase ?? '/api';
 
    async function request<T>(path: string, init?: RequestInit): Promise<T> {
      const res = await fetch(`${BASE}${path}`, {
@@ -54,6 +60,23 @@ After this step, a search of the frontend `src/` for `mock` / `mockData` / `prev
      // ...one method per endpoint, matching the ApiClient interface exactly
    };
    ```
+   The example above is for a **cross-origin backend**. For a **same-origin linked backend**, use `const BASE = '/api';` and do not require `VITE_API_BASE`. Follow the topology recorded in the project plan; never choose based only on the fact that the local proxy works. Public Vite variables are embedded into the bundle, so deployment must provide `VITE_API_BASE` before `vite build`, not after the static files have been produced.
+
+   The client guard fails clearly when the deployed app starts, but Vite does not execute application modules while bundling. For a cross-origin topology, also validate the variable in `vite.config.ts` so packaging itself fails before producing a broken bundle:
+   ```ts
+   import { defineConfig, loadEnv } from 'vite';
+
+   export default defineConfig(({ mode }) => {
+     const env = loadEnv(mode, process.cwd(), '');
+     if (mode === 'production' && !env.VITE_API_BASE) {
+       throw new Error('VITE_API_BASE is required for the production build');
+     }
+
+     return {
+       // Existing plugins and server configuration.
+     };
+   });
+   ```
    Because `liveClient` is typed `: ApiClient`, the compiler guarantees it covers every method the pages already call.
 3. **Swap the seam — the one file that changes.** Edit `src/api/index.ts` so `api` points at the live client:
    ```ts
@@ -72,9 +95,11 @@ After this step, a search of the frontend `src/` for `mock` / `mockData` / `prev
 
 ---
 
-## Dev proxy (so `/api` reaches the backend)
+## Dev proxy (so `/api` reaches the backend locally)
 
 Point the dev server's `/api` proxy at the backend host from Step 2.
+
+This proxy exists only in the development server. It does not create an Azure production route and does not remove the need for a production API base URL or backend CORS when the frontend and API use different origins.
 
 **Vite** (`vite.config.ts`):
 ```ts
