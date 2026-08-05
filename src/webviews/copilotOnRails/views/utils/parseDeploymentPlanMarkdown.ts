@@ -47,7 +47,7 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
     const status = extractMetadata(lines, 'Status') ?? 'Unknown';
     const mode = extractMetadata(lines, 'Mode') ?? 'Unknown';
     const rawSubscription = extractMetadata(lines, 'Subscription') ?? findAttribute(requirements, 'Subscription') ?? 'Unknown';
-    const subscription = stripAnnotation(rawSubscription);
+    const subscription = stripAnnotation(rawSubscription) || 'Unknown';
     const rawLocation = extractMetadata(lines, 'Location') ?? findAttribute(requirements, 'Location') ?? 'Unknown';
 
     // Parse location: "East US (`eastus`)" -> name="East US", code="eastus"
@@ -275,7 +275,7 @@ function findAttribute(table: DeploymentPlanTable, attribute: string): string | 
 
 /** Strips trailing LLM-generated annotations (e.g. "⚠️ ...note...") from a metadata value. */
 function stripAnnotation(value: string): string {
-    return value.replace(/\s*[\u26A0\u2705\u274C\u2139\u{1F4A1}\u{1F6A8}]\uFE0F?\s.*/su, '').trim() || value;
+    return value.replace(/\s*[\u26A0\u2705\u274C\u2139\u{1F4A1}\u{1F6A8}]\uFE0F?\s.*/su, '').trim();
 }
 
 function isWorkspaceTable(table: DeploymentPlanTable): boolean {
