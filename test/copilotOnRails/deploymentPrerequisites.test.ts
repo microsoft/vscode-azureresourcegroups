@@ -13,7 +13,7 @@ import {
     deploySkillVersionTelemetryKey,
     parseSkillMetadataVersion,
     readWorkspaceSkillVersion,
-    skillExistsInRoots,
+    skillExistsInRoot,
     unknownSkillVersion,
 } from '../../src/commands/copilotOnRails/deploymentPrerequisites';
 
@@ -107,35 +107,44 @@ suite('deploymentPrerequisites', () => {
             fs.rmSync(tempDir, { recursive: true, force: true });
         });
 
-        test('skillExistsInRoots is false when the workspace copy is missing (global copy does not count)', async () => {
+        test('skillExistsInRoot is false when the workspace copy is missing (global copy does not count)', async () => {
             const globalRoot = path.join(tempDir, 'global', '.agents');
             const workspaceRoot = path.join(tempDir, 'workspace', '.agents');
             // Only the global-like root has the skill; the workspace root does not.
             writeSkillMarkdown(globalRoot, 'azure-prepare', azurePrepareSkillMd);
 
-            const existsInWorkspace = await skillExistsInRoots([Uri.file(workspaceRoot)], 'azure-prepare');
+            const existsInWorkspace = await skillExistsInRoot(Uri.file(workspaceRoot), 'azure-prepare');
             assert.strictEqual(existsInWorkspace, false, 'a global copy must not satisfy the workspace-only check');
         });
 
-        test('skillExistsInRoots is true when the workspace copy is present', async () => {
+        test('skillExistsInRoot is true when the workspace copy is present', async () => {
             const workspaceRoot = path.join(tempDir, 'workspace', '.agents');
             writeSkillMarkdown(workspaceRoot, 'azure-prepare', azurePrepareSkillMd);
 
-            const existsInWorkspace = await skillExistsInRoots([Uri.file(workspaceRoot)], 'azure-prepare');
+            const existsInWorkspace = await skillExistsInRoot(Uri.file(workspaceRoot), 'azure-prepare');
             assert.strictEqual(existsInWorkspace, true);
+        });
+
+        test('skillExistsInRoot is false when there is no workspace root', async () => {
+            assert.strictEqual(await skillExistsInRoot(undefined, 'azure-prepare'), false);
         });
 
         test('readWorkspaceSkillVersion resolves the semver from a workspace SKILL.md', async () => {
             const workspaceRoot = path.join(tempDir, '.agents');
             writeSkillMarkdown(workspaceRoot, 'azure-prepare', azurePrepareSkillMd);
 
-            const version = await readWorkspaceSkillVersion([Uri.file(workspaceRoot)], 'azure-prepare');
+            const version = await readWorkspaceSkillVersion(Uri.file(workspaceRoot), 'azure-prepare');
             assert.strictEqual(version, '1.3.1');
         });
 
         test('readWorkspaceSkillVersion returns undefined when the skill is not installed in the workspace', async () => {
             const workspaceRoot = path.join(tempDir, '.agents');
-            const version = await readWorkspaceSkillVersion([Uri.file(workspaceRoot)], 'azure-validate');
+            const version = await readWorkspaceSkillVersion(Uri.file(workspaceRoot), 'azure-validate');
+            assert.strictEqual(version, undefined);
+        });
+
+        test('readWorkspaceSkillVersion returns undefined when there is no workspace root', async () => {
+            const version = await readWorkspaceSkillVersion(undefined, 'azure-prepare');
             assert.strictEqual(version, undefined);
         });
 
@@ -143,13 +152,13 @@ suite('deploymentPrerequisites', () => {
             const workspaceRoot = path.join(tempDir, '.agents');
             writeSkillMarkdown(workspaceRoot, 'azure-deploy', `---\nname: azure-deploy\nmetadata:\n  author: Microsoft\n---\n`);
 
-            const version = await readWorkspaceSkillVersion([Uri.file(workspaceRoot)], 'azure-deploy');
+            const version = await readWorkspaceSkillVersion(Uri.file(workspaceRoot), 'azure-deploy');
             assert.strictEqual(version, undefined);
         });
 
         test('a missing version falls back to the unknown sentinel', async () => {
             const workspaceRoot = path.join(tempDir, '.agents');
-            const version = await readWorkspaceSkillVersion([Uri.file(workspaceRoot)], 'azure-deploy');
+            const version = await readWorkspaceSkillVersion(Uri.file(workspaceRoot), 'azure-deploy');
             assert.strictEqual(version ?? unknownSkillVersion, unknownSkillVersion);
         });
     });

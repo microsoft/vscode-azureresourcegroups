@@ -32,13 +32,15 @@ async function fileExists(uri: vscode.Uri): Promise<boolean> {
     }
 }
 
-/**
- * The `.agents` roots inside the user's workspace. Intentionally does NOT include the global
- * `~/.agents` location: the deploy gate guarantees a *workspace* copy of the deploy skills, so a
- * global copy must not short-circuit the local install.
- */
-export function getWorkspaceAgentsRoots(): vscode.Uri[] {
-    return vscode.workspace.workspaceFolders?.map(folder => vscode.Uri.joinPath(folder.uri, '.agents')) ?? [];
+export function getWorkspaceAgentsRoot(): vscode.Uri | undefined {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    if (!folder) {
+        return undefined;
+    }
+    // Copilot on Rails is single-root, so only the first workspace folder is considered. This is the
+    // workspace `.agents` root, not the global `~/.agents` location - a global copy of a deploy skill
+    // must not short-circuit the local install.
+    return vscode.Uri.joinPath(folder.uri, '.agents');
 }
 
 /** Uri of a skill's `SKILL.md` under a given `.agents` root. */
@@ -46,20 +48,18 @@ function skillMarkdownUri(agentsRoot: vscode.Uri, skillName: string): vscode.Uri
     return vscode.Uri.joinPath(agentsRoot, 'skills', skillName, skillFileName);
 }
 
-/** Returns the first `.agents` root (among the given roots) that contains the skill's `SKILL.md`, or `undefined`. */
-async function findSkillMarkdown(roots: vscode.Uri[], skillName: string): Promise<vscode.Uri | undefined> {
-    for (const root of roots) {
-        const uri = skillMarkdownUri(root, skillName);
-        if (await fileExists(uri)) {
-            return uri;
-        }
+/** Returns the skill's `SKILL.md` under the given `.agents` root when it exists, or `undefined`. */
+async function findSkillMarkdown(root: vscode.Uri | undefined, skillName: string): Promise<vscode.Uri | undefined> {
+    if (!root) {
+        return undefined;
     }
-    return undefined;
+    const uri = skillMarkdownUri(root, skillName);
+    return (await fileExists(uri)) ? uri : undefined;
 }
 
-/** Whether the given skill's `SKILL.md` exists under any of the given `.agents` roots. */
-export async function skillExistsInRoots(roots: vscode.Uri[], skillName: string): Promise<boolean> {
-    return (await findSkillMarkdown(roots, skillName)) !== undefined;
+/** Whether the given skill's `SKILL.md` exists under the given `.agents` root. */
+export async function skillExistsInRoot(root: vscode.Uri | undefined, skillName: string): Promise<boolean> {
+    return (await findSkillMarkdown(root, skillName)) !== undefined;
 }
 
 /**
@@ -132,8 +132,8 @@ function stripYamlScalarQuotes(value: string): string {
  * Resolves a deploy skill's semver from its workspace `SKILL.md` `metadata.version`, or `undefined`
  * when the skill isn't installed in the workspace or its version can't be parsed. Never throws.
  */
-export async function readWorkspaceSkillVersion(roots: vscode.Uri[], skillName: string): Promise<string | undefined> {
-    const uri = await findSkillMarkdown(roots, skillName);
+export async function readWorkspaceSkillVersion(root: vscode.Uri | undefined, skillName: string): Promise<string | undefined> {
+    const uri = await findSkillMarkdown(root, skillName);
     if (!uri) {
         return undefined;
     }
@@ -153,7 +153,7 @@ export function deploySkillVersionTelemetryKey(skillName: string): string {
 
 /** Whether the `azure-prepare` skill has a workspace copy (global `~/.agents` copies do not count). */
 async function hasAzurePrepareSkillInWorkspace(): Promise<boolean> {
-    return skillExistsInRoots(getWorkspaceAgentsRoots(), azurePrepareSkillName);
+    return skillExistsInRoot(getWorkspaceAgentsRoot(), azurePrepareSkillName);
 }
 
 /**
@@ -163,11 +163,11 @@ async function hasAzurePrepareSkillInWorkspace(): Promise<boolean> {
  * risking the gate.
  */
 async function recordDeploySkillVersions(context: CopilotOnRailsContext): Promise<void> {
-    const roots = getWorkspaceAgentsRoots();
+    const root = getWorkspaceAgentsRoot();
     for (const skillName of deploySkillNames) {
         let version: string | undefined;
         try {
-            version = await readWorkspaceSkillVersion(roots, skillName);
+            version = await readWorkspaceSkillVersion(root, skillName);
         } catch {
             version = undefined;
         }
@@ -188,8 +188,6 @@ export async function ensureAzureDeploymentPrerequisites(context: CopilotOnRails
 async function ensureAzureDeploymentPrerequisitesCore(context: CopilotOnRailsContext): Promise<boolean> {
     let copilotForAzure = vscode.extensions.getExtension(gitHubCopilotForAzureExtensionId);
     const hasExtension = !!copilotForAzure;
-    // Key the "already installed" check off the *workspace* copy only: a global `~/.agents` copy must
-    // not short-circuit the local install, since the deploy gate guarantees a workspace copy.
     const hasSkill = await hasAzurePrepareSkillInWorkspace();
 
     setCorProp(context, 'copilotForAzureExtensionInstalled', hasExtension);
@@ -225,8 +223,6 @@ async function ensureAzureDeploymentPrerequisitesCore(context: CopilotOnRailsCon
         await copilotForAzure.activate();
 
         installing = 'skill';
-        // Only run the local skills install when the workspace copy is missing - don't force-refresh
-        // or re-download when a local copy already exists.
         if (!(await hasAzurePrepareSkillInWorkspace())) {
             await vscode.commands.executeCommand(installAzureSkillsLocallyCommandId);
         }
