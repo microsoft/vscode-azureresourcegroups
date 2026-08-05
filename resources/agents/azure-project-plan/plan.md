@@ -110,9 +110,8 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 
 | Azure Service | Role in App | Environment Variable | Default Value (Local) | Production Source | Classification |
 |---------------|------------|---------------------|----------------------|------------------|----------------|
-| {Blob Storage} | {Store uploaded images} | {STORAGE_CONNECTION_STRING} | {UseDevelopmentStorage=true} | {Managed identity} | {Essential} |
+| {Blob Storage} | {Store uploaded images} | {STORAGE_CONNECTION_STRING} | {UseDevelopmentStorage=true} | {Infra output} | {Essential} |
 | {PostgreSQL} | {Primary data store} | {DATABASE_URL} | {postgresql://localdev:localdevpassword@localhost:5432/appdb} | {Infra output} | {Essential} |
-| {PostgreSQL} | {Primary data store} | {DATABASE_URL} | {postgresql://localdev:localdevpassword@localhost:5432/appdb} | {Essential} |
 
 ---
 
