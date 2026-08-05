@@ -7,13 +7,14 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microso
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
+import { detectDeploymentCliPrerequisites, getCliPrerequisiteTelemetry } from "../../../../commands/copilotOnRails/deploymentCliPrerequisites";
 import { ensureAzureDeploymentPrerequisites } from "../../../../commands/copilotOnRails/deploymentPrerequisites";
 import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDeployAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
-import { type DeploymentPlanData } from "../../views/utils/deploymentPlanTypes";
+import { type CliPrerequisite, type DeploymentPlanData } from "../../views/utils/deploymentPlanTypes";
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { DEPLOYMENT_PLAN_TELEMETRY_PREFIX, getDeploymentPlanTelemetry } from "../utils/deploymentPlanTelemetryUtils";
@@ -67,6 +68,12 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
 export class DeploymentPlanViewController extends WebviewController<DeploymentPlanViewConfiguration> {
     private planData: DeploymentPlanData;
     private sourceFileUri: vscode.Uri | undefined;
+    /**
+     * Deploy CLI (`azd` / `az`) prerequisites detected extension-side. Kept
+     * separate from `planData` (which mirrors the external `deployment-plan.md`)
+     * so plan reloads never clobber it and it is never parsed from that plan.
+     */
+    private cliPrerequisites: CliPrerequisite[] | undefined;
 
     constructor(planData: DeploymentPlanData, sourceFileUri?: vscode.Uri) {
         const strings = getDeploymentPlanViewStrings();
@@ -76,6 +83,7 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
         this.sourceFileUri = sourceFileUri;
 
         void this.postDeploymentPlanData();
+        void this.refreshCliPrerequisites(false);
 
         this.panel.webview.onDidReceiveMessage((message: { command: string; data?: unknown; prompt?: string }) => {
             switch (message.command) {
@@ -84,6 +92,9 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                     break;
                 case 'approve':
                     void this.approvePlan();
+                    break;
+                case 'refreshCliPrerequisites':
+                    void this.refreshCliPrerequisites(true);
                     break;
                 case 'submitPlanFeedback': {
                     const query = message.prompt?.trim();
@@ -122,6 +133,39 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
         } catch {
             // Telemetry extraction must never block the approval flow; swallow any parsing errors.
             setCorProp(context, `${DEPLOYMENT_PLAN_TELEMETRY_PREFIX}parseFailed`, true);
+        }
+
+        // Additionally record the detected CLI versions and whether an update was
+        // recommended for each at plan-approval time (D6). Unknown/undetected
+        // records as a clearly-empty value and never crashes the approval flow.
+        try {
+            const cliTelemetry = getCliPrerequisiteTelemetry(this.cliPrerequisites);
+            for (const [key, value] of Object.entries(cliTelemetry)) {
+                setCorProp(context, `${DEPLOYMENT_PLAN_TELEMETRY_PREFIX}${key}`, value);
+            }
+        } catch {
+            setCorProp(context, `${DEPLOYMENT_PLAN_TELEMETRY_PREFIX}cliDetectionFailed`, true);
+        }
+    }
+
+    /**
+     * Detects the deploy CLI prerequisites (`azd` / `az`) extension-side and pushes
+     * the refreshed card data to the webview. `userInitiated` distinguishes the
+     * re-check button (which shows a spinner) from the initial background pass.
+     */
+    private async refreshCliPrerequisites(userInitiated: boolean): Promise<void> {
+        if (userInitiated) {
+            void this.panel.webview.postMessage({ command: 'cliPrerequisitesRefreshing' });
+        }
+        try {
+            this.cliPrerequisites = await detectDeploymentCliPrerequisites();
+        } catch {
+            // Detection is best-effort; leave whatever we had (or undefined) in place.
+        } finally {
+            void this.postDeploymentPlanData();
+            if (userInitiated) {
+                void this.panel.webview.postMessage({ command: 'cliPrerequisitesRefreshComplete' });
+            }
         }
     }
 
@@ -175,6 +219,6 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
     }
 
     private async postDeploymentPlanData(): Promise<void> {
-        await this.panel.webview.postMessage({ command: 'setDeploymentPlanData', data: this.planData });
+        await this.panel.webview.postMessage({ command: 'setDeploymentPlanData', data: { ...this.planData, cliPrerequisites: this.cliPrerequisites } });
     }
 }

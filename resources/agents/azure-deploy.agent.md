@@ -108,3 +108,13 @@ If the flow is interrupted for any reason — a terminal command requests a pass
 ## Prerequisites
 
 A scaffolded project with a working local development environment. If the workspace has not yet been scaffolded, stop and direct the user to run the `azure-project-scaffold` agent first. If the local development environment has not yet been set up, stop and direct the user to run the `azure-debug-plan` agent first.
+
+### CLI prerequisites (`azd` / `az`) are detected by the extension — do not put them in the plan
+
+The Azure Developer CLI (`azd`) and Azure CLI (`az`) are required to deploy, but **you do not detect, report, install, or upgrade them, and you must not write them into `.azure/deployment-plan.md`.** The extension detects `azd`/`az` itself and surfaces each one's status, detected version, and install/upgrade guidance in the deployment plan preview's **Prerequisites card** (opened by `open_deploy_plan_view` in Step A), with a "re-check" affordance the user drives. That card is owned by the extension and sourced from code — it is **not** parsed from `deployment-plan.md`.
+
+Therefore:
+
+- **Do not add a Prerequisites / Tooling / "Required CLIs" section to `deployment-plan.md`** for `azd` or `az`. The `azure-prepare` skill's plan is left exactly as it authors it.
+- **Do not run `azd version` / `az version`, install, or upgrade these CLIs yourself** as part of planning. An out-of-date or unconfirmed CLI is surfaced as a non-blocking nudge in the card, not a hard stop — deployment is not aborted for it.
+- The `azure-prepare` skill assumes `azd`/`az` already exist and does not install them; that is expected. Continue the normal Step A → Step B → generate → Step C flow.

@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Textarea, Tooltip } from '@fluentui/react-components';
-import { CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { ArrowSyncRegular, CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { useConfiguration, WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import './styles/deploymentPlanView.scss';
-import { type DeploymentPlanData, type DeploymentPlanTable } from './utils/deploymentPlanTypes';
+import { type CliPrerequisite, type DeploymentPlanData, type DeploymentPlanTable } from './utils/deploymentPlanTypes';
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from './utils/viewConfigTypes';
 
 export type { DeploymentPlanData, DeploymentPlanTable };
@@ -67,6 +67,7 @@ export const DeploymentPlanView = (): JSX.Element => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [isAwaitingRevision, setIsAwaitingRevision] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
+    const [isRefreshingCli, setIsRefreshingCli] = useState(false);
     // Tracks the ORIGINAL SKU value when first edited, keyed by row index.
     // Used to revert cells when a dropdown feedback item is discarded or the
     // user selects the same value again.
@@ -115,6 +116,10 @@ export const DeploymentPlanView = (): JSX.Element => {
                 setDrawerOpen(false);
             } else if (message?.command === 'revisionComplete') {
                 setIsAwaitingRevision(false);
+            } else if (message?.command === 'cliPrerequisitesRefreshing') {
+                setIsRefreshingCli(true);
+            } else if (message?.command === 'cliPrerequisitesRefreshComplete') {
+                setIsRefreshingCli(false);
             }
         };
         window.addEventListener('message', handler);
@@ -132,6 +137,11 @@ export const DeploymentPlanView = (): JSX.Element => {
         }
         vscodeApi.postMessage({ command: 'approve', data: plan });
     }, [vscodeApi, plan, hasEdits, isAlreadyApproved, missingRequiredSelection]);
+
+    const handleRefreshCli = useCallback(() => {
+        setIsRefreshingCli(true);
+        vscodeApi.postMessage({ command: 'refreshCliPrerequisites' });
+    }, [vscodeApi]);
 
     const handleSubscriptionChange = useCallback((value: string) => {
         if (!plan) { return; }
@@ -477,6 +487,12 @@ export const DeploymentPlanView = (): JSX.Element => {
                     </div>
                 </div>
 
+                <CliPrerequisitesCard
+                    prerequisites={plan.cliPrerequisites}
+                    isRefreshing={isRefreshingCli}
+                    onRefresh={handleRefreshCli}
+                />
+
                 {plan.architecture.length > 0 && (
                     <details className='sectionCard' open>
                         <summary><h2>{strings.architectureHeading}</h2></summary>
@@ -664,6 +680,90 @@ const SubmitEditsDialog = ({ strings, open, editCount, onCancel, onSubmit }: Sub
         </Dialog>
     );
 };
+
+// Renders the deploy CLI prerequisites (`azd` / `az`) detected extension-side.
+// Reuses the Prerequisites card visual pattern from the Scaffold / Local Debug
+// phases (`sectionCard prerequisitesCard`, status chips, a re-check button), but
+// its data is sourced from the extension - never parsed from the external
+// `deployment-plan.md`. Only two states are shown (D5): Installed (with the
+// detected version) or Unknown (couldn't confirm - show install instructions).
+// "Not installed" is never rendered for a CLI, since a sandbox can hide a real
+// binary. An out-of-date CLI (>= 2 minor versions behind latest stable) shows an
+// "update recommended" nudge; deploy is never blocked.
+const CliPrerequisitesCard = ({ prerequisites, isRefreshing, onRefresh }: { prerequisites: CliPrerequisite[] | undefined; isRefreshing: boolean; onRefresh: () => void }): JSX.Element => (
+    <div className='sectionCard prerequisitesCard cliPrerequisitesCard'>
+        <div className='sectionHeadingRow'>
+            <h2>Prerequisites</h2>
+            <Tooltip content={isRefreshing ? 'Checking prerequisites…' : 'Re-check prerequisites'} relationship='label'>
+                <Button
+                    appearance='subtle'
+                    size='small'
+                    icon={isRefreshing ? <Spinner size='tiny' /> : <ArrowSyncRegular />}
+                    onClick={onRefresh}
+                    disabled={isRefreshing}
+                />
+            </Tooltip>
+        </div>
+        <div className='sectionContent'>
+            {prerequisites === undefined ? (
+                <p className='paragraph'>Checking installed CLI tools…</p>
+            ) : (
+                prerequisites.map(prereq => <CliPrerequisiteRow key={prereq.id} prereq={prereq} />)
+            )}
+        </div>
+    </div>
+);
+
+const CliInstalledChip = ({ status }: { status: CliPrerequisite['status'] }): JSX.Element => (
+    <span className={`installedChip installed-${status}`}>
+        <span className={`codicon ${status === 'installed' ? 'codicon-pass-filled' : 'codicon-question'}`} />
+        {status === 'installed' ? 'Installed' : 'Unknown'}
+    </span>
+);
+
+const CliInstallInstructions = ({ install }: { install: CliPrerequisite['install'] }): JSX.Element => (
+    <div className='cliPrereqInstall'>
+        <span className='cliPrereqInstallIntro'>{install.intro}</span>
+        {install.commands.map((command, i) => (
+            <code key={i} className='cliPrereqCommand'>{command}</code>
+        ))}
+        {install.docsUrl && <span className='cliPrereqDocs'>Docs: {install.docsUrl}</span>}
+    </div>
+);
+
+const CliPrerequisiteRow = ({ prereq }: { prereq: CliPrerequisite }): JSX.Element => (
+    <div className='cliPrereqRow'>
+        <div className='cliPrereqHeader'>
+            <span className='cliPrereqName'>{prereq.name}</span>
+            <CliInstalledChip status={prereq.status} />
+            {prereq.status === 'installed' && prereq.version && (
+                <code className='cliPrereqVersion'>v{prereq.version}</code>
+            )}
+        </div>
+        {prereq.status === 'installed' && prereq.updateRecommended && (
+            <div className='prerequisitesCallToAction' role='alert'>
+                <span className='codicon codicon-warning' />
+                <div className='prerequisitesCallToActionBody'>
+                    <span className='prerequisitesCallToActionTitle'>
+                        Update recommended - version {prereq.version} is at least two minor versions behind the latest stable{prereq.latestVersion ? ` (${prereq.latestVersion})` : ''}.
+                    </span>
+                    <CliInstallInstructions install={prereq.install} />
+                </div>
+            </div>
+        )}
+        {prereq.status === 'unknown' && (
+            <div className='prerequisitesCallToAction'>
+                <span className='codicon codicon-question' />
+                <div className='prerequisitesCallToActionBody'>
+                    <span className='prerequisitesCallToActionTitle'>
+                        Couldn’t confirm {prereq.name} is installed. Deployment can continue - if it isn’t installed, use the steps below, then re-check.
+                    </span>
+                    <CliInstallInstructions install={prereq.install} />
+                </div>
+            </div>
+        )}
+    </div>
+);
 
 const PlanTable = ({ table }: { table: DeploymentPlanTable }): JSX.Element => (
     <table className='planTable'>

@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import { gitHubCopilotForAzureExtensionId } from '../../constants';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
+import { cliVersionForTelemetry, detectCliVersions } from './deploymentCliPrerequisites';
 
 const azurePrepareSkillName = 'azure-prepare';
 const skillFileName = 'SKILL.md';
@@ -37,6 +38,8 @@ async function hasAzurePrepareSkill(): Promise<boolean> {
 }
 
 export async function ensureAzureDeploymentPrerequisites(context: CopilotOnRailsContext): Promise<boolean> {
+    await recordDetectedCliVersions(context);
+
     let copilotForAzure = vscode.extensions.getExtension(gitHubCopilotForAzureExtensionId);
     const hasExtension = !!copilotForAzure;
     const hasSkill = await hasAzurePrepareSkill();
@@ -92,4 +95,19 @@ export async function ensureAzureDeploymentPrerequisites(context: CopilotOnRails
         vscode.l10n.t('GitHub Copilot for Azure with the "{0}" skill is required to start deployment.', azurePrepareSkillName),
     );
     return false;
+}
+
+/**
+ * Always record the detected `azd` + `az` CLI versions on the run (D6). This is
+ * best-effort telemetry only - detection never throws, and an unconfirmable CLI
+ * records as a clearly-empty value rather than blocking the gate.
+ */
+async function recordDetectedCliVersions(context: CopilotOnRailsContext): Promise<void> {
+    try {
+        const versions = await detectCliVersions();
+        setCorProp(context, 'deployCliAzdVersion', cliVersionForTelemetry(versions.azd));
+        setCorProp(context, 'deployCliAzVersion', cliVersionForTelemetry(versions.az));
+    } catch (error) {
+        setCorErrorProp(context, 'deployCliDetectionError', parseError(error).message);
+    }
 }

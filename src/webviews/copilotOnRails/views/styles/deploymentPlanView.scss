@@ -259,6 +259,111 @@
         }
     }
 
+    .cliPrerequisitesCard {
+        .sectionHeadingRow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sectionContent {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .cliPrereqRow {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .cliPrereqHeader {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .cliPrereqName {
+            font-weight: 600;
+        }
+
+        .cliPrereqVersion {
+            font-size: 0.85em;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .installedChip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+            font-size: 0.85em;
+
+            .codicon {
+                font-size: 13px;
+            }
+
+            &.installed-installed {
+                color: var(--vscode-testing-iconPassed, var(--vscode-charts-green));
+            }
+
+            &.installed-unknown {
+                color: var(--vscode-descriptionForeground);
+            }
+        }
+
+        .prerequisitesCallToAction {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border));
+            border-radius: 6px;
+            font-size: 0.82em;
+            color: var(--vscode-descriptionForeground);
+
+            .codicon {
+                flex: 0 0 auto;
+                margin-top: 2px;
+                color: var(--vscode-notificationsWarningIcon-foreground, var(--vscode-editorWarning-foreground));
+            }
+
+            .codicon-question {
+                color: var(--vscode-descriptionForeground);
+            }
+
+            .prerequisitesCallToActionBody {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+        }
+
+        .cliPrereqInstall {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .cliPrereqCommand {
+            font-family: var(--vscode-editor-font-family, monospace);
+            font-size: 0.95em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: var(--vscode-textCodeBlock-background, var(--vscode-editor-background));
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .cliPrereqDocs {
+            font-size: 0.95em;
+            opacity: 0.85;
+            word-break: break-all;
+        }
+    }
+
     .planTable {
         width: 100%;
         margin: 2px 0;
