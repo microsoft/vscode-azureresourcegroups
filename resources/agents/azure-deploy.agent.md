@@ -89,7 +89,7 @@ When a service uses `host: staticwebapp`, `azd up` can report success while the 
 4. **Leave the Static Web App `properties: {}` for `azd` deploys** — do **not** set `repositoryUrl` / `branch` / `buildProperties` in Bicep. Those switch the app to GitHub-Actions deployment and `azd`'s token upload becomes a no-op (placeholder page). GitHub-linked mode is an *alternative* to `azd`, never combined with it.
 5. **Pre-flight the region.** Static Web Apps control-plane regions are limited (`westus2`, `centralus`, `eastus2`, `westeurope`, `eastasia`); verify `AZURE_LOCATION` is one of them before `azd provision` or it fails with `LocationNotAvailableForResourceType`.
 
-After the user deploys, verify the `WEB_URL` output returns HTTP 200 for `/` **and** a deep client route — a 200 root with a 404 deep link is the signature of a dropped `staticwebapp.config.json`.
+After deployment completes, verify the `WEB_URL` output returns HTTP 200 for `/` **and** a deep client route — a 200 root with a 404 deep link is the signature of a dropped `staticwebapp.config.json`.
 
 ### Container Apps + ACR / managed-identity first-deploy invariants (avoid pull-auth and packaging stalls)
 
