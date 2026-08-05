@@ -100,7 +100,7 @@ export function startAzureDebugGenerateCommand(context: CopilotOnRailsContext, p
 }
 
 export async function startDeploymentCommand(context: CopilotOnRailsContext, prompt?: string): Promise<void> {
-    await openChatWithAgent(context, copilotOnRailsCustomAgents.azureDeployCustomAgent, prompt ?? 'Deploy the project to Azure. Generate and approve `.azure/deployment-plan.md`, prepare the required infrastructure and application artifacts, then complete the mandatory azure-prepare → azure-validate → azure-deploy skill chain and verify the live endpoints.', {
+    await openChatWithAgent(context, copilotOnRailsCustomAgents.azureDeployCustomAgent, prompt ?? 'Deploy the project to Azure. Generate `.azure/deployment-plan.md`, open its preview, and wait for user approval before preparing the required infrastructure and application artifacts. Then complete the mandatory azure-prepare → azure-validate → azure-deploy skill chain and verify the live endpoints.', {
         stage: 2,
         title: l10n.t('Deploying to Azure…'),
         message: l10n.t('Copilot is planning, validating, and deploying your project.'),
