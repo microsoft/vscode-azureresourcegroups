@@ -13,8 +13,7 @@ import { isApprovedOrLater } from "../views/utils/projectPlanStatus";
 import { recordLocalDebugPlanTelemetry } from "./utils/localDebugPlanTelemetryUtils";
 
 /**
- * Records the rich {@link recordLocalDebugPlanTelemetry} snapshot once the debug plan reaches
- * `Implemented`.
+ * Records debug plan telemetry once the debug plan reaches `Implemented`.
  *
  * The watcher is single-shot per run: it self-disposes the moment the implemented telemetry is
  * recorded, guarded by an in-memory flag (against overlapping create/change events) and a persisted
@@ -29,7 +28,7 @@ import { recordLocalDebugPlanTelemetry } from "./utils/localDebugPlanTelemetryUt
 const STATE_IMPLEMENTED_RECORDED = 'copilotOnRails.debugPlan.implementedRecorded';
 
 /**
- * How long to wait after the last observed write to the debug plan before snapshotting it for
+ * How long to wait after the last observed write to the debug plan before snapshotting key components for
  * telemetry.
  */
 const DEBUG_PLAN_SETTLE_MS = 5000;

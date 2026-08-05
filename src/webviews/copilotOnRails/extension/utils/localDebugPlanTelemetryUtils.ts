@@ -131,11 +131,6 @@ export const LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX = 'localDebugPlan.';
  */
 const MAX_SECTION_TITLES = 15;
 
-/**
- * A Debug Configuration Checklist line reports its result via a leading ✅ (passed) or ❌ (failed)
- * marker, optionally after a `-`/`*` bullet or whitespace. Anchoring to the start of the line avoids
- * counting the same emojis when they appear mid-sentence inside a checklist entry's free-text detail.
- */
 const CHECKLIST_PASS_REGEX = /^[-*\s]*✅/;
 const CHECKLIST_FAIL_REGEX = /^[-*\s]*❌/;
 
@@ -363,11 +358,6 @@ function getDebugConfigMetrics(planData: LocalPlanData): {
  * Metrics for the `## Debug Configuration Checklist` section - the post-validation results the
  * azure-debug-generate agent appends after validating each launch config, one line per config, each
  * starting with a ✅ (passed) or ❌ (failed) marker (see the agent's validation.md § Plan Integration).
- *
- * Only the leading pass/fail marker of each line is counted; the free-text detail after it is
- * intentionally ignored. This keeps the metric robust to the wide variation seen in practice: `-` vs
- * `—` separators, an optional `Debug Configuration Checklist:` lead-in line, bullet vs paragraph
- * formatting, non-config summary rows (e.g. an `Emulators` line), and trailing emojis inside prose.
  */
 function getDebugChecklistMetrics(planData: LocalPlanData): { hasSection: boolean; total: number; passed: number; failed: number } {
     const section = findSection(planData, 'Checklist');

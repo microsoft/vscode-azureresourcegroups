@@ -47,11 +47,7 @@ const STATE_PRIOR_VALUE = 'copilotOnRails.autopilot.priorAutoApprove';
 const STATE_PRIOR_PERMISSION_LEVEL = 'copilotOnRails.autopilot.priorPermissionLevel';
 /** Epoch ms after which an active run is considered stale and auto-restored. */
 const STATE_DEADLINE = 'copilotOnRails.autopilot.deadline';
-/**
- * Set once per run after the implied debug-plan approval telemetry
- * has been recorded (i.e. once the plan reaches `Approved`), so an unattended run emits the approval
- * action exactly once even across window reloads and repeated file-watcher events.
- */
+/** Set once per run to ensure the debug-plan approval telemetry has been recorded */
 const STATE_DEBUG_APPROVAL_RECORDED = 'copilotOnRails.autopilot.debugPlanApprovalRecorded';
 
 /** Command id used by the status-bar item to turn autopilot off. */
@@ -177,9 +173,8 @@ function registerDebugCompletionWatcher(): void {
     completionWatcher.onDidChange((uri) => void check(uri));
 
     // `createFileSystemWatcher` only reports changes made after it arms, so any milestone the plan
-    // already reached before this point (e.g. the plan was auto-approved, then the window reloaded
-    // and re-armed the watcher) would never fire an event and be silently missed. Eagerly reconcile
-    // against the current file state, mirroring the implemented watcher's own eager sync.
+    // already reached before this point would never fire an event and be silently missed. Eagerly reconcile
+    // against the current file state.
     void checkCurrentDebugPlanState();
 }
 
@@ -211,17 +206,8 @@ async function checkCurrentDebugPlanState(): Promise<void> {
 
 /**
  * Records the "submit debug plan approval" telemetry action on the autopilot path.
- *
- * In autopilot the plan is auto-approved, so the manual
- * approval UI action in the local plan view never fires. This ensures the same event through the
- * same telemetry wrapper the manual approval uses - the shared wrapper stamps `autopilot: true`,
- * so the auto-approved event stays distinguishable from a manual one. Fires at most once per run
- * (guarded in-memory and via {@link STATE_DEBUG_APPROVAL_RECORDED}) at the point the plan reaches
- * `Approved`, and never when a manual approval would have fired, since it only runs while autopilot
- * is active.
- *
- * The plan parsing telemetry is intentionally *not* recorded here. It is captured later, once the plan
- * reaches `Implemented` to allow us to capture the full plan after the agent is done with it.
+ * In autopilot the plan is auto-approved, so the manual approval UI action in the
+ * local plan view never fires. This ensures the same event fires in autopilot mode.
  */
 async function recordAutopilotDebugPlanApproval(): Promise<void> {
     const context = extensionContext;
@@ -229,14 +215,8 @@ async function recordAutopilotDebugPlanApproval(): Promise<void> {
         return;
     }
 
-    // Guard against overlapping create/change events (and the eager check on arm) racing within this
-    // window, but persist the durable marker only *after* the work below actually completes. Persisting
-    // it up front is what silently drops both milestones: if a window reload or throw interrupts us
-    // after the persist but before we arm the implemented watcher and record, the run comes back marked
-    // "approved" - so the approval action is never emitted AND `armDebugPlanImplementedWatcher` never
-    // runs, so the implemented milestone is never even armed. Reset the in-memory guard on failure so a
-    // later file event (or the eager re-arm check) can retry.
     debugPlanApprovalRecorded = true;
+
     try {
         await armDebugPlanImplementedWatcher();
 
