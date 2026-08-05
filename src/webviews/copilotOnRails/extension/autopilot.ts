@@ -6,7 +6,7 @@
 import { AzExtFsExtra, callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ext } from "../../../extensionVariables";
-import { DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { createProjectPlanFileWatcher, DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { settingUtils } from "../../../utils/settingUtils";
@@ -163,7 +163,7 @@ function armAutopilot(deadline: number): void {
 /** Returns true when the debug plan file content indicates the chain is finished. */
 function registerDebugCompletionWatcher(): void {
     disposeCompletionWatcher();
-    completionWatcher = vscode.workspace.createFileSystemWatcher(DEBUG_PLAN_FILE_GLOB);
+    completionWatcher = createProjectPlanFileWatcher(DEBUG_PLAN_FILE_GLOB);
     const check = async (uri: vscode.Uri): Promise<void> => {
         let content: string;
         try {
@@ -171,17 +171,42 @@ function registerDebugCompletionWatcher(): void {
         } catch {
             return;
         }
-
-        if (!debugPlanApprovalRecorded && isApprovedOrLater(parseLocalDebugPlanMarkdown(content).status)) {
-            await recordAutopilotDebugPlanApproval();
-        }
-
-        if (isDebugPlanImplemented(content)) {
-            await disableAutopilot();
-        }
+        await checkDebugPlanCompletion(content);
     };
     completionWatcher.onDidCreate((uri) => void check(uri));
     completionWatcher.onDidChange((uri) => void check(uri));
+
+    // `createFileSystemWatcher` only reports changes made after it arms, so any milestone the plan
+    // already reached before this point (e.g. the plan was auto-approved, then the window reloaded
+    // and re-armed the watcher) would never fire an event and be silently missed. Eagerly reconcile
+    // against the current file state, mirroring the implemented watcher's own eager sync.
+    void checkCurrentDebugPlanState();
+}
+
+/** Reacts to the current debug plan content: records the auto-approval milestone and/or ends the run. */
+async function checkDebugPlanCompletion(content: string): Promise<void> {
+    if (!debugPlanApprovalRecorded && isApprovedOrLater(parseLocalDebugPlanMarkdown(content).status)) {
+        await recordAutopilotDebugPlanApproval();
+    }
+
+    if (isDebugPlanImplemented(content)) {
+        await disableAutopilot();
+    }
+}
+
+/** Reads the current debug plan (if any) and reconciles it, so milestones reached before arming aren't lost. */
+async function checkCurrentDebugPlanState(): Promise<void> {
+    const [uri] = await vscode.workspace.findFiles(DEBUG_PLAN_FILE_GLOB, undefined, 1);
+    if (!uri) {
+        return;
+    }
+    let content: string;
+    try {
+        content = await AzExtFsExtra.readFile(uri);
+    } catch {
+        return;
+    }
+    await checkDebugPlanCompletion(content);
 }
 
 /**
@@ -204,18 +229,30 @@ async function recordAutopilotDebugPlanApproval(): Promise<void> {
         return;
     }
 
+    // Guard against overlapping create/change events (and the eager check on arm) racing within this
+    // window, but persist the durable marker only *after* the work below actually completes. Persisting
+    // it up front is what silently drops both milestones: if a window reload or throw interrupts us
+    // after the persist but before we arm the implemented watcher and record, the run comes back marked
+    // "approved" - so the approval action is never emitted AND `armDebugPlanImplementedWatcher` never
+    // runs, so the implemented milestone is never even armed. Reset the in-memory guard on failure so a
+    // later file event (or the eager re-arm check) can retry.
     debugPlanApprovalRecorded = true;
-    await context.workspaceState.update(STATE_DEBUG_APPROVAL_RECORDED, true);
+    try {
+        await armDebugPlanImplementedWatcher();
 
-    await armDebugPlanImplementedWatcher();
-
-    await callWithTelemetryAndErrorHandling(corId('submitDebugPlanApproval'), async (actionContext: IActionContext) => {
-        actionContext.errorHandling.suppressDisplay = true;
-        await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'extensionAction', name: 'submitDebugPlanApproval' }, (corContext: CopilotOnRailsContext) => {
-            setCorProp(corContext, 'approvalOutcome', 'submitted');
-            return Promise.resolve();
+        await callWithTelemetryAndErrorHandling(corId('submitDebugPlanApproval'), async (actionContext: IActionContext) => {
+            actionContext.errorHandling.suppressDisplay = true;
+            await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'extensionAction', name: 'submitDebugPlanApproval' }, (corContext: CopilotOnRailsContext) => {
+                setCorProp(corContext, 'approvalOutcome', 'submitted');
+                return Promise.resolve();
+            });
         });
-    });
+
+        await context.workspaceState.update(STATE_DEBUG_APPROVAL_RECORDED, true);
+    } catch (error) {
+        debugPlanApprovalRecorded = false;
+        throw error;
+    }
 }
 
 /**
@@ -225,7 +262,6 @@ async function recordAutopilotDebugPlanApproval(): Promise<void> {
  */
 export async function enableAutopilot(context: vscode.ExtensionContext): Promise<void> {
     extensionContext = context;
-
     // Don't clobber a previously-saved prior value if autopilot is already on.
     if (context.globalState.get<boolean>(STATE_ACTIVE) !== true) {
         await context.globalState.update(STATE_PRIOR_VALUE, getAutoApproveValue() ?? null);

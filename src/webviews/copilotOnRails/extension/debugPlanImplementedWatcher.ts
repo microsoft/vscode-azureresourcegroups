@@ -5,7 +5,7 @@
 
 import { AzExtFsExtra, callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
-import { DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { createProjectPlanFileWatcher, DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { callWithDiagnosticsAndTelemetryHandling, corId } from "../../../utils/copilotOnRails/telemetryUtils";
 import { isDebugPlanImplemented, parseLocalDebugPlanMarkdown, type LocalPlanData } from "../views/utils/parseLocalDebugPlanMarkdown";
@@ -28,7 +28,14 @@ import { recordLocalDebugPlanTelemetry } from "./utils/localDebugPlanTelemetryUt
  */
 const STATE_IMPLEMENTED_RECORDED = 'copilotOnRails.debugPlan.implementedRecorded';
 
+/**
+ * How long to wait after the last observed write to the debug plan before snapshotting it for
+ * telemetry.
+ */
+const DEBUG_PLAN_SETTLE_MS = 5000;
+
 let watcher: vscode.FileSystemWatcher | undefined;
+let recordTimer: NodeJS.Timeout | undefined;
 let extensionContext: vscode.ExtensionContext | undefined;
 /**
  * In-process copy of the persisted {@link STATE_IMPLEMENTED_RECORDED} flag, so overlapping
@@ -38,9 +45,7 @@ let implementedRecorded = false;
 
 /**
  * Wires up the implemented plan watcher and resumes any run that
- * was already in flight when the window (re)loaded: if the telemetry was already recorded there is
- * nothing to do; if the plan is already `Implemented` it records immediately; otherwise, if the plan
- * is approved-or-later, it re-arms so the pending `Implemented` transition is still captured.
+ * was already in flight when the window (re)loaded
  */
 export function registerDebugPlanImplementedWatcher(context: vscode.ExtensionContext): void {
     extensionContext = context;
@@ -60,13 +65,12 @@ export async function armDebugPlanImplementedWatcher(): Promise<void> {
     implementedRecorded = false;
     await extensionContext.workspaceState.update(STATE_IMPLEMENTED_RECORDED, undefined);
 
+    armImplementedPlanWatcher();
+
     const content = await readDebugPlan();
     if (content !== undefined && isDebugPlanImplemented(content)) {
-        await recordImplemented(content);
-        return;
+        scheduleRecord();
     }
-
-    armImplementedWatcher();
 }
 
 async function syncToCurrentPlanState(): Promise<void> {
@@ -78,21 +82,21 @@ async function syncToCurrentPlanState(): Promise<void> {
         // No debug plan yet; approval will arm the watcher once the phase begins.
         return;
     }
-    if (isDebugPlanImplemented(content)) {
-        await recordImplemented(content);
-        return;
+    const implemented = isDebugPlanImplemented(content);
+    if (implemented || isApprovedOrLater(parseLocalDebugPlanMarkdown(content).status)) {
+        armImplementedPlanWatcher();
     }
-    if (isApprovedOrLater(parseLocalDebugPlanMarkdown(content).status)) {
-        armImplementedWatcher();
+    if (implemented) {
+        scheduleRecord();
     }
 }
 
-function armImplementedWatcher(): void {
+function armImplementedPlanWatcher(): void {
     if (watcher) {
         return;
     }
-    watcher = vscode.workspace.createFileSystemWatcher(DEBUG_PLAN_FILE_GLOB);
-    const check = async (uri: vscode.Uri): Promise<void> => {
+    watcher = createProjectPlanFileWatcher(DEBUG_PLAN_FILE_GLOB);
+    const checkImplemented = async (uri: vscode.Uri): Promise<void> => {
         if (implementedRecorded) {
             return;
         }
@@ -103,11 +107,37 @@ function armImplementedWatcher(): void {
             return;
         }
         if (isDebugPlanImplemented(content)) {
-            await recordImplemented(content);
+            // Don't snapshot this event's content directly - it may be an intermediate write. Let the
+            // debounce settle and re-read the freshest file, so trailing writes aren't missed.
+            scheduleRecord();
         }
     };
-    watcher.onDidCreate((uri) => void check(uri));
-    watcher.onDidChange((uri) => void check(uri));
+    watcher.onDidCreate((uri) => void checkImplemented(uri));
+    watcher.onDidChange((uri) => void checkImplemented(uri));
+}
+
+/** (Re)starts the settle timer; every observed write pushes the snapshot back until writes go quiet. */
+function scheduleRecord(): void {
+    if (implementedRecorded) {
+        return;
+    }
+    if (recordTimer) {
+        clearTimeout(recordTimer);
+    }
+    recordTimer = setTimeout(() => void settleAndRecord(), DEBUG_PLAN_SETTLE_MS);
+}
+
+/** Fires once writes have settled: reads the freshest plan and records it if it still reads `Implemented`. */
+async function settleAndRecord(): Promise<void> {
+    recordTimer = undefined;
+    if (implementedRecorded) {
+        return;
+    }
+    const content = await readDebugPlan();
+    if (content === undefined || !isDebugPlanImplemented(content)) {
+        return;
+    }
+    await recordImplemented(content);
 }
 
 async function recordImplemented(content: string): Promise<void> {
@@ -115,11 +145,6 @@ async function recordImplemented(content: string): Promise<void> {
     if (!context || implementedRecorded) {
         return;
     }
-
-    // Set both guards up front so overlapping create/change events (and the eager check on arm)
-    // can't each record before the persisted write completes.
-    implementedRecorded = true;
-    await context.workspaceState.update(STATE_IMPLEMENTED_RECORDED, true);
 
     let planData: LocalPlanData;
     try {
@@ -131,21 +156,27 @@ async function recordImplemented(content: string): Promise<void> {
         return;
     }
 
+    implementedRecorded = true;
+
     await callWithTelemetryAndErrorHandling(corId('recordDebugPlanImplemented'), async (actionContext: IActionContext) => {
         actionContext.errorHandling.suppressDisplay = true;
-        // This milestone is file-driven (extension-initiated), so it's an `extensionAction` rather
-        // than a `webviewAction`. The shared wrapper stamps `autopilot`, so auto vs. manual stays distinct.
         await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'extensionAction', name: 'recordDebugPlanImplemented' }, (corContext: CopilotOnRailsContext) => {
             recordLocalDebugPlanTelemetry(corContext, planData);
             return Promise.resolve();
         });
     });
 
+    await context.workspaceState.update(STATE_IMPLEMENTED_RECORDED, true);
+
     // The run's telemetry is captured; nothing left to watch for.
     disposeWatcher();
 }
 
 function disposeWatcher(): void {
+    if (recordTimer) {
+        clearTimeout(recordTimer);
+        recordTimer = undefined;
+    }
     watcher?.dispose();
     watcher = undefined;
 }

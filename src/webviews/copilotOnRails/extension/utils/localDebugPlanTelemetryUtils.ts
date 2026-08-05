@@ -76,6 +76,15 @@ export interface LocalDebugPlanTelemetry {
     /** Whether a dev-server → API proxy was detected. */
     proxyDetected: boolean;
 
+    /** Whether the plan includes a `## Debug Configuration Checklist` section (post-validation results). */
+    hasDebugChecklist: boolean;
+    /** Debug Configuration Checklist entries with a real ✅/❌ result (passed + failed). */
+    debugChecklistTotalCount: number;
+    /** Checklist entries marked passed (✅). */
+    debugChecklistPassedCount: number;
+    /** Checklist entries marked failed (❌). */
+    debugChecklistFailedCount: number;
+
     /** Orchestrator name, normalized (e.g. `docker compose`), or `none`. */
     orchestrator: string;
 
@@ -123,12 +132,21 @@ export const LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX = 'localDebugPlan.';
 const MAX_SECTION_TITLES = 15;
 
 /**
+ * A Debug Configuration Checklist line reports its result via a leading ✅ (passed) or ❌ (failed)
+ * marker, optionally after a `-`/`*` bullet or whitespace. Anchoring to the start of the line avoids
+ * counting the same emojis when they appear mid-sentence inside a checklist entry's free-text detail.
+ */
+const CHECKLIST_PASS_REGEX = /^[-*\s]*✅/;
+const CHECKLIST_FAIL_REGEX = /^[-*\s]*❌/;
+
+/**
  * Parses a structured {@link LocalPlanData} into a flat, telemetry-safe {@link LocalDebugPlanTelemetry}
  * summary. This is the single, centralized place that derives telemetry from a debug plan.
  */
 export function getLocalDebugPlanTelemetry(planData: LocalPlanData): LocalDebugPlanTelemetry {
     const prereq = getPrerequisiteMetrics(planData);
     const debug = getDebugConfigMetrics(planData);
+    const checklist = getDebugChecklistMetrics(planData);
     const emulators = getEmulatorMetrics(planData);
     const apiTest = getApiTestMetrics(planData);
     const migration = getMigrationMetrics(planData);
@@ -156,6 +174,11 @@ export function getLocalDebugPlanTelemetry(planData: LocalPlanData): LocalDebugP
         debugRuntimes: debug.runtimes,
         debugAzureDependencies: debug.azureDependencies,
         proxyDetected: debug.proxyDetected,
+
+        hasDebugChecklist: checklist.hasSection,
+        debugChecklistTotalCount: checklist.total,
+        debugChecklistPassedCount: checklist.passed,
+        debugChecklistFailedCount: checklist.failed,
 
         orchestrator: getOrchestrator(planData),
 
@@ -336,6 +359,35 @@ function getDebugConfigMetrics(planData: LocalPlanData): {
     };
 }
 
+/**
+ * Metrics for the `## Debug Configuration Checklist` section - the post-validation results the
+ * azure-debug-generate agent appends after validating each launch config, one line per config, each
+ * starting with a ✅ (passed) or ❌ (failed) marker (see the agent's validation.md § Plan Integration).
+ *
+ * Only the leading pass/fail marker of each line is counted; the free-text detail after it is
+ * intentionally ignored. This keeps the metric robust to the wide variation seen in practice: `-` vs
+ * `—` separators, an optional `Debug Configuration Checklist:` lead-in line, bullet vs paragraph
+ * formatting, non-config summary rows (e.g. an `Emulators` line), and trailing emojis inside prose.
+ */
+function getDebugChecklistMetrics(planData: LocalPlanData): { hasSection: boolean; total: number; passed: number; failed: number } {
+    const section = findSection(planData, 'Checklist');
+    if (!section) {
+        return { hasSection: false, total: 0, passed: 0, failed: 0 };
+    }
+
+    let passed = 0;
+    let failed = 0;
+    for (const line of getSectionLines(section)) {
+        if (CHECKLIST_PASS_REGEX.test(line)) {
+            passed++;
+        } else if (CHECKLIST_FAIL_REGEX.test(line)) {
+            failed++;
+        }
+    }
+
+    return { hasSection: true, total: passed + failed, passed, failed };
+}
+
 function getOrchestrator(planData: LocalPlanData): string {
     const section = findSection(planData, 'Orchestrator');
     const table = section && findTable(section, ['Orchestrator']);
@@ -442,6 +494,23 @@ function sectionHasText(section: LocalPlanSection, needle: string): boolean {
         }
         return false;
     });
+}
+
+/**
+ * Flattens a section's textual content into individual trimmed, non-empty lines, descending into
+ * subsections. Paragraph/blockquote text and bullet-list items are all included so line-oriented
+ * scanning (e.g. the checklist pass/fail markers) works regardless of how the markdown is formatted.
+ */
+function getSectionLines(section: LocalPlanSection): string[] {
+    const lines: string[] = [];
+    for (const content of flattenContent(section.content)) {
+        if (content.type === 'paragraph' || content.type === 'blockquote') {
+            lines.push(...content.text.split('\n'));
+        } else if (content.type === 'bulletList') {
+            lines.push(...content.items);
+        }
+    }
+    return lines.map((line) => line.trim()).filter((line) => line !== '');
 }
 
 function cell(row: string[], index: number): string {
