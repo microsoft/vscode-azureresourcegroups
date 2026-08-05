@@ -136,7 +136,7 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
         await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
             mode: azureDeployAgent,
-            query: 'I approve the deployment plan. Continue with generating the infrastructure and deployment artifacts.',
+            query: 'I approve the deployment plan. Generate the infrastructure and deployment artifacts, then complete the mandatory azure-prepare → azure-validate → azure-deploy skill chain and verify the live endpoints.',
         }));
 
         setCorProp(context, approvalOutcomeKey, 'submitted');

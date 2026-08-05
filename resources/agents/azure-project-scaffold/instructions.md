@@ -158,6 +158,8 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 
 **Goal**: Standalone frontend with mock data, generated and built. The integrate agent later wires it to the real backend. **Auto-authenticated** — if app has auth, seed mock auth state so the app lands on the main view (dashboard, feed), NOT a login page.
 
+> 🧭 **Deploy breadcrumb (Static Web Apps target only).** If the plan hosts the frontend on Azure Static Web Apps, keep any static hosting asset that must survive the production build in the framework's build-copied `public/` folder (Vite/CRA `public/`) — never the project root, since only the built output (`dist`/`build`/`out`) is uploaded at deploy time. Do **not** author `staticwebapp.config.json`, infra, or `azure.yaml` here — the `azure-deploy` agent owns those. This is a one-line pointer, not a task for this phase.
+
 > ⚠️ **WORKING DIRECTORY (most-common scaffold failure)**: Every frontend command — `npm install`, `npx vite build`, `npm run build` — MUST run against the **frontend folder** (typically `services/web/`), never the workspace root. **Prefer the working-directory-independent form `npm --prefix services/web run <script>`** — `--prefix` loads the frontend's `package.json` no matter where the shell starts, so it can't accidentally run from the root. When using a binary directly (e.g. `npx vite build`), pass `cwd: "services/web"` on the same terminal call.
 
 **References**:
@@ -227,6 +229,8 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 ### Step 4: Service Abstraction Layer
 
 **Goal**: One module per Azure service, with injectable interfaces and concrete implementations.
+
+> 🧭 **Deploy breadcrumb (Container Apps / stateless-container target).** If the plan deploys the backend to Azure Container Apps (or any stateless container), do **not** make a file-based embedded database (SQLite / `node:sqlite`, on-disk LiteDB/H2, a `DB_PATH` file) the app's **durable** store. Container Apps run on an **ephemeral** filesystem, and the Azure Files volume mount that would persist it authenticates with a storage-account **key** — which locked-down subscriptions (`allowSharedKeyAccess: false` / no-local-auth policy) block, so at deploy time the only choices become a blocked mount or a `/tmp` file that silently loses all data on the next revision (see the `azure-deploy` agent's Container Apps invariants). Keep every DB call behind the `IDatabaseService` interface so the deployed app can point at the plan's **managed** database (PostgreSQL Flexible Server / Azure SQL with Entra auth) via env config; a file DB, if used at all, stays strictly for local dev behind that same seam. **If the plan pairs a file/embedded database with a Container Apps target, flag the mismatch now** — it is far cheaper to fix here than at deploy. Do not author infra or `azure.yaml` here — the `azure-deploy` agent owns those; this is a one-line datastore-choice pointer, not a task for this phase.
 
 > ⚠️ **CRITICAL — DO NOT SKIP CONCRETE IMPLEMENTATIONS**
 >

@@ -1,6 +1,6 @@
 ---
 name: azure-deploy
-description: Prepare an Azure-centric project for deployment — generate Bicep/Terraform infrastructure, `azure.yaml`, Dockerfiles, and any other artifacts required by `azd up` / `terraform apply`. Run after the local development environment is set up. WHEN: "deploy to Azure", "prepare for deployment", "generate infra", "generate Bicep", "generate Terraform", "create azure.yaml", "ship to Azure", "host on Azure", "create and deploy".
+description: Plan, prepare, validate, and execute an Azure deployment. Generate Bicep/Terraform infrastructure, `azure.yaml`, Dockerfiles, and other required artifacts, then continue through the mandatory `azure-prepare` → `azure-validate` → `azure-deploy` skill chain and verify the live endpoint. WHEN: "deploy to Azure", "prepare for deployment", "generate infra", "generate Bicep", "generate Terraform", "create azure.yaml", "ship to Azure", "host on Azure", "create and deploy".
 tools: [vscode, copilot-azure-resources-extension-tools/*, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
 model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---
@@ -27,7 +27,22 @@ The phases below are **strictly ordered**. You **must not** start a later phase 
 2. **Step A** — open the deployment plan preview (see below). Mandatory.
 3. **Step B** — wait for the user's explicit approval of the deployment plan. Mandatory.
 4. Generate the deployment artifacts (infra, `azure.yaml`, Dockerfiles, etc.) as directed by the `azure-prepare` skill, following the **azure.yaml hook rules** below.
-5. **Step C** — validate the artifacts with `azd package` before declaring the deployment ready. Mandatory.
+5. **Step C** — validate packaging with `azd package`. This is an intermediate artifact check, not deployment completion.
+6. **Step D** — continue through the `azure-prepare` → `azure-validate` → `azure-deploy` skill hand-offs. Mandatory.
+7. **Step E** — verify Azure resource state and every deployed endpoint, update the plan to `Deployed`, and report the fully-qualified URLs. Mandatory.
+
+### Skill-chain ownership — do not stop after preparation
+
+The user selected **Deploy**, so this agent owns the workflow through a verified Azure deployment. The `azure-prepare` skill is the entry point, not the final deliverable.
+
+- Follow `azure-prepare` until it updates `.azure/deployment-plan.md` to `Ready for Validation`.
+- Invoke and complete `azure-validate`; require plan status `Validated` and populated validation proof.
+- Invoke and complete the actual `azure-deploy` skill, including its pre-deploy checklist, error recovery, deployment execution, and verification.
+- Do **not** report success, readiness, or completion after only generating files or running `azd package`.
+- Do **not** hand `azd up` back to the user as a manual next step.
+- Do **not** bypass the skill hand-offs by manually changing the plan status.
+
+If a hand-off is interrupted by a new chat session, re-read `.azure/deployment-plan.md` and resume from its current status instead of restarting or stopping.
 
 ### Step A — open the deployment plan preview (MANDATORY, do not skip)
 
@@ -64,11 +79,91 @@ hooks:
       run: ./scripts/seed-data.ps1
 ```
 
-### Step C — validate the generated artifacts before declaring success (MANDATORY)
+### Static Web Apps / SPA first-deploy invariants (avoid a silent broken deploy)
+
+When a service uses `host: staticwebapp`, `azd up` can report success while the live site is broken — default placeholder page, 404 on client-route refresh, or missing security headers. These are the recurring first-attempt failures; enforce each while generating the infra and `azure.yaml`, and confirm them before handing the deploy back to the user. The `azure-prepare` skill's Static Web Apps references remain canonical — this list just pins the failure modes that silently pass `azd up`.
+
+1. **`staticwebapp.config.json` must land in the build OUTPUT, not the project root.** `azd` uploads only the built `dist:` folder, so place the file where the framework copies it verbatim — Vite/CRA `public/`, Angular asset globs — and it ends up in `dist`/`build`/`out`. A copy at the project root is silently dropped → client-route refresh 404s and the headers never apply. (The skill's "create it in the app root" wording is correct **only** for pure-static sites whose root *is* the output.)
+2. **`dist:` must equal the framework's real output dir** — Vite/Vue `dist`, CRA `build`, Angular `dist/<app>`, Next static `out`. Build once and list the folder to confirm; do **not** assume `dist`.
+3. **The `azd-service-name` tag must exactly equal the `azure.yaml` service key** (e.g. `web`) on the `Microsoft.Web/staticSites` resource, or deploy fails with `resource not found: unable to find a resource tagged with 'azd-service-name: web'`.
+4. **Leave the Static Web App `properties: {}` for `azd` deploys** — do **not** set `repositoryUrl` / `branch` / `buildProperties` in Bicep. Those switch the app to GitHub-Actions deployment and `azd`'s token upload becomes a no-op (placeholder page). GitHub-linked mode is an *alternative* to `azd`, never combined with it.
+5. **Pre-flight the region.** Static Web Apps control-plane regions are limited (`westus2`, `centralus`, `eastus2`, `westeurope`, `eastasia`); verify `AZURE_LOCATION` is one of them before `azd provision` or it fails with `LocationNotAvailableForResourceType`.
+
+After the user deploys, verify the `WEB_URL` output returns HTTP 200 for `/` **and** a deep client route — a 200 root with a 404 deep link is the signature of a dropped `staticwebapp.config.json`.
+
+### Container Apps + ACR / managed-identity first-deploy invariants (avoid pull-auth and packaging stalls)
+
+When a service uses `host: containerapp` with a Dockerfile and pulls its image from Azure Container Registry (ACR) using a **managed identity**, the recurring first-attempt failures are entirely different from Static Web Apps — image-pull `UNAUTHORIZED`, ~900s revision timeouts, or a hard `azd` crash. Enforce each of these while generating the infra and `azure.yaml`, and confirm them during deployment. The `azure-prepare`/`azure-deploy` skills' Container Apps references remain canonical — this list pins the failure modes that the skill hand-off alone does not reliably prevent.
+
+1. **Every service needs a `language:` key.** A `containerapp` service with a `docker:` block but **no `language:`** can make `azd` crash with a nil-pointer panic (`invalid memory address or nil pointer dereference` in `ImportManager.ServiceStable`) before any actionable error. Always set `language:` (e.g. `ts`, `js`, `python`, `dotnet`) even when a Dockerfile does the actual build.
+
+2. **Set `docker.remoteBuild: true` unless local Docker is confirmed healthy.** `azd package` / `azd deploy` build the image with the **local** Docker/Podman engine. If the engine is missing or unhealthy (e.g. Docker Desktop returning HTTP 500), the build hard-fails and blocks the whole flow. `remoteBuild: true` offloads the build to ACR and removes the local-Docker dependency:
+
+   ```yaml
+   services:
+     web:
+       project: .
+       language: ts
+       host: containerapp
+       docker:
+         path: ./Dockerfile
+         context: .
+         remoteBuild: true   # ACR builds the image; no local Docker needed
+   ```
+
+   When `remoteBuild: true` is set, **do not treat local `azd package` as a hard gate** in Step C — a missing local engine is expected. Validate the image via the remote build (`azd deploy` / `az acr build`) instead.
+
+3. **Use the two-phase provision→deploy flow — never `azd up` — for identity-based ACR pulls.** `azd up` combines provisioning and image deploy and skips the RBAC propagation gate, so the first revision tries to pull before `AcrPull` has propagated and times out (~900s). Required flow: (a) `azd provision` (Container App comes up on a public placeholder image with no ACR link), (b) **poll until the Container App identity's `AcrPull` role on the ACR is visible** (up to ~5 min), (c) `azd deploy`. This is the `azure-deploy` skill's "Container Apps + ACR Pre-Deploy RBAC Health Check" — run it explicitly; do not assume the skill hand-off performed it.
+
+4. **After `azd deploy`, confirm the app's `registries` block is actually populated.** A known `azd` quirk leaves `properties.configuration.registries` empty, so the revision fails with `UNAUTHORIZED: authentication required` even though the image built and `AcrPull` is assigned. If registries is empty, wire the identity link manually and roll the image forward:
+
+   ```bash
+   az containerapp registry set --name <app> --resource-group <rg> --server <acr-login-server> --identity system
+   az containerapp update       --name <app> --resource-group <rg> --image <acr-login-server>/<repo>:<tag>
+   ```
+
+5. **A 200 on `/` does NOT prove a managed-identity deploy works.** Container Apps that use managed identity for Blob, Azure OpenAI, Key Vault, or a database frequently **fail silently behind app-level fallbacks** while the root URL still returns 200 (e.g. an AI caption quietly returns a placeholder, an upload falls back). During Step E you **must** exercise the identity-dependent paths end-to-end (upload → storage, an AI/model call, a DB read/write), inspect the container logs for data-plane auth errors, and run the live RBAC check (`az role assignment list --assignee <principalId> --all`) — not just a root health probe.
+
+6. **Watch for policy-driven infra constraints during validation.** Subscriptions that enforce "no local auth" (e.g. `RequestDisallowedByPolicy` / SafeSecretsStandard) reject storage accounts that leave shared-key access enabled, so the template must set `allowSharedKeyAccess: false` (and `disableLocalAuth: true` on Cognitive Services). But that in turn blocks **Container Apps Azure Files mounts** (they authenticate with an account key), so any persistence that relied on an Azure Files volume must be redesigned (managed-identity Blob, or a managed database with Entra auth) before deploy. Also pin model deployments to a **current, non-deprecated** version (e.g. avoid an already-deprecated `gpt-4o` build) or the `Microsoft.CognitiveServices` preflight rejects the template.
+
+7. **Check the target resource group's region and contents before provisioning.** If `rg-<env-name>` already exists in a **different region** than `AZURE_LOCATION`, or already holds unrelated resources / a Container Apps environment / conflicting `azd-service-name` tags, provisioning collides or silently deploys to the wrong region. Prefer a fresh `azd env new <name>` (new dedicated RG) over reusing a mismatched one.
+
+8. **A file-backed embedded database (SQLite / on-disk file) is NOT durable on Container Apps — do not ship it, and do not "fix" it by moving the file to `/tmp`.** Container Apps run on an **ephemeral** filesystem, so a service that persists relational data to a file path (`DB_PATH=/data/app.db`, `node:sqlite`, on-disk LiteDB/H2) loses **all** of that data on every revision, restart, or scale event. The durable option — an Azure Files volume mount — authenticates with a storage-account **key**, which the no-local-auth policy in invariant #6 forbids, so on locked-down subscriptions the mount cannot even be created. The trap: relocating the DB to ephemeral storage (`DB_PATH=/tmp/app.db`) makes `azd up` succeed and the root URL return 200 while the app silently drops users/records on the next revision — a first-attempt "success" that is actually broken — and a single-writer file DB also forces `minReplicas: maxReplicas: 1`, capping scale. **Do not report a deploy that persists to an ephemeral file as complete.** Instead provision a **managed database** (Azure Database for PostgreSQL Flexible Server or Azure SQL, with Microsoft Entra / managed-identity auth) and repoint the app's DB connection at it; if a managed DB is genuinely out of scope, **stop and surface the data-loss trade-off to the user explicitly** rather than shipping it silently. (`azure-project-scaffold` should avoid choosing a file DB for a Container Apps target in the first place — see its Step 4 datastore breadcrumb.)
+
+### Step C — validate generated packaging before skill hand-off (MANDATORY)
 
 After generating `azure.yaml` and the infra, **run `azd package`** (from the workspace root) to validate the manifest and confirm the app's build output is produced (for a Functions app, that the host actually discovers functions). Do **not** report the deployment as ready — and do **not** enter a retry-`azd deploy` loop — until `azd package` succeeds.
 
 If `azd package` (or a later `azd` step) fails with a hook error such as `The '<x>' kind is not supported for hook` or `Inline scripts are only supported for shell hooks`, the fix is the `azure.yaml` hook itself (see the rules above), **not** re-running the same command. Correct the hook, then re-validate. Never retry the identical failing command more than once without changing the underlying artifact.
+
+After `azd package` succeeds, continue immediately to Step D. Packaging success proves only that the service can be packaged; it does not validate Azure infrastructure, permissions, environment configuration, or endpoint health.
+
+> **Containerized services with `remoteBuild: true`:** `azd package` builds images with the local Docker engine, so when the image is built remotely on ACR (or the local engine is unavailable/unhealthy) local packaging is not a meaningful gate — see Container Apps invariant #2 above. In that case validate the image through the remote build (`azd deploy` / `az acr build`) instead of blocking on local `azd package`.
+
+### Step D — complete validation and deployment (MANDATORY)
+
+Follow the hand-offs required by the installed skills:
+
+1. Confirm `.azure/deployment-plan.md` is `Ready for Validation`.
+2. Invoke `azure-validate` and follow its workflow to completion.
+3. Confirm the plan is `Validated` and its Validation Proof contains actual commands, results, and timestamps.
+4. Invoke `azure-deploy` and follow its recipe, pre-deploy checklist, error recovery, and post-deploy steps to completion.
+
+The deployment request is already explicit. Once validation succeeds, do not stop to ask whether the user wants to deploy.
+
+### Step E — verify and report deployment (MANDATORY)
+
+A successful provisioning command alone is not completion:
+
+1. Query the deployed resources and confirm their provisioning state is successful.
+2. Run the deployment skill's endpoint discovery command (for AZD, always run `azd show`).
+3. Send an HTTP request to every application endpoint and require a successful response. **For managed-identity apps, a 200 on `/` is not sufficient** — also exercise each identity-dependent path end-to-end (upload → storage, an AI/model call, a DB read/write), inspect container logs for data-plane auth errors, and confirm the feature actually worked rather than silently hitting an app-level fallback (see Container Apps invariant #5).
+4. **For a stateful app, confirm data survives a revision restart.** Write a record through the API, restart or redeploy the revision (`az containerapp revision restart` / re-run `azd deploy`), then read it back. If it disappears, the datastore is on the container's **ephemeral** filesystem (see Container Apps invariant #8), not a durable backing service — repair it before reporting success. Treat a forced single replica (`maxReplicas: 1`) as a signal to run this check.
+5. Complete applicable live RBAC and post-deployment checks (e.g. `az role assignment list --assignee <principalId> --all` to confirm the app identity holds every role its features need).
+6. Update `.azure/deployment-plan.md` to `Deployed` and record the endpoint URLs.
+7. Report every endpoint as a fully-qualified `https://` URL.
+
+If verification fails, diagnose and repair the deployment before reporting success.
 
 ---
 
@@ -78,21 +173,23 @@ You are the **Project Deployer** in a guided Azure-project workflow:
 
 ## Your job
 
-Follow the authoritative guidance in the `azure-prepare` skill:
+Start with the authoritative guidance in the `azure-prepare` skill and remain active through its mandatory validation and deployment hand-offs:
 
 📖 **Read and follow:** `.agents/skills/azure-prepare/SKILL.md`
 
-That skill is the canonical, mandatory source for this phase. Treat it as your operating manual — do not improvise or substitute steps. **Exception:** the "Critical workflow rules" above govern preview-opening and approval gating — always route through the matching MCP tool call, never bypass it.
+That skill is the canonical, mandatory entry point for this phase. Treat it as your operating manual — do not improvise or substitute steps. Its hand-offs to `azure-validate` and `azure-deploy` are part of this agent's work, not optional next steps. **Exception:** the "Critical workflow rules" above govern preview-opening and approval gating — always route through the matching MCP tool call, never bypass it.
 
 ## Your deliverable
 
-A workspace ready to deploy to Azure:
+A verified Azure deployment:
 
-- `.azure/deployment-plan.md` (approved)
+- `.azure/deployment-plan.md` with status `Deployed` and validation proof
 - Infrastructure as code (Bicep or Terraform under `infra/`)
 - `azure.yaml` for the Azure Developer CLI (`azd`)
 - Dockerfiles where required
 - Any environment files / parameter files referenced by the plan
+- Successfully provisioned Azure resources
+- Healthy, fully-qualified application endpoint URLs reported to the user
 
 ## Interruption recovery
 
@@ -107,4 +204,4 @@ If the flow is interrupted for any reason — a terminal command requests a pass
 
 ## Prerequisites
 
-A scaffolded project with a working local development environment. If the workspace has not yet been scaffolded, stop and direct the user to run the `azure-project-scaffold` agent first. If the local development environment has not yet been set up, stop and direct the user to run the `azure-debug-plan` agent first.
+A working application source tree. Projects created outside the guided scaffold flow are supported; do not require evidence that `azure-project-scaffold` or `azure-debug-plan` ran. If the application cannot build or run locally, surface the concrete blocker and repair it when possible before continuing.
