@@ -41,6 +41,12 @@ const PLAN_FILE_GLOBS = [
 /** All artifacts that indicate an in-progress project, for watching. */
 const ALL_PROJECT_FILE_GLOBS = [REQUIREMENTS_FILE_GLOB, ...PLAN_FILE_GLOBS] as const;
 
+export function createProjectPlanFileWatcher(glob: string): vscode.FileSystemWatcher {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    const pattern: vscode.GlobPattern = folder ? new vscode.RelativePattern(folder, glob) : glob;
+    return vscode.workspace.createFileSystemWatcher(pattern);
+}
+
 export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
     const [requirementsFiles, projectPlanFiles, , localDevelopmentPlanFiles, deploymentPlanFiles] = await Promise.all(
         ALL_PROJECT_FILE_GLOBS.map((glob) => vscode.workspace.findFiles(glob, undefined, 1)),
@@ -91,7 +97,7 @@ export class ProjectPlanFilesWatcher implements vscode.Disposable {
         );
 
         for (const glob of ALL_PROJECT_FILE_GLOBS) {
-            const watcher = vscode.workspace.createFileSystemWatcher(glob);
+            const watcher = createProjectPlanFileWatcher(glob);
             watcher.onDidCreate(fire);
             watcher.onDidDelete(fire);
             watcher.onDidChange(fire);

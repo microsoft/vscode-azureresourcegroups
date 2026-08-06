@@ -52,6 +52,30 @@ export function parseLocalDebugPlanMarkdown(markdown: string): LocalPlanData {
     };
 }
 
+export enum LocalDebugPlanStatus {
+    Planning = 'planning',
+    Approved = 'approved',
+    Executing = 'executing',
+    Implemented = 'implemented',
+}
+
+
+const STATUS_METADATA_REGEX = /^\s*>?\s*\**Status[:*]*:[:*]*\s*(.+)$/i;
+const EXECUTION_MODE_METADATA_REGEX = /^\s*>?\s*\**Execution Mode[:*]*:[:*]*\s*(.+)$/i;
+
+/**
+ * Returns the raw `Status` metadata value from the plan header.
+ */
+export function getDebugPlanStatus(content: string): string | undefined {
+    for (const line of content.split(/\r?\n/)) {
+        const value = line.match(STATUS_METADATA_REGEX)?.[1]?.trim();
+        if (value !== undefined) {
+            return value;
+        }
+    }
+    return undefined;
+}
+
 function extractHeader(lines: string[]): { title: string; status: string; executionMode: string; headerNote: string; firstSectionIdx: number } {
     let title = 'Local Development Plan';
     let status = 'Unknown';
@@ -75,8 +99,8 @@ function extractHeader(lines: string[]): { title: string; status: string; execut
 
         if (trimmed.startsWith('>')) {
             const text = trimmed.replace(/^>\s?/, '').trim();
-            const statusMatch = text.match(/^\*\*Status:?\*\*:?\s*(.+)$/);
-            const executionModeMatch = text.match(/^\*\*Execution Mode:?\*\*:?\s*(.+)$/);
+            const statusMatch = text.match(STATUS_METADATA_REGEX);
+            const executionModeMatch = text.match(EXECUTION_MODE_METADATA_REGEX);
             if (statusMatch) {
                 status = statusMatch[1].trim();
             } else if (executionModeMatch) {
