@@ -12,8 +12,9 @@ import {
     findTable,
     firstTable,
     flattenContent,
+    getDebugPlanStatus,
     isChecked,
-    isDebugPlanImplemented,
+    LocalDebugPlanStatus,
     type LocalPlanData,
     type LocalPlanSection,
     type LocalPlanTableContent,
@@ -233,7 +234,7 @@ suite('parseLocalDebugPlanMarkdown query helpers', () => {
             '**Status**: implemented',
             '# Azure Debug Plan\n\n> **Status:** IMPLEMENTED\n',
         ]) {
-            assert.strictEqual(isDebugPlanImplemented(implemented), true, implemented);
+            assert.strictEqual(getDebugPlanStatus(implemented)?.toLowerCase() === LocalDebugPlanStatus.Implemented, true, implemented);
         }
         for (const notImplemented of [
             '> **Status:** Approved',
@@ -241,7 +242,7 @@ suite('parseLocalDebugPlanMarkdown query helpers', () => {
             'The team implemented the feature',
             '',
         ]) {
-            assert.strictEqual(isDebugPlanImplemented(notImplemented), false, notImplemented);
+            assert.strictEqual(getDebugPlanStatus(notImplemented)?.toLowerCase() === LocalDebugPlanStatus.Implemented, false, notImplemented);
         }
     });
 });

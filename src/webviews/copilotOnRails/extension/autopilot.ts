@@ -10,7 +10,7 @@ import { createProjectPlanFileWatcher, DEBUG_PLAN_FILE_GLOB } from "../../../tre
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { settingUtils } from "../../../utils/settingUtils";
-import { isDebugPlanImplemented, parseLocalDebugPlanMarkdown } from "../views/utils/parseLocalDebugPlanMarkdown";
+import { getDebugPlanStatus, LocalDebugPlanStatus, parseLocalDebugPlanMarkdown } from "../views/utils/parseLocalDebugPlanMarkdown";
 import { isApprovedOrLater } from "../views/utils/projectPlanStatus";
 import { armDebugPlanImplementedWatcher } from "./debugPlanImplementedWatcher";
 
@@ -184,7 +184,7 @@ async function checkDebugPlanCompletion(content: string): Promise<void> {
         await recordAutopilotDebugPlanApproval();
     }
 
-    if (isDebugPlanImplemented(content)) {
+    if (getDebugPlanStatus(content)?.toLowerCase() === LocalDebugPlanStatus.Implemented) {
         await disableAutopilot();
     }
 }

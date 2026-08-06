@@ -8,7 +8,7 @@ import * as vscode from "vscode";
 import { createProjectPlanFileWatcher, DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { callWithDiagnosticsAndTelemetryHandling, corId } from "../../../utils/copilotOnRails/telemetryUtils";
-import { isDebugPlanImplemented, parseLocalDebugPlanMarkdown, type LocalPlanData } from "../views/utils/parseLocalDebugPlanMarkdown";
+import { getDebugPlanStatus, LocalDebugPlanStatus, parseLocalDebugPlanMarkdown, type LocalPlanData } from "../views/utils/parseLocalDebugPlanMarkdown";
 import { isApprovedOrLater } from "../views/utils/projectPlanStatus";
 import { recordLocalDebugPlanTelemetry } from "./utils/localDebugPlanTelemetryUtils";
 
@@ -67,7 +67,7 @@ export async function armDebugPlanImplementedWatcher(): Promise<void> {
     armImplementedPlanWatcher();
 
     const content = await readDebugPlan();
-    if (content !== undefined && isDebugPlanImplemented(content)) {
+    if (content !== undefined && getDebugPlanStatus(content)?.toLowerCase() === LocalDebugPlanStatus.Implemented) {
         scheduleRecord();
     }
 }
@@ -81,7 +81,7 @@ async function syncToCurrentPlanState(): Promise<void> {
         // No debug plan yet; approval will arm the watcher once the phase begins.
         return;
     }
-    const implemented = isDebugPlanImplemented(content);
+    const implemented = getDebugPlanStatus(content)?.toLowerCase() === LocalDebugPlanStatus.Implemented;
     if (implemented || isApprovedOrLater(parseLocalDebugPlanMarkdown(content).status)) {
         armImplementedPlanWatcher();
     }
@@ -105,7 +105,7 @@ function armImplementedPlanWatcher(): void {
         } catch {
             return;
         }
-        if (isDebugPlanImplemented(content)) {
+        if (getDebugPlanStatus(content)?.toLowerCase() === LocalDebugPlanStatus.Implemented) {
             // Don't snapshot this event's content directly - it may be an intermediate write. Let the
             // debounce settle and re-read the freshest file, so trailing writes aren't missed.
             scheduleRecord();
@@ -133,7 +133,7 @@ async function settleAndRecord(): Promise<void> {
         return;
     }
     const content = await readDebugPlan();
-    if (content === undefined || !isDebugPlanImplemented(content)) {
+    if (content === undefined || getDebugPlanStatus(content)?.toLowerCase() !== LocalDebugPlanStatus.Implemented) {
         return;
     }
     await recordImplemented(content);

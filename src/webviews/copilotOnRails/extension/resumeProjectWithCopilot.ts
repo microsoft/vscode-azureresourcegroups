@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import { openChatWithAgent } from '../../../commands/copilotOnRails/openChatWithAgent';
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
 import { CopilotOnRailsContext } from '../../../utils/copilotOnRails/CopilotOnRailsContext';
-import { isDebugPlanImplemented } from '../views/utils/parseLocalDebugPlanMarkdown';
+import { getDebugPlanStatus, LocalDebugPlanStatus } from '../views/utils/parseLocalDebugPlanMarkdown';
 import { ProjectPlanStatus, statusEquals } from '../views/utils/projectPlanStatus';
 import { type LoadingViewConfiguration } from '../views/utils/viewConfigTypes';
 import { openFrontendPreviewView } from './openFrontendPreviewView';
@@ -117,7 +117,7 @@ async function isDebugConfigImplemented(): Promise<boolean> {
     }
     try {
         const content = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf-8');
-        return isDebugPlanImplemented(content);
+        return getDebugPlanStatus(content)?.toLowerCase() === LocalDebugPlanStatus.Implemented;
     } catch {
         return false;
     }
