@@ -55,8 +55,10 @@ Follow the generation steps in [generate.md](references/generate.md) in order.
 | # | Action | Reference |
 |---|--------|-----------|
 | 1 | **Validate each launch configuration** — Follow every step in validation.md for each non-compound config. | [validation.md](references/validation.md) |
-| 2 | **Update Debug Configuration Checklist** — Create or update the `## Debug Configuration Checklist` section in `.azure/vscode-debug-plan.md` with real ✅ or ❌ results for each configuration. | [validation.md](references/validation.md) § Plan Integration |
-| 3 | **Set status** — Only after every checklist stub has been replaced with a real result, set plan status to `Implemented` and update **Last Updated**. | `.azure/vscode-debug-plan.md` |
+| 2 | **Validate the compound configuration** — Faithfully run each compound's orchestration per validation.md Step 9: assert every service starts **exactly once**, reaches its ready signal, and is HTTP-reachable. Never infer the result from the individual configs. | [validation.md](references/validation.md) § Step 9 |
+| 3 | **Tear down validation processes** — Stop **every** process and emulator validation spawned (`docker compose down`) and verify all app HTTP, debug, and emulator ports are free again, so a subsequent user F5 starts from a clean slate. | [validation.md](references/validation.md) § Final Teardown |
+| 4 | **Update Debug Configuration Checklist** — Create or update the `## Debug Configuration Checklist` section in `.azure/vscode-debug-plan.md` with real ✅ or ❌ results for each configuration. | [validation.md](references/validation.md) § Plan Integration |
+| 5 | **Set status** — Only after every checklist stub has been replaced with a real result, set plan status to `Implemented` and update **Last Updated**. | `.azure/vscode-debug-plan.md` |
 
 > ⛔ **VALIDATION IS NOT OPTIONAL.** Do NOT set status to `Implemented` until every stub in the Debug Configuration Checklist has been replaced with a real ✅ or ❌ result. A checklist with any remaining stubs or missing entries means validation is incomplete — go back and finish it. This is the single most common failure mode.
 

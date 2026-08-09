@@ -8,6 +8,8 @@ Verify that the generated VS Code debug configuration actually works. This phase
 
 ## Validation Algorithm
 
+Steps 1–8 apply to each **non-compound** launch configuration in `.vscode/launch.json`; Step 9 then validates each **compound** configuration.
+
 For each **non-compound** launch configuration in `.vscode/launch.json`:
 
 ### Step 1: Resolve the Task Chain
@@ -53,11 +55,27 @@ For each **non-compound** launch configuration in `.vscode/launch.json`:
 
 ### Step 8: Cleanup
 
-9. Kill background processes, then move to the next config
+9. Tear down **every** process this config started — not just the last one. Kill the top-level `preLaunchTask` process **and every task in its resolved `dependsOn` chain** (dev servers, `func host`, watchers, and any emulators started for this config), then confirm the app HTTP port and the debug port are released (e.g. `lsof -i :<port>` returns nothing) before moving to the next config. A lingering process here causes the next config — or the compound — to hit "port already in use".
 
-### Step 9: Compound Configs
+### Step 9: Validate the Compound Configuration
 
-10. For compound configs: skip running them; mark ✅ if all named member configs passed, ❌ if any failed
+For each **compound** launch configuration, faithfully run its orchestration — do NOT infer the result from the individual configs.
+
+> ⛔ **Do NOT skip running the compound.** Configs that each pass standalone can still fail when launched together: overlapping or duplicated `dependsOn` chains can start a service more than once, or a second invocation can grab an already-bound port. The user must never see this. You MUST run the compound's orchestration and observe the real result.
+
+10. **Confirm the startup graph is deduplicated.** Before running, verify the compound satisfies the deduplicated, non-overlapping startup-graph rule in [multi-service.md § Deduplicated Startup Graph](multi-service.md): each service's top-level task appears exactly once across the compound's effective task graph, the sequenced `Start All Services` task is the single owner of startup ordering, and every background task sets `instanceLimit: 1` + `instancePolicy: "silent"`. If any rule is violated, fix the generated config before running — do not validate a graph that can duplicate a service.
+
+11. **Run the compound orchestration.** Execute the compound's `preLaunchTask` (the sequenced `Start All Services` task chain) exactly as VS Code would — run its `dependsOn` members in `dependsOrder: "sequence"`. This is the same terminal-driven orchestration used for the individual configs.
+
+12. **Assert each service starts exactly once.** Watch the task output: each service's top-level task must produce exactly one running instance. When an individual config's `preLaunchTask` fires again for an already-running service, that duplicate invocation MUST be a silent no-op (via `instancePolicy: "silent"`) — never a second process. If any service starts a second instance or grabs an already-bound port, mark the compound ❌ with concrete evidence (which service, which port).
+
+13. **Assert readiness and HTTP reachability per service.** For each member service, confirm its ready signal (as in Step 5) and HTTP reachability (as in Step 6), reusing the same `project-types/{type}.md § Validation Signals` lookups the per-config algorithm uses. Every service must reach its ready signal; every service with an HTTP endpoint must return the expected status via `curl`.
+
+14. **Record the result.** Mark the compound ✅ only after **each service started exactly once AND reached its ready signal AND (where applicable) passed HTTP reachability**. Otherwise mark it ❌ with the duplicate/failure evidence.
+
+> **Known limitation:** As with individual configs, the agent validates task orchestration and readiness through the terminal — it does not attach VS Code debuggers to the compound's member configs. Keep the assertion focused on **started exactly once + ready + reachable**.
+
+15. **Tear down the compound.** Stop every process the compound started (all member configs and their full task chains) and confirm their ports are released, exactly as in Step 8. This feeds into the final teardown sweep below.
 
 ---
 
@@ -86,6 +104,20 @@ Additional runtime-specific checks beyond the generic algorithm. These run after
 
 ---
 
+## Final Teardown — Free All Ports Before Handing Back
+
+> ⛔ **MANDATORY — this is a real, recurring user-facing failure.** During validation you start services, dev servers, `func host`, watchers, and emulators as background processes. If ANY of them is still running when you finish, the user's first **F5** hits "port already in use" and the debug session fails on an otherwise-clean project. You MUST leave the workspace with every validation-spawned process stopped and every port these configs use free.
+
+After all individual configs **and** every compound have been validated, and **before** the Plan Integration / status write, sweep and stop everything validation spun up:
+
+1. **Stop every lingering background process** you started during validation — every dev server, `func host`, watcher, and task/language process, across all configs and the compound. Nothing you launched may still be running.
+2. **Stop every emulator you started.** If validation ran `docker compose up`, run `docker compose down` (or stop the specific services you started). Do not leave Azurite, database emulators, or any compose service running.
+3. **Verify the ports are free again.** Confirm that every port the generated configs will use is released — application HTTP ports, debug ports, and emulator ports. Use `lsof -i :<port>` (and `docker compose ps` for emulators); each must show nothing bound. If any port is still held, find and stop the owning process before finishing.
+
+> A subsequent user **F5** must start from a completely clean slate. Do NOT proceed to the closing message or set status to `Implemented` while any validation-spawned process or emulator is still running, or while any of these ports is still bound.
+
+---
+
 ## Plan Integration
 
 After validating all configurations, **create or update** the `## Debug Configuration Checklist` section in `.azure/vscode-debug-plan.md`. If the section does not exist, add it at the end of the plan before closing.
@@ -96,8 +128,9 @@ After validating all configurations, **create or update** the `## Debug Configur
 Debug Configuration Checklist:
 ✅ <config-name> — <ready signal + curl result>
 ✅ <config-name> — <ready signal + curl result>
+✅ <compound-name> — each service started once + ready + curl result
 ```
 
-One line per config (non-compound and compound). ✅ requires the ready signal observed AND curl confirmed (or curl skipped with a valid reason).
+One line per config (non-compound and compound). For a **non-compound** config, ✅ requires the ready signal observed AND curl confirmed (or curl skipped with a valid reason). For a **compound** config, ✅ requires the real compound test from Step 9 — each member service started **exactly once** AND reached its ready signal AND (where applicable) passed HTTP reachability — never an inferred pass from the individual results.
 
 > ⛔ Do NOT set status to `Implemented` until every stub in the Debug Configuration Checklist has been replaced with a real ✅ or ❌ result. A checklist with any remaining stubs is incomplete — go back and validate.
