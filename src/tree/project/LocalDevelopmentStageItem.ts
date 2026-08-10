@@ -8,7 +8,7 @@ import { copilotOnRailsCommandIds } from '../../commands/copilotOnRails/register
 import { DebugConfigurationNode } from './DebugConfigurationNode';
 import { OpenPlanNode } from './OpenPlanNode';
 import { ProgressNode } from './ProgressNode';
-import { getDebugConfigurations } from './projectPlanFiles';
+import { getDebugConfigurations, type DebugConfigurationSummary } from './projectPlanFiles';
 import { StageNode } from './StageNode';
 import { StateStageNode } from './StateStageNode';
 
@@ -24,12 +24,18 @@ export class LocalDevelopmentStageItem extends StageNode {
             return [new StateStageNode(this.stageId, copilotOnRailsCommandIds.startLocalDevelopment)];
         }
 
-        const debugConfigs = getDebugConfigurations();
+        const debugConfigs = this.getDebugConfigurations();
 
-        if (debugConfigs.length === 0) {
-            return [new OpenPlanNode(this.stageId, copilotOnRailsCommandIds.openDebugPlanView)];
-        }
+        // Always surface the "Open plan" node so the completed debug plan can be reviewed,
+        // matching the always-present affordance on the Creation and Deployment stages.
+        // The generated F5 debug-configuration nodes follow the review affordance.
+        return [
+            new OpenPlanNode(this.stageId, copilotOnRailsCommandIds.openDebugPlanView),
+            ...debugConfigs.map((config) => new DebugConfigurationNode(this.stageId, config)),
+        ];
+    }
 
-        return debugConfigs.map((config) => new DebugConfigurationNode(this.stageId, config));
+    protected getDebugConfigurations(): DebugConfigurationSummary[] {
+        return getDebugConfigurations();
     }
 }
