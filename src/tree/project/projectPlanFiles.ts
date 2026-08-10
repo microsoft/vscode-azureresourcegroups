@@ -13,7 +13,8 @@ export interface ProjectPlanFiles {
     hasProjectPlan: boolean;
     hasLocalDevelopmentPlan: boolean;
     hasDeploymentPlan: boolean;
-    /** True when any project artifact exists (requirements or a plan file). */
+    hasAppOnboardSession: boolean;
+    /** True when any project artifact exists (requirements, a plan file, or an App Onboard session). */
     hasAny: boolean;
     /** The furthest stage reached. */
     currentStage: ProjectStage;
@@ -21,7 +22,7 @@ export interface ProjectPlanFiles {
 
 /**
  * Workspace-relative globs for each Copilot-on-Rails project artifact. These are
- * the single source of truth for the `.azure/*` file locations; other modules
+ * the single source of truth for `.azure/*` and App Onboard session locations; other modules
  * import these constants instead of re-hard-coding the paths.
  */
 /** The requirements file marks the very start of a project, before any plan. */
@@ -30,6 +31,7 @@ export const PROJECT_PLAN_FILE_GLOB = '.azure/project-plan.md';
 export const INTEGRATION_PLAN_FILE_GLOB = '.azure/integration-plan.md';
 export const DEBUG_PLAN_FILE_GLOB = '.azure/vscode-debug-plan.md';
 export const DEPLOYMENT_PLAN_FILE_GLOB = '.azure/deployment-plan.md';
+export const APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB = '.copilot-azure/sessions/active-session.json';
 
 const PLAN_FILE_GLOBS = [
     PROJECT_PLAN_FILE_GLOB,
@@ -39,10 +41,10 @@ const PLAN_FILE_GLOBS = [
 ] as const;
 
 /** All artifacts that indicate an in-progress project, for watching. */
-const ALL_PROJECT_FILE_GLOBS = [REQUIREMENTS_FILE_GLOB, ...PLAN_FILE_GLOBS] as const;
+const ALL_PROJECT_FILE_GLOBS = [REQUIREMENTS_FILE_GLOB, ...PLAN_FILE_GLOBS, APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB] as const;
 
 export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
-    const [requirementsFiles, projectPlanFiles, , localDevelopmentPlanFiles, deploymentPlanFiles] = await Promise.all(
+    const [requirementsFiles, projectPlanFiles, , localDevelopmentPlanFiles, deploymentPlanFiles, appOnboardSessionFiles] = await Promise.all(
         ALL_PROJECT_FILE_GLOBS.map((glob) => vscode.workspace.findFiles(glob, undefined, 1)),
     );
 
@@ -50,9 +52,10 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
     const hasProjectPlan = projectPlanFiles.length > 0;
     const hasLocalDevelopmentPlan = localDevelopmentPlanFiles.length > 0;
     const hasDeploymentPlan = deploymentPlanFiles.length > 0;
+    const hasAppOnboardSession = appOnboardSessionFiles.length > 0;
 
     let currentStage: ProjectStage = 0;
-    if (hasDeploymentPlan) {
+    if (hasDeploymentPlan || hasAppOnboardSession) {
         currentStage = 2;
     } else if (hasLocalDevelopmentPlan) {
         currentStage = 1;
@@ -63,9 +66,23 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
         hasProjectPlan,
         hasLocalDevelopmentPlan,
         hasDeploymentPlan,
-        hasAny: hasRequirements || hasProjectPlan || hasLocalDevelopmentPlan || hasDeploymentPlan,
+        hasAppOnboardSession,
+        hasAny: hasRequirements || hasProjectPlan || hasLocalDevelopmentPlan || hasDeploymentPlan || hasAppOnboardSession,
         currentStage,
     };
+}
+
+/**
+ * Returns true when the given workspace folder contains any Copilot on Rails
+ * project artifact under `.azure/`. Unlike {@link getProjectPlanFiles}, which
+ * scans the whole workspace, this is scoped to a single folder so a debug
+ * session can be attributed to the specific folder it runs in.
+ */
+export async function isCopilotOnRailsProjectFolder(folder: vscode.WorkspaceFolder): Promise<boolean> {
+    const fileNames = [REQUIREMENTS_FILE_GLOB, ...PLAN_FILE_GLOBS].map((glob) => glob.replace('.azure/', ''));
+    const pattern = new vscode.RelativePattern(folder, `.azure/{${fileNames.join(',')}}`);
+    const matches = await vscode.workspace.findFiles(pattern, undefined, 1);
+    return matches.length > 0;
 }
 
 /**

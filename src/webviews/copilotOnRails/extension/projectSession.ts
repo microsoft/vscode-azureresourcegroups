@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import { azureDebugGenerateAgent, azureDebugPlanAgent, azureDeployAgent, azureProjectIntegrateAgent, azureProjectPlanAgent, azureProjectScaffoldAgent } from '../../../constants';
 import { ext } from '../../../extensionVariables';
-import { DEBUG_PLAN_FILE_GLOB, DEPLOYMENT_PLAN_FILE_GLOB, INTEGRATION_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB, REQUIREMENTS_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
+import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, DEBUG_PLAN_FILE_GLOB, INTEGRATION_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB, REQUIREMENTS_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
 
 /**
  * Single, extension-owned source of truth for where the user is in the
@@ -84,7 +84,7 @@ const PHASE_CONFIG: Readonly<Record<ProjectPhase, PhaseConfig>> = {
     deploy: {
         agent: azureDeployAgent,
         label: vscode.l10n.t('Deployment'),
-        contextRefs: [DEPLOYMENT_PLAN_FILE_GLOB],
+        contextRefs: [APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB],
     },
 };
 

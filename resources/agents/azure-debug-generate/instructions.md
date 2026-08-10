@@ -15,7 +15,7 @@
 2. **Update plan progressively** — Mark steps complete as you go; update **Last Updated** timestamp on every status change
 3. ❌ **Destructive actions require `ask_user`** — Always confirm before overwriting, deleting, or modifying existing files
 4. **Preserve existing config** — Never silently overwrite project configuration files or `docker-compose.yml`. Merge or ask first.
-5. **Scope — VS Code debug setup only** — These instructions are for generating local debug configurations in VS Code. Cloud deployment is handled by **azure-prepare** → **azure-validate** → **azure-deploy**.
+5. **Scope — VS Code debug setup only** — These instructions are for generating local debug configurations in VS Code. Cloud architecture, IaC generation, provisioning, and deployment are handled by the **azure-deploy** agent through the complete **azure-app-onboard** pipeline.
 6. **Warn on limited support** — When a project type, runtime, or emulator declared in the plan has no matching reference file, emit a `⚠️ LIMITED SUPPORT:` warning — [limited-support.md](references/limited-support.md).
 
 ---

@@ -17,11 +17,19 @@ export class DeploymentStageItem extends StageNode {
     protected readonly stepIndex = 2;
     protected readonly iconName = 'rocket';
 
+    constructor(currentStage: number, hasPlanFile: boolean, private readonly hasAppOnboardSession: boolean) {
+        super(currentStage, hasPlanFile);
+    }
+
     getChildren(): ProgressNode[] {
-        if (!this.hasPlanFile) {
-            return [new StateStageNode(this.stageId, copilotOnRailsCommandIds.startDeployment)];
+        if (this.hasPlanFile) {
+            return [new OpenPlanNode(this.stageId, copilotOnRailsCommandIds.openDeploymentPlanView)];
         }
 
-        return [new OpenPlanNode(this.stageId, copilotOnRailsCommandIds.openDeploymentPlanView)];
+        return [new StateStageNode(
+            this.stageId,
+            copilotOnRailsCommandIds.startDeployment,
+            this.hasAppOnboardSession ? vscode.l10n.t('Resume') : vscode.l10n.t('Start'),
+        )];
     }
 }

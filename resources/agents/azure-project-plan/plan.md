@@ -188,7 +188,7 @@ For each page above, list 3–6 representative records using that page's primary
 1. Run **azure-project-scaffold** to execute this plan
 2. Run **azure-project-integrate** to wire the frontend to live data, smoke-test the backend, and create the migrations
 3. Run **azure-debug-plan** → **azure-debug-generate** for Docker emulators and VS Code debugging
-4. Run **azure-prepare** → **azure-deploy** when ready to deploy
+4. Run the **azure-deploy** agent when ready; it uses **azure-app-onboard** for architecture, cost estimation, IaC generation, provisioning, and health verification
 ````
 
 #### After Writing the Plan
