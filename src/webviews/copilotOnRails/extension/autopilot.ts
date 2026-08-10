@@ -28,8 +28,6 @@ const MAX_REQUESTS_KEY = 'maxRequests';
 
 /** Workspace request budget used for scaffolding runs. */
 export const WORKSPACE_MAX_REQUESTS = 9999;
-const PERMISSIONS_SECTION = 'chat.permissions';
-const PERMISSIONS_KEY = 'default';
 
 /**
  * Maximum wall-clock duration an autopilot run may keep global auto-approve on.
@@ -44,7 +42,6 @@ export const AUTOPILOT_QUERY_MARKER = '[AUTOPILOT MODE]';
 /** globalState keys used to survive window reloads mid-run. */
 const STATE_ACTIVE = 'copilotOnRails.autopilot.active';
 const STATE_PRIOR_VALUE = 'copilotOnRails.autopilot.priorAutoApprove';
-const STATE_PRIOR_PERMISSION_LEVEL = 'copilotOnRails.autopilot.priorPermissionLevel';
 /** Epoch ms after which an active run is considered stale and auto-restored. */
 const STATE_DEADLINE = 'copilotOnRails.autopilot.deadline';
 /** Set once per run to ensure the debug-plan approval telemetry has been recorded */
@@ -100,17 +97,6 @@ export async function raiseWorkspaceMaxRequests(): Promise<void> {
     } catch {
         // Best effort: this setting may not exist on older VS Code versions.
     }
-}
-
-function getPermissionLevelValue(): unknown {
-    const config = vscode.workspace.getConfiguration(PERMISSIONS_SECTION);
-    const inspected = config.inspect(PERMISSIONS_KEY);
-    return inspected?.globalValue;
-}
-
-async function setPermissionLevelValue(value: unknown): Promise<void> {
-    const config = vscode.workspace.getConfiguration(PERMISSIONS_SECTION);
-    await config.update(PERMISSIONS_KEY, value, vscode.ConfigurationTarget.Global);
 }
 
 function showStatusBarItem(): void {
@@ -245,7 +231,6 @@ export async function enableAutopilot(context: vscode.ExtensionContext): Promise
     // Don't clobber a previously-saved prior value if autopilot is already on.
     if (context.globalState.get<boolean>(STATE_ACTIVE) !== true) {
         await context.globalState.update(STATE_PRIOR_VALUE, getAutoApproveValue() ?? null);
-        await context.globalState.update(STATE_PRIOR_PERMISSION_LEVEL, getPermissionLevelValue() ?? null);
         await context.workspaceState.update(STATE_DEBUG_APPROVAL_RECORDED, undefined);
     }
     const deadline = Date.now() + MAX_RUN_DURATION_MS;
@@ -254,7 +239,6 @@ export async function enableAutopilot(context: vscode.ExtensionContext): Promise
 
     await setAutoApproveValue(true);
     await raiseWorkspaceMaxRequests();
-    await setPermissionLevelValue('autopilot');
     armAutopilot(deadline);
 }
 
@@ -275,12 +259,8 @@ export async function disableAutopilot(): Promise<void> {
         // `null` means there was no explicit global value, so clear it.
         await setAutoApproveValue(prior === null ? undefined : prior);
 
-        const priorPermission = context.globalState.get<unknown>(STATE_PRIOR_PERMISSION_LEVEL);
-        await setPermissionLevelValue(priorPermission === null ? undefined : priorPermission);
-
         await context.globalState.update(STATE_ACTIVE, undefined);
         await context.globalState.update(STATE_PRIOR_VALUE, undefined);
-        await context.globalState.update(STATE_PRIOR_PERMISSION_LEVEL, undefined);
         await context.globalState.update(STATE_DEADLINE, undefined);
         await context.workspaceState.update(STATE_DEBUG_APPROVAL_RECORDED, undefined);
     }
