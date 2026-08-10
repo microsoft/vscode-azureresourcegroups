@@ -106,12 +106,12 @@ When the compound runs, "Start All Services" starts both services via `dependsOr
 
 > ⛔ **MANDATORY — checkable rule.** The compound's orchestration MUST have a deduplicated, non-overlapping startup graph. If a service can be launched more than once, the design is wrong — fix it before validation, do not paper over it. Validation ([validation.md § Step 9](validation.md)) checks this graph before running the compound and asserts each service starts exactly once.
 
-The generated compound configuration MUST satisfy **all** of the following. Each rule is checkable against `tasks.json` / `launch.json`:
+Any generated compound configuration MUST satisfy **all** of the following. Each rule is checkable against `tasks.json` / `launch.json`:
 
 | # | Rule | How to check |
 |---|------|--------------|
-| 1 | **Each service's top-level task appears exactly once** across the compound's effective task graph (the transitive `dependsOn` closure of `Start All Services`). No service's start task is reachable via two different paths. | Expand the `dependsOn` closure of `Start All Services`; every service's top-level task label occurs exactly once. |
-| 2 | **`Start All Services` is the single owner of startup ordering.** No per-service task re-declares a `dependsOn` on another service's start task; ordering lives only in the sequenced compound task. | No service start task lists another service's start task in its own `dependsOn`. |
+| 1 | **Each service's top-level task appears exactly once** across the compound's effective task graph (the transitive `dependsOn` closure of the sequenced compound task). No service's start task is reachable via two different paths. | Expand the `dependsOn` closure of the sequenced compound task; every service's top-level task label occurs exactly once. |
+| 2 | **The sequenced compound task is the single owner of startup ordering.** No per-service task re-declares a `dependsOn` on another service's start task; ordering lives only in the sequenced compound task. | No service start task lists another service's start task in its own `dependsOn`. |
 | 3 | **Every background task sets `instanceLimit: 1` and `instancePolicy: "silent"`.** | Every long-running task in the chain carries both properties. |
 
 Because the individual configs keep their own `preLaunchTask` (so they work standalone), the compound WILL invoke each service's start task a second time. Rule 3 makes that second invocation a silent no-op instead of a duplicate process, while Rules 1 and 2 ensure the *first* pass never double-starts a service either.
