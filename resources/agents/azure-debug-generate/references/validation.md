@@ -106,8 +106,6 @@ Additional runtime-specific checks beyond the generic algorithm. These run after
 
 ## Final Teardown — Free All Ports Before Handing Back
 
-> ⛔ **MANDATORY — this is a real, recurring user-facing failure.** During validation you start services, dev servers, `func host`, watchers, and emulators as background processes. If ANY of them is still running when you finish, the user's first **F5** hits "port already in use" and the debug session fails on an otherwise-clean project. You MUST leave the workspace with every validation-spawned process stopped and every port these configs use free.
-
 After all individual configs **and** every compound have been validated, and **before** the Plan Integration / status write, sweep and stop everything validation spun up:
 
 1. **Stop every lingering background process** you started during validation — every dev server, `func host`, watcher, and task/language process, across all configs and the compound. Nothing you launched may still be running.
@@ -132,5 +130,3 @@ Debug Configuration Checklist:
 ```
 
 One line per config (non-compound and compound). For a **non-compound** config, ✅ requires the ready signal observed AND curl confirmed (or curl skipped with a valid reason). For a **compound** config, ✅ requires the real compound test from Step 9 — each member service started **exactly once** AND reached its ready signal AND (where applicable) passed HTTP reachability — never an inferred pass from the individual results.
-
-> ⛔ Do NOT set status to `Implemented` until every stub in the Debug Configuration Checklist has been replaced with a real ✅ or ❌ result. A checklist with any remaining stubs is incomplete — go back and validate.
