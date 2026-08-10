@@ -44,11 +44,11 @@ When a frontend service proxies to a local backend (e.g., a dev server proxy for
 
 #### Pattern
 
-**1. Generate a sequenced compound task** that starts services in order:
+**1. Generate a sequenced compound task** that starts services in order. Give it any descriptive label (referred to below as `{sequenced-compound-task}`):
 
 ```json
 {
-  "label": "Start All Services",
+  "label": "{sequenced-compound-task}",
   "dependsOn": [
     "{backend-service-id}: {backend-top-level-task}",
     "{frontend-service-id}: {frontend-top-level-task}"
@@ -65,7 +65,7 @@ The backend is listed first. Its `problemMatcher` (from `project-types/{type}.md
 {
   "name": "{Launch Config Name from plan's compound row}",
   "configurations": ["{Backend Launch Config Name}", "{Frontend Launch Config Name}"],
-  "preLaunchTask": "Start All Services",
+  "preLaunchTask": "{sequenced-compound-task}",
   "stopAll": true
 }
 ```
@@ -88,7 +88,7 @@ The backend is listed first. Its `problemMatcher` (from `project-types/{type}.md
 
 **4. Set `instanceLimit: 1` and `instancePolicy: "silent"` on background tasks** to prevent duplicate instances.
 
-When the compound runs, "Start All Services" starts both services via `dependsOrder: "sequence"`. Then each individual configuration's `preLaunchTask` fires again — but those services are already running. With `instanceLimit: 1` and `instancePolicy: "silent"`, the duplicate invocation is silently skipped and the existing instance keeps running.
+When the compound runs, the sequenced compound task starts both services via `dependsOrder: "sequence"`. Then each individual configuration's `preLaunchTask` fires again — but those services are already running. With `instanceLimit: 1` and `instancePolicy: "silent"`, the duplicate invocation is silently skipped and the existing instance keeps running.
 
 #### Why This Pattern Is Necessary
 
@@ -103,8 +103,6 @@ When the compound runs, "Start All Services" starts both services via `dependsOr
 ---
 
 ### Deduplicated Startup Graph
-
-> ⛔ **MANDATORY — checkable rule.** The compound's orchestration MUST have a deduplicated, non-overlapping startup graph. If a service can be launched more than once, the design is wrong — fix it before validation, do not paper over it. Validation ([validation.md § Step 9](validation.md)) checks this graph before running the compound and asserts each service starts exactly once.
 
 Any generated compound configuration MUST satisfy **all** of the following. Each rule is checkable against `tasks.json` / `launch.json`:
 
