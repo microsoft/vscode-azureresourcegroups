@@ -1,0 +1,1124 @@
+name: copilot-on-rails-release-experiment
+description: Backend-owned Copilot on Rails experiment plan with neutral stimuli.
+version: "1"
+type: capability
+tags:
+  component: copilot-on-rails
+  plane: vally-native
+  authority: local-authoritative-hard-gate
+  evidenceTier: ordinary
+defaults:
+  runs: 1
+  timeout: 60m
+  model: gpt-5.6-sol
+  executor: mock
+environment:
+  env:
+    COR_EVAL_MODEL: gpt-5.6-sol
+    COR_EVAL_ARM: rails
+    COR_EVAL_ENDPOINT: local
+stimuli:
+  - name: api-csharp-functions-sql
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: api
+      frontend: none
+      backend: csharp-functions
+      database: azure-sql
+      auth: none
+      complexity: medium
+      scenarioId: api-csharp-functions-sql
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: standard
+      validationCommandTimeoutMinutes: "10"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: required
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-csharp-functions-sql
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: api-node-express-redis
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: api
+      frontend: none
+      backend: typescript-express
+      database: redis
+      auth: none
+      complexity: low
+      scenarioId: api-node-express-redis
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: minimal
+      validationCommandTimeoutMinutes: "5"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-node-express-redis
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: api-python-cosmos
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: api
+      frontend: none
+      backend: python
+      database: cosmos
+      auth: none
+      complexity: low
+      scenarioId: api-python-cosmos
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: minimal
+      validationCommandTimeoutMinutes: "5"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-python-cosmos
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: api-python-flask-blob
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: api
+      frontend: none
+      backend: python-flask
+      database: blob
+      auth: mock
+      complexity: low
+      scenarioId: api-python-flask-blob
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: minimal
+      validationCommandTimeoutMinutes: "5"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: required
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-python-flask-blob
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: api-python-functions-queue
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: api
+      frontend: none
+      backend: python-functions
+      database: queue
+      auth: none
+      complexity: low
+      scenarioId: api-python-functions-queue
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: minimal
+      validationCommandTimeoutMinutes: "5"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-python-functions-queue
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: api-ts-functions-minimal
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: api
+      frontend: none
+      backend: typescript-functions
+      database: none
+      auth: none
+      complexity: low
+      scenarioId: api-ts-functions-minimal
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: minimal
+      validationCommandTimeoutMinutes: "5"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: required
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-ts-functions-minimal
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: crud-angular-csharp-functions-sql-entra
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: crud
+      frontend: angular
+      backend: csharp-functions
+      database: azure-sql
+      auth: entra-id
+      complexity: high
+      scenarioId: crud-angular-csharp-functions-sql-entra
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: advanced
+      validationCommandTimeoutMinutes: "15"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: required
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-angular-csharp-functions-sql-entra
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: crud-angular-ts-functions-cosmos-clerk
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: crud
+      frontend: angular
+      backend: typescript-functions
+      database: cosmos
+      auth: clerk
+      complexity: high
+      scenarioId: crud-angular-ts-functions-cosmos-clerk
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: advanced
+      validationCommandTimeoutMinutes: "15"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: required
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-angular-ts-functions-cosmos-clerk
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: crud-react-fastapi-postgres-auth0
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: crud
+      frontend: react
+      backend: python-fastapi
+      database: postgres
+      auth: auth0
+      complexity: high
+      scenarioId: crud-react-fastapi-postgres-auth0
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: advanced
+      validationCommandTimeoutMinutes: "15"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: required
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-react-fastapi-postgres-auth0
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: crud-react-functions-cosmos-entra
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: crud
+      frontend: react
+      backend: typescript-functions
+      database: cosmos
+      auth: entra-id
+      complexity: medium
+      scenarioId: crud-react-functions-cosmos-entra
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: standard
+      validationCommandTimeoutMinutes: "10"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: required
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-react-functions-cosmos-entra
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: crud-react-functions-postgres
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: crud
+      frontend: react
+      backend: functions
+      database: postgres
+      auth: mock
+      complexity: medium
+      scenarioId: crud-react-functions-postgres
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: standard
+      validationCommandTimeoutMinutes: "10"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: required
+      applicability-browser: required
+      applicability-accessibility: required
+      applicability-persistence: required
+      applicability-worker: not-applicable
+      applicability-debugger: required
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-react-functions-postgres
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: crud-react-functions-postgres-external-id
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: crud
+      frontend: react
+      backend: typescript-functions
+      database: postgres
+      auth: entra-external-id
+      complexity: high
+      scenarioId: crud-react-functions-postgres-external-id
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: advanced
+      validationCommandTimeoutMinutes: "15"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: required
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-react-functions-postgres-external-id
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: crud-svelte-js-functions-sql-auth0
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: crud
+      frontend: svelte
+      backend: javascript-functions
+      database: azure-sql
+      auth: auth0
+      complexity: medium
+      scenarioId: crud-svelte-js-functions-sql-auth0
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: standard
+      validationCommandTimeoutMinutes: "10"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: required
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-svelte-js-functions-sql-auth0
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: crud-svelte-python-functions-cosmos
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: crud
+      frontend: svelte
+      backend: python-functions
+      database: cosmos
+      auth: mock
+      complexity: medium
+      scenarioId: crud-svelte-python-functions-cosmos
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: standard
+      validationCommandTimeoutMinutes: "10"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-svelte-python-functions-cosmos
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: crud-vue-functions-postgres
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: crud
+      frontend: vue
+      backend: typescript-functions
+      database: postgres
+      auth: none
+      complexity: medium
+      scenarioId: crud-vue-functions-postgres
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: standard
+      validationCommandTimeoutMinutes: "10"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-vue-functions-postgres
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: multiservice-react-functions-worker-postgres-queue
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: multiservice
+      frontend: react
+      backend: typescript-python-functions
+      database: postgres-queue
+      auth: mock
+      complexity: high
+      scenarioId: multiservice-react-functions-worker-postgres-queue
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: advanced
+      validationCommandTimeoutMinutes: "15"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: multiservice-react-functions-worker-postgres-queue
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: multiservice-vue-functions-worker-cosmos-queue
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: multiservice
+      frontend: vue
+      backend: csharp-typescript-functions
+      database: cosmos-queue
+      auth: entra-id
+      complexity: high
+      scenarioId: multiservice-vue-functions-worker-cosmos-queue
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: advanced
+      validationCommandTimeoutMinutes: "15"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: required
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: multiservice-vue-functions-worker-cosmos-queue
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: static-html-functions-blob
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: static-api
+      frontend: html
+      backend: typescript-functions
+      database: blob
+      auth: none
+      complexity: medium
+      scenarioId: static-html-functions-blob
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: standard
+      validationCommandTimeoutMinutes: "10"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: not-applicable
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: static-html-functions-blob
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: worker-python-functions-blob
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: worker
+      frontend: none
+      backend: python-functions
+      database: blob
+      auth: none
+      complexity: low
+      scenarioId: worker-python-functions-blob
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: minimal
+      validationCommandTimeoutMinutes: "5"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: required
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: required
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: worker-python-functions-blob
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: worker-ts-functions-queue
+    prompt: Execute the selected Copilot on Rails scenario using the explicitly configured arm, endpoint, and model.
+    tags:
+      archetype: worker
+      frontend: none
+      backend: typescript-functions
+      database: queue
+      auth: none
+      complexity: low
+      scenarioId: worker-ts-functions-queue
+      endpoint: local
+      backendAuthoritative: "true"
+      profile: minimal
+      validationCommandTimeoutMinutes: "5"
+      applicability-planning: not-applicable
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: required
+      applicability-browser: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: required
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: worker-ts-functions-queue
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: custom-metrics
+        name: backend-authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+scoring:
+  weights:
+    custom-metrics: 1
+  threshold: 1

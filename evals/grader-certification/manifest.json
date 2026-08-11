@@ -1,0 +1,154 @@
+{
+    "schemaVersion": 1,
+    "fixture": {
+        "id": "reference-node-fullstack",
+        "path": "evals/grader-certification/reference-node-fullstack",
+        "description": "Dependency-free Node.js full-stack reference project with build, test, lint, HTTP, browser, accessibility, persistence, debugger, and deployment artifacts.",
+        "offlineValidators": [
+            "requirements",
+            "project-plan",
+            "plan-gate",
+            "preview",
+            "integration-plan",
+            "integration-output",
+            "local-debug",
+            "deployment",
+            "target-discovery"
+        ],
+        "acaValidators": [
+            "project-build",
+            "local-runtime",
+            "browser",
+            "accessibility",
+            "persistence",
+            "debugger-readiness",
+            "cleanup"
+        ]
+    },
+    "mutations": [
+        {
+            "id": "requirements-schema-version",
+            "tier": "offline",
+            "validator": "requirements",
+            "file": ".azure/requirements.json",
+            "operation": "replace",
+            "search": "\"schemaVersion\": \"2\"",
+            "replacement": "\"schemaVersion\": \"1\"",
+            "expectedCode": "schemaVersion"
+        },
+        {
+            "id": "project-plan-numbering",
+            "tier": "offline",
+            "validator": "project-plan",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "## 3. Prerequisites",
+            "replacement": "## 4. Prerequisites",
+            "expectedCode": "nonSequentialHeading"
+        },
+        {
+            "id": "preview-not-ready",
+            "tier": "offline",
+            "validator": "preview",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "replace",
+            "search": "\"previewStatus\": \"ready\"",
+            "replacement": "\"previewStatus\": \"draft\"",
+            "expectedCode": "previewNotReady"
+        },
+        {
+            "id": "integration-seed-policy",
+            "tier": "offline",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "NO seed data.",
+            "replacement": "Use sample data when convenient.",
+            "expectedCode": "missingNoSeedRule"
+        },
+        {
+            "id": "frontend-mock-import",
+            "tier": "offline",
+            "validator": "integration-output",
+            "file": "public/app.js",
+            "operation": "append",
+            "replacement": "\nimport('./mockClient.js');\n",
+            "expectedCode": "frontendMockStillImported"
+        },
+        {
+            "id": "debug-task-graph",
+            "tier": "offline",
+            "validator": "local-debug",
+            "file": ".vscode/launch.json",
+            "operation": "replace",
+            "search": "\"preLaunchTask\": \"prepare\"",
+            "replacement": "\"preLaunchTask\": \"missing task\"",
+            "expectedCode": "invalidPreLaunchTask"
+        },
+        {
+            "id": "deployment-hook-shell",
+            "tier": "offline",
+            "validator": "deployment",
+            "file": "azure.yaml",
+            "operation": "replace",
+            "search": "shell: sh",
+            "replacement": "shell: cmd",
+            "expectedCode": "invalidAzdHookShell"
+        },
+        {
+            "id": "deployment-secret",
+            "tier": "offline",
+            "validator": "deployment",
+            "file": "azure.yaml",
+            "operation": "append",
+            "replacement": "\nmetadata:\n  password: super-secret-value\n",
+            "expectedCode": "hardcodedSecret"
+        },
+        {
+            "id": "no-build-target",
+            "tier": "offline",
+            "validator": "target-discovery",
+            "file": "package.json",
+            "operation": "delete",
+            "expectedCode": "noBuildTargets"
+        },
+        {
+            "id": "build-syntax-error",
+            "tier": "aca",
+            "validator": "project-build",
+            "file": "src/server.js",
+            "operation": "append",
+            "replacement": "\nconst broken = ;\n",
+            "expectedCode": "sandboxCommandFailed",
+            "expectedCommand": "npm run build"
+        },
+        {
+            "id": "generated-test-failure",
+            "tier": "aca",
+            "validator": "project-build",
+            "file": "test/server.test.js",
+            "operation": "replace",
+            "search": "assert.equal(response.status, 200);",
+            "replacement": "assert.equal(response.status, 500);",
+            "expectedCode": "sandboxCommandFailed",
+            "expectedCommand": "npm test"
+        },
+        {
+            "id": "runtime-status-mismatch",
+            "tier": "aca",
+            "validator": "local-runtime",
+            "operation": "scenario-status",
+            "expectedCode": "localProbeFailed"
+        },
+        {
+            "id": "accessibility-missing-button-name",
+            "tier": "aca",
+            "validator": "local-runtime",
+            "file": "public/index.html",
+            "operation": "replace",
+            "search": "    </main>",
+            "replacement": "        <button></button>\n    </main>",
+            "expectedCode": "localBrowserFailed"
+        }
+    ]
+}

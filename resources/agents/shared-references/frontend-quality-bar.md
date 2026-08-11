@@ -349,6 +349,21 @@ A page can pass items 1–8 and still look templated if it renders empty media s
 - **Match the domain's visual idiom.** A photo-sharing app reads as a gallery (edge-to-edge imagery, scrapbook/polaroid framing, captions), a finance app as data-dense tables, an editorial app as a magazine, a chat app as message bubbles. Do not flatten every app into the same generic SaaS card grid.
 - **Use bespoke, domain-specific component treatments** — tilted polaroid frames, ticket stubs, chat bubbles, kanban cards, gallery tiles, etc. — **layered on top of** the library primitives from the region-token mapping. This is encouraged, not forbidden (see self-review item 12). The ban is only on empty placeholder `<div>`s that re-skin the wireframe, never on art direction that fits the domain.
 
+### 10. Accessibility is a hard runtime gate
+
+Before the page is complete, render it in a real browser and resolve all critical or
+serious WCAG A/AA findings. At minimum:
+
+- Every icon-only button has an accessible name.
+- Form controls have programmatic labels and validation relationships.
+- Foreground/background pairs meet contrast requirements in light and dark themes.
+- Elements under `aria-hidden="true"` are never focusable and contain no focusable descendants.
+- Keyboard focus is visible, ordered, and not trapped outside an intentionally open modal.
+- Semantic landmarks and heading order describe the page structure.
+
+Do not suppress axe rules globally or remove keyboard behavior to make a scan pass. Fix
+the rendered accessibility tree or component composition at the affected selector.
+
 ---
 
 ## Polish self-review checklist (per page, before marking complete)
@@ -368,3 +383,5 @@ Run through this 12-item yes/no list for **each page** generated. A "no" on any 
 11. Does the page **match or exceed** the approved static preview — same regions and content, now with real library elevation, motion, real webfont, and real imagery — so a reviewer comparing them would say "yes, this is the preview, brought to life" (never "this looks worse than the mock")?
 12. Does every region **resolve to a real library primitive** (no zero-effort `<div className="card">Card 1</div>` wireframe stubs)? Bespoke, domain-styled components (polaroid frames, ticket stubs, gallery tiles, chat bubbles) are **encouraged** as long as they wrap or extend a real library primitive and carry real content + imagery — the ban is on empty placeholder `<div>`s that merely re-skin the wireframe, not on domain art direction.
 13. Does every media-bearing entity render a **real image** (from the mock data's image URL), not an empty tinted surface or solid-color block?
+14. Does a real-browser WCAG A/AA scan report zero critical or serious violations?
+15. Can every interactive control be reached and understood by keyboard and accessible name?

@@ -70,7 +70,7 @@ Assemble `.vscode/launch.json` and `.vscode/tasks.json` by combining properties 
 | Debug port | `runtimes/{rt}.md` § Debugger Properties | N/A (uses dev server URL) |
 | Request mode (`attach` / `launch`) | `project-types/{type}.md` § Runtime Wiring | `project-types/frontend-spa/frontend-spa.md` § Runtime Wiring |
 | Top-level startup task (type, command, problem matcher) | `project-types/{type}.md` § VS Code Task Configuration | `project-types/frontend-spa/frontend-spa.md` § VS Code Task Configuration |
-| Build chain tasks (install, clean, watch) | `runtimes/{rt}.md` § Build Chain | N/A (dev server handles compilation) |
+| Build chain tasks (install, clean, watch) | `runtimes/{rt}.md` § Build Chain | `project-types/frontend-spa/frontend-spa.md` (install only; dev server handles compilation) |
 | Runtime-specific launch properties (`outFiles`, `processName`) | `runtimes/{rt}.md` § Debugger Properties | N/A |
 | Compound configuration | [multi-service.md](multi-service.md) § Compound Debug Configuration | [multi-service.md](multi-service.md) § Compound Debug Configuration |
 | Working directory (`cwd`) rules | generate.md § Working Directory (`cwd`) Rules | generate.md § Working Directory (`cwd`) Rules |
@@ -93,7 +93,9 @@ If two services resolve to the same ID, append the project type: `payments-api-f
 
 ### Task Chain Shape (Server-side only)
 
-> Browser-based projects (e.g., Frontend SPA) skip the build chain — the dev server task is the only task. See `project-types/{type}.md` § VS Code Task Configuration.
+> Browser-based projects (e.g., Frontend SPA) skip clean/build/watch, but still require
+> a package-install task. The dev server must transitively depend on an install task with
+> the same service `cwd`. See `project-types/{type}.md` § VS Code Task Configuration.
 
 ```
 "{service-id}: {top-level-task}"         ← project-type-specific (see project-types/{type}.md)

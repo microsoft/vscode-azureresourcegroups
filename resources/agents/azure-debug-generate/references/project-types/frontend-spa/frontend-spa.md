@@ -102,14 +102,28 @@ Look up the launch configuration template from the corresponding adapter file in
 
 ### VS Code Task Configuration
 
-The top-level task is the framework's dev server. No runtime build chain — the dev server handles compilation internally. The task label follows the pattern `"{id} dev"`.
+The top-level task is the framework's dev server. The dev server handles compilation
+internally, so it does not need clean/build/watch tasks. It still requires an explicit
+package-install prerequisite in the same service directory. Without that dependency,
+F5 can fail on a fresh clone because framework plugins such as
+`@vitejs/plugin-react` are unavailable.
 
 ```json
 {
   "type": "shell",
-  "label": "{id} dev",
+  "label": "{service-id}: npm install",
+  "command": "npm install",
+  "options": { "cwd": "${workspaceFolder}/{service-root}" },
+  "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" },
+  "problemMatcher": []
+},
+{
+  "type": "shell",
+  "label": "{service-id}: npm dev",
   "command": "{command from Framework Lookup Table}",
   "options": { "cwd": "${workspaceFolder}/{service-root}" },
+  "dependsOn": ["{service-id}: npm install"],
+  "dependsOrder": "sequence",
   "isBackground": true,
   "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" },
   "problemMatcher": {
@@ -170,9 +184,11 @@ Use the `Ready Pattern (begins)` and `Ready Pattern (ends)` columns from the **F
 
 After generating `launch.json` and `tasks.json`, verify the following were produced correctly:
 
-1. ✅ Dev server task exists in `tasks.json` with a custom `background` problem matcher using the correct begin/end patterns from the Framework Lookup Table
-2. ✅ `launch.json` uses the browser debug adapter matching the browser recorded in the plan's Prerequisites (`chrome` or `msedge`) with `"request": "launch"`
-3. ✅ `launch.json` `url` matches the framework's default port from the Framework Lookup Table
-4. ✅ `launch.json` `preLaunchTask` points to the dev server task
+1. ✅ A package-install task exists with the same `options.cwd` as the dev server task
+2. ✅ The dev server task transitively depends on that package-install task
+3. ✅ Dev server task exists in `tasks.json` with a custom `background` problem matcher using the correct begin/end patterns from the Framework Lookup Table
+4. ✅ `launch.json` uses the browser debug adapter matching the browser recorded in the plan's Prerequisites (`chrome` or `msedge`) with `"request": "launch"`
+5. ✅ `launch.json` `url` matches the framework's default port from the Framework Lookup Table
+6. ✅ `launch.json` `preLaunchTask` points to the dev server task
 
 > Runtime-specific checks (e.g., build task, debugger type) are defined in `runtimes/{rt}.md`.

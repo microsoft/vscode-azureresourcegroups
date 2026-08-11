@@ -1,0 +1,25 @@
+{
+    "schemaVersion": "1",
+    "id": "crud-vue-functions-postgres",
+    "prompt": "Build a project milestone tracker with a Vue and Vite frontend, TypeScript Azure Functions API, PostgreSQL persistence, no authentication, and component plus API tests.",
+    "baselinePrompt": "Build a complete project milestone tracker application using a Vue and Vite frontend, a TypeScript Azure Functions API, PostgreSQL persistence, and no authentication, including component and API tests. Implement all frontend, backend, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "vue",
+        "backend": "typescript-functions",
+        "database": "postgres",
+        "auth": "none",
+        "complexity": "medium"
+    },
+    "requirementsAnswers": {
+        "dataStores": ["PostgreSQL"],
+        "auth": "No auth"
+    },
+    "validation": {
+        "profile": "standard",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 10
+    }
+}

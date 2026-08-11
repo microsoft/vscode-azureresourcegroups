@@ -1,0 +1,13 @@
+{
+    "name": "cor-vscode-debug-parity",
+    "displayName": "Copilot on Rails VS Code Debug Parity",
+    "version": "0.0.1",
+    "private": true,
+    "engines": {
+        "vscode": "^1.106.0"
+    },
+    "main": "./test.js",
+    "activationEvents": [
+        "*"
+    ]
+}

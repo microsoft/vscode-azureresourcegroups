@@ -30,7 +30,7 @@ All package versions pinned in ONE place. **Never use wildcards** (`1.*`, `4.*`)
 
 > ### ⚠️ Resolve latest stable versions at scaffold time (MANDATORY)
 >
-> **The versions shown below are a floor, not a pin.** NuGet releases roll forward weekly — by the time this doc is used, many versions will be stale. The scaffold agent **MUST resolve the latest stable version of every package at scaffold time** and emit those resolved values into `Directory.Packages.props`. Do NOT copy the versions below verbatim.
+> **The versions shown below are a verified stable baseline.** When package search is available, the scaffold agent SHOULD resolve newer stable versions and emit those values into `Directory.Packages.props`. When package search is unavailable, use this baseline exactly rather than inventing package IDs or versions.
 >
 > Resolve via one of:
 > - `dotnet package search {PackageId} --exact-match --take 1` (CLI, deterministic, CI-friendly)
@@ -51,13 +51,12 @@ All package versions pinned in ONE place. **Never use wildcards** (`1.*`, `4.*`)
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Functions runtime (Worker 2.x — FLOOR: 2.50.0 / 2.0.5 for .NET 10; resolve latest stable) -->
-    <PackageVersion Include="Microsoft.Azure.Functions.Worker" Version="2.50.0" />
-    <PackageVersion Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.5" />
+    <!-- Functions runtime (verified .NET 10 baseline) -->
+    <PackageVersion Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
+    <PackageVersion Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.1.0" />
     <PackageVersion Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.3.0" />
-    <PackageVersion Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="2.0.0" />
-    <PackageVersion Include="Microsoft.Azure.Functions.Worker.OpenTelemetry" Version="1.0.0" />
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.4.0" />
+    <PackageVersion Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="2.1.1" />
+    <PackageVersion Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="2.51.0" />
     <PackageVersion Include="Microsoft.ApplicationInsights.WorkerService" Version="2.23.0" />
 
     <!-- ASP.NET Core / config (align to net10.0 → latest 10.* stable) -->
@@ -73,9 +72,10 @@ All package versions pinned in ONE place. **Never use wildcards** (`1.*`, `4.*`)
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
 
     <!-- Azure SDK + identity (each has its own version train — resolve independently) -->
-    <PackageVersion Include="Azure.Identity" Version="1.13.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.24.0" />
     <PackageVersion Include="Azure.Storage.Queues" Version="12.22.0" />
     <PackageVersion Include="Microsoft.Azure.Cosmos" Version="3.47.0" />
@@ -89,7 +89,6 @@ All package versions pinned in ONE place. **Never use wildcards** (`1.*`, `4.*`)
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
-    <PackageVersion Include="FluentValidation.TestHelper" Version="11.11.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
   </ItemGroup>
 </Project>
@@ -98,6 +97,8 @@ All package versions pinned in ONE place. **Never use wildcards** (`1.*`, `4.*`)
 > **Do NOT use `Moq`.** Moq 4.20+ ships [SponsorLink](https://github.com/moq/moq/issues/1372) which makes network calls and is blocked in many enterprises. Use **NSubstitute**.
 >
 > **Do NOT use `FluentAssertions` ≥ 8.0.** FluentAssertions 8+ requires a paid commercial license. Use **Shouldly** (MIT) or pin FluentAssertions to `< 8.0.0` only if explicitly required by the user.
+>
+> **`FluentValidation.TestHelper` is a namespace in the `FluentValidation` package, not a NuGet package.** Never emit a `PackageReference` or central version for `FluentValidation.TestHelper`.
 
 ---
 
@@ -215,6 +216,8 @@ await host.RunAsync();
 ```
 
 > Note: `<PackageReference>` has **no `Version`** — versions are centrally pinned via `Directory.Packages.props`.
+>
+> `Microsoft.Extensions.Configuration.UserSecrets` is supplied by the `Microsoft.AspNetCore.App` framework reference. Set `UserSecretsId` when needed, but do **not** add a separate package reference; NuGet flags it as unnecessary under .NET 10.
 
 ### `Program.cs` (Worker 2.x — `IHostApplicationBuilder`)
 
@@ -222,11 +225,10 @@ await host.RunAsync();
 
 ```csharp
 using Azure.Identity;
-using Azure.Monitor.OpenTelemetry.Exporter;
 using Azure.Storage.Blobs;
 using FluentValidation;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
-using Microsoft.Azure.Functions.Worker.OpenTelemetry;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -242,10 +244,10 @@ if (builder.Environment.IsDevelopment())
 
 var config = builder.Configuration;
 
-// ---------- Observability: OpenTelemetry → Azure Monitor (App Insights) ----------
-builder.Services.AddOpenTelemetry()
-    .UseFunctionsWorkerDefaults()
-    .UseAzureMonitorExporter();
+// ---------- Observability: Application Insights ----------
+builder.Services
+    .AddApplicationInsightsTelemetryWorkerService()
+    .ConfigureFunctionsApplicationInsights();
 
 // ---------- Middleware ----------
 builder.UseMiddleware<ExceptionMiddleware>();
@@ -283,7 +285,7 @@ var host = builder.Build();
 await host.RunAsync();
 ```
 
-> **About App Insights:** Worker 2.x integrates telemetry via **OpenTelemetry** (`Microsoft.Azure.Functions.Worker.OpenTelemetry` + `Azure.Monitor.OpenTelemetry.Exporter`). The older `AddApplicationInsightsTelemetryWorkerService()` + `ConfigureFunctionsApplicationInsights()` pair is still supported but OpenTelemetry is the going-forward path in the Learn docs.
+> **About App Insights:** Use the verified `Microsoft.Azure.Functions.Worker.ApplicationInsights` integration above by default. Add the OpenTelemetry worker integration only when the user explicitly requests it and after resolving a vulnerability-free, mutually compatible package set.
 
 > **Production deployment pattern**: in App Settings, set `ConnectionStrings:Storage` to the **blob service URI** (e.g., `https://myaccount.blob.core.windows.net`) and grant the Function App's managed identity the `Storage Blob Data Contributor` role. The code above detects the URI form and automatically uses `DefaultAzureCredential`. The same pattern works for Cosmos, Service Bus, Key Vault, SQL — all support URI + Managed Identity auth.
 
@@ -391,6 +393,9 @@ public class CreateItem(
 >
 > ```csharp
 > // Functions/FunctionHelpers.cs
+> using Microsoft.Extensions.DependencyInjection;
+> using Microsoft.Extensions.Options;
+>
 > public static async Task<T> ReadJsonBodyAsync<T>(HttpRequest req, CancellationToken ct) where T : class
 > {
 >     var jsonOptions = req.HttpContext.RequestServices
@@ -537,13 +542,17 @@ public class Health(AppDbContext db, BlobServiceClient blobs, IConnectionMultipl
 
 ## Exception Middleware — replaces per-handler try/catch
 
-With ASP.NET Core integration you get a real middleware pipeline. One middleware covers every function.
+One Functions worker middleware covers every function. Handlers stay on the ASP.NET Core
+`HttpRequest` / `IResult` API. The middleware bridge receives `HttpRequestData` from
+`FunctionContext`; do not use that legacy type in handlers.
 
 ```csharp
 // Middleware/ExceptionMiddleware.cs
+using System.Text.Json;
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.Functions.Worker.Middleware;
 using Microsoft.Extensions.Logging;
@@ -577,7 +586,9 @@ public sealed class ExceptionMiddleware(ILogger<ExceptionMiddleware> logger) : I
         if (req is null) return;
         var res = req.CreateResponse();
         res.StatusCode = (System.Net.HttpStatusCode)status;
-        await res.WriteAsJsonAsync(new ProblemDetails { Status = status, Title = title, Detail = detail }, statusCode: status);
+        await JsonSerializer.SerializeAsync(
+            res.Body,
+            new ProblemDetails { Status = status, Title = title, Detail = detail });
         ctx.GetInvocationResult().Value = res;
     }
 }
@@ -659,7 +670,6 @@ Don't run `dotnet ef database update` from the Function App at startup. Options:
     <PackageReference Include="NSubstitute.Analyzers.CSharp" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="coverlet.collector" />
-    <PackageReference Include="FluentValidation.TestHelper" />
   </ItemGroup>
 
   <ItemGroup>
@@ -801,7 +811,7 @@ public class CreateItemValidator : AbstractValidator<CreateItemRequest>
 
 ## Logging — Built-in `ILogger<T>` + Application Insights
 
-No Serilog. Inject `ILogger<T>` and log via structured parameters — Application Insights captures everything via OpenTelemetry (`AddOpenTelemetry().UseFunctionsWorkerDefaults().UseAzureMonitorExporter()` in `Program.cs`).
+No Serilog. Inject `ILogger<T>` and log via structured parameters — Application Insights captures everything through `AddApplicationInsightsTelemetryWorkerService()` and `ConfigureFunctionsApplicationInsights()` in `Program.cs`.
 
 ```csharp
 public class CreateItem(ILogger<CreateItem> logger)
@@ -1050,7 +1060,7 @@ public class AskAi(IOptions<OpenAiOptions> opts) { /* opts.Value.ApiKey */ }
 | Test SDK | `Microsoft.NET.Test.Sdk` |
 | Mocking | `NSubstitute` (+ `NSubstitute.Analyzers.CSharp`) |
 | Assertions | `Shouldly` |
-| Validation tests | `FluentValidation.TestHelper` |
+| Validation tests | `FluentValidation` (`FluentValidation.TestHelper` namespace) |
 | Coverage | `coverlet.collector` |
 
 ---
@@ -1067,7 +1077,7 @@ When the user has an existing Functions project on older patterns, migrate in th
 - [ ] Change `.ConfigureFunctionsWorkerDefaults()` → `.ConfigureFunctionsWebApplication()`
 - [ ] Migrate `Program.cs` from `new HostBuilder()....Build()` to `FunctionsApplication.CreateBuilder(args)` (Worker 2.x `IHostApplicationBuilder`)
 - [ ] Add `Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore` package
-- [ ] Replace `AddApplicationInsightsTelemetryWorkerService()` + `ConfigureFunctionsApplicationInsights()` with OpenTelemetry (`AddOpenTelemetry().UseFunctionsWorkerDefaults().UseAzureMonitorExporter()`)
+- [ ] Configure `AddApplicationInsightsTelemetryWorkerService()` + `ConfigureFunctionsApplicationInsights()`
 - [ ] Move `local.settings.json` keys `DATABASE_URL` / `REDIS_URL` / `STORAGE_CONNECTION_STRING` → `ConnectionStrings:AppDb` / `ConnectionStrings:Redis` / `ConnectionStrings:Storage`
 - [ ] Replace `AppConfig.Load()` with `IConfiguration` / `IOptions<T>` injection
 - [ ] Remove Serilog; rely on `ILogger<T>` + Application Insights

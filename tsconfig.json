@@ -30,6 +30,7 @@
         "gulpfile.ts",
         "**/dist",
         "**/out",
+        "evals/results",
         "src/webviews/copilotOnRails/views"
     ]
 }

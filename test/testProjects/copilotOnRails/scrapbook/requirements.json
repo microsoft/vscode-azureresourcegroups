@@ -183,6 +183,11 @@
       "rationale": "Photos stored in Blob Storage; user pairs and photo metadata in PostgreSQL. Azure Functions also requires a storage account.",
       "options": [
         {
+          "label": "No datastore required",
+          "description": "The app does not persist data or use storage, queues, or caches",
+          "exclusive": true
+        },
+        {
           "label": "Blob Storage",
           "description": "Store files and images"
         },

@@ -491,26 +491,30 @@ export interface HealthResponse {
 
 ## ESLint Configuration
 
-```json
-// .eslintrc.json
-{
-  "root": true,
-  "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint"],
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended"
-  ],
-  "rules": {
-    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
-    "@typescript-eslint/explicit-function-return-type": "off",
-    "no-console": ["warn", { "allow": ["warn", "error"] }]
+Use ESLint's current flat configuration. The `_` convention from the scaffold rules is
+valid only when the config explicitly ignores it:
+
+```javascript
+// eslint.config.mjs
+import eslint from '@eslint/js';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  eslint.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
+    ignores: ['dist/**', 'coverage/**'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', {
+        argsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+      }],
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+    },
   },
-  "env": {
-    "node": true,
-    "es2022": true
-  }
-}
+);
 ```
 
 ---

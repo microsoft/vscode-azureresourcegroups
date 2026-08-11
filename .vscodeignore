@@ -12,6 +12,7 @@
 build/**
 dist/test/**
 docs/**
+evals/**
 gulp*
 node_modules/**
 out/**

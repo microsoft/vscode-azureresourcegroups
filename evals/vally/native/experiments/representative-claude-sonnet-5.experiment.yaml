@@ -1,0 +1,30 @@
+name: copilot-on-rails-representative-experiment-claude-sonnet-5
+evals:
+  - ../experiment-representative.eval.yaml
+overrides:
+  runs: 2
+  executor: mock
+  model: claude-sonnet-5
+  timeout: 60m
+execution:
+  workers: 5
+vary:
+  - /environment/env/COR_EVAL_ARM
+baseline: baseline
+variants:
+  rails:
+    overrides:
+      model: claude-sonnet-5
+      executor: mock
+    environment:
+      env:
+        COR_EVAL_ARM: rails
+        COR_EVAL_MODEL: claude-sonnet-5
+  baseline:
+    overrides:
+      model: claude-sonnet-5
+      executor: mock
+    environment:
+      env:
+        COR_EVAL_ARM: baseline-controlled
+        COR_EVAL_MODEL: claude-sonnet-5

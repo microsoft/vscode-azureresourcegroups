@@ -1,0 +1,40 @@
+{
+    "schemaVersion": "1",
+    "id": "api-csharp-functions-sql",
+    "prompt": "Build a backend-only C# Azure Functions API for managing warehouse inventory with CRUD endpoints, Azure SQL persistence, no authentication, and xUnit tests.",
+    "baselinePrompt": "Build a complete backend-only warehouse inventory project using a C# Azure Functions API with CRUD endpoints, Azure SQL persistence, no authentication, and xUnit tests. Implement all application code and configuration, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging the API, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "tags": {
+        "archetype": "api",
+        "frontend": "none",
+        "backend": "csharp-functions",
+        "database": "azure-sql",
+        "auth": "none",
+        "complexity": "medium"
+    },
+    "requirementsAnswers": {
+        "dataStores": ["Azure SQL"],
+        "auth": "No auth"
+    },
+    "validation": {
+        "profile": "standard",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 10
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 180,
+            "probes": [
+                {
+                    "name": "dependency health endpoint",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/health",
+                    "expectedStatus": 200,
+                    "bodyIncludes": "healthy"
+                }
+            ]
+        }
+    }
+}

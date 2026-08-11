@@ -1,0 +1,25 @@
+{
+    "schemaVersion": "1",
+    "id": "crud-angular-csharp-functions-sql-entra",
+    "prompt": "Build an employee scheduling app with an Angular frontend, C# Azure Functions API, Azure SQL persistence, Microsoft Entra ID authentication with test doubles, and component plus API tests.",
+    "baselinePrompt": "Build a complete employee scheduling application using an Angular frontend, a C# Azure Functions API, Azure SQL persistence, and Microsoft Entra ID authentication with test doubles, including component and API tests. Implement all frontend, backend, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "angular",
+        "backend": "csharp-functions",
+        "database": "azure-sql",
+        "auth": "entra-id",
+        "complexity": "high"
+    },
+    "requirementsAnswers": {
+        "dataStores": ["Azure SQL"],
+        "auth": "Microsoft Entra ID"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 15
+    }
+}

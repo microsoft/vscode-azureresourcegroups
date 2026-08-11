@@ -1,0 +1,7 @@
+{
+  "schema": "copilot-on-rails-authoritative-metrics/v1",
+  "schemaVersion": 1,
+  "values": {
+    "authoritative_hard_gates_passed": true
+  }
+}

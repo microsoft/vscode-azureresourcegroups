@@ -1,0 +1,30 @@
+name: copilot-on-rails-release-experiment-gpt-5-6-sol
+evals:
+  - ../experiment-release.eval.yaml
+overrides:
+  runs: 3
+  executor: mock
+  model: gpt-5.6-sol
+  timeout: 60m
+execution:
+  workers: 5
+vary:
+  - /environment/env/COR_EVAL_ARM
+baseline: baseline
+variants:
+  rails:
+    overrides:
+      model: gpt-5.6-sol
+      executor: mock
+    environment:
+      env:
+        COR_EVAL_ARM: rails
+        COR_EVAL_MODEL: gpt-5.6-sol
+  baseline:
+    overrides:
+      model: gpt-5.6-sol
+      executor: mock
+    environment:
+      env:
+        COR_EVAL_ARM: baseline-controlled
+        COR_EVAL_MODEL: gpt-5.6-sol

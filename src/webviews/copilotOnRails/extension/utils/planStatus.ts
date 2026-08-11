@@ -4,22 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
+import { replaceProjectPlanStatus } from '../../views/utils/projectPlanStatus';
 
-/**
- * Matches the canonical `**Status**:` metadata row in a plan file. Anchored to a
- * line start (`m` flag) so an incidental "Status:" elsewhere in the document
- * can't be matched. Capture group 1 is the label + separator (preserved when
- * rewriting); group 2 is the raw value up to end of line.
- */
+export { replaceProjectPlanStatus } from '../../views/utils/projectPlanStatus';
+
 const STATUS_LINE_REGEX = /^(\*\*Status\*\*:[ \t]*)([^\r\n]*)/m;
-
-/** Replaces only the canonical status metadata value in plan markdown. */
-export function replaceProjectPlanStatus(content: string, newStatus: string): string | undefined {
-    if (!STATUS_LINE_REGEX.test(content)) {
-        return undefined;
-    }
-    return content.replace(STATUS_LINE_REGEX, (_full, prefix: string) => `${prefix}${newStatus}`);
-}
 
 /**
  * Overwrites the status metadata row in one specific plan file. Returns the

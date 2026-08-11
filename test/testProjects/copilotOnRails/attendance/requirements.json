@@ -141,6 +141,11 @@
       "rationale": "PostgreSQL is suited to policies, attendance entries, and period calculations; Blob Storage is required by the recommended Azure Functions backend.",
       "options": [
         {
+          "label": "No datastore required",
+          "description": "The app does not persist data or use storage, queues, or caches",
+          "exclusive": true
+        },
+        {
           "label": "Blob Storage",
           "description": "Store files and images"
         },

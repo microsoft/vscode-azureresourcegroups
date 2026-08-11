@@ -1,0 +1,45 @@
+name: copilot-on-rails-summary-contract
+description: Offline oracle for the custom metrics emitted by the summary adapter.
+version: "1"
+type: capability
+
+defaults:
+  runs: 1
+  executor: mock
+
+stimuli:
+  - name: authoritative-hard-gates-contract
+    prompt: Validate the archived Copilot on Rails hard-gate metrics contract offline.
+    tags:
+      component: copilot-on-rails
+      evidence: summary-only
+      execution: offline
+    graders:
+      - type: custom-metrics
+        name: authoritative-hard-gates
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: final_product_success
+              equals: true
+            - metric: authoritative_hard_gates_passed
+              equals: true
+            - metric: browser_functional_success
+              equals: true
+            - metric: accessibility_success
+              equals: true
+            - metric: persistence_success
+              equals: true
+            - metric: worker_event_success
+              equals: true
+            - metric: debugger_evidence_success
+              equals: true
+            - metric: deployment_success
+              equals: true
+    golden_custom_metrics:
+      path: oracle-custom-metrics.json
+
+scoring:
+  weights:
+    custom-metrics: 1
+  threshold: 1

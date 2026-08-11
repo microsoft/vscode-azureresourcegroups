@@ -1,0 +1,25 @@
+{
+    "schemaVersion": "1",
+    "id": "api-python-functions-queue",
+    "prompt": "Build a backend-only Python Azure Functions API that accepts image-processing jobs, writes them to Queue Storage, exposes job status endpoints, requires no authentication, and includes pytest coverage.",
+    "baselinePrompt": "Build a complete backend-only image-processing job project using a Python Azure Functions API that accepts jobs, writes them to Azure Queue Storage, exposes job status endpoints, requires no authentication, and includes pytest coverage. Implement all application code and configuration, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging the API, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "tags": {
+        "archetype": "api",
+        "frontend": "none",
+        "backend": "python-functions",
+        "database": "queue",
+        "auth": "none",
+        "complexity": "low"
+    },
+    "requirementsAnswers": {
+        "dataStores": ["Queue Storage"],
+        "auth": "No auth"
+    },
+    "validation": {
+        "profile": "minimal",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 5
+    }
+}

@@ -42,5 +42,6 @@ UseDevelopmentStorage=true
 ## Notes
 
 - Ports: 10000 (Blob), 10001 (Queue), 10002 (Table)
+- **Compatibility requirement:** Every generated Azurite command, including `azurite-blob`, MUST include `--skipApiVersionCheck`. Current Azure Storage SDKs can send API versions newer than a pinned Azurite image supports; without this flag, the emulator starts but application health checks fail with `InvalidHeaderValue`.
 - **Consolidation:** If multiple storage bindings are detected (blob + queue + table), use a **single** Azurite service — not one per binding type.
 - The Event Hubs Emulator requires Azurite for checkpointing. If both are needed, the `azurite` service is shared.

@@ -1,0 +1,25 @@
+{
+    "schemaVersion": "1",
+    "id": "crud-react-fastapi-postgres-auth0",
+    "prompt": "Build a subscription dashboard with a React and Vite frontend, Python FastAPI backend, PostgreSQL, Auth0 behind a configuration-driven adapter that is mocked in tests, and full CRUD coverage.",
+    "baselinePrompt": "Build a complete subscription dashboard application using a React and Vite frontend, a Python FastAPI backend, PostgreSQL, and Auth0 behind a configuration-driven adapter that is mocked in tests, with full CRUD coverage. Implement all frontend, backend, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "react",
+        "backend": "python-fastapi",
+        "database": "postgres",
+        "auth": "auth0",
+        "complexity": "high"
+    },
+    "requirementsAnswers": {
+        "dataStores": ["PostgreSQL"],
+        "auth": "Auth0"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 15
+    }
+}

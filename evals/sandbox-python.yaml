@@ -1,0 +1,47 @@
+# ACA Sandbox manifest for Python generated-project validation.
+diskId: 344c39f7-88b1-4c71-8d84-2cb26930d1cc
+resources:
+  cpu: 4000m
+  memory: 8192Mi
+  disk: 81920Mi
+labels:
+  workload: copilot-on-rails-eval
+  role: validator
+lifecycle:
+  autoSuspendPolicy:
+    enabled: true
+    interval: 600
+    mode: Memory
+  autoDeletePolicy:
+    enabled: true
+    deleteIntervalInSeconds: 3600
+egressPolicy:
+  defaultAction: Deny
+  trafficInspection: Full
+  hostRules:
+    - pattern: pypi.org
+      action: Allow
+    - pattern: files.pythonhosted.org
+      action: Allow
+    - pattern: cdn.functions.azure.com
+      action: Allow
+    - pattern: mcr.microsoft.com
+      action: Allow
+    - pattern: "*.data.mcr.microsoft.com"
+      action: Allow
+    - pattern: "*.docker.io"
+      action: Allow
+    - pattern: production.cloudflare.docker.com
+      action: Allow
+    - pattern: "*.r2.cloudflarestorage.com"
+      action: Allow
+    - pattern: update.code.visualstudio.com
+      action: Allow
+    - pattern: vscode.download.prss.microsoft.com
+      action: Allow
+    - pattern: ms-azuretools.gallerycdn.vsassets.io
+      action: Allow
+    - pattern: archive.ubuntu.com
+      action: Allow
+    - pattern: security.ubuntu.com
+      action: Allow

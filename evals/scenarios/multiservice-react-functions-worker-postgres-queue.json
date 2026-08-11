@@ -1,0 +1,25 @@
+{
+    "schemaVersion": "1",
+    "id": "multiservice-react-functions-worker-postgres-queue",
+    "prompt": "Build an order processing system with a React and Vite frontend, TypeScript Azure Functions CRUD API backed by PostgreSQL, a Python Azure Functions queue worker for fulfillment events, mock authentication, and cross-service contract tests.",
+    "baselinePrompt": "Build a complete order processing system using a React and Vite frontend, a TypeScript Azure Functions CRUD API backed by PostgreSQL, a Python Azure Functions queue worker using Azure Queue Storage for fulfillment events, and mock authentication, including cross-service contract tests. Implement all frontend, API, worker, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "tags": {
+        "archetype": "multiservice",
+        "frontend": "react",
+        "backend": "typescript-python-functions",
+        "database": "postgres-queue",
+        "auth": "mock",
+        "complexity": "high"
+    },
+    "requirementsAnswers": {
+        "dataStores": ["Queue Storage", "PostgreSQL"],
+        "auth": "Mock auth middleware"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 15
+    }
+}

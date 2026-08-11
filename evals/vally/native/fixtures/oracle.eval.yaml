@@ -1,0 +1,27 @@
+name: copilot-on-rails-native-oracle-fixture
+description: Offline strict-lint and custom-metrics oracle contract.
+version: "1"
+type: capability
+defaults:
+  runs: 1
+  model: oracle-no-live-model
+  executor: mock
+stimuli:
+  - name: authoritative-custom-metrics-oracle
+    prompt: Validate the authoritative custom metrics contract without invoking a live model.
+    tags:
+      component: copilot-on-rails
+      execution: offline-oracle
+    graders:
+      - type: custom-metrics
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+    golden_custom_metrics:
+      path: oracle-custom-metrics.json
+scoring:
+  weights:
+    custom-metrics: 1
+  threshold: 1

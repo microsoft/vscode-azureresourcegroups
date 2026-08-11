@@ -1,0 +1,396 @@
+name: Copilot on Rails evaluations
+
+on:
+  pull_request:
+    branches:
+      - main
+      - feat/CoR
+    paths:
+      - .github/workflows/copilot-on-rails-evals.yml
+      - evals/**
+      - resources/agents/**
+      - test/copilotOnRails/**
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: Evaluation tier (contracts is offline; all others make paid model calls)
+        required: true
+        type: choice
+        options:
+          - contracts
+          - daily
+          - weekly
+          - release
+        default: contracts
+      run_vscode_parity:
+        description: Request separately gated VS Code parity evidence (currently fails closed)
+        required: true
+        type: boolean
+        default: false
+      run_live_deployment:
+        description: Request separately gated deployment evidence (currently fails closed)
+        required: true
+        type: boolean
+        default: false
+  schedule:
+    - cron: "23 5 * * *"
+    - cron: "41 6 * * 0"
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: Deterministic contracts
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' && inputs.tier == 'contracts')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.11.1
+      - run: npm ci
+      - run: npm run build:check
+      - run: npm run lint
+      - run: npm run eval:cor:thresholds:validate
+      - run: npm run eval:cor:spike:dry
+      - run: npm run eval:cor:graders:certify
+      - run: npx tsx evals/vally/native/generate.ts --check
+      - run: npm run eval:cor:vally:lint
+      - run: npm run eval:cor:vally:oracle
+      - run: npm run eval:cor:vally:native:lint
+      - run: npm run eval:cor:vally:native:oracle
+      - name: Load ACA backend relative to native experiments
+        run: >-
+          npx tsx -e "import path from 'node:path';
+          import { createBackendRegistry, loadBackendPlugin } from '@microsoft/vally';
+          void (async () => {
+          const registry = createBackendRegistry();
+          await loadBackendPlugin('../../plugins/aca-executor/backend.js', registry,
+          { cwd: path.resolve('evals/vally/native/experiments') });
+          const loaded = registry.getAll();
+          if (loaded.length !== 1 || loaded[0].name !== 'cor-aca')
+          throw new Error('Expected exactly one cor-aca backend registration.');
+          })().catch(error => { console.error(error); process.exitCode = 1; });"
+      - run: npm run eval:cor:vally:test
+      - name: Focused evaluator contracts
+        run: >-
+          npx mocha --require tsx/cjs --ui tdd --timeout 10000
+          test/copilotOnRails/evaluationArtifactValidators.test.ts
+          test/copilotOnRails/baselineEvaluation.test.ts
+          test/copilotOnRails/baselineMeritParity.test.ts
+          test/copilotOnRails/evaluationMatrix.test.ts
+          test/copilotOnRails/evaluationDefinition.test.ts
+          test/copilotOnRails/releaseThresholds.test.ts
+
+  model-evaluations:
+    name: ${{ github.event_name == 'schedule' && github.event.schedule == '41 6 * * 0' && 'Weekly Vally-native 3-model experiments' || github.event_name == 'schedule' && 'Daily Vally-native compatibility pilot' || format('{0} Vally-native tier', inputs.tier) }}
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.tier != 'contracts') ||
+      (github.event_name == 'schedule' &&
+       github.event.schedule == '23 5 * * *' &&
+       vars.COR_EVAL_DAILY_ENABLED == 'true') ||
+      (github.event_name == 'schedule' &&
+       github.event.schedule == '41 6 * * 0' &&
+       vars.COR_EVAL_WEEKLY_ENABLED == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 720
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ACA_RESOURCE_GROUP: ${{ vars.COR_EVAL_RESOURCE_GROUP }}
+      ACA_SANDBOX_GROUP: ${{ vars.COR_EVAL_SANDBOX_GROUP }}
+      ACA_REGION: ${{ vars.COR_EVAL_REGION }}
+      GH_TOKEN: ${{ secrets.COR_EVAL_COPILOT_GITHUB_TOKEN }}
+      RESULT_DIRECTORY: evals/results/ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.COR_EVAL_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.COR_EVAL_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.COR_EVAL_AZURE_SUBSCRIPTION_ID }}
+      - run: npm install --global npm@11.11.1
+      - run: npm ci
+      - name: Install and verify ACA CLI
+        run: |
+          curl -fsSL https://aka.ms/aca-cli-install | bash
+          aca --version
+          az account show -o none
+          aca auth status >/dev/null 2>&1 || aca auth login
+          aca doctor
+      - name: Validate evaluator and generated Vally contracts
+        run: |
+          npx tsx evals/vally/native/generate.ts --check
+          npm run eval:cor:thresholds:validate
+          npm run eval:cor:vally:lint
+          npm run eval:cor:vally:oracle
+          npm run eval:cor:vally:native:lint
+          npm run eval:cor:vally:native:oracle
+          npm run eval:cor:vally:test
+          aca sandbox validate --file evals/sandbox.yaml
+          aca sandbox validate --file evals/sandbox-python.yaml
+          aca sandbox validate --file evals/sandbox-dotnet.yaml
+      - name: Load ACA backend relative to native experiments
+        run: >-
+          npx tsx -e "import path from 'node:path';
+          import { createBackendRegistry, loadBackendPlugin } from '@microsoft/vally';
+          void (async () => {
+          const registry = createBackendRegistry();
+          await loadBackendPlugin('../../plugins/aca-executor/backend.js', registry,
+          { cwd: path.resolve('evals/vally/native/experiments') });
+          const loaded = registry.getAll();
+          if (loaded.length !== 1 || loaded[0].name !== 'cor-aca')
+          throw new Error('Expected exactly one cor-aca backend registration.');
+          })().catch(error => { console.error(error); process.exitCode = 1; });"
+      - name: Select exact generated tier experiments
+        env:
+          DISPATCH_TIER: ${{ inputs.tier }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ "${{ github.event.schedule }}" = "41 6 * * 0" ]; then
+              TIER=weekly
+            else
+              TIER=daily
+            fi
+          else
+            TIER="$DISPATCH_TIER"
+          fi
+          mkdir -p "$RESULT_DIRECTORY/experiments"
+          case "$TIER" in
+            daily)
+              printf '%s\n' \
+                evals/vally/native/experiments/compatibility-pilot-gpt-5-6-sol.experiment.yaml \
+                > "$RESULT_DIRECTORY/selected-experiments.txt"
+              ;;
+            weekly)
+              printf '%s\n' \
+                evals/vally/native/experiments/representative-gpt-5-6-sol.experiment.yaml \
+                evals/vally/native/experiments/representative-claude-sonnet-5.experiment.yaml \
+                evals/vally/native/experiments/representative-gpt-5-4-mini.experiment.yaml \
+                > "$RESULT_DIRECTORY/selected-experiments.txt"
+              ;;
+            release)
+              printf '%s\n' \
+                evals/vally/native/experiments/release-gpt-5-6-sol.experiment.yaml \
+                > "$RESULT_DIRECTORY/selected-experiments.txt"
+              ;;
+            *)
+              echo "Unsupported generated Vally tier: $TIER" >&2
+              exit 1
+              ;;
+          esac
+          echo "EVAL_TIER=$TIER" >> "$GITHUB_ENV"
+      - name: Dry-run selected Vally experiments
+        run: |
+          set -euo pipefail
+          while IFS= read -r EXPERIMENT; do
+            [ -n "$EXPERIMENT" ] || continue
+            npx vally experiment run "$EXPERIMENT" \
+              --backend ../../plugins/aca-executor/backend.js \
+              --workers 2 \
+              --output-dir "$RESULT_DIRECTORY/dry-run" \
+              --dry-run
+          done < "$RESULT_DIRECTORY/selected-experiments.txt"
+      - name: Certify graders in ACA
+        if: env.EVAL_TIER == 'daily' || env.EVAL_TIER == 'weekly'
+        run: npm run eval:cor:graders:certify:aca -- --output "$RESULT_DIRECTORY/grader-certification"
+      - name: Fail closed for separately gated release integrations
+        if: inputs.run_vscode_parity || inputs.run_live_deployment
+        run: |
+          echo "::error::VS Code parity and live deployment require separate evidence capture. The removed native-matrix source-selection path is not valid for Vally-native experiments."
+          exit 1
+      - name: Require release-only external evidence integrations
+        if: env.EVAL_TIER == 'release'
+        run: |
+          echo "::error::Release execution is disabled until provenance-bound VS Code parity and explicitly authorized live-deployment evidence are wired into this workflow. Vally-native aggregation and fail-closed release enforcement are available, but the generated release experiment will not make paid calls without those external hard gates."
+          exit 1
+      - name: Run Vally-native ACA experiments sequentially
+        id: evaluation
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          STATUS=0
+          while IFS= read -r EXPERIMENT; do
+            [ -n "$EXPERIMENT" ] || continue
+            NAME=$(basename "$EXPERIMENT" .experiment.yaml)
+            OUTPUT="$RESULT_DIRECTORY/experiments/$NAME"
+            mkdir -p "$OUTPUT"
+            npx vally experiment run "$EXPERIMENT" \
+              --backend ../../plugins/aca-executor/backend.js \
+              --workers 2 \
+              --output-dir "$OUTPUT" || STATUS=1
+          done < "$RESULT_DIRECTORY/selected-experiments.txt"
+          exit "$STATUS"
+      - name: Cleanup exact per-trial ACA owners from durable manifests
+        id: cleanup
+        if: always()
+        continue-on-error: true
+        env:
+          PAID_OUTCOME: ${{ steps.evaluation.outcome }}
+        run: |
+          set -uo pipefail
+          CLEANUP_DIRECTORY="$RESULT_DIRECTORY/cleanup"
+          LABELS_FILE="$CLEANUP_DIRECTORY/owner-labels.txt"
+          mkdir -p "$CLEANUP_DIRECTORY"
+          DISCOVERY_STATUS=0
+          node - "$RESULT_DIRECTORY" "$LABELS_FILE" "$CLEANUP_DIRECTORY/discovery.log" <<'NODE' || DISCOVERY_STATUS=1
+          const fs = require('fs');
+          const path = require('path');
+          const [root, labelsPath, logPath] = process.argv.slice(2);
+          const labels = new Set();
+          const logs = [];
+          let invalid = false;
+          function visit(directory) {
+            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+              const entryPath = path.join(directory, entry.name);
+              if (entry.isDirectory()) {
+                visit(entryPath);
+              } else if (entry.isFile() && entry.name === 'validation-manifest.json') {
+                try {
+                  const manifest = JSON.parse(fs.readFileSync(entryPath, 'utf8'));
+                  if (typeof manifest.ownerLabel !== 'string' ||
+                      !/^[a-z0-9][a-z0-9-]{0,62}$/.test(manifest.ownerLabel)) {
+                    throw new Error('missing or invalid ownerLabel');
+                  }
+                  labels.add(manifest.ownerLabel);
+                  logs.push(`accepted ${entryPath}: ${manifest.ownerLabel}`);
+                } catch (error) {
+                  invalid = true;
+                  logs.push(`rejected ${entryPath}: ${error.message}`);
+                }
+              }
+            }
+          }
+          visit(root);
+          fs.writeFileSync(labelsPath, [...labels].sort().join('\n') + (labels.size ? '\n' : ''));
+          fs.writeFileSync(logPath, logs.join('\n') + (logs.length ? '\n' : ''));
+          if (invalid) process.exitCode = 1;
+          NODE
+
+          STATUS="$DISCOVERY_STATUS"
+          if [ "$PAID_OUTCOME" != "skipped" ] && [ ! -s "$LABELS_FILE" ]; then
+            echo "No durable validation-manifest.json owner labels were found after paid execution." |
+              tee -a "$CLEANUP_DIRECTORY/actions.log"
+            STATUS=1
+          fi
+          while IFS= read -r OWNER_LABEL; do
+            [ -n "$OWNER_LABEL" ] || continue
+            LIST_JSON="$CLEANUP_DIRECTORY/list-$OWNER_LABEL.json"
+            IDS_FILE="$CLEANUP_DIRECTORY/ids-$OWNER_LABEL.txt"
+            echo "Listing exact owner-id=$OWNER_LABEL" | tee -a "$CLEANUP_DIRECTORY/actions.log"
+            if ! aca sandbox list -l "owner-id=$OWNER_LABEL" -o json \
+              > "$LIST_JSON" 2>> "$CLEANUP_DIRECTORY/actions.log"; then
+              echo "List failed for owner-id=$OWNER_LABEL" | tee -a "$CLEANUP_DIRECTORY/actions.log"
+              STATUS=1
+              continue
+            fi
+            if ! node - "$LIST_JSON" "$IDS_FILE" <<'NODE'
+          const fs = require('fs');
+          const [source, target] = process.argv.slice(2);
+          const value = JSON.parse(fs.readFileSync(source, 'utf8'));
+          if (!Array.isArray(value)) throw new Error('ACA sandbox list was not an array');
+          const ids = [...new Set(value.map(item => item?.id).filter(id => typeof id === 'string'))];
+          fs.writeFileSync(target, ids.join('\n') + (ids.length ? '\n' : ''));
+          NODE
+            then
+              echo "List parse failed for owner-id=$OWNER_LABEL" | tee -a "$CLEANUP_DIRECTORY/actions.log"
+              STATUS=1
+              continue
+            fi
+            while IFS= read -r SANDBOX_ID; do
+              [ -n "$SANDBOX_ID" ] || continue
+              echo "Deleting $SANDBOX_ID for owner-id=$OWNER_LABEL" |
+                tee -a "$CLEANUP_DIRECTORY/actions.log"
+              aca sandbox delete --id "$SANDBOX_ID" --yes \
+                >> "$CLEANUP_DIRECTORY/actions.log" 2>&1 || STATUS=1
+            done < "$IDS_FILE"
+            VERIFY_JSON="$CLEANUP_DIRECTORY/verify-$OWNER_LABEL.json"
+            if ! aca sandbox list -l "owner-id=$OWNER_LABEL" -o json \
+              > "$VERIFY_JSON" 2>> "$CLEANUP_DIRECTORY/actions.log"; then
+              echo "Verification list failed for owner-id=$OWNER_LABEL" |
+                tee -a "$CLEANUP_DIRECTORY/actions.log"
+              STATUS=1
+              continue
+            fi
+            if ! node - "$VERIFY_JSON" <<'NODE'
+          const fs = require('fs');
+          const value = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          if (!Array.isArray(value)) throw new Error('ACA sandbox verification list was not an array');
+          if (value.length) throw new Error(`ACA cleanup left ${value.length} sandbox(es)`);
+          NODE
+            then
+              echo "Residual sandboxes remain for owner-id=$OWNER_LABEL" |
+                tee -a "$CLEANUP_DIRECTORY/actions.log"
+              STATUS=1
+            fi
+          done < "$LABELS_FILE"
+          exit "$STATUS"
+      - name: Aggregate Vally-native experiments and release gates
+        id: aggregate
+        if: always() && steps.evaluation.outcome != 'skipped'
+        run: >-
+          npm run eval:cor:vally:native:report --
+          --experiment-dir "$RESULT_DIRECTORY/experiments"
+          --output "$RESULT_DIRECTORY/report"
+      - name: Summarize Vally-native evidence
+        if: always()
+        run: |
+          {
+            echo "## Vally-native evaluation evidence"
+            echo
+            echo "Tier: \`${EVAL_TIER:-not-configured}\`"
+            echo
+            echo "Generated experiments:"
+            sed 's/^/- `/' "$RESULT_DIRECTORY/selected-experiments.txt" 2>/dev/null |
+              sed 's/$/`/' || true
+            echo
+            echo "Evidence files:"
+            find "$RESULT_DIRECTORY/experiments" -type f -print 2>/dev/null |
+              sort | sed 's/^/- `/' | sed 's/$/`/' || true
+            if [ -f "$RESULT_DIRECTORY/report/report.md" ]; then
+              echo
+              cat "$RESULT_DIRECTORY/report/report.md"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload primary Vally-native experiment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cor-vally-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.RESULT_DIRECTORY }}/selected-experiments.txt
+            ${{ env.RESULT_DIRECTORY }}/experiments
+            ${{ env.RESULT_DIRECTORY }}/report
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+      - name: Upload cleanup evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cor-vally-cleanup-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.RESULT_DIRECTORY }}/cleanup
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+      - name: Propagate paid evaluation or cleanup failure
+        if: >-
+          always() &&
+          (steps.evaluation.outcome == 'failure' ||
+           steps.cleanup.outcome == 'failure' ||
+           steps.aggregate.outcome == 'failure')
+        run: exit 1

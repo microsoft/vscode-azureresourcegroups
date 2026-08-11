@@ -1,0 +1,25 @@
+{
+    "schemaVersion": "1",
+    "id": "crud-react-functions-cosmos-entra",
+    "prompt": "Build a document review app with a React and Vite frontend, TypeScript Azure Functions API, Cosmos DB persistence, Microsoft Entra ID authentication with mocked token validation in tests, and review workflow coverage.",
+    "baselinePrompt": "Build a complete document review application using a React and Vite frontend, a TypeScript Azure Functions API, Cosmos DB persistence, and Microsoft Entra ID authentication with mocked token validation in tests, including review workflow coverage. Implement all frontend, backend, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "react",
+        "backend": "typescript-functions",
+        "database": "cosmos",
+        "auth": "entra-id",
+        "complexity": "medium"
+    },
+    "requirementsAnswers": {
+        "dataStores": ["CosmosDB"],
+        "auth": "Microsoft Entra ID"
+    },
+    "validation": {
+        "profile": "standard",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 10
+    }
+}

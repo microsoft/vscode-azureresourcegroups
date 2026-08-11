@@ -1,0 +1,42 @@
+{
+    "schemaVersion": "1",
+    "id": "api-python-flask-blob",
+    "prompt": "Build a backend-only Python Flask API for uploading and downloading compliance documents from Blob Storage, protected by mock authentication and covered by API tests.",
+    "baselinePrompt": "Build a complete backend-only compliance document project using a Python Flask API that uploads documents to and downloads documents from Azure Blob Storage, protected by mock authentication and covered by API tests. Implement all application code and configuration, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging the API, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "tags": {
+        "archetype": "api",
+        "frontend": "none",
+        "backend": "python-flask",
+        "database": "blob",
+        "auth": "mock",
+        "complexity": "low"
+    },
+    "requirementsAnswers": {
+        "dataStores": ["Blob Storage"],
+        "auth": "Mock auth middleware"
+    },
+    "validation": {
+        "profile": "minimal",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 5
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 120,
+            "probes": [
+                {
+                    "name": "health endpoint",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:5000/api/health",
+                    "expectedStatus": 200,
+                    "bodyIncludes": "healthy",
+                    "debugPort": 5678,
+                    "debugProtocol": "tcp"
+                }
+            ]
+        }
+    }
+}
