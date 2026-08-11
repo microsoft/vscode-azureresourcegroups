@@ -1018,6 +1018,8 @@
         "package": "vsce package --githubBranch main",
         "lint": "eslint --max-warnings 0",
         "test": "vscode-test",
+        "eval": "node evals/run-eval.cjs",
+        "eval:plan": "node evals/run-eval.cjs --suite project-plan",
         "all": "npm i && npm run lint && npm run build && npm run package && npm test",
         "api-extractor": "cd api && npm run api-extractor"
     },

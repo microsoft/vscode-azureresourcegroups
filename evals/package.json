@@ -1,11 +1,14 @@
 {
     "name": "evals",
     "version": "1.0.0",
-    "description": "",
+    "description": "Vally evaluation infrastructure for Azure agent workflows. Run from repo root: npm run eval",
     "type": "commonjs",
     "main": "index.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "eval": "node run-eval.cjs",
+        "eval:plan": "node run-eval.cjs --suite project-plan",
+        "mcp": "node mcp/workflow-tools-http.cjs",
+        "lint": "npx -y @microsoft/vally-cli lint --eval-spec project-plan/eval.yaml"
     },
     "keywords": [],
     "author": "",
