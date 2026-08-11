@@ -13,6 +13,7 @@ export default defineConfig([
             'api/dist/**',
             'api/out/**',
             'src/webviews/copilotOnRails/views/react-shim.js',
+            'evals/**',
         ],
     },
     {

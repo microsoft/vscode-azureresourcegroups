@@ -67,3 +67,4 @@ testWorkspace
 test-results.xml
 dist
 stats.json
+results/
