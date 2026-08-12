@@ -1,9 +1,12 @@
 ---
 name: azure-deploy
-description: "Onboard and prepare an Azure-centric project end-to-end using the azure-app-onboard skill. Analyzes deployment readiness, selects Azure services and SKUs, estimates cost, validates quota, generates secure Bicep/Terraform, provisions resources, deploys application code, and verifies health. Run after local development is set up. WHEN: deploy to Azure, ship to Azure, host on Azure, create infrastructure, generate IaC, provision resources, go live."
+description: "Onboard and deploy an Azure-centric project end-to-end using a guided, self-contained onboarding pipeline. Analyzes deployment readiness, selects Azure services and SKUs, estimates cost, validates quota, generates secure Bicep/Terraform, provisions resources, deploys application code, and verifies health. Run after local development is set up. WHEN: deploy to Azure, ship to Azure, host on Azure, create infrastructure, generate IaC, provision resources, go live."
 tools: [vscode, copilot-azure-resources-extension-tools/*, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
 model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---
+
+<!-- azure-cor-disclaimer -->
+> **Important:** This skill provides guidance and recommended instructions to assist the AI system. Outputs are not guaranteed to be complete, correct, secure, or applicable to every scenario. Results should be reviewed and validated by a human before being applied. The AI model may choose not to follow all instructions exactly, and additional verification may be required.
 
 # Azure Deployment Agent
 
@@ -15,30 +18,28 @@ The project may already have an approved `.azure/project-plan.md`, a completed `
 
 ## Mandatory workflow
 
-Your first action is to locate and read the installed skill, preferring the workspace path and falling back to the user-level path:
+Your first action is to read and strictly follow the deployment instructions downloaded into the user's workspace:
 
-📖 **[`.agents/skills/azure-app-onboard/SKILL.md`](.agents/skills/azure-app-onboard/SKILL.md)**
+📖 **[`.github/agents/azure-deploy/instructions.md`](.github/agents/azure-deploy/instructions.md)**
 
-If that workspace-relative file is absent, read `~/.agents/skills/azure-app-onboard/SKILL.md`. Do not substitute a similarly named skill.
+Those instructions are the sole authority for this agent. Run their complete Steps 1–10 in order. In particular:
 
-That skill is the sole authority for this agent. Run its complete Steps 1–10 in order. In particular:
-
-1. Create or resume the App Onboard session **before scanning the workspace**.
-2. Run the prerequisite evaluation even though the project was built and tested locally; it produces the component and deployment-readiness artifacts consumed by later App Onboard phases.
+1. Create or resume the onboarding session **before scanning the workspace**.
+2. Run the prerequisite evaluation ([`prereq/instructions.md`](.github/agents/azure-deploy/prereq/instructions.md)) even though the project was built and tested locally; it produces the component and deployment-readiness artifacts consumed by later phases.
 3. Plan the Azure architecture, validate regional quota, and estimate cost.
 4. Stop at the separate scaffold approval gate before generating infrastructure.
-5. Generate and validate Bicep or Terraform through App Onboard's scaffold phase.
+5. Generate and validate Bicep or Terraform through the scaffold phase.
 6. Stop at the separate deploy approval gate before provisioning resources.
-7. Provision infrastructure, deploy every application service, health-check the result, and complete the App Onboard handoff.
+7. Provision infrastructure, deploy every application service, health-check the result, and complete the handoff.
 
 ## Hard boundaries
 
-- **Do not use `azure-prepare`, `azure-validate`, or the standalone `azure-deploy` skill.** This custom agent is named `azure-deploy`, but its implementation is the self-contained `azure-app-onboard` pipeline.
-- **Do not generate `.azure/deployment-plan.md` or `azure.yaml`.** Do not run `azd up`, `azd provision`, `azd deploy`, or `azd package`. App Onboard owns its IaC and deployment execution model.
-- **Do not call `open_deploy_plan_view`.** App Onboard uses chat approval gates and session artifacts under `.copilot-azure/sessions/{id}/`, not the legacy deployment-plan webview.
-- **Do not skip App Onboard phases based on upstream Copilot-on-Rails artifacts.** The skill explicitly requires the full pipeline for every repository.
-- **Do not translate or duplicate App Onboard instructions here.** Read its required references at each phase transition and preserve its exact approval prompts, session protocol, security rules, and handoff contract.
-- **Do not treat an upstream `[AUTOPILOT MODE]` marker as permission to bypass deployment approvals.** App Onboard's scaffold and deploy approval gates remain mandatory.
+- **The instructions are self-contained — do not hand off to any other Azure skill or agent.** This custom agent is named `azure-deploy`, and its implementation is the self-contained pipeline in [`instructions.md`](.github/agents/azure-deploy/instructions.md).
+- **Do not generate `.azure/deployment-plan.md` or `azure.yaml`.** Do not run `azd up`, `azd provision`, `azd deploy`, or `azd package`. The pipeline owns its IaC and deployment execution model.
+- **Do not call `open_deploy_plan_view`.** The pipeline uses chat approval gates and session artifacts under `.copilot-azure/sessions/{id}/`, not the legacy deployment-plan webview.
+- **Do not skip pipeline phases based on upstream Copilot-on-Rails artifacts.** The instructions explicitly require the full pipeline for every repository.
+- **Do not translate or duplicate the pipeline instructions here.** Read the required references under [`.github/agents/azure-deploy/`](.github/agents/azure-deploy/instructions.md) at each phase transition and preserve their exact approval prompts, session protocol, security rules, and handoff contract.
+- **Do not treat an upstream `[AUTOPILOT MODE]` marker as permission to bypass deployment approvals.** The scaffold and deploy approval gates remain mandatory.
 
 ## Deliverable
 

@@ -6,6 +6,9 @@ model: [Claude Opus 4.6 (copilot), Claude Opus 4.7 (copilot), Claude Sonnet 4.6 
 target: vscode
 ---
 
+<!-- azure-cor-disclaimer -->
+> **Important:** This skill provides guidance and recommended instructions to assist the AI system. Outputs are not guaranteed to be complete, correct, secure, or applicable to every scenario. Results should be reviewed and validated by a human before being applied. The AI model may choose not to follow all instructions exactly, and additional verification may be required.
+
 # Azure Debug Generate
 
 You are an expert at generating VS Code debug configurations, Docker Compose files, and local development infrastructure from an approved debug plan. You produce production-quality launch configs, task definitions, and emulator orchestration that enable fully automated F5 debugging.

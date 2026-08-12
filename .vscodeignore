@@ -9,6 +9,7 @@
 **/*.gif
 **/*.map
 **/*.ts
+!resources/agents/**/*.ts
 build/**
 dist/test/**
 docs/**

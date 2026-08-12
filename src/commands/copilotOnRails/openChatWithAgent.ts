@@ -5,7 +5,6 @@
 
 import { parseError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
-import { azureDeployAgent } from '../../constants';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
@@ -14,7 +13,6 @@ import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoa
 import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
 import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
 import { ensureAgentInstructions } from './agentInstructions';
-import { ensureAzureDeploymentPrerequisites } from './deploymentPrerequisites';
 
 const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
 const CUSTOM_AGENT_COMMAND_PREFIX = 'workbench.action.chat.open';
@@ -188,16 +186,9 @@ export async function openChatWithAgent(context: CopilotOnRailsContext, agentNam
     setCorProp(context, 'chatAgentName', agentName);
 
     const openChatWithAgentOutcomeKey = 'openChatWithAgentOutcome';
-    if (agentName === azureDeployAgent) {
-        if (!await ensureAzureDeploymentPrerequisites(context)) {
-            setCorProp(context, openChatWithAgentOutcomeKey, 'deploymentPrerequisitesMissing');
-            return;
-        }
-    } else {
-        if (!await ensureAgentInstructions(context, agentName)) {
-            setCorProp(context, openChatWithAgentOutcomeKey, 'agentInstructionsMissing');
-            return;
-        }
+    if (!await ensureAgentInstructions(context, agentName)) {
+        setCorProp(context, openChatWithAgentOutcomeKey, 'agentInstructionsMissing');
+        return;
     }
 
     if (!(await ensureCopilotChatReady(context))) {
