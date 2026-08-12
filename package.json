@@ -937,5 +937,8 @@
         "vscode-uri": "^3.0.7",
         "ws": "^8.21.0",
         "zod": "^4.4.3"
+    },
+    "overrides": {
+        "@microsoft/vscode-processutils": "1.0.0"
     }
 }
