@@ -156,7 +156,7 @@ Then **STOP and wait** for the user to confirm their app is running. Once the us
 Call the `start_deployment` tool to hand off to the deployment agent:
 
 ```json
-{ "prompt": "The local development environment is set up and verified. Now onboard and deploy the project using the complete Azure App Onboard pipeline." }
+{ "prompt": "The local development environment is set up and verified. Now onboard and prepare the project using the complete Azure App Onboard pipeline." }
 ```
 
 Then **STOP** — do not do anything else after this call.
