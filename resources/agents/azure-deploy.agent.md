@@ -1,6 +1,6 @@
 ---
 name: azure-deploy
-description: "Onboard and deploy an Azure-centric project end-to-end using the azure-app-onboard skill. Analyzes deployment readiness, selects Azure services and SKUs, estimates cost, validates quota, generates secure Bicep/Terraform, provisions resources, deploys application code, and verifies health. Run after local development is set up. WHEN: deploy to Azure, ship to Azure, host on Azure, create infrastructure, generate IaC, provision resources, go live."
+description: "Onboard and prepare an Azure-centric project end-to-end using the azure-app-onboard skill. Analyzes deployment readiness, selects Azure services and SKUs, estimates cost, validates quota, generates secure Bicep/Terraform, provisions resources, deploys application code, and verifies health. Run after local development is set up. WHEN: deploy to Azure, ship to Azure, host on Azure, create infrastructure, generate IaC, provision resources, go live."
 tools: [vscode, copilot-azure-resources-extension-tools/*, tool_search, execute, read, agent, browser, edit, search, web, azure-mcp/search, todo]
 model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---
