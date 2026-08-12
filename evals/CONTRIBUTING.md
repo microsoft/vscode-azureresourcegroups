@@ -198,8 +198,8 @@ npm run eval:cor:vally:native:report -- \
 
 Read these files first:
 
-- `report.md`: human-readable outcomes, matched Rails/baseline comparison, gate failures, and
-  release recommendation.
+- `report.md`: human-readable outcomes, matched Rails/baseline comparison, one row per run,
+  failed-gate evidence, artifact links, and release recommendation.
 - `vally-native-report.json`: complete machine-readable report.
 - `experiment-input-manifest.json`: every accepted evidence bundle and cleanup status.
 - Per-trial `artifacts/native-summary.json`: scenario/model/arm result.

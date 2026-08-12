@@ -33,6 +33,23 @@ export interface VallyExperimentArtifactBundle {
     endpoint: string;
     model: string;
     cleanupVerified: boolean;
+    diagnostics: VallyExperimentRunDiagnostics;
+}
+
+export interface VallyExperimentRunDiagnostics {
+    attempt: number;
+    outcome: 'autonomous_success' | 'failed';
+    failedStage?: string;
+    failureCode?: string;
+    failureCategory?: string;
+    error?: string;
+    agentRetries: number;
+    durationMs: number;
+    failedGates: {
+        gate: string;
+        evidence: string[];
+        reason?: string;
+    }[];
 }
 
 export interface VallyExperimentInputManifest {
@@ -130,8 +147,8 @@ export async function runVallyExperimentReport(
                 report,
             }, null, 2)}\n`,
         ),
-        appendInputIntegrity(path.join(outputDirectory, 'report.md'), manifest),
     ]);
+    await appendExperimentDetails(path.join(outputDirectory, 'report.md'), manifest, outputDirectory);
     if (options.enforceRelease && report.releaseAssessment.recommendation !== 'candidate') {
         throw new Error(
             `Release policy rejected Vally experiment evidence with recommendation `
@@ -139,31 +156,97 @@ export async function runVallyExperimentReport(
         );
     }
 
-    async function appendInputIntegrity(
-        reportPath: string,
-        manifest: VallyExperimentInputManifest,
-    ): Promise<void> {
-        const total = manifest.artifactBundles.length;
-        const verified = manifest.cleanupVerification.verifiedBundles;
-        const lines = [
-            '',
-            '## Vally-native input integrity',
-            '',
-            `Durable experiment bundles: **${total}**; Rails: **${manifest.treatmentInputs.length}**; `
-                + `controlled baseline: **${manifest.baselineInputs.length}**.`,
-            '',
-            `Embedded post-sweep cleanup verification: **${verified}/${total}** bundles.`,
-            '',
-            verified === total
-                ? 'Every accepted durable validation manifest records successful exact-owner cleanup.'
-                : 'This evidence predates embedded post-sweep cleanup verification and cannot pass '
-                    + '`--enforce-release`; external owner-label checks may support pilot diagnostics '
-                    + 'but do not upgrade these bundles to release evidence.',
-            '',
-        ];
-        await fs.appendFile(reportPath, lines.join('\n'));
-    }
     return report;
+}
+
+async function appendExperimentDetails(
+    reportPath: string,
+    manifest: VallyExperimentInputManifest,
+    reportDirectory: string,
+): Promise<void> {
+    const total = manifest.artifactBundles.length;
+    const verified = manifest.cleanupVerification.verifiedBundles;
+    const lines = [
+        '',
+        renderVallyRunDiagnostics(manifest, reportDirectory),
+        '## Vally-native input integrity',
+        '',
+        `Durable experiment bundles: **${total}**; Rails: **${manifest.treatmentInputs.length}**; `
+            + `controlled baseline: **${manifest.baselineInputs.length}**.`,
+        '',
+        `Embedded post-sweep cleanup verification: **${verified}/${total}** bundles.`,
+        '',
+        verified === total
+            ? 'Every accepted durable validation manifest records successful exact-owner cleanup.'
+            : 'This evidence predates embedded post-sweep cleanup verification and cannot pass '
+                + '`--enforce-release`; external owner-label checks may support pilot diagnostics '
+                + 'but do not upgrade these bundles to release evidence.',
+        '',
+    ];
+    await fs.appendFile(reportPath, lines.join('\n'));
+}
+
+export function renderVallyRunDiagnostics(
+    manifest: VallyExperimentInputManifest,
+    reportDirectory: string,
+): string {
+    return [
+        renderArmDiagnostics('Rails', 'rails'),
+        renderArmDiagnostics('Controlled baseline', 'baseline-controlled'),
+    ].join('\n');
+
+    function renderArmDiagnostics(title: string, arm: EvaluationArm): string {
+        const bundles = manifest.artifactBundles
+            .filter(bundle => bundle.arm === arm)
+            .sort((left, right) =>
+                left.model.localeCompare(right.model)
+                || left.scenarioId.localeCompare(right.scenarioId)
+                || left.diagnostics.attempt - right.diagnostics.attempt);
+        const failed = bundles.filter(bundle => bundle.diagnostics.outcome === 'failed');
+        return [
+            `## ${title} run diagnostics`,
+            '',
+            '| Model | Scenario | Attempt | Outcome | Failed stage | Failure code | Category | Failed gates | Repairs | Duration | Evidence |',
+            '|---|---|---:|---|---|---|---|---|---:|---:|---|',
+            ...bundles.map(bundle => {
+                const diagnostics = bundle.diagnostics;
+                const evidencePath = path.relative(reportDirectory, bundle.artifactDirectory)
+                    .split(path.sep)
+                    .join('/');
+                return `| ${escapeTable(bundle.model)} | ${escapeTable(bundle.scenarioId)} | ${diagnostics.attempt} `
+                    + `| ${diagnostics.outcome} | ${escapeTable(diagnostics.failedStage ?? 'N/A')} `
+                    + `| ${escapeTable(diagnostics.failureCode ?? 'N/A')} `
+                    + `| ${escapeTable(diagnostics.failureCategory ?? 'N/A')} `
+                    + `| ${escapeTable(diagnostics.failedGates.map(value => value.gate).join(', ') || 'none')} `
+                    + `| ${diagnostics.agentRetries} | ${formatDuration(diagnostics.durationMs)} `
+                    + `| [run result](${encodeURI(`${evidencePath}/run-result.json`)}) |`;
+            }),
+            '',
+            ...(failed.length ? [
+                `### ${title} failure evidence`,
+                '',
+                ...failed.flatMap(bundle => {
+                    const diagnostics = bundle.diagnostics;
+                    return [
+                        `#### ${bundle.model} / ${bundle.scenarioId} / attempt ${diagnostics.attempt}`,
+                        '',
+                        `- Run: \`${bundle.runId}\``,
+                        `- Failure: \`${diagnostics.failedStage ?? 'unknown'} / ${diagnostics.failureCode ?? 'unknown'}\``,
+                        `- Classification: \`${diagnostics.failureCategory ?? 'unknown'}\``,
+                        `- Error: ${diagnostics.error ? escapeInline(diagnostics.error) : 'No top-level error was recorded.'}`,
+                        ...diagnostics.failedGates.flatMap(gate => [
+                            `- Gate \`${gate.gate}\`: ${gate.reason ? escapeInline(gate.reason) : 'failed'}`,
+                            ...gate.evidence.map(evidence => `  - ${escapeInline(evidence)}`),
+                        ]),
+                        '',
+                    ];
+                }),
+            ] : [
+                `All ${title.toLowerCase()} runs passed.`,
+                '',
+            ]),
+        ].join('\n');
+    }
 }
 
 async function findArtifactSummaries(root: string): Promise<string[]> {
@@ -218,6 +301,7 @@ async function loadArtifactBundle(summaryPath: string): Promise<VallyExperimentA
         throw new Error(`${summaryPath}: every Vally trial summary must contain exactly one result.`);
     }
     const result = object(results[0], `${summaryPath}: summary.results[0]`);
+    const gates = object(validation.gates, `${summaryPath}: validation.gates`);
     const arm = requiredArm(selection.arm, `${summaryPath}: selection.arm`);
     const scenarioId = requiredString(selection.scenarioId, `${summaryPath}: selection.scenarioId`);
     const endpoint = requiredString(selection.endpoint, `${summaryPath}: selection.endpoint`);
@@ -283,6 +367,35 @@ async function loadArtifactBundle(summaryPath: string): Promise<VallyExperimentA
         endpoint,
         model,
         cleanupVerified: manifestValidation.cleanupVerified === true,
+        diagnostics: {
+            attempt: requiredNonNegativeInteger(runResult.attempt, `${summaryPath}: run-result.attempt`),
+            outcome: requiredOutcome(runResult.outcome, `${summaryPath}: run-result.outcome`),
+            failedStage: optionalString(runResult.failedStage),
+            failureCode: optionalString(runResult.failureCode),
+            failureCategory: optionalString(runResult.failureCategory),
+            error: optionalString(runResult.error),
+            agentRetries: requiredNonNegativeInteger(
+                runResult.agentRetries,
+                `${summaryPath}: run-result.agentRetries`,
+            ),
+            durationMs: requiredNonNegativeNumber(
+                runResult.durationMs,
+                `${summaryPath}: run-result.durationMs`,
+            ),
+            failedGates: Object.entries(gates).flatMap(([gate, rawValue]) => {
+                const value = object(rawValue, `${summaryPath}: validation.gates.${gate}`);
+                if (value.status !== 'failed') {
+                    return [];
+                }
+                return [{
+                    gate,
+                    evidence: Array.isArray(value.evidence)
+                        ? value.evidence.filter((item): item is string => typeof item === 'string')
+                        : [],
+                    reason: optionalString(value.reason),
+                }];
+            }),
+        },
     };
 }
 
@@ -337,6 +450,51 @@ function requiredArm(value: unknown, label: string): EvaluationArm {
         throw new Error(`${label} must be "rails" or "baseline-controlled".`);
     }
     return value;
+}
+
+function requiredOutcome(value: unknown, label: string): 'autonomous_success' | 'failed' {
+    if (value !== 'autonomous_success' && value !== 'failed') {
+        throw new Error(`${label} must be "autonomous_success" or "failed".`);
+    }
+    return value;
+}
+
+function requiredNonNegativeInteger(value: unknown, label: string): number {
+    if (!Number.isInteger(value) || (value as number) < 0) {
+        throw new Error(`${label} must be a non-negative integer.`);
+    }
+    return value as number;
+}
+
+function requiredNonNegativeNumber(value: unknown, label: string): number {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+        throw new Error(`${label} must be a non-negative finite number.`);
+    }
+    return value;
+}
+
+function optionalString(value: unknown): string | undefined {
+    return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function escapeTable(value: string): string {
+    return value.replaceAll('|', '\\|').replace(/\s+/gu, ' ').trim();
+}
+
+function escapeInline(value: string): string {
+    return value.replace(/\s+/gu, ' ').trim();
+}
+
+function formatDuration(durationMs: number): string {
+    if (durationMs < 1000) {
+        return `${durationMs} ms`;
+    }
+    if (durationMs < 60_000) {
+        return `${(durationMs / 1000).toFixed(1)} s`;
+    }
+    const minutes = Math.floor(durationMs / 60_000);
+    const seconds = (durationMs % 60_000) / 1000;
+    return `${minutes}m ${seconds.toFixed(1)}s`;
 }
 
 function duplicateValues(values: string[]): string[] {

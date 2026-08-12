@@ -355,7 +355,8 @@ npm run eval:cor:vally -- \
 The adapter's Vally-shaped `report.json` records the threshold schema/set and every gate's measured
 value, threshold, status, and rationale;
 `releaseAssessment`, `experiments`, and `groups` provide the recommendation, same-model comparison,
-and Vally reliability statistics. `report.md` renders those together. `authoritative-evidence.json`
+and Vally reliability statistics. `report.md` renders those together with per-run Rails and baseline
+diagnostic tables, failed-gate evidence, and links to each durable run result. `authoritative-evidence.json`
 retains the native gate aggregation behind the custom graders. `npm run eval:cor:report` remains a
 low-level compatibility/debug command for historical native consumers.
 
@@ -366,7 +367,7 @@ Its `experiment-input-manifest.json` records every accepted artifact directory a
 executor persisted post-sweep cleanup verification. `--enforce-release` requires that proof and
 exits non-zero unless the recommendation is `candidate`. `vally-native-report.json` wraps the
 input manifest and policy report as one machine-readable record; `report.md` includes the same
-native-input integrity summary.
+native-input integrity summary and per-run diagnostics.
 
 Gate status is strict:
 

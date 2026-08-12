@@ -9,7 +9,10 @@ import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { after, before, describe, test } from 'node:test';
-import { discoverVallyExperimentEvidence } from '../src/vallyExperimentReport';
+import {
+    discoverVallyExperimentEvidence,
+    renderVallyRunDiagnostics,
+} from '../src/vallyExperimentReport';
 
 const scratchRoot = path.resolve(`evals/results/vally-experiment-report-test-${process.pid}`);
 
@@ -34,6 +37,19 @@ describe('Vally native experiment report discovery', () => {
         assert.equal(manifest.baselineInputs.length, 1);
         assert.equal(manifest.cleanupVerification.verifiedBundles, 2);
         assert.equal(manifest.cleanupVerification.missingBundles, 0);
+        const rails = manifest.artifactBundles.find(bundle => bundle.arm === 'rails');
+        assert.equal(rails?.diagnostics.failureCode, 'buildFailed');
+        assert.deepEqual(rails?.diagnostics.failedGates, [{
+            gate: 'build',
+            evidence: ['npm run build exited 1'],
+            reason: 'Generated project did not build.',
+        }]);
+        const markdown = renderVallyRunDiagnostics(manifest, scratchRoot);
+        assert.match(markdown, /## Rails run diagnostics/);
+        assert.match(markdown, /buildFailed/);
+        assert.match(markdown, /Gate `build`: Generated project did not build\./);
+        assert.match(markdown, /\[run result\]\(rails\/api-ts-functions-minimal\/artifacts\/run-result\.json\)/);
+        assert.match(markdown, /All controlled baseline runs passed\./);
     });
 
     test('fails release enforcement for missing post-sweep cleanup proof', async () => {
@@ -72,15 +88,18 @@ async function writeBundle(
     const endpoint = 'local';
     const artifactDirectory = path.join(root, arm, scenarioId, 'artifacts');
     await fs.mkdir(artifactDirectory, { recursive: true });
+    const passed = arm === 'baseline-controlled';
     const result = {
         schemaVersion: '1',
         runId,
         scenarioId,
         attempt: 1,
         evaluationArm: arm,
-        outcome: 'failed',
-        failedStage: 'build',
-        failureCode: 'buildFailed',
+        outcome: passed ? 'autonomous_success' : 'failed',
+        failedStage: passed ? undefined : 'build',
+        failureCode: passed ? undefined : 'buildFailed',
+        failureCategory: passed ? undefined : 'product_failure',
+        error: passed ? undefined : 'Generated project did not build.',
         candidateCommit: 'commit',
         agentAssetsHash: arm === 'rails' ? 'assets' : 'not-applicable:baseline-controlled',
         model,
@@ -115,6 +134,13 @@ async function writeBundle(
             schema: 'copilot-on-rails-authoritative-validation/v1',
             schemaVersion: 1,
             identity,
+            gates: {
+                build: {
+                    status: passed ? 'passed' : 'failed',
+                    reason: passed ? undefined : 'Generated project did not build.',
+                    evidence: passed ? ['npm run build exited 0'] : ['npm run build exited 1'],
+                },
+            },
         }),
         write('custom_metrics.json', {
             schema: 'copilot-on-rails-authoritative-metrics/v1',
