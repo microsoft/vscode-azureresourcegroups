@@ -23,6 +23,7 @@ import {
     SandboxLocalRuntimeValidator,
 } from './SandboxLocalRuntimeValidator';
 import {
+    canContinueAfterProjectValidationFailure,
     isSandboxInfrastructureFailureCode,
     SandboxProjectValidationResult,
     SandboxProjectValidator,
@@ -94,12 +95,20 @@ export interface EvaluationAttemptResult {
     failureCode?: string;
     failureCategory?: EvaluationFailureCategory;
     error?: string;
+    qualityFailures?: EvaluationQualityFailure[];
     durationMs: number;
     agentRetries: number;
     stages: EvaluationStageResult[];
 }
 
 export type EvaluationFailureCategory = 'product_failure' | 'harness_failure' | 'infrastructure_failure';
+
+export interface EvaluationQualityFailure {
+    stage: EvaluationStageResult['name'];
+    code: string;
+    category: 'product_failure';
+    error: string;
+}
 
 const emptyObjectSchema: Record<string, unknown> = {
     type: 'object',
@@ -217,6 +226,7 @@ async function runAttempt(input: {
     const workspace = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'cor-eval-')));
     const stages: EvaluationStageResult[] = [];
     const repairBudget = createAgentRepairBudget(input.scenario.validation.maxAgentRetries);
+    const deferredFailures: StageFailure[] = [];
     let result: EvaluationAttemptResult;
     await fs.mkdir(resultDirectory, { recursive: true });
 
@@ -337,7 +347,7 @@ async function runAttempt(input: {
             scaffoldStage.validation = integrationPlanValidation;
             assertArtifactStageSucceeded('scaffold', integrationPlanValidation, scaffoldGate.called);
 
-            await runProjectValidationStages({
+            const scaffoldValidationFailure = await runProjectValidationStages({
                 workspace,
                 scenario: input.scenario,
                 model: input.model,
@@ -345,10 +355,14 @@ async function runAttempt(input: {
                 projectValidator: input.projectValidator,
                 stages,
                 repairBudget,
+                continueAfterQualityFailure: input.through === 'local',
             });
+            if (scaffoldValidationFailure) {
+                deferredFailures.push(scaffoldValidationFailure);
+            }
 
             if (isThrough(input.through, 'local')) {
-                await runIntegrationStages({
+                const integrationValidationFailure = await runIntegrationStages({
                     workspace,
                     scenario: input.scenario,
                     model: input.model,
@@ -357,7 +371,11 @@ async function runAttempt(input: {
                     stages,
                     hasFrontend: expectedFrontend,
                     repairBudget,
+                    continueAfterQualityFailure: true,
                 });
+                if (integrationValidationFailure) {
+                    deferredFailures.push(integrationValidationFailure);
+                }
                 await runLocalDevelopmentStages({
                     workspace,
                     scenario: input.scenario,
@@ -370,6 +388,8 @@ async function runAttempt(input: {
             }
         }
 
+        const primaryFailure = deferredFailures[0];
+        const classifiedFailure = primaryFailure ? classifyFailure(primaryFailure) : undefined;
         result = {
             schemaVersion: '1',
             evaluationArm: 'rails',
@@ -382,13 +402,20 @@ async function runAttempt(input: {
             model: input.model,
             requestedModel: input.model,
             observedModels: observedModels(stages),
-            outcome: 'autonomous_success',
+            outcome: primaryFailure ? 'failed' : 'autonomous_success',
+            failedStage: classifiedFailure?.stage,
+            failureCode: classifiedFailure?.code,
+            failureCategory: classifiedFailure?.category,
+            error: primaryFailure?.message,
+            ...(deferredFailures.length ? {
+                qualityFailures: deferredFailures.map(toQualityFailure),
+            } : {}),
             durationMs: Date.now() - started,
             agentRetries: repairBudget.usedRetries,
             stages,
         };
     } catch (error) {
-        const failure = classifyFailure(error);
+        const terminalFailure = classifyFailure(error);
         result = {
             schemaVersion: '1',
             evaluationArm: 'rails',
@@ -402,10 +429,18 @@ async function runAttempt(input: {
             requestedModel: input.model,
             observedModels: observedModels(stages),
             outcome: 'failed',
-            failedStage: failure.stage,
-            failureCode: failure.code,
-            failureCategory: failure.category,
-            error: getErrorMessage(error),
+            failedStage: terminalFailure.stage,
+            failureCode: terminalFailure.code,
+            failureCategory: terminalFailure.category,
+            error: [
+                getErrorMessage(error),
+                deferredFailures.length
+                    ? `Earlier quality failures: ${deferredFailures.map(value => value.message).join(' | ')}`
+                    : undefined,
+            ].filter(Boolean).join(' '),
+            ...(deferredFailures.length ? {
+                qualityFailures: deferredFailures.map(toQualityFailure),
+            } : {}),
             durationMs: Date.now() - started,
             agentRetries: repairBudget.usedRetries,
             stages,
@@ -566,7 +601,8 @@ export async function runIntegrationStages(input: {
     stages: EvaluationStageResult[];
     hasFrontend: boolean;
     repairBudget?: AgentRepairBudget;
-}): Promise<void> {
+    continueAfterQualityFailure?: boolean;
+}): Promise<StageFailure | undefined> {
     const repairBudget = input.repairBudget
         ?? createAgentRepairBudget(input.scenario.validation.maxAgentRetries);
     const planPath = path.join(input.workspace, '.azure', 'project-plan.md');
@@ -649,7 +685,7 @@ export async function runIntegrationStages(input: {
     }
     assertArtifactStageSucceeded('integration', integrationValidation, integrationGate.called);
 
-    await runProjectValidationStages({
+    return runProjectValidationStages({
         workspace: input.workspace,
         scenario: input.scenario,
         model: input.model,
@@ -657,6 +693,7 @@ export async function runIntegrationStages(input: {
         projectValidator: input.projectValidator,
         stages: input.stages,
         repairBudget,
+        continueAfterQualityFailure: input.continueAfterQualityFailure,
         validationStageName: 'integration-build',
         repairStageName: 'integration-repair',
         repairAgentName: 'azure-project-integrate',
@@ -681,7 +718,8 @@ export async function runProjectValidationStages(input: {
     repairStageName?: 'repair' | 'integration-repair';
     repairAgentName?: 'azure-project-scaffold' | 'azure-project-integrate';
     repairSystemMessage?: string;
-}): Promise<void> {
+    continueAfterQualityFailure?: boolean;
+}): Promise<StageFailure | undefined> {
     const validationStageName = input.validationStageName ?? 'build';
     const repairStageName = input.repairStageName ?? 'repair';
     const repairBudget = input.repairBudget
@@ -711,12 +749,20 @@ export async function runProjectValidationStages(input: {
         input.stages.push({ name: validationStageName, buildValidation });
     }
     if (buildValidation.outcome !== 'passed') {
-        throw new StageFailure(
+        const failure = new StageFailure(
             validationStageName,
             buildValidation.failureCode ?? 'buildValidationFailed',
             buildValidation.error ?? 'Generated project validation failed.',
         );
+        if (
+            input.continueAfterQualityFailure
+            && canContinueAfterProjectValidationFailure(buildValidation)
+        ) {
+            return failure;
+        }
+        throw failure;
     }
+    return undefined;
 }
 
 export async function runLocalDevelopmentStages(input: {
@@ -1182,6 +1228,15 @@ export class StageFailure extends Error {
     ) {
         super(message);
     }
+}
+
+function toQualityFailure(failure: StageFailure): EvaluationQualityFailure {
+    return {
+        stage: failure.stage,
+        code: failure.code,
+        category: 'product_failure',
+        error: failure.message,
+    };
 }
 
 function createHarnessFailureResult(input: {

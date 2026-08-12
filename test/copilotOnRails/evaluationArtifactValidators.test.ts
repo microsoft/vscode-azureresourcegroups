@@ -12,6 +12,8 @@ import { promisify } from 'util';
 import {
     AcaCommandRunner,
     SandboxProjectValidator,
+    canContinueAfterProjectValidationFailure,
+    classifySandboxValidationCommand,
     createSandboxManifest,
     createWorkspaceArchive,
     discoverProjectValidationTargets,
@@ -53,7 +55,12 @@ import { CopilotSdkAgentExecutor } from '../../evals/src/CopilotSdkAgentExecutor
 import { classifyFailure, createReport, wilsonInterval } from '../../evals/src/report';
 import { applyBuildRevalidation, applyLocalRevalidation } from '../../evals/src/revalidate';
 import { countRepairStages, readSourceResult } from '../../evals/src/resumeLocal';
-import { EvaluationStageResult, runIntegrationStages } from '../../evals/src/run';
+import {
+    EvaluationStageResult,
+    runIntegrationStages,
+    runProjectValidationStages,
+} from '../../evals/src/run';
+import { createAgentRepairBudget } from '../../evals/src/evaluationParity';
 import { loadScenarios, validateScenario } from '../../evals/src/scenario';
 import { runLiveDeployment } from '../../evals/src/liveDeploy';
 import {
@@ -1016,6 +1023,65 @@ suite('Copilot on Rails evaluation artifact validators', () => {
         }
     });
 
+    test('continues past failed tests but not failed builds', async () => {
+        const command = (value: string, success: boolean) => ({
+            ecosystem: 'node' as const,
+            relativeDirectory: '.',
+            command: value,
+            success,
+            failureKind: success ? undefined : 'commandExit' as const,
+            durationMs: 1,
+            stdout: '',
+            stderr: '',
+        });
+        const testFailure = {
+            outcome: 'failed' as const,
+            failureCode: 'sandboxCommandFailed' as const,
+            error: '.: "npm test" failed.',
+            commands: [
+                command('npm run build', true),
+                command('npm test', false),
+            ],
+        };
+        const buildFailure = {
+            ...testFailure,
+            error: '.: "npm run build" failed.',
+            commands: [command('npm run build', false)],
+        };
+        assert.equal(classifySandboxValidationCommand(testFailure.commands[1]), 'test');
+        assert.equal(classifySandboxValidationCommand({
+            ecosystem: 'node',
+            command: 'node -e "console.error(\'Missing required npm script: test\'); process.exit(1)"',
+        }), 'test');
+        assert.equal(canContinueAfterProjectValidationFailure(testFailure), true);
+        assert.equal(canContinueAfterProjectValidationFailure(buildFailure), false);
+        assert.equal(canContinueAfterProjectValidationFailure({
+            ...testFailure,
+            commands: [{
+                ...testFailure.commands[1],
+                failureKind: 'runnerError' as const,
+            }],
+        }), false);
+
+        const scenarios = await loadScenarios(path.resolve(__dirname, '..', '..', 'evals', 'scenarios'));
+        const scenario = scenarios.find(value => value.id === 'crud-react-functions-postgres');
+        assert(scenario);
+        const projectValidator = new SandboxProjectValidator(path.resolve(__dirname, '..', '..'));
+        projectValidator.validate = async () => testFailure;
+        const stages: EvaluationStageResult[] = [];
+        const failure = await runProjectValidationStages({
+            workspace: path.resolve(__dirname, '..', '..'),
+            scenario,
+            executor: new CopilotSdkAgentExecutor(path.resolve(__dirname, '..', '..')),
+            projectValidator,
+            stages,
+            repairBudget: createAgentRepairBudget(0),
+            continueAfterQualityFailure: true,
+        });
+        assert.equal(failure?.code, 'sandboxCommandFailed');
+        assert.deepEqual(stages.map(stage => stage.name), ['build']);
+    });
+
     test('validates workspace child scripts missing from the npm root', async () => {
         const workspace = await fs.mkdtemp(path.join(os.tmpdir(), 'cor-workspace-test-'));
         try {
@@ -1040,6 +1106,83 @@ suite('Copilot on Rails evaluation artifact validators', () => {
             const child = targets.find(target => target.relativeDirectory === path.join('packages', 'api'));
             assert.deepEqual(root?.commands, ['npm install --ignore-scripts', 'npm test']);
             assert.deepEqual(child?.commands, ['npm run build', 'npm run lint']);
+        } finally {
+            await fs.rm(workspace, { recursive: true, force: true });
+        }
+    });
+
+    test('validates later service builds only after a confirmed command failure', async () => {
+        const workspace = await fs.mkdtemp(path.join(os.tmpdir(), 'cor-workspace-continuation-test-'));
+        const executed: { directory: string; command: string }[] = [];
+        const sandboxId = '8fb67372-7cd4-480e-8627-fc09274c9ac8';
+        let remoteExitCode = 1;
+        const aca: AcaCommandRunner = {
+            run: async args => {
+                if (args[1] === 'apply') {
+                    return { stdout: JSON.stringify({ id: sandboxId }), stderr: '' };
+                }
+                const workingDirectoryIndex = args.indexOf('--working-directory');
+                if (
+                    args[1] === 'exec'
+                    && workingDirectoryIndex >= 0
+                    && args[workingDirectoryIndex + 1].startsWith('/workspace')
+                ) {
+                    const value = {
+                        directory: args[workingDirectoryIndex + 1],
+                        command: args[args.indexOf('-c') + 1],
+                    };
+                    executed.push(value);
+                    if (value.directory === '/workspace' && value.command.includes('( npm test )')) {
+                        const marker = value.command.match(/(__COR_EVAL_REMOTE_EXIT_[^=]+__=)/u)?.[1];
+                        assert(marker);
+                        const error = new Error('No test files found') as Error & { stderr: string };
+                        error.stderr = `No test files found\n${marker}${remoteExitCode}\n`;
+                        throw error;
+                    }
+                }
+                return { stdout: '', stderr: '' };
+            },
+        };
+        try {
+            await fs.mkdir(path.join(workspace, 'packages', 'api'), { recursive: true });
+            await fs.writeFile(path.join(workspace, 'package.json'), JSON.stringify({
+                workspaces: ['packages/*'],
+                scripts: { test: 'npm test --workspaces' },
+            }));
+            await fs.writeFile(path.join(workspace, 'packages', 'api', 'package.json'), JSON.stringify({
+                scripts: {
+                    build: 'tsc',
+                    test: 'vitest run',
+                    lint: 'eslint .',
+                },
+            }));
+            const scenarios = await loadScenarios(path.resolve(__dirname, '..', '..', 'evals', 'scenarios'));
+            const scenario = scenarios.find(value => value.id === 'api-ts-functions-minimal');
+            assert(scenario);
+
+            const result = await new SandboxProjectValidator(
+                path.resolve(__dirname, '..', '..'),
+                aca,
+            ).validate(workspace, scenario);
+            assert.equal(result.failureCode, 'sandboxCommandFailed');
+            assert.equal(canContinueAfterProjectValidationFailure(result), true);
+            assert(executed.some(value =>
+                value.directory === '/workspace/packages/api'
+                && value.command.includes('( npm run build )')));
+
+            remoteExitCode = 0;
+            executed.length = 0;
+            const transportFailure = await new SandboxProjectValidator(
+                path.resolve(__dirname, '..', '..'),
+                aca,
+            ).validate(workspace, scenario);
+            assert.equal(canContinueAfterProjectValidationFailure(transportFailure), false);
+            assert.equal(
+                executed.some(value =>
+                    value.directory === '/workspace/packages/api'
+                    && value.command.includes('( npm run build )')),
+                false,
+            );
         } finally {
             await fs.rm(workspace, { recursive: true, force: true });
         }

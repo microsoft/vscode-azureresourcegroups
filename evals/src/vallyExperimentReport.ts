@@ -45,6 +45,7 @@ export interface VallyExperimentRunDiagnostics {
     error?: string;
     agentRetries: number;
     durationMs: number;
+    gates: Record<string, 'passed' | 'failed' | 'not-applicable'>;
     failedGates: {
         gate: string;
         evidence: string[];
@@ -206,8 +207,8 @@ export function renderVallyRunDiagnostics(
         return [
             `## ${title} run diagnostics`,
             '',
-            '| Model | Scenario | Attempt | Outcome | Failed stage | Failure code | Category | Failed gates | Repairs | Duration | Evidence |',
-            '|---|---|---:|---|---|---|---|---|---:|---:|---|',
+            '| Model | Scenario | Attempt | Outcome | Failed stage | Failure code | Category | Tests | Runtime | Debugger | Failed gates | Repairs | Duration | Evidence |',
+            '|---|---|---:|---|---|---|---|---|---|---|---|---:|---:|---|',
             ...bundles.map(bundle => {
                 const diagnostics = bundle.diagnostics;
                 const evidencePath = path.relative(reportDirectory, bundle.artifactDirectory)
@@ -217,6 +218,9 @@ export function renderVallyRunDiagnostics(
                     + `| ${diagnostics.outcome} | ${escapeTable(diagnostics.failedStage ?? 'N/A')} `
                     + `| ${escapeTable(diagnostics.failureCode ?? 'N/A')} `
                     + `| ${escapeTable(diagnostics.failureCategory ?? 'N/A')} `
+                    + `| ${diagnostics.gates.test ?? 'not recorded'} `
+                    + `| ${diagnostics.gates['local-runtime'] ?? 'not recorded'} `
+                    + `| ${diagnostics.gates.debugger ?? 'not recorded'} `
                     + `| ${escapeTable(diagnostics.failedGates.map(value => value.gate).join(', ') || 'none')} `
                     + `| ${diagnostics.agentRetries} | ${formatDuration(diagnostics.durationMs)} `
                     + `| [run result](${encodeURI(`${evidencePath}/run-result.json`)}) |`;
@@ -382,6 +386,13 @@ async function loadArtifactBundle(summaryPath: string): Promise<VallyExperimentA
                 runResult.durationMs,
                 `${summaryPath}: run-result.durationMs`,
             ),
+            gates: Object.fromEntries(Object.entries(gates).map(([gate, rawValue]) => {
+                const value = object(rawValue, `${summaryPath}: validation.gates.${gate}`);
+                return [
+                    gate,
+                    requiredGateStatus(value.status, `${summaryPath}: validation.gates.${gate}.status`),
+                ];
+            })),
             failedGates: Object.entries(gates).flatMap(([gate, rawValue]) => {
                 const value = object(rawValue, `${summaryPath}: validation.gates.${gate}`);
                 if (value.status !== 'failed') {
@@ -455,6 +466,16 @@ function requiredArm(value: unknown, label: string): EvaluationArm {
 function requiredOutcome(value: unknown, label: string): 'autonomous_success' | 'failed' {
     if (value !== 'autonomous_success' && value !== 'failed') {
         throw new Error(`${label} must be "autonomous_success" or "failed".`);
+    }
+    return value;
+}
+
+function requiredGateStatus(
+    value: unknown,
+    label: string,
+): 'passed' | 'failed' | 'not-applicable' {
+    if (value !== 'passed' && value !== 'failed' && value !== 'not-applicable') {
+        throw new Error(`${label} must be "passed", "failed", or "not-applicable".`);
     }
     return value;
 }

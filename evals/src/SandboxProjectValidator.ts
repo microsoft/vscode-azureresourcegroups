@@ -39,10 +39,13 @@ export interface SandboxValidationCommandResult {
     relativeDirectory: string;
     command: string;
     success: boolean;
+    failureKind?: 'commandExit' | 'runnerError';
     durationMs: number;
     stdout: string;
     stderr: string;
 }
+
+export type SandboxValidationCommandKind = 'build' | 'test' | 'lint';
 
 export interface SandboxProjectValidationResult {
     outcome: 'passed' | 'failed';
@@ -62,6 +65,72 @@ export interface AcaCommandRunner {
 
 export function isSandboxInfrastructureFailureCode(code: string | undefined): boolean {
     return ['sandboxCreateFailed', 'sandboxSetupFailed', 'sandboxCleanupFailed'].includes(code ?? '');
+}
+
+export function classifySandboxValidationCommand(
+    command: Pick<SandboxValidationCommandResult, 'ecosystem' | 'command'>,
+): SandboxValidationCommandKind | undefined {
+    const value = command.command.trim();
+    switch (command.ecosystem) {
+        case 'node':
+            if (/Missing required npm script: build/u.test(value)) {
+                return 'build';
+            }
+            if (/Missing required npm script: test/u.test(value)) {
+                return 'test';
+            }
+            if (/Missing required npm script: lint/u.test(value)) {
+                return 'lint';
+            }
+            if (/^npm\s+run\s+build(?:\s|$)/u.test(value)) {
+                return 'build';
+            }
+            if (/^npm\s+(?:run\s+)?test(?:\s|$)/u.test(value)) {
+                return 'test';
+            }
+            if (/^npm\s+run\s+lint(?:\s|$)/u.test(value)) {
+                return 'lint';
+            }
+            return undefined;
+        case 'python':
+            if (/Missing required Python lint configuration/u.test(value)) {
+                return 'lint';
+            }
+            if (/\s-m\s+compileall(?:\s|$)/u.test(value)) {
+                return 'build';
+            }
+            if (/\s-m\s+pytest(?:\s|$)/u.test(value)) {
+                return 'test';
+            }
+            if (/\s-m\s+ruff\s+check(?:\s|$)/u.test(value)) {
+                return 'lint';
+            }
+            return undefined;
+        case 'dotnet':
+            if (/^dotnet\s+build(?:\s|$)/u.test(value)) {
+                return 'build';
+            }
+            if (/^dotnet\s+test(?:\s|$)/u.test(value)) {
+                return 'test';
+            }
+            if (/^dotnet\s+format\b.*\s--verify-no-changes(?:\s|$)/u.test(value)) {
+                return 'lint';
+            }
+            return undefined;
+    }
+}
+
+export function canContinueAfterProjectValidationFailure(
+    validation: SandboxProjectValidationResult,
+): boolean {
+    if (validation.outcome !== 'failed' || validation.failureCode !== 'sandboxCommandFailed') {
+        return false;
+    }
+    const failedCommands = validation.commands.filter(command => !command.success);
+    return failedCommands.length > 0 && failedCommands.every(command => {
+        const kind = classifySandboxValidationCommand(command);
+        return command.failureKind === 'commandExit' && (kind === 'test' || kind === 'lint');
+    });
 }
 
 export class SandboxProjectValidator {
@@ -84,15 +153,20 @@ export class SandboxProjectValidator {
 
         const archivePath = path.join(os.tmpdir(), `cor-eval-${randomUUID()}.tar.gz`);
         const commands: SandboxValidationCommandResult[] = [];
+        let qualityFailure: SandboxProjectValidationResult | undefined;
         try {
             await createWorkspaceArchive(workspace, archivePath);
             for (const [ecosystem, ecosystemTargets] of groupTargets(targets)) {
                 const result = await this.validateEcosystem(ecosystem, ecosystemTargets, archivePath, scenario, commands);
                 if (result) {
-                    return result;
+                    if (canContinueAfterProjectValidationFailure(result)) {
+                        qualityFailure ??= result;
+                    } else {
+                        return result;
+                    }
                 }
             }
-            return { outcome: 'passed', commands };
+            return qualityFailure ?? { outcome: 'passed', commands };
         } finally {
             await fs.rm(archivePath, { force: true });
         }
@@ -168,29 +242,31 @@ export class SandboxProjectValidator {
         }
         if (!validationFailure) {
             try {
-            for (const target of targets) {
-                for (const command of target.commands) {
-                    const commandResult = await this.runValidationCommand(
-                        sandboxId,
-                        target,
-                        command,
-                        scenario.validation.timeoutMinutes * 60 * 1000,
-                    );
-                    commands.push(commandResult);
-                    if (!commandResult.success) {
-                        validationFailure = {
-                            outcome: 'failed',
-                            failureCode: 'sandboxCommandFailed',
-                            error: `${target.relativeDirectory}: "${command}" failed.`,
-                            commands,
-                        };
-                        break;
+                validation: for (const target of targets) {
+                    for (const command of target.commands) {
+                        const commandResult = await this.runValidationCommand(
+                            sandboxId,
+                            target,
+                            command,
+                            scenario.validation.timeoutMinutes * 60 * 1000,
+                        );
+                        commands.push(commandResult);
+                        if (!commandResult.success) {
+                            const failure: SandboxProjectValidationResult = {
+                                outcome: 'failed',
+                                failureCode: 'sandboxCommandFailed',
+                                error: `${target.relativeDirectory}: "${command}" failed.`,
+                                commands,
+                            };
+                            if (canContinueAfterProjectValidationFailure(failure)) {
+                                validationFailure ??= failure;
+                                continue;
+                            }
+                            validationFailure = failure;
+                            break validation;
+                        }
                     }
                 }
-                if (validationFailure) {
-                    break;
-                }
-            }
             } catch (error) {
                 validationFailure = {
                     outcome: 'failed',
@@ -259,13 +335,18 @@ export class SandboxProjectValidator {
         timeoutMs: number,
     ): Promise<SandboxValidationCommandResult> {
         const started = Date.now();
+        const remoteExitMarker = `__COR_EVAL_REMOTE_EXIT_${randomUUID()}__=`;
+        const wrappedCommand = `( ${command} ); __cor_eval_status=$?; `
+            + `printf '\\n${remoteExitMarker}%s\\n' "$__cor_eval_status" >&2; `
+            + 'exit "$__cor_eval_status"';
         try {
             const result = await this.aca.run([
                 'sandbox', 'exec',
                 '--id', sandboxId,
                 '--working-directory', toSandboxPath(target.relativeDirectory),
-                '-c', command,
+                '-c', wrappedCommand,
             ], timeoutMs);
+            const stderr = removeRemoteExitMarker(result.stderr, remoteExitMarker);
             return {
                 ecosystem: target.ecosystem,
                 relativeDirectory: target.relativeDirectory,
@@ -273,18 +354,22 @@ export class SandboxProjectValidator {
                 success: true,
                 durationMs: Date.now() - started,
                 stdout: truncate(result.stdout),
-                stderr: truncate(result.stderr),
+                stderr: truncate(stderr.output),
             };
         } catch (error) {
             const commandError = error as Error & { stdout?: string; stderr?: string };
+            const stderr = removeRemoteExitMarker(commandError.stderr ?? '', remoteExitMarker);
             return {
                 ecosystem: target.ecosystem,
                 relativeDirectory: target.relativeDirectory,
                 command,
                 success: false,
+                failureKind: stderr.exitCode !== undefined && stderr.exitCode !== 0
+                    ? 'commandExit'
+                    : 'runnerError',
                 durationMs: Date.now() - started,
                 stdout: truncate(commandError.stdout ?? ''),
-                stderr: truncate(commandError.stderr ?? getErrorMessage(error)),
+                stderr: truncate(stderr.output || getErrorMessage(error)),
             };
         }
     }
@@ -742,6 +827,21 @@ function toSandboxPath(relativeDirectory: string): string {
 
 function truncate(value: string): string {
     return value.length <= maxLogLength ? value : `${value.slice(0, maxLogLength)}\n[truncated]`;
+}
+
+function removeRemoteExitMarker(value: string, marker: string): { output: string; exitCode?: number } {
+    let exitCode: number | undefined;
+    const output = value
+        .split(/\r?\n/u)
+        .filter(line => {
+            if (line.startsWith(marker) && /^\d+$/u.test(line.slice(marker.length))) {
+                exitCode = Number.parseInt(line.slice(marker.length), 10);
+                return false;
+            }
+            return true;
+        })
+        .join('\n');
+    return { output, exitCode };
 }
 
 function getErrorMessage(error: unknown): string {

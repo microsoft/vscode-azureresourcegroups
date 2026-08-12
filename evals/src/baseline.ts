@@ -19,6 +19,7 @@ import {
     SandboxLocalRuntimeValidator,
 } from './SandboxLocalRuntimeValidator';
 import {
+    canContinueAfterProjectValidationFailure,
     isSandboxInfrastructureFailureCode,
     SandboxProjectValidationResult,
     SandboxProjectValidator,
@@ -80,10 +81,18 @@ export interface BaselineAttemptResult {
     failureCode?: string;
     failureCategory?: BaselineFailureCategory;
     error?: string;
+    qualityFailures?: BaselineQualityFailure[];
     durationMs: number;
     agentRetries: number;
     stages: BaselineStageResult[];
     sourceProvenance: BaselineSourceProvenance;
+}
+
+export interface BaselineQualityFailure {
+    stage: BaselineStageResult['name'];
+    code: string;
+    category: 'product_failure';
+    error: string;
 }
 
 export interface BaselineSourceProvenance {
@@ -234,6 +243,7 @@ export async function runBaselineAttempt(input: BaselineAttemptInput): Promise<B
     const stages: BaselineStageResult[] = [];
     const observedModels = new Set<string>();
     const repairBudget = createAgentRepairBudget(input.scenario.validation.maxAgentRetries);
+    let deferredFailure: BaselineStageFailure | undefined;
     let result: BaselineAttemptResult;
 
     try {
@@ -260,25 +270,34 @@ export async function runBaselineAttempt(input: BaselineAttemptInput): Promise<B
             if (projectValidation.outcome !== 'passed') {
                 const repairAttempt = tryConsumeAgentRepair(repairBudget);
                 if (repairAttempt === undefined) {
-                    throw new BaselineStageFailure(
+                    const failure = new BaselineStageFailure(
                         'build',
                         projectValidation.failureCode ?? 'buildValidationFailed',
                         projectValidation.error ?? 'Generated project validation failed.',
                     );
+                    if (
+                        shouldValidateIntegrationOutput(input.through)
+                        && canContinueAfterProjectValidationFailure(projectValidation)
+                    ) {
+                        deferredFailure ??= failure;
+                    } else {
+                        throw failure;
+                    }
+                } else {
+                    const repairRun = await input.executor.run({
+                        prompt: createBaselineRepairPrompt(repairAttempt, {
+                            stage: 'build',
+                            project: sanitizeProjectValidation(projectValidation),
+                        }),
+                        workingDirectory: workspace,
+                        model: input.model,
+                        timeoutMs: timeoutMs(input.scenario),
+                    });
+                    stages.push({ name: 'repair', agentRun: repairRun });
+                    recordAndAssertModel(repairRun, input.model, observedModels, 'repair');
+                    assertAgentCompleted(repairRun, 'repair');
+                    continue;
                 }
-                const repairRun = await input.executor.run({
-                    prompt: createBaselineRepairPrompt(repairAttempt, {
-                        stage: 'build',
-                        project: sanitizeProjectValidation(projectValidation),
-                    }),
-                    workingDirectory: workspace,
-                    model: input.model,
-                    timeoutMs: timeoutMs(input.scenario),
-                });
-                stages.push({ name: 'repair', agentRun: repairRun });
-                recordAndAssertModel(repairRun, input.model, observedModels, 'repair');
-                assertAgentCompleted(repairRun, 'repair');
-                continue;
             }
 
             if (!shouldValidateIntegrationOutput(input.through)) {
@@ -352,17 +371,33 @@ export async function runBaselineAttempt(input: BaselineAttemptInput): Promise<B
             assertAgentCompleted(repairRun, 'local-repair');
         }
 
+        const classifiedFailure = deferredFailure ? classifyFailure(deferredFailure) : undefined;
         result = createAttemptResult(input, runId, started, stages, observedModels, repairBudget.usedRetries, {
-            outcome: 'autonomous_success',
+            outcome: deferredFailure ? 'failed' : 'autonomous_success',
+            failedStage: classifiedFailure?.stage,
+            failureCode: classifiedFailure?.code,
+            failureCategory: classifiedFailure?.category,
+            error: deferredFailure?.message,
+            ...(deferredFailure ? {
+                qualityFailures: [toQualityFailure(deferredFailure)],
+            } : {}),
         });
     } catch (error) {
-        const failure = classifyFailure(error);
+        const terminalFailure = classifyFailure(error);
         result = createAttemptResult(input, runId, started, stages, observedModels, repairBudget.usedRetries, {
             outcome: 'failed',
-            failedStage: failure.stage,
-            failureCode: failure.code,
-            failureCategory: failure.category,
-            error: getErrorMessage(error),
+            failedStage: terminalFailure.stage,
+            failureCode: terminalFailure.code,
+            failureCategory: terminalFailure.category,
+            error: [
+                getErrorMessage(error),
+                deferredFailure
+                    ? `Earlier quality failure: ${deferredFailure.message}`
+                    : undefined,
+            ].filter(Boolean).join(' '),
+            ...(deferredFailure ? {
+                qualityFailures: [toQualityFailure(deferredFailure)],
+            } : {}),
         });
     }
 
@@ -405,6 +440,15 @@ export async function runBaselineAttempt(input: BaselineAttemptInput): Promise<B
         };
     }
     return result;
+}
+
+function toQualityFailure(failure: BaselineStageFailure): BaselineQualityFailure {
+    return {
+        stage: failure.stage,
+        code: failure.code,
+        category: 'product_failure',
+        error: failure.message,
+    };
 }
 
 export function parseBaselineArgs(args: string[]): BaselineRunOptions {

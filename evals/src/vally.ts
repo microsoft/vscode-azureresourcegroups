@@ -156,6 +156,12 @@ export interface AttemptEvidence {
     failureCode?: string;
     failureCategory?: 'product_failure' | 'harness_failure' | 'infrastructure_failure';
     error?: string;
+    qualityFailures?: {
+        stage?: string;
+        code?: string;
+        category?: 'product_failure';
+        error?: string;
+    }[];
     candidateCommit?: string;
     agentAssetsHash?: string;
     evaluationDefinition?: EvaluationDefinitionProvenance;

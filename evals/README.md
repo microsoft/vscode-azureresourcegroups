@@ -377,6 +377,13 @@ Gate status is strict:
 - `not_applicable` means the scenario corpus declares no such contract. It is never counted as a
   pass.
 
+Local evaluation is dependency-aware. A failed generated test or lint command keeps the attempt
+failed, but Rails and controlled-baseline runs continue through integration, runtime, browser,
+persistence, and debugger validation. Build, setup, infrastructure, and invalid integration
+failures still stop dependent stages. Authoritative gates grade their own evidence rather than
+inheriting the attempt's overall outcome, so a run can truthfully report `test: failed` and
+`debugger: passed`.
+
 Any missing gate keeps the existing `insufficient_evidence`
 recommendation. With complete evidence, any failed gate recommends `hold`; only all applicable
 gates passing recommends `candidate`. Vally-native daily and weekly CI publish this assessment;

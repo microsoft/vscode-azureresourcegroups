@@ -42,8 +42,11 @@ import {
     loadScenarios,
 } from './scenario';
 import {
+    canContinueAfterProjectValidationFailure,
+    classifySandboxValidationCommand,
     readSandboxIds,
     type SandboxValidationCommandResult,
+    type SandboxProjectValidationResult,
 } from './SandboxProjectValidator';
 import {
     AUTHORITATIVE_SCHEMA,
@@ -1229,47 +1232,67 @@ function gatePassed(
     trajectory: Trajectory,
     provenance: Record<string, string>,
 ): { passed: boolean; present: boolean; evidence: string[] } {
-    const stage = (stageName: string) => attempt.stages.find(candidate => candidate.name === stageName);
-    const agentPassed = (stageName: string) => stage(stageName)?.agentRun?.outcome === 'completed';
-    const validationPassed = (stageName: string) => stage(stageName)?.validation?.valid === true;
-    const projectValidations = attempt.stages.flatMap(candidate => {
-        const validation = candidate.buildValidation as ProjectValidationEvidence | undefined;
-        return validation ? [validation] : [];
-    });
-    const successfulProjectValidations = projectValidations
-        .filter(validation => validation.outcome === 'passed');
-    const validationCommands = successfulProjectValidations.flatMap(validation => validation.commands ?? []);
+    const stagesNamed = (stageName: string) => attempt.stages.filter(candidate => candidate.name === stageName);
+    const stagePresent = (stageName: string) => stagesNamed(stageName).length > 0;
+    const agentPassed = (stageName: string) =>
+        stagesNamed(stageName).some(candidate => candidate.agentRun?.outcome === 'completed');
+    const validationPassed = (stageName: string) =>
+        [...stagesNamed(stageName)].reverse()
+            .find(candidate => candidate.validation !== undefined)
+            ?.validation?.valid === true;
+    const handoffPassed = (stageName: string) =>
+        stagesNamed(stageName).some(candidate => candidate.gateCalled === true);
+    const projectValidation = [...attempt.stages].reverse()
+        .map(candidate => candidate.buildValidation as ProjectValidationEvidence | undefined)
+        .find((validation): validation is ProjectValidationEvidence => validation !== undefined);
+    const validationCommands = projectValidation?.commands ?? [];
+    const validationComplete = projectValidation?.outcome === 'passed'
+        || (
+            projectValidation?.outcome === 'failed'
+            && canContinueAfterProjectValidationFailure({
+                outcome: projectValidation.outcome,
+                failureCode: projectValidation.failureCode as SandboxProjectValidationResult['failureCode'],
+                error: projectValidation.error,
+                commands: validationCommands,
+            })
+        );
     const buildCommands = validationCommands
         .filter(command => classifySandboxValidationCommand(command) === 'build');
     const testCommands = validationCommands
         .filter(command => classifySandboxValidationCommand(command) === 'test');
-    const projectValidationPassed = successfulProjectValidations.length > 0;
+    const buildPassed = validationComplete
+        && buildCommands.length > 0
+        && buildCommands.every(command => command.success);
     const localEvidence = attempt.stages
         .map(candidate => candidate.localRuntimeValidation)
         .filter((value): value is NonNullable<typeof value> => value !== undefined);
     const localPassed = localEvidence.some(value => value.outcome === 'passed');
-    const nativeSuccess = attempt.outcome === 'autonomous_success';
     const evidence = ['native-summary.json', 'run-result.json'];
     switch (name) {
         case 'planning': {
-            const present = stage('plan') !== undefined;
-            return { passed: nativeSuccess && agentPassed('plan') && validationPassed('plan'), present, evidence };
+            const present = stagePresent('plan');
+            return {
+                passed: agentPassed('plan') && validationPassed('plan') && handoffPassed('plan'),
+                present,
+                evidence,
+            };
         }
         case 'scaffold': {
-            const present = stage('scaffold') !== undefined;
-            return { passed: nativeSuccess && agentPassed('scaffold'), present, evidence };
+            const present = stagePresent('scaffold');
+            const passed = attempt.evaluationArm === 'rails'
+                ? agentPassed('scaffold') && validationPassed('scaffold') && handoffPassed('scaffold')
+                : agentPassed('scaffold');
+            return { passed, present, evidence };
         }
         case 'build':
             return {
-                passed: nativeSuccess
-                    && buildCommands.length > 0
-                    && buildCommands.every(command => command.success),
+                passed: buildPassed,
                 present: buildCommands.length > 0,
                 evidence,
             };
         case 'test':
             return {
-                passed: nativeSuccess
+                passed: validationComplete
                     && testCommands.length > 0
                     && testCommands.every(command => command.success),
                 present: testCommands.length > 0,
@@ -1277,20 +1300,26 @@ function gatePassed(
             };
         case 'integration': {
             const baselineValidation = validationPassed('integration');
-            const railsAgent = agentPassed('integration');
-            const present = stage('integration') !== undefined;
+            const railsValidation = agentPassed('integration')
+                && validationPassed('integration')
+                && handoffPassed('integration');
+            const present = stagePresent('integration');
             return {
-                passed: nativeSuccess && (baselineValidation || railsAgent) && projectValidationPassed,
+                passed: (
+                    attempt.evaluationArm === 'rails'
+                        ? railsValidation
+                        : baselineValidation
+                ) && buildPassed,
                 present,
                 evidence,
             };
         }
         case 'local-runtime':
-            return { passed: nativeSuccess && localPassed, present: localEvidence.length > 0, evidence };
+            return { passed: localPassed, present: localEvidence.length > 0, evidence };
         case 'browser': {
             const checks = localEvidence.flatMap(value => value.browserChecks ?? []);
             return {
-                passed: nativeSuccess && checks.length > 0 && checks.every(check => check.success === true),
+                passed: checks.length > 0 && checks.every(check => check.success === true),
                 present: checks.length > 0,
                 evidence,
             };
@@ -1299,8 +1328,7 @@ function gatePassed(
             const checks = localEvidence.flatMap(value => value.browserChecks ?? []);
             const expected = (scenario.acceptance?.local?.probes ?? []).filter(probe => probe.browser);
             return {
-                passed: nativeSuccess
-                    && checks.length >= expected.length
+                passed: checks.length >= expected.length
                     && checks.every((check, index) =>
                         check.accessibilityScanned === true
                         && !check.accessibilityScanError
@@ -1315,7 +1343,7 @@ function gatePassed(
         case 'persistence': {
             const checks = localEvidence.flatMap(value => value.persistenceChecks ?? []);
             return {
-                passed: nativeSuccess && checks.length > 0 && checks.every(check => check.success === true),
+                passed: checks.length > 0 && checks.every(check => check.success === true),
                 present: checks.length > 0,
                 evidence,
             };
@@ -1323,7 +1351,7 @@ function gatePassed(
         case 'worker': {
             const checks = localEvidence.flatMap(value => value.workerEvents ?? []);
             return {
-                passed: nativeSuccess && checks.length > 0 && checks.every(check => check.success === true),
+                passed: checks.length > 0 && checks.every(check => check.success === true),
                 present: checks.length > 0,
                 evidence,
             };
@@ -1332,7 +1360,7 @@ function gatePassed(
             const checks = localEvidence.flatMap(value =>
                 (value.commands ?? []).filter(command => command.kind === 'debugger'));
             return {
-                passed: nativeSuccess && checks.length > 0 && checks.every(check => check.success === true),
+                passed: checks.length > 0 && checks.every(check => check.success === true),
                 present: checks.length > 0,
                 evidence,
             };
@@ -1375,39 +1403,9 @@ function isCleanupFailureCode(value: string | undefined): boolean {
 
 interface ProjectValidationEvidence {
     outcome?: string;
+    failureCode?: string;
+    error?: string;
     commands?: SandboxValidationCommandResult[];
-}
-
-function classifySandboxValidationCommand(
-    command: Pick<SandboxValidationCommandResult, 'ecosystem' | 'command'>,
-): 'build' | 'test' | undefined {
-    const value = command.command.trim();
-    switch (command.ecosystem) {
-        case 'node':
-            if (/^npm\s+run\s+build(?:\s|$)/u.test(value)) {
-                return 'build';
-            }
-            if (/^npm\s+(?:run\s+)?test(?:\s|$)/u.test(value)) {
-                return 'test';
-            }
-            return undefined;
-        case 'python':
-            if (/\s-m\s+compileall(?:\s|$)/u.test(value)) {
-                return 'build';
-            }
-            if (/\s-m\s+pytest(?:\s|$)/u.test(value)) {
-                return 'test';
-            }
-            return undefined;
-        case 'dotnet':
-            if (/^dotnet\s+build(?:\s|$)/u.test(value)) {
-                return 'build';
-            }
-            if (/^dotnet\s+test(?:\s|$)/u.test(value)) {
-                return 'test';
-            }
-            return undefined;
-    }
 }
 
 interface SpawnedAttempt {

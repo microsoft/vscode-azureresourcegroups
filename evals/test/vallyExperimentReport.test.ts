@@ -39,6 +39,7 @@ describe('Vally native experiment report discovery', () => {
         assert.equal(manifest.cleanupVerification.missingBundles, 0);
         const rails = manifest.artifactBundles.find(bundle => bundle.arm === 'rails');
         assert.equal(rails?.diagnostics.failureCode, 'buildFailed');
+        assert.equal(rails?.diagnostics.gates.build, 'failed');
         assert.deepEqual(rails?.diagnostics.failedGates, [{
             gate: 'build',
             evidence: ['npm run build exited 1'],
@@ -46,6 +47,7 @@ describe('Vally native experiment report discovery', () => {
         }]);
         const markdown = renderVallyRunDiagnostics(manifest, scratchRoot);
         assert.match(markdown, /## Rails run diagnostics/);
+        assert.match(markdown, /\| Tests \| Runtime \| Debugger \|/);
         assert.match(markdown, /buildFailed/);
         assert.match(markdown, /Gate `build`: Generated project did not build\./);
         assert.match(markdown, /\[run result\]\(rails\/api-ts-functions-minimal\/artifacts\/run-result\.json\)/);

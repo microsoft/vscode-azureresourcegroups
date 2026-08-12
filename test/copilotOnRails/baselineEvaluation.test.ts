@@ -323,6 +323,66 @@ suite('Controlled baseline evaluation', () => {
         });
     });
 
+    test('continues to local runtime after generated tests fail', async () => {
+        await withProjectScratch(async scratch => {
+            let validationCalls = 0;
+            let localRuntimeCalls = 0;
+            const input = await createAttemptInput(scratch, {
+                through: 'local',
+                projectValidator: {
+                    validate: async () => {
+                        validationCalls++;
+                        return failedTestValidation();
+                    },
+                },
+                localRuntimeValidator: {
+                    validate: async () => {
+                        localRuntimeCalls++;
+                        return {
+                            outcome: 'passed',
+                            commands: [],
+                            probes: [],
+                        };
+                    },
+                },
+            });
+
+            const result = await runBaselineAttempt(input);
+            assert.equal(result.outcome, 'failed');
+            assert.equal(result.failureCode, 'sandboxCommandFailed');
+            assert.equal(validationCalls, 2);
+            assert.equal(localRuntimeCalls, 1);
+            assert.equal(result.stages.some(stage => stage.name === 'local-runtime'), true);
+            assert.equal(result.qualityFailures?.[0].code, 'sandboxCommandFailed');
+        });
+    });
+
+    test('keeps a later local failure primary after continuing past failed tests', async () => {
+        await withProjectScratch(async scratch => {
+            const input = await createAttemptInput(scratch, {
+                through: 'local',
+                projectValidator: {
+                    validate: async () => failedTestValidation(),
+                },
+                localRuntimeValidator: {
+                    validate: async () => ({
+                        outcome: 'failed',
+                        failureCode: 'localProbeFailed',
+                        error: 'The generated API did not answer its health probe.',
+                        commands: [],
+                        probes: [],
+                    }),
+                },
+            });
+
+            const result = await runBaselineAttempt(input);
+            assert.equal(result.failedStage, 'local-runtime');
+            assert.equal(result.failureCode, 'localProbeFailed');
+            assert.equal(result.qualityFailures?.[0].code, 'sandboxCommandFailed');
+            assert.match(result.error ?? '', /Earlier quality failure/);
+        });
+    });
+
     test('fails closed when the observed model does not match the pin', async () => {
         await withProjectScratch(async scratch => {
             let validationCalls = 0;
@@ -817,11 +877,41 @@ function completedRun(observedModel: string): CorAgentRunResult {
     };
 }
 
+function failedTestValidation(): Awaited<
+    ReturnType<Parameters<typeof runBaselineAttempt>[0]['projectValidator']['validate']>
+> {
+    return {
+        outcome: 'failed',
+        failureCode: 'sandboxCommandFailed',
+        error: '.: "npm test" failed.',
+        commands: [{
+            ecosystem: 'node',
+            relativeDirectory: '.',
+            command: 'npm run build',
+            success: true,
+            durationMs: 1,
+            stdout: '',
+            stderr: '',
+        }, {
+            ecosystem: 'node',
+            relativeDirectory: '.',
+            command: 'npm test',
+            success: false,
+            failureKind: 'commandExit',
+            durationMs: 1,
+            stdout: '',
+            stderr: 'No test files found',
+        }],
+    };
+}
+
 async function createAttemptInput(
     scratch: string,
     overrides: {
         executor?: Parameters<typeof runBaselineAttempt>[0]['executor'];
         projectValidator?: Parameters<typeof runBaselineAttempt>[0]['projectValidator'];
+        localRuntimeValidator?: Parameters<typeof runBaselineAttempt>[0]['localRuntimeValidator'];
+        through?: Parameters<typeof runBaselineAttempt>[0]['through'];
     } = {},
 ): Promise<Parameters<typeof runBaselineAttempt>[0]> {
     const outputDirectory = path.join(scratch, 'output');
@@ -838,12 +928,12 @@ async function createAttemptInput(
         attempt: 1,
         candidateCommit: 'candidate',
         model,
-        through: 'scaffold',
+        through: overrides.through ?? 'scaffold',
         executor: overrides.executor ?? { run: async () => completedRun(model) },
         projectValidator: overrides.projectValidator ?? {
             validate: async () => ({ outcome: 'passed', commands: [] }),
         },
-        localRuntimeValidator: {
+        localRuntimeValidator: overrides.localRuntimeValidator ?? {
             validate: async () => {
                 throw new Error('Local validation should not run in scaffold mode.');
             },

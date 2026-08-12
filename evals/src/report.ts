@@ -63,6 +63,12 @@ export interface EvaluationAttempt {
                 seriousAccessibilityViolations?: string[];
                 accessibilityScanned?: boolean;
                 accessibilityScanError?: string;
+                qualityFailures?: {
+                    stage: string;
+                    code: string;
+                    category: 'product_failure';
+                    error: string;
+                }[];
                 consoleErrors?: string[];
                 actionsCompleted?: number;
                 actionsExpected?: number;

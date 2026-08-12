@@ -322,6 +322,9 @@ describe('Vally ACA executor', () => {
             outcome: 'failed',
             failureCode: 'buildFailed',
             error: 'Generated project did not build.',
+            validationCommands: [
+                makeValidationCommand('npm run build', false),
+            ],
         });
         const options = makeOptions('product-failure-cleanup');
         await makeExecutor(runner).execute(
@@ -380,6 +383,71 @@ describe('Vally ACA executor', () => {
         const gates = await readAuthoritativeGates(options);
         assert.equal(gates.build.status, 'failed');
         assert.match(gates.build.evidence?.[0] ?? '', /missing applicable build evidence/);
+        assert.equal(gates.test.status, 'passed');
+    });
+
+    test('fails project gates when validation stopped after partial command evidence', async () => {
+        const runner = new FakeRunner({
+            outcome: 'failed',
+            failureCode: 'sandboxSetupFailed',
+            error: 'The Python validation sandbox became unavailable.',
+            validationFailureCode: 'sandboxSetupFailed',
+            validationCommands: [
+                makeValidationCommand('npm run build'),
+                makeValidationCommand('npm test'),
+            ],
+        });
+        const options = makeOptions('partial-validation-evidence');
+        await makeExecutor(runner).execute(
+            makeStimulus({ arm: 'rails', endpoint: 'scaffold' }),
+            options,
+        );
+        const gates = await readAuthoritativeGates(options);
+        assert.equal(gates.build.status, 'failed');
+        assert.equal(gates.test.status, 'failed');
+    });
+
+    test('preserves passing debugger evidence when generated tests fail', async () => {
+        const runner = new FakeRunner({
+            outcome: 'failed',
+            failureCode: 'sandboxCommandFailed',
+            error: '.: "npm test" failed.',
+            validationCommands: [
+                makeValidationCommand('npm run build'),
+                makeValidationCommand('npm test', false),
+            ],
+            includePassingDebuggerEvidence: true,
+        });
+        const options = makeOptions('test-failure-with-debugger-evidence');
+        await makeExecutor(runner).execute(
+            makeStimulus({
+                arm: 'rails',
+                endpoint: 'local',
+                applicability: { debugger: 'required' },
+            }),
+            options,
+        );
+        const gates = await readAuthoritativeGates(options);
+        assert.equal(gates.scaffold.status, 'passed');
+        assert.equal(gates.build.status, 'passed');
+        assert.equal(gates.test.status, 'failed');
+        assert.equal(gates.integration.status, 'passed');
+        assert.equal(gates['local-runtime'].status, 'passed');
+        assert.equal(gates.debugger.status, 'passed');
+    });
+
+    test('fails Rails workflow gates when their required handoffs are missing', async () => {
+        const runner = new FakeRunner({ omitHandoffs: true });
+        const options = makeOptions('missing-rails-handoffs');
+        await makeExecutor(runner).execute(
+            makeStimulus({ arm: 'rails', endpoint: 'local' }),
+            options,
+        );
+        const gates = await readAuthoritativeGates(options);
+        assert.equal(gates.planning.status, 'failed');
+        assert.equal(gates.scaffold.status, 'failed');
+        assert.equal(gates.integration.status, 'failed');
+        assert.equal(gates.build.status, 'passed');
         assert.equal(gates.test.status, 'passed');
     });
 
@@ -1039,6 +1107,9 @@ interface FakeRunnerOptions {
     error?: string;
     waitForAbort?: boolean;
     validationCommands?: SandboxValidationCommandResult[];
+    validationFailureCode?: string;
+    includePassingDebuggerEvidence?: boolean;
+    omitHandoffs?: boolean;
 }
 
 class FakeRunner implements NativeAttemptRunner {
@@ -1300,7 +1371,13 @@ function makeScenario(): CorEvaluationScenario {
 }
 
 function makeAttempt(options: FakeRunnerOptions): AttemptEvidence {
-    return {
+    const validationCommands = options.validationCommands ?? [
+        makeValidationCommand('npm run build'),
+        makeValidationCommand('npm test'),
+    ];
+    const validationFailureCode = options.validationFailureCode
+        ?? (validationCommands.some(command => !command.success) ? 'sandboxCommandFailed' : undefined);
+    const attempt: AttemptEvidence = {
         schemaVersion: '1',
         evaluationArm: 'rails',
         runId: 'run-1',
@@ -1328,6 +1405,7 @@ function makeAttempt(options: FakeRunnerOptions): AttemptEvidence {
         stages: [{
             name: 'plan',
             validation: { valid: true },
+            gateCalled: !options.omitHandoffs,
             agentRun: {
                 outcome: 'completed',
                 sessionId: 'session-1',
@@ -1353,6 +1431,8 @@ function makeAttempt(options: FakeRunnerOptions): AttemptEvidence {
             },
         }, {
             name: 'scaffold',
+            validation: { valid: true },
+            gateCalled: !options.omitHandoffs,
             agentRun: {
                 outcome: 'completed',
                 sessionId: 'session-2',
@@ -1365,14 +1445,14 @@ function makeAttempt(options: FakeRunnerOptions): AttemptEvidence {
         }, {
             name: 'build',
             buildValidation: {
-                outcome: 'passed',
-                commands: options.validationCommands ?? [
-                    makeValidationCommand('npm run build'),
-                    makeValidationCommand('npm test'),
-                ],
+                outcome: validationFailureCode ? 'failed' : 'passed',
+                failureCode: validationFailureCode,
+                commands: validationCommands,
             } as unknown as { outcome?: string },
         }, {
             name: 'integration',
+            validation: { valid: true },
+            gateCalled: !options.omitHandoffs,
             agentRun: {
                 outcome: 'completed',
                 sessionId: 'session-3',
@@ -1384,6 +1464,20 @@ function makeAttempt(options: FakeRunnerOptions): AttemptEvidence {
             },
         }],
     };
+    if (options.includePassingDebuggerEvidence) {
+        attempt.stages.push({
+            name: 'local-runtime',
+            localRuntimeValidation: {
+                outcome: 'passed',
+                commands: [{
+                    kind: 'debugger',
+                    name: 'attach and hit breakpoint',
+                    success: true,
+                }],
+            },
+        });
+    }
+    return attempt;
 }
 
 async function readAuthoritativeGates(
@@ -1414,12 +1508,13 @@ async function readAuthoritativeApplicability(
     return validation.applicability;
 }
 
-function makeValidationCommand(command: string): SandboxValidationCommandResult {
+function makeValidationCommand(command: string, success = true): SandboxValidationCommandResult {
     return {
         ecosystem: 'node',
         relativeDirectory: '.',
         command,
-        success: true,
+        success,
+        failureKind: success ? undefined : 'commandExit',
         durationMs: 1,
         stdout: '',
         stderr: '',

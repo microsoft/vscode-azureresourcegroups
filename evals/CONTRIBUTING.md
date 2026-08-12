@@ -206,6 +206,11 @@ Read these files first:
 - Per-trial `artifacts/cor-validation.json`: authoritative gate evidence.
 - Per-trial `artifacts/validation-manifest.json`: provenance and cleanup verification.
 
+Generated test and lint failures do not suppress later local evidence. The attempt remains failed,
+while integration, runtime, browser, persistence, and debugger gates continue when build/setup
+prerequisites are available. Read each gate independently; for example, `test: failed` and
+`debugger: passed` is a valid and actionable result.
+
 `candidate` means every configured release gate passed. `hold` means complete evidence exists but
 one or more quality gates failed. `insufficient_evidence` means required coverage or external proof
 is missing; it is not a passing result.
