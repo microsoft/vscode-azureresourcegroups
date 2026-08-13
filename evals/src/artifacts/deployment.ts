@@ -134,8 +134,8 @@ async function validateSecretHygiene(workspace: string, issues: ArtifactValidati
     ];
     const secretPattern = /\b(?:password|clientSecret|accountKey)\b\s*[:=]\s*["']?(?!\$\{|parameters?\(|getSecret\(|@secure\(|<)[A-Za-z0-9+/=_-]{8,}/i;
     for (const file of candidates) {
-        const content = await fs.readFile(file, 'utf8');
-        if (secretPattern.test(content)) {
+        const content = await readOptionalFile(file);
+        if (content !== undefined && secretPattern.test(content)) {
             addIssue(issues, 'hardcodedSecret', path.relative(workspace, file), 'Deployment artifacts must not contain hard-coded credentials.');
         }
     }
@@ -148,6 +148,17 @@ async function readRequiredFile(file: string, issuePath: string, issues: Artifac
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
             addIssue(issues, 'missingDeploymentArtifact', issuePath, `${path.basename(file)} is required.`);
             return '';
+        }
+        throw error;
+    }
+}
+
+async function readOptionalFile(file: string): Promise<string | undefined> {
+    try {
+        return await fs.readFile(file, 'utf8');
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            return undefined;
         }
         throw error;
     }

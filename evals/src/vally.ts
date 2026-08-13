@@ -172,6 +172,11 @@ interface StageEvidence {
     buildValidation?: ProjectValidationEvidence;
     localRuntimeValidation?: LocalRuntimeEvidence;
     deploymentValidation?: { outcome?: string };
+    deploymentReadiness?: {
+        outcome?: string;
+        failureCode?: string;
+        commands?: { name: string; success: boolean }[];
+    };
 }
 
 export interface AttemptEvidence {

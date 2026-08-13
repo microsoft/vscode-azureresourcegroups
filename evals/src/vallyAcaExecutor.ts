@@ -53,7 +53,12 @@ import {
     CUSTOM_METRICS_SCHEMA,
     CorAuthoritativeGrader,
     GATE_GROUPS,
+    type GateName,
 } from '../vally/plugins/cor-graders/authoritative';
+import {
+    isDeploymentInfrastructureFailureCode,
+    type DeploymentReadinessResult,
+} from './deploymentReadiness';
 import {
     createVallyRunDiagnostics,
     type VallyRunDiagnostics,
@@ -1082,7 +1087,7 @@ function createAuthoritativeArtifacts(
     scenario: CorEvaluationScenario,
     selection: VallyAcaTrialSelection,
     trajectory: Trajectory,
-    applicability: Record<string, boolean>,
+    applicability: Record<GateName, boolean>,
 ): AuthoritativeArtifacts {
     const identity = {
         scenarioId: selection.scenarioId,
@@ -1106,7 +1111,8 @@ function createAuthoritativeArtifacts(
         endpoint: selection.endpoint,
         runId: attempt.runId,
     };
-    const gates: Record<string, AuthoritativeGate> = Object.fromEntries(Object.keys(applicability).map(name => [
+    const gateNames = Object.keys(applicability) as GateName[];
+    const gates: Record<string, AuthoritativeGate> = Object.fromEntries(gateNames.map(name => [
         name,
         authoritativeGate(name, applicability[name], summary, attempt, scenario, trajectory, provenance),
     ]));
@@ -1175,7 +1181,7 @@ function authoritativeApplicability(
  * reached is a meaningful progress signal. The meta gates (cleanup, model, provenance) are excluded
  * because they are not sequential and would distort depth.
  */
-const PIPELINE_GATE_ORDER: readonly string[] = [
+const PIPELINE_GATE_ORDER: readonly GateName[] = [
     ...GATE_GROUPS.product,
     ...GATE_GROUPS.runtime,
     'deployment',
@@ -1332,7 +1338,7 @@ function validateApplicabilityContract(
 }
 
 function authoritativeGate(
-    name: string,
+    name: GateName,
     applicable: boolean,
     summary: NativeSummary,
     attempt: AttemptEvidence,
@@ -1357,8 +1363,11 @@ function authoritativeGate(
     };
 }
 
+/** Tier 1 deployment evidence recorded on a stage by the deployment endpoint. */
+type DeploymentReadinessEvidence = Pick<DeploymentReadinessResult, 'outcome' | 'failureCode' | 'commands'>;
+
 function gatePassed(
-    name: string,
+    name: GateName,
     _summary: NativeSummary,
     attempt: AttemptEvidence,
     scenario: CorEvaluationScenario,
@@ -1518,8 +1527,37 @@ function gatePassed(
             const present = Object.values(provenance).every(value => value.length > 0);
             return { passed: present, present, evidence };
         }
-        default:
-            return { passed: false, present: false, evidence };
+        case 'deployment': {
+            // Tier 1: the product's own deploy contract stops at `azd package`, so a run is
+            // graded on whether Copilot produced artifacts azd accepts. Failures caused by the
+            // host rather than the generated project are excluded rather than counted as
+            // defects, mirroring how local-runtime infrastructure failures are handled.
+            const readiness = [...attempt.stages].reverse()
+                .map(candidate => candidate.deploymentReadiness as DeploymentReadinessEvidence | undefined)
+                .find((candidate): candidate is DeploymentReadinessEvidence => candidate !== undefined);
+            if (!readiness) {
+                return { passed: false, present: false, evidence };
+            }
+            if (isDeploymentInfrastructureFailureCode(readiness.failureCode)) {
+                return {
+                    passed: false,
+                    present: false,
+                    evidence: [...evidence, `deployment evidence excluded: ${readiness.failureCode}`],
+                };
+            }
+            return {
+                passed: readiness.outcome === 'passed',
+                present: true,
+                evidence: [
+                    ...evidence,
+                    ...readiness.commands.map(command => `${command.name}: ${command.success ? 'passed' : 'failed'}`),
+                ],
+            };
+        }
+        case 'security':
+            // Declared in GATE_GROUPS and required by scenarios, but no evidence is collected
+            // yet. Reporting this explicitly stops it from being mistaken for absent evidence.
+            return { passed: false, present: false, evidence: [...evidence, 'gate "security" has no implementation'] };
     }
 }
 

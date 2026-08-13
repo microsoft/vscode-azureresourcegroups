@@ -22,9 +22,9 @@ export const GATE_GROUPS = {
     runtime: ['local-runtime', 'browser', 'browser-journey', 'accessibility', 'persistence', 'worker', 'debugger'],
     operations: ['deployment', 'security', 'cleanup'],
     identity: ['model', 'provenance'],
-} satisfies Record<string, readonly string[]>;
+} as const satisfies Record<string, readonly string[]>;
 
-type GateName = typeof GATE_GROUPS[keyof typeof GATE_GROUPS][number];
+export type GateName = typeof GATE_GROUPS[keyof typeof GATE_GROUPS][number];
 type EvidenceTier = 'ordinary' | 'deployment-authorized';
 
 interface ArtifactIdentity {

@@ -1,0 +1,14 @@
+# Known-good deployable reference. A tier-2 failure here indicates a harness defect,
+# not a Copilot on Rails defect.
+name: cor-eval-deployable
+metadata:
+  template: cor-eval-deployable@1.0.0
+services:
+  app:
+    project: .
+    host: containerapp
+    language: js
+    docker:
+      path: ./Dockerfile
+      # Build in ACR so a deploy does not require a local container runtime.
+      remoteBuild: true
