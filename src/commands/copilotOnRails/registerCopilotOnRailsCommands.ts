@@ -52,14 +52,14 @@ export const copilotOnRailsCommandIds = {
 /**
  * Registers a Copilot on Rails extension command, wrapping it in the shared
  * {@link callWithDiagnosticsAndTelemetryHandling} so it runs with a prepared {@link CopilotOnRailsContext} and a
- * logged `extensionCommand` lifecycle.  Mirrors the same context shape an mcpTool hands the command.
+ * logged `extensionAction` lifecycle.  Mirrors the same context shape an mcpTool hands the command.
  */
 function registerCopilotOnRailsCommand<A extends unknown[]>(
     commandId: string,
     command: (context: CopilotOnRailsContext, ...args: A) => unknown,
 ): void {
     registerCommand(commandId, (context: IActionContext, ...args: A) =>
-        callWithDiagnosticsAndTelemetryHandling(context, { type: 'extensionCommand', name: commandId }, async (corContext) => await command(corContext, ...args)),
+        callWithDiagnosticsAndTelemetryHandling(context, { type: 'extensionAction', name: commandId }, async (corContext) => await command(corContext, ...args)),
     );
 }
 

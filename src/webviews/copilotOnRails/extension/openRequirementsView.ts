@@ -5,7 +5,7 @@
 
 import { IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
-import { REQUIREMENTS_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { createProjectPlanFileWatcher, REQUIREMENTS_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { getCorProjectId } from "../../../utils/copilotOnRails/telemetryUtils";
 import { parseRequirementsJson, type RequirementsData } from "../views/utils/parseRequirements";
 import { RequirementsViewController } from "./controllers/RequirementsViewController";
@@ -111,7 +111,7 @@ async function reloadRequirements(uri: vscode.Uri): Promise<void> {
  * or changes in the workspace.
  */
 export function registerRequirementsAutoOpen(context: vscode.ExtensionContext): void {
-    const watcher = vscode.workspace.createFileSystemWatcher(REQUIREMENTS_FILE_GLOB);
+    const watcher = createProjectPlanFileWatcher(REQUIREMENTS_FILE_GLOB);
     const handle = async (uri: vscode.Uri) => {
         if (isRequirementsViewOpen()) {
             // Already open — the per-file watcher handles content reload.

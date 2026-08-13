@@ -85,6 +85,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     registerProjectSubmissionStateWatcher(context, corPlanFilesWatcher);
     registerRequirementsAutoOpen(context);
     registerAutopilot(context);
+    registerDebugPlanImplementedWatcher(context);
     registerViewHostDisposal(context);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();
