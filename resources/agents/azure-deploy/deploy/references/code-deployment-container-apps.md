@@ -33,7 +33,7 @@ Add `container-registry.bicep` module (ACR Basic, `adminUserEnabled: false`) + A
 
 > ⛔ **Windows: `az acr build` may fail with `UnicodeEncodeError`.** Azure CLI log streaming crashes on non-ASCII characters (✓, ✗) using Windows `charmap` codec. Append `--no-logs` to the build command. Build success/failure is still reported via exit code.
 
-## Step 5 — Oryx Shortcut (no ACR needed, no Dockerf ile)
+## Step 5 — Oryx Shortcut (no ACR needed, no Dockerfile)
 
 ```powershell
 az containerapp update --subscription {subscriptionId} -g {rg} -n {ca} --source . --set-env-vars NODE_ENV=production
