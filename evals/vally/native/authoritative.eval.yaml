@@ -35,6 +35,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: required
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -112,6 +113,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -188,6 +190,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -264,6 +267,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: required
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -341,6 +345,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -417,6 +422,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: required
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -494,6 +500,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -571,6 +578,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -648,6 +656,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -725,6 +734,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -802,8 +812,9 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: required
       applicability-browser: required
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
-      applicability-persistence: required
+      applicability-persistence: not-applicable
       applicability-worker: not-applicable
       applicability-debugger: required
       applicability-deployment: not-applicable
@@ -847,7 +858,6 @@ stimuli:
             - integration
             - local-runtime
             - browser
-            - persistence
             - debugger
             - cleanup
             - model
@@ -882,6 +892,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -959,6 +970,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -1036,6 +1048,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -1112,6 +1125,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -1188,6 +1202,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -1264,6 +1279,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -1341,6 +1357,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: not-applicable
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
@@ -1417,6 +1434,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: required
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: required
@@ -1495,6 +1513,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: required
       applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
       applicability-worker: required

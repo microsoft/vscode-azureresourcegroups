@@ -118,13 +118,21 @@ interface BrowserEvidence {
     consoleErrors?: string[];
     actionsCompleted?: number;
     actionsExpected?: number;
+    actionsEffective?: number;
     assertionsCompleted?: number;
     assertionsExpected?: number;
+    loadPassed?: boolean;
+    journeyStatus?: 'passed' | 'failed' | 'not-attempted';
+    journeySeverity?: 'required' | 'advisory';
+    journeyError?: string;
 }
 
 interface SuccessEvidence {
     name?: string;
     success?: boolean;
+    /** Persistence checks report this when the journey never created a record to verify. */
+    skipped?: boolean;
+    skipReason?: string;
 }
 
 interface CommandEvidence {

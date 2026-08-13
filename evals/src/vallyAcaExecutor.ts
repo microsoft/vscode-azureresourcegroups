@@ -1220,11 +1220,60 @@ export function progressMetrics(
         : pipeline[depth];
     metrics.deepest_gate_passed = depth === 0 ? 'none' : pipeline[depth - 1];
     metrics.pipeline_depth_ratio = pipeline.length ? round(depth / pipeline.length) : 0;
+
+    // An advisory journey is excluded from the release decision, so its outcome would otherwise go
+    // unmeasured. Charting it is what lets the journey earn promotion back to a hard gate.
+    const journey = gates['browser-journey'];
+    if (journey && journey.status !== 'not-applicable') {
+        metrics.browser_journey_status = journey.status;
+        metrics.browser_journey_enforced = applicability['browser-journey'] ? 1 : 0;
+    }
     return metrics;
 }
 
 function round(value: number): number {
     return Math.round(value * 1000) / 1000;
+}
+
+type GateVerdict = { passed: boolean; present: boolean };
+
+/**
+ * The load contract: the app served the page, rendered content and exposed controls. It is
+ * app-controlled, so a failure here is always a real defect. Evidence written before the gate was
+ * split carries no `loadPassed` flag, so a successful probe is read as a successful load.
+ */
+export function browserLoadVerdict(
+    checks: ReadonlyArray<{ loadPassed?: boolean; success?: boolean }>,
+): GateVerdict {
+    return {
+        passed: checks.length > 0 && checks.every(check => check.loadPassed ?? check.success === true),
+        present: checks.length > 0,
+    };
+}
+
+/**
+ * The journey contract drives labels and DOM the prompt never specified. A probe that recorded no
+ * journey status is reported absent rather than synthesised into a pass or a fail.
+ */
+export function browserJourneyVerdict(
+    checks: ReadonlyArray<{ journeyStatus?: string }>,
+): GateVerdict {
+    const attempted = checks.filter(check => check.journeyStatus !== undefined);
+    return {
+        passed: attempted.length > 0 && attempted.every(check => check.journeyStatus === 'passed'),
+        present: attempted.length > 0,
+    };
+}
+
+/** A skipped check means the journey created nothing to verify, which is not a persistence defect. */
+export function persistenceVerdict(
+    checks: ReadonlyArray<{ success?: boolean; skipped?: boolean }>,
+): GateVerdict {
+    const attempted = checks.filter(check => check.skipped !== true);
+    return {
+        passed: attempted.length > 0 && attempted.every(check => check.success === true),
+        present: attempted.length > 0,
+    };
 }
 
 function declaredApplicability(stimulus: Stimulus): Record<string, boolean> {
@@ -1256,6 +1305,7 @@ function validateApplicabilityContract(
         integration: local,
         ['local-runtime']: local,
         browser: local,
+        ['browser-journey']: local,
         accessibility: local,
         persistence: local,
         worker: local,
@@ -1401,11 +1451,11 @@ function gatePassed(
             return { passed: localPassed, present: localEvidence.length > 0, evidence };
         case 'browser': {
             const checks = localEvidence.flatMap(value => value.browserChecks ?? []);
-            return {
-                passed: checks.length > 0 && checks.every(check => check.success === true),
-                present: checks.length > 0,
-                evidence,
-            };
+            return { ...browserLoadVerdict(checks), evidence };
+        }
+        case 'browser-journey': {
+            const checks = localEvidence.flatMap(value => value.browserChecks ?? []);
+            return { ...browserJourneyVerdict(checks), evidence };
         }
         case 'accessibility': {
             const checks = localEvidence.flatMap(value => value.browserChecks ?? []);
@@ -1428,11 +1478,7 @@ function gatePassed(
         }
         case 'persistence': {
             const checks = localEvidence.flatMap(value => value.persistenceChecks ?? []);
-            return {
-                passed: checks.length > 0 && checks.every(check => check.success === true),
-                present: checks.length > 0,
-                evidence,
-            };
+            return { ...persistenceVerdict(checks), evidence };
         }
         case 'worker': {
             const checks = localEvidence.flatMap(value => value.workerEvents ?? []);

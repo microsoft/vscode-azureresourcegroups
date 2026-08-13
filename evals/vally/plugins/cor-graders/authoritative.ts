@@ -19,7 +19,7 @@ export const CUSTOM_METRICS_SCHEMA = 'copilot-on-rails-authoritative-metrics/v1'
 
 export const GATE_GROUPS = {
     product: ['planning', 'scaffold', 'build', 'test', 'integration'],
-    runtime: ['local-runtime', 'browser', 'accessibility', 'persistence', 'worker', 'debugger'],
+    runtime: ['local-runtime', 'browser', 'browser-journey', 'accessibility', 'persistence', 'worker', 'debugger'],
     operations: ['deployment', 'security', 'cleanup'],
     identity: ['model', 'provenance'],
 } satisfies Record<string, readonly string[]>;
@@ -461,6 +461,7 @@ function completeApplicability(
         integration: value.integration === true,
         'local-runtime': value['local-runtime'] === true,
         browser: value.browser === true,
+        'browser-journey': value['browser-journey'] === true,
         accessibility: value.accessibility === true,
         persistence: value.persistence === true,
         worker: value.worker === true,

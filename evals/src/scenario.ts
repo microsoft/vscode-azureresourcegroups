@@ -62,6 +62,19 @@ export interface LocalAcceptanceProbe {
          * keep collecting axe results but must not fail on them.
          */
         maxSeriousAccessibilityViolations?: number | null;
+        /**
+         * Splits the browser probe into a load contract and a journey contract.
+         *
+         * The load contract (page serves, renders content, exposes interactive elements) is always
+         * enforced: it is app-controlled and cannot be failed by a mis-resolved selector. The
+         * journey contract (scripted clicks, form fills and assertions) drives a UI whose labels
+         * and DOM the prompt never specifies, so it can fail on a working app.
+         *
+         * `advisory` records the journey outcome as evidence and lets the run proceed to the
+         * downstream gates. `required` (the default) fails local runtime, preserving the stricter
+         * behaviour for scenarios whose UI contract is pinned.
+         */
+        journeySeverity?: 'required' | 'advisory';
         viewport?: {
             width: number;
             height: number;
@@ -344,6 +357,10 @@ function validateAcceptance(value: unknown, filePath: string): void {
             }
             if (browser.requireInteractiveElements !== undefined && typeof browser.requireInteractiveElements !== 'boolean') {
                 throw new Error(`Scenario local probe ${index} browser.requireInteractiveElements must be boolean: ${filePath}`);
+            }
+            if (browser.journeySeverity !== undefined
+                && !['required', 'advisory'].includes(browser.journeySeverity as string)) {
+                throw new Error(`Scenario local probe ${index} browser.journeySeverity must be "required" or "advisory": ${filePath}`);
             }
             if (browser.maxSeriousAccessibilityViolations !== undefined
                 && browser.maxSeriousAccessibilityViolations !== null

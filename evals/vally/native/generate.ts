@@ -544,6 +544,12 @@ export function requiredGatesForScenario(
         }
         if (browserProbes.length > 0) {
             required.add('browser');
+            // The journey contract drives labels and DOM the prompt never specified, so a scenario
+            // can mark it advisory: the outcome is still graded and recorded, it just stops
+            // failing the run. The load contract above stays enforced either way.
+            if (browserProbes.some(probe => (probe.browser?.journeySeverity ?? 'required') === 'required')) {
+                required.add('browser-journey');
+            }
             // Accessibility is graded only when a probe enforces it. A scenario opts out by setting
             // maxSeriousAccessibilityViolations to null, which keeps collecting axe evidence
             // without gating on it.
@@ -551,7 +557,8 @@ export function requiredGatesForScenario(
                 required.add('accessibility');
             }
         }
-        if (browserProbes.some(probe => probe.browser?.persistence !== undefined)) {
+        if (browserProbes.some(probe => probe.browser?.persistence !== undefined
+            && (probe.browser?.journeySeverity ?? 'required') === 'required')) {
             required.add('persistence');
         }
         if ((scenario.acceptance?.local?.storageEvents?.length ?? 0) > 0) {
@@ -579,6 +586,7 @@ function allGates(): string[] {
         'integration',
         'local-runtime',
         'browser',
+        'browser-journey',
         'accessibility',
         'persistence',
         'worker',

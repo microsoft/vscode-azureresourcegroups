@@ -53,6 +53,7 @@
                         "expectedText": "ticket",
                         "requireInteractiveElements": true,
                         "maxSeriousAccessibilityViolations": null,
+                        "journeySeverity": "advisory",
                         "viewport": {
                             "width": 1440,
                             "height": 900

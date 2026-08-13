@@ -58,7 +58,7 @@ void test('intent matching requires every meaningful word, so it cannot select a
 void test('an adapted target is recorded as evidence rather than silently substituted', () => {
     const script = build(clickCreate);
 
-    assert.match(script, /adaptedTargets\.push\(\{ requested: name, resolved: bestName \}\)/);
+    assert.match(script, /adaptedTargets\.push\(\{ requested: name, requestedRole: requested, resolved: bestName, resolvedRole: bestRole \}\)/);
     // Evidence is only useful if it reaches the caller on both the success and failure paths.
     assert.equal(script.match(/invalidFields, ambiguousTargets, adaptedTargets,/g)?.length, 2);
 });
@@ -74,4 +74,16 @@ void test('assertions stay strict so an adapted click cannot mask a broken app',
             `assertion must not swallow failures: ${line}`,
         );
     }
+});
+
+void test('an intent-equivalent control is found even when the app used a different role', () => {
+    const script = createBrowserProbeScript('http://localhost:5173', {
+        actions: [{ kind: 'click', selectorType: 'role', role: 'button', selector: 'Create ticket' }],
+    });
+    // A router link renders as an anchor, so demanding role=button failed working apps at the
+    // first action and produced an empty form-fill downstream.
+    assert.match(script, /\['button', 'link', 'menuitem', 'tab'\]\.filter\(value => value !== requested\)/u);
+    assert.match(script, /const roles = \[requested, /u, 'the requested role must be tried first');
+    assert.match(script, /if \(best\) \{ break; \}/u, 'a widened role must never outrank an exact match');
+    assert.match(script, /requestedRole: requested, resolved: bestName, resolvedRole: bestRole/u);
 });

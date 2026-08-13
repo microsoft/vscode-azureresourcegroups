@@ -350,12 +350,18 @@ function describeBrowserLocatorFailure(output: string): string | undefined {
  * The adaptive prober records which controls it could not complete and which the browser itself
  * rejected. Naming them turns a generic assertion timeout into an actionable statement.
  */
-function describeBrowserFormFailure(output: string): string | undefined {
+export function describeBrowserFormFailure(output: string): string | undefined {
     const payload = output.match(/\{"title":.*\}/u);
     if (!payload) {
         return undefined;
     }
-    let evidence: { formFieldsUnsatisfiable?: string[]; invalidFields?: string[]; assertionsCompleted?: number };
+    let evidence: {
+        formFieldsUnsatisfiable?: string[];
+        invalidFields?: string[];
+        assertionsCompleted?: number;
+        formFieldsFilled?: string[];
+        actionLedger?: Array<{ action: string; effective: boolean; reason?: string }>;
+    };
     try {
         evidence = JSON.parse(payload[0]) as typeof evidence;
     } catch {
@@ -370,6 +376,19 @@ function describeBrowserFormFailure(output: string): string | undefined {
     if (unsatisfiable.length) {
         return `The generated form has ${unsatisfiable.length === 1 ? 'a required control' : 'required controls'} `
             + `a user cannot complete: ${unsatisfiable.slice(0, 5).join('; ')}.`;
+    }
+    // Narrating from the action count claimed the form "was filled and submitted" on runs whose
+    // fill list was empty, which sent every reader looking for an app defect that did not exist.
+    // The ledger records what each action actually changed, so the narration follows the evidence.
+    const ineffective = evidence.actionLedger?.filter(entry => !entry.effective) ?? [];
+    if (ineffective.length) {
+        return `The probe could not drive the UI: ${ineffective.length === 1 ? 'an action' : 'actions'} `
+            + `${ineffective.slice(0, 3).map(entry => `"${entry.action}" (${entry.reason ?? 'no effect'})`).join('; ')}. `
+            + 'This is a probe interaction failure, not necessarily an application defect.';
+    }
+    if (!(evidence.formFieldsFilled?.length ?? 0) && evidence.assertionsCompleted === 0) {
+        return 'No form field was filled, so the expected result could never appear. '
+            + 'The probe did not reach the form.';
     }
     if (evidence.assertionsCompleted === 0) {
         return 'The form was filled and submitted, but the expected result never appeared on the page.';

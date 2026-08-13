@@ -119,8 +119,20 @@ export interface LocalRuntimeBrowserResult {
     consoleErrors?: string[];
     actionsCompleted?: number;
     actionsExpected?: number;
+    /**
+     * Actions that observably changed the page. An action can complete without doing anything —
+     * clicking a mis-resolved target, or filling a form that exposed no fields — so this is the
+     * count the journey score is built from.
+     */
+    actionsEffective?: number;
+    actionLedger?: Array<{ action: string; effective: boolean; reason?: string }>;
     assertionsCompleted?: number;
     assertionsExpected?: number;
+    /** The app served the page, rendered content and exposed interactive elements. */
+    loadPassed?: boolean;
+    journeyStatus?: 'passed' | 'failed' | 'not-attempted';
+    journeySeverity?: 'required' | 'advisory';
+    journeyError?: string;
     viewport?: { width: number; height: number };
     currentUrl?: string;
     bodyTextExcerpt?: string;
@@ -136,6 +148,14 @@ export interface LocalRuntimePersistenceResult {
     readinessProbes: LocalRuntimeProbeResult[];
     postRestartBrowser: LocalRuntimeBrowserResult;
     success: boolean;
+    /**
+     * Persistence re-asserts the record the journey created, so it has nothing to verify when the
+     * journey never completed. Skipping is reported distinctly from failing: treating an
+     * unattempted check as a failure would relocate the journey's false negative one gate
+     * downstream instead of removing it.
+     */
+    skipped?: boolean;
+    skipReason?: string;
     durationMs: number;
     error?: string;
 }
@@ -505,7 +525,7 @@ export class SandboxLocalRuntimeValidator {
                                     [...browserChecks].reverse().find(check => check.name === probe.name),
                                 );
                                 persistenceChecks.push(persistenceResult);
-                                if (!persistenceResult.success) {
+                                if (!persistenceResult.success && !persistenceResult.skipped) {
                                     validationFailure = failure(
                                         'localPersistenceFailed',
                                         `Persistence acceptance "${probe.name}" failed. ${persistenceResult.error ?? ''}`.trim(),
@@ -1127,6 +1147,28 @@ export class SandboxLocalRuntimeValidator {
         const contract = probe.browser?.persistence;
         if (!contract) {
             throw new Error('Persistence acceptance configuration is required.');
+        }
+        if (initialBrowser?.journeyStatus === 'failed' || initialBrowser?.journeyStatus === 'not-attempted') {
+            const reason = `The browser journey did not complete (${initialBrowser.journeyError ?? initialBrowser.journeyStatus}), `
+                + 'so there is no created record whose survival a restart could verify.';
+            return {
+                name: probe.name,
+                restartTargets: contract.restartTargets,
+                processIdsBefore: [],
+                processIdsAfter: [],
+                readinessProbes: [],
+                postRestartBrowser: {
+                    name: `${probe.name} after restart`,
+                    url: probe.url ?? '',
+                    success: false,
+                    durationMs: 0,
+                },
+                success: false,
+                skipped: true,
+                skipReason: reason,
+                durationMs: Date.now() - started,
+                error: reason,
+            };
         }
         const selected = launchedProcesses.filter(process =>
             process.restartable && contract.restartTargets.includes(process.target as 'backend' | 'frontend'));
@@ -1825,6 +1867,7 @@ export function createHttpProbeCommand(
         ? null
         : contract.maxSeriousAccessibilityViolations ?? 0;
     const viewport = contract.viewport ?? { width: 1440, height: 900 };
+    const journeySeverity = contract.journeySeverity ?? 'required';
     const actions = contract.actions ?? [];
     const assertions = contract.assertions ?? [];
     return [
@@ -1833,6 +1876,8 @@ export function createHttpProbeCommand(
         '(async () => {',
         'const consoleErrors = [];',
         'let actionsCompleted = 0;',
+        'let actionsEffective = 0;',
+        'const actionLedger = [];',
         'let assertionsCompleted = 0;',
         'const actionsSkipped = [];',
         'const adaptedTargets = [];',
@@ -1851,25 +1896,36 @@ export function createHttpProbeCommand(
             const words = String(name || '').toLowerCase().split(/[^a-z0-9]+/)
                 .filter(word => word && !stop.has(word));
             if (!words.length) { return null; }
-            const candidates = page.getByRole(role || 'button');
-            const count = await candidates.count().catch(() => 0);
+            // The prompt never says whether a create affordance is a button or a link, and a router
+            // link renders as an anchor. Searching only the requested role made a working app fail
+            // at the first action, so the search widens across the activatable roles. The requested
+            // role is tried first, so an exact match always wins over a widened one.
+            const requested = role || 'button';
+            const roles = [requested, ...['button', 'link', 'menuitem', 'tab'].filter(value => value !== requested)];
             let best = null;
             let bestScore = 0;
             let bestName = '';
-            for (let index = 0; index < count; index++) {
-                const candidate = candidates.nth(index);
-                const usable = await candidate.isVisible().catch(() => false)
-                    && await candidate.isEnabled().catch(() => false);
-                if (!usable) { continue; }
-                const text = ((await candidate.textContent().catch(() => '')) || '').toLowerCase();
-                const matched = words.filter(word => text.includes(word)).length;
-                // Require every meaningful word so "Create ticket" never resolves to "Delete ticket".
-                if (matched !== words.length) { continue; }
-                // Prefer the tightest label, so "Create ticket" beats "Create ticket from template".
-                const score = 1000 - text.trim().length;
-                if (score > bestScore) { bestScore = score; best = candidate; bestName = text.trim(); }
+            let bestRole = requested;
+            for (const candidateRole of roles) {
+                const candidates = page.getByRole(candidateRole);
+                const count = await candidates.count().catch(() => 0);
+                for (let index = 0; index < count; index++) {
+                    const candidate = candidates.nth(index);
+                    const usable = await candidate.isVisible().catch(() => false)
+                        && await candidate.isEnabled().catch(() => false);
+                    if (!usable) { continue; }
+                    const text = ((await candidate.textContent().catch(() => '')) || '').toLowerCase();
+                    const matched = words.filter(word => text.includes(word)).length;
+                    // Require every meaningful word so "Create ticket" never resolves to "Delete ticket".
+                    if (matched !== words.length) { continue; }
+                    // Prefer the tightest label, so "Create ticket" beats "Create ticket from template".
+                    const score = 1000 - text.trim().length;
+                    if (score > bestScore) { bestScore = score; best = candidate; bestName = text.trim(); bestRole = candidateRole; }
+                }
+                // A widened role is a fallback, not a preference: stop as soon as one role matched.
+                if (best) { break; }
             }
-            if (best) { adaptedTargets.push({ requested: name, resolved: bestName }); }
+            if (best) { adaptedTargets.push({ requested: name, requestedRole: requested, resolved: bestName, resolvedRole: bestRole }); }
             return best;
         };`,
         // Once a form has been filled, a "click create/submit" action means submit *that* form. The
@@ -2030,6 +2086,16 @@ export function createHttpProbeCommand(
         "return label + (el.validationMessage ? ': ' + el.validationMessage : '');",
         '})).catch(() => []);',
         'let page;',
+        // An action that leaves the URL and the rendered text untouched did not do what the
+        // contract asked, even when Playwright reported no error. Clicking a mis-resolved target
+        // is silent, so effect has to be observed rather than assumed.
+        "const pageSignature = async () => { try { return page.url() + '|' + (await page.locator('body').innerText()).length; } catch { return 'unavailable'; } };",
+        'const recordEffect = async (action, before) => {',
+        'const after = await pageSignature();',
+        "const effective = before === 'unavailable' || after !== before;",
+        'if (effective) actionsEffective++;',
+        "actionLedger.push(effective ? { action, effective: true } : { action, effective: false, reason: 'the page did not change' });",
+        '};',
         'let accessibilityScanned = false;',
         'let accessibilityScanError;',
         'const scanAccessibility = async () => {',
@@ -2046,6 +2112,9 @@ export function createHttpProbeCommand(
         '} catch (error) { accessibilityScanError = error instanceof Error ? error.message : String(error); return []; }',
         '};',
         'const browser = await chromium.launch({ headless: true });',
+        'let loadPassed = false;',
+        "let journeyStatus = 'not-attempted';",
+        'let journeyError;',
         'try {',
         `page = await browser.newPage({ viewport: ${JSON.stringify(viewport)} });`,
         "page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });",
@@ -2053,32 +2122,61 @@ export function createHttpProbeCommand(
         `const response = await page.goto(${JSON.stringify(url)}, { waitUntil: 'domcontentloaded', timeout: 60000 });`,
         "if (!response || !response.ok()) throw new Error('Browser navigation failed with status ' + (response?.status() ?? 'none') + '.');",
         "await page.locator('body').waitFor({ state: 'visible', timeout: 15000 });",
+        // The load contract is evaluated before the journey drives the UI. These assertions are
+        // entirely app-controlled, so a failure here is always a real defect; running them first
+        // means a mis-resolved selector can never hide the fact that the app rendered correctly.
+        "const landingTitle = await page.title();",
+        "const landingBodyText = (await page.locator('body').innerText()).trim();",
+        "if (!landingBodyText) throw new Error('Rendered page body is empty.');",
+        expectedText
+            ? `if (!landingBodyText.toLowerCase().includes(${JSON.stringify(expectedText)})) throw new Error(${JSON.stringify(`Rendered page does not include expected text "${contract.expectedText}".`)});`
+            : '',
+        "const interactiveElements = await page.locator('a[href], button, input, select, textarea').count();",
+        requireInteractive
+            ? "if (interactiveElements === 0) throw new Error('Rendered page has no interactive elements.');"
+            : '',
+        'loadPassed = true;',
+        // Everything below drives a UI whose labels the prompt never specified. Failures are
+        // recorded as journey evidence; whether they fail the probe is the contract's decision.
+        'try {',
         ...actions.map(action => {
+            const label = JSON.stringify(action.kind === 'fillForm'
+                ? `fillForm ${Object.keys(action.values ?? {}).join(', ')}`
+                : `${action.kind} ${action.selector ?? ''}`);
             if (action.kind === 'fillForm') {
-                return `await fillDiscoveredForm(${JSON.stringify(action.values ?? {})}, `
-                    + `${action.scope ? JSON.stringify(action.scope) : 'null'}); actionsCompleted++;`;
+                // A form fill that filled nothing is not a completed action. Counting it was how a
+                // probe reported "3/3 actions completed" with an empty formFieldsFilled list, and
+                // it pushed the real diagnosis downstream into an opaque assertion timeout.
+                return `{ const before = formFieldsFilled.length; `
+                    + `await fillDiscoveredForm(${JSON.stringify(action.values ?? {})}, `
+                    + `${action.scope ? JSON.stringify(action.scope) : 'null'}); `
+                    + `if (formFieldsFilled.length === before) { `
+                    + `actionLedger.push({ action: ${label}, effective: false, reason: 'no form field was filled' }); `
+                    + `throw new Error('Form fill completed without filling any field.'); } `
+                    + `actionsCompleted++; actionsEffective++; actionLedger.push({ action: ${label}, effective: true }); }`;
             }
             const locator = browserLocatorExpression({ ...action, selector: action.selector ?? '' });
-            const label = JSON.stringify(`${action.kind} ${action.selector ?? ''}`);
             let statement: string;
             switch (action.kind) {
                 case 'click':
-                    statement = `await (await resolveClickTarget(${locator}, ${label}, ${JSON.stringify(action.selectorType === 'role' ? (action.role ?? 'button') : '')}, ${JSON.stringify(action.selectorType === 'role' ? (action.selector ?? '') : '')})).click(); actionsCompleted++;`;
+                    statement = `await (await resolveClickTarget(${locator}, ${label}, ${JSON.stringify(action.selectorType === 'role' ? (action.role ?? 'button') : '')}, ${JSON.stringify(action.selectorType === 'role' ? (action.selector ?? '') : '')})).click();`;
                     break;
                 case 'fill':
-                    statement = `await ${locator}.fill(${JSON.stringify(action.value ?? '')}); actionsCompleted++;`;
+                    statement = `await ${locator}.fill(${JSON.stringify(action.value ?? '')});`;
                     break;
                 case 'select':
-                    statement = `await ${locator}.selectOption(${JSON.stringify(action.value ?? '')}); actionsCompleted++;`;
+                    statement = `await ${locator}.selectOption(${JSON.stringify(action.value ?? '')});`;
                     break;
             }
+            const tracked = `{ const before = await pageSignature(); ${statement} `
+                + `actionsCompleted++; await recordEffect(${label}, before); }`;
             if (!action.optional) {
-                return statement;
+                return tracked;
             }
             // The prompt leaves this control's shape open, so absence or read-only state is a valid
             // design decision rather than a defect. Record the skip instead of failing the probe.
             const probe = action.kind === 'click' ? 'isEnabled' : 'isEditable';
-            return `if (await ${locator}.${probe}({ timeout: 2000 }).catch(() => false)) { ${statement} } `
+            return `if (await ${locator}.${probe}({ timeout: 2000 }).catch(() => false)) { ${tracked} } `
                 + `else { actionsSkipped.push(${label}); }`;
         }),
         actions.some(action => action.kind === 'fillForm')
@@ -2097,18 +2195,20 @@ export function createHttpProbeCommand(
                     return `if ((await ${locator}.inputValue()) !== ${JSON.stringify(assertion.value ?? '')}) throw new Error(${JSON.stringify(`Expected ${assertion.selector} value to equal "${assertion.value ?? ''}".`)}); assertionsCompleted++;`;
             }
         }),
-        "const title = await page.title();",
-        "const bodyText = (await page.locator('body').innerText()).trim();",
-        "if (!bodyText) throw new Error('Rendered page body is empty.');",
-        expectedText
-            ? `if (!bodyText.toLowerCase().includes(${JSON.stringify(expectedText)})) throw new Error(${JSON.stringify(`Rendered page does not include expected text "${contract.expectedText}".`)});`
-            : '',
-        "const interactiveElements = await page.locator('a[href], button, input, select, textarea').count();",
-        requireInteractive
-            ? "if (interactiveElements === 0) throw new Error('Rendered page has no interactive elements.');"
-            : '',
+        "journeyStatus = 'passed';",
+        '} catch (error) {',
+        "journeyStatus = 'failed';",
+        "journeyError = error instanceof Error ? error.message.split('\\n')[0] : String(error);",
+        journeySeverity === 'advisory'
+            ? "console.error('Browser journey did not complete (advisory): ' + journeyError);"
+            : 'throw error;',
+        '}',
+        // Re-read after the journey so the evidence reflects where the app ended up, while the
+        // gating decision above stayed pinned to the landing page.
+        'const title = await page.title().catch(() => landingTitle);',
+        "const bodyText = await page.locator('body').innerText().then(value => value.trim()).catch(() => landingBodyText);",
         'const seriousAccessibilityViolations = await scanAccessibility();',
-        `process.stdout.write(JSON.stringify({ title, currentUrl: page.url(), bodyTextLength: bodyText.length, bodyTextExcerpt: bodyText.slice(0, 2000), interactiveElements, seriousAccessibilityViolations, accessibilityScanned, accessibilityScanError, consoleErrors: consoleErrors.slice(0, 20), actionsCompleted, actionsSkipped, formFieldsFilled, formFieldsUnsatisfiable, invalidFields, ambiguousTargets, adaptedTargets, actionsExpected: ${actions.length}, assertionsCompleted, assertionsExpected: ${assertions.length}, viewport: ${JSON.stringify(viewport)} }));`,
+        `process.stdout.write(JSON.stringify({ title, currentUrl: page.url(), bodyTextLength: bodyText.length, bodyTextExcerpt: bodyText.slice(0, 2000), interactiveElements, seriousAccessibilityViolations, accessibilityScanned, accessibilityScanError, consoleErrors: consoleErrors.slice(0, 20), loadPassed, journeyStatus, journeyError, journeySeverity: ${JSON.stringify(journeySeverity)}, actionsCompleted, actionsEffective, actionLedger, actionsSkipped, formFieldsFilled, formFieldsUnsatisfiable, invalidFields, ambiguousTargets, adaptedTargets, actionsExpected: ${actions.length}, assertionsCompleted, assertionsExpected: ${assertions.length}, viewport: ${JSON.stringify(viewport)} }));`,
         maxViolations === null
             ? ''
             : `if (seriousAccessibilityViolations.length > ${maxViolations}) { console.error('Accessibility violations exceeded ${maxViolations}: ' + seriousAccessibilityViolations.join(', ')); process.exitCode = 1; }`,
@@ -2116,7 +2216,7 @@ export function createHttpProbeCommand(
         "const bodyText = page ? await page.locator('body').innerText().catch(() => '') : '';",
         "const title = page ? await page.title().catch(() => '') : '';",
         'const seriousAccessibilityViolations = await scanAccessibility();',
-        `process.stdout.write(JSON.stringify({ title, currentUrl: page?.url(), bodyTextLength: bodyText.length, bodyTextExcerpt: bodyText.slice(0, 2000), seriousAccessibilityViolations, accessibilityScanned, accessibilityScanError, consoleErrors: consoleErrors.slice(0, 20), actionsCompleted, actionsSkipped, formFieldsFilled, formFieldsUnsatisfiable, invalidFields, ambiguousTargets, adaptedTargets, actionsExpected: ${actions.length}, assertionsCompleted, assertionsExpected: ${assertions.length}, viewport: ${JSON.stringify(viewport)} }));`,
+        `process.stdout.write(JSON.stringify({ title, currentUrl: page?.url(), bodyTextLength: bodyText.length, bodyTextExcerpt: bodyText.slice(0, 2000), seriousAccessibilityViolations, accessibilityScanned, accessibilityScanError, consoleErrors: consoleErrors.slice(0, 20), loadPassed, journeyStatus, journeyError, journeySeverity: ${JSON.stringify(journeySeverity)}, actionsCompleted, actionsEffective, actionLedger, actionsSkipped, formFieldsFilled, formFieldsUnsatisfiable, invalidFields, ambiguousTargets, adaptedTargets, actionsExpected: ${actions.length}, assertionsCompleted, assertionsExpected: ${assertions.length}, viewport: ${JSON.stringify(viewport)} }));`,
         "console.error(error instanceof Error ? error.stack : String(error));",
         'process.exitCode = 1;',
         '} finally { await browser.close(); }',
