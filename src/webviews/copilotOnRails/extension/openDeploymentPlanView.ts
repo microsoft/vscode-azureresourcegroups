@@ -3,10 +3,13 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { LocationListStep } from "@microsoft/vscode-azext-azureutils";
+import { callWithTelemetryAndErrorHandling, createSubscriptionContext, IActionContext, ISubscriptionActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ext } from "../../../extensionVariables";
-import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { DEPLOYMENT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { corId } from "../../../utils/copilotOnRails/telemetryUtils";
 import type { DeploymentPlanData } from "../views/utils/deploymentPlanTypes";
 import { getDeploymentPlanRenderIssue, parseDeploymentPlanMarkdown } from "../views/utils/parseDeploymentPlanMarkdown";
 import { DeploymentPlanViewController } from "./controllers/DeploymentPlanViewController";
@@ -35,9 +38,24 @@ export function openDeploymentPlanViewWithContent(content: string, sourceFileUri
 
 async function openDeploymentPlanViewWithContentAsync(content: string, sourceFileUri?: vscode.Uri): Promise<void> {
     const planData = tryParseDeploymentPlan(content, sourceFileUri);
-    const liveSubscriptions = await getAvailableAzureSubscriptions();
+    const [liveSubscriptions, liveLocations] = await Promise.all([
+        getAvailableAzureSubscriptions(),
+        getAvailableAzureLocations(),
+    ]);
     if (liveSubscriptions) {
         planData.availableSubscriptions = liveSubscriptions;
+    }
+    if (liveLocations) {
+        planData.availableLocations = liveLocations;
+        // Resolve the location code from the display name when the plan omitted it.
+        if (!planData.locationCode && planData.location) {
+            const needle = planData.location.toLowerCase();
+            const matched = liveLocations.find(l => l.name.toLowerCase() === needle || l.code.toLowerCase() === needle);
+            if (matched) {
+                planData.locationCode = matched.code;
+                planData.location = matched.name;
+            }
+        }
     }
 
     host.show(planData, sourceFileUri);
@@ -54,6 +72,28 @@ async function getAvailableAzureSubscriptions(): Promise<string[] | undefined> {
     } catch {
         return undefined;
     }
+}
+
+async function getAvailableAzureLocations(): Promise<{ name: string; code: string }[] | undefined> {
+    return await callWithTelemetryAndErrorHandling(corId('deploymentPlan.getLocations'), async (context: IActionContext) => {
+        context.errorHandling.rethrow = false;
+        context.telemetry.suppressIfSuccessful = true;
+
+        const provider = await ext.subscriptionProviderFactory();
+        const subscriptions = await provider.getAvailableSubscriptions({ filter: false });
+        if (subscriptions.length === 0) {
+            return undefined;
+        }
+
+        const wizardContext: ISubscriptionActionContext = { ...context, ...createSubscriptionContext(subscriptions[0]) };
+        const locations = await LocationListStep.getLocations(wizardContext);
+        const mapped = locations
+            .map(l => ({ name: l.displayName ?? l.name, code: l.name }))
+            .filter((l): l is { name: string; code: string } => Boolean(l.name && l.code));
+        const unique = Array.from(new Map(mapped.map(l => [l.code, l])).values())
+            .sort((a, b) => a.name.localeCompare(b.name));
+        return unique.length > 0 ? unique : undefined;
+    });
 }
 
 function tryParseDeploymentPlan(content: string, sourceFileUri: vscode.Uri | undefined): DeploymentPlanData {

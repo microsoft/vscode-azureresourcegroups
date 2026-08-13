@@ -46,7 +46,8 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
 
     const status = extractMetadata(lines, 'Status') ?? 'Unknown';
     const mode = extractMetadata(lines, 'Mode') ?? 'Unknown';
-    const subscription = extractMetadata(lines, 'Subscription') ?? findAttribute(requirements, 'Subscription') ?? 'Unknown';
+    const rawSubscription = extractMetadata(lines, 'Subscription') ?? findAttribute(requirements, 'Subscription') ?? 'Unknown';
+    const subscription = stripAnnotation(rawSubscription) || 'Unknown';
     const rawLocation = extractMetadata(lines, 'Location') ?? findAttribute(requirements, 'Location') ?? 'Unknown';
 
     // Parse location: "East US (`eastus`)" -> name="East US", code="eastus"
@@ -74,26 +75,11 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
         ? ['Visual Studio Enterprise', 'Azure for Students', 'Pay-As-You-Go', 'MSDN Platforms']
         : undefined;
 
-    const knownLocations = [
-        { name: 'East US', code: 'eastus' },
-        { name: 'East US 2', code: 'eastus2' },
-        { name: 'West US', code: 'westus' },
-        { name: 'West US 2', code: 'westus2' },
-        { name: 'Central US', code: 'centralus' },
-        { name: 'North Europe', code: 'northeurope' },
-        { name: 'West Europe', code: 'westeurope' },
-        { name: 'Southeast Asia', code: 'southeastasia' },
-    ];
-
     let resolvedLocationCode = locationCode;
-    let resolvedLocation = location;
-    if (resolvedLocationCode === 'unknown' && location !== 'Unknown') {
-        const needle = location.toLowerCase();
-        const matched = knownLocations.find(l => l.name.toLowerCase() === needle || l.code.toLowerCase() === needle);
-        if (matched) {
-            resolvedLocationCode = matched.code;
-            resolvedLocation = matched.name;
-        }
+    const resolvedLocation = location;
+    if (resolvedLocationCode === 'unknown' && location !== 'Unknown' && /^[a-z][a-z0-9]+$/.test(location.toLowerCase())) {
+        // The location was authored as a bare Azure region code (e.g. `eastus`).
+        resolvedLocationCode = location.toLowerCase();
     }
 
     return {
@@ -103,7 +89,6 @@ export function parseDeploymentPlanMarkdown(markdown: string): DeploymentPlanDat
         availableSubscriptions,
         location: resolvedLocation === 'Unknown' ? '' : resolvedLocation,
         locationCode: resolvedLocationCode === 'unknown' ? '' : resolvedLocationCode,
-        availableLocations: knownLocations,
         architecture,
         workspaceScan: workspaceCandidate?.table ?? emptyTable(),
         decisions: decisionsCandidate?.table ?? emptyTable(),
@@ -286,6 +271,11 @@ function findAttribute(table: DeploymentPlanTable, attribute: string): string | 
     const normalizedAttribute = normalizeHeader(attribute);
     const row = table.rows.find(candidate => normalizeHeader(candidate[0] ?? '') === normalizedAttribute);
     return row?.[1]?.trim();
+}
+
+/** Strips trailing LLM-generated annotations (e.g. "⚠️ ...note...") from a metadata value. */
+function stripAnnotation(value: string): string {
+    return value.replace(/\s*[\u26A0\u2705\u274C\u2139\u{1F4A1}\u{1F6A8}]\uFE0F?\s.*/su, '').trim();
 }
 
 function isWorkspaceTable(table: DeploymentPlanTable): boolean {

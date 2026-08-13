@@ -38,7 +38,6 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         feedbackButtonAriaLabel: vscode.l10n.t('Feedback'),
         feedbackButtonTooltip: vscode.l10n.t('Request changes to the plan before approving'),
         approveButtonTooltip: vscode.l10n.t('Approve the plan and continue with Copilot'),
-        approveButtonAlreadyApprovedTooltip: vscode.l10n.t('Plan already approved'),
         approveButtonMissingSelectionTooltip: vscode.l10n.t('Select a subscription and location before approving the plan'),
         feedbackDrawerInfoTooltip: vscode.l10n.t('Your feedback will be sent to Copilot as a prompt. Copilot will revise the plan and update the file. The updated plan will reload here for your final approval.'),
         revisingBanner: vscode.l10n.t('Copilot is revising the plan…'),
@@ -84,6 +83,16 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                     break;
                 case 'approve':
                     void this.approvePlan();
+                    break;
+                case 'subscriptionChanged':
+                    if (typeof message.data === 'string') {
+                        this.planData.subscription = message.data;
+                    }
+                    break;
+                case 'locationChanged':
+                    if (typeof message.data === 'string') {
+                        this.planData.locationCode = message.data;
+                    }
                     break;
                 case 'submitPlanFeedback': {
                     const query = message.prompt?.trim();

@@ -23,15 +23,42 @@ Never claim one of these tools is "not available" or "not exposed", never fall b
 
 The phases below are **strictly ordered**. You **must not** start a later phase until the earlier one has completed:
 
-1. Write `.azure/deployment-plan.md` (the `azure-prepare` skill calls this the deployment plan).
-2. **Step A** — open the deployment plan preview (see below). Mandatory.
-3. **Step B** — wait for the user's explicit approval of the deployment plan. Mandatory.
-4. Generate the deployment artifacts (infra, `azure.yaml`, Dockerfiles, etc.) as directed by the `azure-prepare` skill, following the **azure.yaml hook rules** below.
-5. **Step C** — validate the artifacts with `azd package` before declaring the deployment ready. Mandatory.
+1. Write the `.azure/deployment-plan.md` skeleton (the `azure-prepare` skill calls this the deployment plan).
+2. **Step A** — confirm subscription and location, then validate quotas (see below). Mandatory before presenting the plan.
+3. Finalize `.azure/deployment-plan.md` with all fields populated — no `_TBD_`, `⚠️ MUST confirm`, or blank cells.
+4. **Step B** — open the deployment plan preview (see below). Mandatory.
+5. **Step C** — wait for the user's explicit approval of the deployment plan. Mandatory.
+6. Generate the deployment artifacts (infra, `azure.yaml`, Dockerfiles, etc.) as directed by the `azure-prepare` skill, following the **azure.yaml hook rules** below.
+7. **Step D** — validate the artifacts with `azd package` before declaring the deployment ready. Mandatory.
 
-### Step A — open the deployment plan preview (MANDATORY, do not skip)
+### Step A — confirm subscription, location, and quotas BEFORE presenting the plan (MANDATORY)
 
-**Trigger:** the instant the `azure-prepare` skill finishes writing `.azure/deployment-plan.md` to disk. This must happen **before** the skill's approval gate (before you summarize the plan or ask for approval).
+The `azure-prepare` skill's plan template marks Subscription and Location as `⚠️ MUST confirm with user`, and its Provisioning Limit Checklist (Section 6) requires completed quota data with no `_TBD_` entries. Both of these **must be resolved before** you open the plan preview or present the plan.
+
+Follow `azure-prepare/references/azure-context.md` for the exact flow:
+
+1. Check for an existing AZD environment (`azd env list` / `azd env get-values`).
+2. If no environment exists or the user wants different settings, detect defaults (`azd config get defaults`, fall back to `az account show`).
+3. **Ask the user** to confirm the subscription (showing the actual name and ID).
+4. **Ask the user** to confirm the location (showing only regions that support all planned services).
+5. **Validate quotas** — invoke the `azure-quotas` skill to populate the Provisioning Limit Checklist. Every row must have actual numbers; no `_TBD_` or placeholder values.
+6. Record the confirmed subscription, location, and quota results in `.azure/deployment-plan.md`.
+
+Only after all six sub-steps succeed should you finalize the plan and proceed to Step B.
+
+### Plan completeness gate (MANDATORY)
+
+Before opening the plan preview (Step B), verify that `.azure/deployment-plan.md` satisfies **all** of these:
+
+- **Section 2 (Requirements):** Subscription and Location rows contain actual values (not `⚠️ MUST confirm with user`).
+- **Section 6 (Provisioning Limit Checklist):** Every row in Phase 2 has numeric values for Total After Deployment, Limit/Quota, and Notes. No cells contain `_TBD_` or `_To be filled in Phase 2_`.
+- **All template sections** from `azure-prepare/references/plan-template.md` are present. Do not omit, rename, or reorder sections.
+
+If any check fails, go back and resolve it before continuing. Do **not** present an incomplete plan.
+
+### Step B — open the deployment plan preview (MANDATORY, do not skip)
+
+**Trigger:** the instant the plan is finalized and passes the completeness gate above. This must happen **before** you summarize the plan or ask for approval.
 
 **Action — call the `open_deploy_plan_view` tool immediately, before any other output.** It takes no arguments.
 
@@ -39,9 +66,9 @@ There is no file-watcher fallback — if you skip this call, the user will not s
 
 This is not optional and not conditional. Do not summarize the plan, do not ask the user a question, do not begin generating infrastructure, and do not move on until this tool has been called. If the tool returns an error, report it verbatim — but still attempt the call first.
 
-### Step B — require explicit user approval before generating artifacts
+### Step C — require explicit user approval before generating artifacts
 
-After Step A, **stop and wait** for explicit user approval of the deployment plan. Do **not** begin generating Bicep/Terraform/`azure.yaml`/Dockerfiles until the user confirms. Treat anything other than a clear approval (e.g. questions, edits, "looks good but…") as not-yet-approved.
+After Step B, **stop and wait** for explicit user approval of the deployment plan. Do **not** begin generating Bicep/Terraform/`azure.yaml`/Dockerfiles until the user confirms. Treat anything other than a clear approval (e.g. questions, edits, "looks good but…") as not-yet-approved.
 
 ### azure.yaml hook rules (avoid the deploy retry loop)
 
@@ -64,7 +91,7 @@ hooks:
       run: ./scripts/seed-data.ps1
 ```
 
-### Step C — validate the generated artifacts before declaring success (MANDATORY)
+### Step D — validate the generated artifacts before declaring success (MANDATORY)
 
 After generating `azure.yaml` and the infra, **run `azd package`** (from the workspace root) to validate the manifest and confirm the app's build output is produced (for a Functions app, that the host actually discovers functions). Do **not** report the deployment as ready — and do **not** enter a retry-`azd deploy` loop — until `azd package` succeeds.
 

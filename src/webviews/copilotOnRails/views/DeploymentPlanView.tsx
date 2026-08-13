@@ -79,16 +79,6 @@ export const DeploymentPlanView = (): JSX.Element => {
         [feedbackItems, freeformDraft],
     );
 
-    const isAlreadyApproved = useMemo(() => {
-        const s = plan?.status?.trim().toLowerCase();
-        return s === 'approved';
-    }, [plan?.status]);
-
-    const missingRequiredSelection = useMemo(
-        () => !plan?.subscription?.trim() || !plan?.locationCode?.trim(),
-        [plan?.subscription, plan?.locationCode],
-    );
-
     const editedRows = useMemo(() => {
         const set = new Set<number>();
         for (const item of feedbackItems) {
@@ -123,7 +113,7 @@ export const DeploymentPlanView = (): JSX.Element => {
     }, []);
 
     const handleApprove = useCallback(() => {
-        if (!plan || isAlreadyApproved || missingRequiredSelection) {
+        if (!plan) {
             return;
         }
         if (hasEdits) {
@@ -131,7 +121,7 @@ export const DeploymentPlanView = (): JSX.Element => {
             return;
         }
         vscodeApi.postMessage({ command: 'approve', data: plan });
-    }, [vscodeApi, plan, hasEdits, isAlreadyApproved, missingRequiredSelection]);
+    }, [vscodeApi, plan, hasEdits]);
 
     const handleSubscriptionChange = useCallback((value: string) => {
         if (!plan) { return; }
@@ -404,13 +394,13 @@ export const DeploymentPlanView = (): JSX.Element => {
                                     />
                                 </Tooltip>
                                 <Tooltip
-                                    content={isAlreadyApproved ? strings.approveButtonAlreadyApprovedTooltip : missingRequiredSelection ? strings.approveButtonMissingSelectionTooltip : strings.approveButtonTooltip}
+                                    content={strings.approveButtonTooltip}
                                     relationship='label'
                                 >
                                     <Button
                                         appearance='primary'
                                         icon={<CheckmarkRegular />}
-                                        disabled={isAwaitingRevision || isAlreadyApproved || missingRequiredSelection}
+                                        disabled={isAwaitingRevision}
                                         onClick={handleApprove}
                                     >
                                         {strings.approveButton}
