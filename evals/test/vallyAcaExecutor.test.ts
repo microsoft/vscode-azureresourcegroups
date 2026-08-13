@@ -40,6 +40,10 @@ import {
     vallyAcaExecutorName,
 } from '../src/vallyAcaExecutor';
 import type { AttemptEvidence, SummaryEvidence } from '../src/vally';
+import {
+    createVallyRunDiagnostics,
+    renderVallyRunDiagnostics,
+} from '../src/vallyRunDiagnostics';
 
 const scratchRoot = path.resolve('evals/results/vally-aca-executor-test-work');
 const scenario = makeScenario();
@@ -284,6 +288,8 @@ describe('Vally ACA executor', () => {
             fs.access(path.join(artifactDir, 'custom_metrics.json')),
             fs.access(path.join(artifactDir, 'adapter-metrics.json')),
             fs.access(path.join(artifactDir, 'validation-manifest.json')),
+            fs.access(path.join(artifactDir, 'reports', 'run-diagnostics.json')),
+            fs.access(path.join(artifactDir, 'reports', 'run-diagnostics.md')),
             fs.access(path.join(artifactDir, 'native', 'run-1', 'workspace', 'generated.txt')),
             fs.access(path.join(options.workDir, 'cor-validation.json')),
             fs.access(path.join(options.workDir, 'custom_metrics.json')),
@@ -315,6 +321,86 @@ describe('Vally ACA executor', () => {
         assert.equal(manifest.provenance.candidateCommit, 'candidate-commit');
         assert.equal(manifest.provenance.evaluationDefinition.combinedHash, 'definition-hash');
         assert.equal(manifest.validation.cleanupVerified, true);
+    });
+
+    test('renders the primary command failure and distinguishes downstream checks not attempted', () => {
+        const attempt: AttemptEvidence = {
+            ...makeAttempt({}),
+            outcome: 'failed',
+            failedStage: 'local-runtime',
+            failureCode: 'localTaskFailed',
+            failureCategory: 'product_failure',
+            error: 'Debug task "support-ticket-api: npm clean" failed.',
+            agentRetries: 2,
+        };
+        attempt.stages.push({
+            name: 'local-runtime',
+            localRuntimeValidation: {
+                outcome: 'failed',
+                failureCode: 'localTaskFailed',
+                error: attempt.error,
+                commands: [{
+                    kind: 'task',
+                    name: 'support-ticket-api: npm clean',
+                    command: 'npm run clean',
+                    relativeDirectory: 'services/support-ticket-api',
+                    success: false,
+                    stdout: '> @support/api clean\n> rimraf dist',
+                    stderr: [
+                        'sh: 1: rimraf: not found',
+                        'npm error code 127',
+                        'npm error location /workspace/services/support-ticket-api',
+                    ].join('\n'),
+                }],
+            },
+        });
+        const diagnostics = createVallyRunDiagnostics(attempt, {
+            build: { status: 'passed', evidence: ['run-result.json'] },
+            test: { status: 'passed', evidence: ['run-result.json'] },
+            integration: { status: 'passed', evidence: ['run-result.json'] },
+            'local-runtime': { status: 'failed', evidence: ['run-result.json'] },
+            browser: {
+                status: 'failed',
+                evidence: ['missing applicable browser evidence in native-summary.json and run-result.json'],
+            },
+            accessibility: {
+                status: 'failed',
+                evidence: ['missing applicable accessibility evidence in native-summary.json and run-result.json'],
+            },
+            persistence: {
+                status: 'failed',
+                evidence: ['missing applicable persistence evidence in native-summary.json and run-result.json'],
+            },
+            debugger: {
+                status: 'failed',
+                evidence: ['missing applicable debugger evidence in native-summary.json and run-result.json'],
+            },
+        }, 2);
+
+        assert.match(
+            diagnostics.summary,
+            /Build, Tests, and Integration passed after 2 repairs\./,
+        );
+        assert.match(diagnostics.summary, /Local runtime failed \(localTaskFailed\)/);
+        assert.match(diagnostics.summary, /Required executable `rimraf` was unavailable/);
+        assert.match(
+            diagnostics.summary,
+            /Browser, Accessibility, Persistence, and Debugger were not attempted\./,
+        );
+        assert.equal(
+            diagnostics.gates.find(gate => gate.gate === 'browser')?.diagnosticStatus,
+            'not-attempted',
+        );
+        assert.match(diagnostics.recommendedActions[0], /Declare and install `rimraf`/);
+        assert.equal(diagnostics.failedCommand?.exitCode, 127);
+        assert.equal(
+            diagnostics.failedCommand?.workingDirectory,
+            'services/support-ticket-api',
+        );
+        const markdown = renderVallyRunDiagnostics(diagnostics);
+        assert.match(markdown, /## Failing command/);
+        assert.match(markdown, /sh: 1: rimraf: not found/);
+        assert.match(markdown, /\| browser \| not-attempted \|/);
     });
 
     test('keeps successful cleanup independent from a product failure', async () => {
@@ -619,7 +705,7 @@ describe('Vally ACA executor', () => {
         if (trial.result.status === 'success') {
             assert.equal(trial.result.gradeResult?.passed, false);
             const details = JSON.stringify(trial.result.gradeResult?.details);
-            assert.match(details, /security required evidence status must be passed/);
+            assert.match(details, /missing applicable security evidence/);
             assert.doesNotMatch(details, /applicability for security must/);
         }
         await trial.cleanup();
@@ -861,7 +947,7 @@ describe('Vally ACA executor', () => {
             const details = JSON.stringify(disposable.result.gradeResult?.details);
             assert.match(details, /backend-authoritative-release-hard-gates/);
             assert.match(details, /custom-metrics/);
-            assert.match(details, /security required evidence status must be passed/);
+            assert.match(details, /missing applicable security evidence/);
         }
         await disposable.cleanup();
         await backend.shutdown();

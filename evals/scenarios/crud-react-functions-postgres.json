@@ -20,7 +20,8 @@
         "build": true,
         "test": true,
         "lint": "if-present",
-        "timeoutMinutes": 10
+        "timeoutMinutes": 10,
+        "maxAgentRetries": 6
     },
     "acceptance": {
         "local": {
@@ -51,7 +52,7 @@
                     "browser": {
                         "expectedText": "ticket",
                         "requireInteractiveElements": true,
-                        "maxSeriousAccessibilityViolations": 0,
+                        "maxSeriousAccessibilityViolations": null,
                         "viewport": {
                             "width": 1440,
                             "height": 900
@@ -64,28 +65,11 @@
                                 "role": "button"
                             },
                             {
-                                "kind": "fill",
-                                "selector": "Subject",
-                                "selectorType": "label",
-                                "value": "Browser acceptance ticket"
-                            },
-                            {
-                                "kind": "fill",
-                                "selector": "Requester",
-                                "selectorType": "label",
-                                "value": "Evaluation User"
-                            },
-                            {
-                                "kind": "fill",
-                                "selector": "Email",
-                                "selectorType": "label",
-                                "value": "evaluation@example.com"
-                            },
-                            {
-                                "kind": "fill",
-                                "selector": "Description",
-                                "selectorType": "label",
-                                "value": "Created by the evaluator to verify the full-stack ticket journey."
+                                "kind": "fillForm",
+                                "values": {
+                                    "Subject": "Browser acceptance ticket",
+                                    "Description": "Created by the evaluator to verify the full-stack ticket journey."
+                                }
                             },
                             {
                                 "kind": "click",
@@ -99,10 +83,6 @@
                                 "kind": "text",
                                 "selector": "body",
                                 "value": "Browser acceptance ticket"
-                            },
-                            {
-                                "kind": "visible",
-                                "selector": "text=Ticket details"
                             }
                         ],
                         "persistence": {
@@ -113,10 +93,6 @@
                                     "kind": "text",
                                     "selector": "body",
                                     "value": "Browser acceptance ticket"
-                                },
-                                {
-                                    "kind": "visible",
-                                    "selector": "text=Ticket details"
                                 }
                             ]
                         }

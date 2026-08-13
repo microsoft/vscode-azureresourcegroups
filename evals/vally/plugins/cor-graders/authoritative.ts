@@ -52,6 +52,7 @@ interface ArtifactProvenance {
 interface GateEvidence {
     status: 'passed' | 'failed' | 'not-applicable';
     evidence?: string[];
+    reason?: string;
 }
 
 interface ArtifactDocument {
@@ -59,6 +60,7 @@ interface ArtifactDocument {
     provenance: ArtifactProvenance;
     applicability: Record<GateName, boolean>;
     gates: Partial<Record<GateName, GateEvidence>>;
+    diagnosticSummary?: string;
     values?: JsonObject;
 }
 
@@ -196,6 +198,9 @@ export class CorAuthoritativeGrader implements Grader {
             ));
         }
         const passed = details.every(result => result.passed) && metricsHardGate === true;
+        const failedGate = details
+            .flatMap(result => result.details ?? [])
+            .find(result => !result.passed);
         return {
             name: this.metadata.name,
             kind: 'code',
@@ -204,7 +209,11 @@ export class CorAuthoritativeGrader implements Grader {
             label: passed ? 'correct' : 'incorrect',
             evidence: passed
                 ? `All applicable Copilot on Rails authoritative gates passed (${selected.source})`
-                : `Authoritative hard-gate evidence failed closed (${selected.source})`,
+                : `${validation.value.diagnosticSummary ?? (
+                    `${failedGate?.name ?? 'authoritative evidence'}: `
+                    + `${failedGate?.evidence ?? 'authoritative hard-gate evidence failed closed'}.`
+                )} `
+                    + `Full diagnosis: ${path.resolve(selected.root, 'reports', 'run-diagnostics.md')}`,
             details,
             metadata: {
                 hardGate: true,
@@ -308,6 +317,10 @@ function parseDocument(
     const provenance = parseProvenance(value.provenance, label, errors);
     const applicability = parseApplicability(value.applicability, label, errors);
     const gates = parseGates(value.gates, label, errors);
+    const diagnosticSummary = value.diagnosticSummary;
+    if (diagnosticSummary !== undefined && typeof diagnosticSummary !== 'string') {
+        errors.push(`${label} artifact diagnosticSummary must be a string`);
+    }
     const values = value.values;
     if (requireValues && !isRecord(values)) {
         errors.push(`${label} artifact values must be an object`);
@@ -322,6 +335,7 @@ function parseDocument(
             provenance,
             applicability,
             gates,
+            ...(typeof diagnosticSummary === 'string' ? { diagnosticSummary } : {}),
             ...(isRecord(values) ? { values } : {}),
         },
     };
@@ -486,9 +500,15 @@ function parseGates(
             errors.push(`${label} gate ${gate} evidence must be a string array`);
             continue;
         }
+        const reason = candidate.reason;
+        if (reason !== undefined && typeof reason !== 'string') {
+            errors.push(`${label} gate ${gate} reason must be a string`);
+            continue;
+        }
         parsed[gate] = {
             status,
             ...(Array.isArray(evidence) ? { evidence: evidence.filter(isString) } : {}),
+            ...(typeof reason === 'string' ? { reason } : {}),
         };
     }
     return parsed;
@@ -687,7 +707,15 @@ function validateGate(
         errors.push(`${name} evidence is missing`);
     } else {
         if (gateEvidence.status !== 'passed') {
-            errors.push(`${name} required evidence status must be passed`);
+            errors.push(
+                gateEvidence.status === 'failed'
+                    ? (
+                        gateEvidence.reason
+                        ?? gateEvidence.evidence?.[0]
+                        ?? `${name} required evidence status must be passed`
+                    )
+                    : `${name} required evidence status must be passed`,
+            );
         }
         if (!gateEvidence.evidence || gateEvidence.evidence.length === 0
             || gateEvidence.evidence.some(item => item.length === 0)) {

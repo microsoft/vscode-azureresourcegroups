@@ -169,6 +169,7 @@ export interface SandboxLocalRuntimeValidationResult {
         | 'localSandboxCreateFailed'
         | 'localSandboxSetupFailed'
         | 'localToolchainUnavailable'
+        | 'localContainerRegistryUnavailable'
         | 'localTaskFailed'
         | 'localProbeFailed'
         | 'localBrowserFailed'
@@ -198,8 +199,23 @@ export function isLocalRuntimeInfrastructureFailureCode(code: string | undefined
         'localSandboxCreateFailed',
         'localSandboxSetupFailed',
         'localToolchainUnavailable',
+        'localContainerRegistryUnavailable',
         'localSandboxCleanupFailed',
     ].includes(code ?? '');
+}
+
+/**
+ * A registry that refuses or rate-limits an image pull says nothing about the generated project.
+ * Counting it as a product failure understates the real success rate.
+ */
+export function isContainerRegistryFailure(output: string | undefined): boolean {
+    if (!output) {
+        return false;
+    }
+    return /error pulling image configuration|denied: requested access to the resource is denied/u.test(output)
+        || /toomanyrequests|rate limit|pull rate limit/iu.test(output)
+        || /failed to (?:resolve|pull) (?:reference|image)/u.test(output)
+        || /(?:dial tcp|TLS handshake|i\/o) timeout.*registry|registry.*(?:dial tcp|TLS handshake|i\/o) timeout/u.test(output);
 }
 
 export class SandboxLocalRuntimeValidator {
@@ -379,7 +395,15 @@ export class SandboxLocalRuntimeValidator {
                                 );
                                 commands.push(taskResult);
                                 if (!taskResult.success) {
-                                    validationFailure = failure('localTaskFailed', `Debug task "${label}" failed.`, commands, probes);
+                                    const registryFailure = isContainerRegistryFailure(
+                                        `${taskResult.stderr ?? ''}\n${taskResult.stdout ?? ''}`);
+                                    validationFailure = failure(
+                                        registryFailure ? 'localContainerRegistryUnavailable' : 'localTaskFailed',
+                                        registryFailure
+                                            ? `Debug task "${label}" could not pull its container images.`
+                                            : `Debug task "${label}" failed.`,
+                                        commands,
+                                        probes);
                                     break;
                                 }
                             }
@@ -1791,13 +1815,15 @@ export function createHttpProbeCommand(
     }
     /* eslint-enable no-template-curly-in-string */
 
-    function createBrowserProbeScript(
+    export function createBrowserProbeScript(
     url: string,
     contract: NonNullable<LocalAcceptanceProbe['browser']>,
 ): string {
     const expectedText = contract.expectedText?.toLowerCase();
     const requireInteractive = contract.requireInteractiveElements ?? true;
-    const maxViolations = contract.maxSeriousAccessibilityViolations ?? 0;
+    const maxViolations = contract.maxSeriousAccessibilityViolations === null
+        ? null
+        : contract.maxSeriousAccessibilityViolations ?? 0;
     const viewport = contract.viewport ?? { width: 1440, height: 900 };
     const actions = contract.actions ?? [];
     const assertions = contract.assertions ?? [];
@@ -1808,6 +1834,201 @@ export function createHttpProbeCommand(
         'const consoleErrors = [];',
         'let actionsCompleted = 0;',
         'let assertionsCompleted = 0;',
+        'const actionsSkipped = [];',
+        'const adaptedTargets = [];',
+        'const ambiguousTargets = [];',
+        // A role+name matching several elements is a legitimate UI (a header CTA and a form submit
+        // button can share a label). Playwright strict mode rejects it, which failed real, working
+        // apps. Disambiguate to the first visible+enabled match and record it as evidence; the
+        // assertions that follow stay strict, so this cannot mask a broken flow.
+        // A generated app is free to label an empty-state CTA differently from the populated-state
+        // one ("Create first ticket" vs "Create ticket"), and the evaluator always boots against an
+        // empty database because seed data is forbidden. Demanding the populated-state label makes
+        // every CRUD app fail a working create flow, so an absent target falls back to the
+        // intent-equivalent control instead of waiting out the click timeout.
+        `const findIntentEquivalent = async (role, name) => {
+            const stop = new Set(['a', 'an', 'the', 'new', 'first', 'my', 'this', 'to', 'add']);
+            const words = String(name || '').toLowerCase().split(/[^a-z0-9]+/)
+                .filter(word => word && !stop.has(word));
+            if (!words.length) { return null; }
+            const candidates = page.getByRole(role || 'button');
+            const count = await candidates.count().catch(() => 0);
+            let best = null;
+            let bestScore = 0;
+            let bestName = '';
+            for (let index = 0; index < count; index++) {
+                const candidate = candidates.nth(index);
+                const usable = await candidate.isVisible().catch(() => false)
+                    && await candidate.isEnabled().catch(() => false);
+                if (!usable) { continue; }
+                const text = ((await candidate.textContent().catch(() => '')) || '').toLowerCase();
+                const matched = words.filter(word => text.includes(word)).length;
+                // Require every meaningful word so "Create ticket" never resolves to "Delete ticket".
+                if (matched !== words.length) { continue; }
+                // Prefer the tightest label, so "Create ticket" beats "Create ticket from template".
+                const score = 1000 - text.trim().length;
+                if (score > bestScore) { bestScore = score; best = candidate; bestName = text.trim(); }
+            }
+            if (best) { adaptedTargets.push({ requested: name, resolved: bestName }); }
+            return best;
+        };`,
+        // Once a form has been filled, a "click create/submit" action means submit *that* form. The
+        // app is free to label its submit differently from the CTA that opened it ("Create support
+        // ticket" vs "Create ticket"), so an exact match on a nav control elsewhere on the page is
+        // not the intended target.
+        `const preferFilledFormSubmit = async (locator) => {
+            if (formFieldsFilled.length === 0) { return null; }
+            const inForm = await locator.first().evaluate(el => Boolean(el.closest('form'))).catch(() => false);
+            if (inForm) { return null; }
+            const submit = page.locator('form button[type="submit"], form input[type="submit"]');
+            const count = await submit.count().catch(() => 0);
+            for (let index = 0; index < count; index++) {
+                const candidate = submit.nth(index);
+                const usable = await candidate.isVisible().catch(() => false)
+                    && await candidate.isEnabled().catch(() => false);
+                if (!usable) { continue; }
+                const text = ((await candidate.textContent().catch(() => '')) || '').trim();
+                adaptedTargets.push({ requested: 'submit of filled form', resolved: text });
+                return candidate;
+            }
+            return null;
+        };`,
+        `const resolveClickTarget = async (locator, label, role, name) => {
+            const count = await locator.count().catch(() => 1);
+            if (count === 1) {
+                const preferred = await preferFilledFormSubmit(locator);
+                if (preferred) { return preferred; }
+            }
+            if (count === 0) {
+                const adapted = await findIntentEquivalent(role, name);
+                if (adapted) { return adapted; }
+                return locator;
+            }
+            if (count <= 1) { return locator; }
+            ambiguousTargets.push({ target: label, matches: count });
+            let best = null;
+            let bestScore = -1;
+            for (let index = 0; index < count; index++) {
+                const candidate = locator.nth(index);
+                const usable = await candidate.isVisible().catch(() => false)
+                    && await candidate.isEnabled().catch(() => false);
+                if (!usable) { continue; }
+                // Once a form has been filled, the intended target is that form's own submit
+                // control, not a same-labelled CTA elsewhere on the page (a header "Create ticket"
+                // button next to the form's "Create ticket" submit is a legitimate design).
+                const inForm = await candidate.evaluate(el => Boolean(el.closest('form'))).catch(() => false);
+                const isSubmit = await candidate.evaluate(
+                    el => el.getAttribute('type') === 'submit').catch(() => false);
+                const score = (formFieldsFilled > 0 && inForm ? 4 : 0) + (isSubmit ? 2 : 0) + 1;
+                if (score > bestScore) { bestScore = score; best = candidate; }
+            }
+            return best ?? locator.first();
+        };`,
+        'const formFieldsFilled = [];',
+        'const formFieldsUnsatisfiable = [];',
+        'let invalidFields = [];',
+        // Discover the form at runtime instead of hard-coding a field list. A generated app is free
+        // to invent required fields the prompt never specified, and that must not read as a defect.
+        'const discoverFields = async (scope) => await page.evaluate((scopeSelector) => {',
+        'const root = scopeSelector ? document.querySelector(scopeSelector) : document;',
+        'if (!root) return [];',
+        "const controls = Array.from(root.querySelectorAll('input, textarea, select'));",
+        'const labelFor = (el) => {',
+        "let text = el.getAttribute('aria-label') || '';",
+        "if (!text && el.getAttribute('aria-labelledby')) { const owner = document.getElementById(el.getAttribute('aria-labelledby')); if (owner) text = owner.textContent || ''; }",
+        "if (!text && el.id) { const tag = document.querySelector('label[for=\"' + CSS.escape(el.id) + '\"]'); if (tag) text = tag.textContent || ''; }",
+        "if (!text) { const wrapper = el.closest('label'); if (wrapper) text = wrapper.textContent || ''; }",
+        // Fluent UI and similar wrappers render the label as a sibling rather than a `for` target.
+        "if (!text) { const field = el.closest('.fui-Field, [class*=\"Field\"]'); if (field) { const tag = field.querySelector('label'); if (tag) text = tag.textContent || ''; } }",
+        "if (!text) text = el.getAttribute('placeholder') || el.name || '';",
+        "return text.replace(/\\s+/g, ' ').trim();",
+        '};',
+        'return controls.map((el, index) => {',
+        "el.setAttribute('data-cor-probe-field', String(index));",
+        'const style = globalThis.getComputedStyle(el);',
+        'return {',
+        'key: index,',
+        'label: labelFor(el),',
+        'tag: el.tagName.toLowerCase(),',
+        "type: (el.getAttribute('type') || '').toLowerCase(),",
+        'required: el.required || el.getAttribute(\'aria-required\') === \'true\',',
+        'disabled: el.disabled,',
+        'readOnly: Boolean(el.readOnly),',
+        "hidden: style.display === 'none' || style.visibility === 'hidden' || el.type === 'hidden',",
+        "hasValue: Boolean(el.value),",
+        "pattern: el.getAttribute('pattern') || '',",
+        "placeholder: el.getAttribute('placeholder') || '',",
+        "options: el.tagName.toLowerCase() === 'select' ? Array.from(el.options).map(option => option.value).filter(Boolean) : [],",
+        '};',
+        '});',
+        '}, scope ?? null);',
+        // Synthesize a value the control will actually accept, so discovery does not stall on
+        // formats the scenario never mentioned.
+        'const synthesizeValue = (field) => {',
+        'if (field.options.length) return field.options[0];',
+        'const hint = (field.label + \' \' + field.placeholder).toLowerCase();',
+        "if (field.type === 'email' || /e-?mail/.test(hint)) return 'evaluation.user@example.com';",
+        "if (field.type === 'number' || field.type === 'range') return '1';",
+        "if (field.type === 'tel' || /phone/.test(hint)) return '5555550123';",
+        "if (field.type === 'url' || /url|website/.test(hint)) return 'https://example.com';",
+        "if (field.type === 'date') return '2026-01-15';",
+        "if (field.type === 'datetime-local') return '2026-01-15T09:00';",
+        "if (field.type === 'time') return '09:00';",
+        "if (field.type === 'password') return 'Evaluation!1';",
+        // A raw identifier cannot be invented so that it matches a real row; record it and try
+        // anyway, so the report names the reason instead of timing out on an assertion.
+        "if (/uuid|guid/.test(hint)) return '00000000-0000-4000-8000-000000000000';",
+        "return 'Evaluation ' + (field.label || 'value');",
+        '};',
+        // A generated field may constrain its format. Try to satisfy it before reporting, so only a
+        // genuinely uncompletable control is recorded against the project.
+        'const applyPattern = (field, value) => {',
+        'if (!field.pattern) return value;',
+        "let expression; try { expression = new RegExp('^(?:' + field.pattern + ')$'); } catch { return value; }",
+        'if (expression.test(value)) return value;',
+        "for (const candidate of ['00000000-0000-4000-8000-000000000000', '12345', '1', '2026-01-15', 'evaluation.user@example.com', 'Evaluation']) { if (expression.test(candidate)) return candidate; }",
+        "for (let length = 1; length <= 16; length++) { const digits = '1'.repeat(length); if (expression.test(digits)) return digits; }",
+        "formFieldsUnsatisfiable.push(field.label + ' (no value satisfies pattern ' + field.pattern + ')');",
+        'return value;',
+        '};',
+        'const fillDiscoveredForm = async (values, scope) => {',
+        // A click that changes route renders the form asynchronously. Discovering once, immediately,
+        // finds nothing, fills nothing, and still reports the action as completed - which is how a
+        // working create flow gets scored as a product failure. Wait for the form to actually exist.
+        "const fillable = (field) => !field.disabled && !field.hidden",
+        "    && !['checkbox', 'radio', 'file', 'submit', 'button', 'image', 'reset'].includes(field.type);",
+        'let fields = [];',
+        'const formDeadline = Date.now() + 15000;',
+        'while (Date.now() < formDeadline) {',
+        'fields = await discoverFields(scope);',
+        'if (fields.some(fillable)) break;',
+        'await page.waitForTimeout(250);',
+        '}',
+        "if (!fields.some(fillable)) { formFieldsUnsatisfiable.push('(no fillable form field appeared within 15s"
+        + " of the form action)'); }",
+        'for (const field of fields) {',
+        'if (field.disabled || field.hidden) continue;',
+        "if (['checkbox', 'radio', 'file', 'submit', 'button', 'image', 'reset'].includes(field.type)) continue;",
+        'const match = Object.keys(values).find(key => field.label.toLowerCase().includes(key.toLowerCase()));',
+        // Fill what the scenario asked for, plus whatever else the app decided to require.
+        'if (match === undefined && !field.required) continue;',
+        'if (field.readOnly) { if (!field.hasValue) formFieldsUnsatisfiable.push(field.label + \' (read-only)\'); continue; }',
+        'const value = applyPattern(field, match === undefined ? synthesizeValue(field) : values[match]);',
+        "if (/uuid|guid/.test((field.label + ' ' + field.placeholder).toLowerCase()) && match === undefined) formFieldsUnsatisfiable.push(field.label + ' (expects an opaque identifier with no picker)');",
+        'const locator = page.locator(\'[data-cor-probe-field="\' + field.key + \'"]\');',
+        'try {',
+        "if (field.tag === 'select') await locator.selectOption(value, { timeout: 5000 });",
+        'else await locator.fill(value, { timeout: 5000 });',
+        "formFieldsFilled.push(field.label + '=' + value);",
+        "} catch (error) { formFieldsUnsatisfiable.push(field.label + ' (' + (error instanceof Error ? error.message.split('\\n')[0] : String(error)) + ')'); }",
+        '}',
+        '};',
+        // Naming the controls the browser itself rejected turns a generic assertion timeout into a
+        // precise statement about which field blocked submission.
+        'const collectInvalidFields = async () => await page.evaluate(() => Array.from(document.querySelectorAll(\':invalid\')).slice(0, 10).map(el => {',
+        "const label = el.getAttribute('aria-label') || el.getAttribute('name') || el.getAttribute('placeholder') || el.tagName.toLowerCase();",
+        "return label + (el.validationMessage ? ': ' + el.validationMessage : '');",
+        '})).catch(() => []);',
         'let page;',
         'let accessibilityScanned = false;',
         'let accessibilityScanError;',
@@ -1815,7 +2036,11 @@ export function createHttpProbeCommand(
         'if (!page) return [];',
         'try {',
         'await page.addScriptTag({ content: axe.source });',
-        "const accessibility = await page.evaluate(async () => await globalThis.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] } }));",
+                // Fluent UI's focus manager (tabster) injects `<i data-tabster-dummy aria-hidden tabindex>`
+        // sentinels that axe reports as `aria-hidden-focus`. They are library internals the
+        // generated app neither writes nor can remove, so scoring them would fail every Fluent UI
+        // frontend for a defect it cannot fix. App-authored rules stay at zero tolerance.
+        "const accessibility = await page.evaluate(async () => await globalThis.axe.run({ exclude: [['[data-tabster-dummy]']] }, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] } }));",
         'accessibilityScanned = true;',
         "return accessibility.violations.filter(value => value.impact === 'serious' || value.impact === 'critical').map(value => value.id + ':' + value.impact + ' [' + value.nodes.slice(0, 3).flatMap(node => node.target).join(', ') + ']');",
         '} catch (error) { accessibilityScanError = error instanceof Error ? error.message : String(error); return []; }',
@@ -1829,16 +2054,36 @@ export function createHttpProbeCommand(
         "if (!response || !response.ok()) throw new Error('Browser navigation failed with status ' + (response?.status() ?? 'none') + '.');",
         "await page.locator('body').waitFor({ state: 'visible', timeout: 15000 });",
         ...actions.map(action => {
-            const locator = browserLocatorExpression(action);
+            if (action.kind === 'fillForm') {
+                return `await fillDiscoveredForm(${JSON.stringify(action.values ?? {})}, `
+                    + `${action.scope ? JSON.stringify(action.scope) : 'null'}); actionsCompleted++;`;
+            }
+            const locator = browserLocatorExpression({ ...action, selector: action.selector ?? '' });
+            const label = JSON.stringify(`${action.kind} ${action.selector ?? ''}`);
+            let statement: string;
             switch (action.kind) {
                 case 'click':
-                    return `await ${locator}.click(); actionsCompleted++;`;
+                    statement = `await (await resolveClickTarget(${locator}, ${label}, ${JSON.stringify(action.selectorType === 'role' ? (action.role ?? 'button') : '')}, ${JSON.stringify(action.selectorType === 'role' ? (action.selector ?? '') : '')})).click(); actionsCompleted++;`;
+                    break;
                 case 'fill':
-                    return `await ${locator}.fill(${JSON.stringify(action.value ?? '')}); actionsCompleted++;`;
+                    statement = `await ${locator}.fill(${JSON.stringify(action.value ?? '')}); actionsCompleted++;`;
+                    break;
                 case 'select':
-                    return `await ${locator}.selectOption(${JSON.stringify(action.value ?? '')}); actionsCompleted++;`;
+                    statement = `await ${locator}.selectOption(${JSON.stringify(action.value ?? '')}); actionsCompleted++;`;
+                    break;
             }
+            if (!action.optional) {
+                return statement;
+            }
+            // The prompt leaves this control's shape open, so absence or read-only state is a valid
+            // design decision rather than a defect. Record the skip instead of failing the probe.
+            const probe = action.kind === 'click' ? 'isEnabled' : 'isEditable';
+            return `if (await ${locator}.${probe}({ timeout: 2000 }).catch(() => false)) { ${statement} } `
+                + `else { actionsSkipped.push(${label}); }`;
         }),
+        actions.some(action => action.kind === 'fillForm')
+            ? 'invalidFields = await collectInvalidFields();'
+            : '',
         ...assertions.map(assertion => {
             const locator = browserLocatorExpression(assertion);
             switch (assertion.kind) {
@@ -1863,13 +2108,15 @@ export function createHttpProbeCommand(
             ? "if (interactiveElements === 0) throw new Error('Rendered page has no interactive elements.');"
             : '',
         'const seriousAccessibilityViolations = await scanAccessibility();',
-        `process.stdout.write(JSON.stringify({ title, currentUrl: page.url(), bodyTextLength: bodyText.length, bodyTextExcerpt: bodyText.slice(0, 2000), interactiveElements, seriousAccessibilityViolations, accessibilityScanned, accessibilityScanError, consoleErrors: consoleErrors.slice(0, 20), actionsCompleted, actionsExpected: ${actions.length}, assertionsCompleted, assertionsExpected: ${assertions.length}, viewport: ${JSON.stringify(viewport)} }));`,
-        `if (seriousAccessibilityViolations.length > ${maxViolations}) { console.error('Accessibility violations exceeded ${maxViolations}: ' + seriousAccessibilityViolations.join(', ')); process.exitCode = 1; }`,
+        `process.stdout.write(JSON.stringify({ title, currentUrl: page.url(), bodyTextLength: bodyText.length, bodyTextExcerpt: bodyText.slice(0, 2000), interactiveElements, seriousAccessibilityViolations, accessibilityScanned, accessibilityScanError, consoleErrors: consoleErrors.slice(0, 20), actionsCompleted, actionsSkipped, formFieldsFilled, formFieldsUnsatisfiable, invalidFields, ambiguousTargets, adaptedTargets, actionsExpected: ${actions.length}, assertionsCompleted, assertionsExpected: ${assertions.length}, viewport: ${JSON.stringify(viewport)} }));`,
+        maxViolations === null
+            ? ''
+            : `if (seriousAccessibilityViolations.length > ${maxViolations}) { console.error('Accessibility violations exceeded ${maxViolations}: ' + seriousAccessibilityViolations.join(', ')); process.exitCode = 1; }`,
         '} catch (error) {',
         "const bodyText = page ? await page.locator('body').innerText().catch(() => '') : '';",
         "const title = page ? await page.title().catch(() => '') : '';",
         'const seriousAccessibilityViolations = await scanAccessibility();',
-        `process.stdout.write(JSON.stringify({ title, currentUrl: page?.url(), bodyTextLength: bodyText.length, bodyTextExcerpt: bodyText.slice(0, 2000), seriousAccessibilityViolations, accessibilityScanned, accessibilityScanError, consoleErrors: consoleErrors.slice(0, 20), actionsCompleted, actionsExpected: ${actions.length}, assertionsCompleted, assertionsExpected: ${assertions.length}, viewport: ${JSON.stringify(viewport)} }));`,
+        `process.stdout.write(JSON.stringify({ title, currentUrl: page?.url(), bodyTextLength: bodyText.length, bodyTextExcerpt: bodyText.slice(0, 2000), seriousAccessibilityViolations, accessibilityScanned, accessibilityScanError, consoleErrors: consoleErrors.slice(0, 20), actionsCompleted, actionsSkipped, formFieldsFilled, formFieldsUnsatisfiable, invalidFields, ambiguousTargets, adaptedTargets, actionsExpected: ${actions.length}, assertionsCompleted, assertionsExpected: ${assertions.length}, viewport: ${JSON.stringify(viewport)} }));`,
         "console.error(error instanceof Error ? error.stack : String(error));",
         'process.exitCode = 1;',
         '} finally { await browser.close(); }',

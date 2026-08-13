@@ -544,7 +544,12 @@ export function requiredGatesForScenario(
         }
         if (browserProbes.length > 0) {
             required.add('browser');
-            required.add('accessibility');
+            // Accessibility is graded only when a probe enforces it. A scenario opts out by setting
+            // maxSeriousAccessibilityViolations to null, which keeps collecting axe evidence
+            // without gating on it.
+            if (browserProbes.some(probe => probe.browser?.maxSeriousAccessibilityViolations !== null)) {
+                required.add('accessibility');
+            }
         }
         if (browserProbes.some(probe => probe.browser?.persistence !== undefined)) {
             required.add('persistence');

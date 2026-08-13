@@ -106,7 +106,7 @@ describe('auto-initialization', () => {
   it('should survive missing Enhancement service config', () => {
     clearServices();
     // Only set Essential service env vars
-    process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/testdb';
+    process.env.DATABASE_URL = `postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@localhost:5432/testdb`;
     process.env.STORAGE_CONNECTION_STRING = 'UseDevelopmentStorage=true';
     // Enhancement env vars intentionally NOT set
     delete process.env.AZURE_OPENAI_ENDPOINT;

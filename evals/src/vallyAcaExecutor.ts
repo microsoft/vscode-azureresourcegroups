@@ -54,6 +54,11 @@ import {
     CorAuthoritativeGrader,
     GATE_GROUPS,
 } from '../vally/plugins/cor-graders/authoritative';
+import {
+    createVallyRunDiagnostics,
+    type VallyRunDiagnostics,
+    writeVallyRunDiagnostics,
+} from './vallyRunDiagnostics';
 
 export const vallyAcaExecutorName = 'cor-aca';
 export const vallyAcaExperimentBackendName = 'cor-aca';
@@ -273,6 +278,7 @@ export class VallyAcaExecutor implements Executor {
                 applicability,
             );
             await Promise.all([
+                writeVallyRunDiagnostics(artifactDirectory, authoritative.diagnostics),
                 writeJson(path.join(artifactDirectory, 'adapter-metrics.json'), adapterMetrics),
                 writeJson(path.join(options.workDir, 'adapter-metrics.json'), adapterMetrics),
                 writeJson(path.join(artifactDirectory, 'cor-validation.json'), authoritative.validation),
@@ -1067,6 +1073,7 @@ interface AuthoritativeGate {
 interface AuthoritativeArtifacts {
     validation: Record<string, unknown>;
     metrics: Record<string, unknown>;
+    diagnostics: VallyRunDiagnostics;
 }
 
 function createAuthoritativeArtifacts(
@@ -1099,11 +1106,27 @@ function createAuthoritativeArtifacts(
         endpoint: selection.endpoint,
         runId: attempt.runId,
     };
-    const gates = Object.fromEntries(Object.keys(applicability).map(name => [
+    const gates: Record<string, AuthoritativeGate> = Object.fromEntries(Object.keys(applicability).map(name => [
         name,
         authoritativeGate(name, applicability[name], summary, attempt, scenario, trajectory, provenance),
     ]));
-    const values: Record<string, boolean | null | string> = {};
+    const diagnostics = createVallyRunDiagnostics(
+        attempt,
+        gates,
+        scenario.validation.maxAgentRetries ?? 2,
+    );
+    for (const diagnostic of diagnostics.gates) {
+        const gate = gates[diagnostic.gate];
+        if (gate.status === 'failed') {
+            gate.reason = diagnostic.explanation;
+            gate.evidence = [
+                diagnostic.explanation,
+                'reports/run-diagnostics.md',
+                ...(gate.evidence ?? []),
+            ];
+        }
+    }
+    const values: Record<string, boolean | null | number | string> = {};
     for (const [name, applicable] of Object.entries(applicability)) {
         const prefix = name.replaceAll('-', '_');
         const gate = gates[name];
@@ -1113,11 +1136,13 @@ function createAuthoritativeArtifacts(
     }
     values.authoritative_hard_gates_passed = Object.entries(applicability)
         .every(([name, applicable]) => !applicable || gates[name].status === 'passed');
+    Object.assign(values, progressMetrics(applicability, gates));
     const shared = {
         identity,
         provenance,
         applicability,
         gates,
+        diagnosticSummary: diagnostics.summary,
     };
     return {
         validation: {
@@ -1131,6 +1156,7 @@ function createAuthoritativeArtifacts(
             ...shared,
             values,
         },
+        diagnostics,
     };
 }
 
@@ -1142,6 +1168,63 @@ function authoritativeApplicability(
     const applicability = declaredApplicability(stimulus);
     validateApplicabilityContract(applicability, scenario, selection);
     return applicability;
+}
+
+/**
+ * Gates that run in pipeline order. A run stops at the first one that fails, so the deepest gate
+ * reached is a meaningful progress signal. The meta gates (cleanup, model, provenance) are excluded
+ * because they are not sequential and would distort depth.
+ */
+const PIPELINE_GATE_ORDER: readonly string[] = [
+    ...GATE_GROUPS.product,
+    ...GATE_GROUPS.runtime,
+    'deployment',
+];
+
+/**
+ * Derived reporting metrics. These add a gradient to an otherwise binary result so that runs which
+ * fail at the browser gate are distinguishable from runs which fail at build. They never influence
+ * `authoritative_hard_gates_passed`, which stays the sole release decision.
+ */
+export function progressMetrics(
+    applicability: Record<string, boolean>,
+    gates: Record<string, AuthoritativeGate>,
+): Record<string, number | string> {
+    const metrics: Record<string, number | string> = {};
+    const passed = (name: string): boolean => gates[name]?.status === 'passed';
+    const applicableGates = Object.entries(applicability)
+        .filter(([, applicable]) => applicable)
+        .map(([name]) => name);
+
+    metrics.gates_applicable = applicableGates.length;
+    metrics.gates_passed = applicableGates.filter(passed).length;
+    metrics.gates_pass_ratio = applicableGates.length
+        ? round(metrics.gates_passed / applicableGates.length)
+        : 0;
+
+    for (const [group, members] of Object.entries(GATE_GROUPS)) {
+        const applicableMembers = members.filter(name => applicability[name]);
+        metrics[`${group}_gates_applicable`] = applicableMembers.length;
+        metrics[`${group}_gates_passed`] = applicableMembers.filter(passed).length;
+    }
+
+    const pipeline = PIPELINE_GATE_ORDER.filter(name => applicability[name]);
+    let depth = 0;
+    while (depth < pipeline.length && passed(pipeline[depth])) {
+        depth++;
+    }
+    metrics.pipeline_gates_applicable = pipeline.length;
+    metrics.furthest_gate_depth = depth;
+    metrics.furthest_gate_reached = depth >= pipeline.length
+        ? 'complete'
+        : pipeline[depth];
+    metrics.deepest_gate_passed = depth === 0 ? 'none' : pipeline[depth - 1];
+    metrics.pipeline_depth_ratio = pipeline.length ? round(depth / pipeline.length) : 0;
+    return metrics;
+}
+
+function round(value: number): number {
+    return Math.round(value * 1000) / 1000;
 }
 
 function declaredApplicability(stimulus: Stimulus): Record<string, boolean> {
@@ -1329,11 +1412,14 @@ function gatePassed(
             const expected = (scenario.acceptance?.local?.probes ?? []).filter(probe => probe.browser);
             return {
                 passed: checks.length >= expected.length
-                    && checks.every((check, index) =>
-                        check.accessibilityScanned === true
-                        && !check.accessibilityScanError
-                        && (check.seriousAccessibilityViolations?.length ?? 0)
-                            <= (expected[index]?.browser?.maxSeriousAccessibilityViolations ?? 0)),
+                    && checks.every((check, index) => {
+                        if (check.accessibilityScanned !== true || check.accessibilityScanError) {
+                            return false;
+                        }
+                        const configured = expected[index]?.browser?.maxSeriousAccessibilityViolations;
+                        return configured === null
+                            || (check.seriousAccessibilityViolations?.length ?? 0) <= (configured ?? 0);
+                    }),
                 present: checks.some(check =>
                     check.accessibilityScanned !== undefined
                     || check.accessibilityScanError !== undefined),

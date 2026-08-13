@@ -86,6 +86,59 @@ export default defineConfig({
 ```
 
 #### jest config example
+
+#### React + Fluent UI must inline CommonJS dependencies
+
+Fluent UI v9 pulls in `tabster`, which ships as CommonJS. Vitest's default
+externalization makes it fail at **import time**, so every test in the file aborts
+before a single assertion runs:
+
+```
+The requested module 'tabster' is a CommonJS module, which may not support all
+module.exports as named exports.
+ ❯ src/App.tsx:2:31
+```
+
+This is not a test-authoring bug — the tests never execute. Any frontend suite that
+renders a component wrapped in `FluentProvider` must inline the CommonJS packages:
+
+```typescript
+// vitest.config.ts (frontend workspace)
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    server: {
+      deps: {
+        // Fluent UI v9 depends on CommonJS-only `tabster`; without this every
+        // test importing a Fluent component fails to import.
+        inline: ['@fluentui/react-components', '@fluentui/react-icons', 'tabster'],
+      },
+    },
+  },
+});
+```
+
+Verify by running the frontend workspace's own `npm test` before finishing the
+phase. A test command that fails on module resolution must be fixed, not skipped.
+
+**Do not anchor the pattern.** Vitest matches `inline` entries against the module's
+*absolute path* (`/workspace/node_modules/@fluentui/react-components/...`), so a
+pattern like `/^@fluentui\//` never matches and the package stays externalized.
+The failure looks unchanged, which makes this a silent no-op that burns repair
+attempts:
+
+| Entry | Inlines Fluent UI? |
+| --- | --- |
+| `/^@fluentui\//` | **No** — anchored at string start, never matches a path |
+| `'@fluentui/react-components'` | Yes — string entries match `/node_modules/<entry>` |
+| `/@fluentui\//` | Yes — unanchored regex matches inside the path |
+
+Inlining only `tabster` is also insufficient: the failing `import` lives *inside*
+`@fluentui/react-components`, so if that package is externalized Node still loads it
+natively and the named export fails.
+
 ```typescript
 // jest.config.ts
 export default {

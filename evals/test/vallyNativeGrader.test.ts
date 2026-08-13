@@ -87,9 +87,11 @@ describe('cor-authoritative Vally grader', () => {
 
     test('fails closed for a required failure and normalizes the hard gate to zero', async () => {
         const fixture = await writeEvidence('failed', evidence => {
+            evidence.validation.diagnosticSummary = 'Build failed: npm run build exited with code 1.';
             evidence.validation.gates.build = {
                 status: 'failed',
                 evidence: ['reports/build.log'],
+                reason: 'npm run build exited with code 1.',
             };
             evidence.metrics.values.build_status = 'failed';
             evidence.metrics.values.build_success = false;
@@ -99,7 +101,9 @@ describe('cor-authoritative Vally grader', () => {
         assert.equal(result.passed, false);
         assert.equal(result.score, 0);
         assert.equal(result.metadata?.hardGateNormalized, true);
-        assert.match(findDetail(result, 'build').evidence, /must be passed/);
+        assert.match(findDetail(result, 'build').evidence, /npm run build exited with code 1/);
+        assert.match(result.evidence, /Build failed: npm run build exited with code 1/);
+        assert.match(result.evidence, /reports\/run-diagnostics\.md/);
     });
 
     test('distinguishes explicit non-applicability from required non-applicability', async () => {
@@ -386,6 +390,7 @@ interface ArtifactDocumentBase {
     identity: Record<string, string>;
     provenance: ArtifactProvenance;
     applicability: Record<string, boolean>;
+    diagnosticSummary?: string;
     gates: Record<string, {
         status: string;
         evidence?: string[];

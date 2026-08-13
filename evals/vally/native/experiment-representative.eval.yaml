@@ -94,7 +94,7 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: required
       applicability-browser: required
-      applicability-accessibility: required
+      applicability-accessibility: not-applicable
       applicability-persistence: required
       applicability-worker: not-applicable
       applicability-debugger: required

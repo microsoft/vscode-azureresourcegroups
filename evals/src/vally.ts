@@ -127,9 +127,30 @@ interface SuccessEvidence {
     success?: boolean;
 }
 
+interface CommandEvidence {
+    kind?: string;
+    name?: string;
+    command?: string;
+    ecosystem?: string;
+    relativeDirectory?: string;
+    cwd?: string;
+    success?: boolean;
+    stdout?: string;
+    stderr?: string;
+}
+
+interface ProjectValidationEvidence {
+    outcome?: string;
+    failureCode?: string;
+    error?: string;
+    commands?: CommandEvidence[];
+}
+
 interface LocalRuntimeEvidence {
     outcome?: string;
-    commands?: ({ kind?: string; name?: string; success?: boolean })[];
+    failureCode?: string;
+    error?: string;
+    commands?: CommandEvidence[];
     browserChecks?: BrowserEvidence[];
     persistenceChecks?: SuccessEvidence[];
     workerEvents?: SuccessEvidence[];
@@ -140,7 +161,7 @@ interface StageEvidence {
     gateCalled?: boolean;
     agentRun?: AgentRunEvidence;
     validation?: { valid?: boolean };
-    buildValidation?: { outcome?: string };
+    buildValidation?: ProjectValidationEvidence;
     localRuntimeValidation?: LocalRuntimeEvidence;
     deploymentValidation?: { outcome?: string };
 }
@@ -1101,7 +1122,11 @@ export function createCustomMetrics(
     const accessibilityPassed = accessibilityApplicable
         && accessibilityScans.length >= browserContracts.length
         && browserEvidence.every((check, index) => {
-            const max = browserContracts[index]?.browser?.maxSeriousAccessibilityViolations ?? 0;
+            const configured = browserContracts[index]?.browser?.maxSeriousAccessibilityViolations;
+            if (configured === null) {
+                return check.accessibilityScanned === true && !check.accessibilityScanError;
+            }
+            const max = configured ?? 0;
             return check.accessibilityScanned === true
                 && !check.accessibilityScanError
                 && (check.seriousAccessibilityViolations?.length ?? 0) <= max;

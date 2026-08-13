@@ -343,7 +343,9 @@ Treat evidence in this order:
 For a product failure:
 
 1. Locate the exact model, scenario, arm, attempt, failed stage, and failure code in `report.md`.
-2. Open that trial's durable validation and run-result artifacts.
+2. Open that trial's `reports/run-diagnostics.md` first. It distinguishes failed gates from dependent
+   gates that were not attempted and includes the failing command, stdout/stderr excerpt, repair
+   usage, and recommended action. Use `run-result.json` for the complete unabridged stage evidence.
 3. Reproduce the smallest matching scenario; do not start with the full release matrix.
 4. Determine whether the same-model baseline passed.
 5. Fix the product contract or implementation, not the grader, unless the expected behavior is

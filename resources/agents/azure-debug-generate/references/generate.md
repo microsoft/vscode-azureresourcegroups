@@ -53,12 +53,75 @@ For each service in the plan's Services table (where Generate is checked), gener
 Before writing any script or task command that invokes a CLI tool (e.g., `rimraf`, `concurrently`, `cross-env`):
 
 1. **Check** — Verify the tool is already a project dependency.
-2. **Add dependency** — Add it as a project dev dependency. This ensures it is version-locked and works consistently across all machines.
+2. **Add dependency** — Add it as a dev dependency **of the package whose script invokes it** — not the workspace root. This ensures it is version-locked and works consistently across all machines.
 3. **Ask if uncertain** — Use `ask_user` if the tool is expensive, opinionated, or has multiple alternatives.
+
+> ⛔ **Monorepo rule — declare per package, never root-only.** In an npm/yarn/pnpm workspaces repo, a
+> tool declared only in the **root** `package.json` is **not** available to a member package's scripts
+> when that member is installed on its own. `npm install` run inside a member directory installs only
+> that member's dependency graph and **skips the root package's own `devDependencies`**, so the binary
+> is never placed on `PATH` and the script fails with `sh: 1: {tool}: not found` / **exit code 127**.
+>
+> ```jsonc
+> // ⛔ WRONG — root declares it, member uses it
+> // package.json (root)                    services/api/package.json
+> { "devDependencies": {"rimraf": "^6"} }   { "scripts": {"clean": "rimraf dist"} }
+>
+> // ✅ RIGHT — the package that invokes the tool declares it
+> // services/api/package.json
+> { "scripts": {"clean": "rimraf dist"}, "devDependencies": {"rimraf": "^6"} }
+> ```
+>
+> Applies to every CLI invoked from a package script: `rimraf`, `concurrently`, `cross-env`, `tsc`,
+> `tsx`, `vite`, `vitest`, `eslint`, `nodemon`. Root-level scripts (e.g., `emulators:clean`) still
+> declare their tools at the root — declare in **both** when both levels invoke the tool.
 
 ---
 
-## VS Code Debug & Task Configuration
+## Reuse Working Configuration Instead of Re-implementing It
+
+> ⚠️ **Before writing a task that performs a job, check whether something in the workspace already
+> performs that job correctly. Invoke it rather than re-implementing it on the host.**
+
+The most common defect in generated debug configuration is a task that re-implements an existing,
+correct piece of configuration and silently drops one detail from it. The task looks right in
+isolation and fails at run time.
+
+| Already exists and is correct | Do **not** re-implement it as |
+|---|---|
+| A compose service that runs migrations with `depends_on: {condition: service_healthy}` and its own `environment:` | A host `npm run db:migrate` task that has neither readiness gating nor the connection string |
+| A root `build` script that builds workspace packages in dependency order | A task graph that builds one package and skips the package it imports |
+| Compose `${VAR}` interpolation from `.env` | A literal credential inlined into a task or compose file |
+
+When the compose file already defines a one-shot job service, start it from the task:
+
+```jsonc
+{
+  "label": "support-api: migrate database",
+  "type": "shell",
+  "command": "docker compose run --rm db-migrate",
+  "dependsOn": ["Start Emulators"]
+}
+```
+
+This inherits the service's `environment:` and its `depends_on` health gating, so it cannot drift
+from the compose definition. Re-implement on the host **only** when no equivalent exists — and then
+declare every variable it needs in `.env`.
+
+---
+
+## `test` Scripts Must Have Tests
+
+Only declare a `test` script in a package that actually contains test files. `vitest run`, `jest`,
+and most runners **exit non-zero when they collect zero tests**, which fails the workspace-wide
+`npm test` and blocks the build gate even though nothing is broken.
+
+For a package that is intentionally untested, either omit the `test` script entirely or make the
+empty case explicit:
+
+```jsonc
+{ "scripts": { "test": "vitest run --passWithNoTests" } }
+```
 
 Assemble `.vscode/launch.json` and `.vscode/tasks.json` by combining properties from the detected **project type** and **runtime** references. Use the source ownership table below to determine which file provides each property.
 
@@ -129,6 +192,68 @@ Use the **Service Root** column from the plan's Services table to determine the 
 | **Per-service tasks** (install, clean, watch, build, top-level) | `"options": { "cwd": "${workspaceFolder}/{service-root}" }` | `"cwd": "${workspaceFolder}/api"` |
 | **Shared tasks** (Start Emulators) | Workspace root (omit `cwd` — it defaults to workspace root) | — |
 | **Single-service repos** | Omit `cwd` — workspace root is the service root | — |
+
+#### Install tasks in a workspaces monorepo
+
+> ⛔ **When the root `package.json` declares `workspaces`, the install task MUST run at the workspace root.**
+> A member-scoped `npm install` installs only that member's dependency graph and skips the root
+> package's own `devDependencies`, so root-declared tools are never placed on `PATH` and the next
+> task in the chain fails with **exit code 127**. It also skips sibling members, breaking
+> `file:../shared` workspace links.
+
+| Repo layout | Install task | `cwd` |
+|---|---|---|
+| npm/yarn/pnpm **workspaces** monorepo | **one shared** `Install Dependencies` task running `npm install` | workspace root (omit `cwd`) |
+| Independent packages (no `workspaces` field) | per-service `{service-id}: npm install` | `${workspaceFolder}/{service-root}` |
+
+In a workspaces monorepo, every service's build chain depends on that **single shared root install
+task**; all other per-service tasks (clean, watch, build, top-level) keep their service `cwd`:
+
+```
+"{service-id}: {top-level-task}"          cwd: ${workspaceFolder}/{service-root}
+       └── dependsOn: "{service-id}: npm watch"    cwd: ${workspaceFolder}/{service-root}
+                       └── dependsOn: "{service-id}: npm clean"   cwd: ${workspaceFolder}/{service-root}
+                                       └── dependsOn: "Install Dependencies"   ← root cwd, shared
+```
+
+`instanceLimit: 1` + `instancePolicy: "silent"` make the shared install run once even when several
+services depend on it.
+
+#### Building internal workspace dependencies
+
+> ⛔ **When a service imports another workspace member, that member must be built before the
+> service's build/watch task runs.**
+> A member is consumed through its `main` / `types` entry points, which point at compiled output
+> (`dist/`). Nothing emits that output until the dependency's own build runs, so the service
+> compiles against type declarations that do not exist.
+>
+> This failure is **silent**: `tsc --watch` reports the errors but never exits, so VS Code shows the
+> task as still running and the top-level host starts against output that was never emitted. It
+> surfaces much later as broken endpoints or a blank page — not as a failed task.
+
+Determine internal dependencies by intersecting each service's `dependencies` with the **names of
+the other workspace members**. For every internal dependency, do one of:
+
+| Approach | When to use | Shape |
+|---|---|---|
+| **Dependency build task** | Default. Works for any runtime. | Add `"{dep-id}: npm build"` with `cwd` = the dependency's root, and make the consuming service's first build-chain task `dependsOn` it |
+| **TypeScript project references** | Both packages are TypeScript and the service compiles with `tsc -b` | Add `"references": [{ "path": "../{dep-root}" }]` and `"composite": true` — `tsc -b` builds the dependency automatically, so no extra task is needed |
+
+Chain shape when `api` depends on a shared library:
+
+```
+"api: func host start"                     cwd: ${workspaceFolder}/services/api
+       └── dependsOn: "api: npm watch"     cwd: ${workspaceFolder}/services/api
+                       └── dependsOn: "api: npm clean"
+                                       └── dependsOn: "shared: npm build"    cwd: ${workspaceFolder}/services/shared
+                                                       └── dependsOn: "Install Dependencies"   ← root cwd, shared
+```
+
+> ⚠️ Do **not** assume the root `package.json`'s aggregate build script covers this. A script like
+> `"build": "npm run build -w @app/shared && npm run build -w @app/api"` encodes the topological
+> order, which is why a one-shot root build succeeds — but the debug chain re-implements the build
+> per service and drops that ordering. Unless a task actually runs the root script, the ordering
+> must be expressed through `dependsOn` or project references.
 
 ### Task `runOptions` Rules
 

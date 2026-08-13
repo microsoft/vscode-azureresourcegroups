@@ -44,6 +44,7 @@ import { validateIntegrationPlanArtifact } from './artifacts/integrationPlan';
 import { validateIntegrationOutput } from './artifacts/integrationOutput';
 import {
     applyLocalRuntimeEvidence,
+    diagnoseGeneratedCode,
     validateLocalDebugArtifacts,
     validateLocalDebugPlanArtifact,
 } from './artifacts/localDebug';
@@ -54,6 +55,8 @@ import { ArtifactValidationResult } from './artifacts/validationTypes';
 import {
     AgentRepairBudget,
     createAgentRepairBudget,
+    createStageRepairBudgets,
+    totalUsedAgentRepairs,
     tryConsumeAgentRepair,
     validatePinnedModel,
 } from './evaluationParity';
@@ -225,7 +228,7 @@ async function runAttempt(input: {
     const resultDirectory = path.join(input.outputDirectory, runId);
     const workspace = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'cor-eval-')));
     const stages: EvaluationStageResult[] = [];
-    const repairBudget = createAgentRepairBudget(input.scenario.validation.maxAgentRetries);
+    const repairBudgets = createStageRepairBudgets(input.scenario.validation.maxAgentRetries);
     const deferredFailures: StageFailure[] = [];
     let result: EvaluationAttemptResult;
     await fs.mkdir(resultDirectory, { recursive: true });
@@ -354,7 +357,7 @@ async function runAttempt(input: {
                 executor: input.executor,
                 projectValidator: input.projectValidator,
                 stages,
-                repairBudget,
+                repairBudget: repairBudgets.build,
                 continueAfterQualityFailure: input.through === 'local',
             });
             if (scaffoldValidationFailure) {
@@ -370,7 +373,7 @@ async function runAttempt(input: {
                     projectValidator: input.projectValidator,
                     stages,
                     hasFrontend: expectedFrontend,
-                    repairBudget,
+                    repairBudget: repairBudgets.integration,
                     continueAfterQualityFailure: true,
                 });
                 if (integrationValidationFailure) {
@@ -383,7 +386,7 @@ async function runAttempt(input: {
                     executor: input.executor,
                     localRuntimeValidator: input.localRuntimeValidator,
                     stages,
-                    repairBudget,
+                    repairBudget: repairBudgets.local,
                 });
             }
         }
@@ -411,7 +414,7 @@ async function runAttempt(input: {
                 qualityFailures: deferredFailures.map(toQualityFailure),
             } : {}),
             durationMs: Date.now() - started,
-            agentRetries: repairBudget.usedRetries,
+            agentRetries: totalUsedAgentRepairs(repairBudgets),
             stages,
         };
     } catch (error) {
@@ -442,7 +445,7 @@ async function runAttempt(input: {
                 qualityFailures: deferredFailures.map(toQualityFailure),
             } : {}),
             durationMs: Date.now() - started,
-            agentRetries: repairBudget.usedRetries,
+            agentRetries: totalUsedAgentRepairs(repairBudgets),
             stages,
         };
     }
@@ -730,7 +733,7 @@ export async function runProjectValidationStages(input: {
         const repairAttempt = tryConsumeAgentRepair(repairBudget) as number;
         const repairRun = await input.executor.run({
             agentName: input.repairAgentName ?? 'azure-project-scaffold',
-            prompt: createRepairPrompt(buildValidation, repairAttempt),
+            prompt: await createRepairPrompt(buildValidation, repairAttempt, input.workspace),
             workingDirectory: input.workspace,
             model: input.model,
             timeoutMs: input.scenario.validation.timeoutMinutes * 60 * 1000,
@@ -1039,10 +1042,16 @@ function assertAgentRunCompleted(
         throw new StageFailure(stage, modelFailure.code, modelFailure.message);
     }
     if (agentRun.outcome !== 'completed') {
+        const errorText = agentRun.errors.join('; ');
+        // A session that never reports idle is a stalled harness, not a project the product built
+        // badly. Keeping it under agentRunFailed counts infrastructure flakes as product failures.
+        const timedOut = /Timeout after \d+ms waiting for session\.idle/u.test(errorText);
         throw new StageFailure(
             stage,
-            agentRun.errors.some(error => error.startsWith('SDK cleanup:')) ? 'agentCleanupFailed' : 'agentRunFailed',
-            agentRun.errors.join('; ') || `Agent outcome was ${agentRun.outcome}.`,
+            agentRun.errors.some(error => error.startsWith('SDK cleanup:'))
+                ? 'agentCleanupFailed'
+                : timedOut ? 'agentRunTimedOut' : 'agentRunFailed',
+            errorText || `Agent outcome was ${agentRun.outcome}.`,
         );
     }
 }
@@ -1288,10 +1297,11 @@ function shouldRepair(
         && !isSandboxInfrastructureFailureCode(validation.failureCode);
 }
 
-function createRepairPrompt(
+async function createRepairPrompt(
     validation: SandboxProjectValidationResult,
     repairAttempt: number,
-): string {
+    workspace: string,
+): Promise<string> {
     const failedCommand = validation.commands.find(command => !command.success);
     const evidence = {
         failureCode: validation.failureCode,
@@ -1304,6 +1314,9 @@ function createRepairPrompt(
             stderr: failedCommand.stderr,
         },
     };
+    // A bare "npm test failed" tells the agent nothing, and it has only two repairs for the whole
+    // run. Attach any deterministic contract hit so the first attempt targets the real cause.
+    const diagnosed = await diagnoseGeneratedCode(workspace).catch(() => []);
     return [
         `[AUTOPILOT REPAIR MODE] Repair attempt ${repairAttempt}.`,
         'The evaluator ran the generated project in an isolated ACA sandbox and received the validation failure below.',
@@ -1311,6 +1324,15 @@ function createRepairPrompt(
         '```json',
         JSON.stringify(evidence, null, 2),
         '```',
+        ...(diagnosed.length
+            ? [
+                '',
+                'The evaluator also ran deterministic checks over the generated source and found the '
+                + 'following. These are exact, verified defects — fix them first, as they are the most '
+                + 'likely root cause of the failure above:',
+                ...diagnosed.map(issue => `- (${issue.code}) ${issue.path}: ${issue.message}`),
+            ]
+            : []),
     ].join('\n');
 }
 

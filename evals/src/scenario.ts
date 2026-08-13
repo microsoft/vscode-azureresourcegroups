@@ -57,7 +57,11 @@ export interface LocalAcceptanceProbe {
     browser?: {
         expectedText?: string;
         requireInteractiveElements?: boolean;
-        maxSeriousAccessibilityViolations?: number;
+        /**
+         * `null` records accessibility evidence without enforcing it. Use it when a scenario should
+         * keep collecting axe results but must not fail on them.
+         */
+        maxSeriousAccessibilityViolations?: number | null;
         viewport?: {
             width: number;
             height: number;
@@ -101,11 +105,28 @@ export type StorageEventContract = StorageQueueEventContract | StorageBlobEventC
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 
 export interface BrowserAction {
-    kind: 'click' | 'fill' | 'select';
-    selector: string;
+    kind: 'click' | 'fill' | 'select' | 'fillForm';
+    selector?: string;
     selectorType?: 'css' | 'label' | 'role';
     role?: BrowserRole;
     value?: string;
+    /**
+     * `fillForm` only. Values to use for fields whose label the scenario genuinely cares about,
+     * keyed by a case-insensitive substring of the label. Every other required field is discovered
+     * at runtime and filled with type-appropriate synthetic data.
+     *
+     * This keeps the scenario expressing intent ("a ticket titled X") instead of a form shape, so a
+     * generated app that adds its own required fields is not scored as a failure.
+     */
+    values?: Record<string, string>;
+    /** `fillForm` only. CSS selector bounding the discovery, defaulting to the whole page. */
+    scope?: string;
+    /**
+     * Skip the action when the target is absent or not editable, instead of failing the probe.
+     * Use only where the prompt leaves the choice open, so a correct implementation that made a
+     * different but valid decision is not recorded as a product failure.
+     */
+    optional?: boolean;
 }
 
 export interface BrowserAssertion {
@@ -230,8 +251,8 @@ function validateScenarioValidation(value: unknown, filePath: string): void {
     if (validation.maxAgentRetries !== undefined
         && (!Number.isInteger(validation.maxAgentRetries)
             || (validation.maxAgentRetries as number) < 0
-            || (validation.maxAgentRetries as number) > 2)) {
-        throw new Error(`Scenario validation maxAgentRetries must be an integer from 0 to 2: ${filePath}`);
+            || (validation.maxAgentRetries as number) > 8)) {
+        throw new Error(`Scenario validation maxAgentRetries must be an integer from 0 to 8: ${filePath}`);
     }
 }
 
@@ -325,15 +346,16 @@ function validateAcceptance(value: unknown, filePath: string): void {
                 throw new Error(`Scenario local probe ${index} browser.requireInteractiveElements must be boolean: ${filePath}`);
             }
             if (browser.maxSeriousAccessibilityViolations !== undefined
+                && browser.maxSeriousAccessibilityViolations !== null
                 && (!Number.isInteger(browser.maxSeriousAccessibilityViolations)
                     || (browser.maxSeriousAccessibilityViolations as number) < 0)) {
-                throw new Error(`Scenario local probe ${index} browser.maxSeriousAccessibilityViolations must be a non-negative integer: ${filePath}`);
+                throw new Error(`Scenario local probe ${index} browser.maxSeriousAccessibilityViolations must be a non-negative integer or null: ${filePath}`);
             }
             if (item.url === undefined) {
                 throw new Error(`Scenario local probe ${index} browser contract requires an HTTP URL: ${filePath}`);
             }
             validateBrowserViewport(browser.viewport, filePath, index);
-            validateBrowserSteps(browser.actions, 'actions', ['click', 'fill', 'select'], filePath, index);
+            validateBrowserSteps(browser.actions, 'actions', ['click', 'fill', 'select', 'fillForm'], filePath, index);
             validateBrowserSteps(browser.assertions, 'assertions', ['visible', 'hidden', 'text', 'value'], filePath, index);
             validateBrowserPersistence(browser.persistence, contract.compound, filePath, index);
         }
@@ -575,7 +597,22 @@ function validateBrowserSteps(
             throw new Error(`Scenario local probe ${probeIndex} browser.${property}[${index}] is invalid: ${filePath}`);
         }
         const item = step as Record<string, unknown>;
-        if (!kinds.includes(item.kind as string) || typeof item.selector !== 'string' || !item.selector.trim()) {
+        if (!kinds.includes(item.kind as string)) {
+            throw new Error(`Scenario local probe ${probeIndex} browser.${property}[${index}] is invalid: ${filePath}`);
+        }
+        // `fillForm` discovers the form at runtime, so it carries values rather than a selector.
+        if (item.kind === 'fillForm') {
+            if (item.values !== undefined
+                && (typeof item.values !== 'object' || item.values === null || Array.isArray(item.values)
+                    || Object.values(item.values as Record<string, unknown>).some(entry => typeof entry !== 'string'))) {
+                throw new Error(`Scenario local probe ${probeIndex} browser.${property}[${index}].values is invalid: ${filePath}`);
+            }
+            if (item.scope !== undefined && (typeof item.scope !== 'string' || !item.scope.trim())) {
+                throw new Error(`Scenario local probe ${probeIndex} browser.${property}[${index}].scope is invalid: ${filePath}`);
+            }
+            continue;
+        }
+        if (typeof item.selector !== 'string' || !item.selector.trim()) {
             throw new Error(`Scenario local probe ${probeIndex} browser.${property}[${index}] is invalid: ${filePath}`);
         }
         if (item.selectorType !== undefined && !['css', 'label', 'role'].includes(item.selectorType as string)) {

@@ -35,6 +35,33 @@ export function createAgentRepairBudget(
     };
 }
 
+/**
+ * Repair budgets are allocated per stage rather than as one shared pool. A shared pool lets an
+ * early stage consume every retry, which starves later stages of any repair opportunity even when
+ * their failure is trivially fixable.
+ */
+export interface StageRepairBudgets {
+    readonly build: AgentRepairBudget;
+    readonly integration: AgentRepairBudget;
+    readonly local: AgentRepairBudget;
+}
+
+export function createStageRepairBudgets(
+    maxRetriesPerStage: number | undefined,
+): StageRepairBudgets {
+    return {
+        build: createAgentRepairBudget(maxRetriesPerStage),
+        integration: createAgentRepairBudget(maxRetriesPerStage),
+        local: createAgentRepairBudget(maxRetriesPerStage),
+    };
+}
+
+export function totalUsedAgentRepairs(budgets: StageRepairBudgets): number {
+    return budgets.build.usedRetries
+        + budgets.integration.usedRetries
+        + budgets.local.usedRetries;
+}
+
 export function tryConsumeAgentRepair(budget: AgentRepairBudget): number | undefined {
     if (budget.usedRetries >= budget.maxRetries) {
         return undefined;

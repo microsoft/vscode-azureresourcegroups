@@ -78,6 +78,18 @@ Vally resolves local plugin paths relative to the eval spec, which is why the di
 `../plugins`. `vally experiment run` resolves its backend relative to the experiment file's
 `evals/vally/native/experiments` directory, so the backend path is `../../plugins`:
 
+Every direct run writes `executor-artifacts/reports/run-diagnostics.md` and
+`run-diagnostics.json`. The failed grader line includes the same concise diagnosis: which upstream
+gates passed, the primary stage/code, the exact failing task and missing executable or test input,
+repair usage, and which dependent gates were not attempted. The Markdown report adds the complete
+gate table, command, working directory, stdout/stderr excerpts, and recommended action.
+
+Vally shows two top-level graders by design. `authoritative-local-hard-gates` is one hierarchical
+grader over the individual planning, scaffold, build, test, integration, runtime, browser,
+accessibility, persistence, debugger, cleanup, model, and provenance gates.
+`authoritative-metric` is a zero-weight integrity assertion that verifies the exported
+`authoritative_hard_gates_passed` metric agrees with that evidence; it is not a second project test.
+
 ```sh
 # Offline plan: two scenarios × Rails/baseline, one run each.
 vally experiment run \
