@@ -36,6 +36,8 @@ import {
 const execFileAsync = promisify(execFile);
 const maxLogLength = 20_000;
 export const debugpyEvaluationPort = 5678;
+const debuggerPrerequisiteAttempts = 30;
+const debuggerPrerequisiteTimeoutMs = 75 * 1000;
 
 export interface PlannedDebugConfiguration {
     name: string;
@@ -63,6 +65,10 @@ interface LaunchConfiguration {
     args?: unknown;
     env?: unknown;
     processName?: unknown;
+    port?: unknown;
+    attachSimplePort?: unknown;
+    url?: unknown;
+    webRoot?: unknown;
 }
 
 interface VsCodeTask {
@@ -543,39 +549,15 @@ export class SandboxLocalRuntimeValidator {
                             if (validationFailure) {
                                 break;
                             }
-                            const debuggerCheck = resolveDebuggerPrerequisite(item.launch);
-                            if ('error' in debuggerCheck) {
-                                validationFailure = failure(
-                                    'debugTaskGraphInvalid',
-                                    debuggerCheck.error,
-                                    commands,
-                                    probes,
-                                    browserChecks,
-                                    persistenceChecks,
-                                    workerEvents,
-                                );
-                            } else if (debuggerCheck.command) {
-                                const debuggerResult = await this.runCommand(
-                                    sandboxId,
-                                    'debugger',
-                                    debuggerCheck.name,
-                                    debuggerCheck.command,
-                                    '/workspace',
-                                    30 * 1000,
-                                );
-                                commands.push(debuggerResult);
-                                if (!debuggerResult.success) {
-                                    validationFailure = failure(
-                                        'localDebuggerUnavailable',
-                                        debuggerCheck.errorMessage,
-                                        commands,
-                                        probes,
-                                        browserChecks,
-                                        persistenceChecks,
-                                        workerEvents,
-                                    );
-                                }
-                            }
+                            validationFailure = await this.runDebuggerPrerequisites(
+                                sandboxId,
+                                item.launch,
+                                commands,
+                                probes,
+                                browserChecks,
+                                persistenceChecks,
+                                workerEvents,
+                            );
                         }
                     } finally {
                         try {
@@ -795,39 +777,15 @@ export class SandboxLocalRuntimeValidator {
                 }
             }
             if (!validationFailure) {
-                const debuggerCheck = resolveDebuggerPrerequisite(launchConfiguration);
-                if ('error' in debuggerCheck) {
-                    validationFailure = failure(
-                        'debugTaskGraphInvalid',
-                        debuggerCheck.error,
-                        commands,
-                        probes,
-                        browserChecks,
-                        persistenceChecks,
-                        workerEvents,
-                    );
-                } else if (debuggerCheck.command) {
-                    const debuggerResult = await this.runCommand(
-                        sandboxId,
-                        'debugger',
-                        debuggerCheck.name,
-                        debuggerCheck.command,
-                        '/workspace',
-                        30 * 1000,
-                    );
-                    commands.push(debuggerResult);
-                    if (!debuggerResult.success) {
-                        validationFailure = failure(
-                            'localDebuggerUnavailable',
-                            debuggerCheck.errorMessage,
-                            commands,
-                            probes,
-                            browserChecks,
-                            persistenceChecks,
-                            workerEvents,
-                        );
-                    }
-                }
+                validationFailure = await this.runDebuggerPrerequisites(
+                    sandboxId,
+                    launchConfiguration,
+                    commands,
+                    probes,
+                    browserChecks,
+                    persistenceChecks,
+                    workerEvents,
+                );
             }
         } finally {
             try {
@@ -1132,6 +1090,57 @@ export class SandboxLocalRuntimeValidator {
                 error: commandResult.success ? undefined : commandResult.stderr,
             },
         };
+    }
+
+    /**
+     * Both the compound and single-configuration paths need identical debugger evidence, and the
+     * gate reads only commands recorded with kind 'debugger'. Sharing one implementation keeps a
+     * configuration shape from being verified on one path and silently skipped on the other.
+     */
+    private async runDebuggerPrerequisites(
+        sandboxId: string,
+        launch: LaunchConfiguration,
+        commands: LocalRuntimeCommandResult[],
+        probes: LocalRuntimeProbeResult[],
+        browserChecks: LocalRuntimeBrowserResult[],
+        persistenceChecks: LocalRuntimePersistenceResult[],
+        workerEvents: LocalRuntimeStorageEventResult[],
+    ): Promise<SandboxLocalRuntimeValidationResult | undefined> {
+        const resolved = resolveDebuggerPrerequisite(launch);
+        if ('error' in resolved) {
+            return failure(
+                'debugTaskGraphInvalid',
+                resolved.error,
+                commands,
+                probes,
+                browserChecks,
+                persistenceChecks,
+                workerEvents,
+            );
+        }
+        for (const check of resolved.checks) {
+            const result = await this.runCommand(
+                sandboxId,
+                'debugger',
+                check.name,
+                check.command,
+                '/workspace',
+                debuggerPrerequisiteTimeoutMs,
+            );
+            commands.push(result);
+            if (!result.success) {
+                return failure(
+                    'localDebuggerUnavailable',
+                    check.errorMessage,
+                    commands,
+                    probes,
+                    browserChecks,
+                    persistenceChecks,
+                    workerEvents,
+                );
+            }
+        }
+        return undefined;
     }
 
     private async runPersistenceCheck(
@@ -2305,25 +2314,145 @@ export function resolveLaunchTask(
     };
 }
 
+export interface DebuggerPrerequisiteCheck {
+    name: string;
+    command: string;
+    errorMessage: string;
+}
+
+const nodeDebuggerTypes = new Set(['node', 'pwa-node', 'node-terminal']);
+const browserDebuggerTypes = new Set(['chrome', 'pwa-chrome', 'msedge', 'pwa-msedge']);
+
+/**
+ * A debug configuration is only evidence that F5 works if the thing it attaches to is actually
+ * attachable. Each supported configuration shape is reduced to shell checks that observe the
+ * live debug surface, so the `debugger` gate measures the generated project rather than the
+ * evaluator's assumptions about it. Shapes we cannot observe return no checks instead of a
+ * synthetic pass, which keeps the gate honest by reporting missing evidence.
+ */
 export function resolveDebuggerPrerequisite(
     configuration: LaunchConfiguration,
-): { command?: string; name: string; errorMessage: string } | { error: string } {
-    if (configuration.type !== 'coreclr' || configuration.request !== 'attach') {
-        return {
-            name: 'debugger prerequisite',
-            errorMessage: 'Debugger prerequisite validation failed.',
-        };
+): { checks: DebuggerPrerequisiteCheck[] } | { error: string } {
+    const type = typeof configuration.type === 'string' ? configuration.type.toLowerCase() : '';
+    if (configuration.request === 'attach' && type === 'coreclr') {
+        return resolveCoreClrPrerequisite(configuration);
     }
+    if (configuration.request === 'attach' && nodeDebuggerTypes.has(type)) {
+        return resolveNodeAttachPrerequisite(configuration);
+    }
+    if (configuration.request === 'launch' && browserDebuggerTypes.has(type)) {
+        return resolveBrowserLaunchPrerequisite(configuration);
+    }
+    return { checks: [] };
+}
+
+function resolveCoreClrPrerequisite(
+    configuration: LaunchConfiguration,
+): { checks: DebuggerPrerequisiteCheck[] } | { error: string } {
     if (typeof configuration.processName !== 'string' || !configuration.processName.trim()) {
         return { error: 'A CoreCLR attach configuration requires a literal processName.' };
     }
     const processName = configuration.processName.replace(/\.exe$/i, '');
     const processPattern = `(^|[/ ])${escapeExtendedRegex(processName)}(\\.dll)?( |$)`;
     return {
-        command: `pgrep -f -- ${shellQuote(processPattern)} >/dev/null`,
-        name: `CoreCLR process ${processName}`,
-        errorMessage: `CoreCLR attach target process "${processName}" is not running.`,
+        checks: [{
+            command: `pgrep -f -- ${shellQuote(processPattern)} >/dev/null`,
+            name: `CoreCLR process ${processName}`,
+            errorMessage: `CoreCLR attach target process "${processName}" is not running.`,
+        }],
     };
+}
+
+/**
+ * VS Code attaches to a Node target by reading the inspector's own HTTP endpoint, so asking that
+ * endpoint for an attachable target reproduces what F5 does. A listening socket is not enough:
+ * the port can accept a connection before the inspector publishes a debug target.
+ */
+function resolveNodeAttachPrerequisite(
+    configuration: LaunchConfiguration,
+): { checks: DebuggerPrerequisiteCheck[] } | { error: string } {
+    const port = readDebugPort(configuration);
+    if (port === undefined) {
+        return {
+            error: 'A Node attach configuration requires a literal port so the debug target can be verified.',
+        };
+    }
+    return {
+        checks: [{
+            command: createDebuggerRetryCommand(
+                `curl --silent --show-error --fail --max-time 5 http://127.0.0.1:${port}/json/list`
+                + ' 2>/dev/null | grep -q webSocketDebuggerUrl',
+                `Node inspector on port ${port} never published an attachable debug target.`,
+            ),
+            name: `Node inspector port ${port}`,
+            errorMessage: `Node attach target on port ${port} is not accepting a debugger.`,
+        }],
+    };
+}
+
+/**
+ * A browser launch configuration has no attach target to probe, but it still fails for users in
+ * two deterministic ways: the URL does not serve, or webRoot points somewhere that does not
+ * exist, in which case source maps never resolve and no breakpoint ever binds.
+ */
+function resolveBrowserLaunchPrerequisite(
+    configuration: LaunchConfiguration,
+): { checks: DebuggerPrerequisiteCheck[] } | { error: string } {
+    const checks: DebuggerPrerequisiteCheck[] = [];
+    const url = typeof configuration.url === 'string' ? configuration.url.trim() : '';
+    if (!url) {
+        return { error: 'A browser launch configuration requires a literal url.' };
+    }
+    checks.push({
+        command: createDebuggerRetryCommand(
+            `curl --silent --show-error --fail --max-time 5 --output /dev/null ${shellQuote(url)}`,
+            `Browser debug target ${url} never served a response.`,
+        ),
+        name: `Browser debug target ${url}`,
+        errorMessage: `Browser debug target "${url}" is not serving, so F5 would open a dead page.`,
+    });
+    const webRoot = typeof configuration.webRoot === 'string'
+        ? replaceWorkspaceFolder(configuration.webRoot)
+        : undefined;
+    if (webRoot && !webRoot.includes('${')) {
+        checks.push({
+            command: `test -d ${shellQuote(webRoot)}`,
+            name: `Browser webRoot ${webRoot}`,
+            errorMessage: `Browser debug configuration webRoot "${webRoot}" does not exist, so breakpoints cannot bind.`,
+        });
+    }
+    return { checks };
+}
+
+function readDebugPort(configuration: LaunchConfiguration): number | undefined {
+    for (const candidate of [configuration.port, configuration.attachSimplePort]) {
+        if (typeof candidate === 'number' && Number.isInteger(candidate) && candidate > 0 && candidate < 65536) {
+            return candidate;
+        }
+        if (typeof candidate === 'string' && /^\d+$/u.test(candidate.trim())) {
+            const parsed = Number.parseInt(candidate.trim(), 10);
+            if (parsed > 0 && parsed < 65536) {
+                return parsed;
+            }
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Language workers frequently start lazily, so the debug surface can appear seconds after the
+ * probes that preceded this check. Retrying keeps a slow start from being reported as a project
+ * that cannot be debugged at all.
+ */
+function createDebuggerRetryCommand(attempt: string, timeoutMessage: string): string {
+    return [
+        `for i in $(seq 1 ${debuggerPrerequisiteAttempts}); do`,
+        `if ${attempt}; then exit 0; fi;`,
+        'sleep 1;',
+        'done;',
+        `printf '%s\\n' ${shellQuote(timeoutMessage)} >&2;`,
+        'exit 1',
+    ].join(' ');
 }
 
 function escapeExtendedRegex(value: string): string {

@@ -1799,8 +1799,9 @@ suite('Copilot on Rails evaluation artifact validators', () => {
         });
 
         assert(!('error' in check));
-        assert.match(check.command ?? '', /pgrep -f/);
-        assert.match(check.command ?? '', /WarehouseInventory\\\.Api/);
+        assert.equal(check.checks.length, 1);
+        assert.match(check.checks[0].command, /pgrep -f/);
+        assert.match(check.checks[0].command, /WarehouseInventory\\\.Api/);
 
         const invalid = resolveDebuggerPrerequisite({
             type: 'coreclr',
