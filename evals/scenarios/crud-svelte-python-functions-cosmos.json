@@ -36,11 +36,54 @@
                     "expectedStatus": 200,
                     "browser": {
                         "requireInteractiveElements": true,
-                        "maxSeriousAccessibilityViolations": null,
-                        "journeySeverity": "advisory",
+                        "maxSeriousAccessibilityViolations": 0,
+                        "journeySeverity": "required",
                         "viewport": {
                             "width": 1440,
                             "height": 900
+                        },
+                        "actions": [
+                            {
+                                "kind": "click",
+                                "selector": "Add book",
+                                "selectorType": "role",
+                                "role": "button",
+                                "optional": true
+                            },
+                            {
+                                "kind": "fillForm",
+                                "values": {
+                                    "title": "Browser acceptance book",
+                                    "name": "Browser acceptance book",
+                                    "book": "Browser acceptance book"
+                                }
+                            },
+                            {
+                                "kind": "click",
+                                "selector": "Add book",
+                                "selectorType": "role",
+                                "role": "button"
+                            }
+                        ],
+                        "assertions": [
+                            {
+                                "kind": "text",
+                                "selector": "body",
+                                "value": "Browser acceptance book"
+                            }
+                        ],
+                        "persistence": {
+                            "restartTargets": [
+                                "frontend"
+                            ],
+                            "reload": "current-url",
+                            "assertions": [
+                                {
+                                    "kind": "text",
+                                    "selector": "body",
+                                    "value": "Browser acceptance book"
+                                }
+                            ]
                         }
                     }
                 }

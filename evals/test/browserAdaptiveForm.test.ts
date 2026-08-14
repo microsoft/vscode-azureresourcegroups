@@ -84,7 +84,9 @@ void test('ambiguous clicks prefer the filled form’s own submit control', () =
         { kind: 'click', selector: 'Create ticket', selectorType: 'role', role: 'button' },
     ]);
     // The scoring must consider form membership, submit type, and only usable candidates.
-    assert.match(script, /formFieldsFilled > 0 && inForm \? 4 : 0/u);
+    // formFieldsFilled is an array, so the guard must test its length: comparing the array itself
+    // to 0 is always false, which silently disabled the form-membership preference entirely.
+    assert.match(script, /formFieldsFilled\.length > 0 && inForm \? 4 : 0/u);
     assert.match(script, /isSubmit \? 2 : 0/u);
     assert.match(script, /el\.closest\('form'\)/u);
     // Ambiguity must be recorded as evidence rather than silently resolved.

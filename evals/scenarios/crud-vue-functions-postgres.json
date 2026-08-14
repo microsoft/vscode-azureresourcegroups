@@ -36,11 +36,54 @@
                     "expectedStatus": 200,
                     "browser": {
                         "requireInteractiveElements": true,
-                        "maxSeriousAccessibilityViolations": null,
-                        "journeySeverity": "advisory",
+                        "maxSeriousAccessibilityViolations": 0,
+                        "journeySeverity": "required",
                         "viewport": {
                             "width": 1440,
                             "height": 900
+                        },
+                        "actions": [
+                            {
+                                "kind": "click",
+                                "selector": "Add milestone",
+                                "selectorType": "role",
+                                "role": "button",
+                                "optional": true
+                            },
+                            {
+                                "kind": "fillForm",
+                                "values": {
+                                    "name": "Browser acceptance milestone",
+                                    "title": "Browser acceptance milestone",
+                                    "milestone": "Browser acceptance milestone"
+                                }
+                            },
+                            {
+                                "kind": "click",
+                                "selector": "Add milestone",
+                                "selectorType": "role",
+                                "role": "button"
+                            }
+                        ],
+                        "assertions": [
+                            {
+                                "kind": "text",
+                                "selector": "body",
+                                "value": "Browser acceptance milestone"
+                            }
+                        ],
+                        "persistence": {
+                            "restartTargets": [
+                                "frontend"
+                            ],
+                            "reload": "current-url",
+                            "assertions": [
+                                {
+                                    "kind": "text",
+                                    "selector": "body",
+                                    "value": "Browser acceptance milestone"
+                                }
+                            ]
                         }
                     }
                 }

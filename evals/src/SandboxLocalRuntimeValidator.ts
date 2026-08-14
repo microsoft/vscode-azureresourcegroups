@@ -2137,7 +2137,7 @@ export function createHttpProbeCommand(
                 const inForm = await candidate.evaluate(el => Boolean(el.closest('form'))).catch(() => false);
                 const isSubmit = await candidate.evaluate(
                     el => el.getAttribute('type') === 'submit').catch(() => false);
-                const score = (formFieldsFilled > 0 && inForm ? 4 : 0) + (isSubmit ? 2 : 0) + 1;
+                const score = (formFieldsFilled.length > 0 && inForm ? 4 : 0) + (isSubmit ? 2 : 0) + 1;
                 if (score > bestScore) { bestScore = score; best = candidate; }
             }
             return best ?? locator.first();

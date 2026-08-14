@@ -374,9 +374,9 @@ stimuli:
       applicability-test: required
       applicability-integration: required
       applicability-local-runtime: required
-      applicability-browser: not-applicable
+      applicability-browser: required
       applicability-browser-journey: not-applicable
-      applicability-accessibility: not-applicable
+      applicability-accessibility: required
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
       applicability-debugger: not-applicable
@@ -430,9 +430,9 @@ stimuli:
       applicability-test: required
       applicability-integration: required
       applicability-local-runtime: required
-      applicability-browser: not-applicable
+      applicability-browser: required
       applicability-browser-journey: not-applicable
-      applicability-accessibility: not-applicable
+      applicability-accessibility: required
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
       applicability-debugger: not-applicable
@@ -486,9 +486,9 @@ stimuli:
       applicability-test: required
       applicability-integration: required
       applicability-local-runtime: required
-      applicability-browser: not-applicable
+      applicability-browser: required
       applicability-browser-journey: not-applicable
-      applicability-accessibility: not-applicable
+      applicability-accessibility: required
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
       applicability-debugger: not-applicable
@@ -542,9 +542,9 @@ stimuli:
       applicability-test: required
       applicability-integration: required
       applicability-local-runtime: required
-      applicability-browser: not-applicable
+      applicability-browser: required
       applicability-browser-journey: not-applicable
-      applicability-accessibility: not-applicable
+      applicability-accessibility: required
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
       applicability-debugger: not-applicable
@@ -599,9 +599,9 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: required
       applicability-browser: required
-      applicability-browser-journey: not-applicable
-      applicability-accessibility: not-applicable
-      applicability-persistence: not-applicable
+      applicability-browser-journey: required
+      applicability-accessibility: required
+      applicability-persistence: required
       applicability-worker: not-applicable
       applicability-debugger: required
       applicability-deployment: not-applicable
@@ -654,9 +654,9 @@ stimuli:
       applicability-test: required
       applicability-integration: required
       applicability-local-runtime: required
-      applicability-browser: not-applicable
+      applicability-browser: required
       applicability-browser-journey: not-applicable
-      applicability-accessibility: not-applicable
+      applicability-accessibility: required
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
       applicability-debugger: not-applicable
@@ -710,9 +710,9 @@ stimuli:
       applicability-test: required
       applicability-integration: required
       applicability-local-runtime: required
-      applicability-browser: not-applicable
+      applicability-browser: required
       applicability-browser-journey: not-applicable
-      applicability-accessibility: not-applicable
+      applicability-accessibility: required
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
       applicability-debugger: not-applicable
@@ -767,9 +767,9 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: required
       applicability-browser: required
-      applicability-browser-journey: not-applicable
-      applicability-accessibility: not-applicable
-      applicability-persistence: not-applicable
+      applicability-browser-journey: required
+      applicability-accessibility: required
+      applicability-persistence: required
       applicability-worker: not-applicable
       applicability-debugger: not-applicable
       applicability-deployment: not-applicable
@@ -823,9 +823,9 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: required
       applicability-browser: required
-      applicability-browser-journey: not-applicable
-      applicability-accessibility: not-applicable
-      applicability-persistence: not-applicable
+      applicability-browser-journey: required
+      applicability-accessibility: required
+      applicability-persistence: required
       applicability-worker: not-applicable
       applicability-debugger: not-applicable
       applicability-deployment: not-applicable
@@ -879,9 +879,9 @@ stimuli:
       applicability-integration: required
       applicability-local-runtime: required
       applicability-browser: required
-      applicability-browser-journey: not-applicable
-      applicability-accessibility: not-applicable
-      applicability-persistence: not-applicable
+      applicability-browser-journey: required
+      applicability-accessibility: required
+      applicability-persistence: required
       applicability-worker: not-applicable
       applicability-debugger: not-applicable
       applicability-deployment: not-applicable
@@ -934,9 +934,9 @@ stimuli:
       applicability-test: required
       applicability-integration: required
       applicability-local-runtime: required
-      applicability-browser: not-applicable
+      applicability-browser: required
       applicability-browser-journey: not-applicable
-      applicability-accessibility: not-applicable
+      applicability-accessibility: required
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
       applicability-debugger: not-applicable
@@ -992,7 +992,7 @@ stimuli:
       applicability-local-runtime: required
       applicability-browser: required
       applicability-browser-journey: not-applicable
-      applicability-accessibility: not-applicable
+      applicability-accessibility: required
       applicability-persistence: not-applicable
       applicability-worker: not-applicable
       applicability-debugger: not-applicable

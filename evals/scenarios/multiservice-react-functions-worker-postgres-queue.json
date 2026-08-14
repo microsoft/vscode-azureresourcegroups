@@ -37,11 +37,55 @@
                     "expectedStatus": 200,
                     "browser": {
                         "requireInteractiveElements": true,
-                        "maxSeriousAccessibilityViolations": null,
-                        "journeySeverity": "advisory",
+                        "maxSeriousAccessibilityViolations": 0,
+                        "journeySeverity": "required",
                         "viewport": {
                             "width": 1440,
                             "height": 900
+                        },
+                        "actions": [
+                            {
+                                "kind": "click",
+                                "selector": "Create order",
+                                "selectorType": "role",
+                                "role": "button",
+                                "optional": true
+                            },
+                            {
+                                "kind": "fillForm",
+                                "values": {
+                                    "order": "Browser acceptance order",
+                                    "customer": "Browser acceptance order",
+                                    "name": "Browser acceptance order",
+                                    "item": "Browser acceptance order"
+                                }
+                            },
+                            {
+                                "kind": "click",
+                                "selector": "Create order",
+                                "selectorType": "role",
+                                "role": "button"
+                            }
+                        ],
+                        "assertions": [
+                            {
+                                "kind": "text",
+                                "selector": "body",
+                                "value": "Browser acceptance order"
+                            }
+                        ],
+                        "persistence": {
+                            "restartTargets": [
+                                "frontend"
+                            ],
+                            "reload": "current-url",
+                            "assertions": [
+                                {
+                                    "kind": "text",
+                                    "selector": "body",
+                                    "value": "Browser acceptance order"
+                                }
+                            ]
                         }
                     }
                 }

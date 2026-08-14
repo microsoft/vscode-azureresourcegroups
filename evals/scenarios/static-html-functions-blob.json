@@ -36,7 +36,7 @@
                     "expectedStatus": 200,
                     "browser": {
                         "requireInteractiveElements": true,
-                        "maxSeriousAccessibilityViolations": null,
+                        "maxSeriousAccessibilityViolations": 0,
                         "journeySeverity": "advisory",
                         "viewport": {
                             "width": 1440,

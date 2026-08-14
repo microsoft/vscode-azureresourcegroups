@@ -12,7 +12,9 @@
         "complexity": "medium"
     },
     "requirementsAnswers": {
-        "dataStores": ["PostgreSQL"],
+        "dataStores": [
+            "PostgreSQL"
+        ],
         "auth": "Mock auth middleware"
     },
     "validation": {
@@ -52,8 +54,8 @@
                     "browser": {
                         "expectedText": "ticket",
                         "requireInteractiveElements": true,
-                        "maxSeriousAccessibilityViolations": null,
-                        "journeySeverity": "advisory",
+                        "maxSeriousAccessibilityViolations": 0,
+                        "journeySeverity": "required",
                         "viewport": {
                             "width": 1440,
                             "height": 900
@@ -87,7 +89,10 @@
                             }
                         ],
                         "persistence": {
-                            "restartTargets": ["backend", "frontend"],
+                            "restartTargets": [
+                                "backend",
+                                "frontend"
+                            ],
                             "reload": "current-url",
                             "assertions": [
                                 {
