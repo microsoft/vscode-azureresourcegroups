@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { execFileSync } from 'child_process';
+import { execFile, execFileSync } from 'child_process';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -16,7 +16,7 @@ import {
     replaceProjectPlanStatus,
     setProjectPlanExecutionMode,
 } from '../../src/webviews/copilotOnRails/views/utils/projectPlanStatus';
-import { CopilotSdkAgentExecutor } from './CopilotSdkAgentExecutor';
+import { CopilotSdkAgentExecutor, agentStallMessagePrefix } from './CopilotSdkAgentExecutor';
 import {
     isLocalRuntimeInfrastructureFailureCode,
     SandboxLocalRuntimeValidationResult,
@@ -61,23 +61,30 @@ import {
     validatePinnedModel,
 } from './evaluationParity';
 import { CorEvaluationScenario, loadScenarios } from './scenario';
+import {
+    evaluateDeploymentReadiness,
+    isDeploymentInfrastructureFailureCode,
+    type DeploymentReadinessCommandRunner,
+    type DeploymentReadinessResult,
+} from './deploymentReadiness';
 
 interface RunOptions {
     attempts: number;
     concurrency: number;
     dryRun: boolean;
-    through: 'plan' | 'scaffold' | 'local';
+    through: 'plan' | 'scaffold' | 'local' | 'deploy';
     model?: string;
     scenarioId?: string;
     outputDirectory?: string;
 }
 
 export interface EvaluationStageResult {
-    name: 'requirements' | 'plan' | 'scaffold' | 'repair' | 'build' | 'integration' | 'integration-repair' | 'integration-build' | 'debug-plan' | 'debug-generate' | 'local-repair' | 'local-artifacts' | 'local-runtime';
+    name: 'requirements' | 'plan' | 'scaffold' | 'repair' | 'build' | 'integration' | 'integration-repair' | 'integration-build' | 'debug-plan' | 'debug-generate' | 'local-repair' | 'local-artifacts' | 'local-runtime' | 'deploy-plan' | 'deploy-generate' | 'deploy-readiness';
     agentRun?: CorAgentRunResult;
     validation?: ArtifactValidationResult;
     buildValidation?: SandboxProjectValidationResult;
     localRuntimeValidation?: SandboxLocalRuntimeValidationResult;
+    deploymentReadiness?: DeploymentReadinessResult;
     gateCalled?: boolean;
 }
 
@@ -222,6 +229,7 @@ async function runAttempt(input: {
     projectValidator: SandboxProjectValidator;
     localRuntimeValidator: SandboxLocalRuntimeValidator;
     through: RunOptions['through'];
+    deploymentCommandRunner?: DeploymentReadinessCommandRunner;
 }): Promise<EvaluationAttemptResult> {
     const started = Date.now();
     const runId = `${input.scenario.id}-${input.attempt}-${started}`;
@@ -388,6 +396,16 @@ async function runAttempt(input: {
                     stages,
                     repairBudget: repairBudgets.local,
                 });
+                if (isThrough(input.through, 'deploy')) {
+                    await runDeploymentStages({
+                        workspace,
+                        scenario: input.scenario,
+                        model: input.model,
+                        executor: input.executor,
+                        stages,
+                        deploymentCommandRunner: input.deploymentCommandRunner,
+                    });
+                }
             }
         }
 
@@ -979,6 +997,107 @@ const workspaceFileTools = [
     'view',
 ];
 
+/**
+ * `azd` runs on the evaluator host rather than inside the agent session, so the packaging evidence
+ * is produced by the harness and cannot be self-reported by the agent under test.
+ */
+export function createLocalDeploymentCommandRunner(workspace: string): DeploymentReadinessCommandRunner {
+    return {
+        run: (_name, command, timeoutMs) => new Promise(resolve => {
+            execFile(
+                '/bin/sh',
+                ['-c', command],
+                { cwd: workspace, timeout: timeoutMs, maxBuffer: 32 * 1024 * 1024 },
+                (error, stdout, stderr) => resolve({
+                    success: !error,
+                    failureKind: error ? ((error as NodeJS.ErrnoException).code === 'ENOENT' ? 'runnerError' : 'commandExit') : undefined,
+                    stdout: String(stdout),
+                    stderr: String(stderr),
+                }),
+            );
+        }),
+    };
+}
+
+/**
+ * The deployment phase the product actually ships: `azure-deploy` generates infra, `azure.yaml` and
+ * Dockerfiles, and the promise it makes is that `azd package` accepts them. The agent has no shell
+ * in an evaluation, so the evaluator - not the agent - runs `azd`, which is also what keeps the
+ * evidence trustworthy rather than self-reported.
+ */
+export async function runDeploymentStages(input: {
+    workspace: string;
+    scenario: CorEvaluationScenario;
+    model?: string;
+    executor: CopilotSdkAgentExecutor;
+    stages: EvaluationStageResult[];
+    deploymentCommandRunner?: DeploymentReadinessCommandRunner;
+}): Promise<void> {
+    const deployGate = { called: false };
+    const deployRun = await input.executor.run({
+        agentName: 'azure-deploy',
+        prompt: '[AUTOPILOT MODE] The project runs locally. Write `.azure/deployment-plan.md`, then generate every deployment artifact it specifies (infra, `azure.yaml`, Dockerfiles).',
+        workingDirectory: input.workspace,
+        model: input.model,
+        timeoutMs: input.scenario.validation.timeoutMinutes * 60 * 1000,
+        builtInTools: workspaceFileTools,
+        additionalSystemMessage: [
+            'The evaluator, not this agent, owns all command execution in an isolated environment.',
+            'Do not run shell commands, azd, docker, or network requests, and do not fabricate validation evidence.',
+            'Autopilot is active: the deployment plan is auto-approved, so do not wait for a user.',
+            'Write the deployment plan, generate the complete infra, azure.yaml and Dockerfile set, then call open_deployment_next_steps_view and stop.',
+        ].join(' '),
+        tools: createDeploymentTools(deployGate),
+        completionToolNames: ['open_deployment_next_steps_view'],
+    });
+    const deployStage: EvaluationStageResult = {
+        name: 'deploy-generate',
+        agentRun: deployRun,
+        gateCalled: deployGate.called,
+    };
+    input.stages.push(deployStage);
+    assertAgentRunCompleted('deploy-generate', deployRun, input.model);
+
+    const readiness = await evaluateDeploymentReadiness(
+        { workspace: input.workspace },
+        input.deploymentCommandRunner ?? createLocalDeploymentCommandRunner(input.workspace),
+    );
+    input.stages.push({
+        name: 'deploy-readiness',
+        deploymentReadiness: readiness,
+        gateCalled: deployGate.called,
+    });
+    if (readiness.outcome !== 'passed' && !isDeploymentInfrastructureFailureCode(readiness.failureCode)) {
+        throw new StageFailure(
+            'deploy-readiness',
+            readiness.failureCode ?? 'deploymentArtifactsInvalid',
+            readiness.error ?? 'Deployment readiness failed.',
+        );
+    }
+}
+
+function createDeploymentTools(gate: { called: boolean }): CorAgentToolDefinition[] {
+    return [
+        {
+            name: 'open_deployment_next_steps_view',
+            description: 'Record that every deployment artifact has been generated for evaluator validation, then stop.',
+            parameters: emptyObjectSchema,
+            handler: () => {
+                gate.called = true;
+                return { message: 'Deployment artifact hand-off recorded. Stop and wait for isolated validation.' };
+            },
+        },
+        {
+            name: 'open_deploy_plan_view',
+            description: 'Open the deployment plan preview. Autopilot approves it immediately.',
+            parameters: emptyObjectSchema,
+            handler: () => ({
+                message: 'Autopilot is active and the deployment plan is approved. Generate the deployment artifacts now.',
+            }),
+        },
+    ];
+}
+
 function createDebugPlanTools(gate: { called: boolean }): CorAgentToolDefinition[] {
     return [
         {
@@ -1027,7 +1146,9 @@ function createDebugGenerateTools(gate: { called: boolean }): CorAgentToolDefini
                 properties: { prompt: { type: 'string' } },
                 additionalProperties: false,
             },
-            handler: () => ({ message: 'Stop. The evaluator has not completed local validation.' }),
+            handler: () => ({
+                message: 'Stop. Local validation is owned by the evaluator, which starts deployment itself.',
+            }),
         },
     ];
 }
@@ -1046,11 +1167,14 @@ function assertAgentRunCompleted(
         // A session that never reports idle is a stalled harness, not a project the product built
         // badly. Keeping it under agentRunFailed counts infrastructure flakes as product failures.
         const timedOut = /Timeout after \d+ms waiting for session\.idle/u.test(errorText);
+        // An upstream turn that starts and never streams anything is the same class of fault,
+        // caught early by the stall watchdog instead of burning the full timeout budget.
+        const stalled = errorText.includes(agentStallMessagePrefix);
         throw new StageFailure(
             stage,
             agentRun.errors.some(error => error.startsWith('SDK cleanup:'))
                 ? 'agentCleanupFailed'
-                : timedOut ? 'agentRunTimedOut' : 'agentRunFailed',
+                : stalled ? 'agentRunStalled' : timedOut ? 'agentRunTimedOut' : 'agentRunFailed',
             errorText || `Agent outcome was ${agentRun.outcome}.`,
         );
     }
@@ -1114,8 +1238,8 @@ export function parseRunArgs(args: string[]): RunOptions {
                 break;
             case '--through': {
                 const value = requireValue(args, ++index, arg);
-                if (value !== 'plan' && value !== 'scaffold' && value !== 'local') {
-                    throw new Error('--through must be "plan", "scaffold", or "local".');
+                if (value !== 'plan' && value !== 'scaffold' && value !== 'local' && value !== 'deploy') {
+                    throw new Error('--through must be "plan", "scaffold", "local", or "deploy".');
                 }
 
                 options.through = value;
@@ -1151,7 +1275,7 @@ export function parseRunArgs(args: string[]): RunOptions {
 }
 
 function isThrough(actual: RunOptions['through'], required: RunOptions['through']): boolean {
-    const order: RunOptions['through'][] = ['plan', 'scaffold', 'local'];
+    const order: RunOptions['through'][] = ['plan', 'scaffold', 'local', 'deploy'];
     return order.indexOf(actual) >= order.indexOf(required);
 }
 

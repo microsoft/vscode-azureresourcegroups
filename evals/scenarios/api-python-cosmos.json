@@ -12,7 +12,9 @@
         "complexity": "low"
     },
     "requirementsAnswers": {
-        "dataStores": ["CosmosDB"],
+        "dataStores": [
+            "CosmosDB"
+        ],
         "auth": "No auth"
     },
     "validation": {
@@ -21,5 +23,17 @@
         "test": true,
         "lint": "if-present",
         "timeoutMinutes": 5
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 180,
+            "probes": [
+                {
+                    "name": "python api process",
+                    "target": "backend",
+                    "processPattern": "uvicorn|gunicorn|flask run|python .*(app|main|server)|func( host)? start|Microsoft.Azure.WebJobs.Script.WebHost"
+                }
+            ]
+        }
     }
 }

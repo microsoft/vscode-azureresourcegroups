@@ -20,6 +20,70 @@ import {
 import { loadAgentSystemPrompt } from './agentAssets';
 
 const defaultTimeoutMs = 5 * 60 * 1000;
+const defaultStallTimeoutMs = 90 * 1000;
+const sdkLogLevels = ['error', 'warning', 'info', 'debug'] as const;
+
+type SdkLogLevel = typeof sdkLogLevels[number];
+
+/**
+ * Diagnosing a stalled agent turn requires the SDK's own transport logs, which are
+ * suppressed at the default level. Raising it is opt-in so normal runs stay quiet.
+ */
+function sdkLogLevel(): SdkLogLevel {
+    const configured = process.env.COR_EVAL_SDK_LOG_LEVEL;
+    return sdkLogLevels.find(level => level === configured) ?? 'warning';
+}
+
+export const agentStallMessagePrefix = 'Agent produced no session events for';
+
+/**
+ * An upstream turn can start and never return: the SDK emits `assistant.turn_start`, then
+ * nothing at all until the overall timeout expires. Waiting out the full budget wastes
+ * minutes per attempt and, when the upstream incident is broad, loses an entire matrix to
+ * dead time. Silence is measured directly so a stall is caught in seconds and can be
+ * retried, and so it stays distinguishable from an agent that is genuinely working.
+ */
+export function createStallWatchdog(timeoutMs: number): {
+    stalled: Promise<void>;
+    recordActivity: () => void;
+    dispose: () => void;
+    describe: () => string;
+} {
+    let lastActivity = Date.now();
+    let timer: NodeJS.Timeout | undefined;
+    let settled = false;
+    let signalStalled: (() => void) | undefined;
+    const stalled = new Promise<void>(resolve => {
+        signalStalled = resolve;
+    });
+    const check = (): void => {
+        if (settled) {
+            return;
+        }
+        const idleMs = Date.now() - lastActivity;
+        if (idleMs >= timeoutMs) {
+            settled = true;
+            signalStalled?.();
+            return;
+        }
+        timer = setTimeout(check, timeoutMs - idleMs).unref();
+    };
+    timer = setTimeout(check, timeoutMs).unref();
+    return {
+        stalled,
+        recordActivity: () => {
+            lastActivity = Date.now();
+        },
+        dispose: () => {
+            settled = true;
+            if (timer) {
+                clearTimeout(timer);
+            }
+        },
+        describe: () => `${agentStallMessagePrefix} ${timeoutMs}ms.`,
+    };
+}
+
 const evaluationBuiltInTools = [
     'apply_patch',
     'create',
@@ -41,7 +105,7 @@ export class CopilotSdkAgentExecutor implements CorAgentExecutor {
         const { CopilotClient, ToolSet } = await import('@github/copilot-sdk-eval');
         const client = new CopilotClient({
             workingDirectory: request.workingDirectory,
-            logLevel: 'warning',
+            logLevel: sdkLogLevel(),
             useLoggedInUser: true,
         });
         let sessionId: string | undefined;
@@ -80,7 +144,9 @@ export class CopilotSdkAgentExecutor implements CorAgentExecutor {
                 },
             });
             sessionId = session.sessionId;
+            const stall = createStallWatchdog(request.stallTimeoutMs ?? defaultStallTimeoutMs);
             const unsubscribe = session.on((event: SessionEvent) => {
+                stall.recordActivity();
                 capture = reduceCorAgentEvent(capture, event);
             });
             try {
@@ -96,11 +162,16 @@ export class CopilotSdkAgentExecutor implements CorAgentExecutor {
                     completionToolNames.size
                         ? completion.then(toolName => ({ kind: 'completion' as const, toolName }))
                         : new Promise<never>(() => undefined),
+                    stall.stalled.then(() => ({ kind: 'stalled' as const })),
                 ]);
                 if (settled.kind === 'completion') {
                     await session.abort();
                     await responsePromise.catch(() => undefined);
                     outcome = 'completed';
+                } else if (settled.kind === 'stalled') {
+                    await session.abort().catch(() => undefined);
+                    await responsePromise.catch(() => undefined);
+                    throw new Error(stall.describe());
                 } else if (settled.kind === 'error') {
                     throw settled.error;
                 } else {
@@ -112,6 +183,7 @@ export class CopilotSdkAgentExecutor implements CorAgentExecutor {
                 capture = appendCorAgentCaptureError(capture, message);
                 outcome = /timed?\s*out|timeout/i.test(message) ? 'timedOut' : 'failed';
             } finally {
+                stall.dispose();
                 unsubscribe();
                 try {
                     await session.disconnect();

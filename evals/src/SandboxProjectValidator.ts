@@ -64,7 +64,13 @@ export interface AcaCommandRunner {
 }
 
 export function isSandboxInfrastructureFailureCode(code: string | undefined): boolean {
-    return ['sandboxCreateFailed', 'sandboxSetupFailed', 'sandboxCleanupFailed', 'agentRunTimedOut'].includes(code ?? '');
+    return [
+        'sandboxCreateFailed',
+        'sandboxSetupFailed',
+        'sandboxCleanupFailed',
+        'agentRunTimedOut',
+        'agentRunStalled',
+    ].includes(code ?? '');
 }
 
 export function classifySandboxValidationCommand(

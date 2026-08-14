@@ -16,6 +16,12 @@ export interface CorAgentRunRequest {
     workingDirectory: string;
     model?: string;
     timeoutMs?: number;
+    /**
+     * Maximum silence between session events before the run is treated as stalled. Guards
+     * against upstream turns that start and never return, which otherwise consume the whole
+     * `timeoutMs` budget without producing any evidence.
+     */
+    stallTimeoutMs?: number;
     tools?: CorAgentToolDefinition[];
     builtInTools?: string[];
     additionalSystemMessage?: string;

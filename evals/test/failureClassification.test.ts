@@ -73,3 +73,17 @@ void test('an application error is not mistaken for a registry failure', () => {
         'product_failure',
     );
 });
+
+void test('an upstream turn that starts and never streams is infrastructure, not a product failure', () => {
+    // Observed 2026-08-14: three consecutive runs emitted `assistant.turn_start` and then no
+    // events at all until the 300s idle timeout, while the same scenario and model passed in
+    // 22s once the upstream incident cleared. Blaming the product for that would be wrong.
+    assert.ok(isSandboxInfrastructureFailureCode('agentRunStalled'));
+    assert.equal(
+        classifyFailure({
+            runId: 'r', scenarioId: 's', attempt: 0, outcome: 'failed',
+            failedStage: 'requirements', failureCode: 'agentRunStalled', durationMs: 1,
+        }),
+        'infrastructure_failure',
+    );
+});

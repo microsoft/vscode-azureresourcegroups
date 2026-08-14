@@ -191,8 +191,8 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
-      applicability-browser: not-applicable
+      applicability-local-runtime: required
+      applicability-browser: required
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
       applicability-persistence: not-applicable
@@ -237,6 +237,8 @@ stimuli:
             - build
             - test
             - integration
+            - local-runtime
+            - browser
             - cleanup
             - model
             - provenance

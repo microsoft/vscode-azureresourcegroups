@@ -12,7 +12,9 @@
         "complexity": "medium"
     },
     "requirementsAnswers": {
-        "dataStores": ["PostgreSQL"],
+        "dataStores": [
+            "PostgreSQL"
+        ],
         "auth": "No auth"
     },
     "validation": {
@@ -21,5 +23,28 @@
         "test": true,
         "lint": "if-present",
         "timeoutMinutes": 10
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 180,
+            "probes": [
+                {
+                    "name": "application frontend",
+                    "target": "frontend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:5173/",
+                    "expectedStatus": 200,
+                    "browser": {
+                        "requireInteractiveElements": true,
+                        "maxSeriousAccessibilityViolations": null,
+                        "journeySeverity": "advisory",
+                        "viewport": {
+                            "width": 1440,
+                            "height": 900
+                        }
+                    }
+                }
+            ]
+        }
     }
 }
