@@ -277,7 +277,7 @@ describe('ServiceRegistry', () => {
   it('should auto-initialize without throwing when Enhancement config is missing (Rule 13)', () => {
     clearServices();
     // Set only Essential service env vars
-    process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/testdb';
+    process.env.DATABASE_URL = `postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@localhost:5432/testdb`;
     process.env.STORAGE_CONNECTION_STRING = 'UseDevelopmentStorage=true';
     // Enhancement env vars intentionally NOT set
     delete process.env.AZURE_OPENAI_ENDPOINT;
