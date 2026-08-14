@@ -41,6 +41,30 @@ Those instructions are the sole authority for this agent. Run their complete Ste
 - **Do not translate or duplicate the pipeline instructions here.** Read the required references under [`.github/agents/azure-deploy/`](.github/agents/azure-deploy/instructions.md) at each phase transition and preserve their exact approval prompts, session protocol, security rules, and handoff contract.
 - **Do not treat an upstream `[AUTOPILOT MODE]` marker as permission to bypass deployment approvals.** The scaffold and deploy approval gates remain mandatory.
 
+<!-- BEGIN copilot-on-rails local addendum (survives re-vendoring — do not remove on re-vendor) -->
+## Local addendum: post-deploy database migrations and firewall safety
+
+> **Copilot on Rails local steering.** These requirements are our own additions on top of the vendored Azure App Onboard pipeline. They **augment — never replace —** the pipeline's phases, session protocol, security rules, and approval gates. Where the pipeline already provides a mechanism (e.g. [`deploy/references/database-post-deploy.md`](.github/agents/azure-deploy/deploy/references/database-post-deploy.md)), use it as-is; these rules make its outcomes **mandatory** and add the firewall guarantee below. This section lives in our wrapper so it is preserved when the pipeline is periodically re-vendored.
+
+### Run database migrations after deploying — do not defer them
+
+After a successful provision + deploy, outstanding database migrations are **part of the deployment**. Run them; do **not** emit them as TODOs, "next steps", or manual instructions for the user to complete later. Within the pipeline's Deploy phase (after the application code is deployed, alongside the final health check, using the existing session artifacts and the existing deploy approval gate — do **not** open new gates):
+
+1. **Detect the migration mechanism** from the project: a framework migration tool (Alembic, Django, EF, Rails, Prisma, Sequelize, …), an ORM migrate command, or raw SQL scripts. Follow the discovery table in [`database-post-deploy.md`](.github/agents/azure-deploy/deploy/references/database-post-deploy.md) and any `prereq-output.json` migration signals.
+2. **Run the migrations against the provisioned database** (the DB in `prepare-plan.json.services[]`), executing through the deployed environment as that reference describes (App Service SSH, Container Apps exec, or an equivalent connection to the live database).
+3. **Verify success**: confirm the schema was actually applied (the migration tool reports up-to-date / the expected tables exist) and re-run the health check so the running app exercises the migrated schema. A green HTTP status alone is not proof — confirm the schema state.
+4. **Record the outcome** in the pipeline's existing artifacts (`deploy-result.json`, `deployment-summary.md`). If migrations cannot be completed, treat it as a **deploy failure** per the pipeline's error handling (write the failure into `deploy-result.json`) rather than reporting a clean deployment while handing the user an un-migrated database.
+
+### Firewall-rule guardrail — record the baseline, always restore it
+
+Reaching the database to run migrations may require connectivity changes. **Only if** connectivity genuinely requires modifying firewall rules:
+
+- **Prefer non-destructive alternatives first.** Add a temporary, tightly scoped allow rule for the current client IP (a single-IP range) rather than tearing down, widening, or disabling existing rules. Never broaden to `0.0.0.0`–`255.255.255.255`, and never disable firewall enforcement, to push a migration through.
+- **Record the exact baseline before touching anything.** Capture the current state of every rule you will add, remove, or modify — rule names, start/end IPs, and enforcement settings — into the session directory *before* the first change (e.g. `az postgres flexible-server firewall-rule list`, `az sql server firewall-rule list`, `az mysql flexible-server firewall-rule list`).
+- **Restore that exact baseline afterward, on every path — success, failure, or abort.** Remove any temporary rule you added and re-add any rule you removed, with **identical** parameters (same name, same IP range, same settings). Perform restoration in a finally-style step so it runs regardless of the migration result — including partial failure, timeout, or a user abort mid-migration.
+- **Never leave the firewall loosened or altered.** After migrations the firewall must match the recorded baseline exactly. If you cannot restore it, surface this loudly as a **deploy failure**, name the exact rule that remains changed, and do **not** report a clean deployment.
+<!-- END copilot-on-rails local addendum -->
+
 ## Deliverable
 
 A live, health-checked Azure deployment plus App Onboard's durable session artifacts:
