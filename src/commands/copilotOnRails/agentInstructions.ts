@@ -35,8 +35,20 @@ const agentInstructionFolders: string[] = [
     'azure-project-plan',
     'azure-project-scaffold',
     'azure-project-integrate',
+    'azure-deploy',
     'shared-references',
 ];
+
+/**
+ * Hidden marker used to detect whether a markdown file already carries the disclaimer,
+ * so re-stamping (e.g. on a version refresh) stays idempotent.
+ */
+export const disclaimerMarker = '<!-- azure-cor-disclaimer -->';
+
+/** User-facing disclaimer prepended to every downloaded instruction markdown file. */
+const disclaimerBlock = `${disclaimerMarker}
+> **Important:** This skill provides guidance and recommended instructions to assist the AI system. Outputs are not guaranteed to be complete, correct, secure, or applicable to every scenario. Results should be reviewed and validated by a human before being applied. The AI model may choose not to follow all instructions exactly, and additional verification may be required.
+`;
 
 /** The running extension's version, used to stamp copied instruction folders. */
 function getExtensionVersion(): string {
@@ -57,6 +69,40 @@ function getWorkspaceAgentsRoot(): vscode.Uri | undefined {
     return vscode.Uri.joinPath(folder.uri, ...WORKSPACE_AGENTS_RELATIVE_PATH);
 }
 
+/**
+ * Inserts the user-facing disclaimer at the top of a markdown document, after YAML front
+ * matter when present so the metadata block stays parseable. Idempotent via {@link disclaimerMarker}.
+ */
+export function applyDisclaimer(content: string): string {
+    if (content.includes(disclaimerMarker)) {
+        return content;
+    }
+
+    const frontMatter = /^\uFEFF?---\r?\n[\s\S]*?\r?\n---[ \t]*\r?\n/.exec(content);
+    if (frontMatter) {
+        const end = frontMatter[0].length;
+        return `${content.slice(0, end)}\n${disclaimerBlock}\n${content.slice(end)}`;
+    }
+
+    return `${disclaimerBlock}\n${content}`;
+}
+
+/** Recursively stamps the disclaimer into every markdown file under `folder`. */
+async function stampDisclaimerIntoMarkdown(folder: vscode.Uri): Promise<void> {
+    for (const [name, type] of await vscode.workspace.fs.readDirectory(folder)) {
+        const entry = vscode.Uri.joinPath(folder, name);
+        if ((type & vscode.FileType.Directory) !== 0) {
+            await stampDisclaimerIntoMarkdown(entry);
+        } else if ((type & vscode.FileType.File) !== 0 && name.toLowerCase().endsWith('.md')) {
+            const original = await AzExtFsExtra.readFile(entry);
+            const stamped = applyDisclaimer(original);
+            if (stamped !== original) {
+                await AzExtFsExtra.writeFile(entry, stamped);
+            }
+        }
+    }
+}
+
 /** Copies each of the given instruction folders from the extension bundle into the workspace, replacing any existing copies. */
 async function copyInstructionFolders(folders: string[], agentsRoot: vscode.Uri): Promise<void> {
     const bundledRoot = getBundledAgentsRoot();
@@ -64,6 +110,7 @@ async function copyInstructionFolders(folders: string[], agentsRoot: vscode.Uri)
         const source = vscode.Uri.joinPath(bundledRoot, folder);
         const dest = vscode.Uri.joinPath(agentsRoot, folder);
         await AzExtFsExtra.copy(source, dest, { overwrite: true });
+        await stampDisclaimerIntoMarkdown(dest);
     }
 }
 

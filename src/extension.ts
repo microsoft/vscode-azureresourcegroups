@@ -62,9 +62,9 @@ import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
 import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/extension/debugPlanImplementedWatcher';
-import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/resumePendingCreateWithCopilot';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
 import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
+import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/resumePendingCreateWithCopilot';
 import { registerViewHostDisposal } from './webviews/copilotOnRails/extension/utils/singletonViewHost';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {

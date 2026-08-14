@@ -14,7 +14,7 @@
 1. **Update plan progressively** — Mark steps complete as you go; update **Last Updated** timestamp on every status change
 2. ❌ **Destructive actions require `ask_user`** — Always confirm before overwriting, deleting, or modifying existing files
 3. **Preserve existing config** — Never silently overwrite project configuration files or `docker-compose.yml`. Merge or ask first.
-4. **Scope — VS Code debug setup only** — This instruction set classifies the workspace and generates a plan. Cloud deployment is handled by **azure-prepare** → **azure-validate** → **azure-deploy**.
+4. **Scope — VS Code debug setup only** — This instruction set classifies the workspace and generates a plan. Cloud architecture, IaC generation, provisioning, and deployment are handled by the **azure-deploy** agent through the complete **azure-app-onboard** pipeline.
 ---
 
 ## Autopilot mode (overrides the approval STOP)

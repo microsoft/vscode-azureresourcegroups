@@ -74,7 +74,7 @@ export class LocalDevNextStepsViewController extends WebviewController<LocalDevN
                         this.panel.dispose();
                         await vscode.commands.executeCommand(
                             copilotOnRailsCommandIds.startDeployment,
-                            vscode.l10n.t('The local development environment is set up and verified. Now prepare the project for deployment to Azure.'),
+                            vscode.l10n.t('The local development environment is set up and verified. Now onboard and deploy the project using the complete Azure App Onboard pipeline.'),
                         );
                         return;
                 }

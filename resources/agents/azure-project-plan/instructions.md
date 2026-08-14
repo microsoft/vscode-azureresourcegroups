@@ -22,7 +22,7 @@ Plan/design a new Azure-centric app; create requirements/architecture; start a p
 | Execute plan / scaffold backend | **azure-project-scaffold** |
 | Integrate the scaffold (live data, smoke test, migrations) | **azure-project-integrate** |
 | Docker Compose, emulators, VS Code F5 | **azure-debug-plan** → **azure-debug-generate** |
-| Deploy to Azure / generate Bicep/Terraform | **azure-prepare** |
+| Deploy to Azure / generate Bicep/Terraform | **azure-deploy** agent (uses **azure-app-onboard**) |
 | Benchmark scaffold quality | **scaffold-benchmark** |
 
 ## Rules
