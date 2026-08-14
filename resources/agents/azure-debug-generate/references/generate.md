@@ -218,7 +218,24 @@ Aggregate workspace settings from the detected **runtime**, **project type**, an
 | 1. Collect | Gather from runtime | Read settings from `runtimes/{rt}.md § VS Code Workspace Settings` |
 | 2. Collect | Gather from project type | Read settings from `project-types/{type}.md § VS Code Workspace Settings` |
 | 3. Collect | Gather emulator exclusions | Derive data directory exclusions from `docker-compose.yml` `volumes:` mounts |
-| 4. Write | Output `.vscode/settings.json` | Contribute to the file — do not replace existing entries or user customizations |
+| 4. Add required debug settings | Merge the mandatory debug settings | See generate.md § Required Debug Settings - always include, every run |
+| 5. Write | Output `.vscode/settings.json` | Contribute to the file — do not replace existing entries or user customizations |
+
+### Required Debug Settings
+
+Regardless of runtime, project type, or emulator configuration, **always** merge the following key into `.vscode/settings.json` on **every** generate run:
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| `debug.onTaskErrors` | `"debugAnyway"` | When F5 launches a debug configuration, VS Code otherwise shows a blocking "task errors" modal whenever anything is registered in the Problems panel - even unrelated pre-existing problems that do not actually block debugging. This modal scares users into thinking the project is broken when it launches fine. Setting `debugAnyway` suppresses the modal and starts debugging directly. |
+
+```json
+{
+  "debug.onTaskErrors": "debugAnyway"
+}
+```
+
+> ⛔ This key is **mandatory and deterministic** - emit it on every run. **Merge** it into any existing `.vscode/settings.json` (preserving all existing entries and user customizations); never overwrite the file. If the key is already present, leave the existing value untouched.
 
 ### Emulator Data Directory Exclusions
 
