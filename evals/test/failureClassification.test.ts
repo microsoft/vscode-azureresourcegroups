@@ -87,3 +87,19 @@ void test('an upstream turn that starts and never streams is infrastructure, not
         'infrastructure_failure',
     );
 });
+
+void test('a blocked container-image pull is infrastructure, not a product failure', () => {
+    // Regression: the single (non-compound) launch path hardcoded localTaskFailed, so a sandbox
+    // that could not pull redis:7.4-alpine was charged to the generated project. Three identical
+    // "failures" of api-node-express-redis were really one environment constraint.
+    const dockerHubDenial = [
+        ' Image redis:7.4-alpine Pulling ',
+        ' 897d797d2723 Pulling fs layer 0B',
+        'error pulling image configuration: download failed after attempts=1: denied: ',
+    ].join('\n');
+    assert.equal(isContainerRegistryFailure(dockerHubDenial), true);
+    assert.equal(isLocalRuntimeInfrastructureFailureCode('localContainerRegistryUnavailable'), true);
+
+    // A genuine application crash must still be charged to the product.
+    assert.equal(isContainerRegistryFailure('Error: connect ECONNREFUSED 127.0.0.1:6379'), false);
+});

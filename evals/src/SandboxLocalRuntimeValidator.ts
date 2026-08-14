@@ -687,12 +687,18 @@ export class SandboxLocalRuntimeValidator {
                     );
                     commands.push(taskResult);
                     if (!taskResult.success) {
-                        const unavailable = /(?:command not found|not recognized|no such file or directory)/i.test(
-                            `${taskResult.stdout}\n${taskResult.stderr}`,
-                        );
+                        const output = `${taskResult.stdout}\n${taskResult.stderr}`;
+                        const unavailable = /(?:command not found|not recognized|no such file or directory)/i.test(output);
+                        // The compound path already distinguished these; without the same check here a
+                        // blocked image pull is charged to the generated project.
+                        const registryFailure = isContainerRegistryFailure(output);
                         validationFailure = failure(
-                            unavailable ? 'localToolchainUnavailable' : 'localTaskFailed',
-                            `Debug task "${String(task.label)}" failed.`,
+                            registryFailure
+                                ? 'localContainerRegistryUnavailable'
+                                : unavailable ? 'localToolchainUnavailable' : 'localTaskFailed',
+                            registryFailure
+                                ? `Debug task "${String(task.label)}" could not pull its container images.`
+                                : `Debug task "${String(task.label)}" failed.`,
                             commands,
                             probes,
                         );
@@ -716,9 +722,13 @@ export class SandboxLocalRuntimeValidator {
                     commands.push(launchResult);
                     processLogName = String(launchTask.label);
                     if (!launchResult.success) {
+                        const registryFailure = isContainerRegistryFailure(
+                            `${launchResult.stderr ?? ''}\n${launchResult.stdout ?? ''}`);
                         validationFailure = failure(
-                            'localTaskFailed',
-                            `Debug launch configuration "${configuration.name}" failed.`,
+                            registryFailure ? 'localContainerRegistryUnavailable' : 'localTaskFailed',
+                            registryFailure
+                                ? `Debug launch configuration "${configuration.name}" could not pull its container images.`
+                                : `Debug launch configuration "${configuration.name}" failed.`,
                             commands,
                             probes,
                         );
