@@ -21,6 +21,7 @@
 **Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` records `executionMode: auto` or equivalent. When active, run fully unattended:
 - **Phase 0–1 still run in full**.  When generating the plan `.azure/vscode-debug-plan.md`, also record `executionMode: auto` or similar.  Follow any specific instructions per the template.
 - Skip the step that instructs to run `openLocalPlanView` and do NOT wait for approval. Set status straight to `Approved`, then invoke `azure-debug-generate` as you normally would, but with the chat arg prefixed with `[AUTOPILOT MODE] `.
+- **Reuse the project-plan prerequisites.** When `.azure/project-plan.md` already lists Prerequisites, carry them over wholesale instead of re-deriving them — see [inventory.md § Step 1](references/inventory.md) for the detail.
 - Never call `ask_user` for non-destructive steps. Scan completeness is unchanged — autopilot suppresses **the preview and approval gates only**.
 
 ## Workflow
@@ -38,7 +39,7 @@ Scan the workspace for service roots. Produce a `services[]` list.
 
 | Action | Reference |
 |--------|-----------|
-| Check for `.azure/project-plan.md` — if found, read for advisory context. **Optional.** | — |
+| Check for `.azure/project-plan.md` — if found, read it for advisory context. | — |
 | Scan all subdirectories; detect project type + runtime per service root | [classify.md](references/classify.md) |
 | If 2+ service roots: assign service IDs, deduplicate emulators, plan compound debug config | [multi-service.md](references/multi-service.md) |
 
