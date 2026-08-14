@@ -18,6 +18,8 @@ const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
 const CUSTOM_AGENT_COMMAND_PREFIX = 'workbench.action.chat.open';
 const CUSTOM_AGENT_LOAD_TIMEOUT_MS = 10_000;
 const CUSTOM_AGENT_LOAD_POLL_INTERVAL_MS = 100;
+// VS Code's Workspace Trust command that opens the native Manage Workspace Trust editor.
+const MANAGE_WORKSPACE_TRUST_COMMAND_ID = 'workbench.trust.manage';
 let agentLaunchInProgress = false;
 
 /**
@@ -61,11 +63,37 @@ async function resolveModelSelector(displayName: string): Promise<{ id?: string;
  * with a `mode` referring to one of them silently no-ops if we don't wait.
  */
 export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Promise<boolean> {
+    const ensureCopilotChatOutcomeKey = 'ensureCopilotChatOutcome';
+
+    // Copilot on Rails cannot run in a restricted (untrusted) workspace. VS Code's
+    // Workspace Trust disables GitHub Copilot Chat, and a trust-disabled extension is
+    // filtered out of the running set so `getExtension` returns `undefined`. Check
+    // trust first and surface an accurate Workspace Trust error rather than letting
+    // the check below report a misleading "not installed".
+    //
+    // The error offers a "Manage Workspace Trust" action that runs the stable built-in
+    // `workbench.trust.manage` command, which opens VS Code's Trust management editor
+    // where the user grants trust. We do NOT call `vscode.workspace.requestWorkspaceTrust()`
+    // - the API that would pop an inline trust modal - because it is still a proposed API.
+    // TODO: revisit for a smoother prompt-to-trust experience once the API is stable.
+    if (!vscode.workspace.isTrusted) {
+        setCorProp(context, ensureCopilotChatOutcomeKey, 'workspaceNotTrusted');
+        const manageTrust = vscode.l10n.t('Manage Workspace Trust');
+        void vscode.window.showErrorMessage(
+            vscode.l10n.t('GitHub Copilot Chat is disabled because this folder is not trusted. Trust the folder, then run this command again.'),
+            manageTrust,
+        ).then((choice) => {
+            if (choice === manageTrust) {
+                void vscode.commands.executeCommand(MANAGE_WORKSPACE_TRUST_COMMAND_ID);
+            }
+        });
+        return false;
+    }
+
     const copilotChatExtension = vscode.extensions.getExtension(COPILOT_CHAT_EXTENSION_ID);
     setCorProp(context, 'copilotChatInstalled', !!copilotChatExtension);
     setCorProp(context, 'copilotChatVersion', (copilotChatExtension?.packageJSON as { version?: string } | undefined)?.version ?? 'none');
 
-    const ensureCopilotChatOutcomeKey = 'ensureCopilotChatOutcome';
     if (!copilotChatExtension) {
         setCorProp(context, ensureCopilotChatOutcomeKey, 'notInstalled');
         void vscode.window.showErrorMessage(
