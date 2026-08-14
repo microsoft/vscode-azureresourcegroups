@@ -3,6 +3,7 @@
 const fs = require('node:fs/promises');
 const http = require('node:http');
 const path = require('node:path');
+const { randomBytes } = require('node:crypto');
 
 const publicRoot = path.join(__dirname, '..', 'public');
 
@@ -30,6 +31,20 @@ function send(response, status, contentType, body) {
     response.end(body);
 }
 
+/**
+ * Compares the presented bearer token against the configured one. This is a full value
+ * comparison rather than a presence check on purpose: the security gate probes protected paths
+ * with a syntactically well-formed token that must not validate, so an app that merely looks for
+ * an Authorization header would serve protected data and has to be treated as unauthenticated.
+ */
+function isAuthorizedAdmin(header, expected) {
+    if (!expected) {
+        return false;
+    }
+    const match = /^Bearer (.+)$/u.exec(header ?? '');
+    return match !== null && match[1] === expected;
+}
+
 function readBody(request) {
     return new Promise((resolve, reject) => {
         let body = '';
@@ -44,6 +59,11 @@ function readBody(request) {
 
 function createServer(options = {}) {
     const dataFile = options.dataFile ?? path.join(__dirname, '..', 'data', 'items.json');
+    // Falling back to an unguessable random secret rather than an empty string keeps the token
+    // comparison on the live path: with an empty expected value every request would short-circuit
+    // before the comparison ran, so the security gate would exercise less of this code than it
+    // appears to. No credential is committed anywhere as a result.
+    const adminToken = options.adminToken ?? process.env.ADMIN_TOKEN ?? randomBytes(32).toString('hex');
     return http.createServer(async (request, response) => {
         const requestUrl = new URL(request.url, 'http://localhost');
         if (request.method === 'GET' && requestUrl.pathname === '/api/health') {
@@ -64,6 +84,15 @@ function createServer(options = {}) {
             const item = { id: items.length + 1, name: payload.name.trim() };
             await writeItems(dataFile, [...items, item]);
             send(response, 201, 'application/json', JSON.stringify(item));
+            return;
+        }
+        if (request.method === 'GET' && requestUrl.pathname === '/api/admin/stats') {
+            if (!isAuthorizedAdmin(request.headers.authorization, adminToken)) {
+                send(response, 401, 'application/json', JSON.stringify({ error: 'unauthorized' }));
+                return;
+            }
+            const items = await readItems(dataFile);
+            send(response, 200, 'application/json', JSON.stringify({ projectCount: items.length }));
             return;
         }
         const asset = requestUrl.pathname === '/' ? 'index.html' : requestUrl.pathname.slice(1);

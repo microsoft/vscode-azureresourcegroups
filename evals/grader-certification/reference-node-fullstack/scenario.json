@@ -8,7 +8,7 @@
         "frontend": "html",
         "backend": "node",
         "database": "file",
-        "auth": "none",
+        "auth": "bearer-token",
         "complexity": "small"
     },
     "requirementsAnswers": {
@@ -92,6 +92,15 @@
                 "lineIncludes": "requestUrl.pathname === '/api/health'",
                 "triggerUrl": "http://127.0.0.1:7071/api/health",
                 "timeoutSeconds": 30
+            },
+            "security": {
+                "publicPaths": [
+                    "/api/health",
+                    "/"
+                ],
+                "protectedPaths": [
+                    "/api/admin/stats"
+                ]
             }
         }
     }

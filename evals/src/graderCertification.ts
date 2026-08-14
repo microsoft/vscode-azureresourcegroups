@@ -7,6 +7,8 @@ import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { validateDeploymentArtifacts } from './artifacts/deployment';
+import { evaluateDeploymentReadiness, isDeploymentInfrastructureFailureCode } from './deploymentReadiness';
+import { createLocalDeploymentCommandRunner } from './run';
 import { validateIntegrationPlanArtifact } from './artifacts/integrationPlan';
 import { validateIntegrationOutput } from './artifacts/integrationOutput';
 import { validateLocalDebugArtifacts } from './artifacts/localDebug';
@@ -28,12 +30,18 @@ interface CertificationManifest {
         offlineValidators: string[];
         acaValidators: string[];
     };
+    deployFixture?: {
+        id: string;
+        path: string;
+        description: string;
+        deployValidators: string[];
+    };
     mutations: CertificationMutation[];
 }
 
 interface CertificationMutation {
     id: string;
-    tier: 'offline' | 'aca';
+    tier: 'offline' | 'aca' | 'deploy';
     validator: string;
     file?: string;
     operation: 'replace' | 'append' | 'delete' | 'scenario-status';
@@ -45,7 +53,7 @@ interface CertificationMutation {
 
 interface CertificationCase {
     id: string;
-    tier: 'offline' | 'aca';
+    tier: 'offline' | 'aca' | 'deploy';
     validator: string;
     expected: string;
     actual: string[];
@@ -56,7 +64,7 @@ interface CertificationCase {
 interface CertificationReport {
     schemaVersion: 1;
     generatedAt: string;
-    mode: 'offline' | 'aca';
+    mode: 'offline' | 'aca' | 'deploy';
     fixture: string;
     outcome: 'passed' | 'failed';
     cases: CertificationCase[];
@@ -66,7 +74,9 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const manifestPath = path.join(repoRoot, 'evals', 'grader-certification', 'manifest.json');
 
 async function main(): Promise<void> {
-    const mode = process.argv.includes('--aca') ? 'aca' : 'offline';
+    const mode = process.argv.includes('--deploy')
+        ? 'deploy'
+        : process.argv.includes('--aca') ? 'aca' : 'offline';
     const outputIndex = process.argv.indexOf('--output');
     const outputDirectory = outputIndex >= 0
         ? path.resolve(process.argv[outputIndex + 1])
@@ -77,17 +87,32 @@ async function main(): Promise<void> {
     if (manifest.schemaVersion !== 1) {
         throw new Error(`Unsupported grader certification manifest version ${manifest.schemaVersion}.`);
     }
-    const fixture = path.join(repoRoot, manifest.fixture.path);
-    const scenarioPath = path.join(fixture, 'scenario.json');
-    const scenario = validateScenario(JSON.parse(await fs.readFile(scenarioPath, 'utf8')), scenarioPath);
-    const cases = mode === 'offline'
-        ? await runOfflineCertification(manifest, fixture, scenario)
-        : await runAcaCertification(manifest, fixture, scenario, caseFilter);
+    let cases: CertificationCase[];
+    let fixtureId: string;
+    if (mode === 'deploy') {
+        if (!manifest.deployFixture) {
+            throw new Error('The manifest declares no deployFixture, so the deployment tier cannot run.');
+        }
+        fixtureId = manifest.deployFixture.id;
+        cases = await runDeployCertification(
+            manifest,
+            path.join(repoRoot, manifest.deployFixture.path),
+            caseFilter,
+        );
+    } else {
+        const fixture = path.join(repoRoot, manifest.fixture.path);
+        const scenarioPath = path.join(fixture, 'scenario.json');
+        const scenario = validateScenario(JSON.parse(await fs.readFile(scenarioPath, 'utf8')), scenarioPath);
+        fixtureId = manifest.fixture.id;
+        cases = mode === 'offline'
+            ? await runOfflineCertification(manifest, fixture, scenario)
+            : await runAcaCertification(manifest, fixture, scenario, caseFilter);
+    }
     const report: CertificationReport = {
         schemaVersion: 1,
         generatedAt: new Date().toISOString(),
         mode,
-        fixture: manifest.fixture.id,
+        fixture: fixtureId,
         outcome: cases.every(value => value.passed) ? 'passed' : 'failed',
         cases,
     };
@@ -208,6 +233,78 @@ async function runAcaCertification(
     return cases;
 }
 
+/**
+ * Certifies the deployment gate against a fixture that is known to package cleanly. `azd package`
+ * needs neither an Azure login nor a subscription, so this tier runs on any machine with `azd`
+ * installed and is the tier-1 half of deployment coverage; live `azd up` remains tier 2.
+ */
+async function runDeployCertification(
+    manifest: CertificationManifest,
+    fixture: string,
+    caseFilter?: string,
+): Promise<CertificationCase[]> {
+    const cases: CertificationCase[] = [];
+    const runReadiness = async (workspace: string) => await evaluateDeploymentReadiness(
+        { workspace },
+        createLocalDeploymentCommandRunner(workspace),
+    );
+    if (!caseFilter || caseFilter === 'golden-deployment-readiness') {
+        // A mutation with no `file` copies the fixture without altering it, which is what keeps
+        // `azd package` from writing environment state back into the checked-in fixture.
+        cases.push(await withMutatedFixture(
+            fixture,
+            { id: 'golden', tier: 'deploy', validator: 'deployment-readiness', operation: 'replace', expectedCode: 'passed' },
+            async workspace => {
+                const startedAt = Date.now();
+                const result = await runReadiness(workspace);
+                const packaged = result.commands.find(value => value.name === 'azd package');
+                const missingEvidence = packaged?.success
+                    ? []
+                    : ['deployment-readiness produced no successful azd package evidence'];
+                return {
+                    id: 'golden-deployment-readiness',
+                    tier: 'deploy' as const,
+                    validator: 'deployment-readiness',
+                    expected: 'passed',
+                    actual: [
+                        result.outcome,
+                        result.failureCode ?? 'none',
+                        result.error ?? '',
+                        `infrastructure: ${result.infrastructure}`,
+                        `services: ${result.serviceNames.join(',') || 'none'}`,
+                        ...missingEvidence.map(value => `missing-evidence: ${value}`),
+                        ...(isDeploymentInfrastructureFailureCode(result.failureCode)
+                            ? ['note: this is a host/environment failure, not a fixture defect']
+                            : []),
+                    ].filter(Boolean),
+                    passed: result.outcome === 'passed' && missingEvidence.length === 0,
+                    durationMs: Date.now() - startedAt,
+                };
+            },
+        ));
+    }
+    for (const mutation of manifest.mutations.filter(value =>
+        value.tier === 'deploy' && (!caseFilter || caseFilter === value.id))) {
+        cases.push(await withMutatedFixture(fixture, mutation, async workspace => {
+            const startedAt = Date.now();
+            const result = await runReadiness(workspace);
+            return {
+                id: mutation.id,
+                tier: 'deploy' as const,
+                validator: mutation.validator,
+                expected: mutation.expectedCode,
+                actual: [result.failureCode ?? result.outcome, result.error ?? ''].filter(Boolean),
+                passed: result.failureCode === mutation.expectedCode,
+                durationMs: Date.now() - startedAt,
+            };
+        }));
+    }
+    if (caseFilter && cases.length === 0) {
+        throw new Error(`Unknown deployment grader certification case "${caseFilter}".`);
+    }
+    return cases;
+}
+
 async function runOfflineValidators(
     workspace: string,
     scenario: CorEvaluationScenario,
@@ -313,7 +410,12 @@ function createCase(
  * succeeded from one that never ran at all. Several gates skip themselves when their prerequisites
  * are absent, so the fixture must prove each declared validator produced evidence.
  */
-function missingGateEvidence(
+/**
+ * Asserts that each certified validator left execution evidence behind. A golden case that only
+ * checks `outcome === 'passed'` cannot tell a gate that ran and succeeded from one that never ran
+ * at all, which is the failure mode that previously hid a dead debugger gate.
+ */
+export function missingGateEvidence(
     validators: string[],
     result: {
         commands?: Array<{ kind?: string }>;
@@ -397,7 +499,9 @@ function renderMarkdown(report: CertificationReport): string {
     return `${lines.join('\n')}\n`;
 }
 
-void main().catch(error => {
-    console.error(error);
-    process.exitCode = 1;
-});
+if (require.main === module) {
+    void main().catch(error => {
+        console.error(error);
+        process.exitCode = 1;
+    });
+}

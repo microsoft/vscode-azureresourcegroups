@@ -22,7 +22,16 @@
             "accessibility",
             "persistence",
             "debugger-readiness",
+            "security",
             "cleanup"
+        ]
+    },
+    "deployFixture": {
+        "id": "reference-deployable",
+        "path": "evals/grader-certification/reference-deployable",
+        "description": "Known-good deployable project used to certify the deployment gate. Packaging runs through azd with a remote container build, so the tier needs no Azure subscription, no azd login, and no local container runtime.",
+        "deployValidators": [
+            "deployment-readiness"
         ]
     },
     "mutations": [
@@ -170,6 +179,46 @@
             "replacement": "\"--inspect=9229\",\n                \"--inspect-port=9331\"",
             "comment": "The app still serves, but the inspector moves off the declared port. Debug-surface failures currently surface through the probe gate because probes carry debugPort; the dedicated debugger gate is certified by evals/test/debuggerPrerequisite.test.ts.",
             "expectedCode": "localProbeFailed"
+        },
+        {
+            "id": "security-auth-bypass",
+            "tier": "aca",
+            "validator": "local-runtime",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "if (!isAuthorizedAdmin(request.headers.authorization, adminToken)) {",
+            "replacement": "if (false) {",
+            "comment": "Serves the protected admin path to an anonymous caller while public paths stay healthy, which is the exact shape the security gate exists to catch. The local-runtime task graph is install -> build -> prepare and never runs npm test, so the unit tests that also cover this logic do not pre-empt the gate.",
+            "expectedCode": "localSecurityFailed"
+        },
+        {
+            "id": "deployment-plan-deleted",
+            "tier": "deploy",
+            "validator": "deployment-readiness",
+            "file": ".azure/deployment-plan.md",
+            "operation": "delete",
+            "expectedCode": "deploymentPlanMissing"
+        },
+        {
+            "id": "deployment-services-removed",
+            "tier": "deploy",
+            "validator": "deployment-readiness",
+            "file": "azure.yaml",
+            "operation": "replace",
+            "search": "services:",
+            "replacement": "disabledServices:",
+            "expectedCode": "deploymentArtifactsInvalid"
+        },
+        {
+            "id": "deployment-unsupported-host",
+            "tier": "deploy",
+            "validator": "deployment-readiness",
+            "file": "azure.yaml",
+            "operation": "replace",
+            "search": "host: containerapp",
+            "replacement": "host: nowhere",
+            "comment": "Static artifact validation only checks that a host field exists, so this reaches azd itself and proves the packaging command actually ran rather than being reported from cached artifact checks.",
+            "expectedCode": "azdPackageFailed"
         }
     ]
 }
