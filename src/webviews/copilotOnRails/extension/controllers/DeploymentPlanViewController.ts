@@ -7,7 +7,7 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microso
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import { ensureAzureDeploymentPrerequisites } from "../../../../commands/copilotOnRails/deploymentPrerequisites";
+import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDeployAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
@@ -127,8 +127,8 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
         const approvalOutcomeKey = 'approvalOutcome';
-        if (!(await ensureAzureDeploymentPrerequisites(context))) {
-            setCorProp(context, approvalOutcomeKey, 'deploymentPrerequisitesMissing');
+        if (!(await ensureAgentInstructions(context, azureDeployAgent))) {
+            setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
             return false;
         }
 
@@ -147,8 +147,8 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
         return await callWithTelemetryAndErrorHandling(corId('submitDeploymentPlanFeedback'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDeploymentPlanFeedback' }, async (context: CopilotOnRailsContext) => {
                 const feedbackOutcomeKey = 'feedbackOutcome';
-                if (!(await ensureAzureDeploymentPrerequisites(context))) {
-                    setCorProp(context, feedbackOutcomeKey, 'deploymentPrerequisitesMissing');
+                if (!(await ensureAgentInstructions(context, azureDeployAgent))) {
+                    setCorProp(context, feedbackOutcomeKey, 'agentInstructionsMissing');
                     return false;
                 }
 
