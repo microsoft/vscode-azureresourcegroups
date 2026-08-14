@@ -482,7 +482,7 @@ stimuli:
             - metric: authoritative_hard_gates_passed
               equals: true
   - name: crud-angular-csharp-functions-sql-entra
-    prompt: Build an employee scheduling app with an Angular frontend, C# Azure Functions API, Azure SQL persistence, Microsoft Entra ID authentication with test doubles, and component plus API tests.
+    prompt: Build an employee scheduling app with an Angular frontend, C# Azure Functions API, Azure SQL persistence, Microsoft Entra ID authentication with test doubles, and component plus API tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/shifts collection.
     tags:
       archetype: crud
       frontend: angular
@@ -501,7 +501,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -547,6 +547,7 @@ stimuli:
             - build
             - test
             - integration
+            - local-runtime
             - security
             - cleanup
             - model
@@ -560,7 +561,7 @@ stimuli:
             - metric: authoritative_hard_gates_passed
               equals: true
   - name: crud-angular-ts-functions-cosmos-clerk
-    prompt: Build a volunteer coordination app with an Angular frontend, TypeScript Azure Functions API, Cosmos DB, Clerk authentication isolated behind a mockable adapter, and CRUD plus authorization tests.
+    prompt: Build a volunteer coordination app with an Angular frontend, TypeScript Azure Functions API, Cosmos DB, Clerk authentication isolated behind a mockable adapter, and CRUD plus authorization tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/items collection.
     tags:
       archetype: crud
       frontend: angular
@@ -579,7 +580,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -625,6 +626,7 @@ stimuli:
             - build
             - test
             - integration
+            - local-runtime
             - security
             - cleanup
             - model
@@ -638,7 +640,7 @@ stimuli:
             - metric: authoritative_hard_gates_passed
               equals: true
   - name: crud-react-fastapi-postgres-auth0
-    prompt: Build a subscription dashboard with a React and Vite frontend, Python FastAPI backend, PostgreSQL, Auth0 behind a configuration-driven adapter that is mocked in tests, and full CRUD coverage.
+    prompt: Build a subscription dashboard with a React and Vite frontend, Python FastAPI backend, PostgreSQL, Auth0 behind a configuration-driven adapter that is mocked in tests, and full CRUD coverage. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/subscriptions collection.
     tags:
       archetype: crud
       frontend: react
@@ -657,7 +659,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -703,6 +705,7 @@ stimuli:
             - build
             - test
             - integration
+            - local-runtime
             - security
             - cleanup
             - model
@@ -716,7 +719,7 @@ stimuli:
             - metric: authoritative_hard_gates_passed
               equals: true
   - name: crud-react-functions-cosmos-entra
-    prompt: Build a document review app with a React and Vite frontend, TypeScript Azure Functions API, Cosmos DB persistence, Microsoft Entra ID authentication with mocked token validation in tests, and review workflow coverage.
+    prompt: Build a document review app with a React and Vite frontend, TypeScript Azure Functions API, Cosmos DB persistence, Microsoft Entra ID authentication with mocked token validation in tests, and review workflow coverage. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/reviews collection.
     tags:
       archetype: crud
       frontend: react
@@ -735,7 +738,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -781,6 +784,7 @@ stimuli:
             - build
             - test
             - integration
+            - local-runtime
             - security
             - cleanup
             - model
@@ -874,7 +878,7 @@ stimuli:
             - metric: authoritative_hard_gates_passed
               equals: true
   - name: crud-react-functions-postgres-external-id
-    prompt: Build a customer membership portal with a React and Vite frontend, TypeScript Azure Functions API, PostgreSQL, Microsoft Entra External ID behind a mockable identity adapter, and membership lifecycle tests.
+    prompt: Build a customer membership portal with a React and Vite frontend, TypeScript Azure Functions API, PostgreSQL, Microsoft Entra External ID behind a mockable identity adapter, and membership lifecycle tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/orders collection.
     tags:
       archetype: crud
       frontend: react
@@ -893,7 +897,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -939,6 +943,7 @@ stimuli:
             - build
             - test
             - integration
+            - local-runtime
             - security
             - cleanup
             - model
@@ -952,7 +957,7 @@ stimuli:
             - metric: authoritative_hard_gates_passed
               equals: true
   - name: crud-svelte-js-functions-sql-auth0
-    prompt: Build an event registration app with a Svelte frontend, JavaScript Azure Functions API, Azure SQL, Auth0 behind a mockable adapter, and registration plus authorization tests.
+    prompt: Build an event registration app with a Svelte frontend, JavaScript Azure Functions API, Azure SQL, Auth0 behind a mockable adapter, and registration plus authorization tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/expenses collection.
     tags:
       archetype: crud
       frontend: svelte
@@ -971,7 +976,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -1017,6 +1022,7 @@ stimuli:
             - build
             - test
             - integration
+            - local-runtime
             - security
             - cleanup
             - model
@@ -1267,7 +1273,7 @@ stimuli:
             - metric: authoritative_hard_gates_passed
               equals: true
   - name: multiservice-vue-functions-worker-cosmos-queue
-    prompt: Build an incident response system with a Vue and Vite frontend, C# Azure Functions API using Cosmos DB, a TypeScript Azure Functions queue worker for notifications, Microsoft Entra ID with mocked token validation, and cross-service tests.
+    prompt: Build an incident response system with a Vue and Vite frontend, C# Azure Functions API using Cosmos DB, a TypeScript Azure Functions queue worker for notifications, Microsoft Entra ID with mocked token validation, and cross-service tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/jobs collection.
     tags:
       archetype: multiservice
       frontend: vue
@@ -1286,7 +1292,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -1332,6 +1338,7 @@ stimuli:
             - build
             - test
             - integration
+            - local-runtime
             - security
             - cleanup
             - model

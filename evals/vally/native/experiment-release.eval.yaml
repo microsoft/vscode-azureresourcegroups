@@ -373,7 +373,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -429,7 +429,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -485,7 +485,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -541,7 +541,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -653,7 +653,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -709,7 +709,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable
@@ -933,7 +933,7 @@ stimuli:
       applicability-build: required
       applicability-test: required
       applicability-integration: required
-      applicability-local-runtime: not-applicable
+      applicability-local-runtime: required
       applicability-browser: not-applicable
       applicability-browser-journey: not-applicable
       applicability-accessibility: not-applicable

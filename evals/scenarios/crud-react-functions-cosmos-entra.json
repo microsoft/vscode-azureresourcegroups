@@ -1,8 +1,8 @@
 {
     "schemaVersion": "1",
     "id": "crud-react-functions-cosmos-entra",
-    "prompt": "Build a document review app with a React and Vite frontend, TypeScript Azure Functions API, Cosmos DB persistence, Microsoft Entra ID authentication with mocked token validation in tests, and review workflow coverage.",
-    "baselinePrompt": "Build a complete document review application using a React and Vite frontend, a TypeScript Azure Functions API, Cosmos DB persistence, and Microsoft Entra ID authentication with mocked token validation in tests, including review workflow coverage. Implement all frontend, backend, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "prompt": "Build a document review app with a React and Vite frontend, TypeScript Azure Functions API, Cosmos DB persistence, Microsoft Entra ID authentication with mocked token validation in tests, and review workflow coverage. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/reviews collection.",
+    "baselinePrompt": "Build a complete document review application using a React and Vite frontend, a TypeScript Azure Functions API, Cosmos DB persistence, and Microsoft Entra ID authentication with mocked token validation in tests, including review workflow coverage. Implement all frontend, backend, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/reviews collection.",
     "tags": {
         "archetype": "crud",
         "frontend": "react",
@@ -12,7 +12,9 @@
         "complexity": "medium"
     },
     "requirementsAnswers": {
-        "dataStores": ["CosmosDB"],
+        "dataStores": [
+            "CosmosDB"
+        ],
         "auth": "Microsoft Entra ID"
     },
     "validation": {
@@ -21,5 +23,31 @@
         "test": true,
         "lint": "if-present",
         "timeoutMinutes": 10
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 180,
+            "probes": [
+                {
+                    "name": "api health",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/health",
+                    "expectedStatus": 200
+                },
+                {
+                    "name": "reviews collection requires auth",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/reviews",
+                    "expectedStatus": 401
+                }
+            ],
+            "security": {
+                "publicPaths": [
+                    "http://127.0.0.1:7071/api/health"
+                ]
+            }
+        }
     }
 }

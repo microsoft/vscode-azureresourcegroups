@@ -1,8 +1,8 @@
 {
     "schemaVersion": "1",
     "id": "crud-react-functions-postgres-external-id",
-    "prompt": "Build a customer membership portal with a React and Vite frontend, TypeScript Azure Functions API, PostgreSQL, Microsoft Entra External ID behind a mockable identity adapter, and membership lifecycle tests.",
-    "baselinePrompt": "Build a complete customer membership portal using a React and Vite frontend, a TypeScript Azure Functions API, PostgreSQL, and Microsoft Entra External ID behind a mockable identity adapter, including membership lifecycle tests. Implement all frontend, backend, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "prompt": "Build a customer membership portal with a React and Vite frontend, TypeScript Azure Functions API, PostgreSQL, Microsoft Entra External ID behind a mockable identity adapter, and membership lifecycle tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/orders collection.",
+    "baselinePrompt": "Build a complete customer membership portal using a React and Vite frontend, a TypeScript Azure Functions API, PostgreSQL, and Microsoft Entra External ID behind a mockable identity adapter, including membership lifecycle tests. Implement all frontend, backend, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/orders collection.",
     "tags": {
         "archetype": "crud",
         "frontend": "react",
@@ -12,7 +12,9 @@
         "complexity": "high"
     },
     "requirementsAnswers": {
-        "dataStores": ["PostgreSQL"],
+        "dataStores": [
+            "PostgreSQL"
+        ],
         "auth": "Microsoft Entra External ID"
     },
     "validation": {
@@ -21,5 +23,31 @@
         "test": true,
         "lint": "if-present",
         "timeoutMinutes": 15
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 180,
+            "probes": [
+                {
+                    "name": "api health",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/health",
+                    "expectedStatus": 200
+                },
+                {
+                    "name": "orders collection requires auth",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/orders",
+                    "expectedStatus": 401
+                }
+            ],
+            "security": {
+                "publicPaths": [
+                    "http://127.0.0.1:7071/api/health"
+                ]
+            }
+        }
     }
 }
