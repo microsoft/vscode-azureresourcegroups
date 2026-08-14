@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { execFile, execFileSync } from 'child_process';
+import { execFile } from 'child_process';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -67,6 +67,7 @@ import {
     type DeploymentReadinessCommandRunner,
     type DeploymentReadinessResult,
 } from './deploymentReadiness';
+import { assertReproducibleSource } from './sourceProvenance';
 
 interface RunOptions {
     attempts: number;
@@ -147,7 +148,7 @@ async function main(): Promise<void> {
     const outputDirectory = path.resolve(options.outputDirectory
         ?? path.join(repoRoot, 'evals', 'results', started.toISOString().replace(/[:.]/g, '-')));
     await fs.mkdir(outputDirectory, { recursive: true });
-    const candidateCommit = getCandidateCommit(repoRoot);
+    const candidateCommit = assertReproducibleSource(repoRoot).commit;
     const agentAssetsHash = await computeAgentAssetsHash(repoRoot);
     const evaluationDefinition = await computeEvaluationDefinition(
         repoRoot,
@@ -1333,13 +1334,6 @@ function requireValue(args: string[], index: number, option: string): string {
         throw new Error(`${option} requires a value.`);
     }
     return value;
-}
-
-function getCandidateCommit(repoRoot: string): string {
-    return execFileSync('git', ['rev-parse', 'HEAD'], {
-        cwd: repoRoot,
-        encoding: 'utf8',
-    }).trim();
 }
 
 async function readRequiredFile(filePath: string): Promise<string> {
