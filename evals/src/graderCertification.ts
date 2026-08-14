@@ -155,13 +155,17 @@ async function runAcaCertification(
     if (!caseFilter || caseFilter === 'golden-local-runtime') {
         const localStart = Date.now();
         const local = await localValidator.validate(fixture, scenario, debugPlan);
+        const missingEvidence = missingGateEvidence(manifest.fixture.acaValidators, local);
         cases.push({
             id: 'golden-local-runtime',
             tier: 'aca',
             validator: 'local-runtime',
             expected: 'passed',
-            actual: localDetails(local),
-            passed: local.outcome === 'passed',
+            actual: [
+                ...localDetails(local),
+                ...missingEvidence.map(value => `missing-evidence: ${value}`),
+            ],
+            passed: local.outcome === 'passed' && missingEvidence.length === 0,
             durationMs: Date.now() - localStart,
         });
     }
@@ -302,6 +306,61 @@ function createCase(
         passed: expected === 'passed' ? actual.length === 0 : actual.includes(expected),
         durationMs: 0,
     };
+}
+
+/**
+ * A golden case that only checks `outcome === 'passed'` cannot distinguish a gate that ran and
+ * succeeded from one that never ran at all. Several gates skip themselves when their prerequisites
+ * are absent, so the fixture must prove each declared validator produced evidence.
+ */
+function missingGateEvidence(
+    validators: string[],
+    result: {
+        commands?: Array<{ kind?: string }>;
+        probes?: Array<unknown>;
+        browserChecks?: Array<{ journeyStatus?: string; accessibilityScanned?: boolean }>;
+        persistenceChecks?: Array<{ skipped?: boolean }>;
+        securityChecks?: Array<unknown>;
+    },
+): string[] {
+    const missing: string[] = [];
+    for (const validator of validators) {
+        switch (validator) {
+            case 'local-runtime':
+                if (!(result.probes ?? []).length) {
+                    missing.push('local-runtime produced no probe evidence');
+                }
+                break;
+            case 'browser':
+                if (!(result.browserChecks ?? []).some(value => value.journeyStatus === 'passed')) {
+                    missing.push('browser produced no completed journey evidence');
+                }
+                break;
+            case 'accessibility':
+                if (!(result.browserChecks ?? []).some(value => value.accessibilityScanned)) {
+                    missing.push('accessibility produced no scan evidence');
+                }
+                break;
+            case 'persistence':
+                if (!(result.persistenceChecks ?? []).some(value => !value.skipped)) {
+                    missing.push('persistence produced no unskipped evidence');
+                }
+                break;
+            case 'debugger-readiness':
+                if (!(result.commands ?? []).some(value => value.kind === 'debugger')) {
+                    missing.push('debugger-readiness produced no debugger evidence');
+                }
+                break;
+            case 'security':
+                if (!(result.securityChecks ?? []).length) {
+                    missing.push('security produced no evidence');
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    return missing;
 }
 
 function localDetails(result: {

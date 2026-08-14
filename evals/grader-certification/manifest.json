@@ -149,6 +149,27 @@
             "search": "    </main>",
             "replacement": "        <button></button>\n    </main>",
             "expectedCode": "localBrowserFailed"
+        },
+        {
+            "id": "persistence-not-durable",
+            "tier": "aca",
+            "validator": "local-runtime",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "path.join(__dirname, '..', 'data', 'items.json')",
+            "replacement": "path.join('/tmp', 'items-' + process.pid + '.json')",
+            "expectedCode": "localPersistenceFailed"
+        },
+        {
+            "id": "debug-port-mismatch",
+            "tier": "aca",
+            "validator": "local-runtime",
+            "file": ".vscode/launch.json",
+            "operation": "replace",
+            "search": "\"--inspect=9229\"",
+            "replacement": "\"--inspect=9229\",\n                \"--inspect-port=9331\"",
+            "comment": "The app still serves, but the inspector moves off the declared port. Debug-surface failures currently surface through the probe gate because probes carry debugPort; the dedicated debugger gate is certified by evals/test/debuggerPrerequisite.test.ts.",
+            "expectedCode": "localProbeFailed"
         }
     ]
 }

@@ -127,3 +127,41 @@ void test('the generated Node inspector check passes against a real inspector an
         await rm(workspace, { recursive: true, force: true });
     }
 });
+
+void test('a Node launch configuration verifies the inspector port declared in runtimeArgs', () => {
+    // A launch configuration carries no `port`; the debug surface is declared via --inspect.
+    const checks = expectChecks({
+        type: 'pwa-node',
+        request: 'launch',
+        runtimeArgs: ['--inspect=9229'],
+    });
+
+    assert.equal(checks.length, 1);
+    assert.match(checks[0].command, /127\.0\.0\.1:9229\/json\/list/);
+    assert.match(checks[0].command, /webSocketDebuggerUrl/);
+});
+
+void test('inspect argument forms all resolve to the port that will be verified', () => {
+    const cases: Array<[string, number]> = [
+        ['--inspect', 9229],
+        ['--inspect-brk', 9229],
+        ['--inspect=9333', 9333],
+        ['--inspect-brk=9333', 9333],
+        ['--inspect=0.0.0.0:9444', 9444],
+    ];
+    for (const [argument, expectedPort] of cases) {
+        const checks = expectChecks({ type: 'node', request: 'launch', runtimeArgs: [argument] });
+        assert.equal(checks.length, 1, `expected a check for ${argument}`);
+        assert.match(
+            checks[0].command,
+            new RegExp(`127\\.0\\.0\\.1:${expectedPort}/json/list`),
+            `expected port ${expectedPort} for ${argument}`,
+        );
+    }
+});
+
+void test('a Node launch configuration without an inspect flag declares no debug surface to verify', () => {
+    // Verifying an undeclared port would invent a requirement the project never claimed.
+    assert.equal(expectChecks({ type: 'node', request: 'launch', runtimeArgs: [] }).length, 0);
+    assert.equal(expectChecks({ type: 'node', request: 'launch' }).length, 0);
+});

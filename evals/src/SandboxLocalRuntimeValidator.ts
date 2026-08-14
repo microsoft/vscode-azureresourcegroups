@@ -2474,6 +2474,7 @@ export interface DebuggerPrerequisiteCheck {
 }
 
 const nodeDebuggerTypes = new Set(['node', 'pwa-node', 'node-terminal']);
+const defaultNodeInspectorPort = 9229;
 const browserDebuggerTypes = new Set(['chrome', 'pwa-chrome', 'msedge', 'pwa-msedge']);
 
 /**
@@ -2492,6 +2493,9 @@ export function resolveDebuggerPrerequisite(
     }
     if (configuration.request === 'attach' && nodeDebuggerTypes.has(type)) {
         return resolveNodeAttachPrerequisite(configuration);
+    }
+    if (configuration.request === 'launch' && nodeDebuggerTypes.has(type)) {
+        return resolveNodeLaunchPrerequisite(configuration);
     }
     if (configuration.request === 'launch' && browserDebuggerTypes.has(type)) {
         return resolveBrowserLaunchPrerequisite(configuration);
@@ -2521,6 +2525,55 @@ function resolveCoreClrPrerequisite(
  * endpoint for an attachable target reproduces what F5 does. A listening socket is not enough:
  * the port can accept a connection before the inspector publishes a debug target.
  */
+/**
+ * Node `launch` configurations expose their debug surface through an `--inspect` runtime argument
+ * rather than a `port` property. Without this the gate resolved zero checks for the most common
+ * Node shape, which reported "no failure" and was indistinguishable from a verified debugger.
+ */
+function resolveNodeLaunchPrerequisite(
+    configuration: LaunchConfiguration,
+): { checks: DebuggerPrerequisiteCheck[] } | { error: string } {
+    const port = readInspectPort(configuration);
+    if (port === undefined) {
+        return { checks: [] };
+    }
+    return {
+        checks: [{
+            command: createDebuggerRetryCommand(
+                `curl --silent --show-error --fail --max-time 5 http://127.0.0.1:${port}/json/list`
+                + ' 2>/dev/null | grep -q webSocketDebuggerUrl',
+                `Node inspector on port ${port} never published an attachable debug target.`,
+            ),
+            name: `Node inspector port ${port}`,
+            errorMessage: `Node launch target on port ${port} is not accepting a debugger.`,
+        }],
+    };
+}
+
+/**
+ * Accepts `--inspect`, `--inspect-brk`, and `--inspect=[host:]port` forms. A bare flag uses Node's
+ * default inspector port.
+ */
+function readInspectPort(configuration: LaunchConfiguration): number | undefined {
+    const runtimeArgs = Array.isArray(configuration.runtimeArgs)
+        ? configuration.runtimeArgs.filter((value): value is string => typeof value === 'string')
+        : [];
+    for (const argument of runtimeArgs) {
+        const match = /^--inspect(?:-brk)?(?:=(?:(?:\[[^\]]+\]|[^:]+):)?(\d+))?$/u.exec(argument.trim());
+        if (!match) {
+            continue;
+        }
+        if (match[1] === undefined) {
+            return defaultNodeInspectorPort;
+        }
+        const parsed = Number.parseInt(match[1], 10);
+        if (parsed > 0 && parsed < 65536) {
+            return parsed;
+        }
+    }
+    return undefined;
+}
+
 function resolveNodeAttachPrerequisite(
     configuration: LaunchConfiguration,
 ): { checks: DebuggerPrerequisiteCheck[] } | { error: string } {
