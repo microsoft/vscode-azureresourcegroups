@@ -19,6 +19,7 @@ import { type CreateProjectViewControllerType } from "../../views/utils/viewConf
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { recordModel } from "../projectSession";
+import { recordRecentPrompt } from "../recentPrompts";
 
 export type { CreateProjectViewControllerType };
 
@@ -57,6 +58,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
                 if (model) {
                     await recordModel(model);
                 }
+                await recordRecentPrompt(query);
 
                 const submissionOutcomeKey = 'submissionOutcome';
                 if (!(await ensureCopilotChatReady(context))) {

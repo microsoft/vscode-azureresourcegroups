@@ -12,6 +12,8 @@ export type CreateProjectViewControllerType = {
     planButtonLabel: string;
     modelLabel: string;
     modelOptions: string[];
+    /** Recently submitted project-creation prompts, newest-first, for input-history navigation. */
+    recentPrompts: string[];
 }
 
 export type DeploymentPlanViewStrings = {
