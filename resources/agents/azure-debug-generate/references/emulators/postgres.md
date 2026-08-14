@@ -10,12 +10,12 @@ postgres:16
 
 ## docker-compose Service Block
 
-Declare the local credentials **once** in a workspace-root `.env` file, then reference them
-everywhere else. Docker Compose interpolates `${...}` from `.env` (or the shell environment),
-so the same values feed the database service and every application service.
+Declare the local credentials **once** in a workspace-root `.env`, then reference them everywhere
+else. Compose interpolates `${...}` from `.env` (or the shell environment), so the same values feed
+the database service and every application service.
 
-`.env` at the workspace root — this file is required; without it Compose interpolates
-`${POSTGRES_USER}` to an empty string and the database silently fails to authenticate:
+`.env` is required — without it Compose interpolates `${POSTGRES_USER}` to an empty string and the
+database silently fails to authenticate:
 
 ```
 POSTGRES_USER=postgres
@@ -23,11 +23,15 @@ POSTGRES_PASSWORD=postgres
 POSTGRES_DB=localdev
 ```
 
-> **Never inline a concrete `user:password@host` URL** in a generated file. Build the URL from
-> the discrete variables above. Besides hard-coding credentials, concrete credential literals are
-> rewritten by secret-redaction filters, which silently corrupts the generated file — a masked
-> value starting with `*` is a fatal YAML parse error, because YAML reads a leading `*` as an
-> alias reference.
+> ⛔ **`.gitignore` must list `.env` before you create it.** A credential that reaches a commit is
+> compromised and has to be rotated — deleting it in a later commit leaves the value in history and
+> in every existing clone and fork. Private repositories are no exception. If the project has no
+> `.gitignore`, or has one that omits `.env`, fix that before writing the file.
+
+> **Never inline a concrete `user:password@host` URL** in a generated file — build it from the
+> variables above. Beyond hard-coding a credential, such literals are rewritten by secret-redaction
+> filters, and a masked value starting with `*` is a fatal YAML parse error: YAML reads a leading
+> `*` as an alias reference.
 
 ```yaml
 services:
@@ -75,15 +79,14 @@ Declare these in the workspace-root **`.env`**, alongside the `POSTGRES_*` value
 > Use whichever variable name the project's ORM or SDK expects. Both forms above are shown as reference.
 > When the value is set on a docker-compose service, replace the `localhost` host with `postgres`.
 
-> **`.env` must declare every key `.env.example` declares.** `.env.example` is documentation; nothing
-> loads it. A key that appears only in `.env.example` is undefined at run time.
+> **`.env` must declare every key `.env.example` declares.** `.env.example` is documentation —
+> nothing loads it, so a key that appears only there is undefined at run time.
 
 > **A runtime settings file does not cover host-run tasks.** `local.settings.json` is read by the
-> Azure Functions host, and a compose `environment:` block is read by the container it belongs to.
-> Neither reaches a VS Code task that runs a tool directly on the host, such as
-> `npm run db:migrate`. A migration client handed an undefined connection string fails with
-> "Unable to acquire a connection", which reads like an unready database but is a missing variable —
-> the client never opened a socket. Put the value in `.env` so both paths resolve it.
+> Azure Functions host and a compose `environment:` block by its own container; neither reaches a
+> VS Code task that runs a tool directly on the host, such as `npm run db:migrate`. That client
+> fails with "Unable to acquire a connection", which reads like an unready database but is a
+> missing variable — it never opened a socket. Put the value in `.env` so both paths resolve it.
 
 ## Healthcheck
 

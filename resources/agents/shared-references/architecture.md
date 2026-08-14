@@ -496,6 +496,12 @@ packages = [
 
 ## .gitignore Additions
 
+> ⛔ **Ignore `.env` and `local.settings.json` before creating them.** They hold real credential
+> values. A secret that reaches a commit is compromised the moment it is pushed, and deleting it in
+> a later commit does **not** undo that — the value stays in history and in every clone and fork
+> that already has it. Recovery means rotating the credential, not editing a file. This applies to
+> private repositories exactly as it does to public ones: no secret belongs in any commit, ever.
+
 ```gitignore
 # Environment
 .env

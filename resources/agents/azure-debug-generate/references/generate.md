@@ -77,6 +77,11 @@ or the shell environment, never from a service's own `environment:` block. Whene
 file references a variable — a compose service, a host task, or a connection string — `.env` must
 declare every variable it needs, or the value silently becomes an empty string.
 
+> ⛔ **`.gitignore` must list `.env` before you create it.** A credential that reaches a commit is
+> compromised and has to be rotated — deleting it in a later commit leaves it in history, in every
+> clone, and in every fork. Private repositories are no exception. If the project has no
+> `.gitignore`, or has one that omits `.env`, fix that first.
+
 See `emulators/{name}.md` § Required App Environment Variables for the per-emulator variable set.
 
 ---
