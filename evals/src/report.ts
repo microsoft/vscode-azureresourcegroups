@@ -7,6 +7,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { isLocalRuntimeInfrastructureFailureCode } from './SandboxLocalRuntimeValidator';
 import { isSandboxInfrastructureFailureCode } from './SandboxProjectValidator';
+import { isDeploymentInfrastructureFailureCode } from './deploymentReadiness';
 import { SandboxVsCodeParityResult } from './SandboxVsCodeParityValidator';
 import { LiveDeploymentResult } from './liveDeploy';
 import {
@@ -371,6 +372,7 @@ export function classifyFailure(attempt: EvaluationAttempt): FailureCategory | u
     if (
         isSandboxInfrastructureFailureCode(attempt.failureCode)
         || isLocalRuntimeInfrastructureFailureCode(attempt.failureCode)
+        || isDeploymentInfrastructureFailureCode(attempt.failureCode)
     ) {
         return 'infrastructure_failure';
     }

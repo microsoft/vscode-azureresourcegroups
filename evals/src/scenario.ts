@@ -30,8 +30,32 @@ export interface CorEvaluationScenario {
             probes: LocalAcceptanceProbe[];
             storageEvents?: StorageEventContract[];
             debugParity?: DebugParityContract;
+            security?: SecurityContract;
         };
     };
+}
+
+/**
+ * A scaffolded project cannot reach a real identity provider, so the gate asserts the property
+ * that does not need one: an app that ships auth configuration must refuse to serve protected
+ * data to a caller with no credentials, and must still serve its public paths so the refusal is
+ * proven to be selective rather than an app that is simply down.
+ */
+export interface SecurityContract {
+    /**
+     * Paths that must stay reachable without credentials, such as health endpoints. They double
+     * as the liveness control for the negative checks.
+     */
+    publicPaths: string[];
+    /**
+     * Defaults to every declared backend probe URL that is not a public path, so the common case
+     * needs no extra authoring.
+     */
+    protectedPaths?: string[];
+    /**
+     * Status codes that count as a correct refusal. Defaults to 401 and 403.
+     */
+    expectedUnauthorizedStatuses?: number[];
 }
 
 export interface DebugParityContract {

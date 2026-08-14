@@ -207,7 +207,10 @@ export function isDeploymentInfrastructureFailureCode(value: string | undefined)
     return value === 'azdUnavailable'
         || value === 'containerRuntimeUnavailable'
         || value === 'deploymentNetworkBlocked'
-        || value === 'deploymentRunnerError';
+        || value === 'deploymentRunnerError'
+        // The deploy agent's `azure-prepare` skill is an external dependency of the evaluation
+        // host, not something the generated project controls.
+        || value === 'deploymentSkillUnavailable';
 }
 
 async function runCommand(

@@ -17,6 +17,7 @@ import {
     setProjectPlanExecutionMode,
 } from '../../src/webviews/copilotOnRails/views/utils/projectPlanStatus';
 import { CopilotSdkAgentExecutor, agentStallMessagePrefix } from './CopilotSdkAgentExecutor';
+import { DeploymentSkillProvenance, ensureDeploymentSkill } from './deploymentSkill';
 import {
     isLocalRuntimeInfrastructureFailureCode,
     SandboxLocalRuntimeValidationResult,
@@ -79,12 +80,13 @@ interface RunOptions {
 }
 
 export interface EvaluationStageResult {
-    name: 'requirements' | 'plan' | 'scaffold' | 'repair' | 'build' | 'integration' | 'integration-repair' | 'integration-build' | 'debug-plan' | 'debug-generate' | 'local-repair' | 'local-artifacts' | 'local-runtime' | 'deploy-plan' | 'deploy-generate' | 'deploy-readiness';
+    name: 'requirements' | 'plan' | 'scaffold' | 'repair' | 'build' | 'integration' | 'integration-repair' | 'integration-build' | 'debug-plan' | 'debug-generate' | 'local-repair' | 'local-artifacts' | 'local-runtime' | 'deploy-plan' | 'deploy-skill' | 'deploy-generate' | 'deploy-readiness';
     agentRun?: CorAgentRunResult;
     validation?: ArtifactValidationResult;
     buildValidation?: SandboxProjectValidationResult;
     localRuntimeValidation?: SandboxLocalRuntimeValidationResult;
     deploymentReadiness?: DeploymentReadinessResult;
+    deploymentSkill?: DeploymentSkillProvenance;
     gateCalled?: boolean;
 }
 
@@ -1033,6 +1035,24 @@ export async function runDeploymentStages(input: {
     stages: EvaluationStageResult[];
     deploymentCommandRunner?: DeploymentReadinessCommandRunner;
 }): Promise<void> {
+    // The production deploy agent treats `.agents/skills/azure-prepare/SKILL.md` as its
+    // mandatory operating manual. Without it the agent improvises, so the run would grade a
+    // missing dependency instead of the product.
+    let skill: DeploymentSkillProvenance;
+    try {
+        skill = await ensureDeploymentSkill(input.workspace, {
+            cacheRoot: path.join(os.tmpdir(), 'cor-eval-azure-prepare'),
+            ref: process.env.COR_EVAL_AZURE_PREPARE_REF,
+        });
+    } catch (error) {
+        throw new StageFailure(
+            'deploy-generate',
+            'deploymentSkillUnavailable',
+            error instanceof Error ? error.message : String(error),
+        );
+    }
+    input.stages.push({ name: 'deploy-skill', deploymentSkill: skill, gateCalled: true });
+
     const deployGate = { called: false };
     const deployRun = await input.executor.run({
         agentName: 'azure-deploy',

@@ -162,6 +162,14 @@ interface LocalRuntimeEvidence {
     browserChecks?: BrowserEvidence[];
     persistenceChecks?: SuccessEvidence[];
     workerEvents?: SuccessEvidence[];
+    securityChecks?: SecurityEvidence[];
+}
+
+interface SecurityEvidence {
+    name?: string;
+    kind?: string;
+    success?: boolean;
+    responseStatus?: number;
 }
 
 interface StageEvidence {

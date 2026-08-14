@@ -1282,6 +1282,23 @@ export function persistenceVerdict(
     };
 }
 
+/**
+ * A run passes only when every attempted check passed *and* the evidence proves enforcement is
+ * selective: at least one public path stayed reachable and at least one protected path was
+ * refused. An app that is simply down refuses everything, and would otherwise look secure.
+ */
+export function securityVerdict(
+    checks: ReadonlyArray<{ kind?: string; success?: boolean }>,
+): GateVerdict {
+    const present = checks.length > 0;
+    const conclusive = checks.some(check => check.kind === 'public')
+        && checks.some(check => check.kind === 'unauthenticated');
+    return {
+        passed: present && conclusive && checks.every(check => check.success === true),
+        present,
+    };
+}
+
 function declaredApplicability(stimulus: Stimulus): Record<string, boolean> {
     const allGates = Object.values(GATE_GROUPS).flat() as string[];
     return Object.fromEntries(allGates.map(gate => {
@@ -1554,10 +1571,18 @@ function gatePassed(
                 ],
             };
         }
-        case 'security':
-            // Declared in GATE_GROUPS and required by scenarios, but no evidence is collected
-            // yet. Reporting this explicitly stops it from being mistaken for absent evidence.
-            return { passed: false, present: false, evidence: [...evidence, 'gate "security" has no implementation'] };
+        case 'security': {
+            const checks = localEvidence.flatMap(value => value.securityChecks ?? []);
+            const verdict = securityVerdict(checks);
+            return {
+                ...verdict,
+                evidence: [
+                    ...evidence,
+                    ...checks.map(check =>
+                        `${check.name}: ${check.success ? 'passed' : `failed (status ${check.responseStatus ?? 'none'})`}`),
+                ],
+            };
+        }
     }
 }
 

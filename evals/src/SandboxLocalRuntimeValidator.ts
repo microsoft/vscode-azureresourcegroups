@@ -28,10 +28,16 @@ import {
 import {
     CorEvaluationScenario,
     LocalAcceptanceProbe,
+    SecurityContract,
     StorageBlobEventContract,
     StorageEventContract,
     StorageQueueEventContract,
 } from './scenario';
+import {
+    SecurityCheckPlan,
+    isSecurityPlanConclusive,
+    planSecurityChecks,
+} from './securityChecks';
 
 const execFileAsync = promisify(execFile);
 const maxLogLength = 20_000;
@@ -86,7 +92,7 @@ interface VsCodeTask {
 }
 
 export interface LocalRuntimeCommandResult {
-    kind: 'setup' | 'task' | 'probe' | 'debugger' | 'diagnostic' | 'restart' | 'storage-event';
+    kind: 'setup' | 'task' | 'probe' | 'debugger' | 'diagnostic' | 'restart' | 'storage-event' | 'security';
     name: string;
     command: string;
     success: boolean;
@@ -185,6 +191,25 @@ export interface LocalRuntimeStorageEventResult {
     error?: string;
 }
 
+export interface LocalRuntimeSecurityResult {
+    name: string;
+    url: string;
+    /**
+     * `public` proves the server is alive and enforcing selectively. Without it a crashed or
+     * blanket-deny app would satisfy every negative check and pass the gate for the wrong reason.
+     */
+    kind: 'unauthenticated' | 'malformed-token' | 'public';
+    expectedStatuses: number[];
+    responseStatus?: number;
+    /**
+     * Retained only for failures, where the body is the evidence that protected data leaked.
+     */
+    responseExcerpt?: string;
+    success: boolean;
+    durationMs: number;
+    error?: string;
+}
+
 export interface SandboxLocalRuntimeValidationResult {
     outcome: 'passed' | 'failed';
     failureCode?:
@@ -201,6 +226,7 @@ export interface SandboxLocalRuntimeValidationResult {
         | 'localBrowserFailed'
         | 'localPersistenceFailed'
         | 'localStorageEventFailed'
+        | 'localSecurityFailed'
         | 'localDebuggerUnavailable'
         | 'localSandboxCleanupFailed';
     error?: string;
@@ -209,6 +235,7 @@ export interface SandboxLocalRuntimeValidationResult {
     browserChecks?: LocalRuntimeBrowserResult[];
     persistenceChecks?: LocalRuntimePersistenceResult[];
     workerEvents?: LocalRuntimeStorageEventResult[];
+    securityChecks?: LocalRuntimeSecurityResult[];
 }
 
 interface LaunchedProcess {
@@ -290,6 +317,7 @@ export class SandboxLocalRuntimeValidator {
         const browserChecks: LocalRuntimeBrowserResult[] = [];
         const persistenceChecks: LocalRuntimePersistenceResult[] = [];
         const workerEvents: LocalRuntimeStorageEventResult[] = [];
+        const securityChecks: LocalRuntimeSecurityResult[] = [];
         try {
             await createWorkspaceArchive(workspace, archivePath);
             if (contract.compound) {
@@ -320,12 +348,14 @@ export class SandboxLocalRuntimeValidator {
                     persistenceChecks,
                     workerEvents,
                     group.probes.some(probe => probe.target === 'worker') ? (contract.storageEvents ?? []) : [],
+                    contract.security,
+                    securityChecks,
                 );
                 if (result) {
                     return result;
                 }
             }
-            return { outcome: 'passed', commands, probes, browserChecks, persistenceChecks, workerEvents };
+            return { outcome: 'passed', commands, probes, browserChecks, persistenceChecks, workerEvents, securityChecks };
         } finally {
             await fs.rm(archivePath, { force: true });
         }
@@ -592,6 +622,8 @@ export class SandboxLocalRuntimeValidator {
         persistenceChecks: LocalRuntimePersistenceResult[],
         workerEvents: LocalRuntimeStorageEventResult[],
         storageEvents: StorageEventContract[],
+        securityContract: SecurityContract | undefined,
+        securityChecks: LocalRuntimeSecurityResult[],
     ): Promise<SandboxLocalRuntimeValidationResult | undefined> {
         const ecosystem = runtimeToEcosystem(configuration.runtime);
         if (!ecosystem) {
@@ -775,6 +807,19 @@ export class SandboxLocalRuntimeValidator {
                         break;
                     }
                 }
+            }
+            if (!validationFailure) {
+                validationFailure = await this.runSecurityChecks(
+                    sandboxId,
+                    securityContract,
+                    acceptanceProbes,
+                    commands,
+                    probes,
+                    browserChecks,
+                    persistenceChecks,
+                    workerEvents,
+                    securityChecks,
+                );
             }
             if (!validationFailure) {
                 validationFailure = await this.runDebuggerPrerequisites(
@@ -1360,6 +1405,104 @@ export class SandboxLocalRuntimeValidator {
             success: postRestart.browser.success,
             durationMs: Date.now() - started,
             error: postRestart.browser.error,
+        };
+    }
+
+    /**
+     * The gate is a hard release blocker, so a contract that cannot produce conclusive evidence
+     * fails rather than passing on a technicality.
+     */
+    private async runSecurityChecks(
+        sandboxId: string,
+        securityContract: SecurityContract | undefined,
+        acceptanceProbes: LocalAcceptanceProbe[],
+        commands: LocalRuntimeCommandResult[],
+        probes: LocalRuntimeProbeResult[],
+        browserChecks: LocalRuntimeBrowserResult[],
+        persistenceChecks: LocalRuntimePersistenceResult[],
+        workerEvents: LocalRuntimeStorageEventResult[],
+        securityChecks: LocalRuntimeSecurityResult[],
+    ): Promise<SandboxLocalRuntimeValidationResult | undefined> {
+        if (!securityContract) {
+            return undefined;
+        }
+        const plan = planSecurityChecks(securityContract, acceptanceProbes);
+        const fail = (error: string): SandboxLocalRuntimeValidationResult => failure(
+            'localSecurityFailed',
+            error,
+            commands,
+            probes,
+            browserChecks,
+            persistenceChecks,
+            workerEvents,
+            securityChecks,
+        );
+        if (!isSecurityPlanConclusive(plan)) {
+            return fail(
+                'The security contract produced no conclusive checks: it needs at least one public '
+                + 'path and one protected path.',
+            );
+        }
+        for (const check of plan) {
+            const { result, command } = await this.runSecurityCheck(sandboxId, check);
+            commands.push(command);
+            securityChecks.push(result);
+            if (!result.success) {
+                return fail(`Security check "${check.name}" failed. ${result.error ?? ''}`.trim());
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * Runs one negative-authorization request. The app is already known to be up by this point,
+     * so a single attempt is enough and a non-answer is itself a failure.
+     */
+    private async runSecurityCheck(
+        sandboxId: string,
+        check: SecurityCheckPlan,
+    ): Promise<{ result: LocalRuntimeSecurityResult; command: LocalRuntimeCommandResult }> {
+        const started = Date.now();
+        const bodyPath = '/tmp/cor-security-body';
+        const headerArguments = Object.entries(check.headers ?? {})
+            .map(([name, value]) => `--header ${shellQuote(`${name}: ${value}`)}`)
+            .join(' ');
+        const script = [
+            `code=$(curl --silent --show-error --output ${shellQuote(bodyPath)}`,
+            `--write-out '%{http_code}' --max-time 20 ${headerArguments} ${shellQuote(check.url)} || true);`,
+            `printf 'COR_STATUS:%s\\nCOR_HEADERS_BEGIN\\n\\nCOR_BODY_BEGIN\\n' "$code";`,
+            `cat ${shellQuote(bodyPath)} 2>/dev/null || true`,
+        ].join(' ');
+        const commandResult = await this.runCommand(
+            sandboxId,
+            'security',
+            check.name,
+            script,
+            '/workspace',
+            45000,
+        );
+        const evidence = parseHttpProbeEvidence(commandResult.stdout);
+        const success = evidence.status !== undefined
+            && check.expectedStatuses.includes(evidence.status);
+        // A refusal body is uninteresting; a leak is the whole finding, so only failures keep it.
+        const responseExcerpt = success ? undefined : evidence.body?.slice(0, 500);
+        return {
+            command: { ...commandResult, success },
+            result: {
+                name: check.name,
+                url: check.url,
+                kind: check.kind,
+                expectedStatuses: check.expectedStatuses,
+                responseStatus: evidence.status,
+                responseExcerpt,
+                success,
+                durationMs: Date.now() - started,
+                error: success
+                    ? undefined
+                    : evidence.status === undefined
+                        ? `No HTTP response from ${check.url}.`
+                        : `Expected ${check.expectedStatuses.join(' or ')} but got ${evidence.status}.`,
+            },
         };
     }
 
@@ -2593,6 +2736,7 @@ function failure(
     browserChecks?: LocalRuntimeBrowserResult[],
     persistenceChecks?: LocalRuntimePersistenceResult[],
     workerEvents?: LocalRuntimeStorageEventResult[],
+    securityChecks?: LocalRuntimeSecurityResult[],
 ): SandboxLocalRuntimeValidationResult {
     return {
         outcome: 'failed',
@@ -2603,6 +2747,7 @@ function failure(
         browserChecks,
         persistenceChecks,
         workerEvents,
+        securityChecks,
     };
 }
 
