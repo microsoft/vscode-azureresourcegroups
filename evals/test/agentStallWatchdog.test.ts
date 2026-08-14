@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { agentStallMessagePrefix, createStallWatchdog } from '../src/CopilotSdkAgentExecutor';
+import { agentStallMessagePrefix, createStallWatchdog, stallTimeoutMs } from '../src/CopilotSdkAgentExecutor';
 
 void test('a silent session is reported as stalled once the silence budget elapses', async () => {
     const watchdog = createStallWatchdog(50);
@@ -64,4 +64,29 @@ void test('a disposed watchdog does not report a stall afterwards', async () => 
         delay(200).then(() => 'quiet'),
     ]);
     assert.equal(outcome, 'quiet');
+});
+
+void test('the stall threshold scales with concurrency instead of being hardcoded', () => {
+    // Raising workers slows individual turns, so a budget tuned for one worker would report
+    // healthy-but-slow turns as stalls at eight. Keep the safe default when unset.
+    const previous = process.env.COR_EVAL_STALL_TIMEOUT_MS;
+    try {
+        delete process.env.COR_EVAL_STALL_TIMEOUT_MS;
+        assert.equal(stallTimeoutMs(), 90 * 1000);
+
+        process.env.COR_EVAL_STALL_TIMEOUT_MS = '180000';
+        assert.equal(stallTimeoutMs(), 180 * 1000);
+
+        // A malformed or nonsensical value must not silently disable stall detection.
+        for (const value of ['not-a-number', '0', '-5', '']) {
+            process.env.COR_EVAL_STALL_TIMEOUT_MS = value;
+            assert.equal(stallTimeoutMs(), 90 * 1000, `"${value}" should fall back to the default`);
+        }
+    } finally {
+        if (previous === undefined) {
+            delete process.env.COR_EVAL_STALL_TIMEOUT_MS;
+        } else {
+            process.env.COR_EVAL_STALL_TIMEOUT_MS = previous;
+        }
+    }
 });

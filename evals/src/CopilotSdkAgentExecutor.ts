@@ -23,6 +23,16 @@ const defaultTimeoutMs = 5 * 60 * 1000;
 const defaultStallTimeoutMs = 90 * 1000;
 const sdkLogLevels = ['error', 'warning', 'info', 'debug'] as const;
 
+/**
+ * The stall threshold is coupled to how many agent sessions run at once: concurrency slows
+ * individual turns, so a budget tuned for one worker starts reporting healthy-but-slow turns as
+ * stalls at eight. Configurable so raising workers does not require a code change.
+ */
+export function stallTimeoutMs(): number {
+    const configured = Number(process.env.COR_EVAL_STALL_TIMEOUT_MS);
+    return Number.isFinite(configured) && configured > 0 ? configured : defaultStallTimeoutMs;
+}
+
 type SdkLogLevel = typeof sdkLogLevels[number];
 
 /**
@@ -144,7 +154,7 @@ export class CopilotSdkAgentExecutor implements CorAgentExecutor {
                 },
             });
             sessionId = session.sessionId;
-            const stall = createStallWatchdog(request.stallTimeoutMs ?? defaultStallTimeoutMs);
+            const stall = createStallWatchdog(request.stallTimeoutMs ?? stallTimeoutMs());
             const unsubscribe = session.on((event: SessionEvent) => {
                 stall.recordActivity();
                 capture = reduceCorAgentEvent(capture, event);
