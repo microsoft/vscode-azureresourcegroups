@@ -64,7 +64,6 @@ import {
 import { CorEvaluationScenario, loadScenarios } from './scenario';
 import {
     evaluateDeploymentReadiness,
-    isDeploymentInfrastructureFailureCode,
     type DeploymentReadinessCommandRunner,
     type DeploymentReadinessResult,
 } from './deploymentReadiness';
@@ -1087,7 +1086,10 @@ export async function runDeploymentStages(input: {
         deploymentReadiness: readiness,
         gateCalled: deployGate.called,
     });
-    if (readiness.outcome !== 'passed' && !isDeploymentInfrastructureFailureCode(readiness.failureCode)) {
+    // An infrastructure failure still means the deploy gate rendered no verdict. Swallowing it here
+    // would let the run report autonomous_success on evidence it never collected; throwing lets the
+    // report classify it as infrastructure and exclude the attempt instead of counting it as a pass.
+    if (readiness.outcome !== 'passed') {
         throw new StageFailure(
             'deploy-readiness',
             readiness.failureCode ?? 'deploymentArtifactsInvalid',

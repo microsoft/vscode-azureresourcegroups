@@ -113,3 +113,19 @@ void test('a missing azure-prepare skill is infrastructure, not a product defect
         'infrastructure_failure',
     );
 });
+
+void test('an infrastructure deploy failure is excluded, never counted as a pass', async () => {
+    // Regression: runDeploymentStages used to swallow infrastructure failures, letting a run that
+    // never produced a deploy verdict report autonomous_success. Absent evidence and passing
+    // evidence are different release signals, so this must classify as infrastructure and be
+    // excluded from product-quality rates rather than inflate them.
+    const category = classifyFailure({
+        runId: 'deploy-infra-regression',
+        scenarioId: 'api-ts-functions-minimal',
+        attempt: 1,
+        outcome: 'failed',
+        failedStage: 'deploy-readiness',
+        failureCode: 'containerRuntimeUnavailable',
+    } as Parameters<typeof classifyFailure>[0]);
+    assert.equal(category, 'infrastructure_failure');
+});
