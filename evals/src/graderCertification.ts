@@ -69,8 +69,16 @@ interface CertificationCase {
 }
 
 /**
- * Sandbox lifecycle errors. `sandboxCommandFailed` is deliberately excluded -- that is a real
- * product signal (a generated build or test command failed) and several mutations expect it.
+ * Sandbox lifecycle and host-environment errors. Two codes are deliberately excluded:
+ *
+ *   `sandboxCommandFailed` -- a generated build or test command failed. Real product signal,
+ *       and several mutations legitimately expect it.
+ *   `localContainerRegistryUnavailable` -- an image pull failed. Ambiguous: the generated compose
+ *       file may reference an image that does not exist, which is a genuine product defect.
+ *       Classifying it as infrastructure would hide those, so it stays a product signal.
+ *
+ * Everything below describes the host failing to provide something the harness needed, which
+ * cannot be evidence for or against a grader.
  */
 const INFRASTRUCTURE_CODES = new Set([
     'localSandboxCleanupFailed',
@@ -79,6 +87,11 @@ const INFRASTRUCTURE_CODES = new Set([
     'sandboxCleanupFailed',
     'sandboxCreateFailed',
     'sandboxSetupFailed',
+    'localToolchainUnavailable',
+    'localDebuggerUnavailable',
+    'containerRuntimeUnavailable',
+    'azdUnavailable',
+    'deploymentSkillUnavailable',
 ]);
 
 function classifyCase(actual: string[], passed: boolean): 'passed' | 'failed' | 'inconclusive' {
