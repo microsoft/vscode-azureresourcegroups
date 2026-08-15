@@ -1033,6 +1033,7 @@
         "eval:cor:graders:certify": "tsx evals/src/graderCertification.ts",
         "eval:cor:graders:certify:aca": "tsx evals/src/graderCertification.ts --aca",
         "eval:cor:graders:certify:deploy": "tsx evals/src/graderCertification.ts --deploy",
+        "eval:cor:gates:health": "tsx evals/src/gateHealth.ts",
         "eval:cor:vally": "tsx evals/src/vally.ts",
         "eval:cor:vally:lint": "vally lint --strict --eval-spec evals/vally/eval.yaml evals/vally",
         "eval:cor:vally:oracle": "vally oracle --eval-spec evals/vally/eval.yaml",
