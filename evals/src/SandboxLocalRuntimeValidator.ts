@@ -1853,7 +1853,13 @@ export function createHttpProbeCommand(
     }
 
     const azuriteDevelopmentAccount = 'devstoreaccount1';
-    const azuriteDevelopmentKey = 'Eby8vdM02xNOcqFeqCnf2Jw==';
+    // Azurite's well-known development account key. This is a published constant, not a secret:
+    // https://learn.microsoft.com/azure/storage/common/storage-use-azurite#well-known-storage-account-and-key
+    // It must match byte-for-byte or Azurite rejects every request with 403 AuthenticationFailed,
+    // which silently fails the storage-event probe no matter how correct the generated app is.
+    // Pinned by azuriteDevelopmentKey.test.ts.
+    const azuriteDevelopmentKey =
+        'Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==';
     const storageApiVersion = '2023-11-03';
 
     export function createAzureStorageSharedKeyAuthorization(
