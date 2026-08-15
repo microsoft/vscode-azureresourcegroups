@@ -58,7 +58,34 @@ interface CertificationCase {
     expected: string;
     actual: string[];
     passed: boolean;
+    /**
+     * `inconclusive` means the sandbox control plane broke before the grader could render a
+     * verdict. That is not evidence the grader is wrong, and recording it as a failure was
+     * making certification results depend on ACA's health: the same suite scored 9/9, then
+     * 1/9, then 5/9 with no code change in between.
+     */
+    classification?: 'passed' | 'failed' | 'inconclusive';
     durationMs: number;
+}
+
+/**
+ * Sandbox lifecycle errors. `sandboxCommandFailed` is deliberately excluded -- that is a real
+ * product signal (a generated build or test command failed) and several mutations expect it.
+ */
+const INFRASTRUCTURE_CODES = new Set([
+    'localSandboxCleanupFailed',
+    'localSandboxCreateFailed',
+    'localSandboxSetupFailed',
+    'sandboxCleanupFailed',
+    'sandboxCreateFailed',
+    'sandboxSetupFailed',
+]);
+
+function classifyCase(actual: string[], passed: boolean): 'passed' | 'failed' | 'inconclusive' {
+    if (passed) {
+        return 'passed';
+    }
+    return actual.some(code => INFRASTRUCTURE_CODES.has(code)) ? 'inconclusive' : 'failed';
 }
 
 interface CertificationReport {
@@ -108,6 +135,9 @@ async function main(): Promise<void> {
             ? await runOfflineCertification(manifest, fixture, scenario)
             : await runAcaCertification(manifest, fixture, scenario, caseFilter);
     }
+    cases = cases.map(value => ({ ...value, classification: classifyCase(value.actual, value.passed) }));
+    const inconclusive = cases.filter(value => value.classification === 'inconclusive');
+    const genuinelyFailed = cases.filter(value => value.classification === 'failed');
     const report: CertificationReport = {
         schemaVersion: 1,
         generatedAt: new Date().toISOString(),
@@ -122,6 +152,20 @@ async function main(): Promise<void> {
         fs.writeFile(path.join(outputDirectory, 'report.md'), renderMarkdown(report)),
     ]);
     console.log(`${report.outcome.toUpperCase()}: ${cases.filter(value => value.passed).length}/${cases.length} grader certification cases passed.`);
+    if (genuinelyFailed.length > 0) {
+        console.log(`  ${genuinelyFailed.length} grader mismatch(es) -- the gate did not detect what it claims to detect:`);
+        for (const value of genuinelyFailed) {
+            console.log(`    ${value.id}: expected ${value.expected}, got ${value.actual.join(', ') || 'passed'}`);
+        }
+    }
+    if (inconclusive.length > 0) {
+        // Not counted as grader defects: the sandbox control plane failed before a verdict existed.
+        console.log(`  ${inconclusive.length} INCONCLUSIVE (sandbox infrastructure failed, grader never rendered a verdict):`);
+        for (const value of inconclusive) {
+            console.log(`    ${value.id}: ${value.actual.filter(code => INFRASTRUCTURE_CODES.has(code)).join(', ')}`);
+        }
+        console.log('  Re-run these cases; they are not evidence for or against the graders.');
+    }
     if (report.outcome !== 'passed') {
         process.exitCode = 1;
     }
@@ -394,13 +438,14 @@ function createCase(
     expected: string,
     actual: string[],
 ): CertificationCase {
+    const passed = expected === 'passed' ? actual.length === 0 : actual.includes(expected);
     return {
         id,
         tier,
         validator,
         expected,
         actual,
-        passed: expected === 'passed' ? actual.length === 0 : actual.includes(expected),
+        passed,
         durationMs: 0,
     };
 }
