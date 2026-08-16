@@ -73,7 +73,7 @@ Follow the generation steps in [generate.md](references/generate.md) in order.
 | VS Code Debug Config | `.vscode/launch.json` — see [project-types/](references/project-types/) and [runtimes/](references/runtimes/) |
 | VS Code Build Config | `.vscode/tasks.json` — see [project-types/](references/project-types/) and [runtimes/](references/runtimes/) |
 | VS Code Extensions | `.vscode/extensions.json` — see [generate.md](references/generate.md) § assembly protocol |
-| VS Code Settings | `.vscode/settings.json` — always includes `"debug.onTaskErrors": "debugAnyway"` (merged, not overwritten); see [generate.md](references/generate.md) § assembly protocol and § Required Debug Settings |
+| VS Code Settings | `.vscode/settings.json` — see [generate.md](references/generate.md) § assembly protocol |
 | Connection Strings | `local.settings.json` or `.env` |
 | Convenience Scripts | Runtime-specific script runner (see [runtimes/](references/runtimes/)) |
 | API Test Collections | `api-test-collections/{service-id}/<test-name>/invoke.{sh,ps1}` |
