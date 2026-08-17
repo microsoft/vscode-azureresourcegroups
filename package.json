@@ -29,7 +29,8 @@
     ],
     "preview": true,
     "activationEvents": [
-        "onFileSystem:azureResourceGroups"
+        "onFileSystem:azureResourceGroups",
+        "onCommand:copilotOnRails.createProjectWithCopilot"
     ],
     "main": "./main.js",
     "contributes": {
