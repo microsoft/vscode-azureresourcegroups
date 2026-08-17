@@ -1071,6 +1071,17 @@ function createExecutedStimulus(input: Stimulus, adapted: Stimulus): Stimulus {
 
 interface AuthoritativeGate {
     status: 'passed' | 'failed' | 'not-applicable';
+    /**
+     * True when an upstream gate stopped the run before this gate could execute, so the gate
+     * rendered no verdict of its own.
+     *
+     * The status deliberately stays `failed`: a required gate that never ran must not be scored as
+     * a pass. But rolling these into per-gate failure counts manufactures failures the product
+     * never earned -- `persistence` showed 78 lifetime "failures" of which 0 were real verdicts.
+     * Consumers computing per-gate statistics should exclude these; consumers computing run
+     * pass/fail should not.
+     */
+    notAttempted?: boolean;
     evidence?: string[];
     reason?: string;
 }
@@ -1125,6 +1136,12 @@ function createAuthoritativeArtifacts(
         const gate = gates[diagnostic.gate];
         if (gate.status === 'failed') {
             gate.reason = diagnostic.explanation;
+            // The diagnostic layer already distinguishes "ran and failed" from "never ran"; that
+            // distinction used to be discarded here, leaving only prose for downstream tools to
+            // pattern-match against.
+            if (diagnostic.diagnosticStatus === 'not-attempted') {
+                gate.notAttempted = true;
+            }
             gate.evidence = [
                 diagnostic.explanation,
                 'reports/run-diagnostics.md',
@@ -1828,6 +1845,12 @@ function validateNativeSummary(
     return attempt;
 }
 
+function isNonProductFailure(attempt: AttemptEvidence): boolean {
+    return attempt.outcome === 'failed'
+        && (attempt.failureCategory === 'harness_failure'
+            || attempt.failureCategory === 'infrastructure_failure');
+}
+
 function assertObservedModel(attempt: AttemptEvidence, requestedModel: string): void {
     if (attempt.requestedModel !== requestedModel || attempt.model !== requestedModel) {
         throw new Error(
@@ -1836,6 +1859,18 @@ function assertObservedModel(attempt: AttemptEvidence, requestedModel: string): 
     }
     const observed = attempt.observedModels ?? [];
     if (!observed.length) {
+        // A run that never reached the model observes no model. When the native runner has already
+        // classified that as a harness or infrastructure failure -- a Copilot auth outage, for
+        // instance -- throwing here converts a correctly classified non-product failure into an
+        // unclassified executor error, which vally scores as 0% product quality. That charges the
+        // product for someone else's downtime. Let the classified failure through so the
+        // product-quality exclusion in vally can apply to it.
+        //
+        // The exemption is deliberately narrow: an autonomous success, or a failure blamed on the
+        // product, must still prove which model produced it.
+        if (isNonProductFailure(attempt)) {
+            return;
+        }
         throw new Error(`Native run did not observe requested model "${requestedModel}".`);
     }
     const mismatches = observed.filter(model => model !== requestedModel);
@@ -1876,3 +1911,8 @@ async function assertDirectory(directory: string, description: string): Promise<
 async function writeJson(filePath: string, value: unknown): Promise<void> {
     await fs.writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
+
+/** Internal surface exposed for contract tests only; not part of the executor's public API. */
+export const __testing = {
+    assertObservedModel,
+};

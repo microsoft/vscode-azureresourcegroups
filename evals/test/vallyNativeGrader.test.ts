@@ -199,6 +199,63 @@ describe('cor-authoritative Vally grader', () => {
         assert.equal(result.score, 0);
         assert.match(result.evidence, /schemaVersion must be 1|artifact schema must be/);
     });
+
+    /*
+     * Negative controls for the gates that have never once failed in production.
+     *
+     * Across the two most recent 20-scenario matrix runs, `model`, `provenance`, and `cleanup`
+     * each recorded 40 passes and 0 failures. `planning` shares that record but is covered by
+     * three mutations in grader-certification/manifest.json, so its clean sheet is credible.
+     * These three had no negative control anywhere, which means we had no evidence they could
+     * detect anything at all -- and they are the gates it is most dangerous to be wrong about.
+     * `cleanup` silently passing means leaked Azure resources billing real money; `model` and
+     * `provenance` silently passing means every number in the report is unverifiable.
+     */
+
+    test('the model gate fails when the artifact disagrees with the trajectory about the model', async () => {
+        const fixture = await writeEvidence('model-negative-control', evidence => {
+            evidence.validation.identity.model = 'claude-sonnet-5';
+            evidence.metrics.identity.model = 'claude-sonnet-5';
+        });
+        const result = await grade(fixture);
+        assert.equal(result.passed, false, 'a run cannot pass while misreporting which model produced it');
+        assert.equal(findDetail(result, 'model').passed, false);
+    });
+
+    test('the provenance gate fails when the artifacts disagree about the candidate commit', async () => {
+        const fixture = await writeEvidence('provenance-negative-control', evidence => {
+            evidence.metrics.provenance.candidateCommit = 'tampered-commit';
+        });
+        const result = await grade(fixture);
+        assert.equal(result.passed, false);
+        assert.equal(findDetail(result, 'provenance').passed, false);
+    });
+
+    test('the cleanup gate fails when cleanup is reported failed', async () => {
+        const fixture = await writeEvidence('cleanup-negative-control', evidence => {
+            evidence.validation.gates.cleanup = {
+                status: 'failed',
+                evidence: ['reports/cleanup.json'],
+                reason: 'Sandbox owner label still returned 1 sandbox after the sweep.',
+            };
+            evidence.metrics.values.cleanup_status = 'failed';
+            evidence.metrics.values.cleanup_success = false;
+            evidence.metrics.values.authoritative_hard_gates_passed = false;
+        });
+        const result = await grade(fixture);
+        assert.equal(result.passed, false, 'leaked sandboxes must never be scored as a clean run');
+        assert.equal(findDetail(result, 'cleanup').passed, false);
+    });
+
+    test('the cleanup gate fails closed when its evidence is missing entirely', async () => {
+        const fixture = await writeEvidence('cleanup-missing-evidence', evidence => {
+            delete evidence.validation.gates.cleanup;
+            delete evidence.metrics.gates.cleanup;
+        });
+        const result = await grade(fixture);
+        assert.equal(result.passed, false, 'absent cleanup evidence must not be read as cleanup success');
+        assert.equal(findDetail(result, 'cleanup').passed, false);
+    });
 });
 
 async function grade(

@@ -100,7 +100,9 @@ export function analyzeGateHealth(root: string = RESULTS_ROOT, onlyRuns?: Set<st
         if (onlyRuns && !onlyRuns.has(relative(root, file).split(sep)[1] ?? '')) {
             continue;
         }
-        let parsed: { gates?: Record<string, { status?: string; reason?: string; evidence?: string[] }> };
+        let parsed: {
+            gates?: Record<string, { status?: string; reason?: string; evidence?: string[]; notAttempted?: boolean }>;
+        };
         try {
             parsed = JSON.parse(readFileSync(file, 'utf8')) as typeof parsed;
         } catch {
@@ -121,7 +123,9 @@ export function analyzeGateHealth(root: string = RESULTS_ROOT, onlyRuns?: Set<st
                 // with no `reason` at all. Reading only `reason` misclassified those as real
                 // verdicts when several were upstream cascade.
                 const reason = [node.reason ?? '', ...(node.evidence ?? [])].join(' ').trim();
-                if (isCascade(reason)) {
+                // Runs produced after the executor learned to record this carry an explicit flag.
+                // The prose match is a fallback for the historical archive only.
+                if (node.notAttempted === true || isCascade(reason)) {
                     tally.notAttempted++;
                 } else {
                     tally.failed++;
