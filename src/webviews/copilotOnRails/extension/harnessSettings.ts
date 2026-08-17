@@ -8,7 +8,7 @@ import { settingUtils } from '../../../utils/settingUtils';
 
 /**
  * The two experimental "Copilot Harness" chat settings that can silently auto-enable
- * across VS Code Insiders updates and break Copilot on Rails runs:
+ * across VS Code updates and break Copilot on Rails runs:
  *   - "Chat > Editor: Prefer Copilot Harness (Experimental)"
  *   - "Chat > Default to Copilot Harness (Experimental)"
  *
@@ -19,7 +19,6 @@ const HARNESS_SETTINGS = [
     { prefix: 'chat', key: 'defaultToCopilotHarness' },
 ] as const;
 
-/** Fully-qualified setting ids, exposed for tests. */
 export const COPILOT_HARNESS_SETTING_IDS = HARNESS_SETTINGS.map(({ prefix, key }) => `${prefix}.${key}`);
 
 /**
