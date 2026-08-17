@@ -1,0 +1,21 @@
+# Vally project configuration
+paths:
+  evals: [evals]
+  skills: [evals/skills]
+  results: results
+
+environments:
+  default:
+    mcpServers:
+      workflow-tools:
+        type: stdio
+        command: node
+        args: [evals/mcp/workflow-tools-server.mjs]
+
+suites:
+  project-plan:
+    description: azure-project-plan agent contracts
+    evals: ["evals/project-plan/**"]
+  chains:
+    description: End-to-end workflow chains (nightly)
+    evals: ["evals/chains/**"]

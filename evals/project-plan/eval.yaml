@@ -1,0 +1,224 @@
+name: azure-project-plan-contracts
+description: >
+  Verify the azure-project-plan agent produces valid requirements, respects
+  approval gates, generates parseable plans, and hands off correctly.
+type: capability
+
+defaults:
+  runs: 3
+  timeout: 10m
+  executor: azure-agent-executor
+  # The executor owns skill + instruction setup (evals/executor/agent-assets.mjs):
+  # it generates SKILL.md from the shipped resources/agents/azure-project-plan.agent.md
+  # and copies the whole instruction folder (including references/) into the workspace,
+  # so a rule removed from the product is also removed from the eval.
+
+stimuli:
+  # ─── 1.1 SPA + Functions + PostgreSQL (photo app) ─────────────────────────
+  - name: photo-app-requirements
+    prompt: |
+      I'd like to create an app where you can upload photos and they get stored
+      with metadata like who uploaded them and when. I want a nice React frontend
+      and an Azure Functions backend with PostgreSQL for the data. Make it with
+      full test coverage.
+    graders:
+      - type: file-exists
+        config:
+          path: .azure/requirements.json
+      - type: file-not-exists
+        name: no-dotfile-requirements
+        config:
+          path: .azure/.requirements.json
+      - type: program
+        name: requirements-schema-valid
+        config:
+          program: node
+          args: [${REPO_ROOT=.}/evals/graders/validate-requirements.mjs]
+      - type: tool-calls
+        name: opens-requirements-view
+        config:
+          required: [workflow-tools-open_requirements_view]
+      - type: file-not-exists
+        name: no-premature-plan
+        config:
+          path: .azure/project-plan.md
+      - type: transcript-not-contains
+        name: no-chat-questions
+        config:
+          substring: "What language"
+    constraints:
+      reject_tools: [vscode_askQuestions]
+
+  # ─── 1.2 API-only (no frontend) ───────────────────────────────────────────
+  - name: api-only-inventory
+    prompt: |
+      I need a backend API for tracking warehouse inventory — products,
+      quantities, locations. Just the API, no UI needed. I want to use CosmosDB
+      since the data structure might change a lot and I want it on Azure Functions.
+    graders:
+      - type: file-exists
+        config:
+          path: .azure/requirements.json
+      - type: program
+        name: requirements-api-only
+        config:
+          program: node
+          args: [${REPO_ROOT=.}/evals/graders/validate-requirements.mjs, --assert-no-frontend, --assert-blob-storage, --assert-cosmosdb]
+      - type: tool-calls
+        name: opens-requirements-view
+        config:
+          required: [workflow-tools-open_requirements_view]
+      - type: file-not-exists
+        name: no-premature-plan
+        config:
+          path: .azure/project-plan.md
+    constraints:
+      reject_tools: [vscode_askQuestions]
+
+  # ─── 1.3 Multi-service (frontend + backend + worker) ──────────────────────
+  - name: multi-service-order-processing
+    prompt: |
+      I want to build an order processing system. There should be a React
+      dashboard where staff can see and manage orders, an Express API that
+      handles the business logic, and a background worker that picks up new
+      orders from a queue and sends confirmation emails. All in one project.
+    graders:
+      - type: file-exists
+        config:
+          path: .azure/requirements.json
+      - type: program
+        name: requirements-multi-service
+        config:
+          program: node
+          args: [${REPO_ROOT=.}/evals/graders/validate-requirements.mjs, --assert-service-count=3]
+      - type: tool-calls
+        name: opens-requirements-view
+        config:
+          required: [workflow-tools-open_requirements_view]
+    constraints:
+      reject_tools: [vscode_askQuestions]
+
+  # ─── 1.4 No datastore needed ──────────────────────────────────────────────
+  - name: no-datastore-converter
+    prompt: |
+      I want a simple unit converter web app — you type in a value and pick the
+      units and it converts. Nothing needs to be saved, no accounts, no backend.
+      Just a clean little frontend tool.
+    graders:
+      - type: file-exists
+        config:
+          path: .azure/requirements.json
+      - type: program
+        name: requirements-no-datastore
+        config:
+          program: node
+          args: [${REPO_ROOT=.}/evals/graders/validate-requirements.mjs, --assert-no-datastore]
+      - type: tool-calls
+        name: opens-requirements-view
+        config:
+          required: [workflow-tools-open_requirements_view]
+    constraints:
+      reject_tools: [vscode_askQuestions]
+
+  # ─── 1.5 Plan generation (multi-turn) ─────────────────────────────────────
+  - name: plan-generation-task-app
+    turns:
+      - |
+        I want to build a task management app where teams can create projects,
+        assign tasks to people, set due dates, and track progress. React frontend,
+        Azure Functions backend, PostgreSQL for the data. I want it to look polished.
+      - "Requirements submitted at .azure/requirements.json. All answers confirmed."
+    graders:
+      - type: tool-calls
+        turn: 0
+        name: requirements-view-opened
+        config:
+          required: [workflow-tools-open_requirements_view]
+      - type: file-exists
+        name: plan-exists
+        config:
+          path: .azure/project-plan.md
+      - type: program
+        name: plan-structure-valid
+        config:
+          program: node
+          args: [${REPO_ROOT=.}/evals/graders/validate-project-plan.mjs]
+      - type: program
+        name: plan-webview-parseable
+        config:
+          program: node
+          args: [${REPO_ROOT=.}/evals/graders/validate-webview-parseable.mjs]
+      - type: tool-calls
+        name: plan-view-opened
+        config:
+          required: [workflow-tools-open_plan_view]
+    constraints:
+      reject_tools: [vscode_askQuestions]
+
+  # ─── 1.6 Plan approval and handoff (multi-turn) ───────────────────────────
+  - name: plan-approval-scrapbook
+    turns:
+      - |
+        I'd like to create an app. I want it to have a sign in page with
+        authentication. I want it to be an app where you can upload photos under
+        your account. You are coupled with another user and all of your photos
+        can be uploaded together. You have a UI that looks like a scrapbook where
+        the photos automatically go with an AI generated caption for the photo.
+      - "Requirements submitted at .azure/requirements.json. All confirmed."
+      - "Looks good, approved."
+    graders:
+      - type: file-matches
+        name: plan-approved
+        config:
+          path: .azure/project-plan.md
+          pattern: "Status.*Approved"
+      - type: tool-calls
+        name: scaffold-handoff
+        config:
+          required: [workflow-tools-start_project_scaffold]
+      - type: output-not-contains
+        name: no-inline-scaffolding
+        config:
+          substring: "creating file"
+    constraints:
+      reject_tools: [vscode_askQuestions]
+
+  # ─── 1.7 Plan feedback before approval (multi-turn) ───────────────────────
+  - name: plan-feedback-recipe-app
+    turns:
+      - |
+        Build me a recipe sharing app where people can post recipes with photos,
+        rate other people's recipes, and save favorites. I want it on Azure.
+      - "Requirements submitted at .azure/requirements.json. All confirmed."
+      - |
+        Actually, can you switch the database to CosmosDB instead? I think the
+        flexible schema would work better for recipes since they all have
+        different structures.
+    graders:
+      - type: file-not-matches
+        name: plan-not-approved
+        config:
+          path: .azure/project-plan.md
+          pattern: "Status.*Approved"
+      - type: tool-calls
+        name: no-scaffold-handoff
+        config:
+          disallowed: [workflow-tools-start_project_scaffold]
+      - type: tool-calls
+        name: plan-view-reopened
+        config:
+          required: [workflow-tools-open_plan_view]
+    constraints:
+      reject_tools: [vscode_askQuestions]
+
+scoring:
+  weights:
+    program: 0.3
+    tool-calls: 0.3
+    file-exists: 0.15
+    file-not-exists: 0.1
+    file-matches: 0.05
+    file-not-matches: 0.04
+    transcript-not-contains: 0.03
+    output-not-contains: 0.03
+  threshold: 0.9

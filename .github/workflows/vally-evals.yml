@@ -1,0 +1,156 @@
+name: Vally Agent Evals
+
+on:
+  # Run per-agent evals on PRs that touch agent instructions
+  pull_request:
+    branches: [main]
+    paths:
+      - 'resources/agents/**'
+      - 'evals/**'
+      - '.vally.yaml'
+
+  # Run full suite (chains + per-agent) nightly
+  schedule:
+    - cron: '0 6 * * *' # 6am UTC daily
+
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Suite to run (project-plan, chains, or all)'
+        required: false
+        default: 'all'
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  per-agent-evals:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install eval dependencies
+        run: npm ci
+        working-directory: evals
+
+      - name: Add Vally CLI to PATH
+        run: echo "$GITHUB_WORKSPACE/evals/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Check agent instruction drift
+        run: node evals/check-agent-drift.mjs
+
+      - name: Lint eval specs
+        run: vally lint
+
+      - name: Run project-plan evals
+        run: node evals/run-eval.cjs --suite project-plan --output-dir ./results/pr/project-plan
+        env:
+          # The Copilot SDK token — stored as a repository secret
+          GITHUB_TOKEN: ${{ secrets.COPILOT_EVAL_TOKEN }}
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vally-results-${{ github.sha }}
+          path: results/
+          retention-days: 30
+
+  compare-to-baseline:
+    needs: per-agent-evals
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install eval dependencies
+        run: npm ci
+        working-directory: evals
+
+      - name: Add Vally CLI to PATH
+        run: echo "$GITHUB_WORKSPACE/evals/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Download PR results
+        uses: actions/download-artifact@v4
+        with:
+          name: vally-results-${{ github.sha }}
+          path: results/pr
+
+      - name: Download baseline results
+        uses: actions/download-artifact@v4
+        with:
+          # Most recent artifact from main branch — you'd configure this
+          # with a separate baseline-publish step or use a fixed artifact name
+          name: vally-baseline-main
+          path: results/main
+        continue-on-error: true
+
+      - name: Compare (fail on regression)
+        if: steps.download-baseline.outcome == 'success'
+        run: |
+          vally compare \
+            --baseline results/main/project-plan \
+            --treatment results/pr/project-plan \
+            --fail-on-regression
+
+  nightly-chain-evals:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.suite != 'project-plan')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install eval dependencies
+        run: npm ci
+        working-directory: evals
+
+      - name: Add Vally CLI to PATH
+        run: echo "$GITHUB_WORKSPACE/evals/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Check agent instruction drift
+        run: node evals/check-agent-drift.mjs
+
+      - name: Run all per-agent evals (5 trials)
+        run: node evals/run-eval.cjs --suite project-plan --runs 5 --output-dir ./results/nightly/project-plan
+        env:
+          GITHUB_TOKEN: ${{ secrets.COPILOT_EVAL_TOKEN }}
+
+      # TODO: Add chain evals once chain eval.yaml is implemented
+      # - name: Run chain evals
+      #   run: |
+      #     vally eval \
+      #       --eval-spec evals/chains/eval.yaml \
+      #       --output-dir ./results/nightly/chains \
+      #       --runs 3 \
+      #       --verbose
+
+      - name: Upload nightly results as baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: vally-baseline-main
+          path: results/nightly/
+          retention-days: 90
+          overwrite: true
+
+      - name: Compare to previous nightly
+        run: |
+          vally compare \
+            --baseline results/previous \
+            --treatment results/nightly/project-plan \
+            --output results/nightly/comparison.jsonl \
+            --verbose
+        continue-on-error: true

@@ -1,0 +1,23 @@
+{
+    "name": "evals",
+    "version": "1.0.0",
+    "description": "Vally evaluation infrastructure for Azure agent workflows. Owns the eval toolchain deps so the extension manifest stays free of eval-only (and preview) packages. Run from repo root: npm run eval",
+    "private": true,
+    "type": "commonjs",
+    "scripts": {
+        "eval": "node run-eval.cjs",
+        "eval:plan": "node run-eval.cjs --suite project-plan",
+        "mcp": "node mcp/workflow-tools-server.mjs",
+        "drift": "node check-agent-drift.mjs",
+        "lint": "vally lint --eval-spec project-plan/eval.yaml"
+    },
+    "license": "MIT",
+    "dependencies": {
+        "@github/copilot-sdk": "^1.0.9-preview.2",
+        "@microsoft/vally": "0.13.0",
+        "@modelcontextprotocol/sdk": "^1.30.0"
+    },
+    "devDependencies": {
+        "@microsoft/vally-cli": "0.13.0"
+    }
+}
