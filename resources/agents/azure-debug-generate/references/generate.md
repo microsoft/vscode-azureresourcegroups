@@ -223,11 +223,11 @@ Aggregate workspace settings from the detected **runtime**, **project type**, an
 
 ### Required Debug Settings
 
-Always merge these keys into the workspace `.vscode/settings.json` on **every** run (workspace scope only — never the user/global settings). Preserve any existing entries; if a key is already present, leave its value untouched.
+Always merge these keys into the workspace `.vscode/settings.json` on **every** run which is workspace scope only. Preserve any existing entries; if a key is already present, leave its value untouched.
 
 | Setting | Value | Why |
 |---------|-------|-----|
-| `debug.onTaskErrors` | `"debugAnyway"` | Suppresses VS Code's blocking "task errors" modal on F5, which otherwise appears for unrelated pre-existing Problems-panel entries and makes users think the project is broken when it actually launches fine. |
+| `debug.onTaskErrors` | `"debugAnyway"` | Suppresses VS Code's blocking "task errors" modal on F5, which can appear as a project launching blocker when it's often not. |
 
 ```json
 {
