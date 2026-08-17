@@ -1,0 +1,224 @@
+{
+    "schemaVersion": 1,
+    "fixture": {
+        "id": "reference-node-fullstack",
+        "path": "evals/grader-certification/reference-node-fullstack",
+        "description": "Dependency-free Node.js full-stack reference project with build, test, lint, HTTP, browser, accessibility, persistence, debugger, and deployment artifacts.",
+        "offlineValidators": [
+            "requirements",
+            "project-plan",
+            "plan-gate",
+            "preview",
+            "integration-plan",
+            "integration-output",
+            "local-debug",
+            "deployment",
+            "target-discovery"
+        ],
+        "acaValidators": [
+            "project-build",
+            "local-runtime",
+            "browser",
+            "accessibility",
+            "persistence",
+            "debugger-readiness",
+            "security",
+            "cleanup"
+        ]
+    },
+    "deployFixture": {
+        "id": "reference-deployable",
+        "path": "evals/grader-certification/reference-deployable",
+        "description": "Known-good deployable project used to certify the deployment gate. Packaging runs through azd with a remote container build, so the tier needs no Azure subscription, no azd login, and no local container runtime.",
+        "deployValidators": [
+            "deployment-readiness"
+        ]
+    },
+    "mutations": [
+        {
+            "id": "requirements-schema-version",
+            "tier": "offline",
+            "validator": "requirements",
+            "file": ".azure/requirements.json",
+            "operation": "replace",
+            "search": "\"schemaVersion\": \"2\"",
+            "replacement": "\"schemaVersion\": \"1\"",
+            "expectedCode": "schemaVersion"
+        },
+        {
+            "id": "project-plan-numbering",
+            "tier": "offline",
+            "validator": "project-plan",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "## 3. Prerequisites",
+            "replacement": "## 4. Prerequisites",
+            "expectedCode": "nonSequentialHeading"
+        },
+        {
+            "id": "preview-not-ready",
+            "tier": "offline",
+            "validator": "preview",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "replace",
+            "search": "\"previewStatus\": \"ready\"",
+            "replacement": "\"previewStatus\": \"draft\"",
+            "expectedCode": "previewNotReady"
+        },
+        {
+            "id": "integration-seed-policy",
+            "tier": "offline",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "NO seed data.",
+            "replacement": "Use sample data when convenient.",
+            "expectedCode": "missingNoSeedRule"
+        },
+        {
+            "id": "frontend-mock-import",
+            "tier": "offline",
+            "validator": "integration-output",
+            "file": "public/app.js",
+            "operation": "append",
+            "replacement": "\nimport('./mockClient.js');\n",
+            "expectedCode": "frontendMockStillImported"
+        },
+        {
+            "id": "debug-task-graph",
+            "tier": "offline",
+            "validator": "local-debug",
+            "file": ".vscode/launch.json",
+            "operation": "replace",
+            "search": "\"preLaunchTask\": \"prepare\"",
+            "replacement": "\"preLaunchTask\": \"missing task\"",
+            "expectedCode": "invalidPreLaunchTask"
+        },
+        {
+            "id": "deployment-hook-shell",
+            "tier": "offline",
+            "validator": "deployment",
+            "file": "azure.yaml",
+            "operation": "replace",
+            "search": "shell: sh",
+            "replacement": "shell: cmd",
+            "expectedCode": "invalidAzdHookShell"
+        },
+        {
+            "id": "deployment-secret",
+            "tier": "offline",
+            "validator": "deployment",
+            "file": "azure.yaml",
+            "operation": "append",
+            "replacement": "\nmetadata:\n  password: super-secret-value\n",
+            "expectedCode": "hardcodedSecret"
+        },
+        {
+            "id": "no-build-target",
+            "tier": "offline",
+            "validator": "target-discovery",
+            "file": "package.json",
+            "operation": "delete",
+            "expectedCode": "noBuildTargets"
+        },
+        {
+            "id": "build-syntax-error",
+            "tier": "aca",
+            "validator": "project-build",
+            "file": "src/server.js",
+            "operation": "append",
+            "replacement": "\nconst broken = ;\n",
+            "expectedCode": "sandboxCommandFailed",
+            "expectedCommand": "npm run build"
+        },
+        {
+            "id": "generated-test-failure",
+            "tier": "aca",
+            "validator": "project-build",
+            "file": "test/server.test.js",
+            "operation": "replace",
+            "search": "assert.equal(response.status, 200);",
+            "replacement": "assert.equal(response.status, 500);",
+            "expectedCode": "sandboxCommandFailed",
+            "expectedCommand": "npm test"
+        },
+        {
+            "id": "runtime-status-mismatch",
+            "tier": "aca",
+            "validator": "local-runtime",
+            "operation": "scenario-status",
+            "expectedCode": "localProbeFailed"
+        },
+        {
+            "id": "accessibility-missing-button-name",
+            "tier": "aca",
+            "validator": "local-runtime",
+            "file": "public/index.html",
+            "operation": "replace",
+            "search": "    </main>",
+            "replacement": "        <button></button>\n    </main>",
+            "expectedCode": "localBrowserFailed"
+        },
+        {
+            "id": "persistence-not-durable",
+            "tier": "aca",
+            "validator": "local-runtime",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "path.join(__dirname, '..', 'data', 'items.json')",
+            "replacement": "path.join('/tmp', 'items-' + process.pid + '.json')",
+            "expectedCode": "localPersistenceFailed"
+        },
+        {
+            "id": "debug-port-mismatch",
+            "tier": "aca",
+            "validator": "local-runtime",
+            "file": ".vscode/launch.json",
+            "operation": "replace",
+            "search": "\"--inspect=9229\"",
+            "replacement": "\"--inspect=9229\",\n                \"--inspect-port=9331\"",
+            "comment": "The app still serves, but the inspector moves off the declared port. Debug-surface failures currently surface through the probe gate because probes carry debugPort; the dedicated debugger gate is certified by evals/test/debuggerPrerequisite.test.ts.",
+            "expectedCode": "localProbeFailed"
+        },
+        {
+            "id": "security-auth-bypass",
+            "tier": "aca",
+            "validator": "local-runtime",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "if (!isAuthorizedAdmin(request.headers.authorization, adminToken)) {",
+            "replacement": "if (false) {",
+            "comment": "Serves the protected admin path to an anonymous caller while public paths stay healthy, which is the exact shape the security gate exists to catch. The local-runtime task graph is install -> build -> prepare and never runs npm test, so the unit tests that also cover this logic do not pre-empt the gate.",
+            "expectedCode": "localSecurityFailed"
+        },
+        {
+            "id": "deployment-plan-deleted",
+            "tier": "deploy",
+            "validator": "deployment-readiness",
+            "file": ".azure/deployment-plan.md",
+            "operation": "delete",
+            "expectedCode": "deploymentPlanMissing"
+        },
+        {
+            "id": "deployment-services-removed",
+            "tier": "deploy",
+            "validator": "deployment-readiness",
+            "file": "azure.yaml",
+            "operation": "replace",
+            "search": "services:",
+            "replacement": "disabledServices:",
+            "expectedCode": "deploymentArtifactsInvalid"
+        },
+        {
+            "id": "deployment-unsupported-host",
+            "tier": "deploy",
+            "validator": "deployment-readiness",
+            "file": "azure.yaml",
+            "operation": "replace",
+            "search": "host: containerapp",
+            "replacement": "host: nowhere",
+            "comment": "Static artifact validation only checks that a host field exists, so this reaches azd itself and proves the packaging command actually ran rather than being reported from cached artifact checks.",
+            "expectedCode": "azdPackageFailed"
+        }
+    ]
+}

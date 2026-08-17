@@ -1,0 +1,69 @@
+{
+    "schemaVersion": "1",
+    "id": "crud-svelte-js-functions-sql-auth0",
+    "prompt": "Build an event registration app with a Svelte frontend, JavaScript Azure Functions API, Azure SQL, Auth0 behind a mockable adapter, and registration plus authorization tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/expenses collection.",
+    "baselinePrompt": "Build a complete event registration application using a Svelte frontend, a JavaScript Azure Functions API, Azure SQL, and Auth0 behind a mockable adapter, including registration and authorization tests. Implement all frontend, backend, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/expenses collection.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "svelte",
+        "backend": "javascript-functions",
+        "database": "azure-sql",
+        "auth": "auth0",
+        "complexity": "medium"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "Azure SQL"
+        ],
+        "auth": "Auth0"
+    },
+    "validation": {
+        "profile": "standard",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 10
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 180,
+            "probes": [
+                {
+                    "name": "api health",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/health",
+                    "expectedStatus": 200
+                },
+                {
+                    "name": "expenses collection requires auth",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/expenses",
+                    "expectedStatus": 401
+                },
+                {
+                    "name": "application frontend",
+                    "target": "frontend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:5173/",
+                    "expectedStatus": 200,
+                    "browser": {
+                        "requireInteractiveElements": true,
+                        "maxSeriousAccessibilityViolations": 0,
+                        "journeySeverity": "advisory",
+                        "viewport": {
+                            "width": 1440,
+                            "height": 900
+                        }
+                    }
+                }
+            ],
+            "security": {
+                "publicPaths": [
+                    "http://127.0.0.1:7071/api/health"
+                ]
+            }
+        }
+    }
+}

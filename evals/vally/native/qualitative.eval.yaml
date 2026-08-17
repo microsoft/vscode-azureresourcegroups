@@ -1,0 +1,1443 @@
+name: copilot-on-rails-qualitative-supplemental
+description: Supplemental, uncalibrated user-satisfaction review; never a release authority.
+version: "1"
+type: capability
+tags:
+  component: copilot-on-rails
+  plane: vally-native
+  authority: supplemental-uncalibrated
+defaults:
+  runs: 1
+  timeout: 60m
+  model: gpt-5.6-sol
+  judge_model: gpt-5.6-sol
+  executor: cor-aca
+stimuli:
+  - name: api-csharp-functions-sql
+    prompt: Build a backend-only C# Azure Functions API for managing warehouse inventory with CRUD endpoints, Azure SQL persistence, no authentication, and xUnit tests.
+    tags:
+      archetype: api
+      frontend: none
+      backend: csharp-functions
+      database: azure-sql
+      auth: none
+      complexity: medium
+      scenarioId: api-csharp-functions-sql
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "10"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-csharp-functions-sql
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: &a1
+            - gpt-5.6-sol
+            - claude-sonnet-5
+            - gpt-5.4-mini
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: api-node-express-redis
+    prompt: Build a backend-only TypeScript Express API for a rate-limited URL shortener using Redis, with no authentication and automated API tests.
+    tags:
+      archetype: api
+      frontend: none
+      backend: typescript-express
+      database: redis
+      auth: none
+      complexity: low
+      scenarioId: api-node-express-redis
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "5"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-node-express-redis
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: api-python-cosmos
+    prompt: Build a backend-only Python API for tracking equipment inspections. It should expose CRUD endpoints, store inspection records in Cosmos DB, require no authentication, and include automated API tests.
+    tags:
+      archetype: api
+      frontend: none
+      backend: python
+      database: cosmos
+      auth: none
+      complexity: low
+      scenarioId: api-python-cosmos
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "5"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-python-cosmos
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: api-python-flask-blob
+    prompt: Build a backend-only Python Flask API for uploading and downloading compliance documents from Blob Storage, protected by mock authentication and covered by API tests.
+    tags:
+      archetype: api
+      frontend: none
+      backend: python-flask
+      database: blob
+      auth: mock
+      complexity: low
+      scenarioId: api-python-flask-blob
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "5"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-python-flask-blob
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: api-python-functions-queue
+    prompt: Build a backend-only Python Azure Functions API that accepts image-processing jobs, writes them to Queue Storage, exposes job status endpoints, requires no authentication, and includes pytest coverage.
+    tags:
+      archetype: api
+      frontend: none
+      backend: python-functions
+      database: queue
+      auth: none
+      complexity: low
+      scenarioId: api-python-functions-queue
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "5"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-python-functions-queue
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: api-ts-functions-minimal
+    prompt: Build a minimal backend-only TypeScript Azure Functions API with health, list, and create endpoints for ephemeral notes, no database, no authentication, and unit tests.
+    tags:
+      archetype: api
+      frontend: none
+      backend: typescript-functions
+      database: none
+      auth: none
+      complexity: low
+      scenarioId: api-ts-functions-minimal
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "5"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-ts-functions-minimal
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: crud-angular-csharp-functions-sql-entra
+    prompt: Build an employee scheduling app with an Angular frontend, C# Azure Functions API, Azure SQL persistence, Microsoft Entra ID authentication with test doubles, and component plus API tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/shifts collection.
+    tags:
+      archetype: crud
+      frontend: angular
+      backend: csharp-functions
+      database: azure-sql
+      auth: entra-id
+      complexity: high
+      scenarioId: crud-angular-csharp-functions-sql-entra
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "15"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-angular-csharp-functions-sql-entra
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: crud-angular-ts-functions-cosmos-clerk
+    prompt: Build a volunteer coordination app with an Angular frontend, TypeScript Azure Functions API, Cosmos DB, Clerk authentication isolated behind a mockable adapter, and CRUD plus authorization tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/items collection.
+    tags:
+      archetype: crud
+      frontend: angular
+      backend: typescript-functions
+      database: cosmos
+      auth: clerk
+      complexity: high
+      scenarioId: crud-angular-ts-functions-cosmos-clerk
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "15"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-angular-ts-functions-cosmos-clerk
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: crud-react-fastapi-postgres-auth0
+    prompt: Build a subscription dashboard with a React and Vite frontend, Python FastAPI backend, PostgreSQL, Auth0 behind a configuration-driven adapter that is mocked in tests, and full CRUD coverage. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/subscriptions collection.
+    tags:
+      archetype: crud
+      frontend: react
+      backend: python-fastapi
+      database: postgres
+      auth: auth0
+      complexity: high
+      scenarioId: crud-react-fastapi-postgres-auth0
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "15"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-react-fastapi-postgres-auth0
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: crud-react-functions-cosmos-entra
+    prompt: Build a document review app with a React and Vite frontend, TypeScript Azure Functions API, Cosmos DB persistence, Microsoft Entra ID authentication with mocked token validation in tests, and review workflow coverage. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/reviews collection.
+    tags:
+      archetype: crud
+      frontend: react
+      backend: typescript-functions
+      database: cosmos
+      auth: entra-id
+      complexity: medium
+      scenarioId: crud-react-functions-cosmos-entra
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "10"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-react-functions-cosmos-entra
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: crud-react-functions-postgres
+    prompt: Build a customer support ticket application with a React frontend, a TypeScript Azure Functions API, PostgreSQL persistence, and mock authentication. Users should create, assign, comment on, and close tickets.
+    tags:
+      archetype: crud
+      frontend: react
+      backend: functions
+      database: postgres
+      auth: mock
+      complexity: medium
+      scenarioId: crud-react-functions-postgres
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "10"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-react-functions-postgres
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: crud-react-functions-postgres-external-id
+    prompt: Build a customer membership portal with a React and Vite frontend, TypeScript Azure Functions API, PostgreSQL, Microsoft Entra External ID behind a mockable identity adapter, and membership lifecycle tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/orders collection.
+    tags:
+      archetype: crud
+      frontend: react
+      backend: typescript-functions
+      database: postgres
+      auth: entra-external-id
+      complexity: high
+      scenarioId: crud-react-functions-postgres-external-id
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "15"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-react-functions-postgres-external-id
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: crud-svelte-js-functions-sql-auth0
+    prompt: Build an event registration app with a Svelte frontend, JavaScript Azure Functions API, Azure SQL, Auth0 behind a mockable adapter, and registration plus authorization tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/expenses collection.
+    tags:
+      archetype: crud
+      frontend: svelte
+      backend: javascript-functions
+      database: azure-sql
+      auth: auth0
+      complexity: medium
+      scenarioId: crud-svelte-js-functions-sql-auth0
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "10"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-svelte-js-functions-sql-auth0
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: crud-svelte-python-functions-cosmos
+    prompt: Build a personal reading tracker with a Svelte frontend, Python Azure Functions API, Cosmos DB, mock authentication, and UI plus API tests for reading-list workflows.
+    tags:
+      archetype: crud
+      frontend: svelte
+      backend: python-functions
+      database: cosmos
+      auth: mock
+      complexity: medium
+      scenarioId: crud-svelte-python-functions-cosmos
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "10"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-svelte-python-functions-cosmos
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: crud-vue-functions-postgres
+    prompt: Build a project milestone tracker with a Vue and Vite frontend, TypeScript Azure Functions API, PostgreSQL persistence, no authentication, and component plus API tests.
+    tags:
+      archetype: crud
+      frontend: vue
+      backend: typescript-functions
+      database: postgres
+      auth: none
+      complexity: medium
+      scenarioId: crud-vue-functions-postgres
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "10"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-vue-functions-postgres
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: multiservice-react-functions-worker-postgres-queue
+    prompt: Build an order processing system with a React and Vite frontend, TypeScript Azure Functions CRUD API backed by PostgreSQL, a Python Azure Functions queue worker for fulfillment events, mock authentication, and cross-service contract tests.
+    tags:
+      archetype: multiservice
+      frontend: react
+      backend: typescript-python-functions
+      database: postgres-queue
+      auth: mock
+      complexity: high
+      scenarioId: multiservice-react-functions-worker-postgres-queue
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "15"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: multiservice-react-functions-worker-postgres-queue
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: multiservice-vue-functions-worker-cosmos-queue
+    prompt: Build an incident response system with a Vue and Vite frontend, C# Azure Functions API using Cosmos DB, a TypeScript Azure Functions queue worker for notifications, Microsoft Entra ID with mocked token validation, and cross-service tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/jobs collection.
+    tags:
+      archetype: multiservice
+      frontend: vue
+      backend: csharp-typescript-functions
+      database: cosmos-queue
+      auth: entra-id
+      complexity: high
+      scenarioId: multiservice-vue-functions-worker-cosmos-queue
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "15"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: multiservice-vue-functions-worker-cosmos-queue
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: static-html-functions-blob
+    prompt: Build a static TypeScript and HTML photo metadata browser with Pico.css, a TypeScript Azure Functions API, Blob Storage for images, no authentication, and frontend plus API tests.
+    tags:
+      archetype: static-api
+      frontend: html
+      backend: typescript-functions
+      database: blob
+      auth: none
+      complexity: medium
+      scenarioId: static-html-functions-blob
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "10"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: static-html-functions-blob
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: worker-python-functions-blob
+    prompt: Build a backend-only Python Azure Functions timer worker that archives expired Blob Storage documents, has no authentication, and includes deterministic worker tests. Locally, read documents from an active-documents container, treat an expiresAt blob metadata value earlier than the current time as expired, move expired blobs to an archived-documents container with the same blob name and content, and delete the source blob.
+    tags:
+      archetype: worker
+      frontend: none
+      backend: python-functions
+      database: blob
+      auth: none
+      complexity: low
+      scenarioId: worker-python-functions-blob
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "5"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: worker-python-functions-blob
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+  - name: worker-ts-functions-queue
+    prompt: Build a backend-only TypeScript Azure Functions queue worker that reads JSON billing events from the billing-events-in Queue Storage queue, validates them, and writes routed JSON events to billing-events-out. For the deterministic input {"eventId":"eval-billing-001","accountId":"acct-eval-001","amount":1250,"currency":"USD"}, the output must preserve eventId and accountId and include route:"standard". Use AzureWebJobsStorage so this works with Azurite, has no authentication, and includes unit tests for success and poison-message paths.
+    tags:
+      archetype: worker
+      frontend: none
+      backend: typescript-functions
+      database: queue
+      auth: none
+      complexity: low
+      scenarioId: worker-ts-functions-queue
+      arm: rails
+      endpoint: local
+      model: gpt-5.6-sol
+      qualitative: supplemental
+      validationCommandTimeoutMinutes: "5"
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: worker-ts-functions-queue
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - trajectory.json
+        - workspace.diff
+        - reports/**
+    rubric:
+      - The delivered project completely satisfies the stated user request.
+      - The project is understandable, locally operable, maintainable, and ready for the user to continue.
+      - The trajectory and diff provide concrete evidence for claims; unsupported claims do not earn credit.
+    graders:
+      - type: prompt
+        name: user-satisfaction-prompt
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          model: gpt-5.6-sol
+          scoring: scale_1_5
+          threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+      - type: panel
+        name: user-satisfaction-panel
+        config:
+          prompt: Score only the end-user experience shown by the trajectory and workspace diff. A satisfied user can understand the result, run it locally, verify it, and continue editing it without hidden manual repair. Penalize unclear instructions, incomplete implementation, incoherent architecture, inaccessible UX, or unverifiable claims. Do not require or infer deployment evidence for an ordinary local trial. This score is supplemental and must never override executable authoritative hard gates.
+          models: *a1
+          aggregation: median
+          scoring: scale_1_5
+          threshold: 0.75
+          overall_threshold: 0.75
+          evidence:
+            - trajectory
+            - diff
+          criteria:
+            - name: task-satisfaction
+              description: The output fulfills the explicit request without user repair.
+              weight: 0.4
+              pass_threshold: 0.75
+              required: true
+            - name: local-operability
+              description: The user can build, test, run, and debug from supplied assets.
+              weight: 0.35
+              pass_threshold: 0.75
+              required: true
+            - name: clarity-and-coherence
+              description: The implementation and guidance are coherent, accessible, and maintainable.
+              weight: 0.25
+              pass_threshold: 0.75
+              required: true
+scoring:
+  weights:
+    prompt: 0.5
+    panel: 0.5
+  threshold: 0.75

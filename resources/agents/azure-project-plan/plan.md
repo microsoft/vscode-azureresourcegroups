@@ -28,7 +28,7 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 > - Every section heading MUST be `## <N>. <Title>` — a number, a period, a space, then the title (e.g. `## 1. Project Overview`, `## 2. Backend — Azure Functions`). Headings without the `N.` number prefix (e.g. `## Overview`, `## Architecture`, `## Services`, `## Data Stores`, `## Authentication`) are **invalid** and will not render.
 > - Metadata at the top MUST be `**Status**:`, `**Created**:`, `**Mode**:` bold key-value rows — not front-matter, not a table.
 > - Do **NOT** add a generic architecture document, a `mermaid` diagram, a standalone `## Authentication` section, or any heading not present in the skeleton. Authentication, data stores, and architecture are captured **inside** the numbered sections (Services Required, the per-service stack sections, Route Definitions), never as their own improvised headings.
-> - The set and order of headings is fixed: `# Project Plan` → `## 1. Project Overview` → one `## N. <Service> — <role>` per service → `## N. Services Required` → `## N. Prerequisites` → `## N. Design System & UI` (frontend only) → `## N. Project Structure` → `## N. Route Definitions` → `## N. Next Steps`. Renumber only; never rename or reshape.
+> - The set and order of headings is fixed: `# Project Plan` → `## 1. Project Overview` → one `## N. <Service> — <role>` per service → `## N. Services Required` → `## N. Prerequisites` → `## N. Design System & UI` (frontend only) → `## N. Project Structure` → `## N. Route Definitions` → `## N. Next Steps`. Number every emitted section sequentially from 1 with **no gaps**. When a conditional section is omitted, renumber every following section; `1, 2, 4, 5` is invalid. Never rename or reshape sections.
 
 #### Plan Template
 
@@ -93,7 +93,7 @@ Write `.azure/project-plan.md` from the template below in a **single pass** (fil
 | Azure Service | Role in App | Environment Variable | Default Value (Local) | Classification |
 |---------------|------------|---------------------|----------------------|----------------|
 | {Blob Storage} | {Store uploaded images} | {STORAGE_CONNECTION_STRING} | {UseDevelopmentStorage=true} | {Essential} |
-| {PostgreSQL} | {Primary data store} | {DATABASE_URL} | {postgresql://localdev:localdevpassword@localhost:5432/appdb} | {Essential} |
+| {PostgreSQL} | {Primary data store} | {DATABASE_URL} | {postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/appdb} | {Essential} |
 
 ---
 
@@ -118,7 +118,7 @@ Every row resolves to just two states, following the status rules in [prerequisi
 ## 6. Design System & UI
 
 
-> **MANDATORY when `services` contains a `frontend` service.** Skip only when there is no frontend service (derived App Type `API only` / `Background worker`). The plan-preview webview parses this section by title (`s.title.toLowerCase().includes('design system')`) and the scaffold quality contract reads `Component Library:` to decide which real library primitives to render.
+> Emit this section **only** when `services` contains a `frontend` service. Omit it entirely for derived App Type `API only` / `Background worker`, then renumber Project Structure and every following section sequentially with no gap. The plan-preview webview parses this section by title (`s.title.toLowerCase().includes('design system')`) and the scaffold quality contract reads `Component Library:` to decide which real library primitives to render.
 
 **Component Library**: {Fluent UI v9 / Vuetify 3 / Skeleton UI / Angular Material / Pico.css — see PLANNING QUICK REFERENCE → Component Library Defaults}
 **Style Direction**: {1–2 sentence design intent, e.g. "Modern data-dense console with subtle elevations, rounded 4px corners, and an emphasis on scannable lists."}
@@ -401,7 +401,7 @@ The webview watches the entire `.azure/.preview-temp/` folder, so the manifest u
 | Blob Storage | `STORAGE_CONNECTION_STRING` | `UseDevelopmentStorage=true` |
 | Queue Storage | `STORAGE_CONNECTION_STRING` | `UseDevelopmentStorage=true` |
 | Table Storage | `STORAGE_CONNECTION_STRING` | `UseDevelopmentStorage=true` |
-| PostgreSQL | `DATABASE_URL` | `postgresql://localdev:localdevpassword@localhost:5432/{dbname}` |
+| PostgreSQL | `DATABASE_URL` | `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/{dbname}` |
 | CosmosDB | `COSMOSDB_CONNECTION_STRING` | `AccountEndpoint=https://localhost:8081/;AccountKey=...` |
 | Redis | `REDIS_URL` | `redis://localhost:6379` |
 | Azure SQL | `SQL_CONNECTION_STRING` | `Server=localhost,1433;Database={db};...` |

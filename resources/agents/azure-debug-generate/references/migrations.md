@@ -41,12 +41,12 @@ When migrations are present, the target database service **must** have a healthc
 services:
   db-migrate:
     image: ${RUNTIME_IMAGE}
-    working_dir: /app
+    working_dir: /workspace/${SERVICE_ROOT}
     depends_on:
       ${DATABASE_SERVICE}:
         condition: service_healthy
     volumes:
-      - ./:/app:ro
+      - ./:/workspace:ro
       ${EXTRA_VOLUME_MOUNTS}
     environment:
       ${CONNECTION_ENV_VAR}: ${CONNECTION_STRING_FOR_COMPOSE_NETWORK}
@@ -59,6 +59,7 @@ services:
 | Placeholder | How to determine |
 |-------------|-----------------|
 | `RUNTIME_IMAGE` | A Docker image that provides the language runtime. See the table below. |
+| `SERVICE_ROOT` | Workspace-relative folder containing the migration script and migration directory. Never default this to the Compose-file directory unless they are the same folder. |
 | `DATABASE_SERVICE` | The compose service name for the target database (from Emulators table) |
 | `CONNECTION_ENV_VAR` | The environment variable the migration tool expects (from targeted resolution) |
 | `CONNECTION_STRING_FOR_COMPOSE_NETWORK` | Same shape as local connection string but with compose service name as host |
@@ -80,3 +81,4 @@ services:
 > - `volumes` with `:ro` — mounts project files read-only for safety
 > - `restart: "no"` — runs once per `docker compose up`, does not restart after exit
 > - Mount ecosystem-specific dependency directories when the migration tool is installed as a project dependency
+> - The container `working_dir` MUST be the service root that owns the migration script. Before considering the service complete, resolve the migration-directory argument from that working directory and confirm the mounted path exists. A workspace-root Compose file with a nested API must use `/workspace/<api-service-root>`, not `/workspace` or `/app`.

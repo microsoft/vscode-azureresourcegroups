@@ -1,0 +1,70 @@
+{
+    "schemaVersion": "1",
+    "id": "multiservice-vue-functions-worker-cosmos-queue",
+    "prompt": "Build an incident response system with a Vue and Vite frontend, C# Azure Functions API using Cosmos DB, a TypeScript Azure Functions queue worker for notifications, Microsoft Entra ID with mocked token validation, and cross-service tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/jobs collection.",
+    "baselinePrompt": "Build a complete incident response system using a Vue and Vite frontend, a C# Azure Functions API using Cosmos DB, a TypeScript Azure Functions queue worker using Azure Queue Storage for notifications, and Microsoft Entra ID with mocked token validation, including cross-service tests. Implement all frontend, API, worker, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/jobs collection.",
+    "tags": {
+        "archetype": "multiservice",
+        "frontend": "vue",
+        "backend": "csharp-typescript-functions",
+        "database": "cosmos-queue",
+        "auth": "entra-id",
+        "complexity": "high"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "Queue Storage",
+            "CosmosDB"
+        ],
+        "auth": "Microsoft Entra ID"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 15
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 180,
+            "probes": [
+                {
+                    "name": "api health",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/health",
+                    "expectedStatus": 200
+                },
+                {
+                    "name": "jobs collection requires auth",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/jobs",
+                    "expectedStatus": 401
+                },
+                {
+                    "name": "application frontend",
+                    "target": "frontend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:5173/",
+                    "expectedStatus": 200,
+                    "browser": {
+                        "requireInteractiveElements": true,
+                        "maxSeriousAccessibilityViolations": 0,
+                        "journeySeverity": "advisory",
+                        "viewport": {
+                            "width": 1440,
+                            "height": 900
+                        }
+                    }
+                }
+            ],
+            "security": {
+                "publicPaths": [
+                    "http://127.0.0.1:7071/api/health"
+                ]
+            }
+        }
+    }
+}

@@ -15,7 +15,7 @@ import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type PreviewPage, type ScaffoldPlanData } from "../../views/utils/parseScaffoldPlanMarkdown";
-import { ProjectPlanStatus } from "../../views/utils/projectPlanStatus";
+import { ProjectPlanStatus, setProjectPlanExecutionMode } from "../../views/utils/projectPlanStatus";
 import { AUTOPILOT_QUERY_MARKER, disableAutopilot, enableAutopilot, getEffectiveMaxRequests, raiseWorkspaceMaxRequests } from "../autopilot";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
@@ -269,34 +269,11 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
         try {
             const raw = Buffer.from(await vscode.workspace.fs.readFile(this.sourceFileUri)).toString('utf-8');
-            if (/execution\s*mode\s*[:=]\s*auto/i.test(raw)) {
+            const updated = setProjectPlanExecutionMode(raw, 'auto');
+            if (updated === raw) {
                 return;
             }
-            const lines = raw.split('\n');
-            const row = '**Execution Mode**: auto';
-            // If an row already exists (e.g. with a `guided` value),
-            // update it in place rather than inserting a duplicate/conflicting row.
-            const existingAt = lines.findIndex(l => /^\*\*Execution\s*Mode\*\*\s*[:=]/i.test(l.trim()));
-            if (existingAt >= 0) {
-                lines[existingAt] = row;
-                await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(lines.join('\n'), 'utf-8'));
-                return raw;
-            }
-            // Insert the metadata row next to the existing **Mode**/**Status**
-            // header lines; otherwise after the first heading; otherwise at the top.
-            let insertAt = lines.findIndex(l => /^\*\*Mode\*\*\s*:/i.test(l.trim()));
-            if (insertAt < 0) {
-                insertAt = lines.findIndex(l => /^\*\*Status\*\*\s*:/i.test(l.trim()));
-            }
-            if (insertAt < 0) {
-                insertAt = lines.findIndex(l => l.trim().startsWith('# '));
-            }
-            if (insertAt < 0) {
-                lines.unshift(row, '');
-            } else {
-                lines.splice(insertAt + 1, 0, row);
-            }
-            await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(lines.join('\n'), 'utf-8'));
+            await vscode.workspace.fs.writeFile(this.sourceFileUri, Buffer.from(updated, 'utf-8'));
             return raw;
         } catch {
             // Best-effort: if we can't persist the marker, the chat query marker

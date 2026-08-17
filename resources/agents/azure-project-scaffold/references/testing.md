@@ -86,6 +86,59 @@ export default defineConfig({
 ```
 
 #### jest config example
+
+#### React + Fluent UI must inline CommonJS dependencies
+
+Fluent UI v9 pulls in `tabster`, which ships as CommonJS. Vitest's default
+externalization makes it fail at **import time**, so every test in the file aborts
+before a single assertion runs:
+
+```
+The requested module 'tabster' is a CommonJS module, which may not support all
+module.exports as named exports.
+ ❯ src/App.tsx:2:31
+```
+
+This is not a test-authoring bug — the tests never execute. Any frontend suite that
+renders a component wrapped in `FluentProvider` must inline the CommonJS packages:
+
+```typescript
+// vitest.config.ts (frontend workspace)
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    server: {
+      deps: {
+        // Fluent UI v9 depends on CommonJS-only `tabster`; without this every
+        // test importing a Fluent component fails to import.
+        inline: ['@fluentui/react-components', '@fluentui/react-icons', 'tabster'],
+      },
+    },
+  },
+});
+```
+
+Verify by running the frontend workspace's own `npm test` before finishing the
+phase. A test command that fails on module resolution must be fixed, not skipped.
+
+**Do not anchor the pattern.** Vitest matches `inline` entries against the module's
+*absolute path* (`/workspace/node_modules/@fluentui/react-components/...`), so a
+pattern like `/^@fluentui\//` never matches and the package stays externalized.
+The failure looks unchanged, which makes this a silent no-op that burns repair
+attempts:
+
+| Entry | Inlines Fluent UI? |
+| --- | --- |
+| `/^@fluentui\//` | **No** — anchored at string start, never matches a path |
+| `'@fluentui/react-components'` | Yes — string entries match `/node_modules/<entry>` |
+| `/@fluentui\//` | Yes — unanchored regex matches inside the path |
+
+Inlining only `tabster` is also insufficient: the failing `import` lives *inside*
+`@fluentui/react-components`, so if that package is externalized Node still loads it
+natively and the named export fails.
+
 ```typescript
 // jest.config.ts
 export default {
@@ -106,6 +159,29 @@ spec: 'tests/**/*.test.ts'
 recursive: true
 timeout: 5000
 ```
+
+#### Azure Functions v4 request/context fixtures
+
+Use the runtime classes as values when constructing test fixtures. `HttpRequest.body` is a body-init object, not a raw string, and `InvocationContext` must not be imported with `import type` when calling its constructor:
+
+```typescript
+import { HttpRequest, InvocationContext } from '@azure/functions';
+
+export function createJsonRequest(method: string, path: string, body: unknown): HttpRequest {
+  return new HttpRequest({
+    method,
+    url: `http://localhost:7071${path}`,
+    headers: { 'content-type': 'application/json' },
+    body: { string: JSON.stringify(body) },
+  });
+}
+
+export function createContext(functionName: string): InvocationContext {
+  return new InvocationContext({ functionName });
+}
+```
+
+Never pass `body: JSON.stringify(value)` directly; `request.json()` will reject that fixture as malformed. Never write `import { type InvocationContext }` and then call `new InvocationContext(...)`; type-only imports are erased at runtime.
 
 ### .NET
 
@@ -476,6 +552,25 @@ import { vi } from 'vitest';
 // Mock fetch globally for all frontend tests
 global.fetch = vi.fn();
 
+// jsdom does not expose every browser API used by component libraries.
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+global.ResizeObserver = ResizeObserverMock;
+global.NodeFilter = window.NodeFilter;
+global.matchMedia = vi.fn().mockImplementation(query => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addListener: vi.fn(),
+  removeListener: vi.fn(),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
+}));
+
 // Helper to mock a successful API response
 export function mockFetchSuccess(body: unknown, status = 200) {
   (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
@@ -494,6 +589,11 @@ export function mockFetchError(status: number, error: { code: string; message: s
   });
 }
 ```
+
+When a component library uses additional browser APIs, add deterministic shims in the
+shared setup file rather than weakening or skipping the affected tests. Assertions must
+target current user-visible behavior and fixture data. Do not assert preview metadata,
+version labels, names, or copy that the implemented page no longer renders.
 
 ### Component Test Pattern
 

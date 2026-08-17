@@ -1,0 +1,69 @@
+{
+    "schemaVersion": "1",
+    "id": "crud-angular-ts-functions-cosmos-clerk",
+    "prompt": "Build a volunteer coordination app with an Angular frontend, TypeScript Azure Functions API, Cosmos DB, Clerk authentication isolated behind a mockable adapter, and CRUD plus authorization tests. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/items collection.",
+    "baselinePrompt": "Build a complete volunteer coordination application using an Angular frontend, a TypeScript Azure Functions API, Cosmos DB, and Clerk authentication isolated behind a mockable adapter, including CRUD and authorization tests. Implement all frontend, backend, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/items collection.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "angular",
+        "backend": "typescript-functions",
+        "database": "cosmos",
+        "auth": "clerk",
+        "complexity": "high"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "CosmosDB"
+        ],
+        "auth": "Clerk"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 15
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 180,
+            "probes": [
+                {
+                    "name": "api health",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/health",
+                    "expectedStatus": 200
+                },
+                {
+                    "name": "items collection requires auth",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:7071/api/items",
+                    "expectedStatus": 401
+                },
+                {
+                    "name": "application frontend",
+                    "target": "frontend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:4200/",
+                    "expectedStatus": 200,
+                    "browser": {
+                        "requireInteractiveElements": true,
+                        "maxSeriousAccessibilityViolations": 0,
+                        "journeySeverity": "advisory",
+                        "viewport": {
+                            "width": 1440,
+                            "height": 900
+                        }
+                    }
+                }
+            ],
+            "security": {
+                "publicPaths": [
+                    "http://127.0.0.1:7071/api/health"
+                ]
+            }
+        }
+    }
+}

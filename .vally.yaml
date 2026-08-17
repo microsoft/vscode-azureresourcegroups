@@ -1,0 +1,29 @@
+paths:
+  skills: []
+  evals:
+    - evals/vally
+  results: evals/results/vally-native
+  evalFilenames:
+    - eval.yaml
+
+suites:
+  copilot-on-rails-offline:
+    description: Offline contracts for archived Copilot on Rails summary evidence.
+    evals:
+      - evals/vally/eval.yaml
+  copilot-on-rails-hard-gates:
+    description: Authoritative product and scenario-specific gate contracts.
+    filter:
+      evidence: summary-only
+  copilot-on-rails-native-authoritative:
+    description: Vally-native ACA execution with fail-closed authoritative release grading.
+    evals:
+      - evals/vally/native/authoritative.eval.yaml
+  copilot-on-rails-native-qualitative:
+    description: Supplemental and uncalibrated trajectory-plus-diff user-satisfaction grading.
+    evals:
+      - evals/vally/native/qualitative.eval.yaml
+  copilot-on-rails-native-oracle:
+    description: Offline custom-metrics oracle contract with no live model execution.
+    evals:
+      - evals/vally/native/fixtures/oracle.eval.yaml

@@ -1,0 +1,69 @@
+{
+    "schemaVersion": "1",
+    "id": "crud-react-fastapi-postgres-auth0",
+    "prompt": "Build a subscription dashboard with a React and Vite frontend, Python FastAPI backend, PostgreSQL, Auth0 behind a configuration-driven adapter that is mocked in tests, and full CRUD coverage. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/subscriptions collection.",
+    "baselinePrompt": "Build a complete subscription dashboard application using a React and Vite frontend, a Python FastAPI backend, PostgreSQL, and Auth0 behind a configuration-driven adapter that is mocked in tests, with full CRUD coverage. Implement all frontend, backend, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified. Expose an unauthenticated GET /api/health endpoint and require a valid bearer token for the GET /api/subscriptions collection.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "react",
+        "backend": "python-fastapi",
+        "database": "postgres",
+        "auth": "auth0",
+        "complexity": "high"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "PostgreSQL"
+        ],
+        "auth": "Auth0"
+    },
+    "validation": {
+        "profile": "advanced",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 15
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 180,
+            "probes": [
+                {
+                    "name": "api health",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:8000/api/health",
+                    "expectedStatus": 200
+                },
+                {
+                    "name": "subscriptions collection requires auth",
+                    "target": "backend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:8000/api/subscriptions",
+                    "expectedStatus": 401
+                },
+                {
+                    "name": "application frontend",
+                    "target": "frontend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:5173/",
+                    "expectedStatus": 200,
+                    "browser": {
+                        "requireInteractiveElements": true,
+                        "maxSeriousAccessibilityViolations": 0,
+                        "journeySeverity": "advisory",
+                        "viewport": {
+                            "width": 1440,
+                            "height": 900
+                        }
+                    }
+                }
+            ],
+            "security": {
+                "publicPaths": [
+                    "http://127.0.0.1:8000/api/health"
+                ]
+            }
+        }
+    }
+}

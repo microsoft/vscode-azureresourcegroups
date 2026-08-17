@@ -89,9 +89,14 @@ Tasks owned by this runtime: install, clean, build, watch. The startup task and 
 | Step | Task Label | Command | Purpose | Background? |
 |------|-----------|---------|---------|------------|
 | install | `{service-id}: npm install` | `npm install` | Installs dependencies | No |
-| clean | `{service-id}: npm clean` | `npm run clean` | Cleans build output | No |
+| clean | `{service-id}: npm clean` | `npm run clean` | Cleans build output. The `clean` script normally uses `rimraf` — it **must** be in **this package's** `devDependencies`, not only the root's. See [generate.md § Dependency Availability](../generate.md). | No |
 | watch | `{service-id}: npm watch` | `npm run watch` | Runs `tsc --watch` for incremental builds | ✅ Yes |
 | build | `{service-id}: npm build` | `npm run build` | One-shot build (used outside debug flow) | No |
+
+> ⛔ **Workspaces monorepo:** if the root `package.json` declares `workspaces`, replace the
+> per-service install task with a **single shared root-cwd install task** and point each service's
+> `clean` at it. A member-scoped `npm install` skips root `devDependencies` and sibling members.
+> See [generate.md § Install tasks in a workspaces monorepo](../generate.md).
 
 #### node-js (JavaScript)
 
@@ -175,6 +180,9 @@ After generating VS Code configuration, verify the following were produced corre
 3. ✅ For TypeScript: `tsconfig.json` has `"sourceMap": true` — without it, breakpoints in `.ts` files appear as gray (unverified) dots
 4. ✅ For TypeScript: watch task exists in `tasks.json` with `$tsc-watch` problem matcher
 5. ✅ For TypeScript: build chain follows install → clean → watch dependency order
+6. ✅ Every CLI a package script invokes (`rimraf`, `tsc`, `cross-env`, …) is declared in **that package's** `dependencies`/`devDependencies` — a root-only declaration is not visible to a member package
+7. ✅ In a workspaces monorepo, the install task runs at the **workspace root** and every service build chain depends on it
+8. ✅ In a workspaces monorepo, every service that imports another workspace member either depends on a task that builds that member first, or declares TypeScript project `references` to it — a member resolves through its compiled `dist/`, and `tsc --watch` will not exit when those declarations are missing
 
 ### Live Validation Checks
 

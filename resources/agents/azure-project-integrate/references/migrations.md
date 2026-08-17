@@ -38,6 +38,34 @@ Add the apply/rollback commands as scripts (`"migrate"`, `"migrate:rollback"`) i
 | `INDEX` | Columns used in `WHERE` / `JOIN` / `ORDER BY` |
 | `NOT NULL` + sensible defaults | Required columns; timestamps default to `now()` |
 
+### Knex: `check*` helpers are **column** methods, not table methods
+
+The only `check` method on the table builder is `table.check(predicate)`. Every
+constrained-value helper — `checkIn`, `checkNotIn`, `checkPositive`, `checkNegative`,
+`checkBetween`, `checkLength`, `checkRegex` — exists **only on the column builder**, so it
+must be chained onto the column definition. Calling one on the table crashes at apply time:
+
+```
+TypeError: table.checkIn is not a function
+    at TableBuilder._fn (migrations/…_create_schema.ts:28:11)
+migration failed with error: table.checkIn is not a function
+```
+
+```typescript
+// ❌ WRONG — checkIn does not exist on the table builder
+table.string('status', 20).notNullable();
+table.checkIn('status', ['open', 'in_progress', 'closed']);
+
+// ✅ RIGHT — chain it onto the column
+table.string('status', 20).notNullable().checkIn(['open', 'in_progress', 'closed']);
+
+// ✅ Also fine — a raw predicate via the table-level `check`
+table.check("status in ('open','in_progress','closed')");
+```
+
+This fails only when migrations actually run, which is *after* build and tests pass — so it
+burns the whole repair budget. Chain the helper the first time.
+
 ## Derive the schema from real usage
 
 Read the handler data-access code (and the entity types) before writing columns — the table must match what the code actually reads and writes. Cross-reference every table name against the collection/table names the handlers use (a `collectionToTable` map if one exists). A mismatch here is the #1 cause of `relation "X" does not exist` at smoke-test time.

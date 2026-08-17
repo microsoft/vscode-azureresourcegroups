@@ -28,7 +28,7 @@ Reference guide for local development setup of Azure Functions projects.
 | node-ts | ✅ Implemented | [runtimes/node.md](../runtimes/node.md) |
 | node-js | ✅ Implemented | [runtimes/node.md](../runtimes/node.md) |
 | dotnet (Functions isolated) | ✅ Implemented | [runtimes/dotnet.md](../runtimes/dotnet.md) |
-| python  | 🔲 Planned | [limited-support.md](../limited-support.md) |
+| python  | ✅ Implemented | [runtimes/python.md](../runtimes/python.md) |
 | java    | 🔲 Planned | [limited-support.md](../limited-support.md) |
 
 > **Limited-support runtimes:** When a runtime with limited support is detected, emit a `⚠️ LIMITED SUPPORT:` warning per [limited-support.md](../limited-support.md) and ask the user whether to proceed. If the user agrees, proceed with best-effort generation for all artifacts (emulators, debug config, tasks). Do not silently skip debug/launch configuration — let the user decide.
@@ -84,6 +84,16 @@ func host start
 
 > For .NET, the Functions host spawns a worker process that VS Code attaches to via `coreclr` — no additional debug flags are needed on the command line.
 
+**Python:**
+
+```text
+languageWorkers__python__defaultExecutablePath="{project-root}/.venv/bin/python" \
+languageWorkers__python__arguments="-m debugpy --listen 9091" \
+func host start
+```
+
+> The worker executable and `debugpy` MUST come from the same project-local `.venv`. Creating `.venv` without setting `languageWorkers__python__defaultExecutablePath` leaves Core Tools using the global `python3`, where project dependencies and `debugpy` are unavailable.
+
 ---
 
 ## Runtime Wiring
@@ -97,7 +107,7 @@ func host start
 | node-ts | `{service-id}: func host start` | `func` | `$func-node-watch` | `attach` | ✅ Implemented | [runtimes/node.md](../runtimes/node.md) |
 | node-js | `{service-id}: func host start` | `func` | `$func-node-watch` | `attach` | ✅ Implemented | [runtimes/node.md](../runtimes/node.md) |
 | dotnet  | `{service-id}: func host start` | `func` | `$func-dotnet-watch` | `attach` | ✅ Implemented | [runtimes/dotnet.md](../runtimes/dotnet.md) |
-| python  | `{service-id}: func host start` | `func` | `$func-python-watch` | `attach` | 🔲 Planned | [limited-support.md](../limited-support.md) |
+| python  | `{service-id}: func host start` | `func` | `$func-python-watch` | `attach` | ✅ Implemented | [runtimes/python.md](../runtimes/python.md) |
 | java    | `{service-id}: func host start` | `func` | `$func-java-watch` | `attach` | 🔲 Planned | [limited-support.md](../limited-support.md) |
 
 > `{service-id}` is the kebab-case ID derived from the plan's Service Label column — see [generate.md § Service ID Derivation](../generate.md).
@@ -122,6 +132,7 @@ The Functions host runs your code in a separate **language-worker** process, so 
 |---------|-----------------------|-----------------|------------|---------------|--------|
 | node-ts | `languageWorkers__node__arguments` | `--inspect=9229` | 9229 | `node` | ✅ Implemented |
 | node-js | `languageWorkers__node__arguments` | `--inspect=9229` | 9229 | `node` | ✅ Implemented |
+| python | `languageWorkers__python__arguments` plus `languageWorkers__python__defaultExecutablePath` | `-m debugpy --listen 9091`; `.venv` interpreter path | 9091 | `debugpy` | ✅ Implemented |
 
 
 **node-ts** (has watch task):
@@ -165,6 +176,30 @@ The Functions host runs your code in a separate **language-worker** process, so 
 > Remove `"Start Emulators"` from `dependsOn` when the plan has no checked emulators.
 
 > `dependsOn`: first entry is the runtime-specific prerequisite — watch task for TypeScript, install task for JavaScript. The exact task labels come from `runtimes/{rt}.md` § Build Chain, prefixed with the service ID.
+
+**python** (project-local virtual environment):
+
+```json
+{
+  "type": "func",
+  "label": "{service-id}: func host start",
+  "command": "host start",
+  "options": {
+    "cwd": "${workspaceFolder}/{path-to-functions-project}",
+    "env": {
+      "languageWorkers__python__defaultExecutablePath": "${workspaceFolder}/{path-to-functions-project}/.venv/bin/python",
+      "languageWorkers__python__arguments": "-m debugpy --listen 9091"
+    }
+  },
+  "problemMatcher": "$func-python-watch",
+  "isBackground": true,
+  "runOptions": { "instanceLimit": 1, "instancePolicy": "silent" },
+  "dependsOrder": "sequence",
+  "dependsOn": ["{service-id}: install dependencies", "Start Emulators"]
+}
+```
+
+> The dependency task and cross-platform `.venv` paths are defined in [runtimes/python.md](../runtimes/python.md). Remove `"Start Emulators"` when the plan has no checked emulators.
 
 **dotnet** (compiled — requires build before host start):
 

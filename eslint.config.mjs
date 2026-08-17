@@ -12,6 +12,10 @@ export default defineConfig([
         ignores: [
             'api/dist/**',
             'api/out/**',
+            'evals/results/**',
+            'evals/grader-certification/reference-node-fullstack/**',
+            'evals/grader-certification/reference-deployable/**',
+            'evals/vscode-parity/**',
             'src/webviews/copilotOnRails/views/react-shim.js',
         ],
     },

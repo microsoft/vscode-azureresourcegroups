@@ -188,7 +188,118 @@ Every page that displays data MUST cover all four states with real library primi
 - [ ] Every data-bearing page exposes all four states (loading / error / empty / data) via a dev-only toggle.
 - [ ] `Style Direction:` is reflected in density and corner radius (e.g. "data-dense" → compact toolbars, tight list rows; "calm and spacious" → generous padding, larger cards).
 - [ ] No `any` types; the four-state contract still holds; auto-auth still works (if applicable).
+- [ ] **The frontend's own `npm test` passes.** If the suite uses vitest and the library ships CommonJS-only dependencies, inline them — see "Test config for component libraries" below.
 - [ ] The scaffolded UI **reproduces the approved preview at `.azure/.preview-temp/<slug>.html` and adds the production-only layer** — same regions, same brand color, same density and populated content, now with real library primitives, real webfont, motion, dark mode, and real imagery the static preview could not include. If a generated page looks **less** polished than the preview, the page has failed the bar.
+
+---
+
+## Test config for component libraries (vitest)
+
+Fluent UI v9 depends on `tabster`, which ships as CommonJS. Vitest externalizes
+node_modules by default, so the import fails and **every test in the file aborts
+before running** — the suite never executes a single assertion:
+
+```
+The requested module 'tabster' is a CommonJS module, which may not support all
+module.exports as named exports.
+ ❯ src/App.tsx:2:31
+```
+
+Any frontend suite that renders a component under the library's theme provider MUST
+inline those packages. **The `test` block goes *inside* the `defineConfig({ … })` object** —
+appending it after the closing `});` produces `TS1005: ';' expected` and fails the build.
+Use one of these two complete files, not a fragment:
+
+```typescript
+// Option A — vitest.config.ts, a standalone file
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    server: {
+      deps: {
+        inline: ['@fluentui/react-components', '@fluentui/react-icons', 'tabster'],
+      },
+    },
+  },
+});
+```
+
+```typescript
+// Option B — merged into the existing vite.config.ts (note: one object, one `});`)
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: { host: true, allowedHosts: true, strictPort: false },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    server: {
+      deps: {
+        inline: ['@fluentui/react-components', '@fluentui/react-icons', 'tabster'],
+      },
+    },
+  },
+});
+```
+
+> ⚠️ Pick **one** option. If you edit `vite.config.ts`, add `test:` as a key of the existing
+> object literal — never paste a `test: { … }` block below the final `});`. After editing any
+> config file, re-read it end-to-end and confirm it still has exactly one top-level
+> `export default defineConfig({ … });`.
+
+### If you declare a `test` script, you MUST ship at least one test
+
+`vitest run` **exits non-zero when it collects no test files**, so a `"test": "vitest run"` script
+with an empty suite fails workspace-wide `npm test` and blocks the whole build. Configuring vitest
+is not enough — write the test file too.
+
+Ship this smoke test at `src/App.test.tsx`. It is the minimum bar, and it doubles as proof that the
+`server.deps.inline` config above is correct (without it, this file is exactly what fails with the
+`tabster` CommonJS error):
+
+```typescript
+import { render, screen } from '@testing-library/react';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { describe, expect, it } from 'vitest';
+import App from './App';
+
+describe('App', () => {
+  it('renders the application shell', () => {
+    render(
+      <FluentProvider theme={webLightTheme}>
+        <App />
+      </FluentProvider>,
+    );
+    expect(screen.getByRole('main')).toBeDefined();
+  });
+});
+```
+
+Add `@testing-library/react` and `jsdom` to `devDependencies` when you add this file. If a package
+is genuinely meant to have no tests, use `"test": "vitest run --passWithNoTests"` instead — but
+never leave a bare `vitest run` with an empty suite.
+
+**Do not anchor the pattern.** Vitest matches `inline` entries against the module's
+*absolute path* (`/workspace/node_modules/@fluentui/react-components/...`), so an
+anchored regex never matches and the package stays externalized. The failure looks
+identical, which makes this a silent no-op:
+
+| Entry | Inlines the package? |
+| --- | --- |
+| `/^@fluentui\//` | **No** — anchored at string start, never matches a path |
+| `'@fluentui/react-components'` | Yes — string entries match `/node_modules/<entry>` |
+| `/@fluentui\//` | Yes — unanchored regex matches inside the path |
+
+Inlining only `tabster` is **not** sufficient: the failing `import` lives inside
+`@fluentui/react-components`, so if that package is externalized Node still loads it
+natively and the named export fails. Inline the library itself.
+
+Run the frontend workspace's `npm test` before claiming the step is complete.
 
 ---
 
@@ -319,6 +430,47 @@ A page can pass items 1–8 and still look templated if it renders empty media s
 - **Match the domain's visual idiom.** A photo-sharing app reads as a gallery (edge-to-edge imagery, scrapbook/polaroid framing, captions), a finance app as data-dense tables, an editorial app as a magazine, a chat app as message bubbles. Do not flatten every app into the same generic SaaS card grid.
 - **Use bespoke, domain-specific component treatments** — tilted polaroid frames, ticket stubs, chat bubbles, kanban cards, gallery tiles, etc. — **layered on top of** the library primitives from the region-token mapping. This is encouraged, not forbidden (see self-review item 12). The ban is only on empty placeholder `<div>`s that re-skin the wireframe, never on art direction that fits the domain.
 
+### 10. Accessibility is a hard runtime gate
+
+Before the page is complete, render it in a real browser and resolve all critical or
+serious WCAG A/AA findings. At minimum:
+
+- Every icon-only button has an accessible name.
+- Form controls have programmatic labels and validation relationships.
+- Foreground/background pairs meet contrast requirements in light and dark themes.
+- Elements under `aria-hidden="true"` are never focusable and contain no focusable descendants.
+- Keyboard focus is visible, ordered, and not trapped outside an intentionally open modal.
+- Semantic landmarks and heading order describe the page structure.
+
+Do not suppress axe rules globally or remove keyboard behavior to make a scan pass. Fix
+the rendered accessibility tree or component composition at the affected selector.
+
+#### Contrast fails on de-emphasized text, not on body text
+
+Every observed `color-contrast` violation came from custom classes invented for *quieter*
+text — `.eyebrow`, `.empty-state` copy, captions, metadata, badge labels — where a
+hand-picked light grey was chosen to look subdued against a white or tinted surface. Body
+text is almost never the problem, so reading the page and judging it "looks fine" does not
+catch this.
+
+Do not hand-pick hex greys for secondary text. Use the theme's own tokens, which are
+already AA-compliant against their matching surface:
+
+```css
+/* Wrong - a grey chosen by eye; ~2.9:1 against white, fails AA (needs 4.5:1) */
+.eyebrow { color: #9aa0a6; }
+.empty-state p { color: #b1b5ba; }
+
+/* Right - semantic tokens that track the active theme */
+.eyebrow { color: var(--colorNeutralForeground3); }
+.empty-state p { color: var(--colorNeutralForeground2); }
+```
+
+`--colorNeutralForeground3` is the lightest neutral that still meets AA for normal text.
+Anything lighter (`Foreground4`, `Disabled`) is for non-text or genuinely disabled content
+only. When a coloured badge or status pill needs a tint, pair the token background with its
+matching `...ForegroundN` token rather than mixing a token background with a custom colour.
+
 ---
 
 ## Polish self-review checklist (per page, before marking complete)
@@ -338,3 +490,5 @@ Run through this 12-item yes/no list for **each page** generated. A "no" on any 
 11. Does the page **match or exceed** the approved static preview — same regions and content, now with real library elevation, motion, real webfont, and real imagery — so a reviewer comparing them would say "yes, this is the preview, brought to life" (never "this looks worse than the mock")?
 12. Does every region **resolve to a real library primitive** (no zero-effort `<div className="card">Card 1</div>` wireframe stubs)? Bespoke, domain-styled components (polaroid frames, ticket stubs, gallery tiles, chat bubbles) are **encouraged** as long as they wrap or extend a real library primitive and carry real content + imagery — the ban is on empty placeholder `<div>`s that merely re-skin the wireframe, not on domain art direction.
 13. Does every media-bearing entity render a **real image** (from the mock data's image URL), not an empty tinted surface or solid-color block?
+14. Does a real-browser WCAG A/AA scan report zero critical or serious violations?
+15. Can every interactive control be reached and understood by keyboard and accessible name?

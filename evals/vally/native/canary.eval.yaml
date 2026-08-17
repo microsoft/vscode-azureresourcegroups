@@ -1,0 +1,181 @@
+name: copilot-on-rails-compatibility-canary
+description: Direct Copilot on Rails execution with fail-closed authoritative artifact grading.
+version: "1"
+type: capability
+tags:
+  component: copilot-on-rails
+  plane: vally-native
+  authority: local-authoritative-hard-gate
+  evidenceTier: ordinary
+defaults:
+  runs: 1
+  timeout: 60m
+  model: gpt-5.6-sol
+  executor: cor-aca
+stimuli:
+  - name: api-ts-functions-minimal
+    prompt: Build a minimal backend-only TypeScript Azure Functions API with health, list, and create endpoints for ephemeral notes, no database, no authentication, and unit tests.
+    tags:
+      archetype: api
+      frontend: none
+      backend: typescript-functions
+      database: none
+      auth: none
+      complexity: low
+      scenarioId: api-ts-functions-minimal
+      endpoint: local
+      arm: rails
+      model: gpt-5.6-sol
+      profile: minimal
+      validationCommandTimeoutMinutes: "5"
+      applicability-planning: required
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: required
+      applicability-browser: not-applicable
+      applicability-browser-journey: not-applicable
+      applicability-accessibility: not-applicable
+      applicability-persistence: not-applicable
+      applicability-worker: not-applicable
+      applicability-debugger: not-applicable
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: api-ts-functions-minimal
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: cor-authoritative
+        name: authoritative-local-hard-gates
+        config:
+          validationPath: cor-validation.json
+          metricsPath: custom_metrics.json
+          requiredGates:
+            - planning
+            - scaffold
+            - build
+            - test
+            - integration
+            - local-runtime
+            - cleanup
+            - model
+            - provenance
+          evidenceTier: ordinary
+      - type: custom-metrics
+        name: authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+  - name: crud-react-functions-postgres
+    prompt: Build a customer support ticket application with a React frontend, a TypeScript Azure Functions API, PostgreSQL persistence, and mock authentication. Users should create, assign, comment on, and close tickets.
+    tags:
+      archetype: crud
+      frontend: react
+      backend: functions
+      database: postgres
+      auth: mock
+      complexity: medium
+      scenarioId: crud-react-functions-postgres
+      endpoint: local
+      arm: rails
+      model: gpt-5.6-sol
+      profile: standard
+      validationCommandTimeoutMinutes: "10"
+      applicability-planning: required
+      applicability-scaffold: required
+      applicability-build: required
+      applicability-test: required
+      applicability-integration: required
+      applicability-local-runtime: required
+      applicability-browser: required
+      applicability-browser-journey: required
+      applicability-accessibility: required
+      applicability-persistence: required
+      applicability-worker: not-applicable
+      applicability-debugger: required
+      applicability-deployment: not-applicable
+      applicability-security: not-applicable
+      applicability-cleanup: required
+      applicability-model: required
+      applicability-provenance: required
+    environment:
+      env:
+        COR_EVAL_SCENARIO_ID: crud-react-functions-postgres
+        COR_EVAL_MODEL: gpt-5.6-sol
+        COR_EVAL_ARM: rails
+        COR_EVAL_ENDPOINT: local
+    supported_executors:
+      - cor-aca
+    artifacts:
+      include:
+        - cor-validation.json
+        - custom_metrics.json
+        - trajectory.json
+        - workspace.diff
+        - validation-manifest.json
+        - native-summary.json
+        - run-result.json
+        - adapter-metrics.json
+        - reports/**
+      exclude:
+        - "**/*.secret"
+        - "**/.env*"
+    graders:
+      - type: cor-authoritative
+        name: authoritative-local-hard-gates
+        config:
+          validationPath: cor-validation.json
+          metricsPath: custom_metrics.json
+          requiredGates:
+            - planning
+            - scaffold
+            - build
+            - test
+            - integration
+            - local-runtime
+            - browser
+            - browser-journey
+            - accessibility
+            - persistence
+            - debugger
+            - cleanup
+            - model
+            - provenance
+          evidenceTier: ordinary
+      - type: custom-metrics
+        name: authoritative-metric
+        config:
+          path: custom_metrics.json
+          assertions:
+            - metric: authoritative_hard_gates_passed
+              equals: true
+scoring:
+  weights:
+    cor-authoritative: 1
+    custom-metrics: 0
+  threshold: 1

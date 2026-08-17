@@ -1,0 +1,93 @@
+{
+    "schemaVersion": "1",
+    "id": "crud-svelte-python-functions-cosmos",
+    "prompt": "Build a personal reading tracker with a Svelte frontend, Python Azure Functions API, Cosmos DB, mock authentication, and UI plus API tests for reading-list workflows.",
+    "baselinePrompt": "Build a complete personal reading tracker application using a Svelte frontend, a Python Azure Functions API, Cosmos DB, and mock authentication, including UI and API tests for reading-list workflows. Implement all frontend, backend, and configuration code, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging every application service, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "tags": {
+        "archetype": "crud",
+        "frontend": "svelte",
+        "backend": "python-functions",
+        "database": "cosmos",
+        "auth": "mock",
+        "complexity": "medium"
+    },
+    "requirementsAnswers": {
+        "dataStores": [
+            "CosmosDB"
+        ],
+        "auth": "Mock auth middleware"
+    },
+    "validation": {
+        "profile": "standard",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 10
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 180,
+            "probes": [
+                {
+                    "name": "application frontend",
+                    "target": "frontend",
+                    "method": "GET",
+                    "url": "http://127.0.0.1:5173/",
+                    "expectedStatus": 200,
+                    "browser": {
+                        "requireInteractiveElements": true,
+                        "maxSeriousAccessibilityViolations": 0,
+                        "journeySeverity": "required",
+                        "viewport": {
+                            "width": 1440,
+                            "height": 900
+                        },
+                        "actions": [
+                            {
+                                "kind": "click",
+                                "selector": "Add book",
+                                "selectorType": "role",
+                                "role": "button",
+                                "optional": true
+                            },
+                            {
+                                "kind": "fillForm",
+                                "values": {
+                                    "title": "Browser acceptance book",
+                                    "name": "Browser acceptance book",
+                                    "book": "Browser acceptance book"
+                                }
+                            },
+                            {
+                                "kind": "click",
+                                "selector": "Add book",
+                                "selectorType": "role",
+                                "role": "button"
+                            }
+                        ],
+                        "assertions": [
+                            {
+                                "kind": "text",
+                                "selector": "body",
+                                "value": "Browser acceptance book"
+                            }
+                        ],
+                        "persistence": {
+                            "restartTargets": [
+                                "frontend"
+                            ],
+                            "reload": "current-url",
+                            "assertions": [
+                                {
+                                    "kind": "text",
+                                    "selector": "body",
+                                    "value": "Browser acceptance book"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}

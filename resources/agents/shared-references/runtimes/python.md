@@ -1,6 +1,10 @@
 # Python Runtime Reference
 
 > Azure Functions v2 model, Python. pytest, Pydantic validation, structlog, DI patterns.
+>
+> ### Runtime policy (MANDATORY)
+>
+> Target Python 3.12 unless the user explicitly requests another supported version. For packaged projects, set `requires-python = ">=3.12,<3.13"`, Ruff `target-version = "py312"`, and `.python-version` to `3.12`. Never infer a newer interpreter merely because it exists locally; Azure and CI support must agree first.
 
 ---
 
@@ -44,7 +48,7 @@ pip install -r requirements.txt
     "FUNCTIONS_WORKER_RUNTIME": "python",
     "ENVIRONMENT": "development",
     "STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=true",
-    "DATABASE_URL": "postgresql://localdev:localdevpassword@localhost:5432/appdb",
+    "DATABASE_URL": "postgresql://<POSTGRES_USER>:<POSTGRES_PASSWORD>@localhost:5432/appdb",
     "REDIS_URL": "redis://localhost:6379"
   },
   "Host": {
@@ -54,13 +58,19 @@ pip install -r requirements.txt
 }
 ```
 
+> `local.settings.json` is plain JSON and does **not** support `${...}` interpolation.
+> Replace `<POSTGRES_USER>` / `<POSTGRES_PASSWORD>` with the same discrete values declared in the
+> workspace-root `.env` used by docker-compose. Never leave the angle-bracket placeholders in the
+> generated file, and never paste a credential value copied out of tool output — redaction filters
+> rewrite concrete credential URLs, and a masked value beginning with `*` corrupts YAML/JSON config.
+
 ### pyproject.toml
 
 ```toml
 [project]
 name = "functions"
 version = "1.0.0"
-requires-python = ">=3.11"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "azure-functions>=1.17.0",
     "pydantic>=2.0.0",
@@ -89,11 +99,40 @@ asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
 ```
+
+Before hand-off, keep imports in Ruff/isort order and run `python -m ruff check .` when command execution is available. Generated source and any build output included in lint scope must both be clean.
+
+### Azure SDK exception boundaries
+
+Wrap the **entire** SDK operation, including client/container acquisition and lazy resource creation. Transport exceptions can occur before the final upload/download call:
+
+```python
+from azure.core.exceptions import (
+    AzureError,
+    ResourceExistsError,
+    ServiceRequestError,
+    ServiceResponseError,
+)
+
+try:
+    container = blob_service_client.get_container_client(container_name)
+    try:
+        container.create_container()
+    except ResourceExistsError:
+        pass
+    container.upload_blob(name=blob_name, data=stream, overwrite=False)
+except (ServiceRequestError, ServiceResponseError) as error:
+    raise StorageUnavailableError() from error
+except AzureError as error:
+    raise StorageOperationError() from error
+```
+
+Do not catch only `HttpResponseError` around `create_container()`: that leaks `ServiceRequestError` and `ServiceResponseError` instead of honoring the service abstraction's unavailable-error contract.
 
 ---
 

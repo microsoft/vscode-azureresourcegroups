@@ -143,7 +143,7 @@ function extractSections(lines: string[]): ScaffoldPlanSection[] {
             const looksLikeTree =
                 next === '.' ||
                 /^[a-zA-Z0-9._-]+\/$/.test(next) ||
-                next.startsWith('├') || next.startsWith('└') || next.startsWith('│');
+                isTreeNodeLine(next);
             if (looksLikeTree) {
                 const tree = parseTree(lines, i + 1);
                 if (tree) {
@@ -168,7 +168,7 @@ function extractSections(lines: string[]): ScaffoldPlanSection[] {
         }
 
         // Parse tree structures (lines starting with tree connectors or a root folder)
-        if (line.trim() === '.' || line.trim().match(/^[a-zA-Z0-9._-]+\/$/) || line.trim().startsWith('├') || line.trim().startsWith('└') || line.trim().startsWith('│')) {
+        if (line.trim() === '.' || line.trim().match(/^[a-zA-Z0-9._-]+\/$/) || isTreeNodeLine(line)) {
             const tree = parseTree(lines, i);
             if (tree) {
                 currentSection.content.push(tree.content);
@@ -282,7 +282,7 @@ function parseTree(lines: string[], startIndex: number): { content: ScaffoldPlan
         if (line.trim() === '```') {
             break;
         }
-        if (line.match(/[├└│]/) || (line.startsWith('    ') && treeLines.length > 0)) {
+        if (isTreeNodeLine(line)) {
             treeLines.push(line);
             i++;
         } else if (line.trim() === '') {
@@ -317,14 +317,14 @@ function buildTreeNodes(lines: string[], depth: number): TreeNode[] {
         }
 
         // Extract name and optional comment
-        const cleaned = line.replace(/[│├└─\s]/g, '').trim();
+        const cleaned = line.replace(/[│├└─|`\s]/g, '').trim();
         if (!cleaned) {
             i++;
             continue;
         }
 
         // More precise extraction: find the connector then get the rest
-        const connectorMatch = line.match(/[├└]──\s+(.+)/);
+        const connectorMatch = line.match(/(?:[├└]──|\|--|`--)\s+(.+)/);
         if (!connectorMatch) {
             i++;
             continue;
@@ -372,7 +372,7 @@ function getTreeDepth(line: string): number {
     while (pos < line.length) {
         // Check for "│   " (pipe + 3 spaces) or "    " (4 spaces)
         const chunk = line.substring(pos, pos + 4);
-        if (chunk === '│   ' || chunk === '    ') {
+        if (chunk === '│   ' || chunk === '|   ' || chunk === '    ') {
             depth++;
             pos += 4;
         } else {
@@ -381,6 +381,10 @@ function getTreeDepth(line: string): number {
     }
 
     return depth;
+}
+
+function isTreeNodeLine(line: string): boolean {
+    return /(?:[├└]──|\|--|`--)\s+/.test(line);
 }
 
 /**
@@ -551,5 +555,3 @@ export function findKeyValue(section: ScaffoldPlanSection, key: string): string 
 }
 
 //#endregion
-
-

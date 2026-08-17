@@ -82,6 +82,7 @@ Requires a scaffolded project. Verify before starting:
 | Write the migration(s) | Each migration MUST contain a complete `up()` with `CREATE TABLE` (all columns, types) and a `down()` that reverses it. **Empty migration files do NOT satisfy this step.** After writing, list the directory and verify each file is non-zero size. |
 | Add constraints | `UNIQUE` on business-unique fields, `FOREIGN KEY` with `ON DELETE`, `CHECK` for enums, `INDEX` on queried columns. (See [migrations.md](.github/agents/azure-project-integrate/references/migrations.md).) |
 | Create / confirm the migration runner | A script or command to apply migrations forward and roll back. Add an npm/poetry/dotnet script if missing (e.g. `"migrate"`, `"migrate:rollback"`). |
+| Validate Compose migration paths | If a one-shot Compose migration service exists, mount the workspace or service folder containing the migrations and set `working_dir` to the service root that owns the migration script. Resolve relative migration-directory arguments from that directory and verify the directory is visible inside the container before running the migration. |
 | Verify table names match handlers | Cross-reference every table against the collection/table names the handlers use. Document the mapping if a `collectionToTable` map exists. |
 | Apply the migrations | Run the migrate command against the local database (start the local DB / emulator if the artifact documents one). Confirm it applies with **zero errors** and the tables now exist. |
 

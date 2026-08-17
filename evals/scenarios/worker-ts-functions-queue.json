@@ -1,0 +1,57 @@
+{
+    "schemaVersion": "1",
+    "id": "worker-ts-functions-queue",
+    "prompt": "Build a backend-only TypeScript Azure Functions queue worker that reads JSON billing events from the billing-events-in Queue Storage queue, validates them, and writes routed JSON events to billing-events-out. For the deterministic input {\"eventId\":\"eval-billing-001\",\"accountId\":\"acct-eval-001\",\"amount\":1250,\"currency\":\"USD\"}, the output must preserve eventId and accountId and include route:\"standard\". Use AzureWebJobsStorage so this works with Azurite, has no authentication, and includes unit tests for success and poison-message paths.",
+    "baselinePrompt": "Build a complete backend-only billing event processing project using a TypeScript Azure Functions queue worker that reads JSON events from the billing-events-in Azure Queue Storage queue and writes routed JSON events to billing-events-out. The deterministic input {\"eventId\":\"eval-billing-001\",\"accountId\":\"acct-eval-001\",\"amount\":1250,\"currency\":\"USD\"} must produce output preserving eventId and accountId and containing route:\"standard\". Use AzureWebJobsStorage so local execution works with Azurite, has no authentication, and includes unit tests for success and poison-message paths. Implement all worker code and configuration, comprehensive automated tests, local VS Code tasks and launch configuration for running and debugging the worker and Azurite, and deployment-ready Azure infrastructure-as-code and application configuration. The repository must be installable, buildable, testable, runnable locally, debuggable in VS Code, and deployable to Azure. Work autonomously to completion without asking questions or requiring user interaction; choose reasonable defaults where unspecified.",
+    "tags": {
+        "archetype": "worker",
+        "frontend": "none",
+        "backend": "typescript-functions",
+        "database": "queue",
+        "auth": "none",
+        "complexity": "low"
+    },
+    "requirementsAnswers": {
+        "dataStores": ["Queue Storage"],
+        "auth": "No auth"
+    },
+    "validation": {
+        "profile": "minimal",
+        "build": true,
+        "test": true,
+        "lint": "if-present",
+        "timeoutMinutes": 5
+    },
+    "acceptance": {
+        "local": {
+            "startupTimeoutSeconds": 120,
+            "storageEvents": [
+                {
+                    "name": "billing event is routed",
+                    "kind": "queue",
+                    "inputQueue": "billing-events-in",
+                    "outputQueue": "billing-events-out",
+                    "message": {
+                        "eventId": "eval-billing-001",
+                        "accountId": "acct-eval-001",
+                        "amount": 1250,
+                        "currency": "USD"
+                    },
+                    "expectedMessageIncludes": {
+                        "eventId": "eval-billing-001",
+                        "accountId": "acct-eval-001",
+                        "route": "standard"
+                    },
+                    "timeoutSeconds": 90
+                }
+            ],
+            "probes": [
+                {
+                    "name": "queue worker process",
+                    "target": "worker",
+                    "processPattern": "func( host)? start|Microsoft.Azure.WebJobs.Script.WebHost"
+                }
+            ]
+        }
+    }
+}
