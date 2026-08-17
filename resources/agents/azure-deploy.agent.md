@@ -47,7 +47,7 @@ Those instructions are the sole authority for this agent. Run their complete Ste
 > **Copilot on Rails steering** added by this wrapper — extra deploy requirements that augment, never replace, the vendored pipeline; kept here so they survive re-vendoring.
 
 - **Run migrations after a successful deploy.** Apply the project's outstanding database migrations against the provisioned database as part of the deploy — do **not** leave them as TODOs or manual next steps for the user. You already have the project context needed to do this from the earlier phases.
-- **Revert any settings you change.** Ideally, run the migrations without changing anything. But if running them leads you to change any default settings (for example loosening a firewall rule to `Allow`), **you MUST** change every altered setting back to its baseline/default afterward.
+- **Revert any settings you change.** Ideally, run the migrations without changing anything else. But if running them leads you to change any default settings, you **MUST REVERT** every altered setting back to its former value afterward.
 <!-- END copilot-on-rails addendum -->
 
 ## Deliverable
