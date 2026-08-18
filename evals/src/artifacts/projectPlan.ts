@@ -7,12 +7,9 @@ import {
     findKeyValue,
     findSection,
     parseScaffoldPlanMarkdown,
-} from '../../../src/webviews/copilotOnRails/views/utils/parseScaffoldPlanMarkdown';
-import {
-    ArtifactValidationIssue,
-    ArtifactValidationResult,
-    createValidationResult,
-} from './validationTypes';
+} from '../../../src/webviews/copilotOnRails/views/utils/parseScaffoldPlanMarkdown.ts';
+import type { ArtifactValidationIssue, ArtifactValidationResult } from './validationTypes.ts';
+import { createValidationResult } from './validationTypes.ts';
 
 const requiredSections = [
     'project overview',
@@ -83,7 +80,31 @@ export function validateProjectPlanArtifact(
     if (/```mermaid/i.test(content)) {
         issues.push(issue('forbiddenMermaid', '$', 'Project plan must use the parsed template, not a Mermaid diagram.'));
     }
+    if (content.trimStart().startsWith('---')) {
+        issues.push(issue('forbiddenFrontMatter', '$', 'Project plan must not start with YAML front-matter.'));
+    }
+    validateRouteDefinitions(content, issues);
     return createValidationResult(issues);
+}
+
+/**
+ * The route table is what the scaffold agent builds against, so it must carry the
+ * Method/Path columns and the health endpoint every generated service exposes.
+ */
+function validateRouteDefinitions(content: string, issues: ArtifactValidationIssue[]): void {
+    const lines = content.split('\n');
+    const start = lines.findIndex(line => /^##\s+\d+\.\s+Route Definitions/i.test(line));
+    if (start === -1) {
+        return;
+    }
+    const offset = lines.slice(start + 1).findIndex(line => /^##\s+\d+\./.test(line));
+    const body = lines.slice(start, offset === -1 ? undefined : start + 1 + offset).join('\n');
+    if (!body.includes('Method') || !body.includes('Path')) {
+        issues.push(issue('missingRouteColumns', '$.routeDefinitions', 'Route table must have Method and Path columns.'));
+    }
+    if (!/\/api\/health/i.test(body)) {
+        issues.push(issue('missingHealthRoute', '$.routeDefinitions', 'Route table must include the /api/health endpoint.'));
+    }
 }
 
 function requireMetadata(content: string, name: string, issues: ArtifactValidationIssue[]): void {

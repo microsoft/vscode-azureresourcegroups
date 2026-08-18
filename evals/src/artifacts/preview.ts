@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import { ArtifactValidationIssue, ArtifactValidationResult, createValidationResult } from './validationTypes';
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
+import type { ArtifactValidationIssue, ArtifactValidationResult } from './validationTypes.ts';
+import { createValidationResult } from './validationTypes.ts';
 
 interface PreviewManifestPage {
     slug?: unknown;

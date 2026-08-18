@@ -46,7 +46,7 @@ test/server.test.js
 
 ## 5. Route Definitions
 
-| Method | Route | Purpose |
+| Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/health` | Report service health |
 | GET | `/api/items` | List projects |

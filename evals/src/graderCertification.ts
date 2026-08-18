@@ -3,15 +3,17 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { promises as fs } from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-import { validatePlanEvaluationContract } from './artifacts/planEvaluation';
-import { validatePreviewArtifacts } from './artifacts/preview';
-import { validateProjectPlanArtifact } from './artifacts/projectPlan';
-import { validateRequirementsArtifact } from './artifacts/requirements';
-import { ArtifactValidationResult } from './artifacts/validationTypes';
-import { CorEvaluationScenario, validateScenario } from './scenario';
+import { promises as fs } from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import type { PlanGateState } from './artifacts/planEvaluation.ts';
+import { validatePlanEvaluationContract } from './artifacts/planEvaluation.ts';
+import { validatePreviewArtifacts } from './artifacts/preview.ts';
+import { validateProjectPlanArtifact } from './artifacts/projectPlan.ts';
+import { validateRequirementsArtifact } from './artifacts/requirements.ts';
+import type { ArtifactValidationResult } from './artifacts/validationTypes.ts';
+import type { CorEvaluationScenario } from './scenario.ts';
+import { validateScenario } from './scenario.ts';
 
 interface CertificationManifest {
     schemaVersion: number;
@@ -56,7 +58,7 @@ interface CertificationReport {
     cases: CertificationCase[];
 }
 
-const repoRoot = path.resolve(__dirname, '..', '..');
+const repoRoot = path.resolve(import.meta.dirname, '..', '..');
 const manifestPath = path.join(repoRoot, 'evals', 'grader-certification', 'manifest.json');
 
 async function main(): Promise<void> {
@@ -127,7 +129,7 @@ async function runOfflineCertification(
 
 async function runOfflineValidators(
     workspace: string,
-    _scenario: CorEvaluationScenario,
+    scenario: CorEvaluationScenario,
 ): Promise<Map<string, string[]>> {
     const azure = path.join(workspace, '.azure');
     const [requirements, projectPlan] = await Promise.all([
@@ -137,15 +139,52 @@ async function runOfflineValidators(
     const validations: Array<readonly [string, ArtifactValidationResult]> = await Promise.all([
         Promise.resolve(['requirements', validateRequirementsArtifact(requirements, { requireConfirmed: true })] as const),
         Promise.resolve(['project-plan', validateProjectPlanArtifact(projectPlan, { expectedStatus: 'Integrated' })] as const),
-        Promise.resolve(['plan-gate', validatePlanEvaluationContract(true, true, {
-            called: true,
-            previewManifestPresentAtCall: true,
-            previewHtmlFilesAtCall: [],
-        })] as const),
+        readPlanGateState(azure, scenario, projectPlan).then(state => [
+            'plan-gate',
+            validatePlanEvaluationContract(state.expectedFrontend, state.generatedFrontend, state.gate),
+        ] as const),
         validatePreviewArtifacts(path.join(azure, '.preview-temp')).then(result => ['preview', result] as const),
     ]);
     const results = new Map(validations.map(([id, result]) => [id, issueCodes(result)]));
     return results;
+}
+
+/**
+ * Derive the plan-gate inputs from the fixture rather than hard-coding them.
+ *
+ * Passing literals made this validator unfalsifiable — it returned `valid: true`
+ * for every fixture and every mutation, so certification proved nothing about it.
+ * Reading the scenario, the plan and the preview directory means a mutation to any
+ * of the three now changes the outcome.
+ */
+async function readPlanGateState(
+    azureDir: string,
+    scenario: CorEvaluationScenario,
+    projectPlan: string,
+): Promise<{ expectedFrontend: boolean; generatedFrontend: boolean; gate: PlanGateState }> {
+    const expectedFrontend = (scenario.tags.frontend ?? 'none') !== 'none';
+    const appType = /^\*\*App Type\*\*\s*:\s*(.+)$/im.exec(projectPlan)?.[1].trim().toLowerCase();
+    const generatedFrontend = !!appType && !['api only', 'background worker'].includes(appType);
+    return {
+        expectedFrontend,
+        generatedFrontend,
+        gate: {
+            called: true,
+            previewManifestPresentAtCall: await exists(path.join(azureDir, '.preview-temp', 'manifest.json')),
+            // The fixture is the post-gate state, so no HTML is treated as
+            // pre-rendered; ordering is asserted from trajectories, not from disk.
+            previewHtmlFilesAtCall: [],
+        },
+    };
+}
+
+async function exists(target: string): Promise<boolean> {
+    try {
+        await fs.access(target);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 async function withMutatedFixture<T>(

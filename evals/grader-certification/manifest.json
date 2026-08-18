@@ -33,6 +33,24 @@
             "expectedCode": "nonSequentialHeading"
         },
         {
+            "id": "plan-gate-frontend-dropped",
+            "tier": "offline",
+            "validator": "plan-gate",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "**App Type**: Web Application",
+            "replacement": "**App Type**: API only",
+            "expectedCode": "frontendIntentMismatch"
+        },
+        {
+            "id": "plan-gate-preview-manifest-missing",
+            "tier": "offline",
+            "validator": "plan-gate",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "delete",
+            "expectedCode": "previewManifestMissingAtGate"
+        },
+        {
             "id": "preview-not-ready",
             "tier": "offline",
             "validator": "preview",

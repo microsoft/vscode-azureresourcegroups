@@ -3,7 +3,7 @@ name: Vally Agent Evals
 on:
   # Run per-agent evals on PRs that touch agent instructions
   pull_request:
-    branches: [main]
+    branches: [main, feat/CoR]
     paths:
       - 'resources/agents/**'
       - 'evals/**'
@@ -44,6 +44,19 @@ jobs:
 
       - name: Check agent instruction drift
         run: node evals/check-agent-drift.mjs
+
+      # Graders run straight off TypeScript source, so a type error is a broken
+      # grader — catch it before it costs a full eval run.
+      - name: Type-check evals
+        run: npm run typecheck
+        working-directory: evals
+
+      # Prove the graders still detect the regressions they claim to detect.
+      - name: Certify graders
+        run: npm run eval:cor:graders:certify
+
+      - name: Validate release thresholds
+        run: npm run eval:cor:thresholds:validate
 
       - name: Lint eval specs
         run: vally lint
@@ -87,6 +100,7 @@ jobs:
           path: results/pr
 
       - name: Download baseline results
+        id: download-baseline
         uses: actions/download-artifact@v4
         with:
           # Most recent artifact from main branch — you'd configure this

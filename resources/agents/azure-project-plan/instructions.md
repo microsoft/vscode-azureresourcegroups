@@ -29,7 +29,7 @@ Plan/design a new Azure-centric app; create requirements/architecture; start a p
 1. **Plan first** — create `.azure/project-plan.md` before any code. No `services/`, configs, or project files until the user approves. Only files allowed under the project root: `.azure/project-plan.md` and the contents of `.azure/.preview-temp/` (per Step 3.5).
 2. **Resilience classification** — classify each service **Essential** (fails without it) or **Enhancement** (succeeds with fallback). See Quick Reference.
 3. **Auto-chain after approval** — immediately invoke `azure-project-scaffold`; never ask the user to invoke it manually. **Generate a presentation-quality frontend HTML/CSS preview** during planning per Step 3.5 (the scaffold agent consumes it as a visual spec but builds the real app with the chosen framework).
-4. **Interactive UI** — use `vscode_askQuestions`, never plain chat; batch unanswered questions into one call.
+4. **Interactive UI** — all user input comes through the requirements and plan webviews; never ask in plain chat and never call `vscode_askQuestions`. Batch open questions into the webview rather than the transcript.
 
 ## Autopilot is selected on the plan page (this agent always runs guided)
 This agent **always** runs guided: it generates `.azure/project-plan.md` with `Status: Planning`, opens the plan preview, and stops for the user's approval. It does **not** detect, decide, or record autopilot, and never skips the preview or approval gate.

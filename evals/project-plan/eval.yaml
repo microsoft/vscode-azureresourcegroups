@@ -33,7 +33,7 @@ stimuli:
         name: requirements-schema-valid
         config:
           program: node
-          args: [${REPO_ROOT=.}/evals/graders/validate-requirements.mjs]
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=.}/evals/graders/validate-requirements.ts]
       - type: tool-calls
         name: opens-requirements-view
         config:
@@ -63,7 +63,7 @@ stimuli:
         name: requirements-api-only
         config:
           program: node
-          args: [${REPO_ROOT=.}/evals/graders/validate-requirements.mjs, --assert-no-frontend, --assert-blob-storage, --assert-cosmosdb]
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=.}/evals/graders/validate-requirements.ts, --assert-no-frontend, --assert-blob-storage, --assert-cosmosdb]
       - type: tool-calls
         name: opens-requirements-view
         config:
@@ -90,7 +90,7 @@ stimuli:
         name: requirements-multi-service
         config:
           program: node
-          args: [${REPO_ROOT=.}/evals/graders/validate-requirements.mjs, --assert-service-count=3]
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=.}/evals/graders/validate-requirements.ts, --assert-service-count=3]
       - type: tool-calls
         name: opens-requirements-view
         config:
@@ -112,7 +112,7 @@ stimuli:
         name: requirements-no-datastore
         config:
           program: node
-          args: [${REPO_ROOT=.}/evals/graders/validate-requirements.mjs, --assert-no-datastore]
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=.}/evals/graders/validate-requirements.ts, --assert-no-datastore]
       - type: tool-calls
         name: opens-requirements-view
         config:
@@ -142,12 +142,12 @@ stimuli:
         name: plan-structure-valid
         config:
           program: node
-          args: [${REPO_ROOT=.}/evals/graders/validate-project-plan.mjs]
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=.}/evals/graders/validate-project-plan.ts]
       - type: program
         name: plan-webview-parseable
         config:
           program: node
-          args: [${REPO_ROOT=.}/evals/graders/validate-webview-parseable.mjs]
+          args: [--disable-warning=MODULE_TYPELESS_PACKAGE_JSON, ${REPO_ROOT=.}/evals/graders/validate-webview-parseable.ts]
       - type: tool-calls
         name: plan-view-opened
         config:
@@ -210,15 +210,3 @@ stimuli:
           required: [workflow-tools-open_plan_view]
     constraints:
       reject_tools: [vscode_askQuestions]
-
-scoring:
-  weights:
-    program: 0.3
-    tool-calls: 0.3
-    file-exists: 0.15
-    file-not-exists: 0.1
-    file-matches: 0.05
-    file-not-matches: 0.04
-    transcript-not-contains: 0.03
-    output-not-contains: 0.03
-  threshold: 0.9

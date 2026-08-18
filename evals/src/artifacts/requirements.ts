@@ -3,16 +3,13 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import type { RequirementsAnswer } from '../../../src/webviews/copilotOnRails/views/utils/parseRequirements.ts';
 import {
     isAnswerEmpty,
     parseRequirementsJson,
-    RequirementsAnswer,
-} from '../../../src/webviews/copilotOnRails/views/utils/parseRequirements';
-import {
-    ArtifactValidationIssue,
-    ArtifactValidationResult,
-    createValidationResult,
-} from './validationTypes';
+} from '../../../src/webviews/copilotOnRails/views/utils/parseRequirements.ts';
+import type { ArtifactValidationIssue, ArtifactValidationResult } from './validationTypes.ts';
+import { createValidationResult } from './validationTypes.ts';
 
 export function validateRequirementsArtifact(
     content: string,

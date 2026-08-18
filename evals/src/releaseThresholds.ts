@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { readFileSync } from 'fs';
-import * as path from 'path';
+import { readFileSync } from 'node:fs';
+import * as path from 'node:path';
 
 export interface ReleaseThresholds {
     schemaVersion: '1';
@@ -205,7 +205,7 @@ function getErrorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 
-if (require.main === module) {
+if (process.argv[1] === import.meta.filename) {
     try {
         const thresholds = loadReleaseThresholds(process.argv[2]);
         process.stdout.write(`Valid release thresholds: ${thresholds.thresholdSet}\n`);

@@ -85,15 +85,23 @@ async function main() {
 
     vally.on("close", (code) => {
         console.log(`\n[run-eval] Results saved to: ${outputDir}`);
-        // Generate readable diagnostics from the latest timestamped subfolder
+        // Generate readable diagnostics from the latest timestamped subfolder.
+        // A report failure means the results are unreadable, so it must surface
+        // rather than leaving a green run with no diagnosis.
+        let reportCode = 0;
         try {
             const subs = require("fs").readdirSync(outputDir).filter(d => d.match(/^\d{4}-/)).sort();
             if (subs.length) {
                 const latest = path.join(outputDir, subs[subs.length - 1]);
                 require("child_process").execFileSync("node", [path.join(evalsDir, "generate-report.cjs"), latest], { stdio: "inherit" });
+            } else {
+                console.error("[run-eval] No trial output found; skipping diagnostics.");
             }
-        } catch { /* best-effort */ }
-        process.exit(code || 0);
+        } catch (err) {
+            console.error(`[run-eval] Failed to generate diagnostics: ${err.message}`);
+            reportCode = 1;
+        }
+        process.exit(code || reportCode);
     });
 
     process.on("SIGINT", () => {

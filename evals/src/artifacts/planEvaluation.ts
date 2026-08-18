@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ArtifactValidationIssue, ArtifactValidationResult } from './validationTypes';
+import type { ArtifactValidationIssue, ArtifactValidationResult } from './validationTypes.ts';
 
 export interface PlanGateState {
     called: boolean;

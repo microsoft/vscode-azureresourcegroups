@@ -1,0 +1,31 @@
+{
+    // The evals run straight off source via Node's built-in type stripping, so
+    // nothing here is emitted — this project exists purely to type-check the
+    // graders and the validators they share with the extension.
+    "compilerOptions": {
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "target": "es2022",
+        "lib": [
+            "es2022"
+        ],
+        "strict": true,
+        "noEmit": true,
+        "allowImportingTsExtensions": true,
+        "erasableSyntaxOnly": true,
+        "noUnusedLocals": true,
+        "noImplicitReturns": true,
+        "noUnusedParameters": true,
+        "skipLibCheck": true,
+        // Declared explicitly so the graders resolve `process`, `Buffer` and the
+        // `node:` builtins from this package rather than accidentally inheriting
+        // @types/node from the extension's node_modules one directory up.
+        "types": [
+            "node"
+        ]
+    },
+    "include": [
+        "src/**/*.ts",
+        "graders/**/*.ts"
+    ]
+}

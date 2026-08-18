@@ -35,6 +35,60 @@ const runSummary = records.find(r => r.type === 'run-summary');
 const passed = results.filter(r => r.gradeResult?.passed);
 const failed = results.filter(r => !r.gradeResult?.passed);
 
+const DIAGNOSTICS_SCHEMA_VERSION = 1;
+
+/** Reserved grader exit code meaning "the grader itself failed" — see graders/graderHarness.ts. */
+const EXIT_GRADER_ERROR = 3;
+
+/**
+ * Fail loudly on an unrecognised result shape.
+ *
+ * Every score in this report is derived from `gradeResult`. If Vally renames or
+ * nests it, silently coercing to `?? 0` would render a confident report claiming
+ * the product scored zero. A completed trial must carry a grade; anything else is
+ * a harness problem and must stop the report rather than fabricate a regression.
+ */
+function assertReadableResults() {
+    const unreadable = results.filter(r =>
+        r.status === 'success'
+        && (!r.gradeResult || typeof r.gradeResult.passed !== 'boolean'));
+    if (unreadable.length === 0) {
+        return;
+    }
+    const names = unreadable.map(stimulusName).join(', ');
+    throw new Error(
+        `Unreadable results: ${unreadable.length} completed trial(s) have no boolean \`gradeResult.passed\` (${names}). `
+        + 'The Vally result shape likely changed; generate-report.cjs must be updated rather than scoring these as failures.',
+    );
+}
+assertReadableResults();
+
+/**
+ * Ordered workflow stages. With pass/fail stimuli, the useful comparison between
+ * two failures is how far each got, so the report names the earliest stage that
+ * failed rather than a partial-credit score.
+ */
+const STAGES = [
+    { name: 'requirements', pattern: /requirements|no-chat-questions|no-premature-plan/i },
+    { name: 'plan', pattern: /plan-exists|plan-structure|plan-webview|plan-view|webview-parseable/i },
+    { name: 'approval', pattern: /approved/i },
+    { name: 'handoff', pattern: /handoff|scaffolding/i },
+];
+
+/** The earliest workflow stage with a failing grader, or null when nothing failed. */
+function failureStage(result) {
+    const failing = graderDetails(result).filter(g => !g.passed).map(g => g.name ?? '');
+    if (failing.length === 0) {
+        return result.status === 'success' ? null : 'execution';
+    }
+    for (const stage of STAGES) {
+        if (failing.some(name => stage.pattern.test(name))) {
+            return stage.name;
+        }
+    }
+    return 'unclassified';
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -60,7 +114,7 @@ function truncate(text, max) {
 
 function formatDuration(ms) {
     const seconds = (ms ?? 0) / 1000;
-    if (seconds < 60) {return `${seconds.toFixed(1)}s`;}
+    if (seconds < 60) { return `${seconds.toFixed(1)}s`; }
     const minutes = Math.floor(seconds / 60);
     return `${minutes}m ${(seconds % 60).toFixed(0)}s`;
 }
@@ -73,28 +127,41 @@ function formatPercent(score) {
 function errorLine(grader) {
     const streams = [grader.metadata?.stderr, grader.metadata?.stdout];
     for (const stream of streams) {
-        if (!stream) {continue;}
+        if (!stream) { continue; }
         const interesting = stream.split('\n').map(l => l.trim()).filter(l =>
             l.startsWith('FAIL:') || l.includes('•') || l.includes('Error:') || l.includes('expected')
         );
-        if (interesting.length) {return interesting.join(' ');}
+        if (interesting.length) { return interesting.join(' '); }
     }
-    if (grader.evidence) {return grader.evidence.split('\n')[0];}
+    const evidence = graderEvidence(grader);
+    if (evidence) { return evidence.split('\n')[0]; }
     return 'Grader failed without diagnostic output.';
+}
+
+/**
+ * Read a grader's human-readable explanation.
+ *
+ * Vally has carried this on `evidence`, and gate-style results have used `reason`
+ * elsewhere — reading only one silently blanks every explanation when the shape
+ * moves. Prefer `evidence`, fall back to `reason`, and say so when neither exists.
+ */
+function graderEvidence(grader) {
+    return grader?.evidence ?? grader?.reason ?? undefined;
 }
 
 /** What the grader observed, in the grader's own words. */
 function observedIssue(grader) {
     const parts = [];
-    if (grader.evidence) {parts.push(grader.evidence.replace(/\n/g, ' '));}
+    const evidence = graderEvidence(grader);
+    if (evidence) { parts.push(evidence.replace(/\n/g, ' ')); }
     // Program graders report a generic "exited with code N" evidence string — the
     // actual assertion that failed only appears on stderr.
     if (grader.metadata?.program) {
         const detail = errorLine(grader);
-        if (detail && !parts.includes(detail)) {parts.push(detail);}
+        if (detail && !parts.includes(detail)) { parts.push(detail); }
     }
     const missingTools = grader.metadata?.required?.filter(t => !(grader.metadata?.tools ?? []).includes(t));
-    if (missingTools?.length) {parts.push(`Required tool(s) never called: ${missingTools.join(', ')}.`);}
+    if (missingTools?.length) { parts.push(`Required tool(s) never called: ${missingTools.join(', ')}.`); }
     if (grader.metadata?.path && grader.metadata?.matches?.length === 0) {
         parts.push(`Expected artifact \`${grader.metadata.path}\` was not produced.`);
     }
@@ -124,10 +191,16 @@ function classify(result, grader) {
     }
     const exitCode = grader?.metadata?.exit_code;
     const stderr = grader?.metadata?.stderr ?? '';
+    // Exit 3 is the graders' reserved "I could not run" code (see graders/graderHarness.ts).
+    // Exit 1 is ambiguous on its own — it is both a deliberate product-failure signal and
+    // what Node returns for an uncaught exception — so the graders disambiguate it for us.
+    if (exitCode === EXIT_GRADER_ERROR) {
+        return { classification: 'harness_failure', reason: `Grader \`${grader.name}\` reported an internal error (exit ${EXIT_GRADER_ERROR}); its result says nothing about the product.` };
+    }
     if (exitCode !== undefined && exitCode !== 0 && exitCode !== 1) {
         return { classification: 'harness_failure', reason: `Grader \`${grader.name}\` exited with ${exitCode}, which indicates the grader itself crashed.` };
     }
-    if (/Cannot find module|command not found|ENOENT|SyntaxError/.test(stderr)) {
+    if (/Cannot find module|command not found|ENOENT|SyntaxError|TypeError|ReferenceError|GRADER ERROR/.test(stderr)) {
         return { classification: 'harness_failure', reason: `Grader \`${grader?.name}\` could not run in this environment.` };
     }
     if (grader?.metadata?.required?.length || grader?.metadata?.path) {
@@ -140,9 +213,9 @@ function classify(result, grader) {
 function skillsInvoked(result) {
     const counts = new Map();
     for (const event of result.trajectory?.events ?? []) {
-        if (event.type !== 'tool_call' || event.data?.name !== 'skill') {continue;}
+        if (event.type !== 'tool_call' || event.data?.name !== 'skill') { continue; }
         const skill = event.data?.arguments?.skill;
-        if (!skill) {continue;}
+        if (!skill) { continue; }
         counts.set(skill, (counts.get(skill) ?? 0) + 1);
     }
     return [...counts].map(([skill, count]) => ({ skill, count }));
@@ -182,7 +255,7 @@ function recommendedActions(result) {
             actions.add(`Reproduce locally: \`${grader.metadata.program} ${(grader.metadata.args ?? []).join(' ')}\` in the trial workspace.`);
         }
     }
-    if (result.gradeResult?.passed && !actions.size) {return [];}
+    if (result.gradeResult?.passed && !actions.size) { return []; }
     if (!actions.size && !result.gradeResult?.passed) {
         actions.add('Inspect the trial trajectory events to determine why the graders disagreed with the output.');
     }
@@ -194,9 +267,9 @@ function primaryFailure() {
     // Real defects outrank outages: an infrastructure error tells us nothing
     // about the product, so it should never headline a run that also has one.
     for (const result of failed) {
-        if (isInfrastructureError(result)) {continue;}
+        if (isInfrastructureError(result)) { continue; }
         const grader = graderDetails(result).find(g => !g.passed);
-        if (grader) {return { result, grader };}
+        if (grader) { return { result, grader }; }
     }
     const infra = failed.find(isInfrastructureError);
     return infra ? { result: infra, grader: null } : null;
@@ -214,13 +287,13 @@ function aggregateMetrics() {
         totals.errors += metrics.errorCount ?? 0;
         totals.wallTimeMs += result.durationMs ?? metrics.wallTimeMs ?? 0;
         const model = result.trajectory?.metadata?.model;
-        if (model && model !== 'unknown') {models.add(model);}
+        if (model && model !== 'unknown') { models.add(model); }
     }
     return { totals, models: [...models] };
 }
 
 function runOutcome() {
-    if (runSummary) {return runSummary.passed ? 'passed' : 'failed';}
+    if (runSummary) { return runSummary.passed ? 'passed' : 'failed'; }
     return failed.length === 0 ? 'passed' : 'failed';
 }
 
@@ -295,6 +368,7 @@ report.push(`- **Outcome:** \`${outcome}\``);
 report.push(`- **Summary:** ${runSummarySentence()}`);
 if (primary) {
     report.push(`- **Primary failure:** \`${stimulusName(primary.result)}${primary.grader ? ` / ${primary.grader.name}` : ''}\``);
+    report.push(`- **Failed at stage:** \`${failureStage(primary.result) ?? 'unknown'}\``);
     report.push(`- **Classification:** \`${primaryClassification.classification}\` — ${primaryClassification.reason}`);
     report.push(`- **Error:** ${escapeCell(truncate(primary.grader ? errorLine(primary.grader) : (primary.result.error ?? 'unknown error'), 300))}`);
     if (primary.grader) {
@@ -323,7 +397,7 @@ if (runSummary?.evals?.length) {
 
 // Stimulus-level overview
 report.push('## Stimulus results\n');
-report.push('| Stimulus | Result | Score | Graders | Duration | Tool calls | Explanation |');
+report.push('| Stimulus | Result | Failed at | Graders | Duration | Tool calls | Explanation |');
 report.push('|---|---|---|---|---|---|---|');
 for (const result of results) {
     const graders = graderDetails(result);
@@ -337,7 +411,7 @@ for (const result of results) {
             : failing.length
                 ? `${failing.map(g => g.name).join(', ')}: ${errorLine(failing[0])}`
                 : 'All graders passed.';
-    report.push(`| ${escapeCell(stimulusName(result))} | ${isInfrastructureError(result) ? 'inconclusive' : result.gradeResult?.passed ? 'passed' : 'failed'} | ${formatPercent(result.gradeResult?.score)} | ${graders.filter(g => g.passed).length}/${graders.length} | ${formatDuration(result.durationMs)} | ${toolCallCount} | ${escapeCell(truncate(explanation, 220))} |`);
+    report.push(`| ${escapeCell(stimulusName(result))} | ${isInfrastructureError(result) ? 'inconclusive' : result.gradeResult?.passed ? 'passed' : 'failed'} | ${failureStage(result) ?? '—'} | ${graders.filter(g => g.passed).length}/${graders.length} | ${formatDuration(result.durationMs)} | ${toolCallCount} | ${escapeCell(truncate(explanation, 220))} |`);
 }
 report.push('');
 
@@ -348,7 +422,7 @@ report.push('|---|---|---|---|');
 for (const result of results) {
     for (const grader of graderDetails(result)) {
         const explanation = grader.passed
-            ? escapeCell(truncate(grader.evidence ?? 'Authoritative evidence passed.', 200))
+            ? escapeCell(truncate(graderEvidence(grader) ?? 'Authoritative evidence passed.', 200))
             : escapeCell(truncate(errorLine(grader), 200));
         report.push(`| ${escapeCell(stimulusName(result))} | ${escapeCell(grader.name ?? '?')} | ${grader.passed ? 'passed' : 'failed'} | ${explanation} |`);
     }
@@ -378,13 +452,13 @@ for (const result of results) {
     if (metadata.skillsLoaded?.length) {
         report.push(`- **Skills loaded:** ${metadata.skillsLoaded.map(s => `\`${s}\``).join(', ')}`);
     }
-    if (metadata.model) {report.push(`- **Model:** \`${metadata.model}\``);}
-    if (metadata.executor) {report.push(`- **Executor:** \`${metadata.executor}\``);}
+    if (metadata.model) { report.push(`- **Model:** \`${metadata.model}\``); }
+    if (metadata.executor) { report.push(`- **Executor:** \`${metadata.executor}\``); }
     if (metrics.tokenUsage?.totalTokens) {
         report.push(`- **Tokens:** ${metrics.tokenUsage.totalTokens} total (${metrics.tokenUsage.inputTokens} in / ${metrics.tokenUsage.outputTokens} out)`);
     }
-    if (metrics.errorCount) {report.push(`- **Errors during run:** ${metrics.errorCount}`);}
-    if (result.trajectory?.workDir) {report.push(`- **Workspace:** \`${result.trajectory.workDir}\``);}
+    if (metrics.errorCount) { report.push(`- **Errors during run:** ${metrics.errorCount}`); }
+    if (result.trajectory?.workDir) { report.push(`- **Workspace:** \`${result.trajectory.workDir}\``); }
     if (failing.length) {
         const { classification, reason } = classify(result, failing[0]);
         report.push(`- **Primary failure:** \`${failing[0].name}\``);
@@ -396,7 +470,7 @@ for (const result of results) {
     report.push('|---|---|---|');
     for (const grader of graders) {
         const icon = grader.passed ? '✅' : '❌';
-        let details = grader.evidence ?? '';
+        let details = graderEvidence(grader) ?? '';
         if (!grader.passed) {
             details = errorLine(grader);
             if (grader.metadata?.exit_code !== undefined) {
@@ -441,7 +515,7 @@ for (const result of results) {
         const actions = recommendedActions(result);
         if (actions.length) {
             report.push('### Recommended actions\n');
-            for (const action of actions) {report.push(`- ${action}`);}
+            for (const action of actions) { report.push(`- ${action}`); }
             report.push('');
         }
     }
@@ -449,7 +523,7 @@ for (const result of results) {
     const touched = filesTouched(result);
     if (touched.length) {
         report.push('### Files created\n');
-        for (const filePath of touched) {report.push(`- \`${filePath}\``);}
+        for (const filePath of touched) { report.push(`- \`${filePath}\``); }
         report.push('');
     }
 
@@ -467,13 +541,13 @@ for (const result of results) {
 const allActions = [...new Set(failed.flatMap(recommendedActions))];
 if (allActions.length) {
     report.push('## Recommended actions\n');
-    for (const action of allActions) {report.push(`- ${action}`);}
+    for (const action of allActions) { report.push(`- ${action}`); }
     report.push('');
 }
 
 report.push('## Full evidence\n');
-for (const file of evidenceFiles()) {report.push(`- \`${file}\``);}
-if (runSummary?.sessionLogsDir) {report.push(`- \`${runSummary.sessionLogsDir}\` (session logs)`);}
+for (const file of evidenceFiles()) { report.push(`- \`${file}\``); }
+if (runSummary?.sessionLogsDir) { report.push(`- \`${runSummary.sessionLogsDir}\` (session logs)`); }
 report.push('');
 
 const reportPath = path.join(resultsDir, 'run-diagnostics.md');
@@ -481,6 +555,7 @@ fs.writeFileSync(reportPath, report.join('\n'));
 
 // Machine-readable counterpart so CI can assert on the same diagnosis.
 const diagnostics = {
+    schemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
     suite: suiteName,
     run: runId,
     generatedAt: new Date().toISOString(),
@@ -490,6 +565,7 @@ const diagnostics = {
         ? {
             stimulus: stimulusName(primary.result),
             grader: primary.grader?.name ?? null,
+            stage: failureStage(primary.result),
             classification: primaryClassification.classification,
             reason: primaryClassification.reason,
             error: primary.grader ? errorLine(primary.grader) : (primary.result.error ?? null),
@@ -511,6 +587,8 @@ const diagnostics = {
         name: stimulusName(result),
         status: result.status ?? null,
         passed: Boolean(result.gradeResult?.passed),
+        inconclusive: isInfrastructureError(result),
+        failureStage: failureStage(result),
         score: result.gradeResult?.score ?? 0,
         durationMs: result.durationMs ?? 0,
         workDir: result.trajectory?.workDir ?? null,
@@ -524,7 +602,7 @@ const diagnostics = {
             name: grader.name ?? null,
             passed: Boolean(grader.passed),
             score: grader.score ?? 0,
-            evidence: grader.evidence ?? null,
+            evidence: graderEvidence(grader) ?? null,
             error: grader.passed ? null : errorLine(grader),
             observedIssue: grader.passed ? null : observedIssue(grader),
             exitCode: grader.metadata?.exit_code ?? null,
