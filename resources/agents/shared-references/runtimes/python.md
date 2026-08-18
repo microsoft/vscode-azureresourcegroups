@@ -44,7 +44,7 @@ pip install -r requirements.txt
     "FUNCTIONS_WORKER_RUNTIME": "python",
     "ENVIRONMENT": "development",
     "STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=true",
-    "DATABASE_URL": "postgresql://localdev:localdevpassword@localhost:5432/appdb",
+    "DATABASE_URL": "postgresql://<POSTGRES_USER>:<POSTGRES_PASSWORD>@localhost:5432/appdb",
     "REDIS_URL": "redis://localhost:6379"
   },
   "Host": {
@@ -53,6 +53,12 @@ pip install -r requirements.txt
   }
 }
 ```
+
+> `local.settings.json` is plain JSON and does **not** support `${...}` interpolation.
+> Replace `<POSTGRES_USER>` / `<POSTGRES_PASSWORD>` with the same discrete values declared in the
+> workspace-root `.env` used by docker-compose. Never leave the angle-bracket placeholders in the
+> generated file, and never paste a credential value copied out of tool output — redaction filters
+> rewrite concrete credential URLs, and a masked value beginning with `*` corrupts YAML/JSON config.
 
 ### pyproject.toml
 

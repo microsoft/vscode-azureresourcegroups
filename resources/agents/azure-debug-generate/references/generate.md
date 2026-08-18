@@ -58,6 +58,34 @@ Before writing any script or task command that invokes a CLI tool (e.g., `rimraf
 
 ---
 
+## Local Credentials
+
+> ⚠️ **Never inline a literal credential into a task or a compose file.** Declare local credentials
+> once in a workspace-root `.env` and reference them through Compose `${VAR}` interpolation
+> everywhere else.
+
+| Correct | Do **not** generate |
+|---|---|
+| Compose `${VAR}` interpolation from `.env` | A literal credential inlined into a task or compose file |
+
+A concrete credential literal is rewritten by secret-redaction filters, and a masked value that
+begins with `*` is a fatal YAML parse error — YAML reads a leading `*` as an alias reference, so the
+whole compose file stops parsing.
+
+Interpolation only resolves if the variable is actually defined: Compose reads `${...}` from `.env`
+or the shell environment, never from a service's own `environment:` block. Whenever a generated
+file references a variable — a compose service, a host task, or a connection string — `.env` must
+declare every variable it needs, or the value silently becomes an empty string.
+
+> ⛔ **`.gitignore` must list `.env` before you create it.** A credential that reaches a commit is
+> compromised and has to be rotated — deleting it in a later commit leaves it in history, in every
+> clone, and in every fork. Private repositories are no exception. If the project has no
+> `.gitignore`, or has one that omits `.env`, fix that first.
+
+See `emulators/{name}.md` § Required App Environment Variables for the per-emulator variable set.
+
+---
+
 ## VS Code Debug & Task Configuration
 
 Assemble `.vscode/launch.json` and `.vscode/tasks.json` by combining properties from the detected **project type** and **runtime** references. Use the source ownership table below to determine which file provides each property.
