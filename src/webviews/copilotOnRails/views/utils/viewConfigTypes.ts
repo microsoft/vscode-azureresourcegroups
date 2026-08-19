@@ -67,6 +67,72 @@ export type DeploymentPlanViewConfiguration = {
     strings: DeploymentPlanViewStrings;
 };
 
+/** Localized strings rendered by the deployment results webview. */
+export type DeployResultViewStrings = {
+    title: string;
+    loading: string;
+    succeededHeading: string;
+    failedHeading: string;
+    inProgressHeading: string;
+    unknownHeading: string;
+    partialBanner: string;
+    openAppButton: string;
+    openPortalButton: string;
+
+    resourceGroupLabel: string;
+    regionLabel: string;
+    elapsedLabel: string;
+    healthLabel: string;
+
+    endpointsHeading: string;
+    endpointNameHeader: string;
+    endpointUrlHeader: string;
+    endpointHealthHeader: string;
+
+    resourcesHeading: string;
+    resourceTypeHeader: string;
+    resourceNameHeader: string;
+    resourceStatusHeader: string;
+
+    healthDetailHeading: string;
+    healthEndpointLabel: string;
+    healthCheckedLabel: string;
+    optionalDependencyLabel: string;
+
+    networkPolicyHeading: string;
+    mainSiteLabel: string;
+    scmSiteLabel: string;
+    basicPublishingLabel: string;
+    basicPublishingScmLabel: string;
+    basicPublishingFtpLabel: string;
+    enabledLabel: string;
+    disabledLabel: string;
+
+    healingHeading: string;
+    healingAttemptLabel: string;
+    healingIssueLabel: string;
+    healingResolutionLabel: string;
+    planLevelChangeBadge: string;
+
+    warningsHeading: string;
+    orphanedHeading: string;
+    orphanedHint: string;
+
+    cleanupHeading: string;
+    cleanupHint: string;
+    copyButtonAriaLabel: string;
+    copiedLabel: string;
+
+    parseFailureTitle: string;
+    parseFailureFallbackMessage: string;
+    parseFailureFileLabel: string;
+    openResultFileButton: string;
+};
+
+export type DeployResultViewConfiguration = {
+    strings: DeployResultViewStrings;
+};
+
 /** Configuration for the transient loading view shown between workflow steps. */
 export type LoadingViewConfiguration = {
     /** Stage index for the StageProgress bar (0 = Project Scaffolding, 1 = Local Development, 2 = Deployment). */

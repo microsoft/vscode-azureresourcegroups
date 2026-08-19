@@ -57,6 +57,7 @@ Use this map from source area to the screenshot(s) it backs:
 | `LocalPlanView` (debug plan) | `08-debug-plan-view.png` |
 | `LocalDevNextStepsView` | `09-debug-next-steps.png` |
 | `DeploymentPlanView` | `10-deployment-plan-view.png` |
+| `DeployResultView` | `15-deployment-results-view.png` |
 | `reportIssue` (issue template) | `13-report-issue-github.png` |
 | `inspectDiagnostics` (JSON payload) | `14-inspect-diagnostics-json.png` |
 
