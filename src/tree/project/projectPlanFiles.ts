@@ -30,14 +30,17 @@ export const REQUIREMENTS_FILE_GLOB = '.azure/requirements.json';
 export const PROJECT_PLAN_FILE_GLOB = '.azure/project-plan.md';
 export const INTEGRATION_PLAN_FILE_GLOB = '.azure/integration-plan.md';
 export const DEBUG_PLAN_FILE_GLOB = '.azure/vscode-debug-plan.md';
-export const DEPLOYMENT_PLAN_FILE_GLOB = '.azure/deployment-plan.md';
+export const PREPARE_PLAN_FILE_GLOB = '.azure/prepare-plan.json';
+export const PREPARE_PLAN_SESSION_FILE_GLOB = '.copilot-azure/sessions/*/prepare-plan.json';
+/** Every location a `prepare-plan.json` may live in, most-canonical first. */
+export const PREPARE_PLAN_FILE_GLOBS = [PREPARE_PLAN_FILE_GLOB, PREPARE_PLAN_SESSION_FILE_GLOB] as const;
 export const APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB = '.copilot-azure/sessions/active-session.json';
 
 const PLAN_FILE_GLOBS = [
     PROJECT_PLAN_FILE_GLOB,
     INTEGRATION_PLAN_FILE_GLOB,
     DEBUG_PLAN_FILE_GLOB,
-    DEPLOYMENT_PLAN_FILE_GLOB,
+    ...PREPARE_PLAN_FILE_GLOBS,
 ] as const;
 
 /** All artifacts that indicate an in-progress project, for watching. */
@@ -50,15 +53,17 @@ export function createProjectPlanFileWatcher(glob: string): vscode.FileSystemWat
 }
 
 export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
-    const [requirementsFiles, projectPlanFiles, , localDevelopmentPlanFiles, deploymentPlanFiles, appOnboardSessionFiles] = await Promise.all(
-        ALL_PROJECT_FILE_GLOBS.map((glob) => vscode.workspace.findFiles(glob, undefined, 1)),
-    );
+    const found = new Map<string, boolean>(await Promise.all(
+        ALL_PROJECT_FILE_GLOBS.map(async (glob): Promise<[string, boolean]> =>
+            [glob, (await vscode.workspace.findFiles(glob, null, 1)).length > 0]),
+    ));
+    const exists = (glob: string): boolean => found.get(glob) ?? false;
 
-    const hasRequirements = requirementsFiles.length > 0;
-    const hasProjectPlan = projectPlanFiles.length > 0;
-    const hasLocalDevelopmentPlan = localDevelopmentPlanFiles.length > 0;
-    const hasDeploymentPlan = deploymentPlanFiles.length > 0;
-    const hasAppOnboardSession = appOnboardSessionFiles.length > 0;
+    const hasRequirements = exists(REQUIREMENTS_FILE_GLOB);
+    const hasProjectPlan = exists(PROJECT_PLAN_FILE_GLOB);
+    const hasLocalDevelopmentPlan = exists(DEBUG_PLAN_FILE_GLOB);
+    const hasDeploymentPlan = PREPARE_PLAN_FILE_GLOBS.some(exists);
+    const hasAppOnboardSession = exists(APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB);
 
     let currentStage: ProjectStage = 0;
     if (hasDeploymentPlan || hasAppOnboardSession) {
@@ -79,16 +84,28 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
 }
 
 /**
- * Returns true when the given workspace folder contains any Copilot on Rails
- * project artifact under `.azure/`. Unlike {@link getProjectPlanFiles}, which
- * scans the whole workspace, this is scoped to a single folder so a debug
- * session can be attributed to the specific folder it runs in.
+ * Returns true when the given workspace folder contains any Copilot on Rails project artifact.
+ * Unlike {@link getProjectPlanFiles}, which scans the whole workspace, this is scoped to a single
+ * folder so a debug session can be attributed to the specific folder it runs in.
  */
 export async function isCopilotOnRailsProjectFolder(folder: vscode.WorkspaceFolder): Promise<boolean> {
-    const fileNames = [REQUIREMENTS_FILE_GLOB, ...PLAN_FILE_GLOBS].map((glob) => glob.replace('.azure/', ''));
-    const pattern = new vscode.RelativePattern(folder, `.azure/{${fileNames.join(',')}}`);
-    const matches = await vscode.workspace.findFiles(pattern, undefined, 1);
-    return matches.length > 0;
+    const allGlobs = [REQUIREMENTS_FILE_GLOB, ...PLAN_FILE_GLOBS];
+    const azureFileNames = allGlobs
+        .filter((glob) => glob.startsWith('.azure/'))
+        .map((glob) => glob.slice('.azure/'.length));
+    const patterns = [
+        `.azure/{${azureFileNames.join(',')}}`,
+        // Artifacts that live outside `.azure/` (e.g. a deploy session directory) are matched as-is.
+        ...allGlobs.filter((glob) => !glob.startsWith('.azure/')),
+    ];
+
+    for (const pattern of patterns) {
+        const matches = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, pattern), null, 1);
+        if (matches.length > 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**

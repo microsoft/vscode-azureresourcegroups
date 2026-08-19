@@ -7,72 +7,60 @@ import assert from 'assert';
 import * as fs from 'fs';
 import { Uri } from 'vscode';
 import { DEPLOYMENT_PLAN_TELEMETRY_PREFIX, DeploymentPlanTelemetry, getDeploymentPlanTelemetry } from '../../src/webviews/copilotOnRails/extension/utils/deploymentPlanTelemetryUtils';
-import { parseDeploymentPlanMarkdown } from '../../src/webviews/copilotOnRails/views/utils/parseDeploymentPlanMarkdown';
+import { parsePreparePlanJson } from '../../src/webviews/copilotOnRails/views/utils/parsePreparePlanJson';
 import { getWorkspaceFolderUri } from '../testUtils';
 
-const attendanceProjectFolder = 'copilotOnRails-attendance';
 const scrapbookProjectFolder = 'copilotOnRails-scrapbook';
+const attendanceProjectFolder = 'copilotOnRails-attendance';
 
 suite('deploymentPlanTelemetryUtils', () => {
     suite('getDeploymentPlanTelemetry', () => {
-        test('attendance project', () => {
-            const telemetry = loadDeploymentPlanTelemetry(attendanceProjectFolder);
-
-            const expected: DeploymentPlanTelemetry = {
-                planParsedOk: true,
-                planStatus: 'planning',
-
-                location: 'westus2',
-
-                classification: 'development',
-                scale: 'small',
-                budget: 'cost-optimized',
-
-                recipe: 'azd (bicep)',
-                stack: 'serverless (functions flex consumption + static web apps)',
-
-                coreServiceCount: 4,
-                coreServiceTypes: 'azure functions,azure static web apps,azure database for postgresql flexible server,azure storage account',
-                coreServiceSkus: 'flex consumption (fc1),free,burstable b1ms,standard lrs',
-                hasDatabase: true,
-
-                supportingServiceCount: 4,
-                supportingServiceTypes: 'log analytics workspace,application insights,key vault,user assigned managed identity',
-            };
-
-            assert.deepStrictEqual(telemetry, expected);
-        });
-
         test('scrapbook project', () => {
             const telemetry = loadDeploymentPlanTelemetry(scrapbookProjectFolder);
 
             const expected: DeploymentPlanTelemetry = {
                 planParsedOk: true,
-                planStatus: 'planning',
 
-                location: 'westus2',
+                location: 'eastus2',
 
-                classification: 'development',
-                scale: 'small',
-                budget: 'cost-optimized',
-
-                recipe: 'azd (bicep)',
-                stack: 'serverless + static web apps',
-
-                coreServiceCount: 4,
-                coreServiceTypes: 'azure functions (flex consumption),azure static web apps,azure database for postgresql flexible server,azure storage account (blob)',
-                coreServiceSkus: 'fc1,free,burstable b1ms,standard_lrs',
+                coreServiceCount: 5,
+                coreServiceTypes: 'functions,staticwebapp,storageaccount,postgresflexibleserver,azureopenai',
+                coreServiceSkus: 'flexconsumption (fc1),free,standard_lrs,standard_b1ms,s0',
                 hasDatabase: true,
 
                 supportingServiceCount: 4,
-                supportingServiceTypes: 'log analytics workspace,application insights,key vault,user assigned managed identity',
+                supportingServiceTypes: 'keyvault,userassignedidentity,loganalyticsworkspace,applicationinsights',
+
+                estimatedMonthlyCost: 23,
+            };
+
+            assert.deepStrictEqual(telemetry, expected);
+        });
+
+        test('attendance project', () => {
+            const telemetry = loadDeploymentPlanTelemetry(attendanceProjectFolder);
+
+            const expected: DeploymentPlanTelemetry = {
+                planParsedOk: true,
+
+                location: 'westus2',
+
+                coreServiceCount: 4,
+                coreServiceTypes: 'functions,staticwebapp,storageaccount,postgresflexibleserver',
+                coreServiceSkus: 'flexconsumption (fc1),free,standard_lrs,standard_b1ms',
+                hasDatabase: true,
+
+                supportingServiceCount: 4,
+                supportingServiceTypes: 'keyvault,userassignedidentity,loganalyticsworkspace,applicationinsights',
+
+                estimatedMonthlyCost: 18.1,
             };
 
             assert.deepStrictEqual(telemetry, expected);
         });
 
         test('all telemetry keys share the deploymentPlan prefix once flattened', () => {
-            const telemetry = loadDeploymentPlanTelemetry(attendanceProjectFolder);
+            const telemetry = loadDeploymentPlanTelemetry(scrapbookProjectFolder);
             const flattened = Object.fromEntries(
                 Object.entries(telemetry).map(([key, value]) => [`${DEPLOYMENT_PLAN_TELEMETRY_PREFIX}${key}`, value]),
             );
@@ -82,56 +70,41 @@ suite('deploymentPlanTelemetryUtils', () => {
 
     suite('edge cases', () => {
         test('reports unknowns and no database for an empty plan', () => {
-            const telemetry = getDeploymentPlanTelemetry(parseDeploymentPlanMarkdown(''));
+            const telemetry = getDeploymentPlanTelemetry(parsePreparePlanJson('{}'));
 
-            assert.strictEqual(telemetry.planStatus, 'unknown');
             assert.strictEqual(telemetry.location, 'unknown');
-            assert.strictEqual(telemetry.recipe, 'unknown');
-            assert.strictEqual(telemetry.stack, 'unknown');
-            assert.strictEqual(telemetry.classification, 'unknown');
             assert.strictEqual(telemetry.coreServiceCount, 0);
             assert.strictEqual(telemetry.coreServiceTypes, '');
             assert.strictEqual(telemetry.coreServiceSkus, '');
             assert.strictEqual(telemetry.hasDatabase, false);
             assert.strictEqual(telemetry.supportingServiceCount, 0);
+            assert.strictEqual(telemetry.estimatedMonthlyCost, 0);
         });
 
-        test('derives distinct core services and SKUs from a service mapping table', () => {
-            const markdown = [
-                '# Azure Deployment Plan',
-                '',
-                '## Architecture',
-                '',
-                '### Service Mapping',
-                '',
-                '| Component | Azure Service | SKU |',
-                '|-----------|---------------|-----|',
-                '| api | Azure Functions | FC1 |',
-                '| worker | Azure Functions | FC1 |',
-                '| db | Azure Cosmos DB | Serverless |',
-                '',
-                '### Supporting Services',
-                '',
-                '| Service | Purpose |',
-                '|---------|---------|',
-                '| Key Vault | Secrets |',
-                '| Application Insights | Monitoring |',
-            ].join('\n');
+        test('splits core services from supporting services', () => {
+            const plan = parsePreparePlanJson(JSON.stringify({
+                services: [
+                    { name: 'functions', sku: 'FC1', resourceName: 'func-a' },
+                    { name: 'functions', sku: 'FC1', resourceName: 'func-b' },
+                    { name: 'cosmosDb', sku: 'Serverless', resourceName: 'cosmos-a' },
+                    { name: 'keyVault', sku: 'standard', resourceName: 'kv-a' },
+                    { name: 'applicationInsights', sku: 'n/a', resourceName: 'appi-a' },
+                ],
+            }));
 
-            const telemetry = getDeploymentPlanTelemetry(parseDeploymentPlanMarkdown(markdown));
+            const telemetry = getDeploymentPlanTelemetry(plan);
 
             assert.strictEqual(telemetry.coreServiceCount, 2);
-            assert.strictEqual(telemetry.coreServiceTypes, 'azure functions,azure cosmos db');
+            assert.strictEqual(telemetry.coreServiceTypes, 'functions,cosmosdb');
             assert.strictEqual(telemetry.coreServiceSkus, 'fc1,serverless');
             assert.strictEqual(telemetry.hasDatabase, true);
             assert.strictEqual(telemetry.supportingServiceCount, 2);
-            assert.strictEqual(telemetry.supportingServiceTypes, 'key vault,application insights');
+            assert.strictEqual(telemetry.supportingServiceTypes, 'keyvault,applicationinsights');
         });
     });
 });
 
 function loadDeploymentPlanTelemetry(workspaceFolderName: string): DeploymentPlanTelemetry {
-    const fixtureUri = Uri.joinPath(getWorkspaceFolderUri(workspaceFolderName), 'deployment-plan.md');
-    const markdown = fs.readFileSync(fixtureUri.fsPath, 'utf8');
-    return getDeploymentPlanTelemetry(parseDeploymentPlanMarkdown(markdown));
+    const fixtureUri = Uri.joinPath(getWorkspaceFolderUri(workspaceFolderName), 'prepare-plan.json');
+    return getDeploymentPlanTelemetry(parsePreparePlanJson(fs.readFileSync(fixtureUri.fsPath, 'utf8')));
 }
