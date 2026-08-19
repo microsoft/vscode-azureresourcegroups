@@ -174,6 +174,18 @@ function observedIssue(grader) {
  */
 const INFRASTRUCTURE_ERROR = /\b(?:429|5\d{2})\b|Authentication failed|rate limit|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|service unavailable/i;
 
+/**
+ * A missing or unusable Copilot credential. This is neither a transient outage to
+ * wait out nor a harness bug to debug — the run is unconfigured, and every trial
+ * fails identically until a human sets the token. It gets its own classification so
+ * the diagnosis names the credential instead of blaming the executor or the agent.
+ */
+const CONFIGURATION_ERROR = /Session was not created with authentication info or custom provider|No Copilot credential found/i;
+
+function isConfigurationError(result) {
+    return result.status === 'error' && CONFIGURATION_ERROR.test(result.error ?? '');
+}
+
 function isInfrastructureError(result) {
     return result.status === 'error' && INFRASTRUCTURE_ERROR.test(result.error ?? '');
 }
@@ -183,6 +195,9 @@ function isInfrastructureError(result) {
  * graders, executor errors) must not be reported as agent regressions.
  */
 function classify(result, grader) {
+    if (isConfigurationError(result)) {
+        return { classification: 'configuration_failure', reason: 'The eval agent had no usable Copilot credential, so no trial reached the agent. This says nothing about the product. Fix: give the job `copilot-requests: write` permission and pass the built-in github.token as COPILOT_GITHUB_TOKEN.' };
+    }
     if (isInfrastructureError(result)) {
         return { classification: 'infrastructure_failure', reason: 'An upstream service (auth, model endpoint, or network) rejected the request before the agent ran. Re-run when the service recovers.' };
     }
@@ -224,6 +239,13 @@ function skillsInvoked(result) {
 /** Actionable next steps derived from the failing graders. */
 function recommendedActions(result) {
     const actions = new Set();
+    if (isConfigurationError(result)) {
+        return [
+            'In GitHub Actions, give the job `permissions: copilot-requests: write` and set COPILOT_GITHUB_TOKEN to the built-in github.token — no PAT or repository secret is needed.',
+            'Outside Actions, export `COPILOT_GITHUB_TOKEN` with a fine-grained PAT (`github_pat_...`) that has Copilot Requests: Read. Classic PATs (`ghp_`) are rejected.',
+            'Do not treat these trials as product regressions — no trial reached the agent.',
+        ];
+    }
     if (isInfrastructureError(result)) {
         return ['Wait for the upstream service to recover, then re-run. Check https://www.githubstatus.com before investigating the agent.'];
     }
@@ -264,13 +286,19 @@ function recommendedActions(result) {
 
 /** The stimulus + grader pair that best explains the run's failure. */
 function primaryFailure() {
-    // Real defects outrank outages: an infrastructure error tells us nothing
-    // about the product, so it should never headline a run that also has one.
+    // Real defects outrank environment problems: a configuration or infrastructure
+    // error tells us nothing about the product, so it should never headline a run
+    // that also contains a genuine failure.
     for (const result of failed) {
-        if (isInfrastructureError(result)) { continue; }
+        if (isConfigurationError(result) || isInfrastructureError(result)) { continue; }
         const grader = graderDetails(result).find(g => !g.passed);
         if (grader) { return { result, grader }; }
     }
+    // Configuration outranks infrastructure: it is deterministic and actionable,
+    // whereas an outage just needs waiting out. Neither produces graders, so the
+    // pair is grader-less and the headline comes from the trial error.
+    const config = failed.find(isConfigurationError);
+    if (config) { return { result: config, grader: null }; }
     const infra = failed.find(isInfrastructureError);
     return infra ? { result: infra, grader: null } : null;
 }

@@ -28,6 +28,11 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # `copilot-requests: write` lets the built-in GITHUB_TOKEN authenticate the
+    # Copilot CLI, so the evals need no personal access token or repository secret.
+    permissions:
+      contents: read
+      copilot-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -61,11 +66,21 @@ jobs:
       - name: Lint eval specs
         run: vally lint
 
+      # A missing or wrong-format token still lets the run start, then fails every
+      # trial with an opaque SDK error ~25 minutes later. Check it here so the cause
+      # is obvious and cheap to see.
+      - name: Verify Copilot credentials
+        run: node evals/check-copilot-auth.mjs
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_EVAL_TOKEN || github.token }}
+
       - name: Run project-plan evals
         run: node evals/run-eval.cjs --suite project-plan --output-dir ./results/pr/project-plan
         env:
-          # The Copilot SDK token — stored as a repository secret
-          GITHUB_TOKEN: ${{ secrets.COPILOT_EVAL_TOKEN }}
+          # The built-in token authenticates because the job requests
+          # `copilot-requests: write`. COPILOT_EVAL_TOKEN is an optional override
+          # for a fine-grained PAT and does not need to exist.
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_EVAL_TOKEN || github.token }}
 
       - name: Upload results
         if: always()
@@ -121,6 +136,9 @@ jobs:
     if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.suite != 'project-plan')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: read
+      copilot-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -138,10 +156,16 @@ jobs:
       - name: Check agent instruction drift
         run: node evals/check-agent-drift.mjs
 
+      - name: Verify Copilot credentials
+        run: node evals/check-copilot-auth.mjs
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_EVAL_TOKEN || github.token }}
+
       - name: Run all per-agent evals (5 trials)
         run: node evals/run-eval.cjs --suite project-plan --runs 5 --output-dir ./results/nightly/project-plan
         env:
-          GITHUB_TOKEN: ${{ secrets.COPILOT_EVAL_TOKEN }}
+          # The Copilot CLI reads COPILOT_GITHUB_TOKEN before GH_TOKEN/GITHUB_TOKEN.
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_EVAL_TOKEN || github.token }}
 
       # TODO: Add chain evals once chain eval.yaml is implemented
       # - name: Run chain evals
