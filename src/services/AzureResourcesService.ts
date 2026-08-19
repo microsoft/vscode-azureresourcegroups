@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { GenericResource, ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
+import { DeploymentOperation, GenericResource, ResourceGroup, ResourceManagementClient } from "@azure/arm-resources";
 import { getSessionFromVSCode } from "@microsoft/vscode-azext-azureauth";
 import { uiUtils } from "@microsoft/vscode-azext-azureutils";
 import { createCredential, createSubscriptionContext, IActionContext } from "@microsoft/vscode-azext-utils";
@@ -15,6 +15,18 @@ import { createResourceClient } from "../utils/azureClients";
 export interface AzureResourcesService {
     listResources(context: IActionContext, subscription: AzureSubscription): Promise<GenericResource[]>;
     listResourceGroups(context: IActionContext, subscription: AzureSubscription): Promise<ResourceGroup[]>;
+    /**
+     * Lists the ARM deployment operations for a single deployment. Used by the
+     * deployment inventory capture to determine, deterministically, which resource
+     * IDs an ARM deployment reported and their provisioning states.
+     *
+     * When `resourceGroupName` is provided the operations are read at
+     * resource-group scope; otherwise they are read at subscription scope (used
+     * for `az deployment sub create`). A missing deployment resolves to an empty
+     * list rather than throwing, so callers can tolerate not-yet-created or
+     * already-deleted deployments.
+     */
+    listDeploymentOperations(context: IActionContext, subscription: AzureSubscription, deploymentName: string, resourceGroupName?: string): Promise<DeploymentOperation[]>;
 }
 
 export const defaultAzureResourcesServiceFactory = (): AzureResourcesService => {
@@ -36,6 +48,19 @@ export const defaultAzureResourcesServiceFactory = (): AzureResourcesService => 
         async listResourceGroups(context: IActionContext, subscription: AzureSubscription): Promise<ResourceGroup[]> {
             const client = await createClient(context, subscription);
             return uiUtils.listAllIterator(client.resourceGroups.list());
+        },
+        async listDeploymentOperations(context: IActionContext, subscription: AzureSubscription, deploymentName: string, resourceGroupName?: string): Promise<DeploymentOperation[]> {
+            const client = await createClient(context, subscription);
+            try {
+                const iterator = resourceGroupName
+                    ? client.deploymentOperations.list(resourceGroupName, deploymentName)
+                    : client.deploymentOperations.listAtSubscriptionScope(deploymentName);
+                return await uiUtils.listAllIterator(iterator);
+            } catch {
+                // A deployment name that was never created (or already removed) yields
+                // an error we treat as "no operations" so capture can proceed.
+                return [];
+            }
         },
     };
 };

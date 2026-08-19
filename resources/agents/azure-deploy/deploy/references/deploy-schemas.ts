@@ -25,6 +25,33 @@ export interface OrphanResourceGroup {
 export type DeployHealingAction = "routed-to-scaffold" | "retried" | "surfaced-to-user";
 export type DeployHealingResult = "fixed" | "still-failing" | "blocked";
 
+// ─── Deterministic resource inventory (capture_deployment_inventory) ─────────
+
+/** How a resource created during this session relates to the tracked deployment(s).
+ *  Computed deterministically by the `capture_deployment_inventory` MCP tool from a
+ *  before/after `resources.list()` diff — NOT inferred from chat history. */
+export type CreatedResourceClassification =
+  /** Reported `Succeeded` by a tracked deployment and located in the final target RG. */
+  | "expected"
+  /** Reported by a tracked deployment but with a non-succeeded provisioning state. */
+  | "failed"
+  /** Not reported by any tracked deployment, or created outside the final target RG
+   *  (e.g. a healing retry or an imperative `az` fallback). Surface for cleanup. */
+  | "orphaned";
+
+/** A resource that exists now because of this session (post − baseline diff). */
+export interface CreatedResource {
+  /** Full ARM resource ID. */
+  id: string;
+  name?: string;
+  type?: string;
+  /** Resource group parsed from the ARM ID. */
+  resourceGroup?: string;
+  /** Provisioning state reported by the deployment operations, when known. */
+  provisioningState?: string;
+  classification: CreatedResourceClassification;
+}
+
 export interface DeployHealingError {
   source: string;
   detail: string;
@@ -89,7 +116,13 @@ export interface DeployResult {
   warnings: string[];
   partial: boolean;
   resourceResults: readonly ResourceResult[];
+  /** Resources that exist now because of this session, computed deterministically by
+   *  `capture_deployment_inventory` (before/after `resources.list()` diff). Includes
+   *  expected, failed, and orphaned resources — the source of truth for the handoff
+   *  cleanup section. Populated at Step 8 and on the Step 9 failure path. */
+  createdResources: readonly CreatedResource[];
   /** RGs created during healing that are not the final deployment target.
+   *  Derived from `createdResources` (resources whose RG != the final target RG).
    *  Surfaced at handoff (Step 9) with manual cleanup commands. */
   orphanedResourceGroups: readonly OrphanResourceGroup[];
   healingAttempts?: readonly DeployHealingAttempt[];

@@ -39,6 +39,7 @@ the work as it happens.
   - [Inspect diagnostics](#inspect-diagnostics)
   - [What the diagnostics contain (privacy)](#what-the-diagnostics-contain-privacy)
   - [Common problems & fixes](#common-problems--fixes)
+  - [Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy)
   - [Re‑download agent instructions](#re-download-agent-instructions)
   - [Reset a workspace's state](#reset-a-workspaces-state)
   - [Escalation checklist](#escalation-checklist)
@@ -257,6 +258,21 @@ and Dockerfiles, then validates them with `azd package`. You deploy with `azd up
   <img src="images/copilot-create-project/10-deployment-plan-view.png" alt="Deployment plan view" />
 </p>
 
+### Knowing what was created (and cleaning up after a failure)
+
+Deploying real Azure resources means a failed or partially-completed deployment can leave resources behind. To
+make this deterministic rather than a guess, the deploy agent records **exactly which resources this session
+created** by snapshotting your subscription with the Azure Resource Manager API **before** the first
+deployment and **after** each attempt, then diffing the two lists. Whatever is present afterward but not
+before was created by this run.
+
+Each created resource is classified as **expected**, **failed**, or **orphaned** (created outside the final
+target resource group — for example by a retry that fell back to a new region — or created but never claimed
+by a successful deployment). The results are recorded in the deploy result (`deploy-result.json`) and, on any
+failure, surfaced in chat with copy‑paste `az` delete commands so you can remove leftovers. The baseline is
+held in memory during the deploy — no extra files are written to your workspace. Nothing is ever deleted
+automatically — the capture only reports. See [Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy).
+
 ## Resuming a session
 
 The flow remembers where you left off in a workspace, through two affordances:
@@ -350,6 +366,7 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 | `start_local_development` | Starts the `azure-debug-plan` agent in a new session. |
 | `start_azure_debug_generate` | Starts the `azure-debug-generate` agent in a new session. |
 | `start_deployment` | Starts the `azure-deploy` agent in a new session. |
+| `capture_deployment_inventory` | Snapshots the subscription's Azure resources (baseline before deploy, capture after) and diffs them to record what the session created and classify orphaned/failed resources. Report‑only — never deletes; the agent builds cleanup commands from its output. |
 
 ## Files & state
 
@@ -439,6 +456,33 @@ before submitting.
 | The flow doesn't advance after an approval. | An agent didn't successfully call its hand‑off MCP tool. | Check the diagnostics event log for a missing `start_*` event; re‑trigger the stage. Agents must load a tool via `tool_search` → `activate_tools` if it isn't directly listed. |
 | **Report Issue** / **Inspect Diagnostics** say "No … diagnostics … recorded." | The flow never ran in this workspace, or state was reset. | Expected. Reproduce the issue in this workspace first so events are recorded. |
 | Requirements view never opens / opens empty. | `.azure/requirements.json` was written to the wrong path (e.g. a leading dot). | The file must be exactly `.azure/requirements.json` (no leading dot on the filename); the watcher and `openRequirementsView` look for that path. |
+| A deploy failed and you're unsure what Azure resources it left behind. | Partial or healing‑retry deployment created resources that aren't the final target. | Check the failure message in chat (or `deploy-result.json.createdResources[]`) and run the listed cleanup commands. See [Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy). |
+
+## Clean up resources after a failed deploy
+
+Because deploying creates real Azure resources, the deploy agent tracks them deterministically instead of
+relying on the model's memory. It snapshots your subscription with the ARM API **before** the first
+deployment (kept **in memory** — no files are written to your workspace) and again **after** each attempt,
+then diffs the two lists — anything new is a resource this session created.
+
+Where to look, in order:
+
+1. **The chat handoff / failure message.** On both success and failure, the agent surfaces a cleanup section
+   with copy‑paste `az` commands. On a failed or aborted deploy this is printed before it stops.
+2. **`deploy-result.json` (in the App Onboard session folder).** Its `createdResources[]` lists each created
+   resource classified `expected` / `failed` / `orphaned`, and `orphanedResourceGroups[]` lists the resource
+   groups left behind by healing retries. The agent writes these from the capture's output.
+
+Cleanup patterns the agent emits (run them yourself — the capture **never deletes anything**):
+
+- **Whole orphaned resource group:** `az group delete --name {rg} --subscription {sub} --yes --no-wait`
+- **Individual leftover resource:** `az resource delete --ids {resourceId} --subscription {sub}`
+- **Everything from the session (tag‑based):**
+  `az group list --tag app-onboard-session-id={id} --query "[].name" -o tsv | ForEach-Object { az group delete -n $_ --yes --no-wait }`
+
+The baseline lives in memory only, so if VS Code is reloaded mid‑deploy the agent can re‑run
+`capture_deployment_inventory` with `phase: "capture"`, but without a baseline it treats every current
+resource as new and may over‑report — so a clean run always captures the baseline before deploying.
 
 ## Re‑download agent instructions
 

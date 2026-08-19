@@ -377,7 +377,15 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
      */
     protected override getDocumentTemplate(webview?: vscode.Webview): string {
         const template = super.getDocumentTemplate(webview);
-        return template.replace(
+        // Webview resource URLs are stable across extension-host reloads, so
+        // Chromium can otherwise reuse a stale views.js after a local rebuild.
+        // A per-panel query key forces this plan view to load the current bundle.
+        const cacheKey = Date.now().toString(36);
+        const cacheBustedTemplate = template.replace(
+            /(views\.(?:js|css))(["'])/g,
+            `$1?v=${cacheKey}$2`,
+        );
+        return cacheBustedTemplate.replace(
             /(default-src\s+[^;]+;)/,
             `$1 frame-src 'self' data:;`,
         );

@@ -6,6 +6,23 @@ Phase-exclusive tool parameters for the deploy phase. For shared tools (`subscri
 
 ---
 
+## `capture_deployment_inventory` (Copilot on Rails extension tool)
+
+Deterministic resource-inventory capture provided by the Azure Resources extension (in-proc MCP, `copilot-azure-resources-extension-tools/*`). Snapshots the subscription's resources via ARM and diffs before/after to record exactly what this session created. Holds the baseline in memory (no workspace files). **Report-only — never deletes.**
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `sessionId` | ✅ | App Onboard session id; locates `.copilot-azure/sessions/{id}/`. |
+| `subscriptionId` | ✅ | Target subscription. |
+| `phase` | ✅ | `"baseline"` (before first deployment) or `"capture"` (after each attempt / on failure / at finalize). |
+| `expectedResourceGroup` | — | Final target RG; created resources outside it are flagged `orphaned`. |
+| `deploymentNames` | — | All ARM deployment names (initial + healing) used to classify created resources. |
+| `resourceGroups` | — | RGs touched (incl. abandoned healing RGs) so RG-scoped deployment operations are read. |
+
+Holds the baseline snapshot in memory (no files written). On `phase: "capture"` returns the created resources classified `expected`/`failed`/`orphaned` plus orphaned resource groups; write those into `deploy-result.json.createdResources[]`/`orphanedResourceGroups[]` and build cleanup commands from the `orphaned`/`failed` entries. See the [Phase 4 Tool Map](#phase-4-tool-map) below and [`../instructions.md`](../instructions.md) Steps 5b/6/8/9.
+
+---
+
 ## `mcp_azure_mcp_deploy` (hierarchical — deploy-phase sub-commands)
 
 | Sub-command | Required Params | Optional Params | Read-Only |
@@ -55,6 +72,8 @@ Phase-exclusive tool parameters for the deploy phase. For shared tools (`subscri
 
 | Tool | Sub-command | AppOnboard Step | Purpose |
 |------|-----------|----------|---------|
+| `capture_deployment_inventory` | *(baseline)* | Step 5b | Snapshot pre-existing resources before the first deployment |
+| `capture_deployment_inventory` | *(capture)* | Steps 6, 8, 9 | Diff resources.list() to record created/orphaned/failed resources + cleanup commands |
 | `mcp_azure_mcp_resourcehealth` | `resourcehealth_availability-status_get` | Step 7 | Post-deploy health. Call with `resourceId` from `deploy-result.json.resourceIds[]` |
 | `mcp_azure_mcp_resourcehealth` | `resourcehealth_health-events_list` | Step 3 | Pre-deploy outage check. `event-type: "ServiceIssue"`, `status: "Active"` |
 | `mcp_azure_mcp_monitor` | `monitor_activitylog_list` | Step 7+ | Failed deployment analysis. `resource-name` from deploy output, `event-level: "Error"`, `hours: 1` |

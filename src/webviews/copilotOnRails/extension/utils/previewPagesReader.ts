@@ -113,10 +113,9 @@ function preparePreviewHtml(html: string, themeCss: string | undefined): string 
 
 /**
  * Remove any author-supplied executable content. The preview iframe runs with
- * `allow-scripts` so the webview's trusted navigation bridge can drive page
- * switching — author HTML must never be able to run code, so `<script>` tags,
- * inline `on*=…` handlers, and `javascript:` URLs are stripped before the HTML
- * reaches the iframe.
+ * scripts disabled, and the trusted host document handles page switching.
+ * Strip `<script>` tags, inline `on*=…` handlers, and `javascript:` URLs as
+ * defense in depth before the HTML reaches the iframe.
  */
 function stripAuthorScripts(html: string): string {
     return html
@@ -133,8 +132,8 @@ function stripAuthorScripts(html: string): string {
  * sibling preview page (e.g. `href="dashboard.html"`) can't resolve inside an
  * `about:srcdoc` iframe, so it would navigate to an invalid URL and break the
  * page. We rewrite such links to an inert `href="#"` carrying
- * `data-preview-nav="<slug>"`; the trusted bridge turns a click into a tab
- * switch in the host. In-page `#` anchors are left alone; any other external
+ * `data-preview-nav="<slug>"`; the trusted host click handler turns a click into
+ * a tab switch. In-page `#` anchors are left alone; any other external
  * link is neutralized to `#` so it can't break the offline iframe.
  */
 function rewriteInternalLinks(html: string): string {
