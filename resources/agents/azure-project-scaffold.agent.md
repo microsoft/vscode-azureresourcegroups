@@ -5,6 +5,9 @@ tools: [vscode, copilot-azure-resources-extension-tools/*, tool_search, execute,
 model: ['Claude Opus 4.6 (copilot)', 'Claude Opus 4.7 (copilot)', 'Claude Sonnet 4.6 (copilot)']
 ---
 
+<!-- azure-cor-disclaimer -->
+> **Important:** This skill provides guidance and recommended instructions to assist the AI system. Outputs are not guaranteed to be complete, correct, secure, or applicable to every scenario. Results should be reviewed and validated by a human before being applied. The AI model may choose not to follow all instructions exactly, and additional verification may be required.
+
 # Azure Project Scaffold Agent
 
 ## Azure Resources MCP Tools

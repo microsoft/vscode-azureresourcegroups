@@ -52,14 +52,14 @@ export const copilotOnRailsCommandIds = {
 /**
  * Registers a Copilot on Rails extension command, wrapping it in the shared
  * {@link callWithDiagnosticsAndTelemetryHandling} so it runs with a prepared {@link CopilotOnRailsContext} and a
- * logged `extensionCommand` lifecycle.  Mirrors the same context shape an mcpTool hands the command.
+ * logged `extensionAction` lifecycle.  Mirrors the same context shape an mcpTool hands the command.
  */
 function registerCopilotOnRailsCommand<A extends unknown[]>(
     commandId: string,
     command: (context: CopilotOnRailsContext, ...args: A) => unknown,
 ): void {
     registerCommand(commandId, (context: IActionContext, ...args: A) =>
-        callWithDiagnosticsAndTelemetryHandling(context, { type: 'extensionCommand', name: commandId }, async (corContext) => await command(corContext, ...args)),
+        callWithDiagnosticsAndTelemetryHandling(context, { type: 'extensionAction', name: commandId }, async (corContext) => await command(corContext, ...args)),
     );
 }
 
@@ -100,12 +100,11 @@ export function startAzureDebugGenerateCommand(context: CopilotOnRailsContext, p
 }
 
 export async function startDeploymentCommand(context: CopilotOnRailsContext, prompt?: string): Promise<void> {
-    await openChatWithAgent(context, copilotOnRailsCustomAgents.azureDeployCustomAgent, prompt ?? 'Prepare the project for deployment to Azure — generate `.azure/deployment-plan.md`, then the infrastructure (Bicep or Terraform), `azure.yaml`, and any Dockerfiles needed for `azd up`.', {
-        stage: 2,
-        title: l10n.t('Preparing deployment…'),
-        message: l10n.t('Copilot is preparing your deployment plan.'),
-        showNeedHelp: true,
-    });
+    await openChatWithAgent(
+        context,
+        copilotOnRailsCustomAgents.azureDeployCustomAgent,
+        prompt ?? 'Onboard and deploy this project to Azure using the complete `azure-app-onboard` pipeline. Analyze readiness, plan the Azure architecture and cost, generate validated infrastructure, deploy every service, and verify the live application.',
+    );
 }
 
 export function registerCopilotOnRailsCommands(): void {

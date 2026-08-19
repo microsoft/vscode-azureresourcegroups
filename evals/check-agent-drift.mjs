@@ -129,13 +129,48 @@ function listFiles(dir) {
     return out.sort();
 }
 
+function hashFile(file) {
+    return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+}
+
+function agentAssetFiles() {
+    const out = {};
+    for (const file of listFiles(agentsRoot)) {
+        out[path.relative(agentsRoot, file).split(path.sep).join("/")] = hashFile(file);
+    }
+    return out;
+}
+
 function hashAgentAssets() {
+    // Unchanged from the original: relative path + raw bytes, so baselines
+    // recorded before per-file diagnostics existed stay valid.
     const hash = createHash("sha256");
     for (const file of listFiles(agentsRoot)) {
         hash.update(path.relative(agentsRoot, file).split(path.sep).join("/"));
         hash.update(fs.readFileSync(file));
     }
     return hash.digest("hex");
+}
+
+/**
+ * Name the files behind a hash mismatch.
+ *
+ * The aggregate hash says only that something moved, which on a pull request is
+ * usually the base branch shifting under you rather than an edit you made. Listing
+ * the paths turns an opaque mismatch into an actionable diff.
+ */
+function describeAssetChanges(baseline, current) {
+    if (!baseline) {
+        return [];
+    }
+    const names = new Set([...Object.keys(baseline), ...Object.keys(current)]);
+    const changes = [];
+    for (const name of [...names].sort()) {
+        if (!(name in current)) {changes.push(`removed:  ${name}`);}
+        else if (!(name in baseline)) {changes.push(`added:    ${name}`);}
+        else if (baseline[name] !== current[name]) {changes.push(`modified: ${name}`);}
+    }
+    return changes;
 }
 
 const failures = [];
@@ -173,16 +208,29 @@ for (const rule of consistencyRules) {
 }
 
 const currentHash = hashAgentAssets();
+const currentFiles = agentAssetFiles();
 const previous = fs.existsSync(lockPath) ? JSON.parse(fs.readFileSync(lockPath, "utf8")) : null;
 
 if (update) {
-    fs.writeFileSync(lockPath, `${JSON.stringify({ agentAssetsHash: currentHash, updatedAt: new Date().toISOString() }, null, 4)}\n`);
+    fs.writeFileSync(lockPath, `${JSON.stringify({
+        agentAssetsHash: currentHash,
+        updatedAt: new Date().toISOString(),
+        files: currentFiles,
+    }, null, 4)}\n`);
     console.log(`Baseline updated: ${currentHash}`);
 } else if (previous && previous.agentAssetsHash !== currentHash) {
+    const changes = describeAssetChanges(previous.files, currentFiles);
+    const detail = changes.length
+        ? `    Changed files (${changes.length}):\n${changes.map(c => `      ${c}`).join("\n")}\n`
+        : "    Baseline predates per-file tracking, so the changed files can't be named.\n"
+        + "    Re-running --update will record them for next time.\n";
     failures.push(
         "agent-assets-changed: resources/agents/** changed since the evals were last verified.\n"
         + `    baseline: ${previous.agentAssetsHash}\n`
         + `    current:  ${currentHash}\n`
+        + detail
+        + "    On a pull request this often means the base branch moved rather than\n"
+        + "    that you edited these files — check `git log` on the base before assuming.\n"
         + "    Re-run the evals against the new instructions, then run:\n"
         + "      node evals/check-agent-drift.mjs --update",
     );

@@ -60,11 +60,12 @@ const eventsKey: string = 'copilotOnRails.diagnosticEvents';
  * Appends a new immutable event to the cache, stamping it with the current time and
  * trimming to the most recent {@link maxCachedEvents}.
  */
-export function recordDiagnosticEvent(event: Omit<DiagnosticEvent, 'timestamp'>): DiagnosticEvent {
+export async function recordDiagnosticEvent(event: Omit<DiagnosticEvent, 'timestamp'>): Promise<DiagnosticEvent> {
     const entry: DiagnosticEvent = { ...event, timestamp: new Date().toISOString() };
     const events: DiagnosticEvent[] = getDiagnosticEvents();
     events.push(entry);
-    void ext.context.workspaceState.update(eventsKey, events.slice(-maxCachedEvents));
+    const trimmed: DiagnosticEvent[] = events.slice(-maxCachedEvents);
+    await ext.context.workspaceState.update(eventsKey, trimmed);
     return entry;
 }
 
@@ -100,16 +101,16 @@ export async function withDiagnosticEvents<T>(
     run: () => Promise<T>,
 ): Promise<T> {
     const properties: Record<string, unknown> = ensureRequiredCopilotOnRailsContext(context).diagnostics.properties;
-    const startEvent: DiagnosticEvent = recordDiagnosticEvent({ name: eventDetails.name, type: eventDetails.type, status: 'start', properties: { ...properties } });
+    const startEvent: DiagnosticEvent = await recordDiagnosticEvent({ name: eventDetails.name, type: eventDetails.type, status: 'start', properties: { ...properties } });
     context.telemetry.properties.startTimestamp = startEvent.timestamp;
 
     try {
         const result: T = await run();
-        const successEvent: DiagnosticEvent = recordDiagnosticEvent({ name: eventDetails.name, type: eventDetails.type, status: 'success', properties: { ...properties } });
+        const successEvent: DiagnosticEvent = await recordDiagnosticEvent({ name: eventDetails.name, type: eventDetails.type, status: 'success', properties: { ...properties } });
         context.telemetry.properties.endTimestamp = successEvent.timestamp;
         return result;
     } catch (error) {
-        const errorEvent: DiagnosticEvent = recordDiagnosticEvent({ name: eventDetails.name, type: eventDetails.type, status: 'error', properties: { ...properties, error: maskUserInfo(parseError(error).message, context.valuesToMask) } });
+        const errorEvent: DiagnosticEvent = await recordDiagnosticEvent({ name: eventDetails.name, type: eventDetails.type, status: 'error', properties: { ...properties, error: maskUserInfo(parseError(error).message, context.valuesToMask) } });
         context.telemetry.properties.endTimestamp = errorEvent.timestamp;
         throw error;
     }
@@ -136,9 +137,9 @@ export interface DiagnosticEvent {
      */
     name: string;
     /**
-     * Whether the event was produced by an extension command, an MCP tool, or a webview action.
+     * Whether the event was produced by the extension, an MCP tool, or a webview action.
      */
-    type: 'extensionCommand' | 'mcpTool' | 'webviewAction';
+    type: 'extensionAction' | 'mcpTool' | 'webviewAction';
     /**
      * Which point in the tool's lifecycle this entry represents.
      */

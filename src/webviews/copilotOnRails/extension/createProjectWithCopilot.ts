@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
+import { getRecentPrompts } from "./recentPrompts";
 import { writePendingCreateMarker } from "./resumePendingCreateWithCopilot";
 
 const localDev = vscode.l10n.t('Local Development');
@@ -63,6 +64,7 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
             'Claude Opus 4.7 (copilot)',
             'Claude Sonnet 4.6 (copilot)',
         ],
+        recentPrompts: getRecentPrompts(),
     });
     controller.revealToForeground();
 }

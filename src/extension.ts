@@ -28,6 +28,7 @@ import { registerMcpTools } from './chat/tools/registerMcpTools';
 import { createCloudConsole } from './cloudConsole/cloudConsole';
 import { registerActivity } from './commands/activities/registerActivity';
 import { registerActivityLogTree } from './commands/activities/registerActivityLogTree';
+import { registerDebugSessionWatcher } from './commands/copilotOnRails/registerDebugSessionWatcher';
 import { createResourceGroup } from './commands/createResourceGroup';
 import { deleteResourceGroupV2 } from './commands/deleteResourceGroup/v2/deleteResourceGroupV2';
 import { registerCommands } from './commands/registerCommands';
@@ -61,9 +62,10 @@ import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/Wor
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
-import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/resumePendingCreateWithCopilot';
+import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/extension/debugPlanImplementedWatcher';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
 import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
+import { resumePendingCreateWithCopilot } from './webviews/copilotOnRails/extension/resumePendingCreateWithCopilot';
 import { registerViewHostDisposal } from './webviews/copilotOnRails/extension/utils/singletonViewHost';
 
 export async function activate(context: vscode.ExtensionContext, perfStats: { loadStartTime: number; loadEndTime: number }): Promise<apiUtils.AzureExtensionApiProvider> {
@@ -83,8 +85,10 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
     const corPlanFilesWatcher = new ProjectPlanFilesWatcher();
     context.subscriptions.push(corPlanFilesWatcher);
     registerProjectSubmissionStateWatcher(context, corPlanFilesWatcher);
+    registerDebugSessionWatcher(context, corPlanFilesWatcher);
     registerRequirementsAutoOpen(context);
     registerAutopilot(context);
+    registerDebugPlanImplementedWatcher(context);
     registerViewHostDisposal(context);
 
     const refreshAzureTreeEmitter = new vscode.EventEmitter<void | TreeDataItem | TreeDataItem[] | null | undefined>();

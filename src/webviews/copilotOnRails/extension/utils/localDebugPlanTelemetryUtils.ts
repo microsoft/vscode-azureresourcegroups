@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { maskUserInfo } from "@microsoft/vscode-azext-utils";
+import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { findColumnIndex, findSection, findTable, flattenContent, isChecked, type LocalPlanData, type LocalPlanSection } from "../../views/utils/parseLocalDebugPlanMarkdown";
 
 /**
@@ -74,6 +76,15 @@ export interface LocalDebugPlanTelemetry {
     /** Whether a dev-server → API proxy was detected. */
     proxyDetected: boolean;
 
+    /** Whether the plan includes a `## Debug Configuration Checklist` section (post-validation results). */
+    hasDebugChecklist: boolean;
+    /** Debug Configuration Checklist entries with a real ✅/❌ result (passed + failed). */
+    debugChecklistTotalCount: number;
+    /** Checklist entries marked passed (✅). */
+    debugChecklistPassedCount: number;
+    /** Checklist entries marked failed (❌). */
+    debugChecklistFailedCount: number;
+
     /** Orchestrator name, normalized (e.g. `docker compose`), or `none`. */
     orchestrator: string;
 
@@ -120,6 +131,9 @@ export const LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX = 'localDebugPlan.';
  */
 const MAX_SECTION_TITLES = 15;
 
+const CHECKLIST_PASS_REGEX = /^[-*\s]*✅/;
+const CHECKLIST_FAIL_REGEX = /^[-*\s]*❌/;
+
 /**
  * Parses a structured {@link LocalPlanData} into a flat, telemetry-safe {@link LocalDebugPlanTelemetry}
  * summary. This is the single, centralized place that derives telemetry from a debug plan.
@@ -127,6 +141,7 @@ const MAX_SECTION_TITLES = 15;
 export function getLocalDebugPlanTelemetry(planData: LocalPlanData): LocalDebugPlanTelemetry {
     const prereq = getPrerequisiteMetrics(planData);
     const debug = getDebugConfigMetrics(planData);
+    const checklist = getDebugChecklistMetrics(planData);
     const emulators = getEmulatorMetrics(planData);
     const apiTest = getApiTestMetrics(planData);
     const migration = getMigrationMetrics(planData);
@@ -155,6 +170,11 @@ export function getLocalDebugPlanTelemetry(planData: LocalPlanData): LocalDebugP
         debugAzureDependencies: debug.azureDependencies,
         proxyDetected: debug.proxyDetected,
 
+        hasDebugChecklist: checklist.hasSection,
+        debugChecklistTotalCount: checklist.total,
+        debugChecklistPassedCount: checklist.passed,
+        debugChecklistFailedCount: checklist.failed,
+
         orchestrator: getOrchestrator(planData),
 
         emulatorCount: emulators.count,
@@ -176,6 +196,18 @@ export function getLocalDebugPlanTelemetry(planData: LocalPlanData): LocalDebugP
         convenienceScriptOfferedCount: scripts.offered,
         convenienceScriptSelectedCount: scripts.selected,
     };
+}
+
+export function recordLocalDebugPlanTelemetry(context: CopilotOnRailsContext, planData: LocalPlanData): void {
+    try {
+        const telemetry = getLocalDebugPlanTelemetry(planData);
+        for (const [key, value] of Object.entries(telemetry)) {
+            setCorProp(context, `${LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX}${key}`, value);
+        }
+    } catch {
+        // Telemetry extraction must never block the approval flow; swallow any parsing errors.
+        setCorProp(context, `${LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX}parseFailed`, true);
+    }
 }
 
 //#region Section metrics
@@ -322,6 +354,30 @@ function getDebugConfigMetrics(planData: LocalPlanData): {
     };
 }
 
+/**
+ * Metrics for the `## Debug Configuration Checklist` section - the post-validation results the
+ * azure-debug-generate agent appends after validating each launch config, one line per config, each
+ * starting with a ✅ (passed) or ❌ (failed) marker (see the agent's validation.md § Plan Integration).
+ */
+function getDebugChecklistMetrics(planData: LocalPlanData): { hasSection: boolean; total: number; passed: number; failed: number } {
+    const section = findSection(planData, 'Checklist');
+    if (!section) {
+        return { hasSection: false, total: 0, passed: 0, failed: 0 };
+    }
+
+    let passed = 0;
+    let failed = 0;
+    for (const line of getSectionLines(section)) {
+        if (CHECKLIST_PASS_REGEX.test(line)) {
+            passed++;
+        } else if (CHECKLIST_FAIL_REGEX.test(line)) {
+            failed++;
+        }
+    }
+
+    return { hasSection: true, total: passed + failed, passed, failed };
+}
+
 function getOrchestrator(planData: LocalPlanData): string {
     const section = findSection(planData, 'Orchestrator');
     const table = section && findTable(section, ['Orchestrator']);
@@ -428,6 +484,23 @@ function sectionHasText(section: LocalPlanSection, needle: string): boolean {
         }
         return false;
     });
+}
+
+/**
+ * Flattens a section's textual content into individual trimmed, non-empty lines, descending into
+ * subsections. Paragraph/blockquote text and bullet-list items are all included so line-oriented
+ * scanning (e.g. the checklist pass/fail markers) works regardless of how the markdown is formatted.
+ */
+function getSectionLines(section: LocalPlanSection): string[] {
+    const lines: string[] = [];
+    for (const content of flattenContent(section.content)) {
+        if (content.type === 'paragraph' || content.type === 'blockquote') {
+            lines.push(...content.text.split('\n'));
+        } else if (content.type === 'bulletList') {
+            lines.push(...content.items);
+        }
+    }
+    return lines.map((line) => line.trim()).filter((line) => line !== '');
 }
 
 function cell(row: string[], index: number): string {

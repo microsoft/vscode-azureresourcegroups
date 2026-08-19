@@ -44,7 +44,7 @@ npm install
     "FUNCTIONS_WORKER_RUNTIME": "node",
     "NODE_ENV": "development",
     "STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=true",
-    "DATABASE_URL": "postgresql://localdev:localdevpassword@localhost:5432/appdb",
+    "DATABASE_URL": "postgresql://<POSTGRES_USER>:<POSTGRES_PASSWORD>@localhost:5432/appdb",
     "REDIS_URL": "redis://localhost:6379"
   },
   "Host": {
@@ -53,6 +53,12 @@ npm install
   }
 }
 ```
+
+> `local.settings.json` is plain JSON and does **not** support `${...}` interpolation.
+> Replace `<POSTGRES_USER>` / `<POSTGRES_PASSWORD>` with the same discrete values declared in the
+> workspace-root `.env` used by docker-compose. Never leave the angle-bracket placeholders in the
+> generated file, and never paste a credential value copied out of tool output — redaction filters
+> rewrite concrete credential URLs, and a masked value beginning with `*` corrupts YAML/JSON config.
 
 ### tsconfig.json
 
@@ -120,6 +126,12 @@ npm install
 > - **Compiled output must be self-sufficient.** `dist/` must never import from `src/` or need a rebuild to run. The `main` field points at compiled `.js` (Rule 12), never a `.ts` entry.
 > - **Prefer disabling the server build over stripping scripts.** The robust deploy config ships the prebuilt `dist/` and turns the platform build **off** (`SCM_DO_BUILD_DURING_DEPLOYMENT=false` / `azd` `host: function` remote build disabled). Do **not** rely on `prepackage`/`postpackage` hooks that temporarily delete the build scripts (`build`, `watch`, `clean`, `prestart`) from `package.json` — that treats the symptom (an unwanted server rebuild) instead of the cause. The deploy agent owns the deploy config; the scaffold's job is to guarantee the split above so a prebuilt artifact deploys cleanly.
 > - **Native modules stay external.** Packages with compiled native addons (`bcrypt`, `sharp`, `better-sqlite3`, Prisma engines, …) are OS/arch-specific. Keep them in `dependencies` (installed on the Linux host), never bundle their binaries from a Windows/macOS build.
+
+> ⚠️ **Monorepo / npm workspaces deployment — keep each service self-contained.**
+> Each service deploys **independently** (one `azure.yaml` service = one artifact), and npm workspaces **hoist** `node_modules` and the single lockfile to the repo root — so a per-service zip has no local `node_modules` and can't resolve a root-linked dependency on its own (the "43KB zip / `Cannot find module 'shared'`" failures). Use the following approaches to make a service self-contained — **no bundler required by default**:
+> - **Compile `shared` in via relative imports (preferred).** Import the shared package by **relative path** (`../../shared/...`), not as a workspace package (`@app/shared`). With `rootDir: ".."` + `../shared` in `include`, `tsc` emits `shared` into the service's own `dist/`, so there is **no `shared` runtime dependency to resolve** — this is the real fix for `Cannot find module 'shared'` on a per-service deploy. If you must consume `shared` as a workspace package, vendor or bundle its compiled output into the artifact.
+> - **Resolve third-party deps at the service level.** Because deps are hoisted, ship the service with either (a) a production `node_modules` installed *into the service directory* (isolated `npm install --omit=dev`), or (b) the platform's production install against the service's `package.json` + lockfile (disable only the *build*, keep the *install*). Native-addon packages must install on the Linux host, never copied from a Windows/macOS `node_modules`.
+> - **Optional — single-file bundle.** For cold-start-sensitive or single-artifact needs, `esbuild --bundle --packages=external` (from a `src/index.ts` that imports every handler; point `main` at the one `dist/index.js`) inlines first-party code (including `shared`) and leaves npm deps external. It sidesteps both issues but **departs from the idiomatic per-file layout** (Microsoft's `func init --model V4` default is modular handlers + a glob `main` compiled by `tsc`), so treat it as an **opt-in optimization, not the default**.
 
 ---
 
