@@ -63,8 +63,8 @@ function registerCopilotOnRailsCommand<A extends unknown[]>(
     );
 }
 
-export function startProjectScaffoldCommand(context: CopilotOnRailsContext, prompt?: string): Promise<void> {
-    return openChatWithAgent(context, copilotOnRailsCustomAgents.azureProjectScaffoldCustomAgent, prompt ?? 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.', {
+export function startProjectScaffoldCommand(context: CopilotOnRailsContext): Promise<void> {
+    return openChatWithAgent(context, copilotOnRailsCustomAgents.azureProjectScaffoldCustomAgent, 'Plan and scaffold a new Azure project: gather requirements, produce `.azure/project-plan.md`, require explicit user approval, then scaffold the frontend preview, backend services, database, and API routes.', {
         stage: 0,
         title: l10n.t('Scaffolding your project…'),
         message: l10n.t('Copilot is gathering requirements and preparing your project plan.'),
@@ -72,8 +72,8 @@ export function startProjectScaffoldCommand(context: CopilotOnRailsContext, prom
     });
 }
 
-export function startProjectIntegrateCommand(context: CopilotOnRailsContext, prompt?: string): Promise<void> {
-    return openChatWithAgent(context, copilotOnRailsCustomAgents.azureProjectIntegrateCustomAgent, prompt ?? 'The project has been scaffolded. Read `.azure/integration-plan.md`, then integrate the project: create the SQL/PostgreSQL schema migrations (no seed data), smoke-test the backend so every endpoint responds, wire the frontend to live data (remove all mock data), and run the frontend and backend together end-to-end.', {
+export function startProjectIntegrateCommand(context: CopilotOnRailsContext): Promise<void> {
+    return openChatWithAgent(context, copilotOnRailsCustomAgents.azureProjectIntegrateCustomAgent, 'The project has been scaffolded. Read `.azure/integration-plan.md`, then integrate the project: create the SQL/PostgreSQL schema migrations (no seed data), smoke-test the backend so every endpoint responds, wire the frontend to live data (remove all mock data), and run the frontend and backend together end-to-end.', {
         stage: 0,
         title: l10n.t('Integrating your frontend…'),
         message: l10n.t('Copilot is wiring the frontend to your backend services. For progress please view the Copilot chat.'),
@@ -90,8 +90,8 @@ export function startLocalDevelopmentCommand(context: CopilotOnRailsContext, pro
     });
 }
 
-export function startAzureDebugGenerateCommand(context: CopilotOnRailsContext, prompt?: string): Promise<void> {
-    return openChatWithAgent(context, copilotOnRailsCustomAgents.azureDebugGenerateCustomAgent, prompt ?? 'The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`.', {
+export function startAzureDebugGenerateCommand(context: CopilotOnRailsContext): Promise<void> {
+    return openChatWithAgent(context, copilotOnRailsCustomAgents.azureDebugGenerateCustomAgent, 'The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`.', {
         stage: 1,
         title: l10n.t('Generating local development artifacts…'),
         message: l10n.t('Copilot is generating the artifacts from your local debugging plan.'),
