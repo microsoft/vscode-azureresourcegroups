@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 /**
  * Prereq-phase TypeScript interfaces for prereq-output.json.
  *
@@ -52,7 +57,7 @@ export interface PrereqWarning {
 
 export interface PrereqOutput {
   // AppOnboardComponent[] — see session-schemas.ts
-  components: any[];
+  components: unknown[];
   /** Structured warnings — see prereq-artifacts.md for write rules */
   warnings: PrereqWarning[];
   detectedStack: string;
@@ -72,7 +77,7 @@ export interface PrereqOutput {
   /** Structured recommendations derived from WARN findings.
    *  Merged into prepare-plan.json.postDeployRecommendations[] by the prepare phase.
    *  PostDeployRecommendation type — see session-schemas.ts */
-  postDeployRecommendations?: any[];
+  postDeployRecommendations?: unknown[];
   /** First-run init commands (DB migrations, seed data) detected from
    *  framework signals + migrations/ dir. Prepare prepends required entries
    *  to deployStrategy.startupCommand. See dependency-compatibility.md § First-Run. */

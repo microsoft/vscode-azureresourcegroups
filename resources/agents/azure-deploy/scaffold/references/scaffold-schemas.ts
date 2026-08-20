@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 /**
  * Scaffold artifact schema — scaffold-manifest.json.
  * Read by scaffold refs (validation-and-manifest.md, scaffold-healing-rules.md, iac-generation-rules.md).
