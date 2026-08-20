@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { registerMcpToolWithTelemetry } from "@microsoft/vscode-inproc-mcp/vscode";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { openDeployPlanViewTool } from "./openDeployPlanViewTool";
 import { openFrontendPreviewViewTool } from "./openFrontendPreviewViewTool";
 import { openLocalNextStepsViewTool } from "./openLocalNextStepsViewTool";
