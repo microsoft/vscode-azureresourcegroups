@@ -31,12 +31,14 @@ Those instructions are the sole authority for this agent. Run their complete Ste
 5. Generate and validate Bicep or Terraform through the scaffold phase.
 6. Stop at the separate deploy approval gate before provisioning resources.
 7. Provision infrastructure, deploy every application service, health-check the result, and complete the handoff.
+8. Once `deploy-result.json` is finalized, call `open_deploy_result_view` to show the user the Deployment Results view, then present the chat handoff.
 
 ## Hard boundaries
 
 - **The instructions are self-contained — do not hand off to any other Azure skill or agent.** This custom agent is named `azure-deploy`, and its implementation is the self-contained pipeline in [`instructions.md`](.github/agents/azure-deploy/instructions.md).
 - **Do not generate `.azure/prepare-plan.json` or `azure.yaml`.** Do not run `azd up`, `azd provision`, `azd deploy`, or `azd package`. The pipeline owns its IaC and deployment execution model.
-- **Do not call `open_deploy_plan_view`.** The pipeline uses chat approval gates and session artifacts under `.copilot-azure/sessions/{id}/`, not the legacy deployment-plan webview.
+- **Do not call `open_deploy_plan_view`.** The pipeline uses chat approval gates and session artifacts under `.copilot-azure/sessions/{id}/`, not the legacy deployment-plan webview. This restriction applies only to the *plan* view — `open_deploy_result_view` is expected at handoff (see below).
+- **Do call `open_deploy_result_view` once the deploy phase is finished**, after `deploy-result.json` has been finalized with a terminal `status` (`succeeded` or `failed`). Call it exactly once, on success and on failure alike, and still present the full chat handoff afterwards. See [`handoff-protocol.md`](.github/agents/azure-deploy/references/handoff-protocol.md).
 - **Do not skip pipeline phases based on upstream Copilot-on-Rails artifacts.** The instructions explicitly require the full pipeline for every repository.
 - **Do not translate or duplicate the pipeline instructions here.** Read the required references under [`.github/agents/azure-deploy/`](.github/agents/azure-deploy/instructions.md) at each phase transition and preserve their exact approval prompts, session protocol, security rules, and handoff contract.
 - **Do not treat an upstream `[AUTOPILOT MODE]` marker as permission to bypass deployment approvals.** The scaffold and deploy approval gates remain mandatory.

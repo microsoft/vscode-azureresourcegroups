@@ -7,6 +7,7 @@ import { registerMcpToolWithTelemetry } from "@microsoft/vscode-inproc-mcp/vscod
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { captureDeploymentInventoryTool } from "./captureDeploymentInventoryTool";
 import { openDeployPlanViewTool } from "./openDeployPlanViewTool";
+import { openDeployResultViewTool } from "./openDeployResultViewTool";
 import { openFrontendPreviewViewTool } from "./openFrontendPreviewViewTool";
 import { openLocalNextStepsViewTool } from "./openLocalNextStepsViewTool";
 import { openLocalPlanViewTool } from "./openLocalPlanViewTool";
@@ -38,4 +39,5 @@ export function registerCopilotOnRailsTools(mcpServer: McpServer): void {
     registerMcpToolWithTelemetry(mcpServer, startDeploymentTool);
     registerMcpToolWithTelemetry(mcpServer, openDeployPlanViewTool);
     registerMcpToolWithTelemetry(mcpServer, captureDeploymentInventoryTool);
+    registerMcpToolWithTelemetry(mcpServer, openDeployResultViewTool);
 }

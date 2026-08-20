@@ -25,6 +25,15 @@ See [deploy-checklist-template.md § Deployment Summary](../deploy/references/de
 > 3. Portal deployment link printed in chat — if missing, generate from `$resId` pattern (see deploy/instructions.md Step 6) and print now
 > 4. `deployment-summary.md` in session folder — if missing, `create` it NOW with the same content you are about to present in chat (status, subscription, RG, region, services table, endpoints, cleanup commands). One `create` call — do NOT skip.
 
+## Show the Deployment Results View
+
+> ⛔ **After the artifact self-check passes, call `open_deploy_result_view` — exactly once, before presenting the chat handoff.** This opens the Deployment Results webview, which renders `deploy-result.json` as a structured report: status, endpoints with health, provisioned resources, recovery attempts, and the cleanup command.
+>
+> - Call it only after `deploy-result.json` is **finalized** (`status` is `succeeded` or `failed`, never `in-progress`). The view reads the file from disk, so calling it early shows a half-written report.
+> - Call it on failure too — the view surfaces which resources and endpoints failed, which is exactly what the user needs to debug.
+> - The view **supplements** the chat handoff; it does not replace it. Still present all four handoff sections below.
+> - If the tool reports that no result file was found, the artifact was written somewhere unexpected — re-check the session folder path and fix the artifact, then call the tool again.
+
 ## Post-Deploy Recommendations
 
 > ⛔ **`postDeployRecommendations[]` MUST be surfaced — not silently dropped.** Read `prepare-plan.json.postDeployRecommendations[]` (already merged with prereq findings by the prepare phase). Present EACH entry as a numbered recommendation with this format:
