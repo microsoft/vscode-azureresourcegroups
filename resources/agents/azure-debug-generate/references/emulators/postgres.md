@@ -10,6 +10,29 @@ postgres:16
 
 ## docker-compose Service Block
 
+Declare the local credentials **once** in a workspace-root `.env`, then reference them everywhere
+else. Compose interpolates `${...}` from `.env` (or the shell environment), so the same values feed
+the database service and every application service.
+
+`.env` is required — without it Compose interpolates `${POSTGRES_USER}` to an empty string and the
+database silently fails to authenticate:
+
+```
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=localdev
+```
+
+> ⛔ **`.gitignore` must list `.env` before you create it.** A credential that reaches a commit is
+> compromised and has to be rotated — deleting it in a later commit leaves the value in history and
+> in every existing clone and fork. Private repositories are no exception. If the project has no
+> `.gitignore`, or has one that omits `.env`, fix that before writing the file.
+
+> **Never inline a concrete `user:password@host` URL** in a generated file — build it from the
+> variables above. Beyond hard-coding a credential, such literals are rewritten by secret-redaction
+> filters, and a masked value starting with `*` is a fatal YAML parse error: YAML reads a leading
+> `*` as an alias reference.
+
 ```yaml
 services:
   postgres:
@@ -17,13 +40,13 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: localdev
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ./.postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -33,18 +56,37 @@ services:
 
 ## Connection String
 
+The host depends on where the client runs:
+
+| Client location | Host |
+|---|---|
+| Host machine (VS Code debug target, `npm` task) | `localhost` |
+| Another docker-compose service | `postgres` (the service name) |
+
 ```
-postgresql://postgres:postgres@localhost:5432/localdev
+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}
 ```
 
 ## Required App Environment Variables
 
+Declare these in the workspace-root **`.env`**, alongside the `POSTGRES_*` values:
+
 | Variable | Value |
 |----------|-------|
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/localdev` |
-| `POSTGRES_CONNECTION_STRING` | `postgresql://postgres:postgres@localhost:5432/localdev` |
+| `DATABASE_URL` | `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}` |
+| `POSTGRES_CONNECTION_STRING` | `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}` |
 
 > Use whichever variable name the project's ORM or SDK expects. Both forms above are shown as reference.
+> When the value is set on a docker-compose service, replace the `localhost` host with `postgres`.
+
+> **`.env` must declare every key `.env.example` declares.** `.env.example` is documentation —
+> nothing loads it, so a key that appears only there is undefined at run time.
+
+> **A runtime settings file does not cover host-run tasks.** `local.settings.json` is read by the
+> Azure Functions host and a compose `environment:` block by its own container; neither reaches a
+> VS Code task that runs a tool directly on the host, such as `npm run db:migrate`. That client
+> fails with "Unable to acquire a connection", which reads like an unready database but is a
+> missing variable — it never opened a socket. Put the value in `.env` so both paths resolve it.
 
 ## Healthcheck
 
@@ -52,7 +94,7 @@ The healthcheck is included in the docker-compose service block above. It uses `
 
 ```yaml
 healthcheck:
-  test: ["CMD-SHELL", "pg_isready -U postgres"]
+  test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
   interval: 5s
   timeout: 5s
   retries: 5
@@ -62,5 +104,5 @@ healthcheck:
 ## Notes
 
 - Port 5432 is the standard PostgreSQL port.
-- Default credentials (`postgres`/`postgres`) are intentionally simple for local dev. Never use in production.
+- Default credentials (`postgres`/`postgres`) are intentionally simple for local dev and are declared in the workspace-root `.env`. Never use in production.
 - Data is persisted to `./.postgres/`.

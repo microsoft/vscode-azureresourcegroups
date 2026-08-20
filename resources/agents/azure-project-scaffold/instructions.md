@@ -191,7 +191,7 @@ If you find yourself writing a command that wouldn't run on the other OS, stop a
 |------|---------|
 | Initialize project | `package.json` + `tsconfig.json` (Node.js) / `pyproject.toml` (Python) / `*.csproj` + `*.sln` (.NET) |
 | Configure linter/formatter | ESLint + Prettier (Node.js) / Ruff (Python) / dotnet format (.NET) |
-| Create `.gitignore` | Runtime-appropriate ignores (node_modules, .env, data/, etc.) |
+| Create `.gitignore` | Runtime-appropriate ignores (node_modules, data/, etc.). **Write it before any file that holds credentials** — `.env` and `local.settings.json` must be ignored from the first commit, never added and removed later. See architecture.md § .gitignore Additions |
 | Create directory structure | `services/functions/`, `services/functions/src/utils/`, `services/shared/` (do NOT create `services/web/` — may exist from frontend generation) |
 
 **Reference**: [architecture.md](.github/agents/shared-references/architecture.md)

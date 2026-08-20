@@ -8,7 +8,7 @@ import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import type { z } from "zod";
 import { azureDeployAgent } from "../../../constants";
-import { DEPLOYMENT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { PREPARE_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/telemetryUtils";
 import { openDeploymentPlanViewFromWorkspace } from "../../../webviews/copilotOnRails/extension/openDeploymentPlanView";
 
@@ -28,7 +28,7 @@ export const openDeployPlanViewTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOu
                 return { message: 'Opened the Deployment Plan view.' };
             });
         }) ?? {
-            message: `Failed to open the Deployment Plan view. Ensure "${DEPLOYMENT_PLAN_FILE_GLOB}" exists in the current workspace. You can generate it using the "${azureDeployAgent}" agent.`,
+            message: `Failed to open the Deployment Plan view. Ensure "${PREPARE_PLAN_FILE_GLOB}" exists in the current workspace. You can generate it using the "${azureDeployAgent}" agent.`,
         };
     }
 };

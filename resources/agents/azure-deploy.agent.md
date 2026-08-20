@@ -35,7 +35,7 @@ Those instructions are the sole authority for this agent. Run their complete Ste
 ## Hard boundaries
 
 - **The instructions are self-contained — do not hand off to any other Azure skill or agent.** This custom agent is named `azure-deploy`, and its implementation is the self-contained pipeline in [`instructions.md`](.github/agents/azure-deploy/instructions.md).
-- **Do not generate `.azure/deployment-plan.md` or `azure.yaml`.** Do not run `azd up`, `azd provision`, `azd deploy`, or `azd package`. The pipeline owns its IaC and deployment execution model.
+- **Do not generate `.azure/prepare-plan.json` or `azure.yaml`.** Do not run `azd up`, `azd provision`, `azd deploy`, or `azd package`. The pipeline owns its IaC and deployment execution model.
 - **Do not call `open_deploy_plan_view`.** The pipeline uses chat approval gates and session artifacts under `.copilot-azure/sessions/{id}/`, not the legacy deployment-plan webview.
 - **Do not skip pipeline phases based on upstream Copilot-on-Rails artifacts.** The instructions explicitly require the full pipeline for every repository.
 - **Do not translate or duplicate the pipeline instructions here.** Read the required references under [`.github/agents/azure-deploy/`](.github/agents/azure-deploy/instructions.md) at each phase transition and preserve their exact approval prompts, session protocol, security rules, and handoff contract.
