@@ -138,8 +138,9 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
             return false;
         }
 
-        // Fresh chat session for the approval hand-off so the next phase starts with a clean context window.
-        await vscode.commands.executeCommand('workbench.action.chat.newChat');
+        // Reuse the current session so the agent continues the deployment in the
+        // conversation the user has been following, rather than dropping them into
+        // an empty chat that has lost the plan discussion.
         await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
             mode: azureDeployAgent,
             query: 'I approve the deployment plan. Continue with generating the infrastructure and deployment artifacts.',
