@@ -104,6 +104,12 @@ export async function startDeploymentCommand(context: CopilotOnRailsContext, pro
         context,
         copilotOnRailsCustomAgents.azureDeployCustomAgent,
         prompt ?? 'Onboard and deploy this project to Azure using the complete `azure-app-onboard` pipeline. Analyze readiness, plan the Azure architecture and cost, generate validated infrastructure, deploy every service, and verify the live application.',
+        {
+            stage: 2,
+            title: l10n.t('Preparing deployment…'),
+            message: l10n.t('Copilot is preparing your deployment plan.'),
+            showNeedHelp: true,
+        },
     );
 }
 

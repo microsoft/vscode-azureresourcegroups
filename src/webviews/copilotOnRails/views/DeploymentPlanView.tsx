@@ -398,7 +398,14 @@ export const DeploymentPlanView = (): JSX.Element => {
                                 ))}
                             </select>
                         ) : (
-                            <span className='infoValue'>{formatLocation(plan.location, plan.locationCode)}</span>
+                            <>
+                                <span className='infoValue'>{formatLocation(plan.location, plan.locationCode)}</span>
+                                {plan.locationsUnavailable && (
+                                    <span className='infoHint'>
+                                        {plan.locationsUnavailable === 'signedOut' ? strings.locationsSignedOutHint : strings.locationsFailedHint}
+                                    </span>
+                                )}
+                            </>
                         )}
                     </div>
                     {plan.deploymentVariables?.environmentName && (

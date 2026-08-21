@@ -28,6 +28,8 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         loading: vscode.l10n.t('Loading deployment plan...'),
         locationLabel: vscode.l10n.t('Location'),
         selectLocationPlaceholder: vscode.l10n.t('Select a location...'),
+        locationsSignedOutHint: vscode.l10n.t('Sign in to Azure to pick a different region.'),
+        locationsFailedHint: vscode.l10n.t('Couldn\u2019t load Azure regions \u2014 showing the planned region only.'),
         azureResourcesHeading: vscode.l10n.t('Azure Resources'),
         costEstimateHeading: vscode.l10n.t('Cost Estimate'),
         costEstimateTotalLabel: vscode.l10n.t('Estimated monthly total'),

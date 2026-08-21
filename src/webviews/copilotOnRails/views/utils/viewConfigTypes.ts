@@ -21,6 +21,10 @@ export type DeploymentPlanViewStrings = {
     loading: string;
     locationLabel: string;
     selectLocationPlaceholder: string;
+    /** Shown beside a read-only region when no Azure account is signed in. */
+    locationsSignedOutHint: string;
+    /** Shown beside a read-only region when the live region list couldn't be loaded. */
+    locationsFailedHint: string;
     azureResourcesHeading: string;
     costEstimateHeading: string;
     costEstimateTotalLabel: string;

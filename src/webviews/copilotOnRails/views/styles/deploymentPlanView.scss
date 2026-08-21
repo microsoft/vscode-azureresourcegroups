@@ -156,6 +156,12 @@
                     margin-left: 4px;
                 }
             }
+
+            .infoHint {
+                font-size: 0.8em;
+                color: var(--vscode-descriptionForeground);
+                font-style: italic;
+            }
         }
     }
 

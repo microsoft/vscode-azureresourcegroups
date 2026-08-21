@@ -52,10 +52,67 @@ export function createProjectPlanFileWatcher(glob: string): vscode.FileSystemWat
     return vscode.workspace.createFileSystemWatcher(pattern);
 }
 
+/**
+ * Resolves a workspace-relative artifact glob against the file system directly.
+ *
+ * `vscode.workspace.findFiles` is backed by the search service, which honors `.gitignore`
+ * whenever `search.useIgnoreFiles` is enabled (the default). The deploy agent's session
+ * protocol git-ignores `.copilot-azure/` because session artifacts can hold secrets, so its
+ * `prepare-plan.json` is invisible to `findFiles`. Walking the file system finds it regardless
+ * of the user's ignore/exclude settings.
+ *
+ * Supports a single `*` wildcard per path segment (e.g. `.copilot-azure/sessions/{*}/prepare-plan.json`),
+ * which is all the project artifact globs need.
+ */
+export async function findProjectFiles(glob: string, folder?: vscode.WorkspaceFolder): Promise<vscode.Uri[]> {
+    const folders = folder ? [folder] : vscode.workspace.workspaceFolders ?? [];
+    const results: vscode.Uri[] = [];
+    for (const workspaceFolder of folders) {
+        results.push(...await resolveGlobSegments(workspaceFolder.uri, glob.split('/')));
+    }
+    return results;
+}
+
+async function resolveGlobSegments(base: vscode.Uri, segments: readonly string[]): Promise<vscode.Uri[]> {
+    const [segment, ...rest] = segments;
+    if (segment === undefined) {
+        return [];
+    }
+
+    if (segment !== '*') {
+        const next = vscode.Uri.joinPath(base, segment);
+        if (rest.length > 0) {
+            return await resolveGlobSegments(next, rest);
+        }
+        try {
+            const stat = await vscode.workspace.fs.stat(next);
+            return stat.type === vscode.FileType.Directory ? [] : [next];
+        } catch {
+            return [];
+        }
+    }
+
+    let entries: [string, vscode.FileType][];
+    try {
+        entries = await vscode.workspace.fs.readDirectory(base);
+    } catch {
+        return [];
+    }
+
+    const matches = await Promise.all(entries.map(async ([name, type]): Promise<vscode.Uri[]> => {
+        const child = vscode.Uri.joinPath(base, name);
+        if (rest.length === 0) {
+            return type === vscode.FileType.Directory ? [] : [child];
+        }
+        return type === vscode.FileType.Directory ? await resolveGlobSegments(child, rest) : [];
+    }));
+    return matches.flat();
+}
+
 export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
     const found = new Map<string, boolean>(await Promise.all(
         ALL_PROJECT_FILE_GLOBS.map(async (glob): Promise<[string, boolean]> =>
-            [glob, (await vscode.workspace.findFiles(glob, null, 1)).length > 0]),
+            [glob, (await findProjectFiles(glob)).length > 0]),
     ));
     const exists = (glob: string): boolean => found.get(glob) ?? false;
 
@@ -89,19 +146,8 @@ export async function getProjectPlanFiles(): Promise<ProjectPlanFiles> {
  * folder so a debug session can be attributed to the specific folder it runs in.
  */
 export async function isCopilotOnRailsProjectFolder(folder: vscode.WorkspaceFolder): Promise<boolean> {
-    const allGlobs = [REQUIREMENTS_FILE_GLOB, ...PLAN_FILE_GLOBS];
-    const azureFileNames = allGlobs
-        .filter((glob) => glob.startsWith('.azure/'))
-        .map((glob) => glob.slice('.azure/'.length));
-    const patterns = [
-        `.azure/{${azureFileNames.join(',')}}`,
-        // Artifacts that live outside `.azure/` (e.g. a deploy session directory) are matched as-is.
-        ...allGlobs.filter((glob) => !glob.startsWith('.azure/')),
-    ];
-
-    for (const pattern of patterns) {
-        const matches = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, pattern), null, 1);
-        if (matches.length > 0) {
+    for (const glob of [REQUIREMENTS_FILE_GLOB, ...PLAN_FILE_GLOBS]) {
+        if ((await findProjectFiles(glob, folder)).length > 0) {
             return true;
         }
     }
