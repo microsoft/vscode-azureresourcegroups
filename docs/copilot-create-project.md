@@ -380,7 +380,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.azure/integration-plan.md` | scaffold agent | Brief the integrate agent consumes. |
 | `.azure/vscode-debug-plan.md` | debug‑plan agent | The local debug configuration plan. |
 | `.azure/prepare-plan.json` (or `.copilot-azure/sessions/{id}/prepare-plan.json`) | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. |
-| `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | Result of the deploy: status, endpoints, health, resources, recovery attempts. Backs the Deployment results view; the newest file wins when both exist. |
+| `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | Result of the deploy: status, endpoints, health, resources, recovery attempts. Backs the Deployment results view. Written into the active session folder, so a workspace holds one per session — the session named by `.copilot-azure/sessions/active-session.json` wins, falling back to the newest file. |
 | `.github/agents/**` (+ `.version`) | extension | Copied agent instruction files and the version stamp. |
 
 Session/diagnostics state is kept in VS Code **workspaceState** (not files): `copilotOnRails.prompt`,

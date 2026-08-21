@@ -435,7 +435,7 @@ export const DeploymentPlanView = (): JSX.Element => {
                 )}
 
                 {plan.costEstimate && plan.costEstimate.breakdown.length > 0 && (
-                    <details className='sectionCard'>
+                    <details className='sectionCard' open>
                         <summary><h2>{strings.costEstimateHeading}</h2></summary>
                         <table className='planTable'>
                             <thead>

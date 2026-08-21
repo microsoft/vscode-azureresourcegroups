@@ -68,6 +68,53 @@ suite('parseDeployResultJson', () => {
             assert.strictEqual(result.primaryEndpoint?.url, 'https://nice-pebble-007cd0f0f.7.azurestaticapps.net');
         });
 
+        test('features no endpoint when the deployment is backend-only', () => {
+            // "Open app" must stay hidden rather than opening a Function App URL:
+            // there is no browsable front end in this deployment.
+            const result = parseDeployResultJson(JSON.stringify({
+                endpoints: {
+                    api: 'https://func-scrapbook-dev-5381.azurewebsites.net',
+                    health: 'https://func-scrapbook-dev-5381.azurewebsites.net/api/health',
+                },
+            }));
+
+            assert.strictEqual(result.primaryEndpoint, undefined);
+            assert.strictEqual(result.endpoints.length, 2, 'backend endpoints stay listed in the endpoints section');
+        });
+
+        test('features a front end named something other than "web"', () => {
+            const result = parseDeployResultJson(JSON.stringify({
+                endpoints: {
+                    api: 'https://func-scrapbook-dev-5381.azurewebsites.net',
+                    frontend: 'https://nice-pebble-007cd0f0f.7.azurestaticapps.net',
+                },
+            }));
+
+            assert.strictEqual(result.primaryEndpoint?.name, 'frontend');
+            assert.strictEqual(result.primaryEndpoint?.url, 'https://nice-pebble-007cd0f0f.7.azurestaticapps.net');
+        });
+
+        test('features a Static Web App even when the artifact omits endpoint names', () => {
+            // The array form carries no `name`, so every entry falls back to the
+            // generic `endpoint` and only the host identifies the front end.
+            const result = parseDeployResultJson(JSON.stringify({
+                endpoints: [
+                    { url: 'https://func-offcompl-dev-48c0.azurewebsites.net/api' },
+                    { url: 'https://witty-stone-0bab4f50f.7.azurestaticapps.net' },
+                ],
+            }));
+
+            assert.strictEqual(result.primaryEndpoint?.url, 'https://witty-stone-0bab4f50f.7.azurestaticapps.net');
+        });
+
+        test('features no endpoint when unnamed endpoints are all backends', () => {
+            const result = parseDeployResultJson(JSON.stringify({
+                endpoints: [{ url: 'https://func-offcompl-dev-48c0.azurewebsites.net/api' }],
+            }));
+
+            assert.strictEqual(result.primaryEndpoint, undefined);
+        });
+
         test('maps resource keys onto friendly type names', () => {
             const result = parseDeployResultJson(content());
 

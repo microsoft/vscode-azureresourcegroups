@@ -56,11 +56,54 @@ const ENDPOINT_LABELS: Record<string, string> = {
 };
 
 /**
- * Order used to pick the endpoint featured as "your app is live at". The web
- * front end is the user-facing entry point, so it wins over a bare API, and the
- * health endpoint is never featured.
+ * Order used to pick the endpoint featured as "your app is live at".
+ *
+ * Only user-facing front ends qualify. "Open app" promises a browsable UI, so a
+ * backend-only deployment (a Function App or bare API with no Static Web App)
+ * must not offer the button at all rather than opening a JSON endpoint the user
+ * can't do anything with. API/backend/health endpoints are therefore never
+ * featured — they remain listed in the endpoints section.
  */
-const PRIMARY_ENDPOINT_PREFERENCE = ['web', 'frontend', 'app', 'ui', 'api', 'backend'];
+const PRIMARY_ENDPOINT_PREFERENCE = ['web', 'frontend', 'app', 'ui', 'portal', 'spa', 'site'];
+
+/**
+ * Host suffixes that only ever serve a browsable front end. Names alone are not
+ * enough: the artifact's array form omits `name` entirely (every entry then falls
+ * back to the generic `endpoint`), so a Static Web App would otherwise go
+ * unrecognized and hide the "Open app" button on a deployment that plainly has a
+ * front end.
+ */
+const FRONTEND_HOST_SUFFIXES = [
+    '.azurestaticapps.net',   // Static Web Apps
+    '.azurefd.net',           // Front Door
+    '.azureedge.net',         // CDN
+    '.web.core.windows.net',  // Storage static website
+];
+
+/** Host suffixes that serve an API/backend, never a browsable front end. */
+const BACKEND_HOST_SUFFIXES = [
+    '.azurewebsites.net',     // Functions / App Service
+];
+
+function endpointHost(url: string): string {
+    try {
+        return new URL(url).hostname.toLowerCase();
+    } catch {
+        return '';
+    }
+}
+
+/** True when the URL is served from hosting that only ever fronts a UI. */
+function isFrontendUrl(url: string): boolean {
+    const host = endpointHost(url);
+    return host.length > 0 && FRONTEND_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix));
+}
+
+/** True when the URL is an API surface rather than something worth opening in a browser. */
+function isBackendUrl(url: string): boolean {
+    const host = endpointHost(url);
+    return host.length > 0 && BACKEND_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix));
+}
 
 function isRecord(value: unknown): value is Json {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -163,15 +206,30 @@ function readEndpoints(value: unknown): DeployResultEndpoint[] {
     return endpoints;
 }
 
+/**
+ * Pick the front end to feature as "your app is live at", or `undefined` when the
+ * deployment has no browsable UI. Returning `undefined` hides the "Open app"
+ * button — deliberately, since there is no front end to open.
+ *
+ * Endpoint names are unreliable (the array form of the artifact has no `name` at
+ * all), so a recognized front-end host wins even when the name says nothing.
+ */
 function pickPrimaryEndpoint(endpoints: DeployResultEndpoint[]): DeployResultEndpoint | undefined {
-    const candidates = endpoints.filter(e => e.name.toLowerCase() !== 'health');
+    const candidates = endpoints.filter(e => e.name.toLowerCase() !== 'health' && !isBackendUrl(e.url));
+
     for (const preferred of PRIMARY_ENDPOINT_PREFERENCE) {
         const match = candidates.find(e => e.name.toLowerCase() === preferred);
         if (match) {
             return match;
         }
     }
-    return candidates[0];
+
+    const byHost = candidates.find(e => isFrontendUrl(e.url));
+    if (byHost) {
+        return byHost;
+    }
+
+    return undefined;
 }
 
 /** Extract the resource name and provider type from a full ARM resource ID. */

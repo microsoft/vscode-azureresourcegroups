@@ -36,15 +36,7 @@ export const PREPARE_PLAN_SESSION_FILE_GLOB = '.copilot-azure/sessions/*/prepare
 export const PREPARE_PLAN_FILE_GLOBS = [PREPARE_PLAN_FILE_GLOB, PREPARE_PLAN_SESSION_FILE_GLOB] as const;
 export const APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB = '.copilot-azure/sessions/active-session.json';
 
-/**
- * The deploy phase's result artifact. The App Onboard session protocol writes it
- * to the active session folder, but it is also seen at the `.azure/` root, so
- * both locations are searched.
- */
-export const DEPLOY_RESULT_FILE_GLOB = '.azure/deploy-result.json';
-export const DEPLOY_RESULT_SESSION_FILE_GLOB = '.copilot-azure/sessions/*/deploy-result.json';
-export const DEPLOY_RESULT_FILE_GLOBS = [DEPLOY_RESULT_FILE_GLOB, DEPLOY_RESULT_SESSION_FILE_GLOB] as const;
-
+export const DEPLOY_RESULT_FILE_GLOB = '.copilot-azure/sessions/*/deploy-result.json';
 
 const PLAN_FILE_GLOBS = [
     PROJECT_PLAN_FILE_GLOB,
