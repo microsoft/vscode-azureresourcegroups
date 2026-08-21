@@ -73,6 +73,7 @@
     "copilotOnRails.openDebugPlanView": "Open Debug Plan View",
     "copilotOnRails.openDebugNextStepsView": "Open Debug Next Steps View",
     "copilotOnRails.openDeploymentPlanView": "Open Deploy Plan View",
+    "copilotOnRails.openDeployResultView": "Open Deploy Results View",
     "copilotOnRails.inspectDiagnostics": "Inspect Copilot on Rails Diagnostics",
     "azureProject.refresh": "Refresh",
     "azureProject.viewName": "Azure Project",
