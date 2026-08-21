@@ -185,11 +185,44 @@ function readResourceFromId(resourceId: string): DeployResultResource | undefine
     return { type, name };
 }
 
+function readCreatedResources(value: unknown): DeployResultResource[] {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    const resources: DeployResultResource[] = [];
+    for (const entry of value) {
+        if (!isRecord(entry)) {
+            continue;
+        }
+        const resourceId = readString(entry.id);
+        const fromId = readResourceFromId(resourceId);
+        const name = readString(entry.name) || fromId?.name || resourceId;
+        if (!name) {
+            continue;
+        }
+        const rawType = readString(entry.type);
+        const classification = readString(entry.classification);
+        const provisioningState = readString(entry.provisioningState);
+        resources.push({
+            type: rawType ? titleCase(rawType.split('/').pop() ?? rawType) : (fromId?.type ?? 'Resource'),
+            name,
+            status: [classification, provisioningState].filter(Boolean).join(' · ') || undefined,
+        });
+    }
+    return resources;
+}
+
 /**
- * Normalize resources from any of the three layouts the artifact may use:
- * object map, `resourceResults[]`, or a bare `resourceIds[]`.
+ * Normalize resources from any supported artifact layout. The deterministic
+ * `createdResources[]` inventory is authoritative when present.
  */
 function readResources(plan: Json): DeployResultResource[] {
+    const createdResources = readCreatedResources(plan.createdResources);
+    if (createdResources.length > 0) {
+        return createdResources;
+    }
+
     const map = plan.resources;
     if (isRecord(map)) {
         const resources: DeployResultResource[] = [];

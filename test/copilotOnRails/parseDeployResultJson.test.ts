@@ -147,6 +147,13 @@ suite('parseDeployResultJson', () => {
                 status: 'failed',
                 error: 'Deployment quota exceeded',
             }],
+            createdResources: [{
+                id: '/subscriptions/sub-1/resourceGroups/rg-1/providers/Microsoft.Web/sites/func-x',
+                name: 'func-x',
+                type: 'Microsoft.Web/sites',
+                provisioningState: 'Failed',
+                classification: 'failed',
+            }],
             orphanedResourceGroups: [{ name: 'rg-old', region: 'eastus', healingAttempt: 1, reason: 'region fallback' }],
             healingAttempts: [{
                 attempt: 1,
@@ -175,8 +182,25 @@ suite('parseDeployResultJson', () => {
             }]);
         });
 
-        test('derives resources from resourceResults, keeping status and error', () => {
+        test('uses the deterministic created-resources inventory when present', () => {
             const result = parseDeployResultJson(schemaShaped);
+
+            assert.deepStrictEqual(result.resources, [{
+                type: 'Sites',
+                name: 'func-x',
+                status: 'failed · Failed',
+            }]);
+        });
+
+        test('falls back to resourceResults, keeping status and error', () => {
+            const result = parseDeployResultJson(JSON.stringify({
+                resourceResults: [{
+                    resourceId: '/subscriptions/sub-1/resourceGroups/rg-1/providers/Microsoft.Web/sites/func-x',
+                    type: 'Microsoft.Web/sites',
+                    status: 'failed',
+                    error: 'Deployment quota exceeded',
+                }],
+            }));
 
             assert.deepStrictEqual(result.resources, [{
                 type: 'Sites',

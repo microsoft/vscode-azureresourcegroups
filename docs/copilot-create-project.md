@@ -278,7 +278,8 @@ automatically — the capture only reports. See [Clean up resources after a fail
 
 When the deploy finishes, the agent writes `deploy-result.json` and opens the **Deployment results** view —
 a read-only report of what actually shipped: status and health, the live endpoints, the Azure resources that
-were created, any recovery attempts made along the way, and the command that deletes everything again. It
+were created (including their inventory classification and provisioning state), any recovery attempts made
+along the way, and the command that deletes everything again. It
 opens on failure too, so you can see which resources or endpoints didn't make it. You can reopen it any time
 with **Azure: Open Deploy Results View**.
 
