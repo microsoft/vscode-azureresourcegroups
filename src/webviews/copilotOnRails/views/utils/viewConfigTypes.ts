@@ -19,19 +19,27 @@ export type CreateProjectViewControllerType = {
 export type DeploymentPlanViewStrings = {
     title: string;
     loading: string;
-    subscriptionLabel: string;
     locationLabel: string;
-    selectSubscriptionPlaceholder: string;
     selectLocationPlaceholder: string;
-    architectureHeading: string;
-    workspaceScanHeading: string;
-    decisionsHeading: string;
+    /** Shown beside a read-only region when no Azure account is signed in. */
+    locationsSignedOutHint: string;
+    /** Shown beside a read-only region when the live region list couldn't be loaded. */
+    locationsFailedHint: string;
     azureResourcesHeading: string;
+    costEstimateHeading: string;
+    costEstimateTotalLabel: string;
+    costServiceHeader: string;
+    costSkuHeader: string;
+    costMonthlyHeader: string;
+    costNotesHeader: string;
+    recommendationsHeading: string;
+    recommendationEffortLabel: string;
+    environmentNameLabel: string;
+    estimatedCostLabel: string;
     approveButton: string;
     feedbackButtonAriaLabel: string;
     feedbackButtonTooltip: string;
     approveButtonTooltip: string;
-    approveButtonAlreadyApprovedTooltip: string;
     approveButtonMissingSelectionTooltip: string;
     feedbackDrawerInfoTooltip: string;
     revisingBanner: string;

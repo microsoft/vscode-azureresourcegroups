@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { DEPLOY_RESULT_FILE_GLOBS } from "../../../tree/project/projectPlanFiles";
+import { DEPLOY_RESULT_FILE_GLOBS, findProjectFiles } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import type { DeployResultData } from "../views/utils/deployResultTypes";
 import { getDeployResultRenderIssue, parseDeployResultJson } from "../views/utils/parseDeployResultJson";
@@ -85,12 +85,12 @@ function emptyDeployResult(): DeployResultData {
  * Locate the deploy result to display. A workspace can accumulate one artifact
  * per App Onboard session, so the most recently modified file wins.
  *
- * `findFiles` is called with a `null` exclude so the dot-folders holding these
- * artifacts are not skipped by the user's `files.exclude`/`search.exclude`.
+ * Resolved against the file system rather than the search index: the deploy agent git-ignores
+ * `.copilot-azure/`, and `vscode.workspace.findFiles` skips git-ignored files by default.
  */
 async function findLatestDeployResult(): Promise<vscode.Uri | undefined> {
     const matches = (await Promise.all(
-        DEPLOY_RESULT_FILE_GLOBS.map((glob) => vscode.workspace.findFiles(glob, null)),
+        DEPLOY_RESULT_FILE_GLOBS.map((glob) => findProjectFiles(glob)),
     )).flat();
 
     if (matches.length === 0) {

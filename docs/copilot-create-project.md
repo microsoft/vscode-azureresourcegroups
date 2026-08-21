@@ -96,7 +96,7 @@ flowchart TD
     Next2 -->|start_deployment| Deploy
 
     subgraph Deploy[6 · azure-deploy]
-        DepPlan[.azure/deployment-plan.md] --> Infra[Bicep/Terraform + azure.yaml] --> AzdPkg[Validate: azd package] --> DepResult[deploy-result.json] --> ResultView[Deployment results view]
+        DepPlan[prepare-plan.json] --> Infra[Bicep/Terraform + azure.yaml] --> AzdPkg[Validate: azd package] --> DepResult[deploy-result.json] --> ResultView[Deployment results view]
     end
 
     Deploy --> Done([azd up])
@@ -249,8 +249,11 @@ API tests — then opens the **Debug Next Steps** view.
 
 ## Stage 7 — Deploy to Azure
 
-Choosing **Deploy** starts **`azure-deploy`**, which writes `.azure/deployment-plan.md` and opens the
-**Deployment plan** view. After you approve, it generates the infrastructure (Bicep/Terraform), `azure.yaml`,
+Choosing **Deploy** starts **`azure-deploy`**, which writes its structured plan to
+`.azure/prepare-plan.json` (or, when it runs with a deploy session, to
+`.copilot-azure/sessions/{id}/prepare-plan.json`) and opens the **Deployment plan** view. The view renders the
+planned Azure services (with editable SKUs), the cost estimate and its breakdown, and post-deploy
+recommendations. After you approve, it generates the infrastructure (Bicep/Terraform), `azure.yaml`,
 and Dockerfiles, then validates them with `azd package`. You deploy with `azd up`.
 
 <p align="center">
@@ -338,7 +341,7 @@ step‑by‑step instructions live in the sibling folders and are copied into yo
 | 3 | `azure-project-integrate` | `.azure/integration-plan.md` | migrations, live‑wired frontend | `start_local_development` |
 | 4 | `azure-debug-plan` | project source | `.azure/vscode-debug-plan.md` | `start_azure_debug_generate` |
 | 5 | `azure-debug-generate` | `.azure/vscode-debug-plan.md` | `docker-compose`, `.vscode/launch.json` + `tasks.json`, API tests | `start_deployment` |
-| 6 | `azure-deploy` | project source | `.azure/deployment-plan.md`, Bicep/Terraform, `azure.yaml`, Dockerfiles | `azd up` |
+| 6 | `azure-deploy` | project source | `.copilot-azure/sessions/{id}/prepare-plan.json`, Bicep/Terraform, `azure.yaml`, Dockerfiles | `azd up` |
 
 Agent instructions are **version‑stamped**. A `.version` file next to the copied folders records the
 extension version that wrote them; if it doesn't match the running extension, the folders are refreshed
@@ -376,7 +379,7 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |
 | `.azure/integration-plan.md` | scaffold agent | Brief the integrate agent consumes. |
 | `.azure/vscode-debug-plan.md` | debug‑plan agent | The local debug configuration plan. |
-| `.azure/deployment-plan.md` | deploy agent | The deployment plan. |
+| `.azure/prepare-plan.json` (or `.copilot-azure/sessions/{id}/prepare-plan.json`) | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. |
 | `.azure/deploy-result.json` *or* `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | Result of the deploy: status, endpoints, health, resources, recovery attempts. Backs the Deployment results view; the newest file wins when both exist. |
 | `.github/agents/**` (+ `.version`) | extension | Copied agent instruction files and the version stamp. |
 
