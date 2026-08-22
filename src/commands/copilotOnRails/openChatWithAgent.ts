@@ -9,6 +9,7 @@ import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
+import { ensureLocalHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
 import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
@@ -75,6 +76,14 @@ export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Pr
     }
 
     if (!copilotChatExtension.isActive) {
+        // Pin the local chat harness BEFORE activating Copilot Chat. Chat binds its harness
+        // choice from configuration at activation time, so on a fresh workspace (where
+        // `.vscode/settings.json` doesn't yet have the keys) activating first would make Chat
+        // read the global setting and the initial run would come up non-local. Writing (and
+        // awaiting) the workspace override here guarantees the value is in place before
+        // `activate()` reads it, so the very first launch uses the local harness too.
+        await ensureLocalHarnessOn();
+
         try {
             await vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Starting GitHub Copilot Chat...') },
@@ -126,6 +135,13 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
 
     agentLaunchInProgress = true;
     try {
+        // Safety net: re-assert the local chat harness for launch paths that don't go through
+        // `ensureCopilotChatReady` (the later-phase plan controllers call `launchAgentChat`
+        // directly). By then Copilot Chat is already active with `.vscode/settings.json` in
+        // place, so this is an idempotent no-op on the happy path; the timing-critical write
+        // that fixes the first run lives in `ensureCopilotChatReady`, before activation.
+        await ensureLocalHarnessOn();
+
         // Revealing chat initializes its custom-mode registry. The agent-specific
         // command appears only after VS Code has finished loading that registry.
         await vscode.commands.executeCommand('workbench.action.chat.open');
