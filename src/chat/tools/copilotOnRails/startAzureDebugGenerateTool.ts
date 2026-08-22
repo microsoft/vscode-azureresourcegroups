@@ -7,29 +7,24 @@ import { callWithTelemetryAndErrorHandling, IActionContext } from "@microsoft/vs
 import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import * as vscode from "vscode";
-import { z } from "zod/mini";
+import type { z } from "zod";
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { azureDebugGenerateAgent, azureDebugPlanAgent } from "../../../constants";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/telemetryUtils";
 
 const startAzureDebugGenerateToolName = 'start_azure_debug_generate';
 
-const startAzureDebugGenerateInputSchema = z.object({
-    prompt: z.optional(z.string()),
-});
-
-export const startAzureDebugGenerateTool: CopilotTool<typeof startAzureDebugGenerateInputSchema, typeof UnspecifiedOutputSchema> = {
+export const startAzureDebugGenerateTool: CopilotTool<z.ZodVoid, typeof UnspecifiedOutputSchema> = {
     name: startAzureDebugGenerateToolName,
     description: `Hand off to the "${azureDebugGenerateAgent}" agent to generate the artifacts specified by the "${azureDebugPlanAgent}" agent.`,
-    inputSchema: startAzureDebugGenerateInputSchema,
     annotations: {
         openWorldHint: false,
         destructiveHint: false,
     },
-    execute: async (input, extras) => {
+    execute: async (_, extras) => {
         return await callWithTelemetryAndErrorHandling(`mcpTool/${startAzureDebugGenerateToolName}/execute`, async (context: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(context, { type: 'mcpTool', name: startAzureDebugGenerateToolName, extras }, async () => {
-                await vscode.commands.executeCommand(copilotOnRailsCommandIds.startAzureDebugGenerate, input.prompt);
+                await vscode.commands.executeCommand(copilotOnRailsCommandIds.startAzureDebugGenerate);
                 return { message: 'Started the local development generate agent.' };
             });
         }) ?? {

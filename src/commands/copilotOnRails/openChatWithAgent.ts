@@ -9,6 +9,7 @@ import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
+import { ensureLocalHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
 import { saveReloadResumePrompt } from '../../webviews/copilotOnRails/extension/reloadResumePrompt';
@@ -122,6 +123,8 @@ export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Pr
     }
 
     if (!copilotChatExtension.isActive) {
+        await ensureLocalHarnessOn();
+
         try {
             await vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Starting GitHub Copilot Chat...') },
@@ -153,6 +156,8 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
 
     agentLaunchInProgress = true;
     try {
+        await ensureLocalHarnessOn();
+
         // Start a fresh chat session for this phase hand-off. Agents coordinate through
         // the `.azure/*` plan files on disk, not chat history, so a clean session keeps
         // each agent's context window focused on its own phase instead of accumulating

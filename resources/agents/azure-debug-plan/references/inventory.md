@@ -6,6 +6,14 @@ Scan the workspace to populate the plan. For multi-service workspaces, loop over
 
 ## Step 1: Prerequisites
 
+### Autopilot: Reuse the Project Plan Prerequisites
+
+**Autopilot mode only.** In autopilot, if `.azure/project-plan.md` exists and lists Prerequisites (its `### Run` and `### Debug` groups), carry those prerequisites over wholesale into the debug plan instead of re-deriving them — the planning stage already inventoried them, and autopilot has no approval gate to catch a dropped prerequisite. Add any prerequisites the workspace scan reveals that project-plan is missing, and don't silently override a project-plan entry. Only when project-plan has no Prerequisites do you fall back to deriving them from the workspace scan below.
+
+In interactive (non-autopilot) mode, derive prerequisites from the workspace scan as usual; the user reviews and edits the plan before approving.
+
+### Deriving Prerequisites from the Workspace Scan
+
 Identify required tools and then inventory them by following [prerequisites.md](../../shared-references/prerequisites.md).
 
 The required tools are derived from a scan of the currently opened workspace project — check only the tools and extensions relevant to the detected project types, runtimes, and Azure bindings. Both tool sets defined in prerequisites.md apply here — the **Run** tools (Node.js, .NET SDK, Python, Functions Core Tools, ...) and the **Debug** tools (Docker, Docker Compose, VS Code extensions, ...) — since debugging exercises the full local stack.
