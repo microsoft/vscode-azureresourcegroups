@@ -159,10 +159,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
         setCorProp(context, 'autopilot', confirmedAutopilot);
 
-        if (!(await ensureAgentInstructions(context, 'azure-project-scaffold'))) {
-            setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
-            return false;
-        }
+        await ensureAgentInstructions(context, 'azure-project-scaffold');
 
         const planBeforeApproval = this.sourceFileUri
             ? await writeProjectPlanStatusAtUri(this.sourceFileUri, ProjectPlanStatus.approved)
@@ -323,10 +320,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                 setCorProp(context, 'autopilot', autopilot);
 
                 const refreshOutcomeKey = 'refreshOutcome';
-                if (!(await ensureAgentInstructions(context, 'azure-project-plan'))) {
-                    setCorProp(context, refreshOutcomeKey, 'agentInstructionsMissing');
-                    return;
-                }
+                await ensureAgentInstructions(context, 'azure-project-plan');
 
                 this._isRefreshingPrereqs = true;
                 void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });

@@ -9,6 +9,7 @@ import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/regis
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
 import { getRecentPrompts } from "./recentPrompts";
+import { consumeReloadResumePrompt } from "./reloadResumePrompt";
 import { writePendingCreateMarker } from "./resumePendingCreateWithCopilot";
 
 const localDev = vscode.l10n.t('Local Development');
@@ -51,6 +52,25 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
     }
 
     // Nothing detected => start from scratch.
+    openCreateProjectView();
+}
+
+/**
+ * Re-opens the create view pre-filled after a reload-for-agent-discovery. When a create launch
+ * is blocked because Workspace Trust was granted mid-session, we stash the prompt and reload the
+ * window so Copilot Chat can discover the agents (see `reloadResumePrompt.ts`). On the next
+ * activation this restores the view with the prompt/model already filled in, so the user just
+ * presses Plan again - this time in a healthy window that downloads and launches normally.
+ * No-ops when there's no stashed prompt.
+ */
+export async function resumeCreateProjectViewAfterReload(): Promise<void> {
+    const resume = await consumeReloadResumePrompt();
+    if (resume) {
+        openCreateProjectView(resume.prompt, resume.model);
+    }
+}
+
+function openCreateProjectView(initialPrompt?: string, initialModel?: string): void {
     const controller = new CreateProjectViewController({
         title: vscode.l10n.t('Create with Copilot'),
         heading: vscode.l10n.t('What would you like to build?'),
@@ -65,6 +85,8 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
             'Claude Sonnet 4.6 (copilot)',
         ],
         recentPrompts: getRecentPrompts(),
+        initialPrompt,
+        initialModel,
     });
     controller.revealToForeground();
 }

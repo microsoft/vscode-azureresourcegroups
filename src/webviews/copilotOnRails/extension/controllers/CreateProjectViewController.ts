@@ -7,15 +7,14 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microso
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
-import { ensureCopilotChatReady, launchAgentChat } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { prepareAndLaunchAgent } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { prepareNewCorProject } from "../../../../utils/copilotOnRails/prepareNewCorProject";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
-import { type CreateProjectViewControllerType } from "../../views/utils/viewConfigTypes";
+import { type CreateProjectViewControllerType, type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { recordModel } from "../projectSession";
@@ -61,27 +60,29 @@ export class CreateProjectViewController extends WebviewController<CreateProject
                 await recordRecentPrompt(query);
 
                 const submissionOutcomeKey = 'submissionOutcome';
-                if (!(await ensureCopilotChatReady(context))) {
-                    setCorProp(context, submissionOutcomeKey, 'copilotChatNotReady');
-                    return;
-                }
-                if (!(await ensureAgentInstructions(context, 'azure-project-plan'))) {
-                    setCorProp(context, submissionOutcomeKey, 'agentInstructionsMissing');
-                    return;
-                }
-                if (!(await launchAgentChat(context, azureProjectPlanAgent, query, model))) {
-                    setCorProp(context, submissionOutcomeKey, 'launchFailed');
-                    return;
-                }
-                setCorProp(context, submissionOutcomeKey, 'submitted');
-                this.panel.dispose();
-                projectSubmissionState.setPending();
-                openLoadingView({
+                const loading: LoadingViewConfiguration = {
                     stage: 0,
                     title: vscode.l10n.t('Gathering project requirements…'),
                     message: vscode.l10n.t('Copilot is analyzing your prompt and preparing the requirements questionnaire.'),
                     showNeedHelp: true,
-                });
+                };
+
+                switch (await prepareAndLaunchAgent(context, { agentName: azureProjectPlanAgent, prompt: query, loading, model, restoreCreateViewOnReload: true, onBeforeHandoff: () => this.panel.dispose() })) {
+                    case 'chatNotReady':
+                        setCorProp(context, submissionOutcomeKey, 'copilotChatNotReady');
+                        return;
+                    case 'deferred':
+                        setCorProp(context, submissionOutcomeKey, 'deferredForAgentDiscovery');
+                        return;
+                    case 'launchFailed':
+                        setCorProp(context, submissionOutcomeKey, 'launchFailed');
+                        return;
+                    case 'launched':
+                        setCorProp(context, submissionOutcomeKey, 'submitted');
+                        projectSubmissionState.setPending();
+                        openLoadingView(loading);
+                        return;
+                }
             });
         });
     }

@@ -61,6 +61,7 @@ import { WorkspaceResourceBranchDataProviderManager } from './tree/workspace/Wor
 import { registerWorkspaceTree } from './tree/workspace/registerWorkspaceTree';
 import { createResourceClient } from './utils/azureClients';
 import { disableAutopilot, registerAutopilot } from './webviews/copilotOnRails/extension/autopilot';
+import { resumeCreateProjectViewAfterReload } from './webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { registerDebugPlanImplementedWatcher } from './webviews/copilotOnRails/extension/debugPlanImplementedWatcher';
 import { registerRequirementsAutoOpen } from './webviews/copilotOnRails/extension/openRequirementsView';
 import { registerResumeAffordances } from './webviews/copilotOnRails/extension/resumeAffordances';
@@ -135,6 +136,7 @@ export async function activate(context: vscode.ExtensionContext, perfStats: { lo
 
         registerCommands();
         void resumePendingCreateWithCopilot();
+        void resumeCreateProjectViewAfterReload();
         survey(context);
 
         registerChatStandInParticipantIfNeeded(context);

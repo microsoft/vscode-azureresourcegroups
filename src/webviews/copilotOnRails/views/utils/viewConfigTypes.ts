@@ -14,6 +14,10 @@ export type CreateProjectViewControllerType = {
     modelOptions: string[];
     /** Recently submitted project-creation prompts, newest-first, for input-history navigation. */
     recentPrompts: string[];
+    /** Pre-fills the prompt input, e.g. when re-opening the view after a reload-for-agent-discovery. */
+    initialPrompt?: string;
+    /** Pre-selects the model dropdown to match {@link initialPrompt}'s original submission. */
+    initialModel?: string;
 }
 
 export type DeploymentPlanViewStrings = {
