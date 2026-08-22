@@ -20,12 +20,12 @@ const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
 const MANAGE_WORKSPACE_TRUST_COMMAND_ID = 'workbench.trust.manage';
 const RELOAD_WINDOW_COMMAND_ID = 'workbench.action.reloadWindow';
 let agentLaunchInProgress = false;
-let needsWorkspaceTrustReload = false;
+let requireWorkspaceTrustReload = false;
 
 export function registerWorkspaceTrustTracking(): void {
     ext.context.subscriptions.push(
         vscode.workspace.onDidGrantWorkspaceTrust(() => {
-            needsWorkspaceTrustReload = true;
+            requireWorkspaceTrustReload = true;
         }),
     );
 }
@@ -74,7 +74,7 @@ export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Pr
     const ensureCopilotChatOutcomeKey = 'ensureCopilotChatOutcome';
 
     if (!vscode.workspace.isTrusted) {
-        needsWorkspaceTrustReload = true;
+        requireWorkspaceTrustReload = true;
         setCorProp(context, ensureCopilotChatOutcomeKey, 'workspaceNotTrusted');
         const manageTrust = vscode.l10n.t('Manage Workspace Trust');
         void vscode.window.showErrorMessage(
@@ -149,7 +149,7 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
         // Custom modes get no per-mode open command, so passing `mode` to the generic chat-open
         // command is the supported way to launch one. If the mode hasn't been discovered yet this
         // silently opens the default Agent - the reload guard in prepareAndLaunchAgent prevents
-        // that (see needsWorkspaceTrustReload).
+        // that (see requireWorkspaceTrustReload).
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: agentName,
             query,
@@ -214,7 +214,7 @@ async function prepareAndLaunchAgent(context: CopilotOnRailsContext, options: Pr
     // Prompt a one-time reload before writing anything, and hand control back to the user rather
     // than auto-launching: agent discovery is async with no readiness API, so any auto-launch
     // would race. restoreCreateViewOnReload re-opens the create view pre-filled to soften it.
-    if (needsWorkspaceTrustReload) {
+    if (requireWorkspaceTrustReload) {
         if (restoreCreateViewOnReload) {
             await saveReloadResumePrompt(prompt, model);
         }
