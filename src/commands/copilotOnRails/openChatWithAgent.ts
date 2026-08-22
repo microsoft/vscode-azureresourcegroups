@@ -17,26 +17,15 @@ import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/vie
 import { ensureAgentInstructions } from './agentInstructions';
 
 const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
-// VS Code's Workspace Trust command that opens the native Manage Workspace Trust editor.
 const MANAGE_WORKSPACE_TRUST_COMMAND_ID = 'workbench.trust.manage';
 const RELOAD_WINDOW_COMMAND_ID = 'workbench.action.reloadWindow';
 let agentLaunchInProgress = false;
+let needsWorkspaceTrustReload = false;
 
-// True once this window session was blocked by an untrusted workspace (either detected when
-// a launch was attempted, or observed via a mid-session trust grant). When set, Copilot Chat
-// came up with a stale custom-mode registry that granting trust doesn't refresh, so launching
-// a custom agent would silently fall back to the default Agent until the window is reloaded.
-let workspaceTrustWasRestrictedThisSession = false;
-
-/**
- * Tracks whether Workspace Trust was granted mid-session (including via VS Code's own
- * banner) so we can tell whether a freshly-installed agent needs a window reload to be
- * discovered.
- */
 export function registerWorkspaceTrustTracking(): void {
     ext.context.subscriptions.push(
         vscode.workspace.onDidGrantWorkspaceTrust(() => {
-            workspaceTrustWasRestrictedThisSession = true;
+            needsWorkspaceTrustReload = true;
         }),
     );
 }
@@ -84,19 +73,8 @@ async function resolveModelSelector(displayName: string): Promise<{ id?: string;
 export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Promise<boolean> {
     const ensureCopilotChatOutcomeKey = 'ensureCopilotChatOutcome';
 
-    // Copilot on Rails cannot run in a restricted (untrusted) workspace. VS Code's
-    // Workspace Trust disables GitHub Copilot Chat, and a trust-disabled extension is
-    // filtered out of the running set so `getExtension` returns `undefined`. Check
-    // trust first and surface an accurate Workspace Trust error rather than letting
-    // the check below report a misleading "not installed".
-    //
-    // The error offers a "Manage Workspace Trust" action that runs the stable built-in
-    // `workbench.trust.manage` command, which opens VS Code's Trust management editor
-    // where the user grants trust. We do NOT call `vscode.workspace.requestWorkspaceTrust()`
-    // - the API that would pop an inline trust modal - because it is still a proposed API.
-    // TODO: revisit for a smoother prompt-to-trust experience once the API is stable.
     if (!vscode.workspace.isTrusted) {
-        workspaceTrustWasRestrictedThisSession = true;
+        needsWorkspaceTrustReload = true;
         setCorProp(context, ensureCopilotChatOutcomeKey, 'workspaceNotTrusted');
         const manageTrust = vscode.l10n.t('Manage Workspace Trust');
         void vscode.window.showErrorMessage(
@@ -158,10 +136,8 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
     try {
         await ensureLocalHarnessOn();
 
-        // Start a fresh chat session for this phase hand-off. Agents coordinate through
-        // the `.azure/*` plan files on disk, not chat history, so a clean session keeps
-        // each agent's context window focused on its own phase instead of accumulating
-        // the entire plan → scaffold → debug conversation.
+        // Fresh chat session per phase hand-off: agents coordinate through the `.azure/*` plan
+        // files on disk, not chat history, so a clean session keeps each agent focused on its phase.
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
 
         const resolvedModel = model ?? getSessionModel();
@@ -170,19 +146,10 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
         const selector = resolvedModel ? await resolveModelSelector(resolvedModel) : undefined;
         setCorProp(context, 'chatModelResolved', !!selector);
 
-        // Launch the custom agent by passing its mode to the generic chat-open command.
-        // For a custom mode, VS Code never registers a per-mode `workbench.action.chat.open<mode>`
-        // command (only the built-in Ask/Agent/Edit modes get one) - that id exists only as a
-        // mode-picker action item, so it can't be discovered via `getCommands()`. Targeting
-        // `workbench.action.chat.open` with a `mode` argument is the supported way to open a
-        // custom agent from an extension.
-        //
-        // Caveat: if `mode` hasn't been discovered yet (VS Code scans `.github/agents/*.agent.md`
-        // asynchronously), this SILENTLY falls back to the default Agent - no error - and the
-        // prompt runs in the wrong agent. That race is what the reload prompt in
-        // prepareAndLaunchAgent avoids: when the session started untrusted we reload before ever
-        // reaching this call, so by the time we open the agent the window is trusted from the
-        // start and discovery has run normally.
+        // Custom modes get no per-mode open command, so passing `mode` to the generic chat-open
+        // command is the supported way to launch one. If the mode hasn't been discovered yet this
+        // silently opens the default Agent - the reload guard in prepareAndLaunchAgent prevents
+        // that (see needsWorkspaceTrustReload).
         await vscode.commands.executeCommand('workbench.action.chat.open', {
             mode: agentName,
             query,
@@ -224,51 +191,30 @@ export interface PrepareAndLaunchAgentOptions {
     model?: string;
     /** Skip the chat-ready preflight for callers that already ran it earlier in the flow. */
     skipChatReadyCheck?: boolean;
-    /**
-     * When the reload-for-agent-discovery guard fires, stash this launch's prompt/model so the
-     * create view can be re-opened pre-filled after the reload. Set by the create entry point;
-     * other callers just reload without restoring a view.
-     */
+    /** Stash this launch's prompt/model so the create view can be re-opened pre-filled after a reload. */
     restoreCreateViewOnReload?: boolean;
-    /** Runs right before handing off — prompting a reload or reporting a successful launch — e.g. to dispose the source panel. */
+    /** Runs right before handing off (reload prompt or successful launch), e.g. to dispose the source panel. */
     onBeforeHandoff?: () => void;
 }
 
 /**
- * Shared launch routine for the fresh-agent entry points. Verifies chat is ready, and - when
- * this session started untrusted - prompts a one-time window reload instead of launching,
- * because Copilot Chat can't discover the project's custom agents until it restarts in the
- * now-trusted window. Otherwise downloads the agent's instructions and launches. Callers map
- * the returned outcome to telemetry and terminal UI.
+ * Shared launch routine for the fresh-agent entry points. Readies chat, and - when this session
+ * needs a workspace-trust reload - prompts that reload instead of launching. Otherwise writes the
+ * agent's instructions and launches. Callers map the returned outcome to telemetry and terminal UI.
  */
 export async function prepareAndLaunchAgent(context: CopilotOnRailsContext, options: PrepareAndLaunchAgentOptions): Promise<AgentLaunchOutcome> {
     const { agentName, prompt, model, skipChatReadyCheck, restoreCreateViewOnReload, onBeforeHandoff } = options;
 
-    // Gate on Workspace Trust (and activate chat) before ensureAgentInstructions writes
-    // files, so an untrusted workspace isn't littered with project files it never consented to.
+    // Gate on trust before ensureAgentInstructions writes files, so an untrusted workspace
+    // isn't littered with project files it never consented to.
     if (!skipChatReadyCheck && !(await ensureCopilotChatReady(context))) {
         return 'chatNotReady';
     }
 
-    // If this session started untrusted, Copilot Chat is running against a stale custom-mode
-    // registry that granting trust mid-session doesn't refresh, so launching a custom agent
-    // now would silently fall back to the default Agent. Prompt a one-time reload BEFORE
-    // downloading anything; after the reload the user re-runs the command in a healthy window,
-    // where the agents download and are discovered normally. Only reachable from a CoR command,
-    // so a bare Workspace Trust grant never triggers this on its own.
-    //
-    // Why reload + re-launch instead of just resuming straight into the agent? We tried the
-    // seamless path (download the agents, reload, then auto-open the agent on activation) and
-    // it was flaky: VS Code scans `.github/agents/*.agent.md` into its chat-mode registry
-    // asynchronously, and `chat.open { mode }` silently no-ops to the default Agent when the
-    // mode isn't registered yet (see launchAgentChat). There is no API to query mode readiness
-    // or read the active mode, so we can't reliably wait for or verify discovery - any
-    // auto-launch is a race we can't observe, and a timer is just a guess. Handing control back
-    // to the user (reload, then press Plan again) removes the race: by the time they click, the
-    // reloaded window has been trusted from the start and has finished discovering the agents,
-    // so the launch lands in the right mode. The cost is one extra click, which we soften by
-    // re-opening the create view with their prompt pre-filled (saveReloadResumePrompt).
-    if (workspaceTrustWasRestrictedThisSession) {
+    // Prompt a one-time reload before writing anything, and hand control back to the user rather
+    // than auto-launching: agent discovery is async with no readiness API, so any auto-launch
+    // would race. restoreCreateViewOnReload re-opens the create view pre-filled to soften it.
+    if (needsWorkspaceTrustReload) {
         if (restoreCreateViewOnReload) {
             await saveReloadResumePrompt(prompt, model);
         }
@@ -312,12 +258,7 @@ export async function openChatWithAgent(context: CopilotOnRailsContext, agentNam
     }
 }
 
-/**
- * Prompts the user to reload the window so Copilot Chat can pick up the project's custom
- * agents. Fired only from the CoR launch path when this session started untrusted; after the
- * reload the window is trusted from the start and re-running the command downloads and
- * launches the agent normally.
- */
+/** Prompts a one-time window reload so Copilot Chat can discover the project's custom agents. */
 async function promptReloadForAgentDiscovery(context: CopilotOnRailsContext): Promise<void> {
     setCorProp(context, 'promptedReloadForAgentDiscovery', true);
     const reload = vscode.l10n.t('Reload Window');
