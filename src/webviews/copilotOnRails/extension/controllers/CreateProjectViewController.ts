@@ -7,7 +7,7 @@ import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microso
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import { prepareAndLaunchAgent } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { launchAgentAndRecordOutcome } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { projectSubmissionState } from "../../../../tree/project/projectSubmissionState";
@@ -67,21 +67,10 @@ export class CreateProjectViewController extends WebviewController<CreateProject
                     showNeedHelp: true,
                 };
 
-                switch (await prepareAndLaunchAgent(context, { agentName: azureProjectPlanAgent, prompt: query, loading, model, restoreCreateViewOnReload: true, onBeforeHandoff: () => this.panel.dispose() })) {
-                    case 'chatNotReady':
-                        setCorProp(context, submissionOutcomeKey, 'copilotChatNotReady');
-                        return;
-                    case 'deferred':
-                        setCorProp(context, submissionOutcomeKey, 'deferredForAgentDiscovery');
-                        return;
-                    case 'launchFailed':
-                        setCorProp(context, submissionOutcomeKey, 'launchFailed');
-                        return;
-                    case 'launched':
-                        setCorProp(context, submissionOutcomeKey, 'submitted');
-                        projectSubmissionState.setPending();
-                        openLoadingView(loading);
-                        return;
+                if (await launchAgentAndRecordOutcome(context, submissionOutcomeKey, { agentName: azureProjectPlanAgent, prompt: query, loading, model, restoreCreateViewOnReload: true, onBeforeHandoff: () => this.panel.dispose() })) {
+                    setCorProp(context, submissionOutcomeKey, 'submitted');
+                    projectSubmissionState.setPending();
+                    openLoadingView(loading);
                 }
             });
         });

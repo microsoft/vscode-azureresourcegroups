@@ -181,8 +181,8 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
     return true;
 }
 
-/** Result of {@link prepareAndLaunchAgent}, mapped by each caller to its own telemetry and terminal UI. */
-export type AgentLaunchOutcome = 'chatNotReady' | 'deferred' | 'launchFailed' | 'launched';
+/** Result of {@link prepareAndLaunchAgent}; consumed by {@link launchAgentAndRecordOutcome}. */
+type AgentLaunchOutcome = 'chatNotReady' | 'deferred' | 'launchFailed' | 'launched';
 
 export interface PrepareAndLaunchAgentOptions {
     agentName: string;
@@ -200,9 +200,9 @@ export interface PrepareAndLaunchAgentOptions {
 /**
  * Shared launch routine for the fresh-agent entry points. Readies chat, and - when this session
  * needs a workspace-trust reload - prompts that reload instead of launching. Otherwise writes the
- * agent's instructions and launches. Callers map the returned outcome to telemetry and terminal UI.
+ * agent's instructions and launches.
  */
-export async function prepareAndLaunchAgent(context: CopilotOnRailsContext, options: PrepareAndLaunchAgentOptions): Promise<AgentLaunchOutcome> {
+async function prepareAndLaunchAgent(context: CopilotOnRailsContext, options: PrepareAndLaunchAgentOptions): Promise<AgentLaunchOutcome> {
     const { agentName, prompt, model, skipChatReadyCheck, restoreCreateViewOnReload, onBeforeHandoff } = options;
 
     // Gate on trust before ensureAgentInstructions writes files, so an untrusted workspace
@@ -233,28 +233,37 @@ export async function prepareAndLaunchAgent(context: CopilotOnRailsContext, opti
     return 'launched';
 }
 
+/**
+ * Runs {@link prepareAndLaunchAgent}, records the abort outcomes as telemetry under `outcomeKey`,
+ * and returns true only when the agent launched - so callers write just their success path.
+ */
+export async function launchAgentAndRecordOutcome(context: CopilotOnRailsContext, outcomeKey: string, options: PrepareAndLaunchAgentOptions): Promise<boolean> {
+    switch (await prepareAndLaunchAgent(context, options)) {
+        case 'chatNotReady':
+            setCorProp(context, outcomeKey, 'copilotChatNotReady');
+            return false;
+        case 'deferred':
+            setCorProp(context, outcomeKey, 'deferredForAgentDiscovery');
+            return false;
+        case 'launchFailed':
+            setCorProp(context, outcomeKey, 'launchFailed');
+            return false;
+        case 'launched':
+            return true;
+    }
+}
+
 export async function openChatWithAgent(context: CopilotOnRailsContext, agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
     setCorProp(context, 'chatAgentName', agentName);
 
     const key = 'openChatWithAgentOutcome';
-    switch (await prepareAndLaunchAgent(context, { agentName, prompt, loading })) {
-        case 'chatNotReady':
-            setCorProp(context, key, 'copilotChatNotReady');
-            return;
-        case 'deferred':
-            setCorProp(context, key, 'deferredForAgentDiscovery');
-            return;
-        case 'launchFailed':
-            setCorProp(context, key, 'chatlaunchFailed');
-            return;
-        case 'launched':
-            setCorProp(context, key, 'launched');
-            if (loading) {
-                setCorProp(context, 'openChatLoadingStage', loading.stage);
-                projectSubmissionState.setPending(loading.stage);
-                openLoadingView(loading);
-            }
-            return;
+    if (await launchAgentAndRecordOutcome(context, key, { agentName, prompt, loading })) {
+        setCorProp(context, key, 'launched');
+        if (loading) {
+            setCorProp(context, 'openChatLoadingStage', loading.stage);
+            projectSubmissionState.setPending(loading.stage);
+            openLoadingView(loading);
+        }
     }
 }
 

@@ -7,7 +7,7 @@ import { callWithTelemetryAndErrorHandling, type IActionContext, parseError } fr
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import { prepareAndLaunchAgent } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { launchAgentAndRecordOutcome } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
@@ -104,17 +104,9 @@ export class RequirementsViewController extends WebviewController<Record<string,
 
                 // Chat was already readied earlier in the flow; this hand-off is programmatic,
                 // so suppress the tracked-view close before disposing the panel.
-                switch (await prepareAndLaunchAgent(context, { agentName: azureProjectPlanAgent, prompt: query, loading, skipChatReadyCheck: true, onBeforeHandoff: () => { suppressTrackedViewCloseOnce(); this.panel.dispose(); } })) {
-                    case 'deferred':
-                        setCorProp(context, submissionOutcomeKey, 'deferredForAgentDiscovery');
-                        return;
-                    case 'launchFailed':
-                        setCorProp(context, submissionOutcomeKey, 'launchFailed');
-                        return;
-                    case 'launched':
-                        setCorProp(context, submissionOutcomeKey, 'submitted');
-                        openLoadingView(loading);
-                        return;
+                if (await launchAgentAndRecordOutcome(context, submissionOutcomeKey, { agentName: azureProjectPlanAgent, prompt: query, loading, skipChatReadyCheck: true, onBeforeHandoff: () => { suppressTrackedViewCloseOnce(); this.panel.dispose(); } })) {
+                    setCorProp(context, submissionOutcomeKey, 'submitted');
+                    openLoadingView(loading);
                 }
             });
         });
