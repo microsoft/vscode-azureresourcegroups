@@ -104,7 +104,7 @@ export class RequirementsViewController extends WebviewController<Record<string,
 
                 // Chat was already readied earlier in the flow; this hand-off is programmatic,
                 // so suppress the tracked-view close before disposing the panel.
-                if (await launchAgentAndRecordOutcome(context, submissionOutcomeKey, { agentName: azureProjectPlanAgent, prompt: query, loading, skipChatReadyCheck: true, onBeforeHandoff: () => { suppressTrackedViewCloseOnce(); this.panel.dispose(); } })) {
+                if (await launchAgentAndRecordOutcome(context, submissionOutcomeKey, { agentName: azureProjectPlanAgent, prompt: query, skipChatReadyCheck: true, onBeforeHandoff: () => { suppressTrackedViewCloseOnce(); this.panel.dispose(); } })) {
                     setCorProp(context, submissionOutcomeKey, 'submitted');
                     openLoadingView(loading);
                 }

@@ -187,7 +187,6 @@ type AgentLaunchOutcome = 'chatNotReady' | 'deferred' | 'launchFailed' | 'launch
 export interface PrepareAndLaunchAgentOptions {
     agentName: string;
     prompt: string;
-    loading?: LoadingViewConfiguration;
     model?: string;
     /** Skip the chat-ready preflight for callers that already ran it earlier in the flow. */
     skipChatReadyCheck?: boolean;
@@ -257,7 +256,7 @@ export async function openChatWithAgent(context: CopilotOnRailsContext, agentNam
     setCorProp(context, 'chatAgentName', agentName);
 
     const key = 'openChatWithAgentOutcome';
-    if (await launchAgentAndRecordOutcome(context, key, { agentName, prompt, loading })) {
+    if (await launchAgentAndRecordOutcome(context, key, { agentName, prompt })) {
         setCorProp(context, key, 'launched');
         if (loading) {
             setCorProp(context, 'openChatLoadingStage', loading.stage);

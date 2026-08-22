@@ -137,16 +137,13 @@ async function writeVersionStamp(agentsRoot: vscode.Uri): Promise<void> {
  * Ensures the bundled instruction files are present — and up to date — in the workspace
  * before an agent is invoked. Throws a {@link UserCancelledError} if the user declines the
  * download prompt, so the caller's telemetry wrapper records the action as canceled.
- *
- * @returns `newInstall` is true only when the folders were written into a workspace that
- * had none before, which is what determines whether agent discovery needs a window reload.
  */
-export async function ensureAgentInstructions(context: CopilotOnRailsContext, agentName: string): Promise<{ newInstall: boolean }> {
+export async function ensureAgentInstructions(context: CopilotOnRailsContext, agentName: string): Promise<void> {
     const ensureAgentInstructionsOutcomeKey = 'ensureAgentInstructionsOutcome';
     const agentsRoot = getWorkspaceAgentsRoot();
     if (!agentsRoot) {
         setCorProp(context, ensureAgentInstructionsOutcomeKey, 'noWorkspace');
-        return { newInstall: false };
+        return;
     }
 
     const missingFolders: string[] = [];
@@ -166,10 +163,10 @@ export async function ensureAgentInstructions(context: CopilotOnRailsContext, ag
             await copyInstructionFolders(agentInstructionFolders, agentsRoot);
             await writeVersionStamp(agentsRoot);
             setCorProp(context, ensureAgentInstructionsOutcomeKey, 'refreshedStale');
-            return { newInstall: false };
+            return;
         }
         setCorProp(context, ensureAgentInstructionsOutcomeKey, 'upToDate');
-        return { newInstall: false };
+        return;
     }
 
     const download = vscode.l10n.t('Download');
@@ -191,7 +188,6 @@ export async function ensureAgentInstructions(context: CopilotOnRailsContext, ag
     await copyInstructionFolders(agentInstructionFolders, agentsRoot);
     await writeVersionStamp(agentsRoot);
     setCorProp(context, ensureAgentInstructionsOutcomeKey, 'downloaded');
-    return { newInstall: true };
 }
 
 /**

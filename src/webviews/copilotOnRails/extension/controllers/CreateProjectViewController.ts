@@ -67,7 +67,7 @@ export class CreateProjectViewController extends WebviewController<CreateProject
                     showNeedHelp: true,
                 };
 
-                if (await launchAgentAndRecordOutcome(context, submissionOutcomeKey, { agentName: azureProjectPlanAgent, prompt: query, loading, model, restoreCreateViewOnReload: true, onBeforeHandoff: () => this.panel.dispose() })) {
+                if (await launchAgentAndRecordOutcome(context, submissionOutcomeKey, { agentName: azureProjectPlanAgent, prompt: query, model, restoreCreateViewOnReload: true, onBeforeHandoff: () => this.panel.dispose() })) {
                     setCorProp(context, submissionOutcomeKey, 'submitted');
                     projectSubmissionState.setPending();
                     openLoadingView(loading);
