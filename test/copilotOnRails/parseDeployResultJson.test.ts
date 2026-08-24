@@ -68,6 +68,53 @@ suite('parseDeployResultJson', () => {
             assert.strictEqual(result.primaryEndpoint?.url, 'https://nice-pebble-007cd0f0f.7.azurestaticapps.net');
         });
 
+        test('features no endpoint when the deployment is backend-only', () => {
+            // "Open app" must stay hidden rather than opening a Function App URL:
+            // there is no browsable front end in this deployment.
+            const result = parseDeployResultJson(JSON.stringify({
+                endpoints: {
+                    api: 'https://func-scrapbook-dev-5381.azurewebsites.net',
+                    health: 'https://func-scrapbook-dev-5381.azurewebsites.net/api/health',
+                },
+            }));
+
+            assert.strictEqual(result.primaryEndpoint, undefined);
+            assert.strictEqual(result.endpoints.length, 2, 'backend endpoints stay listed in the endpoints section');
+        });
+
+        test('features a front end named something other than "web"', () => {
+            const result = parseDeployResultJson(JSON.stringify({
+                endpoints: {
+                    api: 'https://func-scrapbook-dev-5381.azurewebsites.net',
+                    frontend: 'https://nice-pebble-007cd0f0f.7.azurestaticapps.net',
+                },
+            }));
+
+            assert.strictEqual(result.primaryEndpoint?.name, 'frontend');
+            assert.strictEqual(result.primaryEndpoint?.url, 'https://nice-pebble-007cd0f0f.7.azurestaticapps.net');
+        });
+
+        test('features a Static Web App even when the artifact omits endpoint names', () => {
+            // The array form carries no `name`, so every entry falls back to the
+            // generic `endpoint` and only the host identifies the front end.
+            const result = parseDeployResultJson(JSON.stringify({
+                endpoints: [
+                    { url: 'https://func-offcompl-dev-48c0.azurewebsites.net/api' },
+                    { url: 'https://witty-stone-0bab4f50f.7.azurestaticapps.net' },
+                ],
+            }));
+
+            assert.strictEqual(result.primaryEndpoint?.url, 'https://witty-stone-0bab4f50f.7.azurestaticapps.net');
+        });
+
+        test('features no endpoint when unnamed endpoints are all backends', () => {
+            const result = parseDeployResultJson(JSON.stringify({
+                endpoints: [{ url: 'https://func-offcompl-dev-48c0.azurewebsites.net/api' }],
+            }));
+
+            assert.strictEqual(result.primaryEndpoint, undefined);
+        });
+
         test('maps resource keys onto friendly type names', () => {
             const result = parseDeployResultJson(content());
 
@@ -189,6 +236,67 @@ suite('parseDeployResultJson', () => {
                 type: 'Sites',
                 name: 'func-x',
                 status: 'failed · Failed',
+            }]);
+        });
+
+        test('builds a per-resource cleanup list from failed/orphaned inventory entries', () => {
+            const result = parseDeployResultJson(schemaShaped);
+
+            assert.deepStrictEqual(result.resourcesToCleanup, [{
+                type: 'Sites',
+                name: 'func-x',
+                id: '/subscriptions/sub-1/resourceGroups/rg-1/providers/Microsoft.Web/sites/func-x',
+                resourceGroup: 'rg-1',
+                classification: 'failed',
+                deleteCommand: 'az resource delete --ids "/subscriptions/sub-1/resourceGroups/rg-1/providers/Microsoft.Web/sites/func-x"',
+            }]);
+        });
+
+        test('excludes expected resources and includes orphaned ones in the cleanup list', () => {
+            const result = parseDeployResultJson(JSON.stringify({
+                createdResources: [
+                    {
+                        id: '/subscriptions/s/resourceGroups/rg-1/providers/Microsoft.Web/sites/keep-me',
+                        name: 'keep-me',
+                        type: 'Microsoft.Web/sites',
+                        classification: 'expected',
+                    },
+                    {
+                        id: '/subscriptions/s/resourceGroups/rg-stray/providers/Microsoft.ManagedIdentity/userAssignedIdentities/stray-mi',
+                        name: 'stray-mi',
+                        type: 'Microsoft.ManagedIdentity/userAssignedIdentities',
+                        classification: 'orphaned',
+                    },
+                ],
+            }));
+
+            assert.deepStrictEqual(result.resourcesToCleanup, [{
+                type: 'UserAssignedIdentities',
+                name: 'stray-mi',
+                id: '/subscriptions/s/resourceGroups/rg-stray/providers/Microsoft.ManagedIdentity/userAssignedIdentities/stray-mi',
+                resourceGroup: 'rg-stray',
+                classification: 'orphaned',
+                deleteCommand: 'az resource delete --ids "/subscriptions/s/resourceGroups/rg-stray/providers/Microsoft.ManagedIdentity/userAssignedIdentities/stray-mi"',
+            }]);
+        });
+
+        test('falls back to a name/group/type delete command when the inventory omits the ID', () => {
+            const result = parseDeployResultJson(JSON.stringify({
+                createdResources: [{
+                    name: 'stray-mi',
+                    type: 'Microsoft.ManagedIdentity/userAssignedIdentities',
+                    resourceGroup: 'rg-stray',
+                    classification: 'orphaned',
+                }],
+            }));
+
+            assert.deepStrictEqual(result.resourcesToCleanup, [{
+                type: 'UserAssignedIdentities',
+                name: 'stray-mi',
+                id: undefined,
+                resourceGroup: 'rg-stray',
+                classification: 'orphaned',
+                deleteCommand: 'az resource delete --name "stray-mi" --resource-group "rg-stray" --resource-type "Microsoft.ManagedIdentity/userAssignedIdentities"',
             }]);
         });
 

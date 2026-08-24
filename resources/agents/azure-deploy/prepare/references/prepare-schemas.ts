@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See LICENSE.md in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 /**
  * Prepare artifact schema — prepare-plan.json.
  * Read by prepare instructions.md Step 9 (write prepare-plan.json).

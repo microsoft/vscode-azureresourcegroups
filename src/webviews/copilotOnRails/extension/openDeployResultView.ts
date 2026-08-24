@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from "vscode";
-import { DEPLOY_RESULT_FILE_GLOBS } from "../../../tree/project/projectPlanFiles";
+import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, DEPLOY_RESULT_FILE_GLOBS, findProjectFiles } from "../../../tree/project/projectPlanFiles";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import type { DeployResultData } from "../views/utils/deployResultTypes";
 import { getDeployResultRenderIssue, parseDeployResultJson } from "../views/utils/parseDeployResultJson";
@@ -78,19 +78,23 @@ function emptyDeployResult(): DeployResultData {
         orphanedResourceGroups: [],
         warnings: [],
         cleanupCommand: '',
+        resourcesToCleanup: [],
     };
 }
 
 /**
- * Locate the deploy result to display. A workspace can accumulate one artifact
- * per App Onboard session, so the most recently modified file wins.
+ * Locate the deploy result to display. The deploy agent writes one artifact per
+ * App Onboard session, either at the `.azure/` root or under
+ * `.copilot-azure/sessions/{sessionId}/`, so a workspace can accumulate several.
+ * The session that `active-session.json` points at wins; if that pointer is
+ * missing or stale, the most recently modified file does.
  *
- * `findFiles` is called with a `null` exclude so the dot-folders holding these
- * artifacts are not skipped by the user's `files.exclude`/`search.exclude`.
+ * Resolved against the file system rather than the search index: the deploy agent git-ignores
+ * `.copilot-azure/`, and `vscode.workspace.findFiles` skips git-ignored files by default.
  */
 async function findLatestDeployResult(): Promise<vscode.Uri | undefined> {
     const matches = (await Promise.all(
-        DEPLOY_RESULT_FILE_GLOBS.map((glob) => vscode.workspace.findFiles(glob, null)),
+        DEPLOY_RESULT_FILE_GLOBS.map((glob) => findProjectFiles(glob)),
     )).flat();
 
     if (matches.length === 0) {
@@ -98,6 +102,11 @@ async function findLatestDeployResult(): Promise<vscode.Uri | undefined> {
     }
     if (matches.length === 1) {
         return matches[0];
+    }
+
+    const active = await findActiveSessionDeployResult(matches);
+    if (active) {
+        return active;
     }
 
     const stats = await Promise.all(matches.map(async (uri) => {
@@ -109,6 +118,38 @@ async function findLatestDeployResult(): Promise<vscode.Uri | undefined> {
     }));
     stats.sort((a, b) => b.mtime - a.mtime);
     return stats[0].uri;
+}
+
+/**
+ * Resolve the deploy result belonging to the session `active-session.json`
+ * points at. Returns undefined when there is no pointer, it can't be read, or
+ * the session it names has no result file yet.
+ */
+async function findActiveSessionDeployResult(matches: readonly vscode.Uri[]): Promise<vscode.Uri | undefined> {
+    const pointers = await vscode.workspace.findFiles(APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, null);
+
+    for (const pointer of pointers) {
+        let activeSessionId: string | undefined;
+        try {
+            const parsed = JSON.parse(await readFileText(pointer)) as { activeSessionId?: unknown };
+            activeSessionId = typeof parsed?.activeSessionId === 'string' ? parsed.activeSessionId : undefined;
+        } catch {
+            continue;
+        }
+        if (!activeSessionId) {
+            continue;
+        }
+
+        // The pointer lives at `.copilot-azure/sessions/active-session.json`, so
+        // the session it names is a sibling folder.
+        const expected = vscode.Uri.joinPath(pointer, '..', activeSessionId, 'deploy-result.json').path;
+        const match = matches.find((uri) => uri.path === expected);
+        if (match) {
+            return match;
+        }
+    }
+
+    return undefined;
 }
 
 /** Command/tool entry point: find the newest deploy result and show it. */

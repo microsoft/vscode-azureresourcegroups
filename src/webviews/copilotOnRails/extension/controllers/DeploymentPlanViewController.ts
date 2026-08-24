@@ -28,6 +28,8 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         loading: vscode.l10n.t('Loading deployment plan...'),
         locationLabel: vscode.l10n.t('Location'),
         selectLocationPlaceholder: vscode.l10n.t('Select a location...'),
+        locationsSignedOutHint: vscode.l10n.t('Sign in to Azure to pick a different region.'),
+        locationsFailedHint: vscode.l10n.t('Couldn\u2019t load Azure regions \u2014 showing the planned region only.'),
         azureResourcesHeading: vscode.l10n.t('Azure Resources'),
         costEstimateHeading: vscode.l10n.t('Cost Estimate'),
         costEstimateTotalLabel: vscode.l10n.t('Estimated monthly total'),
@@ -131,13 +133,11 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
         const approvalOutcomeKey = 'approvalOutcome';
-        if (!(await ensureAgentInstructions(context, azureDeployAgent))) {
-            setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
-            return false;
-        }
+        await ensureAgentInstructions(context, azureDeployAgent);
 
-        // Fresh chat session for the approval hand-off so the next phase starts with a clean context window.
-        await vscode.commands.executeCommand('workbench.action.chat.newChat');
+        // Reuse the current session so the agent continues the deployment in the
+        // conversation the user has been following, rather than dropping them into
+        // an empty chat that has lost the plan discussion.
         await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
             mode: azureDeployAgent,
             query: 'I approve the deployment plan. Continue with generating the infrastructure and deployment artifacts.',
@@ -151,10 +151,7 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
         return await callWithTelemetryAndErrorHandling(corId('submitDeploymentPlanFeedback'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDeploymentPlanFeedback' }, async (context: CopilotOnRailsContext) => {
                 const feedbackOutcomeKey = 'feedbackOutcome';
-                if (!(await ensureAgentInstructions(context, azureDeployAgent))) {
-                    setCorProp(context, feedbackOutcomeKey, 'agentInstructionsMissing');
-                    return false;
-                }
+                await ensureAgentInstructions(context, azureDeployAgent);
 
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
                 await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {

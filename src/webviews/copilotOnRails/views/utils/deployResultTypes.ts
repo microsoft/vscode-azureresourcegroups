@@ -91,6 +91,26 @@ export interface DeployResultOrphanedResourceGroup {
     reason?: string;
 }
 
+/**
+ * A single resource flagged by the deterministic inventory as `failed` or
+ * `orphaned`, paired with the `az` command that deletes just that resource.
+ * Rendered as an itemized cleanup list alongside the bulk `cleanupCommand`.
+ */
+export interface DeployResultCleanupResource {
+    /** Friendly resource type, e.g. `Managed Identity`. */
+    type: string;
+    /** The resource name in Azure. */
+    name: string;
+    /** Full ARM resource ID, when known — used to build the delete command. */
+    id?: string;
+    /** The resource group the resource lives in, when known. */
+    resourceGroup?: string;
+    /** Why this resource needs cleanup. */
+    classification: 'failed' | 'orphaned';
+    /** Azure CLI command that deletes just this resource. */
+    deleteCommand: string;
+}
+
 /** Shown instead of the report when the artifact can't be rendered. */
 export interface DeployResultParseError {
     message: string;
@@ -131,6 +151,12 @@ export interface DeployResultData {
 
     /** Azure CLI command that deletes everything this deployment created. */
     cleanupCommand: string;
+
+    /**
+     * Per-resource cleanup list built from the inventory's `failed`/`orphaned`
+     * entries — each carries its own `az resource delete` command.
+     */
+    resourcesToCleanup: DeployResultCleanupResource[];
 
     parseError?: DeployResultParseError;
 }

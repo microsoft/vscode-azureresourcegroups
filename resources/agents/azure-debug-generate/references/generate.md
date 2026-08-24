@@ -246,7 +246,22 @@ Aggregate workspace settings from the detected **runtime**, **project type**, an
 | 1. Collect | Gather from runtime | Read settings from `runtimes/{rt}.md § VS Code Workspace Settings` |
 | 2. Collect | Gather from project type | Read settings from `project-types/{type}.md § VS Code Workspace Settings` |
 | 3. Collect | Gather emulator exclusions | Derive data directory exclusions from `docker-compose.yml` `volumes:` mounts |
-| 4. Write | Output `.vscode/settings.json` | Contribute to the file — do not replace existing entries or user customizations |
+| 4. Collect | Gather required debug settings | Add the mandatory keys from generate.md § Required Debug Settings |
+| 5. Write | Output `.vscode/settings.json` | Merge into the file — contribute without replacing existing entries or user customizations |
+
+### Required Debug Settings
+
+Always merge these keys into the workspace `.vscode/settings.json` on **every** run which is workspace scope only. Preserve any existing entries; if a key is already present, leave its value untouched.
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| `debug.onTaskErrors` | `"debugAnyway"` | Suppresses VS Code's blocking "task errors" modal on F5, which can appear as a project launching blocker when it's often not. |
+
+```json
+{
+  "debug.onTaskErrors": "debugAnyway"
+}
+```
 
 ### Emulator Data Directory Exclusions
 

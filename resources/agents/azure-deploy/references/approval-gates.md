@@ -6,6 +6,8 @@
 
 Display the architecture plan for user approval BEFORE generating any files:
 
+> ⛔ **Open the plan view FIRST.** Call `open_deploy_plan_view` before displaying the gate text — it renders the `prepare-plan.json` you just wrote (services, SKUs, region, cost) in a side-by-side view. Call it once per gate; it is a display action only and never replaces the chat approval prompt below.
+
 > ⛔ **Resource group edit is MANDATORY in the gate display.** Show this exact block:
 > ```
 > 🏢 **Subscription:** {subscriptionName} (`{subscriptionId}`)

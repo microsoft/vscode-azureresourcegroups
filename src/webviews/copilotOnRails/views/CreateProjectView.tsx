@@ -12,10 +12,10 @@ import './styles/createProjectView.scss';
 import { type CreateProjectViewControllerType } from './utils/viewConfigTypes';
 
 export const CreateProjectView = (): JSX.Element => {
-    const [prompt, setPrompt] = useState('');
     const { vscodeApi } = useContext(WebviewContext);
     const config = useConfiguration<CreateProjectViewControllerType>();
-    const [selectedModel, setSelectedModel] = useState(config.modelOptions[0] ?? '');
+    const [prompt, setPrompt] = useState(config.initialPrompt ?? '');
+    const [selectedModel, setSelectedModel] = useState(config.initialModel ?? config.modelOptions[0] ?? '');
 
     const recentPrompts = config.recentPrompts ?? [];
     const textareaRef = useRef<HTMLTextAreaElement>(null);

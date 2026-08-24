@@ -7,13 +7,13 @@ import { callWithTelemetryAndErrorHandling, type IActionContext, parseError } fr
 import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
-import { launchAgentChat } from "../../../../commands/copilotOnRails/openChatWithAgent";
+import { launchAgentAndRecordOutcome } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureProjectPlanAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
 import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorErrorProp, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type RequirementsData, type RequirementsExecutionMode } from "../../views/utils/parseRequirements";
+import { type LoadingViewConfiguration } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
 import { openLoadingView } from "../openLoadingView";
 import { markRequirementsSubmitted } from "../openRequirementsView";
@@ -95,26 +95,19 @@ export class RequirementsViewController extends WebviewController<Record<string,
                 void this.panel.webview.postMessage({ command: 'submitComplete' });
 
                 const relativePath = vscode.workspace.asRelativePath(this.sourceFileUri);
-                if (!(await ensureAgentInstructions(context, 'azure-project-plan'))) {
-                    setCorProp(context, submissionOutcomeKey, 'agentInstructionsMissing');
-                    return;
-                }
-
                 const query = vscode.l10n.t('Requirements submitted at {0} \u2014 read the file and continue generating .azure/project-plan.md.', relativePath);
-                if (!(await launchAgentChat(context, azureProjectPlanAgent, query))) {
-                    setCorProp(context, submissionOutcomeKey, 'launchFailed');
-                    return;
-                }
-
-                setCorProp(context, submissionOutcomeKey, 'submitted');
-                // Programmatic hand-off to the plan phase \u2014 don't treat this close as the user abandoning the flow.
-                suppressTrackedViewCloseOnce();
-                this.panel.dispose();
-                openLoadingView({
+                const loading: LoadingViewConfiguration = {
                     stage: 0,
                     title: vscode.l10n.t('Generating your project plan\u2026'),
                     message: vscode.l10n.t('Copilot is using your answers to build .azure/project-plan.md. The plan view will open automatically when it\u2019s ready.'), showNeedHelp: true,
-                });
+                };
+
+                // Chat was already readied earlier in the flow; this hand-off is programmatic,
+                // so suppress the tracked-view close before disposing the panel.
+                if (await launchAgentAndRecordOutcome(context, submissionOutcomeKey, { agentName: azureProjectPlanAgent, prompt: query, skipChatReadyCheck: true, onBeforeHandoff: () => { suppressTrackedViewCloseOnce(); this.panel.dispose(); } })) {
+                    setCorProp(context, submissionOutcomeKey, 'submitted');
+                    openLoadingView(loading);
+                }
             });
         });
     }

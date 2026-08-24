@@ -57,6 +57,11 @@ export interface DeploymentPlanData {
     /** ARM region code the plan targets (e.g. `westus2`). */
     locationCode: string;
     availableLocations?: AzureLocationOption[];
+    /**
+     * Why {@link availableLocations} is absent, so the view can explain the read-only region
+     * instead of silently dropping the picker. Omitted once the live list loads.
+     */
+    locationsUnavailable?: 'signedOut' | 'failed';
     /** Services the plan will provision, projected into an editable `Service … SKU` table. */
     resources: DeploymentPlanTable;
     /** Services the plan will provision, in plan order. */

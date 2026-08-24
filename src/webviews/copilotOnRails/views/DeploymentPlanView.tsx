@@ -398,7 +398,14 @@ export const DeploymentPlanView = (): JSX.Element => {
                                 ))}
                             </select>
                         ) : (
-                            <span className='infoValue'>{formatLocation(plan.location, plan.locationCode)}</span>
+                            <>
+                                <span className='infoValue'>{formatLocation(plan.location, plan.locationCode)}</span>
+                                {plan.locationsUnavailable && (
+                                    <span className='infoHint'>
+                                        {plan.locationsUnavailable === 'signedOut' ? strings.locationsSignedOutHint : strings.locationsFailedHint}
+                                    </span>
+                                )}
+                            </>
                         )}
                     </div>
                     {plan.deploymentVariables?.environmentName && (
@@ -428,7 +435,7 @@ export const DeploymentPlanView = (): JSX.Element => {
                 )}
 
                 {plan.costEstimate && plan.costEstimate.breakdown.length > 0 && (
-                    <details className='sectionCard'>
+                    <details className='sectionCard' open>
                         <summary><h2>{strings.costEstimateHeading}</h2></summary>
                         <table className='planTable'>
                             <thead>

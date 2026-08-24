@@ -13,11 +13,13 @@ import { settingUtils } from "../../../utils/settingUtils";
 import { getDebugPlanStatus, LocalDebugPlanStatus, parseLocalDebugPlanMarkdown } from "../views/utils/parseLocalDebugPlanMarkdown";
 import { isApprovedOrLater } from "../views/utils/projectPlanStatus";
 import { armDebugPlanImplementedWatcher } from "./debugPlanImplementedWatcher";
+import { ensureLocalHarnessOn } from "./harnessSettings";
 
 /**
  * Autopilot mode for the create-project workflow.
  * It temporarily enables global chat tool auto-approve and restores it later.
- * It also raises workspace chat request budget for long unattended runs.
+ * It also raises workspace chat request budget for long unattended runs, and forces the
+ * experimental "Copilot Harness" chat settings off at Workspace scope for the run.
  */
 
 const AUTO_APPROVE_SECTION = 'chat.tools.global';
@@ -255,6 +257,7 @@ export async function enableAutopilot(context: vscode.ExtensionContext): Promise
     await setAutoApproveValue(true);
     await raiseWorkspaceMaxRequests();
     await setPermissionLevelValue('autopilot');
+    await ensureLocalHarnessOn();
     armAutopilot(deadline);
 }
 

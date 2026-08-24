@@ -87,6 +87,7 @@ export const DeployResultView = (): JSX.Element => {
     const { strings } = useConfiguration<DeployResultViewConfiguration>();
     const [result, setResult] = useState<DeployResultData | null>(null);
     const [copied, setCopied] = useState(false);
+    const [copiedKey, setCopiedKey] = useState<string | null>(null);
     const { vscodeApi } = useContext(WebviewContext);
 
     useEffect(() => {
@@ -94,6 +95,7 @@ export const DeployResultView = (): JSX.Element => {
             if (event.data?.command === 'setDeployResultData') {
                 setResult(event.data.data as DeployResultData);
                 setCopied(false);
+                setCopiedKey(null);
             }
         };
         window.addEventListener('message', handler);
@@ -111,6 +113,16 @@ export const DeployResultView = (): JSX.Element => {
         return () => window.clearTimeout(timer);
     }, [copied]);
 
+    // Same transient reset for the per-resource cleanup copy buttons, keyed by
+    // the item that was copied so only that button shows "Copied".
+    useEffect(() => {
+        if (copiedKey === null) {
+            return;
+        }
+        const timer = window.setTimeout(() => setCopiedKey(null), 2000);
+        return () => window.clearTimeout(timer);
+    }, [copiedKey]);
+
     const openExternal = useCallback((url: string) => {
         vscodeApi.postMessage({ command: 'openExternal', url });
     }, [vscodeApi]);
@@ -118,6 +130,11 @@ export const DeployResultView = (): JSX.Element => {
     const copyText = useCallback((text: string) => {
         vscodeApi.postMessage({ command: 'copyText', text });
         setCopied(true);
+    }, [vscodeApi]);
+
+    const copyItemText = useCallback((text: string, key: string) => {
+        vscodeApi.postMessage({ command: 'copyText', text });
+        setCopiedKey(key);
     }, [vscodeApi]);
 
     if (!result) {
@@ -345,6 +362,46 @@ export const DeployResultView = (): JSX.Element => {
                                 {group.reason && ` — ${group.reason}`}
                             </li>
                         ))}
+                    </ul>
+                </Section>
+            )}
+
+            {result.resourcesToCleanup.length > 0 && (
+                <Section heading={strings.cleanupResourcesHeading}>
+                    <p className='sectionHint'>{strings.cleanupResourcesHint}</p>
+                    <ul className='cleanupResourceList'>
+                        {result.resourcesToCleanup.map((resource) => {
+                            const key = resource.id ?? `${resource.type}-${resource.name}`;
+                            const badge = resource.classification === 'failed' ? strings.failedBadge : strings.orphanedBadge;
+                            return (
+                                <li key={key} className='cleanupResourceItem'>
+                                    <div className='cleanupResourceHeader'>
+                                        <span className={`cleanupBadge ${resource.classification}`}>{badge}</span>
+                                        <span className='cleanupResourceName mono'>{resource.name}</span>
+                                        <span className='cleanupResourceType'>{resource.type}</span>
+                                        {resource.resourceGroup && (
+                                            <span className='cleanupResourceGroup'>{resource.resourceGroup}</span>
+                                        )}
+                                    </div>
+                                    {resource.deleteCommand && (
+                                        <div className='commandRow'>
+                                            <code className='commandText'>{resource.deleteCommand}</code>
+                                            <Tooltip
+                                                content={copiedKey === key ? strings.copiedLabel : strings.copyButtonAriaLabel}
+                                                relationship='label'
+                                            >
+                                                <Button
+                                                    appearance='subtle'
+                                                    aria-label={strings.copyButtonAriaLabel}
+                                                    icon={<CopyRegular />}
+                                                    onClick={() => copyItemText(resource.deleteCommand, key)}
+                                                />
+                                            </Tooltip>
+                                        </div>
+                                    )}
+                                </li>
+                            );
+                        })}
                     </ul>
                 </Section>
             )}

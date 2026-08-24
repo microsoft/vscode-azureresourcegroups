@@ -5,7 +5,7 @@
 
 import * as vscode from "vscode";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { PREPARE_PLAN_FILE_GLOBS } from "../../../tree/project/projectPlanFiles";
+import { createProjectPlanFileWatcher, findProjectFiles, PREPARE_PLAN_FILE_GLOBS } from "../../../tree/project/projectPlanFiles";
 import type { DeploymentPlanData } from "../views/utils/deploymentPlanTypes";
 import { getPreparePlanRenderIssue, parsePreparePlanJson } from "../views/utils/parsePreparePlanJson";
 import { DeploymentPlanViewController } from "./controllers/DeploymentPlanViewController";
@@ -36,9 +36,11 @@ export function openDeploymentPlanViewWithContent(content: string, sourceFileUri
 async function openDeploymentPlanViewWithContentAsync(content: string, sourceFileUri?: vscode.Uri): Promise<void> {
     const planData = tryParseDeploymentPlan(content, sourceFileUri);
 
-    const liveLocations = await getAvailableAzureLocations();
-    if (liveLocations) {
-        planData.availableLocations = liveLocations;
+    const locations = await getAvailableAzureLocations();
+    if (locations.status === 'loaded') {
+        planData.availableLocations = locations.locations;
+    } else {
+        planData.locationsUnavailable = locations.status;
     }
 
     host.show(planData, sourceFileUri);
@@ -92,9 +94,9 @@ export async function openDeploymentPlanViewFromWorkspace(_context: CopilotOnRai
  * writes one to.
  */
 async function findLatestPreparePlan(): Promise<vscode.Uri | undefined> {
-    // `null` disables the default `files.exclude`/`search.exclude` filtering — the plan can live in a
-    // dot-folder that a user's excludes could otherwise hide.
-    const matches = await Promise.all(PREPARE_PLAN_FILE_GLOBS.map(glob => vscode.workspace.findFiles(glob, null)));
+    // Resolved against the file system rather than the search index: the deploy agent git-ignores
+    // `.copilot-azure/`, and `vscode.workspace.findFiles` skips git-ignored files by default.
+    const matches = await Promise.all(PREPARE_PLAN_FILE_GLOBS.map(glob => findProjectFiles(glob)));
     const files = matches.flat();
 
     let latest: { uri: vscode.Uri; mtime: number } | undefined;
@@ -121,5 +123,28 @@ async function reloadDeploymentPlan(uri: vscode.Uri): Promise<void> {
         openDeploymentPlanViewWithContent(await readFileText(uri), uri);
     } catch {
         // File may have been deleted or be momentarily unavailable; ignore.
+    }
+}
+
+/**
+ * Auto-open the deployment plan view when a `prepare-plan.json` first appears in the workspace.
+ *
+ * The deploy agent is asked to call `open_deploy_plan_view` at its scaffold approval gate, but the
+ * view is the user's only visual summary of the plan, so this watcher guarantees it surfaces even
+ * when the agent skips the tool call. Only creation opens the view — later writes (quota results,
+ * plan edits) refresh it through {@link watchSingleFile} when it is already open, so a view the
+ * user deliberately closed never pops back up mid-pipeline.
+ */
+export function registerDeploymentPlanAutoOpen(context: vscode.ExtensionContext): void {
+    for (const glob of PREPARE_PLAN_FILE_GLOBS) {
+        const watcher = createProjectPlanFileWatcher(glob);
+        watcher.onDidCreate((uri) => {
+            if (isDeploymentPlanViewOpen()) {
+                // Already open — the per-file watcher handles content reload.
+                return;
+            }
+            void openDeploymentPlanViewAsync(uri);
+        });
+        context.subscriptions.push(watcher);
     }
 }
