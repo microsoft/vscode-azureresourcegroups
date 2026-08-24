@@ -22,6 +22,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readSupportedModels } from "./executor/agent-assets.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -209,6 +210,36 @@ for (const rule of consistencyRules) {
 
 const currentHash = hashAgentAssets();
 const currentFiles = agentAssetFiles();
+
+/**
+ * The eval spec must run the agent on a model the product actually ships it on.
+ * Catching a bad pin here costs a second; catching it at trial time costs a run.
+ */
+const evalSpecPath = path.join(__dirname, "project-plan", "eval.yaml");
+try {
+    const supported = readSupportedModels(repoRoot, PLAN);
+    const spec = fs.readFileSync(evalSpecPath, "utf8");
+    const defaultsBlock = /^defaults:\r?\n((?:[ \t]+.*\r?\n|\r?\n)*)/m.exec(spec)?.[1] ?? "";
+    const pinned = /^\s+model:\s*(\S+)\s*$/m.exec(defaultsBlock)?.[1];
+    if (!pinned) {
+        failures.push(
+            "eval-model-unpinned: evals/project-plan/eval.yaml has no `defaults.model`.\n"
+            + "    Without a pin the SDK falls back to the host CLI's default, which differs\n"
+            + "    between a developer machine and CI, so the graders disagree.\n"
+            + `    Supported: ${supported.join(", ")}`,
+        );
+    } else if (!supported.includes(pinned)) {
+        failures.push(
+            `eval-model-unsupported: evals/project-plan/eval.yaml pins '${pinned}', which `
+            + `${PLAN}.agent.md does not list.\n`
+            + `    Supported: ${supported.join(", ")}`,
+        );
+    } else {
+        checked.push(`eval-model-pinned (${pinned})`);
+    }
+} catch (err) {
+    failures.push(`eval-model-resolution: ${err.message}`);
+}
 const previous = fs.existsSync(lockPath) ? JSON.parse(fs.readFileSync(lockPath, "utf8")) : null;
 
 if (update) {

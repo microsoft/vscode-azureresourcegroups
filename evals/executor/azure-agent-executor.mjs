@@ -15,7 +15,7 @@ import { computeMetrics } from "@microsoft/vally";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildEvalSkill, prepareAgentWorkspace } from "./agent-assets.mjs";
+import { buildEvalSkill, prepareAgentWorkspace, resolveEvalModel } from "./agent-assets.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,10 +130,12 @@ class AzureAgentExecutor {
         // Put the shipped instruction folder (including references/) in the workspace,
         // exactly as the extension writes it to a user's .github/agents.
         const copiedFolders = prepareAgentWorkspace(repoRoot, options.workDir, AGENT_NAME);
+        const { model, supported } = resolveEvalModel(repoRoot, AGENT_NAME, options.model);
 
         process.stderr.write(`[azure-agent-executor] workDir: ${options.workDir}\n`);
         process.stderr.write(`[azure-agent-executor] skillDirs: ${JSON.stringify(skillDirs)}\n`);
         process.stderr.write(`[azure-agent-executor] agent assets: ${copiedFolders.join(", ") || "none"}\n`);
+        process.stderr.write(`[azure-agent-executor] model: ${model} (agent supports: ${supported.join(", ")})\n`);
 
         const client = new CopilotClient({
             workingDirectory: options.workDir,
@@ -148,7 +150,7 @@ class AzureAgentExecutor {
 
         try {
             const session = await client.createSession({
-                model: options.model,
+                model,
                 onPermissionRequest: approveAll,
                 skillDirectories: skillDirs,
                 mcpServers: {
@@ -231,7 +233,7 @@ class AzureAgentExecutor {
             metadata: {
                 startedAt,
                 completedAt,
-                model: options.model ?? "unknown",
+                model,
                 executor: this.name,
                 skillsLoaded,
                 sessionID: "unknown",
