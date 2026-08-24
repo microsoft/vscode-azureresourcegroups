@@ -1,6 +1,6 @@
 ---
 name: azure-project-plan
-description: "Plan and design an Azure-centric project with user requirements gathering and interactive plan approval. Generates .azure/project-plan.md, then auto-chains to azure-project-scaffold. WHEN: \"plan project\", \"design app\", \"new project\", \"project requirements\", \"create project plan\", \"plan my app\", \"what should I build\", \"scaffold project\", \"new Azure app\", \"create testable app\", \"new API project\", \"full-stack Azure app\", \"new project with tests\", \"create app\", \"bootstrap project\", \"new fullstack project\", \"testable API\", \"create functions project\"."
+description: "Plan and design an Azure-centric project with user requirements gathering and interactive plan approval — including frontend-only, static, and no-backend apps. Generates .azure/project-plan.md, then auto-chains to azure-project-scaffold. WHEN: \"plan project\", \"design app\", \"new project\", \"project requirements\", \"create project plan\", \"plan my app\", \"what should I build\", \"scaffold project\", \"new Azure app\", \"create testable app\", \"new API project\", \"full-stack Azure app\", \"new project with tests\", \"create app\", \"build me an app\", \"make me a web app\", \"simple web app\", \"frontend only app\", \"no backend app\", \"static site\", \"bootstrap project\", \"new fullstack project\", \"testable API\", \"create functions project\"."
 license: MIT
 metadata:
   author: Microsoft
@@ -14,7 +14,10 @@ metadata:
 **North Star:** capture requirements → approved plan in minutes, no long back-and-forth. After approval, auto-chain to `azure-project-scaffold`.
 
 ## Triggers
-Plan/design a new Azure-centric app; create requirements/architecture; start a project from scratch; full-stack Azure Functions app; testable API with Azure services; bootstrap Functions + frontend.
+Plan/design a new app of **any** shape; create requirements/architecture; start a project from scratch; full-stack Azure Functions app; testable API with Azure services; bootstrap Functions + frontend; multi-service projects (frontend + API + worker) regardless of framework (Express, Fastify, etc.); **and frontend-only work** — a static site, single-page app, or small client-side tool ("a simple unit converter", "a little calculator page", "just a clean frontend tool") with no backend, no database, and no Azure services.
+
+> ⚠️ **No request is too small to plan.** "Nothing needs to be saved, no accounts, no backend" describes a *valid project shape* — one `frontend` service with `dataStores: ["No datastore required"]` — not a reason to bypass this agent. Never answer a build request by writing `index.html` or any other application code directly; always start with `.azure/requirements.json`.
+
 
 ## ❌ Do NOT activate — route instead
 | User intent | Correct skill |
