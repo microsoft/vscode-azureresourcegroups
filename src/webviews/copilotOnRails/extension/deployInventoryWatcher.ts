@@ -218,6 +218,12 @@ async function writeInventoryIntoFile(
                 : `Holds ${group.resourceCount} resource(s) created by this deployment.`,
         }));
 
+    // Nothing was created and no new orphans — don't churn (reformat + trigger a reload of) the
+    // agent's artifact for a no-op. The caller still records the capture as done.
+    if (createdResources.length === 0 && newOrphans.length === 0) {
+        return;
+    }
+
     const merged: Record<string, unknown> = {
         ...raw,
         createdResources,

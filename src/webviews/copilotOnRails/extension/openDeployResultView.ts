@@ -166,12 +166,13 @@ export async function openDeployResultViewFromWorkspace(_context: CopilotOnRails
 }
 
 async function openDeployResultViewAsync(uri: vscode.Uri): Promise<void> {
-    // Safety net: guarantee the deterministic inventory is computed before the results are shown,
-    // even if the agent never called capture_deployment_inventory. It writes the file when needed,
-    // which the single-file watcher below then reflects.
-    await ensureDeployInventoryCaptured(uri);
+    // Render immediately with whatever the artifact currently holds, then compute the deterministic
+    // inventory in the background. When it writes createdResources[] back, the single-file watcher
+    // reloads the view — so the safety net's (possibly multi-second) Azure call never blocks the
+    // first paint, even if the agent never called capture_deployment_inventory.
     openDeployResultViewWithContent(await readFileText(uri), uri);
     host.setWatcher(watchSingleFile(uri, () => void reloadDeployResult(uri)));
+    void ensureDeployInventoryCaptured(uri);
 }
 
 async function reloadDeployResult(uri: vscode.Uri): Promise<void> {

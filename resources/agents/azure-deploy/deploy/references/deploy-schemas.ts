@@ -20,10 +20,12 @@ export type DeployHealingPhase = "validation" | "deployment";
 export interface OrphanResourceGroup {
   /** Azure resource group name */
   name: string;
-  /** Region where the RG was created */
-  region: string;
-  /** Which healing attempt created or targeted this RG */
-  healingAttempt: number;
+  /** Region where the RG was created. Omitted when derived by the deterministic
+   *  `capture_deployment_inventory` diff, which doesn't track a region. */
+  region?: string;
+  /** Which healing attempt created or targeted this RG. Omitted when derived by the
+   *  deterministic `capture_deployment_inventory` diff rather than a tracked healing attempt. */
+  healingAttempt?: number;
   /** Why this RG was abandoned (e.g., "region fallback to westus2") */
   reason: string;
 }
