@@ -41,6 +41,35 @@ const MODEL_DISPLAY_NAME_TO_ID = new Map([
 ]);
 
 /**
+ * Every asset the evals put in front of the agent: the `.agent.md` the skill is
+ * generated from, plus the instruction folders copied into the workspace.
+ *
+ * The drift baseline hashes exactly this set. Hashing all of `resources/agents/**`
+ * instead would fail the check whenever an unrelated agent moved on the base branch,
+ * which on a pull request means unrelated commits break a suite they can't affect.
+ *
+ * Returns repo-relative paths (POSIX separators) sorted for a stable hash.
+ */
+export function listEvalAssetFiles(repoRoot, agentName) {
+    const sourceRoot = path.join(repoRoot, "resources", "agents");
+    const roots = [`${agentName}.agent.md`, agentName, SHARED_FOLDER];
+    const out = [];
+
+    const walk = (relative) => {
+        const full = path.join(sourceRoot, relative);
+        if (!fs.existsSync(full)) {return;}
+        if (fs.statSync(full).isDirectory()) {
+            for (const entry of fs.readdirSync(full)) {walk(path.join(relative, entry));}
+        } else {
+            out.push(relative.split(path.sep).join("/"));
+        }
+    };
+
+    for (const root of roots) {walk(root);}
+    return out.sort();
+}
+
+/**
  * Copy the agent's entire instruction folder (including `references/`) plus the
  * shared references into the workspace, mirroring what the extension writes to
  * `.github/agents` on the user's machine.
