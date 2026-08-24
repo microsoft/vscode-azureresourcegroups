@@ -74,6 +74,14 @@ jobs:
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_EVAL_TOKEN || github.token }}
 
+      # Half the graders assert a gate tool was called. If the MCP server can't reach
+      # the agent, those fail 15 minutes later looking like agent regressions, so
+      # confirm the tools are actually there first.
+      - name: Verify workflow-tools MCP server
+        run: node evals/check-mcp-tools.mjs
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_EVAL_TOKEN || github.token }}
+
       - name: Run project-plan evals
         run: node evals/run-eval.cjs --suite project-plan --output-dir ./results/pr/project-plan
         env:
