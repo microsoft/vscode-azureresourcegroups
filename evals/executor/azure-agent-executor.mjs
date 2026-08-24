@@ -16,6 +16,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildEvalSkill, prepareAgentWorkspace, resolveEvalModel } from "./agent-assets.mjs";
+import { MCP_SERVER_NAME, mcpServerConfig, waitForMcpServer } from "../mcp/workflow-tools.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -153,17 +154,21 @@ class AzureAgentExecutor {
                 model,
                 onPermissionRequest: approveAll,
                 skillDirectories: skillDirs,
-                mcpServers: {
-                    "workflow-tools": {
-                        type: "local",
-                        command: "node",
-                        args: [path.resolve(__dirname, "../mcp/workflow-tools-server.mjs")],
-                        tools: ["*"],
-                    },
-                },
+                mcpServers: mcpServerConfig(),
                 streaming: false,
                 workingDirectory: options.workDir,
             });
+
+            // Must happen before the first prompt: a turn started while the server is
+            // still connecting gets a tool list with no gate tools, and never recovers.
+            const mcpReady = await waitForMcpServer(session);
+            if (!mcpReady.ok) {
+                throw new Error(
+                    `MCP server '${MCP_SERVER_NAME}' unavailable (${mcpReady.reason}). `
+                    + "Gate-tool graders cannot pass without it. Host state: "
+                    + JSON.stringify(mcpReady.listing ?? {}),
+                );
+            }
 
             session.on((event) => {
                 rawEvents.push(event);

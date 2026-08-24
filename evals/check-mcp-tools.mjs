@@ -24,7 +24,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { MCP_SERVER_NAME, TOOLS } from "./mcp/workflow-tools.mjs";
+import { MCP_SERVER_NAME, mcpServerConfig, TOOLS, waitForMcpServer } from "./mcp/workflow-tools.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -32,14 +32,14 @@ function bundledCliPath() {
     const pkgDir = path.resolve(__dirname, "node_modules/@github/copilot");
     for (const candidate of ["npm-loader.js", "index.js"]) {
         const full = path.resolve(pkgDir, candidate);
-        if (fs.existsSync(full)) {return full;}
+        if (fs.existsSync(full)) { return full; }
     }
     throw new Error(`Copilot CLI not found under ${pkgDir} — run \`npm ci\` in evals/.`);
 }
 
 function fail(message, detail) {
     console.error(`\n✖ ${message}\n`);
-    if (detail) {console.error(`${detail}\n`);}
+    if (detail) { console.error(`${detail}\n`); }
     process.exit(1);
 }
 
@@ -54,23 +54,15 @@ let session;
 try {
     session = await client.createSession({
         onPermissionRequest: approveAll,
-        mcpServers: {
-            [MCP_SERVER_NAME]: {
-                type: "local",
-                command: "node",
-                args: [path.resolve(__dirname, "mcp/workflow-tools-server.mjs")],
-                tools: ["*"],
-            },
-        },
+        mcpServers: mcpServerConfig(),
         streaming: false,
         workingDirectory: workDir,
     });
 
-    const listing = await session.rpc.mcp.list();
-    const server = (listing?.servers ?? []).find(s => s.name === MCP_SERVER_NAME);
+    const { ok, listing, reason } = await waitForMcpServer(session);
     const host = listing?.host ?? {};
 
-    if (!server || server.status !== "connected") {
+    if (!ok) {
         const hints = [];
         if (host.mcp3pEnabled === false) {
             hints.push(
@@ -83,7 +75,7 @@ try {
             hints.push(`  failedServers: ${JSON.stringify(host.failedServers, null, 2)}`);
         }
         fail(
-            `MCP server '${MCP_SERVER_NAME}' is not connected (status: ${server?.status ?? "absent"}).`,
+            `MCP server '${MCP_SERVER_NAME}' is not connected (${reason}).`,
             `${hints.join("\n\n") || "  No failure detail was reported by the host."}\n\n`
             + `  Full host state:\n${JSON.stringify(listing, null, 2)}`,
         );
@@ -105,7 +97,7 @@ try {
 
     console.log(`✔ MCP server '${MCP_SERVER_NAME}' connected with all ${TOOLS.length} gate tools available.`);
 } catch (err) {
-    if (err?.message?.startsWith("MCP server")) {throw err;}
+    if (err?.message?.startsWith("MCP server")) { throw err; }
     fail(`MCP preflight could not complete: ${err.message}`, err.stack);
 } finally {
     await session?.disconnect().catch(() => { /* ignore */ });
