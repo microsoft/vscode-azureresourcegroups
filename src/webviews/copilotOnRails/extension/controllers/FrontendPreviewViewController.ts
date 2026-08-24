@@ -155,10 +155,7 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
                 setCorProp(context, 'devServerStatus', this.state.status);
 
                 const approvalOutcomeKey = 'approvalOutcome';
-                if (!(await ensureAgentInstructions(context, 'azure-project-integrate'))) {
-                    setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
-                    return;
-                }
+                await ensureAgentInstructions(context, 'azure-project-integrate');
                 // Approving the final UX preview moves the plan into the integration
                 // phase, so flip the plan status before handing off. This is a
                 // deterministic UI signal, so record it in extension code rather than

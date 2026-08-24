@@ -79,10 +79,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
         const approvalOutcomeKey = 'approvalOutcome';
-        if (!(await ensureAgentInstructions(context, azureDebugPlanAgent))) {
-            setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
-            return false;
-        }
+        await ensureAgentInstructions(context, azureDebugPlanAgent);
 
         // Fresh chat session for the approval hand-off so the next phase starts with a
         // clean context window.
@@ -100,10 +97,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         const feedbackOutcomeKey = 'feedbackOutcome';
         return await callWithTelemetryAndErrorHandling(corId('submitDebugPlanFeedback'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDebugPlanFeedback' }, async (context: CopilotOnRailsContext) => {
-                if (!(await ensureAgentInstructions(context, azureDebugPlanAgent))) {
-                    setCorProp(context, feedbackOutcomeKey, 'agentInstructionsMissing');
-                    return false;
-                }
+                await ensureAgentInstructions(context, azureDebugPlanAgent);
 
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
                 await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
@@ -134,10 +128,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             actionContext.errorHandling.suppressDisplay = true;
             await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'refreshDebugPrerequisites' }, async (context: CopilotOnRailsContext) => {
                 const refreshOutcomeKey = 'refreshOutcome';
-                if (!(await ensureAgentInstructions(context, azureDebugPlanAgent))) {
-                    setCorProp(context, refreshOutcomeKey, 'agentInstructionsMissing');
-                    return;
-                }
+                await ensureAgentInstructions(context, azureDebugPlanAgent);
 
                 this._isRefreshingPrereqs = true;
                 void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });

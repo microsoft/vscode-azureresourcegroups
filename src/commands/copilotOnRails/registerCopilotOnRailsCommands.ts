@@ -20,7 +20,7 @@ import { openPlanViewFromWorkspace } from '../../webviews/copilotOnRails/extensi
 import { resumeProjectWithCopilot } from '../../webviews/copilotOnRails/extension/resumeProjectWithCopilot';
 import { copilotOnRailsCustomAgents, downloadAgentInstructions } from './agentInstructions';
 import { inspectDiagnostics } from './inspectDiagnostics';
-import { openChatWithAgent } from './openChatWithAgent';
+import { openChatWithAgent, registerWorkspaceTrustTracking } from './openChatWithAgent';
 import { reportIssue } from './reportIssue';
 import { startDebugConfiguration } from './startDebugConfiguration';
 
@@ -108,6 +108,8 @@ export async function startDeploymentCommand(context: CopilotOnRailsContext, pro
 }
 
 export function registerCopilotOnRailsCommands(): void {
+    registerWorkspaceTrustTracking();
+
     // Phase 1: Project scaffolding commands
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.createProjectWithCopilot, createProjectWithCopilot);
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.downloadAgentInstructions, downloadAgentInstructions);

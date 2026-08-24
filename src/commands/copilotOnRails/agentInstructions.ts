@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra, IActionContext } from '@microsoft/vscode-azext-utils';
+import { AzExtFsExtra, IActionContext, UserCancelledError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
@@ -135,24 +135,15 @@ async function writeVersionStamp(agentsRoot: vscode.Uri): Promise<void> {
 
 /**
  * Ensures the bundled instruction files are present — and up to date — in the workspace
- * before an agent is invoked.
- *
- * - When any folder is missing, the user is asked whether to download them. Declining
- *   returns `false` so the caller can abort the agent invocation.
- * - When every folder is present but the version stamp is missing or does not match the
- *   running extension version, the folders are refreshed silently so a stale copy left by
- *   an older extension version can't make the agent follow outdated instructions.
- * - When all folders are present and the stamp matches, returns `true` immediately without
- *   any prompts or copies.
- *
- * No-ops (returns `true`) when no workspace is open.
+ * before an agent is invoked. Throws a {@link UserCancelledError} if the user declines the
+ * download prompt, so the caller's telemetry wrapper records the action as canceled.
  */
-export async function ensureAgentInstructions(context: CopilotOnRailsContext, agentName: string): Promise<boolean> {
+export async function ensureAgentInstructions(context: CopilotOnRailsContext, agentName: string): Promise<void> {
     const ensureAgentInstructionsOutcomeKey = 'ensureAgentInstructionsOutcome';
     const agentsRoot = getWorkspaceAgentsRoot();
     if (!agentsRoot) {
         setCorProp(context, ensureAgentInstructionsOutcomeKey, 'noWorkspace');
-        return true;
+        return;
     }
 
     const missingFolders: string[] = [];
@@ -172,10 +163,10 @@ export async function ensureAgentInstructions(context: CopilotOnRailsContext, ag
             await copyInstructionFolders(agentInstructionFolders, agentsRoot);
             await writeVersionStamp(agentsRoot);
             setCorProp(context, ensureAgentInstructionsOutcomeKey, 'refreshedStale');
-            return true;
+            return;
         }
         setCorProp(context, ensureAgentInstructionsOutcomeKey, 'upToDate');
-        return true;
+        return;
     }
 
     const download = vscode.l10n.t('Download');
@@ -189,7 +180,7 @@ export async function ensureAgentInstructions(context: CopilotOnRailsContext, ag
     );
     if (choice !== download) {
         setCorProp(context, ensureAgentInstructionsOutcomeKey, 'downloadDeclined');
-        return false;
+        throw new UserCancelledError('agentInstructionsDeclined');
     }
 
     // A folder was missing — bring everything to the current version, not just the
@@ -197,7 +188,6 @@ export async function ensureAgentInstructions(context: CopilotOnRailsContext, ag
     await copyInstructionFolders(agentInstructionFolders, agentsRoot);
     await writeVersionStamp(agentsRoot);
     setCorProp(context, ensureAgentInstructionsOutcomeKey, 'downloaded');
-    return true;
 }
 
 /**

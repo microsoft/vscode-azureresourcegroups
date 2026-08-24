@@ -7,19 +7,28 @@ import { parseError } from '@microsoft/vscode-azext-utils';
 import * as vscode from 'vscode';
 import { ext } from '../../extensionVariables';
 import { projectSubmissionState } from '../../tree/project/projectSubmissionState';
-import { CopilotOnRailsContext, ensureRequiredCopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
+import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRailsContext';
 import { setCorErrorProp, setCorProp } from '../../utils/copilotOnRails/telemetryUtils';
 import { ensureLocalHarnessOn } from '../../webviews/copilotOnRails/extension/harnessSettings';
 import { openLoadingView } from '../../webviews/copilotOnRails/extension/openLoadingView';
 import { getSessionModel, recordAgentLaunch } from '../../webviews/copilotOnRails/extension/projectSession';
+import { saveReloadResumePrompt } from '../../webviews/copilotOnRails/extension/reloadResumePrompt';
 import { type LoadingViewConfiguration } from '../../webviews/copilotOnRails/views/utils/viewConfigTypes';
 import { ensureAgentInstructions } from './agentInstructions';
 
 const COPILOT_CHAT_EXTENSION_ID = 'GitHub.copilot-chat';
-const CUSTOM_AGENT_COMMAND_PREFIX = 'workbench.action.chat.open';
-const CUSTOM_AGENT_LOAD_TIMEOUT_MS = 10_000;
-const CUSTOM_AGENT_LOAD_POLL_INTERVAL_MS = 100;
+const MANAGE_WORKSPACE_TRUST_COMMAND_ID = 'workbench.trust.manage';
+const RELOAD_WINDOW_COMMAND_ID = 'workbench.action.reloadWindow';
 let agentLaunchInProgress = false;
+let requireWorkspaceTrustReload = false;
+
+export function registerWorkspaceTrustTracking(): void {
+    ext.context.subscriptions.push(
+        vscode.workspace.onDidGrantWorkspaceTrust(() => {
+            requireWorkspaceTrustReload = true;
+        }),
+    );
+}
 
 /**
  * Resolves a user-facing model name (e.g. "Claude Opus 4.7 (copilot)") to a
@@ -62,11 +71,27 @@ async function resolveModelSelector(displayName: string): Promise<{ id?: string;
  * with a `mode` referring to one of them silently no-ops if we don't wait.
  */
 export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Promise<boolean> {
+    const ensureCopilotChatOutcomeKey = 'ensureCopilotChatOutcome';
+
+    if (!vscode.workspace.isTrusted) {
+        requireWorkspaceTrustReload = true;
+        setCorProp(context, ensureCopilotChatOutcomeKey, 'workspaceNotTrusted');
+        const manageTrust = vscode.l10n.t('Manage Workspace Trust');
+        void vscode.window.showErrorMessage(
+            vscode.l10n.t('GitHub Copilot Chat is disabled because this folder is not trusted. Trust the folder, then run this command again.'),
+            manageTrust,
+        ).then((choice) => {
+            if (choice === manageTrust) {
+                void vscode.commands.executeCommand(MANAGE_WORKSPACE_TRUST_COMMAND_ID);
+            }
+        });
+        return false;
+    }
+
     const copilotChatExtension = vscode.extensions.getExtension(COPILOT_CHAT_EXTENSION_ID);
     setCorProp(context, 'copilotChatInstalled', !!copilotChatExtension);
     setCorProp(context, 'copilotChatVersion', (copilotChatExtension?.packageJSON as { version?: string } | undefined)?.version ?? 'none');
 
-    const ensureCopilotChatOutcomeKey = 'ensureCopilotChatOutcome';
     if (!copilotChatExtension) {
         setCorProp(context, ensureCopilotChatOutcomeKey, 'notInstalled');
         void vscode.window.showErrorMessage(
@@ -95,26 +120,6 @@ export async function ensureCopilotChatReady(context: CopilotOnRailsContext): Pr
     return true;
 }
 
-/**
- * A fresh session is started for each phase hand-off because agents communicate
- * through the `.azure/*` plan files on disk, not chat history, so a clean session
- * keeps each agent's context window focused on its own phase instead of
- * accumulating the entire plan → scaffold → debug conversation.
- */
-async function waitForCustomAgentCommand(agentName: string): Promise<string | undefined> {
-    const commandId = `${CUSTOM_AGENT_COMMAND_PREFIX}${agentName}`;
-    const deadline = Date.now() + CUSTOM_AGENT_LOAD_TIMEOUT_MS;
-
-    do {
-        if ((await vscode.commands.getCommands()).includes(commandId)) {
-            return commandId;
-        }
-        await new Promise(resolve => setTimeout(resolve, CUSTOM_AGENT_LOAD_POLL_INTERVAL_MS));
-    } while (Date.now() < deadline);
-
-    return undefined;
-}
-
 export async function launchAgentChat(context: CopilotOnRailsContext, agentName: string, query: string, model?: string): Promise<boolean> {
     setCorProp(context, 'chatQueryLength', query.length);
 
@@ -131,24 +136,8 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
     try {
         await ensureLocalHarnessOn();
 
-        // Revealing chat initializes its custom-mode registry. The agent-specific
-        // command appears only after VS Code has finished loading that registry.
-        await vscode.commands.executeCommand('workbench.action.chat.open');
-
-        const waitStart = Date.now();
-        const commandId = await waitForCustomAgentCommand(agentName);
-        const agentWaitMs = Date.now() - waitStart;
-        context.telemetry.measurements.chatAgentCommandWaitMs = agentWaitMs;
-        ensureRequiredCopilotOnRailsContext(context).diagnostics.properties.chatAgentCommandWaitMs = agentWaitMs;
-
-        if (!commandId) {
-            setCorProp(context, chatLaunchOutcomeKey, 'agentCommandTimeout');
-            void vscode.window.showErrorMessage(
-                vscode.l10n.t('The "{0}" Copilot agent did not finish loading. Please try again.', agentName),
-            );
-            return false;
-        }
-
+        // Fresh chat session per phase hand-off: agents coordinate through the `.azure/*` plan
+        // files on disk, not chat history, so a clean session keeps each agent focused on its phase.
         await vscode.commands.executeCommand('workbench.action.chat.newChat');
 
         const resolvedModel = model ?? getSessionModel();
@@ -157,7 +146,12 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
         const selector = resolvedModel ? await resolveModelSelector(resolvedModel) : undefined;
         setCorProp(context, 'chatModelResolved', !!selector);
 
-        await vscode.commands.executeCommand(commandId, {
+        // Custom modes get no per-mode open command, so passing `mode` to the generic chat-open
+        // command is the supported way to launch one. If the mode hasn't been discovered yet this
+        // silently opens the default Agent - the reload guard in prepareAndLaunchAgent prevents
+        // that (see requireWorkspaceTrustReload).
+        await vscode.commands.executeCommand('workbench.action.chat.open', {
+            mode: agentName,
             query,
             ...(selector ? { modelSelector: selector } : {}),
         });
@@ -187,31 +181,105 @@ export async function launchAgentChat(context: CopilotOnRailsContext, agentName:
     return true;
 }
 
+/** Result of {@link prepareAndLaunchAgent}; consumed by {@link launchAgentAndRecordOutcome}. */
+type AgentLaunchOutcome = 'chatNotReady' | 'deferred' | 'launchFailed' | 'launched';
+
+export interface PrepareAndLaunchAgentOptions {
+    agentName: string;
+    prompt: string;
+    model?: string;
+    /** Skip the chat-ready preflight for callers that already ran it earlier in the flow. */
+    skipChatReadyCheck?: boolean;
+    /** Stash this launch's prompt/model so the create view can be re-opened pre-filled after a reload. */
+    restoreCreateViewOnReload?: boolean;
+    /** Runs right before handing off (reload prompt or successful launch), e.g. to dispose the source panel. */
+    onBeforeHandoff?: () => void;
+}
+
+/**
+ * Shared launch routine for the fresh-agent entry points. Readies chat, and - when this session
+ * needs a workspace-trust reload - prompts that reload instead of launching. Otherwise writes the
+ * agent's instructions and launches.
+ */
+async function prepareAndLaunchAgent(context: CopilotOnRailsContext, options: PrepareAndLaunchAgentOptions): Promise<AgentLaunchOutcome> {
+    const { agentName, prompt, model, skipChatReadyCheck, restoreCreateViewOnReload, onBeforeHandoff } = options;
+
+    // Gate on trust before ensureAgentInstructions writes files, so an untrusted workspace
+    // isn't littered with project files it never consented to.
+    if (!skipChatReadyCheck && !(await ensureCopilotChatReady(context))) {
+        return 'chatNotReady';
+    }
+
+    // Prompt a one-time reload before writing anything, and hand control back to the user rather
+    // than auto-launching: agent discovery is async with no readiness API, so any auto-launch
+    // would race. restoreCreateViewOnReload re-opens the create view pre-filled to soften it.
+    if (requireWorkspaceTrustReload) {
+        if (restoreCreateViewOnReload) {
+            await saveReloadResumePrompt(prompt, model);
+        }
+        onBeforeHandoff?.();
+        await promptReloadForAgentDiscovery(context);
+        return 'deferred';
+    }
+
+    await ensureAgentInstructions(context, agentName);
+
+    if (!(await launchAgentChat(context, agentName, prompt, model))) {
+        return 'launchFailed';
+    }
+
+    onBeforeHandoff?.();
+    return 'launched';
+}
+
+/**
+ * Runs {@link prepareAndLaunchAgent}, records the abort outcomes as telemetry under `outcomeKey`,
+ * and returns true only when the agent launched - so callers write just their success path.
+ */
+export async function launchAgentAndRecordOutcome(context: CopilotOnRailsContext, outcomeKey: string, options: PrepareAndLaunchAgentOptions): Promise<boolean> {
+    switch (await prepareAndLaunchAgent(context, options)) {
+        case 'chatNotReady':
+            setCorProp(context, outcomeKey, 'copilotChatNotReady');
+            return false;
+        case 'deferred':
+            setCorProp(context, outcomeKey, 'deferredForAgentDiscovery');
+            return false;
+        case 'launchFailed':
+            setCorProp(context, outcomeKey, 'launchFailed');
+            return false;
+        case 'launched':
+            return true;
+    }
+}
+
 export async function openChatWithAgent(context: CopilotOnRailsContext, agentName: string, prompt: string, loading?: LoadingViewConfiguration): Promise<void> {
     setCorProp(context, 'chatAgentName', agentName);
 
-    const openChatWithAgentOutcomeKey = 'openChatWithAgentOutcome';
-    if (!await ensureAgentInstructions(context, agentName)) {
-        setCorProp(context, openChatWithAgentOutcomeKey, 'agentInstructionsMissing');
-        return;
+    const key = 'openChatWithAgentOutcome';
+    if (await launchAgentAndRecordOutcome(context, key, { agentName, prompt })) {
+        setCorProp(context, key, 'launched');
+        if (loading) {
+            setCorProp(context, 'openChatLoadingStage', loading.stage);
+            projectSubmissionState.setPending(loading.stage);
+            openLoadingView(loading);
+        }
     }
+}
 
-    if (!(await ensureCopilotChatReady(context))) {
-        setCorProp(context, openChatWithAgentOutcomeKey, 'copilotChatNotReady');
-        return;
-    }
-
-    if (!(await launchAgentChat(context, agentName, prompt))) {
-        setCorProp(context, openChatWithAgentOutcomeKey, 'chatlaunchFailed');
-        return;
-    }
-
-    setCorProp(context, openChatWithAgentOutcomeKey, 'launched');
-
-    if (loading) {
-        setCorProp(context, 'openChatLoadingStage', loading.stage);
-        projectSubmissionState.setPending(loading.stage);
-        openLoadingView(loading);
+/** Prompts a one-time window reload so Copilot Chat can discover the project's custom agents. */
+async function promptReloadForAgentDiscovery(context: CopilotOnRailsContext): Promise<void> {
+    setCorProp(context, 'promptedReloadForAgentDiscovery', true);
+    const reload = vscode.l10n.t('Reload Window');
+    const choice = await vscode.window.showInformationMessage(
+        vscode.l10n.t('Reload to set up your project'),
+        {
+            modal: true,
+            detail: vscode.l10n.t('VS Code needs to reload this window once so it can load the project\u2019s Copilot agents. After it reloads, start your project again to continue.'),
+        },
+        reload,
+    );
+    if (choice === reload) {
+        await vscode.commands.executeCommand(RELOAD_WINDOW_COMMAND_ID);
     }
 }
 
