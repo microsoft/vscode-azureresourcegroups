@@ -1,0 +1,109 @@
+name: MSBench Evals
+
+# Runs the project-plan eval on MSBench against a real VSIX build of this
+# extension, rather than against agent instructions in isolation.
+#
+# Split into two jobs on purpose:
+#
+#   build - packages the VSIX and runs the same guards run.sh uses locally.
+#           Needs no credentials, so it can run on any PR and catches the most
+#           common failure (a VSIX missing dist/extension.bundle.js) without
+#           spending an MSBench run.
+#   eval  - submits to MSBench. Needs Azure auth, so it is manual-only; see
+#           evals/msbench/README.md ("Running in CI") for the one-time setup.
+#
+# Unlike vally-evals.yml this cannot ride on GITHUB_TOKEN: MSBench runs on CES,
+# which authenticates callers by Entra client id.
+on:
+  pull_request:
+    paths:
+      - 'evals/msbench/**'
+      - '.github/workflows/msbench-evals.yml'
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        description: 'Benchmark instance to borrow for its container image'
+        required: false
+        default: 'vscbench.say_hello'
+
+env:
+  NODE_VERSION: '22'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # Everything that can be verified without credentials.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Build and verify the VSIX
+        run: ./evals/msbench/run.sh --build-only
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msbench-vsix
+          path: evals/msbench/assets/extensions/*.vsix
+          retention-days: 7
+
+  eval:
+    # Manual only: the Azure identity has to be allowlisted by the MSBench team
+    # before this can pass, so running it on PRs would only ever be red.
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    # A cold run is ~15 min; the timeout is generous so a slow queue does not
+    # look like a product failure.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write # Fetch an OIDC token for azure/login.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: msbench-vsix
+          path: evals/msbench/assets/extensions
+
+      # run.sh mints the MSBench feed token with `az account get-access-token`,
+      # so it only needs an already-authenticated az. A self-hosted runner that
+      # is already signed in can skip this step entirely.
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.MSBENCH_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.MSBENCH_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.MSBENCH_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run project-plan eval
+        run: ./evals/msbench/run.sh --skip-build --output "$RUNNER_TEMP/report.json" --data_dir "$RUNNER_TEMP/msbench-data"
+        env:
+          BENCHMARK: ${{ inputs.benchmark }}
+
+      # Keep the report and per-instance data so a failure can be diagnosed from
+      # the transcript and patch rather than by re-running.
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msbench-results
+          path: |
+            ${{ runner.temp }}/report.json
+            ${{ runner.temp }}/msbench-data/**
+          if-no-files-found: ignore

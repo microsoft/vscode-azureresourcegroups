@@ -40,8 +40,9 @@ provisioning, and no other team needs to be involved.
 
 ## Verified result
 
-Run `2026082467524759` — **all 7 assertions passed**, `resolved: true`. The agent
-produced a 236-line `.azure/requirements.json` and called the extension's real
+Runs `2026082467524759`, `2026082468156047` (from a clean venv) and `2026082471095778`
+— **all 7 assertions passed**, `resolved: true`, every time. The agent produced a
+236-line `.azure/requirements.json` and called the extension's real
 `open_requirements_view` tool (as `mcp_copilot_azure_open_requirements_view`).
 
 ## How it works
@@ -101,6 +102,28 @@ Assertion detail is in `eval.json`. Also captured: `screen_recording.mp4`,
 `extension-host.log`, and `customScript/output.log`. See
 [AGENT_OUTPUTS.md](https://github.com/microsoft/vscode-copilot-evaluation/blob/main/doc/references/AGENT_OUTPUTS.md).
 
+## Running in CI
+
+[`.github/workflows/msbench-evals.yml`](../../.github/workflows/msbench-evals.yml) runs
+this on `ubuntu-latest`. It is **`workflow_dispatch` only**, because it cannot run yet
+without one-time setup.
+
+`vally-evals.yml` needs no secrets — `copilot-requests: write` lets the built-in
+`GITHUB_TOKEN` authenticate the Copilot CLI. That trick does not transfer. MSBench runs
+on CES, which identifies callers by Entra client id, so CI needs a real Azure identity:
+
+1. Create a user-assigned managed identity (or app registration) and add a federated
+   credential for this repo.
+2. Set `MSBENCH_AZURE_CLIENT_ID`, `MSBENCH_AZURE_TENANT_ID` and
+   `MSBENCH_AZURE_SUBSCRIPTION_ID` as repository secrets.
+3. **Ask the MSBench team to allowlist that client id for CES submission** — see
+   [Submitting MSBench runs from GitHub Actions](https://dev.azure.com/devdiv/OnlineServices/_git/msbench?path=/wiki/Submitting-MSBench-runs-from-GitHub-Actions.md).
+   This step is not self-service.
+
+Step 3 is the reason the workflow is manual-only and unscheduled: until the identity is
+allowlisted a scheduled run would only ever be red. Local runs need none of this —
+`az login` plus the `MSBench User` role is enough, which is why that path landed first.
+
 ## Troubleshooting
 
 Three failure modes cost real time while building this, all of which now fail fast in
@@ -122,7 +145,8 @@ Three failure modes cost real time while building this, all of which now fail fa
 - The other three single-turn stimuli, plus the real `program` validators as `exec:`
   assertions (needs a repo checkout in the container).
 - The three multi-turn stimuli, using `promptSteps` (native multi-turn).
-- Nightly CI; keep `vally-evals.yml` as the fast PR gate.
+- Nightly CI once the CES identity is allowlisted; keep `vally-evals.yml` as the fast PR
+  gate.
 - Expand gates and graders, including browser assertions for the preview canvas.
 
 Longer term these could graduate into `benchmarks/azure/` in
