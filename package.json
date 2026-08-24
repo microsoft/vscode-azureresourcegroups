@@ -408,6 +408,11 @@
                 "category": "Azure"
             },
             {
+                "command": "copilotOnRails.openDeployResultView",
+                "title": "%copilotOnRails.openDeployResultView%",
+                "category": "Azure"
+            },
+            {
                 "command": "copilotOnRails.openRequirementsView",
                 "title": "%copilotOnRails.openRequirementsView%",
                 "category": "Azure"

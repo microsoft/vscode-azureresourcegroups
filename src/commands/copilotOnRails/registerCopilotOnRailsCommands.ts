@@ -11,6 +11,7 @@ import { CopilotOnRailsContext } from '../../utils/copilotOnRails/CopilotOnRails
 import { callWithDiagnosticsAndTelemetryHandling, corId } from '../../utils/copilotOnRails/telemetryUtils';
 import { createProjectWithCopilot } from '../../webviews/copilotOnRails/extension/createProjectWithCopilot';
 import { openDeploymentPlanViewFromWorkspace } from '../../webviews/copilotOnRails/extension/openDeploymentPlanView';
+import { openDeployResultViewFromWorkspace } from '../../webviews/copilotOnRails/extension/openDeployResultView';
 import { openFrontendPreviewView } from '../../webviews/copilotOnRails/extension/openFrontendPreviewView';
 import { openLocalDevNextStepsView } from '../../webviews/copilotOnRails/extension/openLocalDevNextStepsView';
 import { openLocalPlanViewFromWorkspace } from '../../webviews/copilotOnRails/extension/openLocalPlanView';
@@ -42,6 +43,7 @@ export const copilotOnRailsCommandIds = {
 
     startDeployment: corId('startDeployment'),
     openDeploymentPlanView: corId('openDeploymentPlanView'),
+    openDeployResultView: corId('openDeployResultView'),
 
     resumeProjectWithCopilot: corId('resumeProjectWithCopilot'),
     refreshProjectTree: `${azureProjectId}.refresh`,
@@ -104,6 +106,12 @@ export async function startDeploymentCommand(context: CopilotOnRailsContext, pro
         context,
         copilotOnRailsCustomAgents.azureDeployCustomAgent,
         prompt ?? 'Onboard and deploy this project to Azure using the complete `azure-app-onboard` pipeline. Analyze readiness, plan the Azure architecture and cost, generate validated infrastructure, deploy every service, and verify the live application.',
+        {
+            stage: 2,
+            title: l10n.t('Preparing deployment…'),
+            message: l10n.t('Copilot is preparing your deployment plan.'),
+            showNeedHelp: true,
+        },
     );
 }
 
@@ -130,6 +138,7 @@ export function registerCopilotOnRailsCommands(): void {
     // Phase 3: Deployment commands
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.startDeployment, startDeploymentCommand);
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.openDeploymentPlanView, openDeploymentPlanViewFromWorkspace);
+    registerCopilotOnRailsCommand(copilotOnRailsCommandIds.openDeployResultView, openDeployResultViewFromWorkspace);
 
     registerCopilotOnRailsCommand(copilotOnRailsCommandIds.resumeProjectWithCopilot, resumeProjectWithCopilot);
     registerCommand(copilotOnRailsCommandIds.refreshProjectTree, () => ext.actions.refreshProjectTree());

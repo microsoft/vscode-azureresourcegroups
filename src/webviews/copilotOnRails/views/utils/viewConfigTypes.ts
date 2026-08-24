@@ -23,19 +23,27 @@ export type CreateProjectViewControllerType = {
 export type DeploymentPlanViewStrings = {
     title: string;
     loading: string;
-    subscriptionLabel: string;
     locationLabel: string;
-    selectSubscriptionPlaceholder: string;
     selectLocationPlaceholder: string;
-    architectureHeading: string;
-    workspaceScanHeading: string;
-    decisionsHeading: string;
+    /** Shown beside a read-only region when no Azure account is signed in. */
+    locationsSignedOutHint: string;
+    /** Shown beside a read-only region when the live region list couldn't be loaded. */
+    locationsFailedHint: string;
     azureResourcesHeading: string;
+    costEstimateHeading: string;
+    costEstimateTotalLabel: string;
+    costServiceHeader: string;
+    costSkuHeader: string;
+    costMonthlyHeader: string;
+    costNotesHeader: string;
+    recommendationsHeading: string;
+    recommendationEffortLabel: string;
+    environmentNameLabel: string;
+    estimatedCostLabel: string;
     approveButton: string;
     feedbackButtonAriaLabel: string;
     feedbackButtonTooltip: string;
     approveButtonTooltip: string;
-    approveButtonAlreadyApprovedTooltip: string;
     approveButtonMissingSelectionTooltip: string;
     feedbackDrawerInfoTooltip: string;
     revisingBanner: string;
@@ -69,6 +77,72 @@ export type DeploymentPlanViewStrings = {
 
 export type DeploymentPlanViewConfiguration = {
     strings: DeploymentPlanViewStrings;
+};
+
+/** Localized strings rendered by the deployment results webview. */
+export type DeployResultViewStrings = {
+    title: string;
+    loading: string;
+    succeededHeading: string;
+    failedHeading: string;
+    inProgressHeading: string;
+    unknownHeading: string;
+    partialBanner: string;
+    openAppButton: string;
+    openPortalButton: string;
+
+    resourceGroupLabel: string;
+    regionLabel: string;
+    elapsedLabel: string;
+    healthLabel: string;
+
+    endpointsHeading: string;
+    endpointNameHeader: string;
+    endpointUrlHeader: string;
+    endpointHealthHeader: string;
+
+    resourcesHeading: string;
+    resourceTypeHeader: string;
+    resourceNameHeader: string;
+    resourceStatusHeader: string;
+
+    healthDetailHeading: string;
+    healthEndpointLabel: string;
+    healthCheckedLabel: string;
+    optionalDependencyLabel: string;
+
+    networkPolicyHeading: string;
+    mainSiteLabel: string;
+    scmSiteLabel: string;
+    basicPublishingLabel: string;
+    basicPublishingScmLabel: string;
+    basicPublishingFtpLabel: string;
+    enabledLabel: string;
+    disabledLabel: string;
+
+    healingHeading: string;
+    healingAttemptLabel: string;
+    healingIssueLabel: string;
+    healingResolutionLabel: string;
+    planLevelChangeBadge: string;
+
+    warningsHeading: string;
+    orphanedHeading: string;
+    orphanedHint: string;
+
+    cleanupHeading: string;
+    cleanupHint: string;
+    copyButtonAriaLabel: string;
+    copiedLabel: string;
+
+    parseFailureTitle: string;
+    parseFailureFallbackMessage: string;
+    parseFailureFileLabel: string;
+    openResultFileButton: string;
+};
+
+export type DeployResultViewConfiguration = {
+    strings: DeployResultViewStrings;
 };
 
 /** Configuration for the transient loading view shown between workflow steps. */

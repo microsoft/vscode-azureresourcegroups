@@ -96,7 +96,7 @@ flowchart TD
     Next2 -->|start_deployment| Deploy
 
     subgraph Deploy[6 · azure-deploy]
-        DepPlan[.azure/deployment-plan.md] --> Infra[Bicep/Terraform + azure.yaml] --> AzdPkg[Validate: azd package]
+        DepPlan[prepare-plan.json] --> Infra[Bicep/Terraform + azure.yaml] --> AzdPkg[Validate: azd package] --> DepResult[deploy-result.json] --> ResultView[Deployment results view]
     end
 
     Deploy --> Done([azd up])
@@ -249,12 +249,27 @@ API tests — then opens the **Debug Next Steps** view.
 
 ## Stage 7 — Deploy to Azure
 
-Choosing **Deploy** starts **`azure-deploy`**, which writes `.azure/deployment-plan.md` and opens the
-**Deployment plan** view. After you approve, it generates the infrastructure (Bicep/Terraform), `azure.yaml`,
+Choosing **Deploy** starts **`azure-deploy`**, which writes its structured plan to
+`.azure/prepare-plan.json` (or, when it runs with a deploy session, to
+`.copilot-azure/sessions/{id}/prepare-plan.json`) and opens the **Deployment plan** view. The view renders the
+planned Azure services (with editable SKUs), the cost estimate and its breakdown, and post-deploy
+recommendations. After you approve, it generates the infrastructure (Bicep/Terraform), `azure.yaml`,
 and Dockerfiles, then validates them with `azd package`. You deploy with `azd up`.
 
 <p align="center">
   <img src="images/copilot-create-project/10-deployment-plan-view.png" alt="Deployment plan view" />
+</p>
+
+When the deploy finishes, the agent writes `deploy-result.json` and opens the **Deployment results** view —
+a read-only report of what actually shipped: status and health, the live endpoints, the Azure resources that
+were created, any recovery attempts made along the way, and the command that deletes everything again. It
+opens on failure too, so you can see which resources or endpoints didn't make it. You can reopen it any time
+with **Azure: Open Deploy Results View**.
+
+> 📷 *Screenshot needed: the Deployment results view after a successful deploy.*
+
+<p align="center">
+  <img src="images/copilot-create-project/15-deployment-results-view.png" alt="Deployment results view" />
 </p>
 
 ## Resuming a session
@@ -302,10 +317,11 @@ includes an `**Execution Mode**: auto` metadata row. In autopilot, agents hand o
 | **Debug plan** view | `copilotOnRails.openDebugPlanView` | `open_local_plan_view` | Review the local debug configuration; approve. |
 | **Debug Next Steps** view | `copilotOnRails.openDebugNextStepsView` | `open_local_next_steps_view` | Post‑debug "What's next?" (deploy / run tests). |
 | **Deployment plan** view | `copilotOnRails.openDeploymentPlanView` | `open_deploy_plan_view` | Review the deployment plan; approve. |
+| **Deployment results** view | `copilotOnRails.openDeployResultView` | `open_deploy_result_view` | Read-only report of a finished deploy: status, endpoints, resources, cleanup. |
 | **Azure Project** progress tree | `azureProject.refresh` (refresh) | — (tree data provider) | Stage‑based progress of the whole pipeline. |
 
 > The `openScaffoldPlanView`, `openFrontendPreviewView`, `openScaffoldNextStepsView`, `openDebugPlanView`,
-> `openDebugNextStepsView`, and `openDeploymentPlanView` commands are also available from the Command
+> `openDebugNextStepsView`, `openDeploymentPlanView`, and `openDeployResultView` commands are also available from the Command
 > Palette, primarily for support/debugging (they open the view for the current workspace's artifacts).
 
 ---
@@ -325,7 +341,7 @@ step‑by‑step instructions live in the sibling folders and are copied into yo
 | 3 | `azure-project-integrate` | `.azure/integration-plan.md` | migrations, live‑wired frontend | `start_local_development` |
 | 4 | `azure-debug-plan` | project source | `.azure/vscode-debug-plan.md` | `start_azure_debug_generate` |
 | 5 | `azure-debug-generate` | `.azure/vscode-debug-plan.md` | `docker-compose`, `.vscode/launch.json` + `tasks.json`, API tests | `start_deployment` |
-| 6 | `azure-deploy` | project source | `.azure/deployment-plan.md`, Bicep/Terraform, `azure.yaml`, Dockerfiles | `azd up` |
+| 6 | `azure-deploy` | project source | `.copilot-azure/sessions/{id}/prepare-plan.json`, Bicep/Terraform, `azure.yaml`, Dockerfiles | `azd up` |
 
 Agent instructions are **version‑stamped**. A `.version` file next to the copied folders records the
 extension version that wrote them; if it doesn't match the running extension, the folders are refreshed
@@ -345,6 +361,7 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 | `open_local_plan_view` | Opens the Debug plan view. |
 | `open_local_next_steps_view` | Opens the post‑debug Next Steps view. |
 | `open_deploy_plan_view` | Opens the Deployment plan view. |
+| `open_deploy_result_view` | Opens the Deployment results view. The deploy agent calls this at handoff, once `deploy-result.json` is finalized. |
 | `start_project_scaffold` | Starts the `azure-project-scaffold` agent in a new session. |
 | `start_project_integrate` | Starts the `azure-project-integrate` agent in a new session. |
 | `start_local_development` | Starts the `azure-debug-plan` agent in a new session. |
@@ -362,7 +379,8 @@ Everything the flow produces lives in the workspace, so it's inspectable and rev
 | `.azure/.preview-temp/{theme.css, manifest.json, *.html}` | plan agent | Per‑screen UI preview pages rendered in the Plan view. |
 | `.azure/integration-plan.md` | scaffold agent | Brief the integrate agent consumes. |
 | `.azure/vscode-debug-plan.md` | debug‑plan agent | The local debug configuration plan. |
-| `.azure/deployment-plan.md` | deploy agent | The deployment plan. |
+| `.azure/prepare-plan.json` (or `.copilot-azure/sessions/{id}/prepare-plan.json`) | deploy agent | The structured deployment plan. The Deployment plan view renders its services, cost estimate, and post-deploy recommendations. |
+| `.copilot-azure/sessions/{id}/deploy-result.json` | deploy agent | Result of the deploy: status, endpoints, health, resources, recovery attempts. Backs the Deployment results view. Written into the active session folder, so a workspace holds one per session — the session named by `.copilot-azure/sessions/active-session.json` wins, falling back to the newest file. |
 | `.github/agents/**` (+ `.version`) | extension | Copied agent instruction files and the version stamp. |
 
 Session/diagnostics state is kept in VS Code **workspaceState** (not files): `copilotOnRails.prompt`,
@@ -486,6 +504,7 @@ Collect before escalating a bug:
 | Open Debug Plan View | `copilotOnRails.openDebugPlanView` |
 | Open Debug Next Steps View | `copilotOnRails.openDebugNextStepsView` |
 | Open Deploy Plan View | `copilotOnRails.openDeploymentPlanView` |
+| Open Deploy Results View | `copilotOnRails.openDeployResultView` |
 | Report Issue | `copilotOnRails.reportIssue` |
 | Inspect Copilot on Rails Diagnostics | `copilotOnRails.inspectDiagnostics` |
 | Refresh (Azure Project view) | `azureProject.refresh` |

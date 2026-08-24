@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-19T18:41:01.315Z",
+  "mode": "offline",
+  "fixture": "reference-node-fullstack",
+  "outcome": "passed",
+  "cases": [
+    {
+      "id": "golden-requirements",
+      "tier": "offline",
+      "validator": "requirements",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-project-plan",
+      "tier": "offline",
+      "validator": "project-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-plan-gate",
+      "tier": "offline",
+      "validator": "plan-gate",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-preview",
+      "tier": "offline",
+      "validator": "preview",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "requirements-schema-version",
+      "tier": "offline",
+      "validator": "requirements",
+      "expected": "schemaVersion",
+      "actual": [
+        "schemaVersion"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-plan-numbering",
+      "tier": "offline",
+      "validator": "project-plan",
+      "expected": "nonSequentialHeading",
+      "actual": [
+        "nonSequentialHeading",
+        "nonSequentialHeading"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "plan-gate-frontend-dropped",
+      "tier": "offline",
+      "validator": "plan-gate",
+      "expected": "frontendIntentMismatch",
+      "actual": [
+        "frontendIntentMismatch"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "plan-gate-preview-manifest-missing",
+      "tier": "offline",
+      "validator": "plan-gate",
+      "expected": "previewManifestMissingAtGate",
+      "actual": [
+        "previewManifestMissingAtGate"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-not-ready",
+      "tier": "offline",
+      "validator": "preview",
+      "expected": "previewNotReady",
+      "actual": [
+        "previewNotReady"
+      ],
+      "passed": true,
+      "durationMs": 0
+    }
+  ]
+}
