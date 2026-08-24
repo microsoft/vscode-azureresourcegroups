@@ -9,10 +9,8 @@ import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import type { AzureSubscription } from "api/src/resources/azure";
 import * as vscode from "vscode";
 import { z } from "zod/mini";
-import { ext } from "../../../extensionVariables";
-import { getAzureResourcesService } from "../../../services/AzureResourcesService";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
-import { computeDeploymentInventory, DeploymentTarget, normalizeResourceId } from "../../../utils/copilotOnRails/deploymentInventory";
+import { captureInventory, resolveSubscription, snapshotResourceIds } from "../../../utils/copilotOnRails/deploymentInventoryCapture";
 import { callWithDiagnosticsAndTelemetryHandling, setCorErrorProp, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 
 const captureDeploymentInventoryToolName = 'capture_deployment_inventory';
@@ -76,10 +74,8 @@ async function captureDeploymentInventory(context: CopilotOnRailsContext, input:
         return { message: vscode.l10n.t('Azure subscription "{0}" was not found. Sign in or select it, then retry.', input.subscriptionId) };
     }
 
-    const resources = await getAzureResourcesService().listResources(context, subscription);
-
     if (input.phase === 'baseline') {
-        const resourceIds = dedupeResourceIds(resources);
+        const resourceIds = await snapshotResourceIds(context, subscription);
         baselineBySession.set(input.sessionId, resourceIds);
         setCorProp(context, 'captureBaselineCount', resourceIds.length);
         return { message: vscode.l10n.t('Baseline captured: {0} existing resource(s). Run phase="capture" after each deployment attempt.', resourceIds.length) };
@@ -88,13 +84,12 @@ async function captureDeploymentInventory(context: CopilotOnRailsContext, input:
     const baseline = baselineBySession.get(input.sessionId);
     setCorProp(context, 'captureMissingBaseline', baseline === undefined);
 
-    const deploymentTargets = await collectDeploymentTargets(context, subscription, input);
-    const result = computeDeploymentInventory(
-        baseline ?? [],
-        resources.map((r) => ({ id: r.id ?? '', name: r.name, type: r.type })).filter((r) => r.id),
-        deploymentTargets,
-        input.expectedResourceGroup,
-    );
+    const result = await captureInventory(context, subscription, {
+        expectedResourceGroup: input.expectedResourceGroup,
+        deploymentNames: input.deploymentNames,
+        resourceGroups: input.resourceGroups,
+        baseline,
+    });
 
     const failed = result.createdResources.filter((r) => r.classification === 'failed').length;
     const orphaned = result.createdResources.filter((r) => r.classification === 'orphaned').length;
@@ -107,7 +102,7 @@ async function captureDeploymentInventory(context: CopilotOnRailsContext, input:
         result.createdResources.length, result.createdResources.length - failed - orphaned, failed, orphaned,
     );
     const baselineNote = baseline === undefined
-        ? ' ' + vscode.l10n.t('Warning: no baseline was found, so every current resource is treated as new. Run phase="baseline" before deploying next time.')
+        ? ' ' + vscode.l10n.t('Warning: no baseline was found, so only resources reported by the tracked deployment(s) are listed. Run phase="baseline" before deploying next time to also catch imperative strays.')
         : '';
 
     return {
@@ -119,52 +114,3 @@ async function captureDeploymentInventory(context: CopilotOnRailsContext, input:
     };
 }
 
-/** Reads ARM deployment operations for the tracked deployments to learn which created resources
- *  each deployment accounts for and their provisioning states. */
-async function collectDeploymentTargets(context: IActionContext, subscription: AzureSubscription, input: CaptureInput): Promise<DeploymentTarget[]> {
-    const deploymentNames = input.deploymentNames ?? [];
-    if (deploymentNames.length === 0) {
-        return [];
-    }
-    // A deployment may live at subscription scope or (after a 403 fallback) at RG scope.
-    const scopes: (string | undefined)[] = [undefined, ...(input.resourceGroups ?? [])];
-    const service = getAzureResourcesService();
-    const byId = new Map<string, DeploymentTarget>();
-
-    for (const deploymentName of deploymentNames) {
-        for (const scope of scopes) {
-            const operations = await service.listDeploymentOperations(context, subscription, deploymentName, scope);
-            for (const op of operations) {
-                const id = op.properties?.targetResource?.id;
-                if (!id) {
-                    continue;
-                }
-                const normalized = normalizeResourceId(id);
-                const provisioningState = op.properties?.provisioningState;
-                // Prefer a succeeded state if any scope reports one.
-                if (!byId.has(normalized) || provisioningState?.toLowerCase() === 'succeeded') {
-                    byId.set(normalized, { id, provisioningState });
-                }
-            }
-        }
-    }
-    return Array.from(byId.values());
-}
-
-function dedupeResourceIds(resources: readonly { id?: string }[]): string[] {
-    const seen = new Set<string>();
-    const ids: string[] = [];
-    for (const resource of resources) {
-        if (resource.id && !seen.has(normalizeResourceId(resource.id))) {
-            seen.add(normalizeResourceId(resource.id));
-            ids.push(resource.id);
-        }
-    }
-    return ids;
-}
-
-async function resolveSubscription(subscriptionId: string): Promise<AzureSubscription | undefined> {
-    const provider = await ext.subscriptionProviderFactory();
-    const subscriptions = await provider.getAvailableSubscriptions({ filter: false });
-    return subscriptions.find((s) => s.subscriptionId === subscriptionId);
-}

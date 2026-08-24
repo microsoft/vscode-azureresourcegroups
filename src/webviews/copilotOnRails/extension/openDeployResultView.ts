@@ -9,6 +9,7 @@ import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRa
 import type { DeployResultData } from "../views/utils/deployResultTypes";
 import { getDeployResultRenderIssue, parseDeployResultJson } from "../views/utils/parseDeployResultJson";
 import { DeployResultViewController } from "./controllers/DeployResultViewController";
+import { ensureDeployInventoryCaptured } from "./deployInventoryWatcher";
 import { closeLoadingView } from "./openLoadingView";
 import { buildParseError, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
@@ -165,6 +166,10 @@ export async function openDeployResultViewFromWorkspace(_context: CopilotOnRails
 }
 
 async function openDeployResultViewAsync(uri: vscode.Uri): Promise<void> {
+    // Safety net: guarantee the deterministic inventory is computed before the results are shown,
+    // even if the agent never called capture_deployment_inventory. It writes the file when needed,
+    // which the single-file watcher below then reflects.
+    await ensureDeployInventoryCaptured(uri);
     openDeployResultViewWithContent(await readFileText(uri), uri);
     host.setWatcher(watchSingleFile(uri, () => void reloadDeployResult(uri)));
 }

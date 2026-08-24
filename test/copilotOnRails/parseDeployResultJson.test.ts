@@ -271,7 +271,7 @@ suite('parseDeployResultJson', () => {
             }));
 
             assert.deepStrictEqual(result.resourcesToCleanup, [{
-                type: 'UserAssignedIdentities',
+                type: 'User Assigned Identities',
                 name: 'stray-mi',
                 id: '/subscriptions/s/resourceGroups/rg-stray/providers/Microsoft.ManagedIdentity/userAssignedIdentities/stray-mi',
                 resourceGroup: 'rg-stray',
@@ -291,7 +291,7 @@ suite('parseDeployResultJson', () => {
             }));
 
             assert.deepStrictEqual(result.resourcesToCleanup, [{
-                type: 'UserAssignedIdentities',
+                type: 'User Assigned Identities',
                 name: 'stray-mi',
                 id: undefined,
                 resourceGroup: 'rg-stray',
