@@ -335,7 +335,8 @@
 
     // The resources table is the only editable one, and its SKU dropdown must stay readable.
     // Auto layout lets the long Purpose text starve the SKU column, so pin the widths instead
-    // and let Purpose wrap into the space it is given.
+    // and let Purpose wrap into the space it is given. Widths are keyed to the 5-column layout
+    // (Service, Resource Name, Component, Purpose, SKU) and must sum to 100%.
     .planTable.resourcesTable {
         table-layout: fixed;
 
@@ -346,22 +347,27 @@
 
         th:nth-child(1),
         td:nth-child(1) {
-            width: 17%;
+            width: 16%;
         }
 
         th:nth-child(2),
         td:nth-child(2) {
-            width: 22%;
+            width: 20%;
         }
 
         th:nth-child(3),
         td:nth-child(3) {
-            width: 37%;
+            width: 16%;
+        }
+
+        th:nth-child(4),
+        td:nth-child(4) {
+            width: 26%;
         }
 
         th:last-child,
         td:last-child {
-            width: 24%;
+            width: 22%;
         }
     }
 

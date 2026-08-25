@@ -258,10 +258,7 @@ plan markdown.
 
 Choosing **Deploy** starts **`azure-deploy`**, which writes its structured plan to
 `.azure/prepare-plan.json` (or, when it runs with a deploy session, to
-`.copilot-azure/sessions/{id}/prepare-plan.json`) and opens the **Deployment plan** view. The view renders the
-planned Azure services (with editable SKUs), the cost estimate and its breakdown, and post-deploy
-recommendations. After you approve, it generates the infrastructure (Bicep/Terraform), `azure.yaml`,
-and Dockerfiles, then validates them with `azd package`. You deploy with `azd up`. Like the plan preview, the deploy plan's **Prerequisites** section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the plan markdown.
+`.copilot-azure/sessions/{id}/prepare-plan.json`) and opens the **Deployment plan** view. The view renders the planned Azure services (with editable SKUs), the cost estimate and its breakdown, and post-deploy recommendations. After you approve, it generates the infrastructure (Bicep/Terraform), `azure.yaml`, and Dockerfiles, then validates them with `azd package`. You deploy with `azd up`. Like the plan preview, the deploy plan's **Prerequisites** section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the plan markdown. The agent probes the two CLIs this stage depends on (**Azure Developer CLI (azd)** and **Azure CLI (az)**) and records each tool's installed status and detected version through the extension; until it does, the view shows their status as **Unknown**. This status is kept only in memory for the current window, so after a reload it resets to **Unknown** until the agent records it again. You can re-run the check anytime with the refresh button beside the section heading.
 
 <p align="center">
   <img src="images/copilot-create-project/10-deployment-plan-view.png" alt="Deployment plan view" />

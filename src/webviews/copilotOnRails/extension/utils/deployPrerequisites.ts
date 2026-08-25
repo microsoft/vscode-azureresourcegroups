@@ -3,19 +3,19 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from "vscode";
+import type { Uri } from "vscode";
 import { DEPLOY_PREREQUISITE_CATALOG, type DeployPrerequisiteId } from "../../views/utils/deployPrerequisiteCatalog";
 import { type DeploymentPrerequisite } from "../../views/utils/deploymentPlanTypes";
 
 /**
- * The deploy stage's prerequisite record is *ours*, not the vendored Azure App Onboard
- * pipeline's. The agent runs the version probes and reports the result through the
- * `record_deploy_prerequisites` MCP tool; we persist it to this sibling file next to
- * `prepare-plan.json` (inside the git-ignored `.copilot-azure/` session dir), and the
- * deploy plan view reads it. Keeping it out of `prepare-plan.json` means we never mutate
- * a vendored artifact/schema (which a vendor sync would overwrite) or touch their telemetry.
+ * The deploy stage's prerequisite record is *ours*, not the vendored Azure App Onboard pipeline's. The
+ * agent runs the version probes and reports the result through the `record_deploy_prerequisites` MCP tool;
+ * we keep it in memory, keyed by the owning `prepare-plan.json`, and the deploy plan view reads it back.
+ * Nothing is written to disk, so we never sit beside or mutate the vendored session artifacts. The status
+ * is intentionally ephemeral: if the window reloads before the agent re-reports, the view falls back to its
+ * "unknown" state and the user can re-run the probe from the section's refresh button.
  */
-const DEPLOY_PREREQUISITES_FILE_NAME = 'deploy-prerequisites.json';
+const recordedPrerequisites = new Map<string, DeploymentPrerequisite[]>();
 
 /** A single tool's detection result as reported by the `record_deploy_prerequisites` tool. */
 interface DeployPrerequisiteInput {
@@ -60,46 +60,13 @@ function sanitizeVersion(value: string | undefined): string | undefined {
     return cleaned.length > 0 ? cleaned : undefined;
 }
 
-/** The `deploy-prerequisites.json` sibling that pairs with a given `prepare-plan.json`. */
-function deployPrerequisitesUriFor(preparePlanUri: vscode.Uri): vscode.Uri {
-    return vscode.Uri.joinPath(preparePlanUri, '..', DEPLOY_PREREQUISITES_FILE_NAME);
+/** Records the prerequisites the agent detected for a given `prepare-plan.json`, replacing any prior record. */
+export function storeDeployPrerequisites(preparePlanUri: Uri, prerequisites: readonly DeploymentPrerequisite[]): void {
+    recordedPrerequisites.set(preparePlanUri.fsPath, [...prerequisites]);
 }
 
-/** Persists the recorded prerequisites next to their `prepare-plan.json`. */
-export async function writeDeployPrerequisites(preparePlanUri: vscode.Uri, prerequisites: readonly DeploymentPrerequisite[]): Promise<void> {
-    const uri = deployPrerequisitesUriFor(preparePlanUri);
-    const content = `${JSON.stringify({ prerequisites }, undefined, 2)}\n`;
-    await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf8'));
-}
-
-/** Reads previously recorded prerequisites for a `prepare-plan.json`, or undefined when none/invalid. */
-export async function readDeployPrerequisites(preparePlanUri: vscode.Uri): Promise<DeploymentPrerequisite[] | undefined> {
-    try {
-        const bytes = await vscode.workspace.fs.readFile(deployPrerequisitesUriFor(preparePlanUri));
-        const parsed = JSON.parse(Buffer.from(bytes).toString('utf8')) as unknown;
-        return parseStoredPrerequisites(parsed);
-    } catch {
-        // Missing file, unreadable, or invalid JSON - the view falls back to an "unknown" list.
-        return undefined;
-    }
-}
-
-/** Defensively reads back our own stored shape, tolerating hand-edits without trusting them. */
-function parseStoredPrerequisites(parsed: unknown): DeploymentPrerequisite[] | undefined {
-    const list = (parsed as { prerequisites?: unknown })?.prerequisites;
-    if (!Array.isArray(list)) {
-        return undefined;
-    }
-    const prerequisites = list
-        .map((entry): DeploymentPrerequisite | undefined => {
-            const record = entry as { tool?: unknown; installed?: unknown; version?: unknown };
-            const tool = typeof record.tool === 'string' ? record.tool.trim() : '';
-            if (!tool) {
-                return undefined;
-            }
-            const version = sanitizeVersion(typeof record.version === 'string' ? record.version : undefined);
-            return { tool, installed: record.installed === true, ...(version ? { version } : {}) };
-        })
-        .filter((entry): entry is DeploymentPrerequisite => entry !== undefined);
-    return prerequisites.length > 0 ? prerequisites : undefined;
+/** Returns the prerequisites recorded for a `prepare-plan.json`, or undefined when none have been recorded. */
+export function getDeployPrerequisites(preparePlanUri: Uri): DeploymentPrerequisite[] | undefined {
+    const prerequisites = recordedPrerequisites.get(preparePlanUri.fsPath);
+    return prerequisites && prerequisites.length > 0 ? [...prerequisites] : undefined;
 }

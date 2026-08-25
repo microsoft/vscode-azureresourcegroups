@@ -11,7 +11,7 @@ import { getPreparePlanRenderIssue, parsePreparePlanJson } from "../views/utils/
 import { DeploymentPlanViewController } from "./controllers/DeploymentPlanViewController";
 import { closeLoadingView } from "./openLoadingView";
 import { getAvailableAzureLocations } from "./utils/azureLocations";
-import { readDeployPrerequisites, writeDeployPrerequisites } from "./utils/deployPrerequisites";
+import { getDeployPrerequisites, storeDeployPrerequisites } from "./utils/deployPrerequisites";
 import { buildParseError, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<DeploymentPlanData, DeploymentPlanViewController>({
@@ -119,14 +119,14 @@ async function findLatestPreparePlan(): Promise<vscode.Uri | undefined> {
 }
 
 async function openDeploymentPlanViewAsync(uri: vscode.Uri): Promise<void> {
-    const prerequisites = await readDeployPrerequisites(uri);
+    const prerequisites = getDeployPrerequisites(uri);
     openDeploymentPlanViewWithContent(await readFileText(uri), uri, prerequisites);
     host.setWatcher(watchSingleFile(uri, () => void reloadDeploymentPlan(uri)));
 }
 
 async function reloadDeploymentPlan(uri: vscode.Uri): Promise<void> {
     try {
-        const prerequisites = await readDeployPrerequisites(uri);
+        const prerequisites = getDeployPrerequisites(uri);
         openDeploymentPlanViewWithContent(await readFileText(uri), uri, prerequisites);
     } catch {
         // File may have been deleted or be momentarily unavailable; ignore.
@@ -134,7 +134,7 @@ async function reloadDeploymentPlan(uri: vscode.Uri): Promise<void> {
 }
 
 /**
- * Persists the deploy prerequisites the `record_deploy_prerequisites` MCP tool collected, next to the
+ * Records, in memory, the deploy prerequisites the `record_deploy_prerequisites` MCP tool collected for the
  * most recent `prepare-plan.json`, and refreshes the plan view when it is already open so the freshly
  * detected azd/az status replaces the "unknown" fallback. Returns false when no plan exists yet.
  */
@@ -143,7 +143,7 @@ export async function recordDeployPrerequisites(prerequisites: DeploymentPrerequ
     if (!preparePlan) {
         return false;
     }
-    await writeDeployPrerequisites(preparePlan, prerequisites);
+    storeDeployPrerequisites(preparePlan, prerequisites);
     if (isDeploymentPlanViewOpen()) {
         await openDeploymentPlanViewAsync(preparePlan);
     }

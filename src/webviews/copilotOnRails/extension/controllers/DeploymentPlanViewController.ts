@@ -219,7 +219,7 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
                 void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
                 await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
                     mode: azureDeployAgent,
-                    query: 'Re-check the deployment prerequisites only. Re-run `azd version` and `az version`, then call the `record_deploy_prerequisites` tool with the current results. Do not change anything else in the plan.',
+                    query: 'Re-check the deployment prerequisites only. Re-run `azd version` and `az version`, then call the `record_deploy_prerequisites` tool with the results.',
                 }));
 
                 setCorProp(context, refreshOutcomeKey, 'submitted');
