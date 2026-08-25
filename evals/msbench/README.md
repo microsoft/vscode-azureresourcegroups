@@ -12,6 +12,12 @@ The two are complementary, not redundant:
 | Tools | `evals/mcp/workflow-tools-server.mjs` stand-in | The extension's in-process MCP server |
 | Webviews | Never opened | Actually rendered |
 | Where | GitHub Actions, ~30 min | MSBench CES, with video + screenshots |
+
+The single stimulus ported here is [`photo-app-requirements`](../project-plan/eval.yaml)
+— its six graders plus the `reject_tools` constraint become the seven assertions in
+`assets/user-overrides.yaml`. `evals/project-plan/eval.yaml` stays the source of truth;
+this folder is a port of it, so changes there need mirroring here until the remaining six
+stimuli are wired up.
 | Role | Fast PR gate | Nightly, pass@k, model sweeps |
 
 ## Quick start
@@ -40,10 +46,24 @@ provisioning, and no other team needs to be involved.
 
 ## Verified result
 
-Runs `2026082467524759`, `2026082468156047` (from a clean venv) and `2026082471095778`
-— **all 7 assertions passed**, `resolved: true`, every time. The agent produced a
-236-line `.azure/requirements.json` and called the extension's real
+**All 7 assertions passed, `resolved: true`, on every run below** (links need
+Corpnet/Azure VPN):
+
+| Run | Base branch | Notes |
+| --- | --- | --- |
+| [`2026082467524759`](https://msbenchapp.azurewebsites.net/run-analysis/2026082467524759) | Copilot-on-Rails | first green run |
+| [`2026082468156047`](https://msbenchapp.azurewebsites.net/run-analysis/2026082468156047) | Copilot-on-Rails | from a clean venv |
+| [`2026082471095778`](https://msbenchapp.azurewebsites.net/run-analysis/2026082471095778) | Copilot-on-Rails | CI-style flags |
+| [`2026082478636953`](https://msbenchapp.azurewebsites.net/run-analysis/2026082478636953) | Copilot-on-Rails | control |
+| [`2026082479418416`](https://msbenchapp.azurewebsites.net/run-analysis/2026082479418416) | `feat/CoR` | this PR's base |
+
+The agent produced a 236-line `.azure/requirements.json` and called the extension's real
 `open_requirements_view` tool (as `mcp_copilot_azure_open_requirements_view`).
+
+> **Flaky failure mode:** back-to-back runs can fail with `"type": "RATE_LIMIT"` in
+> `output/error.json` — the Copilot API rate-limits the agent mid-run, so the artifact
+> assertions fail simply because nothing was produced. This is not a product failure.
+> Leave a few minutes between runs, and check `error.json` before believing a red result.
 
 ## How it works
 
