@@ -1,30 +1,34 @@
 {
-    "name": "evals",
-    "version": "1.0.0",
-    "description": "Vally evaluation infrastructure for Azure agent workflows. Owns the eval toolchain deps so the extension manifest stays free of eval-only (and preview) packages. Run from repo root: npm run eval",
-    "private": true,
-    "type": "module",
-    "scripts": {
-        "eval": "node run-eval.cjs",
-        "eval:plan": "node run-eval.cjs --suite project-plan",
-        "mcp": "node mcp/workflow-tools-server.mjs",
-        "drift": "node check-agent-drift.mjs",
-        "lint": "vally lint --eval-spec project-plan/eval.yaml",
-        "typecheck": "tsc --noEmit -p tsconfig.json",
-        "certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/graderCertification.ts"
-    },
-    "license": "MIT",
-    "dependencies": {
-        "@github/copilot-sdk": "^1.0.9-preview.2",
-        "@microsoft/vally": "0.13.0",
-        "@modelcontextprotocol/sdk": "^1.30.0"
-    },
-    "devDependencies": {
-        "@microsoft/vally-cli": "0.13.0",
-        "@types/node": "22.x",
-        "typescript": "^5.9.2"
-    },
-    "engines": {
-        "node": ">=22.18"
-    }
+  "name": "evals",
+  "version": "1.0.0",
+  "description": "Vally evaluation infrastructure for Azure agent workflows. Owns the eval toolchain deps so the extension manifest stays free of eval-only (and preview) packages. Run from repo root: npm run eval",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "eval": "node run-eval.cjs",
+    "eval:plan": "node run-eval.cjs --suite project-plan",
+    "mcp": "node mcp/workflow-tools-server.mjs",
+    "drift": "node check-agent-drift.mjs",
+    "lint": "npm run lint:plan && npm run lint:local-dev",
+    "lint:plan": "vally lint --eval-spec project-plan/eval.yaml",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/graderCertification.ts",
+    "eval:local-dev": "node run-eval.cjs --suite local-dev",
+    "lint:local-dev": "vally lint --eval-spec local-dev/eval.yaml"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@github/copilot-sdk": "^1.0.9-preview.2",
+    "@microsoft/vally": "0.13.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "jsonc-parser": "^2.3.1"
+  },
+  "devDependencies": {
+    "@microsoft/vally-cli": "0.13.0",
+    "@types/node": "22.x",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
 }

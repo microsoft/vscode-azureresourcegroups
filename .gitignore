@@ -71,3 +71,9 @@ results/
 
 # Generated eval skills (built from resources/agents/*.agent.md at run time)
 evals/.generated/
+
+# MSBench assets are assembled by evals/msbench/stage.sh from the repo's own
+# graders and fixtures. Committing them would create a second copy of the
+# contracts that could silently drift from the originals.
+evals/msbench/assets/graders/
+evals/msbench/assets/workspace-seed/
