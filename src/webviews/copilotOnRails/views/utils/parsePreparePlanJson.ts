@@ -135,10 +135,11 @@ function buildServicesTable(services: DeploymentPlanService[]): DeploymentPlanTa
         return emptyTable();
     }
     return {
-        headers: ['Service', 'Resource Name', 'Purpose', 'SKU'],
+        headers: ['Service', 'Resource Name', 'Component', 'Purpose', 'SKU'],
         rows: services.map(service => [
             getServiceDisplayName(service.name),
             service.version ? `${service.resourceName} (v${service.version})` : service.resourceName,
+            service.component,
             service.purpose,
             service.sku,
         ]),
@@ -154,6 +155,7 @@ function readServices(value: unknown): DeploymentPlanService[] {
         name: readString(entry.name) ?? '',
         sku: readString(entry.sku) ?? '',
         purpose: readString(entry.purpose) ?? '',
+        component: readString(entry.component) ?? '',
         region: readString(entry.region) ?? '',
         resourceName: readString(entry.resourceName) ?? '',
         version: readString(entry.version),

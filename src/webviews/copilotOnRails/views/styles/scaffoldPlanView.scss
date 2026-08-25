@@ -460,6 +460,30 @@
                 color: var(--vscode-descriptionForeground);
             }
         }
+
+        .installLink {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+            font-size: 0.85em;
+            color: var(--vscode-textLink-foreground);
+            text-decoration: none;
+
+            &:hover {
+                text-decoration: underline;
+            }
+
+            svg {
+                font-size: 13px;
+                width: 1em;
+                height: 1em;
+            }
+        }
+
+        .installLinkEmpty {
+            color: var(--vscode-descriptionForeground);
+        }
     }
 
     .planTable td.editedCell {

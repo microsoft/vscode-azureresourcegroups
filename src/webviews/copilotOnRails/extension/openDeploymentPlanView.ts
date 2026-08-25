@@ -6,11 +6,12 @@
 import * as vscode from "vscode";
 import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
 import { createProjectPlanFileWatcher, findProjectFiles, PREPARE_PLAN_FILE_GLOBS } from "../../../tree/project/projectPlanFiles";
-import type { DeploymentPlanData } from "../views/utils/deploymentPlanTypes";
+import type { DeploymentPlanData, DeploymentPrerequisite } from "../views/utils/deploymentPlanTypes";
 import { getPreparePlanRenderIssue, parsePreparePlanJson } from "../views/utils/parsePreparePlanJson";
 import { DeploymentPlanViewController } from "./controllers/DeploymentPlanViewController";
 import { closeLoadingView } from "./openLoadingView";
 import { getAvailableAzureLocations } from "./utils/azureLocations";
+import { readDeployPrerequisites, writeDeployPrerequisites } from "./utils/deployPrerequisites";
 import { buildParseError, readFileText, SingletonViewHost, watchSingleFile } from "./utils/singletonViewHost";
 
 const host = new SingletonViewHost<DeploymentPlanData, DeploymentPlanViewController>({
@@ -29,12 +30,16 @@ export function openDeploymentPlanView(uri: vscode.Uri): void {
     void openDeploymentPlanViewAsync(uri);
 }
 
-export function openDeploymentPlanViewWithContent(content: string, sourceFileUri?: vscode.Uri): void {
-    void openDeploymentPlanViewWithContentAsync(content, sourceFileUri);
+export function openDeploymentPlanViewWithContent(content: string, sourceFileUri?: vscode.Uri, prerequisites?: DeploymentPrerequisite[]): void {
+    void openDeploymentPlanViewWithContentAsync(content, sourceFileUri, prerequisites);
 }
 
-async function openDeploymentPlanViewWithContentAsync(content: string, sourceFileUri?: vscode.Uri): Promise<void> {
+async function openDeploymentPlanViewWithContentAsync(content: string, sourceFileUri?: vscode.Uri, prerequisites?: DeploymentPrerequisite[]): Promise<void> {
     const planData = tryParseDeploymentPlan(content, sourceFileUri);
+
+    if (prerequisites && prerequisites.length > 0) {
+        planData.prerequisites = prerequisites;
+    }
 
     const locations = await getAvailableAzureLocations();
     if (locations.status === 'loaded') {
@@ -114,16 +119,35 @@ async function findLatestPreparePlan(): Promise<vscode.Uri | undefined> {
 }
 
 async function openDeploymentPlanViewAsync(uri: vscode.Uri): Promise<void> {
-    openDeploymentPlanViewWithContent(await readFileText(uri), uri);
+    const prerequisites = await readDeployPrerequisites(uri);
+    openDeploymentPlanViewWithContent(await readFileText(uri), uri, prerequisites);
     host.setWatcher(watchSingleFile(uri, () => void reloadDeploymentPlan(uri)));
 }
 
 async function reloadDeploymentPlan(uri: vscode.Uri): Promise<void> {
     try {
-        openDeploymentPlanViewWithContent(await readFileText(uri), uri);
+        const prerequisites = await readDeployPrerequisites(uri);
+        openDeploymentPlanViewWithContent(await readFileText(uri), uri, prerequisites);
     } catch {
         // File may have been deleted or be momentarily unavailable; ignore.
     }
+}
+
+/**
+ * Persists the deploy prerequisites the `record_deploy_prerequisites` MCP tool collected, next to the
+ * most recent `prepare-plan.json`, and refreshes the plan view when it is already open so the freshly
+ * detected azd/az status replaces the "unknown" fallback. Returns false when no plan exists yet.
+ */
+export async function recordDeployPrerequisites(prerequisites: DeploymentPrerequisite[]): Promise<boolean> {
+    const preparePlan = await findLatestPreparePlan();
+    if (!preparePlan) {
+        return false;
+    }
+    await writeDeployPrerequisites(preparePlan, prerequisites);
+    if (isDeploymentPlanViewOpen()) {
+        await openDeploymentPlanViewAsync(preparePlan);
+    }
+    return true;
 }
 
 /**

@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Button, CounterBadge, Dialog, DialogActions, DialogBody, DialogContent, DialogSurface, DialogTitle, Spinner, Switch, Textarea, Tooltip } from '@fluentui/react-components';
-import { ArrowSyncRegular, CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, RocketRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
+import { ArrowSyncRegular, CheckmarkRegular, CommentEditRegular, DismissRegular, DocumentRegular, OpenRegular, RocketRegular, SendRegular, WarningRegular } from '@fluentui/react-icons';
 import { WebviewContext } from '@microsoft/vscode-azext-webview/webview';
 import { Fragment, useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import { UiPreviewCard } from './components/UiPreviewCard';
 import './styles/scaffoldPlanView.scss';
 import { type ScaffoldPlanContent, type ScaffoldPlanData, type ScaffoldPlanSection, type PreviewPage, type PreviewStatus, type TreeNode } from './utils/parseScaffoldPlanMarkdown';
+import { getPrerequisiteInstallLink } from './utils/prerequisiteInstallLinks';
 import { isApprovedOrLater } from './utils/projectPlanStatus';
 
 const editableOptions: Record<string, string[]> = {
@@ -978,6 +979,23 @@ const InstalledChip = ({ status }: { status: InstalledStatus }): JSX.Element => 
     </span>
 );
 
+// Renders the Install cell deterministically. The link is resolved from the
+// hardcoded catalog by matching the tool name — never taken from the plan
+// markdown — so a compromised plan can't inject an arbitrary URL. Tools with no
+// known link render a plain dash.
+const InstallLinkCell = ({ toolName }: { toolName: string }): JSX.Element => {
+    const link = getPrerequisiteInstallLink(toolName);
+    if (!link) {
+        return <span className='installLinkEmpty' aria-hidden='true'>—</span>;
+    }
+    return (
+        <a className='installLink' href={link.url} target='_blank' rel='noreferrer' title={`Install ${link.label} — ${link.url}`}>
+            <OpenRegular />
+            <span>Install</span>
+        </a>
+    );
+};
+
 interface PrereqGroup {
     label?: string;
     isDebug: boolean;
@@ -1047,6 +1065,8 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
 
     const renderTable = (table: Extract<ScaffoldPlanContent, { type: 'table' }>, key: number): JSX.Element => {
         const installedIdx = table.headers.findIndex(h => h.toLowerCase().includes('installed'));
+        // Any agent-authored "Install" column is dropped — install links are
+        // rendered deterministically from the hardcoded catalog instead.
         const installIdx = table.headers.findIndex(h => h.trim().toLowerCase() === 'install');
         const toolIdx = table.headers.findIndex(h => h.toLowerCase().includes('tool'));
         const visible = (idx: number): boolean => idx !== installIdx;
@@ -1054,18 +1074,27 @@ const PrerequisitesCard = ({ section, showDebug, onRefreshPrerequisites, isRefre
             <div key={key} className='planTableWrapper'>
                 <table className='planTable'>
                     <thead>
-                        <tr>{table.headers.map((h, hi) => visible(hi) ? <th key={hi}>{h}</th> : null)}</tr>
+                        <tr>
+                            {table.headers.map((h, hi) => visible(hi) ? <th key={hi}>{h}</th> : null)}
+                            <th key='install'>Install</th>
+                        </tr>
                     </thead>
                     <tbody>
-                        {table.rows.map((row, ri) => (
-                            <tr key={ri}>{row.map((cell, ci) =>
-                                !visible(ci)
-                                    ? null
-                                    : ci === installedIdx
-                                        ? <td key={ci}><InstalledChip status={classifyInstalledForRow(toolIdx >= 0 ? (row[toolIdx] ?? '') : '', cell)} /></td>
-                                        : <td key={ci}>{cell}</td>,
-                            )}</tr>
-                        ))}
+                        {table.rows.map((row, ri) => {
+                            const toolName = toolIdx >= 0 ? (row[toolIdx] ?? '') : (row[0] ?? '');
+                            return (
+                                <tr key={ri}>
+                                    {row.map((cell, ci) =>
+                                        !visible(ci)
+                                            ? null
+                                            : ci === installedIdx
+                                                ? <td key={ci}><InstalledChip status={classifyInstalledForRow(toolIdx >= 0 ? (row[toolIdx] ?? '') : '', cell)} /></td>
+                                                : <td key={ci}>{cell}</td>,
+                                    )}
+                                    <td key='install'><InstallLinkCell toolName={toolName} /></td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

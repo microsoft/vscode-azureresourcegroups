@@ -23,6 +23,7 @@ import {
     CommentEditRegular,
     DismissRegular,
     DocumentRegular,
+    OpenRegular,
     SendRegular,
     WarningRegular,
 } from "@fluentui/react-icons";
@@ -51,6 +52,7 @@ import {
     type LocalPlanData,
     type LocalPlanSection,
 } from "./utils/parseLocalDebugPlanMarkdown";
+import { getPrerequisiteInstallLink } from "./utils/prerequisiteInstallLinks";
 
 mermaid.initialize({
     startOnLoad: false,
@@ -101,6 +103,7 @@ const DEFAULT_OPEN_SECTIONS = new Set([
 ]);
 
 const EMULATORS_SECTION = "emulators";
+const PREREQUISITES_SECTION = "prerequisites";
 
 function sectionSortOrder(title: string): number {
     const lower = title.toLowerCase().trim();
@@ -770,19 +773,36 @@ const DataTable = ({
         })()
         : -1;
 
+    // In the Prerequisites section, drop any agent-authored "Install" column and
+    // render a deterministic Install link resolved from the hardcoded catalog by
+    // matching the tool name — the webview never renders a URL taken from the
+    // plan markdown.
+    const isPrereq =
+        sectionTitle?.toLowerCase().trim() === PREREQUISITES_SECTION;
+    const installIdx = isPrereq
+        ? headers.findIndex((h) => h.trim().toLowerCase() === "install")
+        : -1;
+    const toolIdx = isPrereq
+        ? headers.findIndex((h) => h.toLowerCase().includes("tool"))
+        : -1;
+    const columnHidden = (idx: number): boolean => idx === installIdx;
+
     return (
         <div className="dataTableWrapper">
             <table className="dataTable">
                 <thead>
                     <tr>
-                        {headers.map((h, hi) => (
-                            <th
-                                key={hi}
-                                dangerouslySetInnerHTML={{
-                                    __html: formatInline(h),
-                                }}
-                            />
-                        ))}
+                        {headers.map((h, hi) =>
+                            columnHidden(hi) ? null : (
+                                <th
+                                    key={hi}
+                                    dangerouslySetInnerHTML={{
+                                        __html: formatInline(h),
+                                    }}
+                                />
+                            ),
+                        )}
+                        {isPrereq && <th key="install">Install</th>}
                     </tr>
                 </thead>
                 <tbody>
@@ -794,9 +814,14 @@ const DataTable = ({
                         const showWarning =
                             serviceColIdx >= 0 &&
                             isLimitedSupportDataStore(serviceLabel);
+                        const toolName =
+                            toolIdx >= 0 ? (row[toolIdx] ?? "") : (row[0] ?? "");
                         return (
                             <tr key={ri}>
                                 {row.map((cell, ci) => {
+                                    if (columnHidden(ci)) {
+                                        return null;
+                                    }
                                     if (ci === serviceColIdx && showWarning) {
                                         const warningMessage =
                                             limitedSupportWarningMessage();
@@ -835,12 +860,44 @@ const DataTable = ({
                                         />
                                     );
                                 })}
+                                {isPrereq && (
+                                    <td key="install">
+                                        <InstallLinkCell toolName={toolName} />
+                                    </td>
+                                )}
                             </tr>
                         );
                     })}
                 </tbody>
             </table>
         </div>
+    );
+};
+
+// Renders the Install cell deterministically. The link is resolved from the
+// hardcoded catalog by matching the tool name — never taken from the plan
+// markdown — so a compromised plan can't inject an arbitrary URL. Tools with no
+// known link render a plain dash.
+const InstallLinkCell = ({ toolName }: { toolName: string }): JSX.Element => {
+    const link = getPrerequisiteInstallLink(toolName);
+    if (!link) {
+        return (
+            <span className="installLinkEmpty" aria-hidden="true">
+                —
+            </span>
+        );
+    }
+    return (
+        <a
+            className="installLink"
+            href={link.url}
+            target="_blank"
+            rel="noreferrer"
+            title={`Install ${link.label} — ${link.url}`}
+        >
+            <OpenRegular />
+            <span>Install</span>
+        </a>
     );
 };
 
@@ -1078,12 +1135,6 @@ function formatInline(text: string): string {
             .replace(
                 /\[([^\]]+)\]\(([^)]+)\)/g,
                 '<a href="$2" target="_blank" rel="noreferrer">$1</a>',
-            )
-            // Auto-link bare URLs (e.g. install columns in the Prerequisites table)
-            // — skipped when the URL already follows the `"` of an existing href.
-            .replace(
-                /(^|[^"'>])(https?:\/\/[^\s<]+[^\s<.,;:!?)\]])/g,
-                '$1<a href="$2" target="_blank" rel="noreferrer">$2</a>',
             )
             // Restore a small whitelist of presentational HTML tags that the agent
             // emits inside table cells (collapsible endpoint lists, line breaks).

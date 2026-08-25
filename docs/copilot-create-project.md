@@ -180,6 +180,11 @@ For apps with a UI, the preview also renders one **UI Preview** card per screen 
 mock‑up) so you can see the proposed layout before any code is written. Read the plan, then **approve** it (or
 type feedback to revise it).
 
+The plan's **Prerequisites** section lists the tools the agent detected (with an **Installed** status) and an
+**Install** link for each. Those links are not written by the agent — the extension resolves each link
+deterministically from a built‑in catalog by matching the tool name, so the plan markdown can never inject an
+arbitrary URL into the view.
+
 <p align="center">
   <img src="images/copilot-create-project/05-plan-preview.png" alt="Plan preview — plan document" />
 </p>
@@ -237,7 +242,9 @@ When done it opens the **Scaffold Next Steps** view — a "What's next?" card th
 Choosing **Local Development** starts **`azure-debug-plan`**, which scans the project, classifies its services
 and dependencies, and writes `.azure/vscode-debug-plan.md`. After you approve, **`azure-debug-generate`**
 produces the debugging artifacts — `docker-compose` for emulators, VS Code `launch.json` / `tasks.json`, and
-API tests — then opens the **Debug Next Steps** view.
+API tests — then opens the **Debug Next Steps** view. Like the plan preview, the debug plan's **Prerequisites**
+section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the
+plan markdown.
 
 <p align="center">
   <img src="images/copilot-create-project/08-debug-plan-view.png" alt="Debug plan view" />
@@ -254,7 +261,7 @@ Choosing **Deploy** starts **`azure-deploy`**, which writes its structured plan 
 `.copilot-azure/sessions/{id}/prepare-plan.json`) and opens the **Deployment plan** view. The view renders the
 planned Azure services (with editable SKUs), the cost estimate and its breakdown, and post-deploy
 recommendations. After you approve, it generates the infrastructure (Bicep/Terraform), `azure.yaml`,
-and Dockerfiles, then validates them with `azd package`. You deploy with `azd up`.
+and Dockerfiles, then validates them with `azd package`. You deploy with `azd up`. Like the plan preview, the deploy plan's **Prerequisites** section shows deterministic **Install** links resolved by the extension from its built‑in catalog, not from the plan markdown.
 
 <p align="center">
   <img src="images/copilot-create-project/10-deployment-plan-view.png" alt="Deployment plan view" />
