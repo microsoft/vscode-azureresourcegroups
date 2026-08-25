@@ -5,10 +5,13 @@ name: MSBench Evals
 #
 # Split into two jobs on purpose:
 #
-#   build - packages the VSIX and runs the same guards run.sh uses locally.
-#           Needs no credentials, so it can run on any PR and catches the most
-#           common failure (a VSIX missing dist/extension.bundle.js) without
-#           spending an MSBench run.
+#   build - packages the VSIX and asserts what ended up inside it, using the same
+#           guards run.sh applies locally. The shared build template
+#           (microsoft/vscode-azuretools jobs.yml) already compiles and packages,
+#           but it never inspects the archive, so a .vscodeignore rule that drops
+#           resources/agents/ passes every other check in the repo and then shows
+#           up as an agent that mysteriously ignores its instructions. Needs no
+#           credentials, so it catches that on a PR instead of in an MSBench run.
 #   eval  - submits to MSBench. Needs Azure auth, so it is manual-only; see
 #           evals/msbench/README.md ("Running in CI") for the one-time setup.
 #
@@ -19,6 +22,11 @@ on:
     paths:
       - 'evals/msbench/**'
       - '.github/workflows/msbench-evals.yml'
+      # The build job's lasting value is asserting what ends up *inside* the
+      # VSIX, which the shared build template does not check. Both inputs to
+      # that live outside evals/, so they have to trigger it themselves.
+      - '.vscodeignore'
+      - 'resources/agents/**'
   workflow_dispatch:
     inputs:
       benchmark:
