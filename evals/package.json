@@ -7,12 +7,12 @@
     "scripts": {
         "eval": "node run-eval.cjs",
         "eval:plan": "node run-eval.cjs --suite project-plan",
-        "drift": "node check-agent-drift.mjs",
+        "drift": "node check-agent-drift.ts",
         "lint": "vally lint --eval-spec project-plan/eval.yaml",
         "typecheck": "tsc --noEmit -p tsconfig.json",
         "certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/graderCertification.ts",
         "gate-tools": "node check-gate-tools.mjs",
-        "ci:local": "node ci-local.mjs"
+        "ci:local": "node ci-local.ts"
     },
     "license": "MIT",
     "dependencies": {

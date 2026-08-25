@@ -1,5 +1,5 @@
 # Stimulus 1.4 `no-datastore-converter` from evals/project-plan/eval.yaml.
-# Concatenated onto config/base.yaml by build-config.mjs.
+# Concatenated onto config/base.yaml by build-config.ts.
 #
 # Three graders plus the reject_tools constraint, mirrored one-for-one from the
 # source spec.

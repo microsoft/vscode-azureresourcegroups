@@ -1,5 +1,5 @@
 # Stimulus 1.3 `multi-service-order-processing` from evals/project-plan/eval.yaml.
-# Concatenated onto config/base.yaml by build-config.mjs.
+# Concatenated onto config/base.yaml by build-config.ts.
 #
 # Three graders plus the reject_tools constraint. Note there is deliberately no
 # no-premature-plan assertion: the source spec does not include one for this

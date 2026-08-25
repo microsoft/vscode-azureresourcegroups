@@ -114,10 +114,14 @@ second checked-in copy is exactly the drift this eval exists to catch:
 | Path | Built by | From |
 | --- | --- | --- |
 | `assets/extensions/*.vsix` | `run.sh` | `npm run build && npm run package` |
-| `assets/graders/**` | `stage-graders.mjs` | `evals/graders`, `evals/src`, `src/webviews` |
-| `assets/user-overrides.yaml` | `build-config.mjs` | `config/base.yaml` + `config/stimuli/<name>.yaml` |
+| `assets/graders/**` | `stage-graders.ts` | `evals/graders`, `evals/src`, `src/webviews` |
+| `assets/user-overrides.yaml` | `build-config.ts` | `config/base.yaml` + `config/stimuli/<name>.yaml` |
 
 Edit `config/`, never `assets/`.
+
+Both generators are TypeScript run directly by Node, which strips the types at load
+time — there is no build step and no emitted JavaScript. `evals/tsconfig.json`
+type-checks them (`npm run typecheck`) but emits nothing.
 
 ### Why one config file per stimulus
 
@@ -125,7 +129,7 @@ Not a preference — two independent constraints force it:
 
 1. `run-agent.sh` does a literal `cp "$PWD/user-overrides.yaml"`, so that filename is
    the only config the agent will ever read. A stimulus cannot be chosen with a flag;
-   selecting one means *writing that file*, which is what `build-config.mjs` does.
+   selecting one means *writing that file*, which is what `build-config.ts` does.
 2. `promptSteps` feeds a **single chat session**. Stacking the four stimuli as four
    steps would let a later one see the `requirements.json` an earlier one wrote, and
    `no-premature-plan` would fail spuriously.
@@ -134,7 +138,7 @@ So the only real choice was whether the shared preamble (VSIX path, `chatMode`, 
 agent-seeding `script:`) is copied into four files or written once. It is written once,
 in `config/base.yaml`, and concatenated with a stimulus file. The merge is textual
 rather than a YAML round-trip so that the explanatory comments survive into the
-generated file — the two sources define disjoint top-level keys, and `build-config.mjs`
+generated file — the two sources define disjoint top-level keys, and `build-config.ts`
 fails if that ever stops being true.
 
 ## Running the real validators (`exec:`)
@@ -153,7 +157,7 @@ Results land in an `exec` table (`command`, `exitCode`, `stdOut`, `stdErr`), and
 the default `assertZeroExitCode` the harness generates
 `SELECT COUNT(*) > 0 FROM exec WHERE exitCode = 0 AND command = :command`.
 
-`stage-graders.mjs` copies the graders in, preserving repo-relative paths so their
+`stage-graders.ts` copies the graders in, preserving repo-relative paths so their
 relative imports resolve unchanged — the closure spans **two roots**, `evals/` and the
 extension's own `src/webviews/`. It walks the import graph from the three validators
 rather than hardcoding a file list, which catches two things locally in milliseconds

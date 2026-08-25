@@ -25,7 +25,9 @@
         ]
     },
     "include": [
+        "*.ts",
         "src/**/*.ts",
-        "graders/**/*.ts"
+        "graders/**/*.ts",
+        "msbench/*.ts"
     ]
 }

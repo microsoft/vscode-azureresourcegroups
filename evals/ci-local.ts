@@ -19,12 +19,14 @@
  * GitHub token and so cannot be reproduced by this script; use `evals/msbench/run.sh`.
  *
  * Usage:
- *   node evals/ci-local.mjs                 # every cheap gate (seconds-to-minutes)
- *   node evals/ci-local.mjs --merge         # first merge the PR base, as CI does
- *   node evals/ci-local.mjs --job contracts
+ *   node evals/ci-local.ts                 # every cheap gate (seconds-to-minutes)
+ *   node evals/ci-local.ts --merge         # first merge the PR base, as CI does
+ *   node evals/ci-local.ts --job contracts
+ *
+ * Runs straight off source via Node's built-in type stripping — no build step.
  */
 
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncOptions, type SpawnSyncReturns } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -37,8 +39,8 @@ const WORKFLOW = ".github/workflows/agent-contracts.yml";
 const IMAGE_NODE = "22";
 
 const args = process.argv.slice(2);
-const hasFlag = name => args.includes(`--${name}`);
-const flagValue = (name, fallback) => {
+const hasFlag = (name: string): boolean => args.includes(`--${name}`);
+const flagValue = (name: string, fallback: string): string => {
     const i = args.indexOf(`--${name}`);
     return i !== -1 && args[i + 1] ? args[i + 1] : fallback;
 };
@@ -50,17 +52,25 @@ const jobName = flagValue("job", "contracts");
 // The one step that costs real model calls and ~15 minutes; opt in explicitly.
 const EXPENSIVE_STEP = /Run .*evals$/;
 
-function run(cmd, cmdArgs, opts = {}) {
-    return spawnSync(cmd, cmdArgs, { encoding: "utf8", ...opts });
+/** One `run:` step of the workflow job, with its expressions already resolved. */
+interface Step {
+    name: string;
+    run: string;
+    workingDirectory: string;
+    env: Record<string, string>;
 }
 
-function die(message, hint) {
+function run(cmd: string, cmdArgs: string[], opts: SpawnSyncOptions = {}): SpawnSyncReturns<string> {
+    return spawnSync(cmd, cmdArgs, { encoding: "utf8", ...opts }) as SpawnSyncReturns<string>;
+}
+
+function die(message: string, hint?: string): never {
     console.error(`\n✖ ${message}`);
     if (hint) {console.error(`\n${hint}`);}
     process.exit(1);
 }
 
-function resolveToken() {
+function resolveToken(): { token: string | null; source: string } {
     if (process.env.COPILOT_GITHUB_TOKEN) {
         return { token: process.env.COPILOT_GITHUB_TOKEN, source: "COPILOT_GITHUB_TOKEN" };
     }
@@ -80,18 +90,30 @@ function resolveToken() {
  * Deliberately narrow: an unrecognised expression throws instead of resolving to an
  * empty string, so a step cannot quietly run with different inputs than it gets in CI.
  */
-function resolveExpression(raw, token) {
+function resolveExpression(raw: string, token: string | null): string {
     const expr = raw.trim().replace(/^\$\{\{\s*/, "").replace(/\s*\}\}$/, "");
-    if (/^secrets\.\w+\s*\|\|\s*github\.token$/.test(expr)) {return token;}
-    if (expr === "github.token") {return token;}
+    if (/^secrets\.\w+\s*\|\|\s*github\.token$/.test(expr) || expr === "github.token") {
+        // Making this fatal is the whole point of resolving narrowly: substituting an
+        // absent token would hand the step an empty (or, worse, literal "null") value
+        // and the gate would report green for a reason unrelated to the code.
+        if (!token) {
+            throw new Error(
+                `A ${jobName} step needs ${raw.trim()}, but no token could be resolved.\n`
+                + `    Set COPILOT_GITHUB_TOKEN, or run 'gh auth login'.`,
+            );
+        }
+        return token;
+    }
     if (expr === "env.NODE_VERSION") {return IMAGE_NODE;}
     throw new Error(`Unsupported workflow expression: ${raw}`);
 }
 
-function loadSteps(token) {
+function loadSteps(token: string | null): Step[] {
     const file = path.join(repoRoot, WORKFLOW);
     if (!fs.existsSync(file)) {die(`Workflow not found: ${WORKFLOW}`);}
-    const workflow = parseYaml(fs.readFileSync(file, "utf8"));
+    const workflow = parseYaml(fs.readFileSync(file, "utf8")) as {
+        jobs?: Record<string, { steps?: Array<Record<string, unknown>> }>;
+    };
     const job = workflow.jobs?.[jobName];
     if (!job) {
         die(
@@ -100,13 +122,13 @@ function loadSteps(token) {
         );
     }
     return (job.steps ?? [])
-        .filter(step => typeof step.run === "string")
+        .filter((step): step is Record<string, unknown> & { run: string } => typeof step.run === "string")
         .map(step => ({
-            name: step.name ?? step.run.split("\n")[0],
+            name: typeof step.name === "string" ? step.name : step.run.split("\n")[0],
             run: step.run,
-            workingDirectory: step["working-directory"] ?? ".",
+            workingDirectory: typeof step["working-directory"] === "string" ? step["working-directory"] : ".",
             env: Object.fromEntries(
-                Object.entries(step.env ?? {}).map(([k, v]) => [
+                Object.entries((step.env ?? {}) as Record<string, unknown>).map(([k, v]) => [
                     k,
                     typeof v === "string" && v.includes("${{") ? resolveExpression(v, token) : String(v),
                 ]),
@@ -115,7 +137,7 @@ function loadSteps(token) {
 }
 
 /** Stage the tree CI would see. Uses the working tree so unpushed edits are covered. */
-function stageSource() {
+function stageSource(): string {
     const dest = fs.mkdtempSync(path.join(os.tmpdir(), "ci-local-src-"));
     const tar = run("bash", [
         "-c",
@@ -132,7 +154,7 @@ function stageSource() {
  * A moving base branch shows up as failures in files the PR never touched, which is
  * hard to recognise from a red check alone.
  */
-function applyMerge(sourceDir) {
+function applyMerge(sourceDir: string): void {
     const base = run("bash", [
         "-c",
         `cd "${repoRoot}" && git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || true`,
@@ -162,7 +184,7 @@ function applyMerge(sourceDir) {
     fs.rmSync(path.join(sourceDir, ".git"), { recursive: true, force: true });
 }
 
-function buildScript(steps, token) {
+function buildScript(steps: Step[]): string {
     const lines = [
         "set -uo pipefail",
         'export GITHUB_WORKSPACE=/work',
@@ -227,14 +249,18 @@ const sourceDir = stageSource();
 if (useMerge) {applyMerge(sourceDir);}
 
 const scriptPath = path.join(sourceDir, ".ci-local-steps.sh");
-fs.writeFileSync(scriptPath, buildScript(steps, token));
+fs.writeFileSync(scriptPath, buildScript(steps));
 
 console.log(`Runner: node:${IMAGE_NODE} on linux/amd64, clean HOME, cold npm ci\n`);
 
 const result = spawnSync("docker", [
     "run", "--rm",
     "--platform", "linux/amd64",
-    "-e", `COPILOT_GITHUB_TOKEN=${token}`,
+    // Only forward the variable when there is something to forward. Interpolating an
+    // absent token yields the literal string "null" in the container, which is worse
+    // than leaving it unset: a step guarding on `[ -n "$COPILOT_GITHUB_TOKEN" ]` would
+    // take it for a real credential.
+    ...(token ? ["-e", `COPILOT_GITHUB_TOKEN=${token}`] : []),
     "-v", `${sourceDir}:/work`,
     "-w", "/work",
     `node:${IMAGE_NODE}`,

@@ -14,15 +14,17 @@
  * grader that depends on it.
  *
  * Usage:
- *   node evals/check-agent-drift.mjs            # verify contracts + asset hash
- *   node evals/check-agent-drift.mjs --update   # accept current assets as the new baseline
+ *   node evals/check-agent-drift.ts            # verify contracts + asset hash
+ *   node evals/check-agent-drift.ts --update   # accept current assets as the new baseline
+ *
+ * Runs straight off source via Node's built-in type stripping — no build step.
  */
 
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { listEvalAssetFiles, readSupportedModels } from "./executor/agent-assets.mjs";
+import { listEvalAssetFiles, readSupportedModels } from "./src/agent-definition.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -32,11 +34,37 @@ const update = process.argv.includes("--update");
 
 const PLAN = "azure-project-plan";
 
+/** A rule the graders rely on, asserted against one shipped file. */
+interface Contract {
+    /** Path under `resources/agents`. */
+    file: string;
+    name: string;
+    /** Must still match the shipped file. */
+    pattern: RegExp;
+    /** What breaks when the pattern stops matching. */
+    grader: string;
+}
+
+/** A rule that must hold across every shipped file for the agent. */
+interface ConsistencyRule {
+    name: string;
+    pattern: RegExp;
+    message: string;
+}
+
+/** The `agent-assets.lock.json` baseline. */
+interface AssetBaseline {
+    agentAssetsHash: string;
+    scope?: string;
+    updatedAt: string;
+    files?: Record<string, string>;
+}
+
 /**
  * Each contract is a rule the graders rely on. `pattern` must still match the
  * shipped file; `grader` names what breaks when it doesn't.
  */
-const contracts = [
+const contracts: Contract[] = [
     {
         file: `${PLAN}.agent.md`,
         name: "skill-frontmatter",
@@ -130,7 +158,7 @@ const contracts = [
  * two shipped files contradicting each other — the failure mode that made the old
  * hand-written eval skill necessary in the first place.
  */
-const consistencyRules = [
+const consistencyRules: ConsistencyRule[] = [
     {
         name: "never-instructs-vscode-askquestions",
         // Matches an instruction to USE the tool, not the (correct) prohibitions.
@@ -140,8 +168,8 @@ const consistencyRules = [
     },
 ];
 
-function listFiles(dir) {
-    const out = [];
+function listFiles(dir: string): string[] {
+    const out: string[] = [];
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) {out.push(...listFiles(full));}
@@ -150,7 +178,7 @@ function listFiles(dir) {
     return out.sort();
 }
 
-function hashFile(file) {
+function hashFile(file: string): string {
     return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
 
@@ -162,19 +190,19 @@ function hashFile(file) {
  */
 const SCOPE = `${PLAN}.agent.md, ${PLAN}/**, shared-references/**`;
 
-function trackedFiles() {
+function trackedFiles(): string[] {
     return listEvalAssetFiles(repoRoot, PLAN);
 }
 
-function agentAssetFiles() {
-    const out = {};
+function agentAssetFiles(): Record<string, string> {
+    const out: Record<string, string> = {};
     for (const name of trackedFiles()) {
         out[name] = hashFile(path.join(agentsRoot, name));
     }
     return out;
 }
 
-function hashAgentAssets() {
+function hashAgentAssets(): string {
     // Relative path + raw bytes, in sorted order, so the hash is stable across platforms.
     const hash = createHash("sha256");
     for (const name of trackedFiles()) {
@@ -191,12 +219,15 @@ function hashAgentAssets() {
  * usually the base branch shifting under you rather than an edit you made. Listing
  * the paths turns an opaque mismatch into an actionable diff.
  */
-function describeAssetChanges(baseline, current) {
+function describeAssetChanges(
+    baseline: Record<string, string> | undefined,
+    current: Record<string, string>,
+): string[] {
     if (!baseline) {
         return [];
     }
     const names = new Set([...Object.keys(baseline), ...Object.keys(current)]);
-    const changes = [];
+    const changes: string[] = [];
     for (const name of [...names].sort()) {
         if (!(name in current)) {changes.push(`removed:  ${name}`);}
         else if (!(name in baseline)) {changes.push(`added:    ${name}`);}
@@ -205,8 +236,8 @@ function describeAssetChanges(baseline, current) {
     return changes;
 }
 
-const failures = [];
-const checked = [];
+const failures: string[] = [];
+const checked: string[] = [];
 
 for (const contract of contracts) {
     const filePath = path.join(agentsRoot, contract.file);
@@ -269,9 +300,11 @@ try {
         checked.push(`eval-model-pinned (${pinned})`);
     }
 } catch (err) {
-    failures.push(`eval-model-resolution: ${err.message}`);
+    failures.push(`eval-model-resolution: ${err instanceof Error ? err.message : String(err)}`);
 }
-const previous = fs.existsSync(lockPath) ? JSON.parse(fs.readFileSync(lockPath, "utf8")) : null;
+const previous: AssetBaseline | null = fs.existsSync(lockPath)
+    ? JSON.parse(fs.readFileSync(lockPath, "utf8")) as AssetBaseline
+    : null;
 
 if (update) {
     fs.writeFileSync(lockPath, `${JSON.stringify({
@@ -290,7 +323,7 @@ if (update) {
         + `    baseline scope: ${previous.scope ?? "resources/agents/** (whole tree)"}\n`
         + `    current scope:  ${SCOPE}\n`
         + "    Re-record it with:\n"
-        + "      node evals/check-agent-drift.mjs --update",
+        + "      node evals/check-agent-drift.ts --update",
     );
 } else if (previous && previous.agentAssetsHash !== currentHash) {
     const changes = describeAssetChanges(previous.files, currentFiles);
@@ -306,7 +339,7 @@ if (update) {
         + detail
         + "    These files are loaded by this suite, so a change here can move the graders.\n"
         + "    Re-run the evals against the new instructions, then run:\n"
-        + "      node evals/check-agent-drift.mjs --update",
+        + "      node evals/check-agent-drift.ts --update",
     );
 }
 
