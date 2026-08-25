@@ -71,3 +71,6 @@ results/
 
 # Generated eval skills (built from resources/agents/*.agent.md at run time)
 evals/.generated/
+
+# Per-suite MSBench upload payload, rebuilt by evals/msbench/stage.mjs on every run
+evals/msbench/.staged/

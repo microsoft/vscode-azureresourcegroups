@@ -14,6 +14,8 @@ export default defineConfig([
             'api/dist/**',
             'api/out/**',
             'evals/grader-certification/reference-node-fullstack/**',
+            'evals/grader-certification/sample-agent-output/**',
+            'evals/msbench/.staged/**',
             'evals/vscode-parity/**',
             'src/webviews/copilotOnRails/views/react-shim.js',
         ],

@@ -52,6 +52,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Validate MSBench suite configs
+        run: node evals/msbench/validate-suites.mjs
+
       - name: Build and verify the VSIX
         run: ./evals/msbench/run.sh --build-only
 

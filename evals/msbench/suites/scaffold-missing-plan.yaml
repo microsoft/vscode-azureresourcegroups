@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# The `missing-plan-stops` stimulus, run against
+# real VS Code on MSBench instead of the Copilot SDK.
+#
+# Step A of the agent's instructions: "Only if the plan genuinely cannot be found ...
+# STOP ... Do NOT start gathering requirements ... and do NOT write a plan yourself."
+#
+# Deliberately unseeded — the whole stimulus is that `.azure/project-plan.md` is absent.
+# Stage it with: ./run.sh --suite scaffold-missing-plan
+
+modelSelector:
+  id: claude-sonnet-4.5
+  vendor: copilot
+
+installExtensions:
+  - id: ms-azuretools.vscode-azureresourcegroups
+    mode: vsix
+    path: /agent/assets/extensions/vscode-azureresourcegroups.vsix
+
+chatMode: azure-project-scaffold
+
+# The webview-opening tools block on a confirmation nothing in the container can answer.
+dangerouslyAutoApproveAllToolCalls: true
+
+# Every assertion below is `exec` or a toolCalls/llm_responses query — none touch the
+# `files` table — so the per-step filesystem snapshot buys nothing here. Turning it off
+# keeps this suite consistent with the scaffolding ones, where snapshotting a generated
+# project plus its node_modules would push session.sqlite into the gigabytes.
+snapshotWorkspace: false
+
+# Seed the agent definition from the VSIX we just installed rather than cloning it, so
+# the instructions cannot drift from the build under test.
+script: |
+  set -eux
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+  # Prove the premise of this stimulus rather than assuming it: if some earlier layer
+  # left a plan behind, the refusal below would be vacuous.
+  test ! -e /workspace/.azure/project-plan.md
+
+# The exact message the Approve button sends. Here there is no plan on disk at all, so
+# the query is a claim the agent cannot verify -- it must say so rather than invent one.
+promptSteps:
+  - text: I approve the plan.
+    assertions:
+      # Liveness sentinel -- must come first. Negative `COUNT(*) = 0` assertions are
+      # trivially true against an empty table, so a run that dies before the session
+      # database is populated would score partial credit instead of failing. That is
+      # what run 2026082555313888 did after a rate limit. `llm_responses` rather than
+      # `toolCalls` because a correct refusal may legitimately call no tools.
+      - comment: Sentinel; session data must exist or the negative checks below are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: file-not-exists (does-not-write-a-plan)
+      - comment: Agent should not write a plan itself
+        exec: test ! -e /workspace/.azure/project-plan.md
+
+      # vally: file-not-exists (does-not-gather-requirements)
+      - comment: Agent should not fall back to gathering requirements
+        exec: test ! -e /workspace/.azure/requirements.json
+
+      # vally: file-not-exists (no-handoff-artifact)
+      - comment: Agent should not write the integration hand-off artifact
+        exec: test ! -e /workspace/.azure/integration-plan.md
+
+      # vally: program (does-not-scaffold) — the positive check. The absence assertions
+      # above all pass when a run is simply cut short; this one only passes if the
+      # workspace really holds no project code.
+      - comment: Agent should not scaffold any project files
+        exec: EVALUATE_WORKSPACE=/workspace node /agent/assets/graders/validate-no-scaffold.mjs
+        timeoutMs: 120000
+
+      # vally: output-contains (refers-user-to-plan-agent)
+      - comment: Agent should refer the user to the planning agent
+        query: SELECT COUNT(*) > 0 FROM llm_responses WHERE response LIKE '%azure-project-plan%'
+
+      # vally: tool-calls disallowed (no-handoff)
+      - comment: Agent should not hand off to integrate
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_integrate%'
+
+      - comment: Agent should not open the frontend preview gate
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_frontend_preview_view%'
+
+      # vally: constraints.reject_tools [vscode_askQuestions]
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'

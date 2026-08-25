@@ -1,0 +1,96 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# The `fullstack-opens-preview-gate` stimulus, run
+# against real VS Code on MSBench instead of the Copilot SDK.
+#
+# Step C.3 of the agent's instructions: open the preview gate "and STOP — do NOT also
+# call start_project_integrate". Step 11: delete `.azure/.preview-temp/`.
+#
+# Pair this with scaffold-autopilot: same plan, autopilot flag flipped. An agent that
+# always opens the gate, or never does, fails exactly one of the two.
+#
+# Stage it with: ./run.sh --suite scaffold-fullstack
+
+modelSelector:
+  id: claude-sonnet-4.5
+  vendor: copilot
+
+installExtensions:
+  - id: ms-azuretools.vscode-azureresourcegroups
+    mode: vsix
+    path: /agent/assets/extensions/vscode-azureresourcegroups.vsix
+
+chatMode: azure-project-scaffold
+
+dangerouslyAutoApproveAllToolCalls: true
+
+# Required here, not merely preferred. This stimulus scaffolds a full project and the
+# build assertion then runs a real `npm install`, so a per-step snapshot of the
+# workspace would copy node_modules into session.sqlite after every step — the exact
+# "multi-gigabyte / times out the run" case the schema warns about. Every assertion
+# below is therefore `exec` or a toolCalls query; none may touch the `files` table.
+snapshotWorkspace: false
+
+script: |
+  set -eux
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+  cp -r /agent/assets/workspace-seed/.azure /workspace/.azure
+  # An unapproved or missing plan would make every assertion below vacuous.
+  grep -q '\*\*Status\*\*: Approved' /workspace/.azure/project-plan.md
+
+# The exact message the Approve button sends. `ScaffoldPlanViewController.approvePlan`
+# writes `Status: Approved` to the plan file and then launches the scaffold agent with
+# this query, so it is all the agent gets -- four words and whatever it reads off disk.
+promptSteps:
+  - text: I approve the plan.
+    assertions:
+      # Liveness sentinel -- must come first. Negative `COUNT(*) = 0` assertions are
+      # trivially true against an empty table, so a run that dies before the session
+      # database is populated would score partial credit instead of failing. That is
+      # what run 2026082555313888 did after a rate limit. `llm_responses` rather than
+      # `toolCalls` because a correct refusal may legitimately call no tools.
+      - comment: Sentinel; session data must exist or the negative checks below are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: file-exists (writes-handoff-artifact)
+      - comment: Agent should write the integration hand-off artifact
+        exec: test -e /workspace/.azure/integration-plan.md
+
+      # vally: program (integration-plan-contract)
+      - comment: integration-plan.md should satisfy the hand-off contract
+        exec: EVALUATE_WORKSPACE=/workspace node /agent/assets/graders/validate-integration-plan.mjs --has-frontend
+        timeoutMs: 120000
+
+      # vally: tool-calls required (opens-preview-gate)
+      - comment: Agent should open the frontend preview gate
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_frontend_preview_view%'
+
+      # vally: tool-calls disallowed (gate-owns-the-handoff)
+      # The gate owns the hand-off; calling both would hand off twice.
+      - comment: Agent should not also hand off to integrate
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_project_integrate%'
+
+      # vally: program (frontend-preview-embeddable)
+      - comment: Scaffolded frontend should be preview-embeddable and keep the API seam
+        exec: EVALUATE_WORKSPACE=/workspace node /agent/assets/graders/validate-frontend-scaffold.mjs
+        timeoutMs: 120000
+
+      # vally: program (project-builds)
+      # The only assertion that proves the scaffold actually works rather than merely
+      # looks right. Runs a real install + build for every workspace package, so it gets
+      # the whole 20m budget the local suite gives it.
+      - comment: Scaffolded project should install and build
+        exec: EVALUATE_WORKSPACE=/workspace node /agent/assets/graders/validate-project-builds.mjs --require-frontend
+        timeoutMs: 1200000
+
+      # vally: file-not-exists (preview-temp-cleaned-up)
+      - comment: Agent should delete the throwaway preview
+        exec: test ! -e /workspace/.azure/.preview-temp/manifest.json
+
+      # vally: constraints.reject_tools [vscode_askQuestions]
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'

@@ -1,0 +1,92 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Produces the fullstack scaffold seed by running the real planning agent in real VS Code.
+#
+# The scaffold agent's first action is to read `.azure/project-plan.md`, so something has
+# to put one there. Checking one in makes that document a second source of truth: edit the
+# planner's template and the stored copy still describes the old shape, so the scaffold
+# graders keep passing against a plan no agent would emit.
+#
+# This suite replaces the previous SDK-driven generator. Both produced a real plan, but the
+# SDK drives Copilot CLI headlessly and behaves differently from the VS Code harness the
+# scaffold suites are measured in -- so the seed was made under one runtime and consumed
+# under another. Generating it here keeps producer and consumer on the same harness.
+#
+# Harvest the result with:
+#   node evals/msbench/harvest-seed.mjs --run-id <id> --target fullstack
+#
+# The harvester refuses to promote a run whose assertions below did not all pass, so a
+# broken planner surfaces as "could not harvest seed" rather than quietly becoming a
+# fixture that bakes the break into every scaffold suite.
+
+modelSelector:
+  id: claude-sonnet-4.5
+  vendor: copilot
+
+installExtensions:
+  - id: ms-azuretools.vscode-azureresourcegroups
+    mode: vsix
+    path: /agent/assets/extensions/vscode-azureresourcegroups.vsix
+
+chatMode: azure-project-plan
+
+dangerouslyAutoApproveAllToolCalls: true
+
+# Nothing here queries the `files` table, and the planner writes a whole `.preview-temp/`
+# tree, so per-step snapshotting is pure cost. The seed is recovered from `patch.diff`.
+snapshotWorkspace: false
+
+# Unpack the agent definitions from the VSIX under test so the planner's instructions
+# cannot drift from the build the scaffold suites are measured against.
+script: |
+  set -eux
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+
+promptSteps:
+  # Turn 1: the requirements the planner gathers from. This wording drives a UI plan, so
+  # the planner writes `.azure/.preview-temp/` and the scaffold suites inherit the
+  # leftovers their cleanup grader needs.
+  - text: |
+      I want to build a support ticket tracker where staff can file tickets,
+      assign owners, and follow status changes. React frontend, Azure Functions
+      backend, PostgreSQL for the data. I want it to look polished.
+
+  # Turn 2: stands in for `RequirementsViewController`, which writes the confirmed
+  # `.azure/requirements.json` back to disk and re-invokes the agent with a query that
+  # begins exactly this way. Without a human to submit the webview, the planner would
+  # otherwise stop at the requirements gate and never write a plan.
+  - text: Requirements submitted at .azure/requirements.json. All answers confirmed.
+    assertions:
+      # Liveness sentinel -- must come first. Every check below is satisfied by an
+      # empty workspace plus an empty session database, so without this a run that
+      # died early would look like a clean planner failure instead of a void run.
+      - comment: Sentinel; session data must exist or the checks below are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Planner should write the project plan
+        exec: test -e /workspace/.azure/project-plan.md
+
+      # The planner's own contract graders. These are the promotion gate: the harvester
+      # only writes a seed when all of them passed.
+      - comment: Plan should match the skill's numbered skeleton
+        exec: EVALUATE_WORKSPACE=/workspace node /agent/assets/graders/validate-project-plan.mjs
+        timeoutMs: 120000
+
+      # Hard rule 9: the plan view is a parser, not a renderer. An off-template plan
+      # shows a parse-error banner instead of the plan, and would seed every scaffold
+      # suite with a document the real product cannot display.
+      - comment: Plan should be parseable by the plan-preview webview
+        exec: EVALUATE_WORKSPACE=/workspace node /agent/assets/graders/validate-webview-parseable.mjs
+        timeoutMs: 120000
+
+      # The planner writes `Status: Planning` and stops at the approval gate; only the
+      # extension flips it to `Approved` when the user clicks Approve. If a plan ever
+      # arrives already approved, the harvester's Status rewrite would be masking a real
+      # behaviour change, so fail here instead. Single-quoted because the pattern
+      # contains ": ", which YAML would otherwise read as a nested mapping.
+      - comment: Planner should leave the plan awaiting approval
+        exec: 'grep -q ''\*\*Status\*\*: Planning'' /workspace/.azure/project-plan.md'

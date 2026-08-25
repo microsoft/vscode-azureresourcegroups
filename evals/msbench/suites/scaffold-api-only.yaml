@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# The `api-only-hands-off-directly` stimulus, run
+# against real VS Code on MSBench instead of the Copilot SDK.
+#
+# Step C.4 of the agent's instructions: call start_project_integrate "only when the plan
+# has NO frontend (the preview gate is skipped)".
+#
+# Stage it with: ./run.sh --suite scaffold-api-only
+
+modelSelector:
+  id: claude-sonnet-4.5
+  vendor: copilot
+
+installExtensions:
+  - id: ms-azuretools.vscode-azureresourcegroups
+    mode: vsix
+    path: /agent/assets/extensions/vscode-azureresourcegroups.vsix
+
+chatMode: azure-project-scaffold
+
+dangerouslyAutoApproveAllToolCalls: true
+
+# See scaffold-fullstack.yaml: the build assertion runs a real npm install, so per-step
+# snapshotting is not survivable here.
+snapshotWorkspace: false
+
+script: |
+  set -eux
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+  cp -r /agent/assets/workspace-seed/.azure /workspace/.azure
+  grep -q '\*\*Status\*\*: Approved' /workspace/.azure/project-plan.md
+  # This stimulus is only meaningful for a plan with no UI. The seed-plan-api-only suite
+  # asserts this, but the seed travels through several copies to get here.
+  test ! -e /workspace/.azure/.preview-temp
+
+# The exact message the Approve button sends (`ScaffoldPlanViewController.approvePlan`).
+promptSteps:
+  - text: I approve the plan.
+    assertions:
+      # Liveness sentinel -- must come first. Negative `COUNT(*) = 0` assertions are
+      # trivially true against an empty table, so a run that dies before the session
+      # database is populated would score partial credit instead of failing. That is
+      # what run 2026082555313888 did after a rate limit. `llm_responses` rather than
+      # `toolCalls` because a correct refusal may legitimately call no tools.
+      - comment: Sentinel; session data must exist or the negative checks below are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      # vally: file-exists (writes-handoff-artifact)
+      - comment: Agent should write the integration hand-off artifact
+        exec: test -e /workspace/.azure/integration-plan.md
+
+      # vally: program (integration-plan-contract) — no --has-frontend for an API-only plan
+      - comment: integration-plan.md should satisfy the hand-off contract
+        exec: EVALUATE_WORKSPACE=/workspace node /agent/assets/graders/validate-integration-plan.mjs
+        timeoutMs: 120000
+
+      # vally: tool-calls required (hands-off-to-integrate)
+      - comment: Agent should hand off directly to integrate
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_project_integrate%'
+
+      # vally: tool-calls disallowed (skips-preview-gate)
+      - comment: Agent should not open the preview gate for a plan with no frontend
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%open_frontend_preview_view%'
+
+      # vally: program (project-builds)
+      # No frontend means no preview gate, so the build is the only evidence that this
+      # shape produced a working project rather than a plausible-looking directory tree.
+      - comment: Scaffolded project should install and build
+        exec: EVALUATE_WORKSPACE=/workspace node /agent/assets/graders/validate-project-builds.mjs
+        timeoutMs: 1200000
+
+      # vally: constraints.reject_tools [vscode_askQuestions]
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'

@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Produces the API-only scaffold seed by running the real planning agent in real VS Code.
+# See seed-plan-fullstack.yaml for why the seed is generated rather than checked in.
+#
+# The `API only` shape matters: for a plan with no UI the planner skips `.preview-temp/`
+# entirely, which is exactly the starting state the `scaffold-api-only` stimulus needs to
+# prove the scaffold agent hands off directly instead of opening the frontend preview gate.
+#
+# Harvest the result with:
+#   node evals/msbench/harvest-seed.mjs --run-id <id> --target api-only
+
+modelSelector:
+  id: claude-sonnet-4.5
+  vendor: copilot
+
+installExtensions:
+  - id: ms-azuretools.vscode-azureresourcegroups
+    mode: vsix
+    path: /agent/assets/extensions/vscode-azureresourcegroups.vsix
+
+chatMode: azure-project-plan
+
+dangerouslyAutoApproveAllToolCalls: true
+
+snapshotWorkspace: false
+
+script: |
+  set -eux
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+
+promptSteps:
+  - text: |
+      I need a backend-only REST service for tracking inventory levels across
+      warehouses. Azure Functions with PostgreSQL. No web UI at all — it is
+      consumed by other services.
+
+  # Stands in for `RequirementsViewController` re-invoking the agent after the user
+  # submits the requirements webview.
+  - text: Requirements submitted at .azure/requirements.json. All answers confirmed.
+    assertions:
+      # Liveness sentinel -- must come first.
+      - comment: Sentinel; session data must exist or the checks below are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
+      - comment: Planner should write the project plan
+        exec: test -e /workspace/.azure/project-plan.md
+
+      - comment: Plan should match the skill's numbered skeleton
+        exec: EVALUATE_WORKSPACE=/workspace node /agent/assets/graders/validate-project-plan.mjs
+        timeoutMs: 120000
+
+      # No `validate-webview-parseable` here: an `API only` plan never opens the plan
+      # preview, so requiring it would assert behaviour this stimulus does not exercise.
+
+      - comment: Planner should leave the plan awaiting approval
+        exec: 'grep -q ''\*\*Status\*\*: Planning'' /workspace/.azure/project-plan.md'
+
+      # The whole point of this seed: no UI means no preview scaffolding on disk.
+      - comment: API-only plan should not produce a frontend preview
+        exec: test ! -e /workspace/.azure/.preview-temp

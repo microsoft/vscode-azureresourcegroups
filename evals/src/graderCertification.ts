@@ -8,6 +8,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import type { PlanGateState } from './artifacts/planEvaluation.ts';
 import { validatePlanEvaluationContract } from './artifacts/planEvaluation.ts';
+import { validateFrontendScaffold } from './artifacts/frontendScaffold.ts';
+import { validateIntegrationPlanArtifact } from './artifacts/integrationPlan.ts';
 import { validatePreviewArtifacts } from './artifacts/preview.ts';
 import { validateProjectPlanArtifact } from './artifacts/projectPlan.ts';
 import { validateRequirementsArtifact } from './artifacts/requirements.ts';
@@ -132,18 +134,24 @@ async function runOfflineValidators(
     scenario: CorEvaluationScenario,
 ): Promise<Map<string, string[]>> {
     const azure = path.join(workspace, '.azure');
-    const [requirements, projectPlan] = await Promise.all([
+    const [requirements, projectPlan, integrationPlan] = await Promise.all([
         fs.readFile(path.join(azure, 'requirements.json'), 'utf8'),
         fs.readFile(path.join(azure, 'project-plan.md'), 'utf8'),
+        fs.readFile(path.join(azure, 'integration-plan.md'), 'utf8'),
     ]);
     const validations: Array<readonly [string, ArtifactValidationResult]> = await Promise.all([
         Promise.resolve(['requirements', validateRequirementsArtifact(requirements, { requireConfirmed: true })] as const),
         Promise.resolve(['project-plan', validateProjectPlanArtifact(projectPlan, { expectedStatus: 'Integrated' })] as const),
+        Promise.resolve([
+            'integration-plan',
+            validateIntegrationPlanArtifact(integrationPlan, { hasFrontend: (scenario.tags.frontend ?? 'none') !== 'none' }),
+        ] as const),
         readPlanGateState(azure, scenario, projectPlan).then(state => [
             'plan-gate',
             validatePlanEvaluationContract(state.expectedFrontend, state.generatedFrontend, state.gate),
         ] as const),
         validatePreviewArtifacts(path.join(azure, '.preview-temp')).then(result => ['preview', result] as const),
+        validateFrontendScaffold(workspace).then(result => ['frontend-scaffold', result] as const),
     ]);
     const results = new Map(validations.map(([id, result]) => [id, issueCodes(result)]));
     return results;

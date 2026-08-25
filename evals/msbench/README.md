@@ -14,12 +14,6 @@ The two are complementary, not redundant:
 | Where | GitHub Actions, ~30 min | MSBench CES, with video + screenshots |
 | Role | Fast PR gate | Nightly, pass@k, model sweeps |
 
-The single stimulus ported here is [`photo-app-requirements`](../project-plan/eval.yaml)
-— its six graders plus the `reject_tools` constraint become the seven assertions in
-`assets/user-overrides.yaml`. `evals/project-plan/eval.yaml` stays the source of truth;
-this folder is a port of it, so changes there need mirroring here until the remaining six
-stimuli are wired up.
-
 ## Quick start
 
 ```bash
@@ -34,6 +28,97 @@ rebuilding the extension using `./run.sh --skip-build`.
 `msbench-cli` plus the `vscode` special agent from the internal feed, builds and
 stages the VSIX, and submits. The only prerequisites are Azure CLI and Node.
 
+## Suites
+
+One MSBench run is one config, and `promptSteps` is a multi-turn sequence rather than a
+list of scenarios, so each Vally stimulus is its own suite:
+
+```bash
+node stage.mjs --list                        # what is available
+./run.sh --suite scaffold-unapproved-plan    # pick one
+```
+
+| Suite | Stimulus | Cost |
+| --- | --- | --- |
+| `project-plan` (default) | `photo-app-requirements` | cheap |
+| `seed-plan-fullstack` | produces the fullstack seed | planning only |
+| `seed-plan-api-only` | produces the API-only seed | planning only |
+| `scaffold-missing-plan` | `missing-plan-stops` | cheap |
+| `scaffold-unapproved-plan` | `unapproved-plan-stops` | cheap |
+| `scaffold-fullstack` | `fullstack-opens-preview-gate` | scaffolds + builds |
+| `scaffold-api-only` | `api-only-hands-off-directly` | scaffolds + builds |
+| `scaffold-autopilot` | `autopilot-skips-preview-gate` | scaffolds + builds |
+
+The scaffold agent's first action is reading `.azure/project-plan.md`, and nothing in
+the container puts one there. The seed comes from a real planning-agent run rather than
+a checked-in file, so produce it once before the first scaffold suite:
+
+```bash
+# from the repo root
+./evals/msbench/run.sh --suite seed-plan-fullstack
+node evals/msbench/harvest-seed.mjs --run-id <id> --target fullstack
+
+./evals/msbench/run.sh --suite seed-plan-api-only
+node evals/msbench/harvest-seed.mjs --run-id <id> --target api-only
+
+npm run eval:msbench:seed:check   # confirms the seed matches resources/agents/
+```
+
+The seed runs the planner in the same VS Code harness the scaffold suites are measured
+in. An SDK-driven generator would be cheaper, but it drives Copilot CLI headlessly and
+behaves differently from this harness, so the seed would be produced under one runtime
+and consumed under another.
+
+`harvest-seed.mjs` refuses to promote a run whose assertions did not all pass — including
+the liveness sentinel — so a broken planner, or a run voided by a rate limit, surfaces as
+"could not harvest seed" rather than quietly becoming a fixture that bakes the break into
+every scaffold suite.
+
+`scaffold-fullstack` and `scaffold-autopilot` deliberately share one seed, differing
+only in the `[AUTOPILOT MODE]` prompt prefix and the two inverted gate assertions. That
+pairing is what makes the gate decision falsifiable: an agent that always opens the
+gate, or never does, fails exactly one of the two. `scaffold-unapproved-plan` shares the
+same planner trial as `scaffold-fullstack`, differing by one row — its `Status`.
+
+### How assets get staged
+
+`stage.mjs` builds `.staged/`, which is what gets uploaded as `--agent-assets` and
+appears at `/agent/assets` in the container:
+
+```
+.staged/
+  user-overrides.yaml    the chosen suite's config
+  extensions/            the VSIX
+  graders/*.mjs          the eval graders, bundled
+  workspace-seed/.azure/ the generated plan (scaffold suites only)
+```
+
+Graders are **bundled with esbuild** rather than copied. Run from source they are `.ts`
+files importing across `evals/src/`, which needs both that directory layout reproduced
+in the container and a Node new enough to strip types (>=22.18). Bundling collapses each
+to one dependency-free `.mjs` targeting Node 18, so the container only has to run ESM.
+They are built from the same sources `graderCertification` certifies, so the certified
+path and the MSBench path stay the same code.
+
+`.staged/` is rebuilt from scratch each run and gitignored, which keeps `assets/`
+pristine and — more importantly — stops a previous suite's seed leaking into the next
+one, where a stale `.azure/` would quietly turn "no plan on disk" into a pass.
+
+### Validating suites without submitting
+
+```bash
+# from the repo root
+npm run eval:msbench:validate
+```
+
+`run.sh` runs this before staging, and CI runs it in the credential-free `build` job.
+A suite config is otherwise only parsed inside the container, after a VSIX build and an
+Azure login, where a typo is indistinguishable from a failed eval. It checks the things
+that have actually gone wrong: YAML that does not parse (an unquoted
+`exec: grep -q '**Status**: Planning'` reads as a nested mapping and takes the run
+down), a `files` query while snapshotting is off, a suite in `suites/` that `stage.mjs`
+cannot stage, and an `exec` naming a grader that does not exist.
+
 ### Access
 
 You need the **`MSBench User`** role, requested at <https://aka.ms/msbench/access>
@@ -44,27 +129,25 @@ provisioning, and no other team needs to be involved.
 `run.sh` mints the feed token with `az account get-access-token` rather than using
 `keyring`, which otherwise drops into an interactive prompt and hangs.
 
+Until the role syncs, the install step fails like this:
+
+```
+ERROR: No matching distribution found for msbench-cli
+```
+
+That message is misleading — the package exists, but pip renders the feed's `403`
+as if it were missing. `run.sh` queries the feed on failure and prints the real
+reason ("lacks permission ... You need to have `ReadPackages`") along with the
+identity it used, so a missing entitlement is distinguishable from a typo, an
+expired login, or a VPN problem. Being signed in to `az` is not the same as being
+entitled; the role is a separate request.
+
 ## Verified result
 
-**All 7 assertions passed, `resolved: true`, on every run below** (links need
-Corpnet/Azure VPN):
-
-| Run | Base branch | Notes |
-| --- | --- | --- |
-| [`2026082467524759`](https://msbenchapp.azurewebsites.net/run-analysis/2026082467524759) | Copilot-on-Rails | first green run |
-| [`2026082468156047`](https://msbenchapp.azurewebsites.net/run-analysis/2026082468156047) | Copilot-on-Rails | from a clean venv |
-| [`2026082471095778`](https://msbenchapp.azurewebsites.net/run-analysis/2026082471095778) | Copilot-on-Rails | CI-style flags |
-| [`2026082478636953`](https://msbenchapp.azurewebsites.net/run-analysis/2026082478636953) | Copilot-on-Rails | control |
-| [`2026082479418416`](https://msbenchapp.azurewebsites.net/run-analysis/2026082479418416) | `feat/CoR` | this PR's base |
-| [`2026082509500207`](https://msbenchapp.azurewebsites.net/run-analysis/2026082509500207) | `meganmott/happy-hedgehog` | while stacked on #1683, before it merged |
-
-The agent produced a 236-line `.azure/requirements.json` and called the extension's real
+Runs `2026082467524759`, `2026082468156047` (from a clean venv) and `2026082471095778`
+— **all 7 assertions passed**, `resolved: true`, every time. The agent produced a
+236-line `.azure/requirements.json` and called the extension's real
 `open_requirements_view` tool (as `mcp_copilot_azure_open_requirements_view`).
-
-> **Flaky failure mode:** back-to-back runs can fail with `"type": "RATE_LIMIT"` in
-> `output/error.json` — the Copilot API rate-limits the agent mid-run, so the artifact
-> assertions fail simply because nothing was produced. This is not a product failure.
-> Leave a few minutes between runs, and check `error.json` before believing a red result.
 
 ## How it works
 
@@ -111,6 +194,33 @@ false-match text the agent merely read.
 There is also an LLM-as-judge assertion (`comment` + `prompt`) with no Vally
 equivalent, worth considering for the qualitative parts of a plan.
 
+### Why the scaffold suites avoid the `files` table
+
+`snapshotWorkspace` defaults to on, copying the whole workspace into `session.sqlite`
+after **every step** — which is what makes `files` queries possible. The scaffold
+stimuli generate an entire project and then run a real `npm install`, so snapshotting
+would be copying `node_modules` after each step: the "multi-gigabyte / times out the
+run" case the schema itself warns about. There are no path exclusions; it is all or
+nothing.
+
+So the scaffold suites set `snapshotWorkspace: false` and express **every** file check
+as `exec` instead:
+
+| Vally grader | scaffold suite assertion |
+| --- | --- |
+| `file-exists` | `exec: test -e /workspace/…` |
+| `file-not-exists` | `exec: test ! -e /workspace/…` |
+| `file-matches` | `exec: grep -q … /workspace/…` |
+| `program` | `exec:` running the bundled grader |
+
+`toolCalls` and `llm_responses` assertions are unaffected — they keep working with
+snapshotting off. The run fails fast if any assertion queries `files` while it is
+disabled, so a mistake here is loud rather than silent.
+
+This turned out to be the better mapping anyway: the `program` graders run as
+themselves rather than as a SQL approximation of themselves, so there is no second
+implementation of the contract to drift.
+
 ## Results and artifacts
 
 ```bash
@@ -129,7 +239,7 @@ Assertion detail is in `eval.json`. Also captured: `screen_recording.mp4`,
 this on `ubuntu-latest`. It is **`workflow_dispatch` only**, because it cannot run yet
 without one-time setup.
 
-The Vally CI path needed no secrets — `copilot-requests: write` lets the built-in
+`vally-evals.yml` needs no secrets — `copilot-requests: write` lets the built-in
 `GITHUB_TOKEN` authenticate the Copilot CLI. That trick does not transfer. MSBench runs
 on CES, which identifies callers by Entra client id, so CI needs a real Azure identity:
 
@@ -161,13 +271,37 @@ Three failure modes cost real time while building this, all of which now fail fa
 - **`VSIX has no resources/agents/`** when the VSIX is fine — `unzip -l | grep -q`
   under `set -o pipefail` reports SIGPIPE (141) as failure.
 
+Two more that show up only after a real submission:
+
+- **`RATE_LIMIT` kills the run.** The underlying error is transient — the message
+  literally says "please wait 1 seconds" — but the harness treats any rate limit as
+  fatal and abandons the whole run, so a momentary hiccup costs ~20 minutes. Retry, or
+  batch several attempts in one go (extra flags pass straight through to `msbench-cli`):
+
+  ```bash
+  ./run.sh --suite scaffold-unapproved-plan --skip-build --repeat 3
+  ```
+
+  Note the gate suites are only cheap when the agent *behaves*. Runs
+  2026082555313888 and 2026082561519259 each burned ~1.8-2.1M tokens over 33-39 steps
+  precisely because the agent bypassed the gate and scaffolded a full project, which
+  makes the failure mode the expensive one and rate limits more likely on exactly the
+  suites that are catching a bug.
+
+- **A rate-limited run reports scores anyway, and they are meaningless.** MSBench still
+  evaluates assertions against an empty session database, where `COUNT(*) = 0` checks
+  pass vacuously. The sentinel assertion at the top of each scaffold suite exists to
+  make this unmistakable: if it fails, ignore every other result in the run and retry.
+  Read `patch.diff` for what the agent actually did.
+
 ## Next steps
 
-- The other three single-turn stimuli, plus the real `program` validators as `exec:`
-  assertions (needs a repo checkout in the container).
+- The remaining project-plan stimuli, plus its `program` validators as `exec:`
+  assertions — the scaffold suites already do this, so the staging machinery exists.
 - The three multi-turn stimuli, using `promptSteps` (native multi-turn).
-- Nightly CI once the CES identity is allowlisted; keep
-  [`agent-contracts.yml`](../../.github/workflows/agent-contracts.yml) as the fast PR
+- Confirm the container's Node version. The graders are bundled for Node 18 so this
+  should not matter, but it has not been observed on a real run.
+- Nightly CI once the CES identity is allowlisted; keep `vally-evals.yml` as the fast PR
   gate.
 - Expand gates and graders, including browser assertions for the preview canvas.
 

@@ -1027,6 +1027,8 @@
         "api-extractor": "cd api && npm run api-extractor",
         "eval": "node evals/run-eval.cjs",
         "eval:plan": "node evals/run-eval.cjs --suite project-plan",
+        "eval:msbench:validate": "node evals/msbench/validate-suites.mjs",
+        "eval:msbench:seed:check": "node evals/msbench/harvest-seed.mjs --check",
         "eval:report": "node evals/generate-report.cjs",
         "eval:drift": "node evals/check-agent-drift.mjs",
         "eval:cor:graders:certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/src/graderCertification.ts",

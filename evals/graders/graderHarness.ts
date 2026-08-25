@@ -54,18 +54,33 @@ export function failWithIssues(summary: string, issues: ArtifactValidationIssue[
  * Run a grader body, mapping its outcome onto the exit-code contract above.
  * An unexpected throw (TypeError, ReferenceError, …) exits 3 rather than 1 so a
  * broken grader is never reported as a product regression.
+ *
+ * The body may be async; it is awaited so a rejection cannot escape as an unhandled
+ * rejection and PASS is never printed before the checks finish.
  */
-export function runGrader(name: string, body: () => void): void {
-    try {
-        body();
-    } catch (error) {
+export function runGrader(name: string, body: () => void | Promise<void>): void {
+    const onError = (error: unknown): never => {
         if (error instanceof ProductFailure) {
             console.error(`FAIL: ${name} — ${error.message}`);
             process.exit(EXIT_PRODUCT_FAILURE);
         }
         console.error(`GRADER ERROR: ${name} threw ${error instanceof Error ? error.stack ?? error.message : String(error)}`);
         process.exit(EXIT_GRADER_ERROR);
+    };
+    const pass = (): never => {
+        console.error(`PASS: ${name}`);
+        process.exit(EXIT_PASS);
+    };
+
+    try {
+        const result = body();
+        if (result instanceof Promise) {
+            result.then(pass, onError);
+            return;
+        }
+    } catch (error) {
+        onError(error);
+        return;
     }
-    console.error(`PASS: ${name}`);
-    process.exit(EXIT_PASS);
+    pass();
 }

@@ -21,7 +21,7 @@ import { workflowToolDefinitions } from "../mcp/workflow-tools.mjs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "../..");
-const AGENT_NAME = "azure-project-plan";
+const DEFAULT_AGENT_NAME = "azure-project-plan";
 
 function getBundledCliPath() {
     const pkgDir = path.resolve(__dirname, "../node_modules/@github/copilot");
@@ -111,6 +111,14 @@ function convertSdkEvent(event) {
     }
 }
 
+/**
+ * The SDK signals an exhausted turn budget by message only, so match it explicitly and
+ * let every other failure keep propagating as a genuine harness error.
+ */
+function isTimeout(error) {
+    return /Timeout after \d+ms waiting for session\.idle/.test(error?.message ?? "");
+}
+
 class AzureAgentExecutor {
     name = "azure-agent-executor";
     supportsMultiTurn = true;
@@ -123,16 +131,21 @@ class AzureAgentExecutor {
         const startedAt = new Date();
         let skillsLoaded = [];
         let assistantOutput = "";
+        let timedOut = false;
         const rawEvents = [];
 
-        const skillDir = buildEvalSkill(repoRoot, AGENT_NAME, path.resolve(__dirname, "../.generated/skills"));
+        // The scaffold suite drives a different agent than the planning suite, so the
+        // name is an input rather than a constant.
+        const agentName = options.env?.COR_EVAL_AGENT ?? DEFAULT_AGENT_NAME;
+        const skillDir = buildEvalSkill(repoRoot, agentName, path.resolve(__dirname, "../.generated/skills"));
         const skillDirs = [skillDir];
 
         // Put the shipped instruction folder (including references/) in the workspace,
         // exactly as the extension writes it to a user's .github/agents.
-        const copiedFolders = prepareAgentWorkspace(repoRoot, options.workDir, AGENT_NAME);
-        const { model, supported } = resolveEvalModel(repoRoot, AGENT_NAME, options.model);
+        const copiedFolders = prepareAgentWorkspace(repoRoot, options.workDir, agentName);
+        const { model, supported } = resolveEvalModel(repoRoot, agentName, options.model);
 
+        process.stderr.write(`[azure-agent-executor] agent: ${agentName}\n`);
         process.stderr.write(`[azure-agent-executor] workDir: ${options.workDir}\n`);
         process.stderr.write(`[azure-agent-executor] skillDirs: ${JSON.stringify(skillDirs)}\n`);
         process.stderr.write(`[azure-agent-executor] agent assets: ${copiedFolders.join(", ") || "none"}\n`);
@@ -170,14 +183,27 @@ class AzureAgentExecutor {
             });
 
             const prompts = stimulus.turns ?? [stimulus.prompt];
-            for (const prompt of prompts) {
-                const result = await session.sendAndWait(prompt, options.timeout);
-                if (result?.data?.content) {
-                    assistantOutput += result.data.content + "\n";
+            try {
+                for (const prompt of prompts) {
+                    const result = await session.sendAndWait(prompt, options.timeout);
+                    if (result?.data?.content) {
+                        assistantOutput += result.data.content + "\n";
+                    }
                 }
+            } catch (error) {
+                // A timeout is a verdict, not a lost trial: the workspace and the events
+                // collected so far are exactly the evidence needed to decide whether the
+                // agent stopped when it should have. Letting this escape would discard
+                // `rawEvents` and report a busy agent as "0 tool calls", which hides the
+                // real behaviour behind a harness artifact.
+                if (!isTimeout(error)) {
+                    throw error;
+                }
+                timedOut = true;
+                process.stderr.write(`[azure-agent-executor] ${error.message} — grading the partial trajectory\n`);
             }
 
-            await session.disconnect();
+            await session.disconnect().catch(() => { /* the trial is already over */ });
         } finally {
             // Shutdown failures are irrelevant once the trial has produced its result.
             await client.stop().catch(() => { /* ignore */ });
@@ -233,6 +259,7 @@ class AzureAgentExecutor {
                 executor: this.name,
                 skillsLoaded,
                 sessionID: "unknown",
+                timedOut,
             },
             metrics: {
                 ...metrics,

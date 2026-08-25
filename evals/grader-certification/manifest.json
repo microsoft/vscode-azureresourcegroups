@@ -1,14 +1,16 @@
 {
     "schemaVersion": 1,
     "fixture": {
-        "id": "reference-node-fullstack",
-        "path": "evals/grader-certification/reference-node-fullstack",
-        "description": "Node.js full-stack reference project for planning artifact grader certification.",
+        "id": "sample-agent-output",
+        "path": "evals/grader-certification/sample-agent-output",
+        "description": "Workspace as the planning and scaffold agents leave it \u2014 the artifacts the offline validators grade. Kept separate from reference-node-fullstack, which is a plain deployable app carrying no agent artifacts.",
         "offlineValidators": [
             "requirements",
             "project-plan",
             "plan-gate",
-            "preview"
+            "preview",
+            "integration-plan",
+            "frontend-scaffold"
         ]
     },
     "mutations": [
@@ -59,6 +61,166 @@
             "search": "\"previewStatus\": \"ready\"",
             "replacement": "\"previewStatus\": \"draft\"",
             "expectedCode": "previewNotReady"
+        },
+        {
+            "id": "frontend-preview-not-embeddable",
+            "tier": "offline",
+            "validator": "frontend-scaffold",
+            "file": "services/web/vite.config.ts",
+            "operation": "replace",
+            "search": "allowedHosts: true,",
+            "replacement": "",
+            "expectedCode": "devServerRejectsWebviewOrigin"
+        },
+        {
+            "id": "frontend-dev-script-does-not-serve",
+            "tier": "offline",
+            "validator": "frontend-scaffold",
+            "file": "services/web/package.json",
+            "operation": "replace",
+            "search": "\"dev\": \"vite\"",
+            "replacement": "\"dev\": \"vite build --watch\"",
+            "expectedCode": "devScriptDoesNotServe"
+        },
+        {
+            "id": "frontend-frame-busting-csp",
+            "tier": "offline",
+            "validator": "frontend-scaffold",
+            "file": "services/web/index.html",
+            "operation": "replace",
+            "search": "<title>",
+            "replacement": "<meta http-equiv=\"Content-Security-Policy\" content=\"frame-ancestors 'none'\" /><title>",
+            "expectedCode": "previewFrameBusting"
+        },
+        {
+            "id": "frontend-api-seam-bypassed",
+            "tier": "offline",
+            "validator": "frontend-scaffold",
+            "file": "services/web/src/pages/TicketsPage.tsx",
+            "operation": "replace",
+            "search": "from '../api'",
+            "replacement": "from '../api/mockClient'",
+            "expectedCode": "apiSeamBypassed"
+        },
+        {
+            "id": "integration-plan-missing-no-seed-rule",
+            "tier": "offline",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "**NO seed data is to be created.**",
+            "replacement": "",
+            "expectedCode": "missingNoSeedRule"
+        },
+        {
+            "id": "integration-plan-missing-backend-run-command",
+            "tier": "offline",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "| Run command | `npm start` |\n",
+            "replacement": "",
+            "expectedCode": "missingBackendCommand"
+        },
+        {
+            "id": "integration-plan-missing-route-inventory",
+            "tier": "offline",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "## API Routes",
+            "replacement": "## Notes on the API",
+            "expectedCode": "missingRouteInventory"
+        },
+        {
+            "id": "integration-plan-route-inventory-shadowed-by-auth-heading",
+            "tier": "offline",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "## API Routes",
+            "replacement": "## Auth (required on every route except `/api/health`)\n\nMock API key — send `X-API-Key: <API_KEY>`. Missing key → `401 UNAUTHORIZED`.\n\n## API Routes",
+            "expectedCode": "passed"
+        },
+        {
+            "id": "integration-plan-missing-api-seam",
+            "tier": "offline",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "| API seam file | `public/js/api/index.js` |\n",
+            "replacement": "",
+            "expectedCode": "missingApiSeam"
+        },
+        {
+            "id": "integration-plan-missing-service-classification",
+            "tier": "offline",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "| File repository (IItemRepository) | Essential | Persist project records |\n| Static file server | Essential | Serve HTML, JS, and CSS from `public/` |",
+            "replacement": "| File repository (IItemRepository) | Persist project records |\n| Static file server | Serve HTML, JS, and CSS from `public/` |",
+            "expectedCode": "missingServiceClassification"
+        },
+        {
+            "id": "frontend-api-client-interface-dropped",
+            "tier": "offline",
+            "validator": "frontend-scaffold",
+            "file": "services/web/src/api/client.ts",
+            "operation": "replace",
+            "search": "export interface ApiClient {",
+            "replacement": "export interface TicketGateway {",
+            "expectedCode": "missingApiClientInterface"
+        },
+        {
+            "id": "frontend-mock-client-dropped",
+            "tier": "offline",
+            "validator": "frontend-scaffold",
+            "file": "services/web/src/api/mockClient.ts",
+            "operation": "replace",
+            "search": "export const mockClient: ApiClient =",
+            "replacement": "export const mockClient =",
+            "expectedCode": "missingMockClient"
+        },
+        {
+            "id": "integration-plan-no-seed-rule-in-heading",
+            "tier": "offline",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "## Database\n",
+            "replacement": "## Database \u2014 migrations to create (**NO seed data**)\n",
+            "expectedCode": "passed"
+        },
+        {
+            "id": "integration-plan-no-seed-rule-as-table-row",
+            "tier": "offline",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "Production migration would replace the file store with managed storage. **NO seed data is to be created.**",
+            "replacement": "| **Seed data** | **NONE. Do not create seed data.** |",
+            "expectedCode": "passed"
+        },
+        {
+            "id": "integration-plan-port-inside-run-command",
+            "tier": "offline",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "| Run command | `npm start` |\n| Port | 7071 (override with `PORT`) |",
+            "replacement": "| Run command | `npm start`, listens on port **7071** |",
+            "expectedCode": "passed"
+        },
+        {
+            "id": "integration-plan-missing-backend-port",
+            "tier": "offline",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "| Port | 7071 (override with `PORT`) |\n| Health endpoint | `GET /api/health` |",
+            "replacement": "| Health endpoint | `GET /api/health` |",
+            "expectedCode": "missingBackendPort"
         }
     ]
 }
