@@ -12,13 +12,13 @@ The two are complementary, not redundant:
 | Tools | `evals/mcp/workflow-tools-server.mjs` stand-in | The extension's in-process MCP server |
 | Webviews | Never opened | Actually rendered |
 | Where | GitHub Actions, ~30 min | MSBench CES, with video + screenshots |
+| Role | Fast PR gate | Nightly, pass@k, model sweeps |
 
 The single stimulus ported here is [`photo-app-requirements`](../project-plan/eval.yaml)
 — its six graders plus the `reject_tools` constraint become the seven assertions in
 `assets/user-overrides.yaml`. `evals/project-plan/eval.yaml` stays the source of truth;
 this folder is a port of it, so changes there need mirroring here until the remaining six
 stimuli are wired up.
-| Role | Fast PR gate | Nightly, pass@k, model sweeps |
 
 ## Quick start
 
@@ -56,6 +56,7 @@ Corpnet/Azure VPN):
 | [`2026082471095778`](https://msbenchapp.azurewebsites.net/run-analysis/2026082471095778) | Copilot-on-Rails | CI-style flags |
 | [`2026082478636953`](https://msbenchapp.azurewebsites.net/run-analysis/2026082478636953) | Copilot-on-Rails | control |
 | [`2026082479418416`](https://msbenchapp.azurewebsites.net/run-analysis/2026082479418416) | `feat/CoR` | this PR's base |
+| [`2026082509500207`](https://msbenchapp.azurewebsites.net/run-analysis/2026082509500207) | `meganmott/happy-hedgehog` | while stacked on #1683, before it merged |
 
 The agent produced a 236-line `.azure/requirements.json` and called the extension's real
 `open_requirements_view` tool (as `mcp_copilot_azure_open_requirements_view`).
