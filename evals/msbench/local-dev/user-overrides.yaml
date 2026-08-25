@@ -1,0 +1,163 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# The local development phase (azure-debug-plan -> azure-debug-generate) run
+# against real VS Code on MSBench, with the SAME graders the Vally
+# `evals/local-dev/eval.yaml` suite uses — not hand-translated SQL.
+#
+# Every artifact assertion here is an `exec:` that runs the real validator, so
+# there is no second copy of the contract to keep in sync. The SQL assertions
+# are reserved for the things SQL does better than a file-system grader:
+# tool calls, per-step provenance, and chat prose.
+#
+# Prepare the assets, then run:
+#   ../stage-graders.sh   ./assets
+#   ../stage-workspace.sh ./assets
+#   (then submit with the msbench run script, --agent-assets ./assets)
+
+modelSelector:
+  id: claude-sonnet-4.5
+  vendor: copilot
+
+installExtensions:
+  - id: ms-azuretools.vscode-azureresourcegroups
+    mode: vsix
+    # Container path. Everything under ./assets is copied to /agent/assets and,
+    # unlike a benchmark config, this path is NOT rewritten — so it is hardcoded.
+    path: /agent/assets/extensions/vscode-azureresourcegroups.vsix
+
+# The debug planning agent. Unlike the project-plan eval this session starts
+# mid-workflow, because the debug agents analyse an existing project rather than
+# create one. The hand-off to azure-debug-generate is driven by promptSteps below.
+chatMode: azure-debug-plan
+
+# The webview gate tools (open_local_plan_view, start_azure_debug_generate) block
+# on a confirmation that nothing can answer in an unattended run.
+dangerouslyAutoApproveAllToolCalls: true
+
+script: |
+  set -eux
+
+  # Agent definitions come out of the VSIX under test rather than a git clone, so
+  # the instructions cannot drift from the build being graded.
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+
+  # Seed the scaffolded project the debug agents analyse. Staged by
+  # stage-workspace.sh from the grader certification fixture, with the debug
+  # artifacts stripped out so no assertion can pass without the agent working.
+  cp -R /agent/assets/workspace-seed/. /workspace/
+
+  # Fail the run here rather than at assertion time if the seed is wrong.
+  test -f /workspace/.azure/project-plan.md
+  test ! -e /workspace/.azure/vscode-debug-plan.md
+  test ! -e /workspace/.vscode/launch.json
+
+  # The graders are Node scripts using type stripping, which needs Node 22+.
+  node --version
+  node -e 'const [maj]=process.versions.node.split(".").map(Number); if (maj < 22) { console.error("Graders need Node 22+ for type stripping; found "+process.versions.node); process.exit(1); }'
+
+  # ─── Capability probe ────────────────────────────────────────────────────
+  # Non-fatal on purpose: this records what the container can actually do, so
+  # runtime graders (boot the emulators, hit the endpoints) can be scoped from
+  # evidence rather than assumption. Read the results afterwards from
+  # customScript/output.log in the extracted run.
+  #
+  # `set +e` because every probe below is expected to fail on some image, and a
+  # failed probe must not abort setup.
+  set +e
+  echo "───── CAPABILITY PROBE ─────"
+  echo "PROBE docker-cli:     $(command -v docker || echo ABSENT)"
+  echo "PROBE docker-daemon:  $(docker info --format '{{.ServerVersion}}' 2>&1 | head -1)"
+  echo "PROBE docker-compose: $(docker compose version 2>&1 | head -1)"
+  echo "PROBE can-run-container: $(docker run --rm hello-world >/dev/null 2>&1 && echo YES || echo NO)"
+  echo "PROBE user:           $(id)"
+  echo "PROBE network-egress: $(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 https://mcr.microsoft.com/v2/ 2>&1 | tail -1)"
+  echo "PROBE func-tools:     $(func --version 2>&1 | head -1)"
+  echo "PROBE dotnet:         $(dotnet --version 2>&1 | head -1)"
+  echo "PROBE python:         $(python3 --version 2>&1 | head -1)"
+  echo "PROBE free-mem-mb:    $(free -m 2>/dev/null | awk '/Mem:/{print $2}' || echo unknown)"
+  echo "───── END PROBE ─────"
+  set -e
+
+promptSteps:
+  # ─── Step 0: plan, and stop at the approval gate ──────────────────────────
+  - text: |
+      Set up local debugging for this project so I can hit F5 in VS Code.
+    assertions:
+      - comment: The debug plan satisfies the full plan contract (real validator)
+        exec: >-
+          EVALUATE_WORKSPACE=/workspace node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON
+          /agent/assets/graders/evals/graders/validate-debug-plan.ts
+        timeoutMs: 60000
+
+      - comment: Planning stopped at the approval gate without generating (real validator)
+        exec: >-
+          EVALUATE_WORKSPACE=/workspace node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON
+          /agent/assets/graders/evals/graders/validate-debug-gate.ts
+        timeoutMs: 60000
+
+      # vally: tool-calls required [open_local_plan_view]
+      - comment: Agent should open the local plan webview for review
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_local_plan_view%'
+
+      # vally: tool-calls disallowed [start_azure_debug_generate]
+      - comment: Agent should not hand off to generation before approval
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%start_azure_debug_generate%'
+
+      # Stronger than the Vally equivalent. `validate-debug-gate.ts` had to drop
+      # its compose check entirely, because a scaffolded project may legitimately
+      # ship docker-compose.yml and a post-hoc grader cannot tell that apart from
+      # a premature write. The implied stepIndex filter scopes this to files
+      # written by THIS step, which is exactly the provenance the grader lacks.
+      - comment: This step should not have written a compose file
+        query: >-
+          SELECT COUNT(*) = 0 FROM files
+          WHERE path LIKE '%docker-compose.yml' OR path LIKE '%compose.yaml'
+
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+  # ─── Step 1: approve, which triggers the hand-off to generation ───────────
+  #
+  # In VS Code, start_azure_debug_generate runs openChatWithAgent, which calls
+  # workbench.action.chat.newChat — a fire-and-forget new session with no handle
+  # (see projectSession.ts). promptSteps drive a single session, so whether the
+  # spawned agent is observed here is UNVERIFIED. Step 2 exists to cover the case
+  # where it is not.
+  - text: "The debug plan looks good, approved. Generate the configuration."
+    assertions:
+      - comment: Agent should hand off to the generation agent after approval
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%start_azure_debug_generate%'
+
+  # ─── Step 2: generation ───────────────────────────────────────────────────
+  #
+  # Carries the hand-off prompt verbatim from startAzureDebugGenerateCommand in
+  # registerCopilotOnRailsCommands.ts, so this is the exact query the product
+  # sends when it opens the generate agent. If step 1's hand-off is observed
+  # natively this turn is a harmless no-op restatement.
+  - text: "The local debugging plan has been approved. Now generate the artifacts as specified by `.azure/vscode-debug-plan.md`."
+    assertions:
+      - comment: launch.json and tasks.json are structurally sound (real validator)
+        exec: >-
+          EVALUATE_WORKSPACE=/workspace node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON
+          /agent/assets/graders/evals/graders/validate-debug-config.ts
+        timeoutMs: 60000
+
+      - comment: Generated artifacts conform to the approved plan (real validator)
+        exec: >-
+          EVALUATE_WORKSPACE=/workspace node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON
+          /agent/assets/graders/evals/graders/validate-debug-artifacts.ts
+        timeoutMs: 60000
+
+      # The failure mode azure-debug-generate/instructions.md calls "the single
+      # most common": stopping at Executing without running validation. Both live
+      # Vally runs hit exactly this.
+      - comment: Plan reaches Implemented with a completed validation checklist (real validator)
+        exec: >-
+          EVALUATE_WORKSPACE=/workspace node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON
+          /agent/assets/graders/evals/graders/validate-debug-plan.ts
+          --assert-status=Implemented --assert-checklist
+        timeoutMs: 60000

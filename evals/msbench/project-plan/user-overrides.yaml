@@ -48,6 +48,11 @@ script: |
   cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
   ls -la /workspace/.github/agents/
 
+  # The `exec:` graders are Node scripts relying on type stripping (Node 22+).
+  # Fail here rather than letting every exec assertion fail as a "product" bug.
+  node --version
+  node -e 'const [maj]=process.versions.node.split(".").map(Number); if (maj < 22) { console.error("Graders need Node 22+ for type stripping; found "+process.versions.node); process.exit(1); }'
+
 promptSteps:
   - text: |
       I'd like to create an app where you can upload photos and they get stored
@@ -59,15 +64,17 @@ promptSteps:
       - comment: Agent should have written the requirements artifact
         query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
 
-      # Partial stand-in for the `requirements-schema-valid` program grader, which
-      # needs a repo checkout in the container. Catches a malformed artifact; the
-      # full contract check lands next as an `exec:` assertion.
-      - comment: requirements.json should be valid JSON carrying a questions array
-        query: >-
-          SELECT COUNT(*) > 0 FROM files
-          WHERE path LIKE '%.azure/requirements.json'
-            AND json_valid(content)
-            AND json_array_length(json_extract(content, '$.questions')) > 0
+      # vally: program requirements-schema-valid
+      # The real grader, not a SQL approximation. The README previously noted this
+      # "needs a repo checkout in the container"; stage-graders.sh removes that
+      # constraint by staging a self-contained bundle under /agent/assets/graders,
+      # so the exact contract the Vally suite enforces runs here unchanged and
+      # there is no second copy of it to keep in sync.
+      - comment: requirements.json satisfies the full requirements contract (real grader)
+        exec: >-
+          EVALUATE_WORKSPACE=/workspace node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON
+          /agent/assets/graders/evals/graders/validate-requirements.ts
+        timeoutMs: 60000
 
       # vally: file-not-exists (no-dotfile-requirements)
       - comment: Agent should not have written the dotfile variant

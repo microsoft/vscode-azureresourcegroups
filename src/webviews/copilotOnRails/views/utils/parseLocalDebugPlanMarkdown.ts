@@ -52,12 +52,20 @@ export function parseLocalDebugPlanMarkdown(markdown: string): LocalPlanData {
     };
 }
 
-export enum LocalDebugPlanStatus {
-    Planning = 'planning',
-    Approved = 'approved',
-    Executing = 'executing',
-    Implemented = 'implemented',
-}
+/**
+ * Declared as a const object rather than a TS `enum` so the module stays
+ * erasable: the eval graders load this parser directly through Node's
+ * type-stripping, which rejects `enum`. Call sites are unaffected — both the
+ * value (`LocalDebugPlanStatus.Implemented`) and the type still resolve.
+ */
+export const LocalDebugPlanStatus = {
+    Planning: 'planning',
+    Approved: 'approved',
+    Executing: 'executing',
+    Implemented: 'implemented',
+} as const;
+
+export type LocalDebugPlanStatus = typeof LocalDebugPlanStatus[keyof typeof LocalDebugPlanStatus];
 
 
 const STATUS_METADATA_REGEX = /^\s*>?\s*\**Status[:*]*:[:*]*\s*(.+)$/i;

@@ -21,7 +21,26 @@ import { workflowToolDefinitions } from "../mcp/workflow-tools.mjs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "../..");
-const AGENT_NAME = "azure-project-plan";
+/**
+ * Which shipped agents to load into the session.
+ *
+ * A suite sets `AZURE_EVAL_AGENTS` (comma-separated) via `environment.env` when it
+ * needs more than one — the local-dev suite loads the scaffold and both debug agents
+ * so a multi-turn stimulus can walk the real Plan → Scaffold → Debug chain and skill
+ * activation is chosen by the model from the shipped descriptions, exactly as in VS Code.
+ * Defaults to the plan agent so the existing project-plan suite is unaffected.
+ */
+const DEFAULT_AGENTS = ["azure-project-plan"];
+
+function resolveAgentNames(options) {
+    const raw = options?.env?.AZURE_EVAL_AGENTS ?? process.env.AZURE_EVAL_AGENTS;
+    if (!raw) { return DEFAULT_AGENTS; }
+    const names = raw.split(",").map(n => n.trim()).filter(Boolean);
+    if (names.length === 0) {
+        throw new Error("AZURE_EVAL_AGENTS was set but contained no agent names.");
+    }
+    return names;
+}
 
 function getBundledCliPath() {
     const pkgDir = path.resolve(__dirname, "../node_modules/@github/copilot");
@@ -125,15 +144,26 @@ class AzureAgentExecutor {
         let assistantOutput = "";
         const rawEvents = [];
 
-        const skillDir = buildEvalSkill(repoRoot, AGENT_NAME, path.resolve(__dirname, "../.generated/skills"));
-        const skillDirs = [skillDir];
+        const agentNames = resolveAgentNames(options);
+        const skillDirs = agentNames.map(agentName =>
+            buildEvalSkill(repoRoot, agentName, path.resolve(__dirname, "../.generated/skills")));
 
-        // Put the shipped instruction folder (including references/) in the workspace,
-        // exactly as the extension writes it to a user's .github/agents.
-        const copiedFolders = prepareAgentWorkspace(repoRoot, options.workDir, AGENT_NAME);
-        const { model, supported } = resolveEvalModel(repoRoot, AGENT_NAME, options.model);
+        // Put the shipped instruction folders (including references/) in the workspace,
+        // exactly as the extension writes them to a user's .github/agents.
+        const copiedFolders = [...new Set(agentNames.flatMap(agentName =>
+            prepareAgentWorkspace(repoRoot, options.workDir, agentName)))];
+
+        // Validate the pinned model against every agent in the chain, not just the first, so a
+        // hand-off into an agent that doesn't support it fails before the run starts.
+        const resolvedModels = agentNames.map(agentName =>
+            resolveEvalModel(repoRoot, agentName, options.model));
+        const model = resolvedModels[0].model;
+        const supported = resolvedModels.reduce(
+            (shared, resolved) => shared.filter(name => resolved.supported.includes(name)),
+            resolvedModels[0].supported);
 
         process.stderr.write(`[azure-agent-executor] workDir: ${options.workDir}\n`);
+        process.stderr.write(`[azure-agent-executor] agents: ${agentNames.join(", ")}\n`);
         process.stderr.write(`[azure-agent-executor] skillDirs: ${JSON.stringify(skillDirs)}\n`);
         process.stderr.write(`[azure-agent-executor] agent assets: ${copiedFolders.join(", ") || "none"}\n`);
         process.stderr.write(`[azure-agent-executor] model: ${model} (agent supports: ${supported.join(", ")})\n`);

@@ -99,6 +99,14 @@ jobs:
           tenant-id: ${{ secrets.MSBENCH_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.MSBENCH_AZURE_SUBSCRIPTION_ID }}
 
+      # assets/ is generated rather than tracked, so the suite config, the grader
+      # bundle and the workspace seed have to be assembled before run.sh reads them.
+      # preflight catches a broken config offline, before ~15 minutes of container time.
+      - name: Stage project-plan assets
+        run: |
+          ./evals/msbench/stage.sh project-plan
+          ./evals/msbench/preflight.sh project-plan
+
       - name: Run project-plan eval
         run: ./evals/msbench/run.sh --skip-build --output "$RUNNER_TEMP/report.json" --data_dir "$RUNNER_TEMP/msbench-data"
         env:

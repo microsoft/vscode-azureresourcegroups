@@ -8,7 +8,10 @@
             "requirements",
             "project-plan",
             "plan-gate",
-            "preview"
+            "preview",
+            "debug-plan",
+            "debug-config",
+            "debug-artifacts"
         ]
     },
     "mutations": [
@@ -59,6 +62,144 @@
             "search": "\"previewStatus\": \"ready\"",
             "replacement": "\"previewStatus\": \"draft\"",
             "expectedCode": "previewNotReady"
+        },
+        {
+            "id": "debug-plan-table-concatenated",
+            "tier": "offline",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "|---|---|---|---|---|---|---|---|\n",
+            "replacement": "|---|---|---|---|---|---|---|---|| [x] | Ghost App (debug) | Ghost App | `./ghost` | Backend | Node.js | 22.x | None |\n",
+            "expectedCode": "tableRowConcatenated"
+        },
+        {
+            "id": "debug-plan-checklist-stub",
+            "tier": "offline",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "\u2705 Persistence \u2014 Created project remained visible after restarting the service, confirming the local JSON store is written through.",
+            "replacement": "\u2705 Persistence \u2014 TBD",
+            "expectedCode": "checklistStub"
+        },
+        {
+            "id": "debug-plan-diagram-dropped",
+            "tier": "offline",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "## Architecture Diagram",
+            "replacement": "## Architecture Notes",
+            "expectedCode": "missingSection"
+        },
+        {
+            "id": "debug-plan-status-regressed",
+            "tier": "offline",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "> **Status:** Implemented",
+            "replacement": "> **Status:** Planning",
+            "expectedCode": "unexpectedStatus"
+        },
+        {
+            "id": "debug-config-prelaunch-dangling",
+            "tier": "offline",
+            "validator": "debug-config",
+            "file": ".vscode/launch.json",
+            "operation": "replace",
+            "search": "\"preLaunchTask\": \"prepare\"",
+            "replacement": "\"preLaunchTask\": \"prepare-everything\"",
+            "expectedCode": "preLaunchTaskUnresolved"
+        },
+        {
+            "id": "debug-config-dependson-dangling",
+            "tier": "offline",
+            "validator": "debug-config",
+            "file": ".vscode/tasks.json",
+            "operation": "replace",
+            "search": "\"dependsOn\": \"install\"",
+            "replacement": "\"dependsOn\": \"restore\"",
+            "expectedCode": "dependsOnUnresolved"
+        },
+        {
+            "id": "debug-config-dependson-cycle",
+            "tier": "offline",
+            "validator": "debug-config",
+            "file": ".vscode/tasks.json",
+            "operation": "replace",
+            "search": "\"command\": \"npm ci --ignore-scripts\",",
+            "replacement": "\"command\": \"npm ci --ignore-scripts\",\n            \"dependsOn\": \"prepare\",",
+            "expectedCode": "dependsOnCycle"
+        },
+        {
+            "id": "debug-artifacts-unchecked-config-generated",
+            "tier": "offline",
+            "validator": "debug-artifacts",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "| [x] | Golden App (debug) |",
+            "replacement": "| [ ] | Golden App (debug) |",
+            "expectedCode": "uncheckedConfigGenerated"
+        },
+        {
+            "id": "debug-artifacts-script-not-registered",
+            "tier": "offline",
+            "validator": "debug-artifacts",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "| [x] | start | ./package.json |",
+            "replacement": "| [x] | serve | ./package.json |",
+            "expectedCode": "scriptNotRegistered"
+        },
+        {
+            "id": "debug-artifacts-api-collection-empty",
+            "tier": "offline",
+            "validator": "debug-artifacts",
+            "file": "api-test-collections/golden-app/health/invoke.sh",
+            "operation": "delete",
+            "expectedCode": "apiCollectionEmpty"
+        },
+        {
+            "id": "debug-config-task-run-options",
+            "tier": "offline",
+            "validator": "debug-config",
+            "file": ".vscode/tasks.json",
+            "operation": "replace",
+            "search": "\"instancePolicy\": \"silent\"",
+            "replacement": "\"instancePolicy\": \"prompt\"",
+            "expectedCode": "invalidTaskRunOptions"
+        },
+        {
+            "id": "debug-config-duplicate-task-label",
+            "tier": "offline",
+            "validator": "debug-config",
+            "file": ".vscode/tasks.json",
+            "operation": "replace",
+            "search": "\"label\": \"build\",",
+            "replacement": "\"label\": \"install\",",
+            "expectedCode": "duplicateTaskLabels"
+        },
+        {
+            "id": "debug-artifacts-extension-recommendations",
+            "tier": "offline",
+            "validator": "debug-artifacts",
+            "file": ".vscode/extensions.json",
+            "operation": "replace",
+            "search": "\"ms-vscode.js-debug\"",
+            "replacement": "\"js-debug\"",
+            "expectedCode": "invalidExtensionRecommendations"
+        },
+        {
+            "id": "debug-artifacts-redacted-secret",
+            "tier": "offline",
+            "validator": "debug-artifacts",
+            "file": ".env.example",
+            "operation": "replace",
+            "replacement": "DATABASE_URL=postgres://golden:******@localhost:5432/golden",
+            "expectedCode": "redactedSecretPlaceholder",
+            "search": "PORT=7071"
         }
     ]
 }
