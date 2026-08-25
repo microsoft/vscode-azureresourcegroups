@@ -302,6 +302,11 @@ The flow remembers where you left off in a workspace, through two affordances:
   - **Fully scaffolded project detected** → *"How would you like to proceed?"* → **Local Development** or **Deploy**.
   - **Completed local debug configuration detected** → *"Would you like to deploy this project?"* → **Deploy**.
 
+When the deployment phase resumes, the deploy agent takes a fresh Azure resource inventory baseline after
+you confirm **Resume** and before it runs any command that can provision more resources. Resources already
+present at that point are treated as the pre-resume state. Inventory captured after the resume is merged with
+the existing `deploy-result.json` inventory, so cleanup evidence from earlier deployment attempts is retained.
+
 <p align="center">
   <img src="images/copilot-create-project/11-resume-prompt.png" alt="Resume notification" />
 </p>
