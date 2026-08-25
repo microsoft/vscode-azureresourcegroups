@@ -63,8 +63,11 @@ jobs:
       - name: Validate release thresholds
         run: npm run eval:cor:thresholds:validate
 
+      # Run through the evals package so the spec is actually linted: a bare `vally lint`
+      # at the repo root discovers no skills and silently passes.
       - name: Lint eval specs
-        run: vally lint
+        run: npm run lint
+        working-directory: evals
 
       # A missing or wrong-format token still lets the run start, then fails every
       # trial with an opaque SDK error ~25 minutes later. Check it here so the cause
@@ -74,11 +77,11 @@ jobs:
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_EVAL_TOKEN || github.token }}
 
-      # Half the graders assert a gate tool was called. If the MCP server can't reach
-      # the agent, those fail 15 minutes later looking like agent regressions, so
-      # confirm the tools are actually there first.
-      - name: Verify workflow-tools MCP server
-        run: node evals/check-mcp-tools.mjs
+      # Half the graders assert a gate tool was called. If those tools don't reach the
+      # agent, they fail 15 minutes later looking like agent regressions, so confirm
+      # the agent can see them — and that the graders' names still match — up front.
+      - name: Verify workflow gate tools
+        run: node evals/check-gate-tools.mjs
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_EVAL_TOKEN || github.token }}
 

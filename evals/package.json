@@ -7,22 +7,23 @@
     "scripts": {
         "eval": "node run-eval.cjs",
         "eval:plan": "node run-eval.cjs --suite project-plan",
-        "mcp": "node mcp/workflow-tools-server.mjs",
         "drift": "node check-agent-drift.mjs",
         "lint": "vally lint --eval-spec project-plan/eval.yaml",
         "typecheck": "tsc --noEmit -p tsconfig.json",
-        "certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/graderCertification.ts"
+        "certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/graderCertification.ts",
+        "gate-tools": "node check-gate-tools.mjs",
+        "ci:local": "node ci-local.mjs"
     },
     "license": "MIT",
     "dependencies": {
         "@github/copilot-sdk": "^1.0.9-preview.2",
-        "@microsoft/vally": "0.13.0",
-        "@modelcontextprotocol/sdk": "^1.30.0"
+        "@microsoft/vally": "0.13.0"
     },
     "devDependencies": {
         "@microsoft/vally-cli": "0.13.0",
         "@types/node": "22.x",
-        "typescript": "^5.9.2"
+        "typescript": "^5.9.2",
+        "yaml": "^2.9.0"
     },
     "engines": {
         "node": ">=22.18"

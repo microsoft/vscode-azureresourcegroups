@@ -6,12 +6,11 @@
 /**
  * The workflow gate tools shared by the mock MCP server and the skill generator.
  *
- * Kept separate from `workflow-tools-server.mjs` so importing the list does not
- * start a stdio server.
+ * The tools are registered in-process on the eval session (see `workflowToolDefinitions`)
+ * rather than served over MCP, so they are not subject to the MCP registry policy.
  */
 
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
+import { defineTool } from "@github/copilot-sdk";
 
 export const MCP_SERVER_NAME = "workflow-tools";
 
@@ -31,39 +30,28 @@ export const TOOLS = [
     ["start_deployment", "Hand off to the deployment agent."],
 ];
 
-/** Session config registering the mock server; shared so the executor and the preflight agree. */
-export function mcpServerConfig() {
-    return {
-        [MCP_SERVER_NAME]: {
-            type: "local",
-            command: "node",
-            args: [path.resolve(path.dirname(fileURLToPath(import.meta.url)), "workflow-tools-server.mjs")],
-            tools: ["*"],
-        },
-    };
-}
 
 /**
- * Block until the mock server finishes connecting.
+ * The gate tools as in-process SDK tools, named exactly as the agent calls them.
  *
- * `createSession` resolves before MCP servers finish registering, so a prompt sent
- * immediately after can start a turn whose tool list has no gate tools in it. That
- * loses a race we happened to win on warm dev machines and lose on cold CI runners,
- * where it looked like the agent ignoring the gates rather than never being offered
- * them. Returns the last host listing so callers can report why a wait failed.
+ * Registering these directly on the session instead of over MCP keeps the evals
+ * independent of the MCP registry policy. That policy is fetched from the API with
+ * the caller's token, and a token that cannot read it (the Actions `GITHUB_TOKEN`
+ * gets 403) makes the runtime block every non-default MCP server — the server is
+ * filtered before it starts, so it surfaces as an empty server list rather than an
+ * error, and every gate-tool grader fails for reasons unrelated to the agent.
+ *
+ * `defer: "never"` keeps them out of lazy tool search so the agent always sees them,
+ * and `skipPermission` stops a permission prompt from stalling an unattended run.
  */
-export async function waitForMcpServer(session, { timeoutMs = 30_000, intervalMs = 250 } = {}) {
-    const deadline = Date.now() + timeoutMs;
-    let listing;
-    for (;;) {
-        listing = await session.rpc.mcp.list().catch(() => undefined);
-        const server = (listing?.servers ?? []).find(s => s.name === MCP_SERVER_NAME);
-        if (server?.status === "connected") {return { ok: true, listing };}
-        // A server that failed to start will never become connected — stop early.
-        if (server?.status === "failed") {return { ok: false, listing, reason: "failed" };}
-        if (Date.now() >= deadline) {
-            return { ok: false, listing, reason: server ? `stuck in '${server.status}'` : "never registered" };
-        }
-        await new Promise(resolve => setTimeout(resolve, intervalMs));
-    }
+export function workflowToolDefinitions() {
+    return TOOLS.map(([name, description]) => defineTool(`${MCP_SERVER_NAME}-${name}`, {
+        description,
+        parameters: { type: "object", properties: {}, additionalProperties: true },
+        skipPermission: true,
+        defer: "never",
+        handler: async () => ({
+            content: [{ type: "text", text: `OK: ${name} executed successfully.` }],
+        }),
+    }));
 }
