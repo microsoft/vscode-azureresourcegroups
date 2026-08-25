@@ -11,19 +11,17 @@
  * a runner in ways the suite is sensitive to: a personal `~/.copilot` config, a
  * different OS and CPU architecture, an already-populated `node_modules`, and a
  * different Copilot token. This runs the real workflow steps — parsed out of
- * `.github/workflows/vally-evals.yml`, so they cannot drift from what CI does — on
+ * `.github/workflows/agent-contracts.yml`, so they cannot drift from what CI does — on
  * linux/amd64 with a clean HOME and a fresh `npm ci`.
  *
- * What it still cannot reproduce is the runner's token identity: CI authenticates with
- * the Actions `GITHUB_TOKEN`, and some Copilot policy (notably the MCP registry policy)
- * resolves differently for it than for a personal token. Steps that depend on that are
- * flagged in the summary rather than silently claimed as verified.
+ * These are the credential-free gates. Running the agent itself now happens on MSBench
+ * (`.github/workflows/msbench-evals.yml`), which needs an Entra identity rather than a
+ * GitHub token and so cannot be reproduced by this script; use `evals/msbench/run.sh`.
  *
  * Usage:
  *   node evals/ci-local.mjs                 # every cheap gate (seconds-to-minutes)
- *   node evals/ci-local.mjs --with-evals    # also run the full suite (slow, real model calls)
  *   node evals/ci-local.mjs --merge         # first merge the PR base, as CI does
- *   node evals/ci-local.mjs --job chain-evals
+ *   node evals/ci-local.mjs --job contracts
  */
 
 import { spawnSync } from "node:child_process";
@@ -35,7 +33,7 @@ import { parse as parseYaml } from "yaml";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
-const WORKFLOW = ".github/workflows/vally-evals.yml";
+const WORKFLOW = ".github/workflows/agent-contracts.yml";
 const IMAGE_NODE = "22";
 
 const args = process.argv.slice(2);
@@ -47,7 +45,7 @@ const flagValue = (name, fallback) => {
 
 const withEvals = hasFlag("with-evals");
 const useMerge = hasFlag("merge");
-const jobName = flagValue("job", "per-agent-evals");
+const jobName = flagValue("job", "contracts");
 
 // The one step that costs real model calls and ~15 minutes; opt in explicitly.
 const EXPENSIVE_STEP = /Run .*evals$/;
@@ -70,11 +68,10 @@ function resolveToken() {
     if (gh.status === 0 && gh.stdout.trim()) {
         return { token: gh.stdout.trim(), source: "gh auth token" };
     }
-    die(
-        "No Copilot token available.",
-        "  Set COPILOT_GITHUB_TOKEN, or authenticate with `gh auth login`.\n"
-        + "  Steps that call the model cannot run without one.",
-    );
+    // No step in the contracts job needs a token, so this is not fatal. If a step ever
+    // does reference one, resolveExpression throws rather than running with an empty
+    // value — a missing token must never look like a passing gate.
+    return { token: null, source: "none (no contracts step requires one)" };
 }
 
 /**
@@ -216,7 +213,7 @@ if (run("docker", ["info"], { stdio: "ignore" }).status !== 0) {
         "Docker is not available.",
         "  This runs the CI steps in a linux/amd64 container to match the runner.\n"
         + "  Start Docker, or run the individual checks directly:\n"
-        + "    node evals/check-agent-drift.mjs && node evals/check-gate-tools.mjs",
+        + "    (cd evals && npm run drift && npm run typecheck && npm run certify && npm run lint)",
     );
 }
 

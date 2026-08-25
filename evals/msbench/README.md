@@ -128,7 +128,7 @@ Assertion detail is in `eval.json`. Also captured: `screen_recording.mp4`,
 this on `ubuntu-latest`. It is **`workflow_dispatch` only**, because it cannot run yet
 without one-time setup.
 
-`vally-evals.yml` needs no secrets — `copilot-requests: write` lets the built-in
+The Vally CI path needed no secrets — `copilot-requests: write` lets the built-in
 `GITHUB_TOKEN` authenticate the Copilot CLI. That trick does not transfer. MSBench runs
 on CES, which identifies callers by Entra client id, so CI needs a real Azure identity:
 
@@ -165,7 +165,8 @@ Three failure modes cost real time while building this, all of which now fail fa
 - The other three single-turn stimuli, plus the real `program` validators as `exec:`
   assertions (needs a repo checkout in the container).
 - The three multi-turn stimuli, using `promptSteps` (native multi-turn).
-- Nightly CI once the CES identity is allowlisted; keep `vally-evals.yml` as the fast PR
+- Nightly CI once the CES identity is allowlisted; keep
+  [`agent-contracts.yml`](../../.github/workflows/agent-contracts.yml) as the fast PR
   gate.
 - Expand gates and graders, including browser assertions for the preview canvas.
 

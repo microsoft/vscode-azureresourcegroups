@@ -12,8 +12,8 @@ name: MSBench Evals
 #   eval  - submits to MSBench. Needs Azure auth, so it is manual-only; see
 #           evals/msbench/README.md ("Running in CI") for the one-time setup.
 #
-# Unlike vally-evals.yml this cannot ride on GITHUB_TOKEN: MSBench runs on CES,
-# which authenticates callers by Entra client id.
+# Unlike the credential-free gates in agent-contracts.yml, this cannot ride on
+# GITHUB_TOKEN: MSBench runs on CES, which authenticates callers by Entra client id.
 on:
   pull_request:
     paths:
