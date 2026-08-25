@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Shared preamble for every stimulus.
+#
+# `build-config.mjs <stimulus>` concatenates this file with one file from
+# `stimuli/` to produce `assets/user-overrides.yaml`, which is the LAST of three
+# config layers (base -> benchmark instance -> user overrides, see
+# scripts/run-agent.sh in microsoft/vscode-copilot-evaluation). Merging is a
+# shallow Object.assign, so the stimulus's `promptSteps` wholly replace those of
+# whichever instance we borrow — that is what lets us reuse the `say_hello`
+# container image rather than publishing one of our own.
+#
+# `installExtensions` is the exception: it concatenates and de-dupes by id across
+# layers, so our extension installs alongside github.copilot-chat.
+#
+# Why the split: run-agent.sh hardcodes `cp "$PWD/user-overrides.yaml"`, so the
+# agent will only ever read that one filename and a stimulus cannot be selected
+# with a flag. And `promptSteps` feeds a *single* chat session, so the four
+# stimuli cannot be stacked into one file either — a later stimulus would see
+# the requirements.json an earlier one wrote, and `no-premature-plan` would fail
+# spuriously. One run per stimulus is therefore forced; keeping the preamble
+# here means the VSIX path and the agent-seeding script have exactly one
+# definition instead of four copies drifting apart.
+#
+# Run it with ./run.sh — see README.md.
+
+modelSelector:
+  id: claude-sonnet-4.5
+  vendor: copilot
+
+installExtensions:
+  - id: ms-azuretools.vscode-azureresourcegroups
+    mode: vsix
+    # Container path. Everything under ./assets is copied to /agent/assets, and
+    # unlike a benchmark config this path is NOT rewritten, so it is hardcoded.
+    path: /agent/assets/extensions/vscode-azureresourcegroups.vsix
+
+# The agent under test. It ships inside the VSIX via contributes.chatAgents, but
+# custom modes are resolved from the workspace's .github/agents, so the script
+# below seeds it there too.
+chatMode: azure-project-plan
+
+# The Vally executor approves every permission request. Without this the
+# webview-opening tools block on a confirmation nothing can answer.
+dangerouslyAutoApproveAllToolCalls: true
+
+# Seed the agent definition into the workspace, unpacked from the VSIX we just
+# installed rather than cloned from GitHub. That keeps the instructions exactly
+# in step with the build under test — cloning a branch would let the two drift,
+# and silently grade the wrong version of the prompt.
+script: |
+  set -eux
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+  ls -la /workspace/.github/agents/

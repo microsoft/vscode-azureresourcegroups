@@ -1,0 +1,60 @@
+# Stimulus 1.1 `photo-app-requirements` from evals/project-plan/eval.yaml.
+# Concatenated onto config/base.yaml by build-config.mjs.
+
+promptSteps:
+  - text: |
+      I'd like to create an app where you can upload photos and they get stored
+      with metadata like who uploaded them and when. I want a nice React frontend
+      and an Azure Functions backend with PostgreSQL for the data. Make it with
+      full test coverage.
+    assertions:
+      # vally: file-exists .azure/requirements.json
+      - comment: Agent should have written the requirements artifact
+        query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
+
+      # vally: program requirements-schema-valid
+      # The real validator, not a lookalike. `exec:` runs after the agent finishes,
+      # with cwd set to the workspace, so the harness's `process.cwd()` fallback
+      # already points at the right place — do not pass EVALUATE_WORKSPACE, since
+      # the runner uses a worktree path rather than /workspace on some routes.
+      #
+      # Why this one is `exec:` and the others stay SQL: the checks here are
+      # semantic (schema version, per-question shape, service roles, datastore
+      # recommendations). Expressing those in SQLite would mean reimplementing the
+      # validator in a second language — exactly the drift this eval exists to
+      # catch. The remaining assertions are honest one-liners in SQL, so they stay
+      # there rather than being converted for the sake of it.
+      - comment: requirements.json satisfies the requirements contract
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts
+
+      # vally: file-not-exists (no-dotfile-requirements)
+      - comment: Agent should not have written the dotfile variant
+        query: SELECT COUNT(*) = 0 FROM files WHERE path LIKE '%.azure/.requirements.json'
+
+      # vally: tool-calls required [workflow-tools-open_requirements_view]
+      # Satisfied here by the extension's real in-process MCP server.
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      # vally: file-not-exists (no-premature-plan) — the approval gate
+      - comment: Agent should not have generated a plan before requirements were confirmed
+        query: SELECT COUNT(*) = 0 FROM files WHERE path LIKE '%.azure/project-plan.md'
+
+      # vally: transcript-not-contains "What language"
+      # `llm_responses.response` is user-facing prose only — it excludes tool output
+      # and thinking blocks, so this cannot false-match text the agent merely read.
+      - comment: Agent should ask structured questions in the webview, not in chat
+        query: SELECT COUNT(*) = 0 FROM llm_responses WHERE response LIKE '%What language%'
+
+      # vally: constraints.reject_tools [vscode_askQuestions]
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      # Recorded, not asserted — `assertZeroExitCode: false` stores the command in
+      # the `exec` table without generating a check, so it can never fail the run
+      # and does not change the assertion count. Read it first when the exec grader
+      # above goes red: no Node, Node too old to strip types, and a mis-staged tree
+      # are indistinguishable from the outside. See README.md.
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; ls /agent/assets/graders/evals/graders 2>&1 | head'
+        assertZeroExitCode: false

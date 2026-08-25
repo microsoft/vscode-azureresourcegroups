@@ -14,11 +14,23 @@ The two are complementary, not redundant:
 | Where | GitHub Actions, ~30 min | MSBench CES, with video + screenshots |
 | Role | Fast PR gate | Nightly, pass@k, model sweeps |
 
-The single stimulus ported here is [`photo-app-requirements`](../project-plan/eval.yaml)
-— its six graders plus the `reject_tools` constraint become the seven assertions in
-`assets/user-overrides.yaml`. `evals/project-plan/eval.yaml` stays the source of truth;
-this folder is a port of it, so changes there need mirroring here until the remaining six
-stimuli are wired up.
+The four **single-turn** stimuli from [`evals/project-plan/eval.yaml`](../project-plan/eval.yaml)
+are ported here, one config per stimulus in [`config/stimuli/`](config/stimuli).
+`evals/project-plan/eval.yaml` stays the source of truth; this folder is a port of it,
+so changes there need mirroring here until the remaining three (multi-turn) stimuli are
+wired up.
+
+| Stimulus | Assertions | Validator flags |
+| --- | --- | --- |
+| `photo-app-requirements` (default) | 7 | — |
+| `api-only-inventory` | 5 | `--assert-no-frontend --assert-blob-storage --assert-cosmosdb` |
+| `multi-service-order-processing` | 4 | `--assert-service-count=3` |
+| `no-datastore-converter` | 4 | `--assert-no-datastore` |
+
+Assertion counts differ because they mirror each stimulus's graders one-for-one rather
+than being levelled up — only `photo-app-requirements` specifies
+`no-dotfile-requirements` and `transcript-not-contains`, and only it and
+`api-only-inventory` specify `no-premature-plan`.
 
 ## Quick start
 
@@ -27,12 +39,18 @@ az login          # once
 ./run.sh          # builds the VSIX, installs tooling, submits the run
 ```
 
-First run takes ~10 minutes end to end (~4 min of that is MSBench). Re-run without
-rebuilding the extension using `./run.sh --skip-build`.
+Re-run without rebuilding the extension using `./run.sh --skip-build`, and pick a
+different stimulus with `./run.sh --stimulus api-only-inventory`. With no arguments it
+runs `photo-app-requirements`, exactly as before.
+
+Wall-clock varies a lot with CES queueing: the original runs took ~4 min of MSBench
+time, but a run on 2026-08-25 took 50 min for the same single instance. Budget
+accordingly rather than assuming a stall.
 
 `run.sh` is self-contained: it provisions a Python 3.10+ virtualenv, installs
-`msbench-cli` plus the `vscode` special agent from the internal feed, builds and
-stages the VSIX, and submits. The only prerequisites are Azure CLI and Node.
+`msbench-cli` plus the `vscode` special agent from the internal feed, stages the VSIX
+and the graders, builds the config, and submits. The only prerequisites are Azure CLI
+and Node.
 
 ### Access
 
@@ -46,8 +64,8 @@ provisioning, and no other team needs to be involved.
 
 ## Verified result
 
-**All 7 assertions passed, `resolved: true`, on every run below** (links need
-Corpnet/Azure VPN):
+**All 7 assertions passed, `resolved: true`, on every `photo-app-requirements` run
+below** (links need Corpnet/Azure VPN):
 
 | Run | Base branch | Notes |
 | --- | --- | --- |
@@ -55,11 +73,17 @@ Corpnet/Azure VPN):
 | [`2026082468156047`](https://msbenchapp.azurewebsites.net/run-analysis/2026082468156047) | Copilot-on-Rails | from a clean venv |
 | [`2026082471095778`](https://msbenchapp.azurewebsites.net/run-analysis/2026082471095778) | Copilot-on-Rails | CI-style flags |
 | [`2026082478636953`](https://msbenchapp.azurewebsites.net/run-analysis/2026082478636953) | Copilot-on-Rails | control |
-| [`2026082479418416`](https://msbenchapp.azurewebsites.net/run-analysis/2026082479418416) | `feat/CoR` | this PR's base |
+| [`2026082479418416`](https://msbenchapp.azurewebsites.net/run-analysis/2026082479418416) | `feat/CoR` | #1689's base |
 | [`2026082509500207`](https://msbenchapp.azurewebsites.net/run-analysis/2026082509500207) | `meganmott/happy-hedgehog` | while stacked on #1683, before it merged |
+| [`2026082579322454`](https://msbenchapp.azurewebsites.net/run-analysis/2026082579322454) | `feat/CoR` | **first run with the real validator as `exec:`** |
 
 The agent produced a 236-line `.azure/requirements.json` and called the extension's real
 `open_requirements_view` tool (as `mcp_copilot_azure_open_requirements_view`).
+
+In `2026082579322454` the `exec` table confirms the grader genuinely ran in-container
+rather than being skipped — fingerprint `Linux x86_64 / cwd=/workspace / node=v22.22.2`,
+and the validator's own `PASS: requirements.json satisfies the requirements contract` on
+stderr.
 
 > **Flaky failure mode:** back-to-back runs can fail with `"type": "RATE_LIMIT"` in
 > `output/error.json` — the Copilot API rate-limits the agent mid-run, so the artifact
@@ -81,6 +105,102 @@ concatenates rather than replaces, so our VSIX installs alongside `github.copilo
 The agent definition is unpacked from the VSIX itself rather than cloned from GitHub,
 so the instructions always match the build under test. Cloning a branch would let the
 two drift and silently grade the wrong version of the prompt.
+
+## Layout
+
+Three things under `assets/` are **generated on every run and gitignored**, because a
+second checked-in copy is exactly the drift this eval exists to catch:
+
+| Path | Built by | From |
+| --- | --- | --- |
+| `assets/extensions/*.vsix` | `run.sh` | `npm run build && npm run package` |
+| `assets/graders/**` | `stage-graders.mjs` | `evals/graders`, `evals/src`, `src/webviews` |
+| `assets/user-overrides.yaml` | `build-config.mjs` | `config/base.yaml` + `config/stimuli/<name>.yaml` |
+
+Edit `config/`, never `assets/`.
+
+### Why one config file per stimulus
+
+Not a preference — two independent constraints force it:
+
+1. `run-agent.sh` does a literal `cp "$PWD/user-overrides.yaml"`, so that filename is
+   the only config the agent will ever read. A stimulus cannot be chosen with a flag;
+   selecting one means *writing that file*, which is what `build-config.mjs` does.
+2. `promptSteps` feeds a **single chat session**. Stacking the four stimuli as four
+   steps would let a later one see the `requirements.json` an earlier one wrote, and
+   `no-premature-plan` would fail spuriously.
+
+So the only real choice was whether the shared preamble (VSIX path, `chatMode`, the
+agent-seeding `script:`) is copied into four files or written once. It is written once,
+in `config/base.yaml`, and concatenated with a stimulus file. The merge is textual
+rather than a YAML round-trip so that the explanatory comments survive into the
+generated file — the two sources define disjoint top-level keys, and `build-config.mjs`
+fails if that ever stops being true.
+
+## Running the real validators (`exec:`)
+
+Megan's `program` graders run as `exec:` assertions, so the contract is checked by the
+*same* validator code the Vally suite and grader certification use, rather than a SQL
+lookalike that would drift from it.
+
+`exec:` runs after the agent finishes, via `shell: true`, with **cwd set to the
+workspace** — so `graderHarness`'s `process.cwd()` fallback already resolves
+`.azure/requirements.json` correctly. Do **not** pass `EVALUATE_WORKSPACE=/workspace`:
+the runner uses a worktree path instead of `/workspace` on some routes, so hardcoding it
+would be wrong where cwd is always right.
+
+Results land in an `exec` table (`command`, `exitCode`, `stdOut`, `stdErr`), and with
+the default `assertZeroExitCode` the harness generates
+`SELECT COUNT(*) > 0 FROM exec WHERE exitCode = 0 AND command = :command`.
+
+`stage-graders.mjs` copies the graders in, preserving repo-relative paths so their
+relative imports resolve unchanged — the closure spans **two roots**, `evals/` and the
+extension's own `src/webviews/`. It walks the import graph from the three validators
+rather than hardcoding a file list, which catches two things locally in milliseconds
+instead of four minutes into a container run: a moved file, and a *bare* specifier
+reachable from a grader (e.g. `vscode-nls`), which would need a `node_modules` the
+container does not have.
+
+Verified in the container: **Node v22.22.2 on Linux x86_64**, which is past the 22.18
+cutoff where TypeScript type-stripping is on by default — so the graders run straight
+off source, with `--disable-warning=MODULE_TYPELESS_PACKAGE_JSON` and a
+`{"type":"module"}` package.json at the staged root.
+
+### One fidelity gap worth knowing
+
+`graderHarness` distinguishes exit 1 (bad artifact, a real product failure) from exit 3
+(the grader itself broke). MSBench collapses both into "non-zero", so a harness fault is
+reported as a product regression here. That is the conservative direction — a broken
+grader shows up as red rather than silently passing — but it means a red `exec:`
+assertion is worth confirming against `stdErr` before believing it.
+
+### Which assertions are `exec:` and which stay SQL
+
+Only the `program` graders. The `files`, `toolCalls` and `llm_responses` tables cover
+`file-exists`, `file-not-exists`, `tool-calls` and `transcript-not-contains` honestly in
+one line each, and SQLite's JSON functions can inspect artifact content directly. What
+SQL *cannot* do without reimplementing the validator in a second language is the
+semantic part — schema version, per-question shape, service roles and counts, datastore
+recommendations. Those are the ones that become `exec:`; the rest stay SQL rather than
+being converted for the sake of it.
+
+Concretely, the check this replaced was
+`json_valid(content) AND json_array_length(json_extract(content, '$.questions')) > 0`.
+Given `{"projectName":"x","questions":[{"id":"dataStores","label":"nope"}]}` that returns
+**pass**, while the real validator returns **fail** naming seven contract violations
+(wrong `schemaVersion`, no `services`, and five missing per-question fields).
+
+Each stimulus also carries a deliberately non-asserting `exec:` with
+`assertZeroExitCode: false`. It records an environment fingerprint into the `exec` table
+without generating a check, so it can never fail a run or change the assertion count.
+Read it first when a grader goes red — "no Node", "Node too old", and "tree staged to
+the wrong path" are indistinguishable from the outside:
+
+```bash
+sqlite3 session.sqlite "SELECT output FROM exec WHERE command LIKE '%uname%'"
+sqlite3 session.sqlite "SELECT exitCode, stdErr FROM exec WHERE command LIKE '%validate-%'"
+```
+
 
 ## Why the VSIX route
 
@@ -108,8 +228,21 @@ multi-turn stimuli straightforward. `llm_responses.response` is user-facing pros
 only, excluding tool output and thinking blocks, so substring assertions don't
 false-match text the agent merely read.
 
-There is also an LLM-as-judge assertion (`comment` + `prompt`) with no Vally
-equivalent, worth considering for the qualitative parts of a plan.
+There is also a third assertion type with no Vally equivalent: **LLM-as-judge**. A judge
+model reads whatever rows `promptInputQuery` selects and returns pass/fail.
+
+```yaml
+- comment: The plan justifies its datastore choice
+  promptInputQuery: SELECT path || ':' || char(10) || content FROM files WHERE path LIKE '%project-plan.md'
+  prompt: "Evaluate whether the plan explains *why* each datastore was chosen. ${queryResult} Respond PASS if it does, FAIL otherwise."
+  mode: pass_fail
+```
+
+Nothing here uses it yet. It is the right tool for the qualitative parts of a plan —
+whether reasoning is coherent, whether prose matches the chosen services — and a better
+answer than inventing a brittle SQL proxy for a judgement call. It is not a substitute
+for `exec:` on anything the validators already decide deterministically.
+
 
 ## Results and artifacts
 
@@ -147,9 +280,28 @@ allowlisted a scheduled run would only ever be red. Local runs need none of this
 
 ## Troubleshooting
 
-Three failure modes cost real time while building this, all of which now fail fast in
-`run.sh` with a clear message:
+Failure modes that cost real time while building this. Most now fail fast in `run.sh`
+with a clear message:
 
+- **A red run that is actually rate limiting.** Back-to-back runs get throttled by the
+  Copilot API mid-run. The agent then produces nothing, so artifact assertions fail
+  while negative assertions pass trivially — indistinguishable from a genuine agent
+  regression at a glance. **Always check `output/error.json` for `"type": "RATE_LIMIT"`
+  before believing a red result.** Corroborate with
+  `select name, count(*) from spans group by name` against
+  `output/vsc-output/agent-traces.db` (note: `spans`/`span_attributes`, not `toolCalls`,
+  which is the assertion-time view). ~13 chat spans is healthy; dying around 6 is
+  throttling. Leave several minutes between runs.
+- **`HTTP 400 BadRequest` from `/api/ces/benchmark/startRun` at submit time.** Seen
+  submitting ~90s after a previous run finished; no run id is allocated. The same
+  config submitted cleanly after a cooldown, so treat it as transient submission
+  throttling rather than a config error — wait a few minutes and resubmit before
+  debugging the YAML.
+- **`msbench-cli` silently installs an ancient version.** pip's 15s default read
+  timeout treats a slow feed download as an *unusable candidate* rather than a network
+  error, so it backtracks through older releases and reports success — once landing
+  0.3.17.post1 instead of 0.3.54. `run.sh` pins `--timeout 180 --retries 10` and floors
+  the versions with `>=` so pip fails loudly instead. Check with `msbench-cli --version`.
 - **`Special agent plugin 'msbench-agent-vscode' is not installed`** — plugins are
   discovered as console scripts on `PATH`, so invoking `venv/bin/msbench-cli` by
   absolute path reports every plugin as missing even when installed. `run.sh` puts the
@@ -163,13 +315,14 @@ Three failure modes cost real time while building this, all of which now fail fa
 
 ## Next steps
 
-- The other three single-turn stimuli, plus the real `program` validators as `exec:`
-  assertions (needs a repo checkout in the container).
-- The three multi-turn stimuli, using `promptSteps` (native multi-turn).
+- The three multi-turn stimuli, using `promptSteps` (native multi-turn). The per-table
+  `stepIndex` scoping already does the hard part.
+- LLM-as-judge assertions for the qualitative parts of a generated plan.
 - Nightly CI once the CES identity is allowlisted; keep
   [`agent-contracts.yml`](../../.github/workflows/agent-contracts.yml) as the fast PR
   gate.
 - Expand gates and graders, including browser assertions for the preview canvas.
+
 
 Longer term these could graduate into `benchmarks/azure/` in
 `vscode-copilot-evaluation`, alongside the GitHub Copilot for Azure team's deployment

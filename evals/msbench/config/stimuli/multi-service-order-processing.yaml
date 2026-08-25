@@ -1,0 +1,37 @@
+# Stimulus 1.3 `multi-service-order-processing` from evals/project-plan/eval.yaml.
+# Concatenated onto config/base.yaml by build-config.mjs.
+#
+# Three graders plus the reject_tools constraint. Note there is deliberately no
+# no-premature-plan assertion: the source spec does not include one for this
+# stimulus, and assertions are mirrored one-for-one so eval.yaml stays the single
+# source of truth.
+
+promptSteps:
+  - text: |
+      I want to build an order processing system. There should be a React
+      dashboard where staff can see and manage orders, an Express API that
+      handles the business logic, and a background worker that picks up new
+      orders from a queue and sends confirmation emails. All in one project.
+    assertions:
+      # vally: file-exists .azure/requirements.json
+      - comment: Agent should have written the requirements artifact
+        query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
+
+      # vally: program requirements-multi-service
+      # Counting services means understanding the artifact's service model, not
+      # counting substrings — hence `exec:` rather than a SQL approximation.
+      - comment: requirements.json should decompose into exactly three services
+        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/evals/graders/validate-requirements.ts --assert-service-count=3
+
+      # vally: tool-calls required [workflow-tools-open_requirements_view]
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      # vally: constraints.reject_tools [vscode_askQuestions]
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+      # Recorded, not asserted. See config/stimuli/photo-app-requirements.yaml.
+      - comment: Environment fingerprint for triage
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; ls /agent/assets/graders/evals/graders 2>&1 | head'
+        assertZeroExitCode: false

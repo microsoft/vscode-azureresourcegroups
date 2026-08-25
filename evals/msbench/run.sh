@@ -10,18 +10,25 @@
 #   ./run.sh                 # submit and stream progress
 #   ./run.sh --skip-build    # reuse the VSIX already staged
 #   ./run.sh --build-only    # build and stage the VSIX, then stop
+#   ./run.sh --stimulus api-only-inventory
+#                            # run a different stimulus (default:
+#                            # photo-app-requirements). See config/stimuli/.
 #
 set -euo pipefail
 
 SKIP_BUILD=0
 BUILD_ONLY=0
+STIMULUS="photo-app-requirements"
 PASSTHRU=()
-for arg in "$@"; do
-    case "$arg" in
+while [ $# -gt 0 ]; do
+    case "$1" in
         --skip-build) SKIP_BUILD=1 ;;
         --build-only) BUILD_ONLY=1 ;;
-        *) PASSTHRU+=("$arg") ;;
+        --stimulus) shift; [ $# -gt 0 ] || { echo "--stimulus needs a value" >&2; exit 1; }; STIMULUS="$1" ;;
+        --stimulus=*) STIMULUS="${1#*=}" ;;
+        *) PASSTHRU+=("$1") ;;
     esac
+    shift
 done
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -37,6 +44,20 @@ BENCHMARK="${BENCHMARK:-vscbench.say_hello}"
 # Resource id of the Azure DevOps first-party app, used to mint a feed token.
 ADO_RESOURCE="499b84ac-1321-427f-aa17-267ca6975798"
 VENV="${MSBENCH_VENV:-${HOME}/.msbench-venv}"
+
+# The feed proxies large transitive deps (pandas, pyarrow) from upstream PyPI and
+# is routinely slower than pip's 15s default. A timed-out download is not treated
+# as a network error but as an unusable candidate, so pip silently backtracks to
+# ever-older msbench-cli releases and "succeeds" with the wrong version.
+PIP_NET_FLAGS=(--timeout 180 --retries 10)
+
+# Floors, not pins: upgrades are still picked up, but pip fails loudly instead of
+# quietly resolving an ancient release. Without them a timed-out or 401'd
+# download of a transitive dep (pandas, pyarrow) makes pip backtrack rather than
+# error, and it will happily "succeed" on msbench-cli 0.3.17 — which submits, but
+# against a different agent contract than the one these configs were written for.
+MSBENCH_CLI_SPEC="msbench-cli>=0.3.54"
+MSBENCH_VSCODE_SPEC="msbench-agent-vscode>=0.0.22"
 
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -83,6 +104,20 @@ esac
 
 log "Staged $(basename "$BUILT_VSIX" 2>/dev/null || basename "$VSIX_DEST") ($(du -h "$VSIX_DEST" | cut -f1))"
 
+# --- stage the graders and build the config ----------------------------------
+#
+# The `exec:` assertions run the real Vally validators inside the container, so
+# their sources have to travel with the run. Staged on every invocation —
+# including --skip-build — because they are source files read straight off the
+# working tree: staging a stale copy would grade the wrong contract.
+log "Staging graders"
+node "${HERE}/stage-graders.mjs"
+
+# `assets/user-overrides.yaml` is generated because run-agent.sh will only ever
+# read that one filename, so selecting a stimulus means writing that file.
+log "Building config for stimulus '${STIMULUS}'"
+node "${HERE}/build-config.mjs" "$STIMULUS"
+
 if [ "$BUILD_ONLY" -eq 1 ]; then
     log "Build only; not submitting."
     exit 0
@@ -117,7 +152,7 @@ if [ ! -x "${VENV}/bin/msbench-cli" ]; then
         || die "Could not get a DevOps token. Request the 'MSBench User' role at https://aka.ms/msbench/access"
 
     PIP_INDEX_URL="https://msbench:${ADO_TOKEN}@pkgs.dev.azure.com/devdiv/_packaging/MicrosoftSweBench/pypi/simple/" \
-        "${VENV}/bin/python" -m pip install --quiet msbench-cli msbench-agent-vscode \
+        "${VENV}/bin/python" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_CLI_SPEC" "$MSBENCH_VSCODE_SPEC" \
         || die "msbench-cli install failed. Confirm feed access at https://aka.ms/msbench/access"
     unset ADO_TOKEN
 fi
@@ -134,7 +169,7 @@ if ! "${VENV}/bin/python" -m pip show msbench-agent-vscode >/dev/null 2>&1; then
     log "Installing the vscode special agent plugin"
     ADO_TOKEN="$(az account get-access-token --resource "$ADO_RESOURCE" --query accessToken -o tsv)"
     PIP_INDEX_URL="https://msbench:${ADO_TOKEN}@pkgs.dev.azure.com/devdiv/_packaging/MicrosoftSweBench/pypi/simple/" \
-        "${VENV}/bin/python" -m pip install --quiet msbench-agent-vscode \
+        "${VENV}/bin/python" -m pip install --quiet "${PIP_NET_FLAGS[@]}" "$MSBENCH_VSCODE_SPEC" \
         || die "Could not install msbench-agent-vscode"
     unset ADO_TOKEN
 fi
