@@ -1,0 +1,86 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# M1 — the `photo-app-requirements` stimulus from evals/project-plan/eval.yaml,
+# ported to run on MSBench via the vscbench `vscode` special agent.
+#
+# Unlike the Vally path, nothing here is a stand-in: the VSIX registers the real
+# in-process MCP server (src/chat/tools/copilotOnRails/registerCopilotOnRailsTools.ts),
+# so `open_requirements_view` is the shipping tool opening the shipping webview.
+#
+# Run locally (no CES, Docker only):
+#   runtest local --benchmark vscbench.say_hello --agent vscode \
+#     --config evals/msbench/cor-requirements.vscode.agent.yaml
+#
+# Run on CES:
+#   msbench-cli run --agent vscode --model . --benchmark vscbench.say_hello \
+#     --agent-assets evals/msbench/
+
+installExtensions:
+  - id: ms-azuretools.vscode-azureresourcegroups
+    mode: vsix
+    # Built by `npm run package` at the repo root; see README.md in this folder.
+    path: ./vscode-azureresourcegroups.vsix
+
+# `azure-project-plan` ships inside the VSIX via contributes.chatAgents, but the
+# TestConfig contract resolves custom modes from the workspace's .github/agents.
+# The setup script below seeds it there so the mode resolves either way.
+chatMode: azure-project-plan
+
+# The Vally executor approves every permission request (approveAll). Webview-opening
+# tools would otherwise block on a confirmation the harness cannot answer.
+dangerouslyAutoApproveAllToolCalls: true
+
+# Mirrors the GitHub-Copilot-for-Azure benchmarks: seed the agent definition into
+# the workspace and record the commit it came from, so a run is traceable to a
+# specific version of the instructions even though the image is fixed.
+script: |
+  set -e
+  git clone --depth 1 https://github.com/microsoft/vscode-azureresourcegroups.git /opt/cor-src
+  git -C /opt/cor-src rev-parse --short HEAD > "${OUTPUT}/vscode-azureresourcegroups_commit.txt"
+  mkdir -p /workspace/.github/agents
+  cp -r /opt/cor-src/resources/agents/* /workspace/.github/agents/
+
+promptSteps:
+  - text: |
+      I'd like to create an app where you can upload photos and they get stored
+      with metadata like who uploaded them and when. I want a nice React frontend
+      and an Azure Functions backend with PostgreSQL for the data. Make it with
+      full test coverage.
+    assertions:
+      # vally: file-exists .azure/requirements.json
+      - comment: Agent should have written the requirements artifact
+        query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
+
+      # Partial stand-in for the `requirements-schema-valid` program grader, which
+      # needs a repo checkout in the container. This catches a malformed artifact;
+      # the full contract check lands in M2 as an `exec:` assertion.
+      - comment: requirements.json should be valid JSON carrying a questions array
+        query: >-
+          SELECT COUNT(*) > 0 FROM files
+          WHERE path LIKE '%.azure/requirements.json'
+            AND json_valid(content)
+            AND json_array_length(json_extract(content, '$.questions')) > 0
+
+      # vally: file-not-exists (no-dotfile-requirements)
+      - comment: Agent should not have written the dotfile variant
+        query: SELECT COUNT(*) = 0 FROM files WHERE path LIKE '%.azure/.requirements.json'
+
+      # vally: tool-calls required [workflow-tools-open_requirements_view]
+      - comment: Agent should have opened the requirements webview
+        query: SELECT COUNT(*) > 0 FROM toolCalls WHERE tool LIKE '%open_requirements_view%'
+
+      # vally: file-not-exists (no-premature-plan) — the approval gate
+      - comment: Agent should not have generated a plan before requirements were confirmed
+        query: SELECT COUNT(*) = 0 FROM files WHERE path LIKE '%.azure/project-plan.md'
+
+      # vally: transcript-not-contains "What language"
+      # `llm_responses.response` is user-facing prose only — it excludes tool output
+      # and thinking blocks, so this cannot false-match text the agent merely read.
+      - comment: Agent should ask structured questions in the webview, not in chat
+        query: SELECT COUNT(*) = 0 FROM llm_responses WHERE response LIKE '%What language%'
+
+      # vally: constraints.reject_tools [vscode_askQuestions]
+      - comment: Agent should not fall back to the chat question tool
+        query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
+
+vscodeSettings: {}

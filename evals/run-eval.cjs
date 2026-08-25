@@ -10,7 +10,10 @@
 // Usage (from repo root):
 //   npm run eval
 //   npm run eval -- --runs 3
-//   npm run eval -- --suite project-plan --runs 5 --model claude-sonnet-5
+//   npm run eval -- --suite project-plan --runs 5 --model claude-opus-4.7
+//
+// The model defaults to `defaults.model` in the suite's eval.yaml. Overriding it here
+// only accepts a model the agent declares in its `.agent.md` frontmatter.
 
 const { spawn } = require("child_process");
 const path = require("path");

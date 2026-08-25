@@ -22,6 +22,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { listEvalAssetFiles, readSupportedModels } from "./executor/agent-assets.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -153,21 +154,32 @@ function hashFile(file) {
     return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
 
+/**
+ * The tracked assets, as repo-relative paths under `resources/agents`.
+ *
+ * Scoped to what the evals actually load (see listEvalAssetFiles) rather than the
+ * whole agents tree, so a change to an agent this suite never runs can't fail it.
+ */
+const SCOPE = `${PLAN}.agent.md, ${PLAN}/**, shared-references/**`;
+
+function trackedFiles() {
+    return listEvalAssetFiles(repoRoot, PLAN);
+}
+
 function agentAssetFiles() {
     const out = {};
-    for (const file of listFiles(agentsRoot)) {
-        out[path.relative(agentsRoot, file).split(path.sep).join("/")] = hashFile(file);
+    for (const name of trackedFiles()) {
+        out[name] = hashFile(path.join(agentsRoot, name));
     }
     return out;
 }
 
 function hashAgentAssets() {
-    // Unchanged from the original: relative path + raw bytes, so baselines
-    // recorded before per-file diagnostics existed stay valid.
+    // Relative path + raw bytes, in sorted order, so the hash is stable across platforms.
     const hash = createHash("sha256");
-    for (const file of listFiles(agentsRoot)) {
-        hash.update(path.relative(agentsRoot, file).split(path.sep).join("/"));
-        hash.update(fs.readFileSync(file));
+    for (const name of trackedFiles()) {
+        hash.update(name);
+        hash.update(fs.readFileSync(path.join(agentsRoot, name)));
     }
     return hash.digest("hex");
 }
@@ -229,15 +241,57 @@ for (const rule of consistencyRules) {
 
 const currentHash = hashAgentAssets();
 const currentFiles = agentAssetFiles();
+
+/**
+ * The eval spec must run the agent on a model the product actually ships it on.
+ * Catching a bad pin here costs a second; catching it at trial time costs a run.
+ */
+const evalSpecPath = path.join(__dirname, "project-plan", "eval.yaml");
+try {
+    const supported = readSupportedModels(repoRoot, PLAN);
+    const spec = fs.readFileSync(evalSpecPath, "utf8");
+    const defaultsBlock = /^defaults:\r?\n((?:[ \t]+.*\r?\n|\r?\n)*)/m.exec(spec)?.[1] ?? "";
+    const pinned = /^\s+model:\s*(\S+)\s*$/m.exec(defaultsBlock)?.[1];
+    if (!pinned) {
+        failures.push(
+            "eval-model-unpinned: evals/project-plan/eval.yaml has no `defaults.model`.\n"
+            + "    Without a pin the SDK falls back to the host CLI's default, which differs\n"
+            + "    between a developer machine and CI, so the graders disagree.\n"
+            + `    Supported: ${supported.join(", ")}`,
+        );
+    } else if (!supported.includes(pinned)) {
+        failures.push(
+            `eval-model-unsupported: evals/project-plan/eval.yaml pins '${pinned}', which `
+            + `${PLAN}.agent.md does not list.\n`
+            + `    Supported: ${supported.join(", ")}`,
+        );
+    } else {
+        checked.push(`eval-model-pinned (${pinned})`);
+    }
+} catch (err) {
+    failures.push(`eval-model-resolution: ${err.message}`);
+}
 const previous = fs.existsSync(lockPath) ? JSON.parse(fs.readFileSync(lockPath, "utf8")) : null;
 
 if (update) {
     fs.writeFileSync(lockPath, `${JSON.stringify({
         agentAssetsHash: currentHash,
+        scope: SCOPE,
         updatedAt: new Date().toISOString(),
         files: currentFiles,
     }, null, 4)}\n`);
     console.log(`Baseline updated: ${currentHash}`);
+    console.log(`Tracking ${Object.keys(currentFiles).length} file(s): ${SCOPE}`);
+} else if (previous && previous.scope !== SCOPE) {
+    // A baseline recorded under a different scope isn't comparable — its hash covers a
+    // different file set, so a mismatch would say nothing about the instructions.
+    failures.push(
+        "agent-assets-scope-changed: the baseline was recorded for a different file set.\n"
+        + `    baseline scope: ${previous.scope ?? "resources/agents/** (whole tree)"}\n`
+        + `    current scope:  ${SCOPE}\n`
+        + "    Re-record it with:\n"
+        + "      node evals/check-agent-drift.mjs --update",
+    );
 } else if (previous && previous.agentAssetsHash !== currentHash) {
     const changes = describeAssetChanges(previous.files, currentFiles);
     const detail = changes.length
@@ -245,12 +299,12 @@ if (update) {
         : "    Baseline predates per-file tracking, so the changed files can't be named.\n"
         + "    Re-running --update will record them for next time.\n";
     failures.push(
-        "agent-assets-changed: resources/agents/** changed since the evals were last verified.\n"
+        `agent-assets-changed: tracked agent assets changed since the evals were last verified.\n`
+        + `    scope:    ${SCOPE}\n`
         + `    baseline: ${previous.agentAssetsHash}\n`
         + `    current:  ${currentHash}\n`
         + detail
-        + "    On a pull request this often means the base branch moved rather than\n"
-        + "    that you edited these files — check `git log` on the base before assuming.\n"
+        + "    These files are loaded by this suite, so a change here can move the graders.\n"
         + "    Re-run the evals against the new instructions, then run:\n"
         + "      node evals/check-agent-drift.mjs --update",
     );

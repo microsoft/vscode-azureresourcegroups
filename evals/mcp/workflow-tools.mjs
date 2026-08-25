@@ -6,9 +6,11 @@
 /**
  * The workflow gate tools shared by the mock MCP server and the skill generator.
  *
- * Kept separate from `workflow-tools-server.mjs` so importing the list does not
- * start a stdio server.
+ * The tools are registered in-process on the eval session (see `workflowToolDefinitions`)
+ * rather than served over MCP, so they are not subject to the MCP registry policy.
  */
+
+import { defineTool } from "@github/copilot-sdk";
 
 export const MCP_SERVER_NAME = "workflow-tools";
 
@@ -27,3 +29,29 @@ export const TOOLS = [
     ["start_local_development", "Hand off to the local development setup agent."],
     ["start_deployment", "Hand off to the deployment agent."],
 ];
+
+
+/**
+ * The gate tools as in-process SDK tools, named exactly as the agent calls them.
+ *
+ * Registering these directly on the session instead of over MCP keeps the evals
+ * independent of the MCP registry policy. That policy is fetched from the API with
+ * the caller's token, and a token that cannot read it (the Actions `GITHUB_TOKEN`
+ * gets 403) makes the runtime block every non-default MCP server — the server is
+ * filtered before it starts, so it surfaces as an empty server list rather than an
+ * error, and every gate-tool grader fails for reasons unrelated to the agent.
+ *
+ * `defer: "never"` keeps them out of lazy tool search so the agent always sees them,
+ * and `skipPermission` stops a permission prompt from stalling an unattended run.
+ */
+export function workflowToolDefinitions() {
+    return TOOLS.map(([name, description]) => defineTool(`${MCP_SERVER_NAME}-${name}`, {
+        description,
+        parameters: { type: "object", properties: {}, additionalProperties: true },
+        skipPermission: true,
+        defer: "never",
+        handler: async () => ({
+            content: [{ type: "text", text: `OK: ${name} executed successfully.` }],
+        }),
+    }));
+}

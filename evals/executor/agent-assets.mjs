@@ -17,8 +17,57 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { MCP_SERVER_NAME, TOOLS } from "../mcp/workflow-tools.mjs";
 
+/**
+ * The model CI grades against when the eval spec or CLI doesn't pick one.
+ *
+ * Must be one of the agent's declared models (validated below). Sonnet is the
+ * cheapest of the three, which keeps a per-PR run inside the workflow timeout.
+ */
+const DEFAULT_EVAL_MODEL = "claude-sonnet-4.6";
+
 /** The instruction folders every agent may reference via relative links. */
 const SHARED_FOLDER = "shared-references";
+
+/**
+ * Maps the VS Code display names in the agent front-matter `model:` list to the
+ * bare Copilot (CAPI) model ids the SDK accepts. Extend this when the product
+ * adds a supported model; an unmapped entry fails the run rather than silently
+ * narrowing what the evals consider supported.
+ */
+const MODEL_DISPLAY_NAME_TO_ID = new Map([
+    ["Claude Opus 4.6 (copilot)", "claude-opus-4.6"],
+    ["Claude Opus 4.7 (copilot)", "claude-opus-4.7"],
+    ["Claude Sonnet 4.6 (copilot)", "claude-sonnet-4.6"],
+]);
+
+/**
+ * Every asset the evals put in front of the agent: the `.agent.md` the skill is
+ * generated from, plus the instruction folders copied into the workspace.
+ *
+ * The drift baseline hashes exactly this set. Hashing all of `resources/agents/**`
+ * instead would fail the check whenever an unrelated agent moved on the base branch,
+ * which on a pull request means unrelated commits break a suite they can't affect.
+ *
+ * Returns repo-relative paths (POSIX separators) sorted for a stable hash.
+ */
+export function listEvalAssetFiles(repoRoot, agentName) {
+    const sourceRoot = path.join(repoRoot, "resources", "agents");
+    const roots = [`${agentName}.agent.md`, agentName, SHARED_FOLDER];
+    const out = [];
+
+    const walk = (relative) => {
+        const full = path.join(sourceRoot, relative);
+        if (!fs.existsSync(full)) {return;}
+        if (fs.statSync(full).isDirectory()) {
+            for (const entry of fs.readdirSync(full)) {walk(path.join(relative, entry));}
+        } else {
+            out.push(relative.split(path.sep).join("/"));
+        }
+    };
+
+    for (const root of roots) {walk(root);}
+    return out.sort();
+}
 
 /**
  * Copy the agent's entire instruction folder (including `references/`) plus the
@@ -61,6 +110,71 @@ function readFrontmatterValue(frontmatter, key) {
         value = value.slice(1, -1);
     }
     return value.replace(/\\"/g, '"');
+}
+
+/** Read the front-matter of the shipped `<agent>.agent.md`, or throw if it's missing. */
+function readAgentFile(repoRoot, agentName) {
+    const agentFile = path.join(repoRoot, "resources", "agents", `${agentName}.agent.md`);
+    if (!fs.existsSync(agentFile)) {
+        throw new Error(`Cannot read agent assets: ${agentFile} does not exist`);
+    }
+    return { agentFile, ...splitFrontmatter(fs.readFileSync(agentFile, "utf8")) };
+}
+
+/**
+ * The models the shipped agent declares support for, as SDK model ids.
+ *
+ * Read from the agent's own `model:` front-matter so the harness can never grade
+ * a model the product doesn't ship the agent on — and so removing a model from
+ * the product removes it from the evals too.
+ */
+export function readSupportedModels(repoRoot, agentName) {
+    const { agentFile, frontmatter } = readAgentFile(repoRoot, agentName);
+    const raw = readFrontmatterValue(frontmatter, "model");
+    if (!raw) {
+        throw new Error(`Cannot resolve eval model: ${agentFile} has no frontmatter 'model' list`);
+    }
+
+    // `model: ['A (copilot)', 'B (copilot)']` — a single-line flow sequence in every shipped agent.
+    const displayNames = raw
+        .replace(/^\[|\]$/g, "")
+        .split(",")
+        .map(entry => entry.trim().replace(/^['"]|['"]$/g, ""))
+        .filter(Boolean);
+
+    if (displayNames.length === 0) {
+        throw new Error(`Cannot resolve eval model: ${agentFile} declares an empty 'model' list`);
+    }
+
+    return displayNames.map(displayName => {
+        const id = MODEL_DISPLAY_NAME_TO_ID.get(displayName);
+        if (!id) {
+            throw new Error(
+                `Cannot resolve eval model: ${agentFile} lists '${displayName}', which has no SDK id mapping. ` +
+                `Add it to MODEL_DISPLAY_NAME_TO_ID in evals/executor/agent-assets.mjs.`,
+            );
+        }
+        return id;
+    });
+}
+
+/**
+ * Resolve the model a trial runs as.
+ *
+ * Without this the SDK falls back to whatever the host's Copilot CLI defaults to,
+ * which is a developer's `~/.copilot/settings.json` locally and a different default
+ * in CI — the same eval then grades two different models and the results disagree.
+ */
+export function resolveEvalModel(repoRoot, agentName, requestedModel) {
+    const supported = readSupportedModels(repoRoot, agentName);
+    const model = requestedModel || DEFAULT_EVAL_MODEL;
+    if (!supported.includes(model)) {
+        throw new Error(
+            `Model '${model}' is not supported by the ${agentName} agent. ` +
+            `Supported: ${supported.join(", ")}.`,
+        );
+    }
+    return { model, supported };
 }
 
 /**
