@@ -1,0 +1,64 @@
+{
+    "schemaVersion": 1,
+    "fixture": {
+        "id": "reference-node-fullstack",
+        "path": "evals/grader-certification/reference-node-fullstack",
+        "description": "Node.js full-stack reference project for planning artifact grader certification.",
+        "offlineValidators": [
+            "requirements",
+            "project-plan",
+            "plan-gate",
+            "preview"
+        ]
+    },
+    "mutations": [
+        {
+            "id": "requirements-schema-version",
+            "tier": "offline",
+            "validator": "requirements",
+            "file": ".azure/requirements.json",
+            "operation": "replace",
+            "search": "\"schemaVersion\": \"2\"",
+            "replacement": "\"schemaVersion\": \"1\"",
+            "expectedCode": "schemaVersion"
+        },
+        {
+            "id": "project-plan-numbering",
+            "tier": "offline",
+            "validator": "project-plan",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "## 3. Prerequisites",
+            "replacement": "## 4. Prerequisites",
+            "expectedCode": "nonSequentialHeading"
+        },
+        {
+            "id": "plan-gate-frontend-dropped",
+            "tier": "offline",
+            "validator": "plan-gate",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "**App Type**: Web Application",
+            "replacement": "**App Type**: API only",
+            "expectedCode": "frontendIntentMismatch"
+        },
+        {
+            "id": "plan-gate-preview-manifest-missing",
+            "tier": "offline",
+            "validator": "plan-gate",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "delete",
+            "expectedCode": "previewManifestMissingAtGate"
+        },
+        {
+            "id": "preview-not-ready",
+            "tier": "offline",
+            "validator": "preview",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "replace",
+            "search": "\"previewStatus\": \"ready\"",
+            "replacement": "\"previewStatus\": \"draft\"",
+            "expectedCode": "previewNotReady"
+        }
+    ]
+}

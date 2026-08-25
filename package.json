@@ -1024,7 +1024,13 @@
         "lint": "eslint --max-warnings 0",
         "test": "vscode-test",
         "all": "npm i && npm run lint && npm run build && npm run package && npm test",
-        "api-extractor": "cd api && npm run api-extractor"
+        "api-extractor": "cd api && npm run api-extractor",
+        "eval": "node evals/run-eval.cjs",
+        "eval:plan": "node evals/run-eval.cjs --suite project-plan",
+        "eval:report": "node evals/generate-report.cjs",
+        "eval:drift": "node evals/check-agent-drift.mjs",
+        "eval:cor:graders:certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/src/graderCertification.ts",
+        "eval:cor:thresholds:validate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/src/releaseThresholds.ts evals/release-thresholds.v1.json"
     },
     "devDependencies": {
         "@azure/arm-msi": "^2.1.0",
@@ -1046,7 +1052,7 @@
         "esbuild-plugin-copy": "*",
         "mermaid": "^11.15.0",
         "sass": "~1.79.6",
-        "tsx": "*"
+        "typescript-eslint": "^8.61.1"
     },
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",

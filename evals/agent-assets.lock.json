@@ -1,0 +1,27 @@
+{
+    "agentAssetsHash": "34a55db1ea04b528f6f638222af591774e8c7c8ac2ec73e7d08026d449813769",
+    "scope": "azure-project-plan.agent.md, azure-project-plan/**, shared-references/**",
+    "updatedAt": "2026-08-25T17:39:58.180Z",
+    "files": {
+        "azure-project-plan.agent.md": "af8a0e8ea91248eaaf4229258f0b5bc4253cb57a7c49d3431fe56a4d63a1664f",
+        "azure-project-plan/.metadata.json": "cec03694d63e45c8cb96983bd586790878b5813289885ae94d6cefc42243f37e",
+        "azure-project-plan/instructions.md": "76deebe218ccfe9d7e606b985cc0907647f040a7921312411733d5dfcb8b8041",
+        "azure-project-plan/plan.md": "c3826b463abd092d62101a169566eba36a28eb5ce3c416d6a9db1a5d87806953",
+        "azure-project-plan/references/html-preview.md": "c9a6488b097988ee1c5caa65e923d0bb1faabe1ecb74e2d9a4f2f47c9e63980e",
+        "azure-project-plan/requirements.md": "a2c6e2cb549c1e2c92fed51c0fbd733c8e72b6afd1d78b10cd985f74a6059861",
+        "shared-references/.metadata.json": "9e72de59c9acf8b579d95d1c29e866f41f093f54a96d4732dddca2e84a6b3dba",
+        "shared-references/architecture.md": "a936026ddc65d9083cab2498cdd37eedc1c076f74793f84a7ec17d8f05e20973",
+        "shared-references/database-integrity.md": "91de147fa73b0cfb9052c9ded3835ba3cecb3e6287d7225af167ff4465d7f623",
+        "shared-references/error-handling.md": "706c20819acc730ac86b679aa89bdda9a9cac1fab04dec82cefa9cbf29a42ceb",
+        "shared-references/examples/service-abstraction-examples.md": "fc94a5aa174cceb158b283aa8beb0d3afa4fb21c581e2c21f5e517e2ba5ff561",
+        "shared-references/frontend-patterns.md": "dd322a53d90fce9bd05940304cf3e69a5a040da62e659c94311c1a6daae6ba78",
+        "shared-references/frontend-quality-bar.md": "faf4c784ff66238b46d8a6c8adf0c37e1148db922208ed8f0b551e8e79ee7885",
+        "shared-references/prerequisites.md": "5c10ef03943cadedae20e583537b823b391baa47096fb048ef4d249c5022a330",
+        "shared-references/resilience.md": "6e07c6cc68e5b52fe701f4d099d180765ec340a1dfce4ac113150041f0773ea0",
+        "shared-references/runtimes/dotnet.md": "06d76ac7dca329ff1836207fdd5812aa3e76f9460bec713a4a740590e79834fe",
+        "shared-references/runtimes/python.md": "b2f0a0470af813f3691552880511f1ebdcf2adcfc8d029784be3d9dde8207204",
+        "shared-references/runtimes/typescript.md": "0f4812f4208f8fdc292320e620eafc1ce3ea8f493411919ae49fe3db7d46e1a8",
+        "shared-references/seed-data.md": "dfd906a409f7356311bbc0cab16a3ebb71e6178503256aefa30e6526d71c7174",
+        "shared-references/service-abstraction.md": "60b1eb1c461687adbe298ed3b43872e637768d95f947c05274e097529a0983ad"
+    }
+}
