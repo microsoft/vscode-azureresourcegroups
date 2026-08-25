@@ -71,3 +71,11 @@ results/
 
 # Generated eval skills (built from resources/agents/*.agent.md at run time)
 evals/.generated/
+
+# Grader sources staged into the MSBench agent assets by evals/msbench/run.sh.
+# Generated from the working tree on every run; a checked-in copy would drift.
+evals/msbench/assets/graders/
+
+# Built from evals/msbench/config/{base,stimuli/*}.yaml by run.sh. run-agent.sh
+# only ever reads this one filename, so selecting a stimulus means writing it.
+evals/msbench/assets/user-overrides.yaml
