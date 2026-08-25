@@ -1,0 +1,66 @@
+name: Agent Contracts
+
+# The half of the Vally eval suite that needs no Copilot credentials.
+#
+# Running the agent itself now happens on MSBench (see msbench-evals.yml), but
+# the checks below still earn their place in PR CI: they are fast, they need no
+# token, and they guard the graders and agent assets that the MSBench run
+# depends on. A broken grader or a drifted instruction file would otherwise only
+# surface as a confusing eval failure much later.
+#
+# Deliberately absent: check-copilot-auth.mjs, check-gate-tools.mjs and
+# run-eval.cjs. Those drive a live agent and belong to the MSBench path.
+on:
+  pull_request:
+    paths:
+      - 'evals/**'
+      - 'resources/agents/**'
+      - '.vally.yaml'
+      - '.github/workflows/agent-contracts.yml'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install eval dependencies
+        run: npm ci
+        working-directory: evals
+
+      - name: Add Vally CLI to PATH
+        run: echo "$GITHUB_WORKSPACE/evals/node_modules/.bin" >> "$GITHUB_PATH"
+
+      # A rule removed from the shipped agent should not linger in the eval's
+      # copy of it, or the eval grades a prompt we no longer ship.
+      - name: Check agent instruction drift
+        run: npm run drift
+        working-directory: evals
+
+      # Graders run straight off TypeScript source, so a type error is a broken
+      # grader — catch it before it costs a full eval run.
+      - name: Type-check evals
+        run: npm run typecheck
+        working-directory: evals
+
+      # Prove the graders still detect the regressions they claim to detect.
+      - name: Certify graders
+        run: npm run certify
+        working-directory: evals
+
+      # Run through the evals package so the spec is actually linted: a bare
+      # `vally lint` at the repo root discovers no skills and silently passes.
+      - name: Lint eval specs
+        run: npm run lint
+        working-directory: evals
