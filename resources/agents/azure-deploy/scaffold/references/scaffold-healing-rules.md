@@ -39,7 +39,7 @@ Classify Step 11 failures using the table above. **FIXABLE:** edit IaC → re-va
 |------|--------|
 | 1. STOP | Never silently change service/region |
 | 2. Update plan | `prepare-plan.json`: `services[]`, `naming.resources[]`, `costEstimate`, `deployStrategy` per [`prepare-schemas.ts`](../../prepare/references/prepare-schemas.ts) |
-| 3. Re-approve | "⚠️ Plan change: {old} → {new} (~${new}/mo). Approve? (Yes / Edit / Cancel)" |
+| 3. Re-approve | Re-open the Deployment Plan view with the change ({old} → {new}, ~${new}/mo) for re-approval. |
 | 4. Regenerate | New module files with correct names, delete stale, re-run self-review + validation |
 | 5. Log | [`ScaffoldHealingAttempt`](scaffold-schemas.ts) with `planLevelChange: true`. Counts toward healing cap |
 

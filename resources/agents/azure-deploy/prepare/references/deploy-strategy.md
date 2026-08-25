@@ -97,7 +97,7 @@ Same as Pattern A, but Node.js adds a dependency guard: `if [ ! -d node_modules 
 
 ### SKU Implications
 
-When `f1Viable: false` (any of: native modules, TypeScript build, large deps, WSGI/ASGI server), F1 is not viable — use B1 (~$13/mo) minimum. Surface at approval gate: "⚠️ {f1BlockReason}. B1 minimum required."
+When `f1Viable: false` (any of: native modules, TypeScript build, large deps, WSGI/ASGI server), F1 is not viable — use B1 (~$13/mo) minimum. Surface in the deploy plan (view): "⚠️ {f1BlockReason}. B1 minimum required."
 
 ### Container Timeout
 

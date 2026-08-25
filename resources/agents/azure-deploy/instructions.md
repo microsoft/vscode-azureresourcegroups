@@ -9,7 +9,7 @@ metadata:
 
 # Azure App Onboard
 
-> ⛔ **Every repo goes through the full pipeline (Steps 1–10). No exceptions.** Do not skip steps, refuse, or short-circuit based on what you recognize. Follow the Workflow table below sequentially — read each step's references before acting.
+> ⛔ **Every repo goes through the full pipeline (Steps 1–9). No exceptions.** Do not skip steps, refuse, or short-circuit based on what you recognize. Follow the Workflow table below sequentially — read each step's references before acting.
 
 ## Quick Reference
 
@@ -44,13 +44,13 @@ metadata:
 
 ## Pipeline Rules
 
-> ⛔ **You MUST read [`references/pipeline-rules.md`](references/pipeline-rules.md) at the start of every AppOnboard session.** It contains approval gates, phase lifecycle, session artifacts, deploy-as-is, and security baseline rules.
+> ⛔ **You MUST read [`references/pipeline-rules.md`](references/pipeline-rules.md) at the start of every AppOnboard session.** It contains the deploy approval gate, phase lifecycle, session artifacts, deploy-as-is, and security baseline rules.
 
 ## Workflow
 
-> ⛔ **Deploy recovery:** After deploy gate approval OR before any `az deployment`/`az webapp deploy`/`az acr build` — if you haven't read `deploy/instructions.md`, read `.copilot-azure/sessions/{id}/deploy-checklist.md` first, then `deploy/instructions.md`. ⛔ Always use this pipeline's own deploy phase (`deploy/instructions.md`) — do NOT hand off to any other deployment workflow.
+> ⛔ **Deploy recovery:** After deploy-gate approval in the view OR before any `az deployment`/`az webapp deploy`/`az acr build` — if you haven't read `deploy/instructions.md`, read `.copilot-azure/sessions/{id}/deploy-checklist.md` first, then `deploy/instructions.md`. ⛔ Always use this pipeline's own deploy phase (`deploy/instructions.md`) — do NOT hand off to any other deployment workflow.
 
-> ⛔ **Post-scaffold transition (MANDATORY):** Immediately after `scaffold-manifest.json` is written, YOUR NEXT ACTION MUST be Step 8 (Deploy Approval Gate) — NOT a summary report, NOT a "here are the generated files" message, NOT a completion signal. Confirm `context.json` has `completedPhases: [...,"scaffold"]` + `currentPhase: "deploy"` (update it yourself if the scaffold subagent didn't). Re-read [approval-gates.md § Deploy Gate](references/approval-gates.md) if evicted from context (scaffold reference loading is heavy), then present the exact prompt: **"🚀 Ready to deploy? (Yes / Run manually / Edit plan / Cancel)"**. This gate is the LAST content in your response — wait for the user's reply.
+> ⛔ **Post-scaffold transition (MANDATORY):** Immediately after `scaffold-manifest.json` is written, YOUR NEXT ACTION MUST be Step 8 (Deploy — execute IaC) — NOT a summary report, NOT a "here are the generated files" message, NOT a completion signal, and NOT another approval prompt (the user already approved the plan in the Deployment Plan view at Step 6). Confirm `context.json` has `completedPhases: [...,"scaffold"]` + `currentPhase: "deploy"` (update it yourself if the scaffold subagent didn't), then read `.copilot-azure/sessions/{id}/deploy-checklist.md` → `deploy/instructions.md` and begin deployment.
 
 | # | Step | Action | Reference |
 |---|------|--------|-----------|
@@ -59,18 +59,17 @@ metadata:
 | 3 | **Prereq scan** | ⛔ Skip if `completedPhases` includes `"prereq"`. Otherwise: evaluate repo readiness, write `prereq-output.json`, update `context.json`. **Halt if:** `overallHealth: "blocked"` OR `routeToSkill` set. | ⛔ **You MUST read and follow [prereq/instructions.md](prereq/instructions.md)** |
 | 4 | **Gather intent** | Present prereq results, confirm stack + Azure services, ask remaining questions. | ⛔ Read [intent-gathering.md](references/intent-gathering.md) § After Prereq Returns |
 | 5 | **Plan architecture** | Write `prepare-plan.json`. | ⛔ **You MUST read [prepare/instructions.md](prepare/instructions.md)** |
-| 6 | **Scaffold approval gate** | Display plan for user approval BEFORE generating any files. | ⛔ Read [approval-gates.md](references/approval-gates.md) § Scaffold Gate |
-| 7 | **Scaffold** | Generate IaC, self-review. Write `scaffold-manifest.json`. Update `context.json`. | ⛔ **You MUST read [scaffold/instructions.md](scaffold/instructions.md)** |
-| 8 | **Deploy approval gate** | Display validation summary. ⛔ After approval: FIRST read deploy-checklist.md → deploy/instructions.md. Always use this pipeline's own `deploy/instructions.md` — do NOT hand off elsewhere. | ⛔ Read [approval-gates.md](references/approval-gates.md) § Deploy Gate |
-| 9 | **Deploy** | Execute IaC, health-check. Write `deploy-result.json`. | ⛔ **You MUST read [deploy/instructions.md](deploy/instructions.md)** |
-| 10 | **Handoff** | Surface deployment identity, cleanup commands, next steps. | ⛔ **You MUST read [`handoff-protocol.md`](references/handoff-protocol.md)** |
+| 6 | **Deploy gate (webview)** | Call the `open_deploy_plan_view` tool, then STOP — the view renders the plan and owns approval. ⛔ No chat prompt, no chat tables. IaC is NOT generated until the user approves in the view. | ⛔ Read [approval-gates.md](references/approval-gates.md) § Deploy Gate |
+| 7 | **Scaffold** | ⛔ Only after the view reports approval. Generate IaC, self-review, validate. Write `scaffold-manifest.json`. Update `context.json`. | ⛔ **You MUST read [scaffold/instructions.md](scaffold/instructions.md)** |
+| 8 | **Deploy** | Execute IaC, health-check. Write `deploy-result.json`. ⛔ FIRST read deploy-checklist.md → deploy/instructions.md; do NOT hand off elsewhere. | ⛔ **You MUST read [deploy/instructions.md](deploy/instructions.md)** |
+| 9 | **Handoff** | Surface deployment identity, cleanup commands, next steps. | ⛔ **You MUST read [`handoff-protocol.md`](references/handoff-protocol.md)** |
 
 ## Error Handling
 
 | Error | Remediation |
 |-------|-------------|
 | Phase fails | Halt, report phase + error. User decides: retry, skip, abort. |
-| MCP server unavailable | Skip affected checks, add disclaimer to `costEstimate.assumptions[]` and every approval gate. |
+| MCP server unavailable | Skip affected checks, add disclaimer to `costEstimate.assumptions[]` (surfaced in the Deployment Plan view). |
 | Missing RBAC | Report required role + `az role assignment` command. |
 
 > **Shared references:** [MCP tools](references/mcp-tool-reference.md) (cross-phase tool parameters) | [IaC resources](references/iac-resources.md) (Azure resource docs for troubleshooting)

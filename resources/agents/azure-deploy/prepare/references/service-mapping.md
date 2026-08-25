@@ -58,7 +58,7 @@ Component→Azure service selection. Apply `context.json.intent` as modifiers, `
 | Multi-step orchestration | Durable Functions + Durable Task Scheduler | DTS is the recommended managed backend |
 | Low-code workflow | Logic Apps | Integration-heavy, visual designer |
 
-> **docker-compose → Azure mapping:** Map each `detectedServices[].type` to its PaaS equivalent using these tables. **Unmapped services** (SSH daemons, custom sidecars — no managed equivalent): offer a Linux VM (B1s ~$7/mo) as companion at the scaffold gate. Present as option, not forced. Write to `postDeployRecommendations[]`.
+> **docker-compose → Azure mapping:** Map each `detectedServices[].type` to its PaaS equivalent using these tables. **Unmapped services** (SSH daemons, custom sidecars — no managed equivalent): offer a Linux VM (B1s ~$7/mo) as companion in the deploy plan (view). Present as option, not forced. Write to `postDeployRecommendations[]`.
 
 ## Supporting (always include)
 

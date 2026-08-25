@@ -58,7 +58,7 @@ export interface AppOnboardComponent {
 export interface AppOnboardAzureTarget {
   subscriptionId: string;
   /** Display name of the subscription (from `az account show --query name`).
-   *  Shown at both approval gates so the user can verify the target. */
+   *  Shown in the deploy plan view so the user can verify the target. */
   subscriptionName: string;
   resourceGroup: string;
   region: string;

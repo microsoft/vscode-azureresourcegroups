@@ -11,18 +11,16 @@ Offer next steps: CI/CD setup, monitoring, domain config, **🗑️ resource cle
 > 🏢 Subscription: {context.json.azure.subscriptionName} ({context.json.azure.subscriptionId})
 > 📁 Resource Group: {context.json.azure.resourceGroup}
 > 🌍 Region: {context.json.azure.region}
-> 🔗 Portal: https://portal.azure.com/#@/resource/subscriptions/{subId}/resourceGroups/{rgName}/overview
 > ```
-> Source: `context.json.azure`. This is the user's quickest path to finding their resources after the session ends.
+> Source: `context.json.azure`. ⛔ **Do NOT print a portal link** — the deploy result view surfaces the Azure portal URL at the end, from the session artifacts.
 
-See [deploy-checklist-template.md § Deployment Summary](../deploy/references/deploy-checklist-template.md) for the full deployment summary format.
+⛔ **Do NOT print the deployment summary / services table in chat.** The deploy result view renders the full deployment summary (services, SKUs, endpoints, portal URL) from `deploy-result.json` + `deployment-summary.md` at the end. Chat carries only the actionable text below (cleanup, redeploy, recommendations, next steps).
 
 ## Artifact Self-Check
 
 > ⛔ **Artifact self-check — MANDATORY before handoff.** Verify these exist before presenting cleanup or next steps:
 > 1. `deploy-result.json` in session folder — if missing, read [`deploy-schemas.ts`](../deploy/references/deploy-schemas.ts) and write it NOW with status, endpoints, health, `orphanedResourceGroups[]`
-> 2. Portal deployment link printed in chat — if missing, generate from `$resId` pattern (see deploy/instructions.md Step 6) and print now
-> 3. `deployment-summary.md` in session folder — if missing, `create` it NOW with the same content you are about to present in chat (status, subscription, RG, region, services table, endpoints, cleanup commands). One `create` call — do NOT skip.
+> 2. `deployment-summary.md` in session folder — if missing, `create` it NOW with the full deployment result (status, subscription, RG, region, services table, endpoints, cleanup commands). This is the artifact the deploy result view renders — write it in full, but do NOT print the services/summary table in chat. One `create` call — do NOT skip.
 
 ## Post-Deploy Recommendations
 

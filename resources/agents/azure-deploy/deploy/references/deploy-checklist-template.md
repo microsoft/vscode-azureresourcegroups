@@ -21,7 +21,7 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 - You MUST `view` deploy/instructions.md BEFORE running any `az deployment` command
 - Path: `.github/agents/azure-deploy/deploy/instructions.md`
 - If you have not read it in this conversation (or since the last compaction), read it NOW
-- It covers preflight checks, portal links, what-if, SCM lifecycle, deploy-result.json schema, audit logging, and health checks — skip it and none of these happen
+- It covers preflight checks, what-if, SCM lifecycle, deploy-result.json schema, audit logging, and health checks — skip it and none of these happen
 
 ## After every `az` command
 - Append 2 lines to `deploy-audit.log`: `{timestamp} | {command} | started` then `{timestamp} | {command} | succeeded/failed`
@@ -30,7 +30,6 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 - Verify 5 tags: `az group show -n {rgName} --query tags`
 - ⛔ Do NOT set startup command or app settings via CLI — they are already in Bicep from scaffold. If `az webapp show` doesn't reflect them yet, wait 30s and re-check (ARM propagation delay). Do NOT run `az webapp config` imperatively.
   Required: app-onboard-skill, app-onboard-session-id, created-at, environment, deployed-by
-- Verify portal link is still correct if healing changed the deployment name
 
 ## Code deploy — App Service (delete if not using App Service)
 - ⛔ **Deploy command: `az webapp deploy --type zip`** (Entra-capable, supports `--async`). NEVER `az webapp deployment source config-zip` — it needs SCM basic auth and is disallowed.
@@ -65,7 +64,7 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 - Store token in $env:SWA_CLI_DEPLOYMENT_TOKEN — never as CLI arg
 
 ## During healing / retries
-- ⛔ REGION LOCK: Deploy region MUST match plan region ({region}). Any region change → RE-PRESENT deploy approval gate with old and new region. Do NOT silently switch. After approval: update `prepare-plan.json.services[].region`, `deploymentVariables.location`, AND append attempt number to `naming.suffix` (e.g., `edd6` → `edd602`). Recompute ALL resource names from the new suffix before redeploying — globally unique names (App Service, Key Vault) from the old region may be soft-deleted and unavailable.
+- ⛔ REGION LOCK: Deploy region MUST match plan region ({region}). Any region change → RE-OPEN the Deployment Plan view with old and new region. Do NOT silently switch. After the user re-approves: update `prepare-plan.json.services[].region`, `deploymentVariables.location`, AND append attempt number to `naming.suffix` (e.g., `edd6` → `edd602`). Recompute ALL resource names from the new suffix before redeploying — globally unique names (App Service, Key Vault) from the old region may be soft-deleted and unavailable.
 - ⛔ IaC-only: NEVER use `az containerapp update --image`, `az webapp update`, `az appservice plan delete`, or `az group create` — fix the Bicep and redeploy via `az deployment sub create`
 - ⛔ IaC-only for app-managed roles: NEVER `az role assignment create` for AcrPull or KV Secrets User — Bicep-managed (deterministic GUID), so an imperative grant collides on redeploy (`RoleAssignmentExists`). Missing app role = fix the Bicep module and redeploy. (Deployer/subscription-scope 403s are the ONLY exception — see [`error-classification.md`](error-classification.md).)
 - ⛔ **On error: read [`error-classification.md`](error-classification.md)** to classify the failure and follow the prescribed remediation. Do NOT ad-hoc heal without reading the classification.
@@ -74,12 +73,12 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
   After 3: STOP and ask user ("Yes / I have a suggestion / Stop")
 - NEVER run `az group delete` — track in orphanedResourceGroups[]
 - ⛔ **RG deletion timeout:** If you ran `az group delete --no-wait`, wait max 2 minutes then `ask_user`: "Resource group deletion is slow. Wait longer / Proceed without cleanup / Cancel." Do NOT poll indefinitely.
-- Region/SKU/service changes require re-approval gate
+- Region/SKU/service changes require re-approval via the Deployment Plan view
 
 ## Before handoff (Step 8)
 - ⛔ Read [`deploy-schemas.ts`](deploy-schemas.ts) for exact DeployResult field names
 - Finalize `deploy-result.json` — overwrite skeleton IN PLACE (keep exact field names, do NOT rename): status (lowercase `succeeded`/`failed`), resourceGroupName, subscriptionId, deploymentNames (all used), resourceIds, endpoints, healthStatus (worst across endpoints), duration.completedUtc, resourceResults from `az deployment operation list`. Read back to verify.
-- ⛔ `deployment-summary.md` — generate from `deploy-result.json` fields (Status, Health, Portal Links, Cleanup). NOT a separate data source.
+- ⛔ `deployment-summary.md` — generate from `deploy-result.json` fields (Status, Health, Cleanup). NOT a separate data source.
 - ⛔ `context.json` — add "deploy" to completedPhases, set currentPhase to null, update lastModifiedUtc. VERIFY by reading back.
 - SCM re-disabled (App Service) or image param set (Container Apps)
 - If prereq found migration frameworks: run migrations before declaring healthy
@@ -88,7 +87,7 @@ Read `prepare-plan.json` to determine the service types, then build the checklis
 ⛔ Before returning to orchestrator, verify ALL artifacts exist by reading each one back:
 1. `deploy-result.json` — MUST contain (exact names): `status` (lowercase `succeeded`/`failed`), `resourceGroupName`, `subscriptionId`, `deploymentNames[]`, `resourceIds[]`, `endpoints[]`, `healthStatus`, `duration.completedUtc`, `resourceResults[]`. Missing/renamed fields → rewrite with real values NOW
 2. `deploy-audit.log` — MUST exist with ≥2 entries (started + result for at least 1 command). Missing → reconstruct from memory
-3. `deployment-summary.md` — MUST contain Status, Health, Portal Links sections. Missing → generate from deploy-result.json
+3. `deployment-summary.md` — MUST contain Status, Health, Cleanup sections. Missing → generate from deploy-result.json
 4. `context.json` — MUST have `"deploy"` in `completedPhases`, `currentPhase: null`, updated `lastModifiedUtc`
 5. ⛔ **Endpoint completeness** — EVERY service in `prepare-plan.json.services[]` that hosts application code MUST have a corresponding entry in `deploy-result.json.endpoints[]` with code deployed and a valid `healthStatus` (`healthy`, `degraded`, `unreachable`, `unknown`). If ANY compute endpoint is missing or has code not deployed, set `partial: true` and `status: "failed"`. A deployment with undeployed user components is NOT `"succeeded"`.
 

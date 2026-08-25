@@ -50,7 +50,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 2 when `prereq-output.j
 | 7 | **Generate naming** | Centralized naming: suffix, prefix, all resource names | ⛔ **You MUST read [naming-patterns.md](references/naming-patterns.md)** |
 | 8 | **Determine IaC format** | Existing non-Azure `.tf` → `ask_user` Bicep vs TF, write to `overrides[].iacFormat`. No `.tf` → default Bicep. | (inline) |
 | 9 | **Write prepare-plan.json** | Per `PreparePlan` schema. Include postDeployRecommendations, deploymentVariables | ⛔ **You MUST read [prepare-schemas.ts](references/prepare-schemas.ts)** for `PreparePlan` schema |
-| 10 | **Return summary** | Structured summary for orchestrator approval gate | (inline — 1 line) |
+| 10 | **Return summary** | Structured summary consumed by the orchestrator Deploy Gate (Deployment Plan view) | (inline — 1 line) |
 | 11 | **Validate plan** | 4-dimension check: Goal Alignment, WAF Alignment, Dependency Completeness, Deployment Viability. Fix inline on failure, document tradeoffs in `assumptions[]`. | All must pass before writing |
 
 ### Step 5 — Post-Quota Validation

@@ -37,13 +37,13 @@ If `deploy-result.json` missing, write skeleton with these EXACT field names (do
 
 Read [deploy-safety.md](deploy-safety.md) and [blocked-patterns.md](blocked-patterns.md). Bake into checklist sections: deploy-result.json rules, blocked commands table, shell rules (sync shells, secrets persistence, no --track-status, az rest headers on Windows), 403 scope fallback (4-step procedure with real values), post-deploy tag verification, deployment operation polling (conditional: >5 resources), re-approval gates, antipatterns, artifact reconciliation.
 
-### Step 3 — Read preflight + approval gate refs
+### Step 3 — Read preflight refs
 
-Read [preflight-checks.md](preflight-checks.md) and [approval-gate-template.md](approval-gate-template.md).
+Read [preflight-checks.md](preflight-checks.md).
 
 Bake preflight into checklist: auth token check, resource name availability (real names), RBAC scope pre-check, ⛔ MANDATORY what-if command (pre-filled with real deploymentName, region, subscriptionId), RG existence check, offer restriction check (conditional: if `offerRestrictionsVerified` false AND DB services in plan).
 
-Bake approval gate VERBATIM with real values: subscription, RG, region, service table, cost table, validation status, files list, response handlers with exact CLI commands. If F1/D1 detected, append warning.
+⛔ **Do NOT bake a chat approval gate.** The deploy phase presents no chat gate — approval already happened in the Deployment Plan webview at orchestrator Step 6 (see [approval-gate-template.md](approval-gate-template.md)). Do NOT put a service table, cost table, or "🚀 Ready to deploy?" prompt in the checklist.
 
 ### Step 4 — Read code-deployment + health refs
 

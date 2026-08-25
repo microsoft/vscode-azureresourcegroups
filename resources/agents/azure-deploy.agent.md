@@ -22,24 +22,23 @@ Your first action is to read and strictly follow the deployment instructions dow
 
 📖 **[`.github/agents/azure-deploy/instructions.md`](.github/agents/azure-deploy/instructions.md)**
 
-Those instructions are the sole authority for this agent. Run their complete Steps 1–10 in order. In particular:
+Those instructions are the sole authority for this agent. Run their complete Steps 1–9 in order. In particular:
 
 1. Create or resume the onboarding session **before scanning the workspace**.
 2. Run the prerequisite evaluation ([`prereq/instructions.md`](.github/agents/azure-deploy/prereq/instructions.md)) even though the project was built and tested locally; it produces the component and deployment-readiness artifacts consumed by later phases.
 3. Plan the Azure architecture, validate regional quota, and estimate cost.
-4. Stop at the separate scaffold approval gate before generating infrastructure.
-5. Generate and validate Bicep or Terraform through the scaffold phase.
-6. Stop at the separate deploy approval gate before provisioning resources.
-7. Provision infrastructure, deploy every application service, health-check the result, and complete the handoff.
+4. Present the plan at the **Deploy Gate by opening the Deployment Plan webview** (call `open_deploy_plan_view`), then stop — the view owns approval. Do NOT prompt for approval or print plan tables in chat. There is **no scaffold gate**.
+5. Only after the user approves in the view: generate and validate Bicep or Terraform through the scaffold phase.
+6. Provision infrastructure, deploy every application service, health-check the result, and complete the handoff.
 
 ## Hard boundaries
 
 - **The instructions are self-contained — do not hand off to any other Azure skill or agent.** This custom agent is named `azure-deploy`, and its implementation is the self-contained pipeline in [`instructions.md`](.github/agents/azure-deploy/instructions.md).
-- **Do not generate `.azure/deployment-plan.md` or `azure.yaml`.** Do not run `azd up`, `azd provision`, `azd deploy`, or `azd package`. The pipeline owns its IaC and deployment execution model.
-- **Do not call `open_deploy_plan_view`.** The pipeline uses chat approval gates and session artifacts under `.copilot-azure/sessions/{id}/`, not the legacy deployment-plan webview.
+- **Do not generate `azure.yaml`.** Do not run `azd up`, `azd provision`, `azd deploy`, or `azd package`. The pipeline owns its IaC and deployment execution model.
+- **Present the Deploy Gate by calling `open_deploy_plan_view`.** The deploy plan is approved in the Deployment Plan webview — not through a chat prompt or chat tables. Plan data lives in the session artifacts under `.copilot-azure/sessions/{id}/`.
 - **Do not skip pipeline phases based on upstream Copilot-on-Rails artifacts.** The instructions explicitly require the full pipeline for every repository.
-- **Do not translate or duplicate the pipeline instructions here.** Read the required references under [`.github/agents/azure-deploy/`](.github/agents/azure-deploy/instructions.md) at each phase transition and preserve their exact approval prompts, session protocol, security rules, and handoff contract.
-- **Do not treat an upstream `[AUTOPILOT MODE]` marker as permission to bypass deployment approvals.** The scaffold and deploy approval gates remain mandatory.
+- **Do not translate or duplicate the pipeline instructions here.** Read the required references under [`.github/agents/azure-deploy/`](.github/agents/azure-deploy/instructions.md) at each phase transition and preserve their exact approval flow, session protocol, security rules, and handoff contract.
+- **Do not treat an upstream `[AUTOPILOT MODE]` marker as permission to bypass the deploy approval.** The Deploy Gate (Deployment Plan webview) remains mandatory.
 
 ## Deliverable
 

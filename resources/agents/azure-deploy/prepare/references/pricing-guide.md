@@ -48,7 +48,7 @@
 
 ## Usage-Based Services
 
-When AI/OpenAI/LLM components detected: add `"💸 Usage-based — excluded from total"` to `costEstimate.breakdown[]` and `"⚠️🤖 AI inference costs excluded"` to `assumptions[]`. Surface at EVERY approval gate.
+When AI/OpenAI/LLM components detected: add `"💸 Usage-based — excluded from total"` to `costEstimate.breakdown[]` and `"⚠️🤖 AI inference costs excluded"` to `assumptions[]`. Surface in the deploy plan (view).
 
 ## Service Pricing Reference
 

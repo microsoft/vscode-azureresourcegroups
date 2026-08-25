@@ -149,7 +149,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
    bash {scaffoldDir}/scripts/scaffold-conformance.sh ".copilot-azure/sessions/{uuid}" infra                       # bash (only if pwsh unavailable; needs jq for the plan-dependent checks)
    ```
    ⛔ **Prefer the `.ps1` when `pwsh` is available** — it runs every check unconditionally. The `.sh` twin skips the plan-dependent checks (`DB-VERSION-MATCH`, `SERVICES-COMPLETE`, `DB-NAME-PRESENT`, `WARN-FIXED`) when `jq` is absent.
-   ⛔ Any BLOCK failure → fix the IaC, re-run (max 3); never present the deploy gate with an open BLOCK. Run it here in the main thread — do NOT delegate to the validate subagent or hand-judge the result when a shell exists. Pass the JSON to the validate subagent for `scaffold-manifest.json.conformance`.
+   ⛔ Any BLOCK failure → fix the IaC, re-run (max 3); never proceed to deploy (Step 8) with an open BLOCK. Run it here in the main thread — do NOT delegate to the validate subagent or hand-judge the result when a shell exists. Pass the JSON to the validate subagent for `scaffold-manifest.json.conformance`.
 
 10b–12.5. **Validation + manifest** — ⛔ **You MUST dispatch [`subagent-validate.md`](references/subagent-validate.md) as a `task`.** ⛔ agent_type: `"task"` — NEVER `"general-purpose"`.
    ```
@@ -176,7 +176,7 @@ Invoked by the `azure-app-onboard` orchestrator at Phase 3 when `prepare-plan.js
    - **Expect:** `scaffold-manifest.json` with `validationResult`, deploy checklist generated
    - Verify `deploy-checklist.md` exists (written at Step 5b) — if missing, create NOW from [`deploy-checklist-template.md`](../deploy/references/deploy-checklist-template.md). Verify `deploy-result.json` exists — if missing, create from [`deploy-schemas.ts`](../deploy/references/deploy-schemas.ts).
    - ⛔ **Verify `context.json` update (main-thread — do NOT delegate).** Read `.copilot-azure/sessions/{uuid}/context.json`. If `completedPhases` does not include `"scaffold"` OR `currentPhase` is not `"deploy"`, write it yourself via `edit` / `create`: append `"scaffold"` to `completedPhases`, set `currentPhase` to `"deploy"`, update `lastModifiedUtc` to current UTC ISO 8601. This is a phase-boundary write required by [pipeline-rules.md](../references/pipeline-rules.md) — do not skip it.
-   - ⛔ **Return to orchestrator for Step 8 (Deploy Approval Gate).** YOUR NEXT ACTION MUST BE presenting the Deploy Gate per orchestrator instructions.md — do NOT write a "summary of generated files" message, do NOT emit a completion report. The Deploy Gate prompt (`🚀 Ready to deploy? ...`) is the ONLY correct next output.
+   - ⛔ **Return to orchestrator for Step 8 (Deploy — execute IaC).** The plan was already approved in the Deployment Plan webview (Step 6), so YOUR NEXT ACTION MUST BE beginning deployment per orchestrator instructions.md — do NOT write a "summary of generated files" message, do NOT emit a completion report, and do NOT present another approval prompt. Read `deploy-checklist.md` → `deploy/instructions.md` and deploy.
 
 ## Self-Healing Loop
 

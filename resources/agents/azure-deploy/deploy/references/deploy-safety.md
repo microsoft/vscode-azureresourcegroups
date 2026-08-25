@@ -30,8 +30,7 @@ When `az deployment sub create` returns 403 (insufficient subscription-scope per
 1. **Restructure Bicep to RG-scope** — change `targetScope = 'subscription'` to resource-group scope, remove the `Microsoft.Resources/resourceGroups` resource.
 2. **Create the RG via CLI** — `az group create -n {rg} -l {region} --tags app-onboard-skill=true app-onboard-session-id={sessionId} created-at={createdAt} environment={environmentName} deployed-by={deployedBy}`. All 5 AppOnboard tags MUST be included.
 3. **Retry with `az deployment group create`** — use `--resource-group {rg}` instead of subscription scope.
-4. **Regenerate portal link** for RG-scope — `$resId` must include `/resourceGroups/{rg}`: `$resId = "/subscriptions/{subscriptionId}/resourceGroups/{rg}/providers/Microsoft.Resources/deployments/$deploymentName"`. Re-run `Write-Output "LINK=$l"; Start-Process $l 2>$null` and print new bare URL.
-5. **If retry ALSO fails with 403** → classify as `ENVIRONMENT_BLOCKING`. Surface required role: `az role assignment create --role Contributor --assignee {user} --scope /subscriptions/{sub}/resourceGroups/{rg}`.
+4. **If retry ALSO fails with 403** → classify as `ENVIRONMENT_BLOCKING`. Surface required role: `az role assignment create --role Contributor --assignee {user} --scope /subscriptions/{sub}/resourceGroups/{rg}`.
 
 ## Deploy Checklist
 
@@ -52,7 +51,7 @@ For deployments with >5 resources, poll every 30s: `az deployment operation list
 
 ## Re-Approval Gates
 
-Region, service type, or SKU changes from user-approved values → re-present approval gate. Resource name changes → informational only. Same-deployment retries → no re-approval.
+Region, service type, or SKU changes from user-approved values → re-open the Deployment Plan view for re-approval. Resource name changes → informational only. Same-deployment retries → no re-approval.
 
 ## Antipatterns
 

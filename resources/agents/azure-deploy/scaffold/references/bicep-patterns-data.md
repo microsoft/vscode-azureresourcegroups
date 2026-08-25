@@ -30,7 +30,7 @@ resource pg 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   }
 }
 
-// 0.0.0.0 = all Azure services (intentional) — broad access consented at the Scaffold Gate.
+// 0.0.0.0 = all Azure services (intentional) — broad access consented at the Deploy Gate (Deployment Plan view).
 resource pgFirewall 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = {
   parent: pg
   name: 'AllowAllAzureServicesAndResourcesWithinAzureIps'
@@ -72,7 +72,7 @@ resource mysql 'Microsoft.DBforMySQL/flexibleServers@2023-12-30' = {
   }
 }
 
-// 0.0.0.0 = all Azure services (intentional) — broad access consented at the Scaffold Gate.
+// 0.0.0.0 = all Azure services (intentional) — broad access consented at the Deploy Gate (Deployment Plan view).
 resource mysqlFirewall 'Microsoft.DBforMySQL/flexibleServers/firewallRules@2023-12-30' = {
   parent: mysql
   name: 'AllowAllAzureServicesAndResourcesWithinAzureIps'

@@ -1,4 +1,4 @@
-# Validation, Manifest & Approval — Steps 10–12.5
+# Validation, Manifest & Phase Exit — Steps 10–12.5
 
 ## Step 10 — CI/CD
 
@@ -46,17 +46,16 @@ az bicep build --file infra/main.bicep --stdout > $null
 
 **You MUST also update `context.json`** per `AppOnboardContext` in [`session-schemas.ts`](../../references/session-schemas.ts): append `"scaffold"` to `completedPhases`, set `currentPhase` to `"deploy"`, update `lastModifiedUtc`.
 
-## Step 12.5 — Deploy Approval Gate
+## Step 12.5 — Phase Exit (no gate)
 
-Present the user with: files generated, selfReview findings, **validation results** (pass/fail per check from Step 11), services + SKUs, secure-defaults applied. End with: **"Ready to deploy? (Yes / Run manually / Edit plan / Cancel)"** — do not continue until the user approves.
+The plan was already approved in the Deployment Plan webview (orchestrator Step 6) before scaffold ran. ⛔ **Do NOT present a chat approval gate here** — no "Ready to deploy?" prompt, no services/cost tables, no files-generated summary. Scaffold's job is to finish IaC generation and validation, write artifacts, and return to the orchestrator for Step 8 (Deploy).
 
-> ⛔ **Self-check before presenting the deploy gate.** Does `scaffold-manifest.json` contain a `validationResult` field with `status` set? If NO → you skipped Step 11. Go back and run validation. Do NOT present the deploy gate with `validationResult: null`.
+> ⛔ **Self-check before returning.** Does `scaffold-manifest.json` contain a `validationResult` field with `status` set? If NO → you skipped Step 11. Go back and run validation. Do NOT return with `validationResult: null`.
 
-> ⛔ **Quota gate — MANDATORY.** Read `prepare-plan.json.quotaValidation`. If `verified == false`, `method == "unverifiable"`, or `method` is not `"cli"` for quota-constrained services: read [`sku-quota-validation.md`](../../prepare/references/sku-quota-validation.md) § Deploy Gate Re-Validation and follow the procedure.
+> ⛔ **Quota re-validation — MANDATORY (automated, not a user gate).** Read `prepare-plan.json.quotaValidation`. If `verified == false`, `method == "unverifiable"`, or `method` is not `"cli"` for quota-constrained services: read [`sku-quota-validation.md`](../../prepare/references/sku-quota-validation.md) § Deploy Gate Re-Validation and follow the procedure. If it forces a region/SKU change, that is a plan change → re-open the Deployment Plan view for re-approval (see [approval-gates.md](../../references/approval-gates.md)).
 > ⛔ Do NOT use `az vm list-usage`, `az appservice list-locations`, or `mcp_azure_mcp_quota` for quota checks — see Anti-Patterns in [`sku-quota-validation.md`](../../prepare/references/sku-quota-validation.md).
 
-
-> ⛔ **Azure service compatibility warnings.** Read `prereq-output.json.warnings[]` for any warnings with `fixPhase: "deploy-gate"`. Surface EACH at the deploy gate: "⚠️ Azure compatibility: {warning.summary}. Fix: {warning.fix}. Approve? (Yes / Skip / Cancel)". If the user skips, add to `postDeployRecommendations[]`.
+> ⛔ **Azure service compatibility warnings** (`prereq-output.json.warnings[]` with `fixPhase: "deploy-gate"`) are part of the plan the Deployment Plan view renders at Step 6 — they are NOT re-surfaced as a chat prompt here. Ensure each is recorded in the session artifacts; post-deploy remediation goes to `postDeployRecommendations[]`.
 
 > ⛔ **Phase exit — NOT complete until ALL done:**
 > 1. `scaffold-manifest.json` written with `files[]`, `selfReview.findings[]`, AND `validationResult`

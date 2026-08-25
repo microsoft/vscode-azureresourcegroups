@@ -4,23 +4,20 @@ Cross-cutting rules enforced across all workflow steps. Referenced from [instruc
 
 ## Approval gates
 
-⛔ **Two separate approval gates are required — never merge them.**
+⛔ **One approval gate — the Deploy Gate — presented as a webview.**
 
-1. **Scaffold gate (Step 6):** "✅ Ready to proceed with scaffolding? (Yes / Edit plan / Cancel)" — approves IaC generation only. ⛔ When the plan includes PostgreSQL/MySQL, add `Private access` as a selectable choice — see approval-gates.md for the exact variant.
-2. **Deploy gate (Step 8):** "🚀 Ready to deploy? (Yes / Run manually / Edit plan / Cancel)" — approves resource provisioning.
+**Deploy gate (Step 6):** call the `open_deploy_plan_view` tool, then STOP. The Deployment Plan webview renders the plan (subscription, resource group, region, services + SKUs, resource names, cost) and owns the approve / edit / cancel decision. ⛔ **No chat approval prompt and no chat tables** — none of the plan is printed in chat. See [approval-gates.md](approval-gates.md) for the full gate contract.
 
-The scaffold gate does NOT grant deploy permission. After scaffold completes, you MUST present the deploy gate as a SEPARATE response. Never go from scaffold approval directly to `az group create` or `az deployment`.
+⛔ **There is no scaffold gate.** IaC generation (Step 7) runs automatically AFTER the user approves the plan in the view — never before. NEVER create, write, or modify infrastructure files before the view reports approval. No exceptions — not for simple apps, trivial plans, free-tier deployments, or single-component repos.
 
-⛔ **BOTH gates MUST show Subscription (name + ID), Resource Group, and Region** as standalone lines above the service table — users must see WHERE resources will be created before approving.
-
-⛔ **NEVER create, write, or modify infrastructure files before the user explicitly says "Yes" to the scaffold gate.** No exceptions — not for simple apps, trivial plans, free-tier deployments, or single-component repos.
+⛔ **The subscription, resource group, and region are part of the plan the view renders** — the user must see WHERE resources will be created before approving. Record them in the session artifacts, not in chat.
 
 ⛔ **Modifying existing IaC files (not AppOnboard-generated) requires explicit user approval.** Present: "I need to modify {file}: {change description}. Approve? (Yes / Edit / Cancel)". This applies to repos with existing Bicep/Terraform where AppOnboard adjusts SKUs, regions, or settings.
 
-Each gate is the LAST content in its response — do NOT continue past a gate in the same turn.
+Opening the view is the LAST content in its response — do NOT continue past the gate in the same turn.
 
-> ❌ BAD: Writes Bicep without approval · scaffolds and deploys in same response · skips deploy gate after scaffold approval
-> ✅ GOOD: Shows plan → user says Yes → scaffold → show validation summary → deploy gate → user says Yes → deploy
+> ❌ BAD: Writes Bicep before the view approves · prints a service/cost table in chat · asks "🚀 Ready to deploy?" in chat
+> ✅ GOOD: Writes prepare-plan.json → opens Deployment Plan view → view approves → scaffold → deploy
 
 ## Phase lifecycle
 
@@ -46,7 +43,7 @@ Update `context.json` at phase boundaries — combine `completedPhases` update w
 
 ## Phase transition rule
 
-> ⛔ **Before executing the FIRST command of any new phase, re-read that phase instructions.md.** After prereq → read `prepare/instructions.md`. After prepare → `scaffold/instructions.md`. After scaffold gate → `deploy/instructions.md`. This applies at EVERY transition.
+> ⛔ **Before executing the FIRST command of any new phase, re-read that phase instructions.md.** After prereq → read `prepare/instructions.md`. After the deploy-gate approval in the view → `scaffold/instructions.md`. After scaffold → `deploy/instructions.md`. This applies at EVERY transition.
 
 ## Post-compaction recovery
 
@@ -64,7 +61,7 @@ Set by prereq: (1) auto-approves readiness gate, (2) simplifies prepare Step 3 a
 
 ## Deploy as-is
 
-⛔ Do NOT refactor or upgrade working application code. Deploy what works. Fixing broken code IS allowed (build errors, missing deps) through the approval gate. Upgrade suggestions → `prepare-plan.json.postDeployRecommendations[]`. Infrastructure changes = allowed; code rewrites = forbidden; Azure compatibility changes (TLS, SSL, port) = allowed when detected by prereq AND approved. Never prompt for passwords — auto-generate into Key Vault.
+⛔ Do NOT refactor or upgrade working application code. Deploy what works. Fixing broken code IS allowed (build errors, missing deps) when surfaced in the plan the user approves in the view. Upgrade suggestions → `prepare-plan.json.postDeployRecommendations[]`. Infrastructure changes = allowed; code rewrites = forbidden; Azure compatibility changes (TLS, SSL, port) = allowed when detected by prereq AND approved. Never prompt for passwords — auto-generate into Key Vault.
 
 ## Known Platform Bugs
 
