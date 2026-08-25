@@ -36,7 +36,7 @@ for (let i = 0; i < args.length; i++) {
 }
 
 const evalSpecTemplate = path.join(evalsDir, suite, "eval.yaml");
-const executorPlugin = path.join(evalsDir, "executor", "azure-agent-executor.mjs");
+const executorPlugin = path.join(evalsDir, "executor", "azure-agent-executor.ts");
 const outputDir = outputDirArg
     ? path.resolve(repoRoot, outputDirArg)
     : path.join(repoRoot, "results", `local-${Date.now()}`);
@@ -52,7 +52,7 @@ const evalSpec = path.join(evalSpecDir, "eval.yaml");
 fs.writeFileSync(evalSpec, evalSpecResolved);
 
 // The workflow-tools MCP server is a stdio server launched per-session by the
-// Copilot SDK (see evals/executor/azure-agent-executor.mjs) — nothing to start here.
+// Copilot SDK (see evals/executor/azure-agent-executor.ts) — nothing to start here.
 
 // Use the vally CLI pinned by evals/package.json so local runs and CI agree on a
 // version. Fall back to npx (pinned to the same version) when deps aren't installed.

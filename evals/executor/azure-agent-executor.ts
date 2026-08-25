@@ -12,11 +12,12 @@
 
 import { approveAll, CopilotClient, RuntimeConnection } from "@github/copilot-sdk";
 import { computeMetrics } from "@microsoft/vally";
+import type { Executor, ExecutorOptions, ExecutorRegistry, Stimulus, Trajectory, TrajectoryEvent } from "@microsoft/vally";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildEvalSkill, prepareAgentWorkspace, resolveEvalModel } from "./agent-assets.mjs";
-import { workflowToolDefinitions } from "../mcp/workflow-tools.mjs";
+import { buildEvalSkill, prepareAgentWorkspace, resolveEvalModel } from "./agent-assets.ts";
+import { workflowToolDefinitions } from "../mcp/workflow-tools.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,11 +40,39 @@ function getBundledCliPath() {
     return path.resolve(pkgDir, "npm-loader.js");
 }
 
-function parseArgs(args) {
+/**
+ * The trajectory events this executor actually emits.
+ *
+ * Deliberately *not* `TrajectoryEvent`: three fields diverge from what vally
+ * models, and the divergences change grading, so they are recorded here rather
+ * than silently "fixed" during a mechanical TypeScript conversion.
+ *
+ * 1. `tool_call.data.name` — vally's `ToolCallEvent` calls this `toolName`, and
+ *    both `tool-call-grader` and `metrics-collector` read `data.toolName`. As a
+ *    result every tool call is currently counted as `"unknown"` in
+ *    `toolCallBreakdown`, and `tool-calls` graders cannot match on `tool_call`
+ *    events (they match on `tool_result`, which does carry `toolName`).
+ * 2. `tool_result.data.success` — required by vally's `ToolResultEvent` and
+ *    supplied by the SDK's `tool.execution_complete`, but dropped here, so a
+ *    grader reading it sees `undefined` (falsy) for every call.
+ * 3. `skill_loaded` — not a vally event kind at all; no vally grader or reporter
+ *    matches it, so these events are inert. vally models skills as
+ *    `skill_activation` with `data.name`.
+ *
+ * Fixing these flips eval outcomes, so it needs a full suite run to validate and
+ * is tracked separately from this conversion.
+ */
+type ExecutorEvent =
+    | { type: "assistant_message"; timestamp: Date; data: { content: string } }
+    | { type: "tool_call"; timestamp: Date; data: { toolCallId: string; name: string; arguments: Record<string, unknown> } }
+    | { type: "tool_result"; timestamp: Date; data: { toolCallId: string; toolName: string; result: unknown } }
+    | { type: "skill_loaded"; timestamp: Date; data: { skills: unknown[] } };
+
+function parseArgs(args: unknown): Record<string, unknown> {
     if (!args) {return {};}
-    if (typeof args === "object") {return args;}
+    if (typeof args === "object") {return args as Record<string, unknown>;}
     try {
-        const parsed = JSON.parse(args);
+        const parsed = JSON.parse(args as string);
         return parsed && typeof parsed === "object" ? parsed : { value: parsed };
     } catch {
         // Non-JSON string payloads (e.g. apply_patch patch text). Wrap it so downstream
@@ -52,10 +81,10 @@ function parseArgs(args) {
     }
 }
 
-function convertSdkEvent(event) {
+function convertSdkEvent(event: any): ExecutorEvent | ExecutorEvent[] | null {
     switch (event.type) {
         case "assistant.message": {
-            const results = [];
+            const results: ExecutorEvent[] = [];
             if (event.data?.content) {
                 results.push({
                     type: "assistant_message",
@@ -111,7 +140,7 @@ function convertSdkEvent(event) {
     }
 }
 
-class AzureAgentExecutor {
+class AzureAgentExecutor implements Executor {
     name = "azure-agent-executor";
     supportsMultiTurn = true;
     supportsTurnCompletion = false;
@@ -119,11 +148,11 @@ class AzureAgentExecutor {
     supportsAttachments = false;
     supportsEnvVars = true;
 
-    async execute(stimulus, options) {
+    async execute(stimulus: Stimulus, options: ExecutorOptions): Promise<Trajectory> {
         const startedAt = new Date();
-        let skillsLoaded = [];
+        let skillsLoaded: string[] = [];
         let assistantOutput = "";
-        const rawEvents = [];
+        const rawEvents: unknown[] = [];
 
         const skillDir = buildEvalSkill(repoRoot, AGENT_NAME, path.resolve(__dirname, "../.generated/skills"));
         const skillDirs = [skillDir];
@@ -186,7 +215,7 @@ class AzureAgentExecutor {
         const completedAt = new Date();
 
         // Build trajectory from events collected via session.on()
-        const events = [];
+        const events: ExecutorEvent[] = [];
         for (const event of rawEvents) {
             const converted = convertSdkEvent(event);
             if (Array.isArray(converted)) {
@@ -197,7 +226,7 @@ class AzureAgentExecutor {
         }
 
         // Fill in missing toolName on tool_result events by matching toolCallId to tool_call
-        const callIdToName = new Map();
+        const callIdToName = new Map<string, string>();
         for (const e of events) {
             if (e.type === "tool_call" && e.data.toolCallId && e.data.name) {
                 callIdToName.set(e.data.toolCallId, e.data.name);
@@ -218,12 +247,16 @@ class AzureAgentExecutor {
             });
         }
 
-        const metrics = computeMetrics(events);
+        // Single cast at the vally boundary. `ExecutorEvent` documents exactly how
+        // these events diverge from `TrajectoryEvent` (see its doc comment); vally
+        // tolerates the extra/renamed fields at runtime, it just cannot grade on them.
+        const trajectoryEvents = events as unknown as TrajectoryEvent[];
+        const metrics = computeMetrics(trajectoryEvents);
 
         return {
             id: crypto.randomUUID(),
             stimulus,
-            events,
+            events: trajectoryEvents,
             output: assistantOutput.trim() || events.filter(e => e.type === "assistant_message").map(e => e.data.content).join("\n"),
             workDir: options.workDir,
             metadata: {
@@ -242,9 +275,9 @@ class AzureAgentExecutor {
     }
 
     /** Required by the Vally executor interface; each trial already stops its own client. */
-    async shutdown() { /* no-op */ }
+    async shutdown(): Promise<void> { /* no-op */ }
 }
 
-export function registerExecutors(registry) {
+export function registerExecutors(registry: ExecutorRegistry): void {
     registry.register(new AzureAgentExecutor());
 }

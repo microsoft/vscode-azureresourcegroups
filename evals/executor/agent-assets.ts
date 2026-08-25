@@ -15,7 +15,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { MCP_SERVER_NAME, TOOLS } from "../mcp/workflow-tools.mjs";
+import { MCP_SERVER_NAME, TOOLS } from "../mcp/workflow-tools.ts";
 import {
     SHARED_FOLDER,
     readFrontmatterValue,
@@ -36,10 +36,10 @@ const DEFAULT_EVAL_MODEL = "claude-sonnet-4.6";
  * shared references into the workspace, mirroring what the extension writes to
  * `.github/agents` on the user's machine.
  */
-export function prepareAgentWorkspace(repoRoot, workDir, agentName) {
+export function prepareAgentWorkspace(repoRoot: string, workDir: string, agentName: string): string[] {
     const sourceRoot = path.join(repoRoot, "resources", "agents");
     const destinationRoot = path.join(workDir, ".github", "agents");
-    const copied = [];
+    const copied: string[] = [];
 
     for (const folder of [agentName, SHARED_FOLDER]) {
         const src = path.join(sourceRoot, folder);
@@ -60,7 +60,7 @@ export function prepareAgentWorkspace(repoRoot, workDir, agentName) {
  * which is a developer's `~/.copilot/settings.json` locally and a different default
  * in CI — the same eval then grades two different models and the results disagree.
  */
-export function resolveEvalModel(repoRoot, agentName, requestedModel) {
+export function resolveEvalModel(repoRoot: string, agentName: string, requestedModel?: string): { model: string; supported: string[] } {
     const supported = readSupportedModels(repoRoot, agentName);
     const model = requestedModel || DEFAULT_EVAL_MODEL;
     if (!supported.includes(model)) {
@@ -77,7 +77,7 @@ export function resolveEvalModel(repoRoot, agentName, requestedModel) {
  * discover on its own. Deliberately contains no workflow rules or contracts —
  * those must come from the shipped instructions so the graders test the product.
  */
-function harnessNotes(agentName) {
+function harnessNotes(agentName: string): string {
     const toolList = TOOLS.map(([name]) => `\`${MCP_SERVER_NAME}-${name}\``).join(", ");
     return [
         "## Evaluation environment",
@@ -102,7 +102,7 @@ function harnessNotes(agentName) {
  * activation is tested against the real trigger phrases. VS Code-only keys
  * (`tools`, `model`) are dropped because they don't apply to the SDK harness.
  */
-export function buildEvalSkill(repoRoot, agentName, outputRoot) {
+export function buildEvalSkill(repoRoot: string, agentName: string, outputRoot: string): string {
     const agentFile = path.join(repoRoot, "resources", "agents", `${agentName}.agent.md`);
     if (!fs.existsSync(agentFile)) {
         throw new Error(`Cannot build eval skill: ${agentFile} does not exist`);
@@ -123,7 +123,7 @@ export function buildEvalSkill(repoRoot, agentName, outputRoot) {
         `description: ${JSON.stringify(description)}`,
         "---",
         "",
-        `<!-- GENERATED from resources/agents/${agentName}.agent.md — do not edit. See evals/executor/agent-assets.mjs. -->`,
+        `<!-- GENERATED from resources/agents/${agentName}.agent.md — do not edit. See evals/executor/agent-assets.ts. -->`,
         "",
         body.trim(),
         "",

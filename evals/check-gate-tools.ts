@@ -18,7 +18,7 @@
  * in-process, so this check mostly guards against the tools being renamed out from
  * under the graders.
  *
- * Usage: node evals/check-gate-tools.mjs
+ * Usage: node evals/check-gate-tools.ts
  */
 
 import { approveAll, CopilotClient, RuntimeConnection } from "@github/copilot-sdk";
@@ -26,7 +26,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { MCP_SERVER_NAME, workflowToolDefinitions } from "./mcp/workflow-tools.mjs";
+import { MCP_SERVER_NAME, workflowToolDefinitions } from "./mcp/workflow-tools.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -47,10 +47,10 @@ function bundledCliPath() {
  * Comparing against the specs catches that; comparing the definitions against
  * themselves would not.
  */
-function requiredToolNamesFromSpecs() {
+function requiredToolNamesFromSpecs(): Set<string> {
     const specDir = path.join(__dirname, "project-plan");
-    const names = new Set();
-    let files;
+    const names = new Set<string>();
+    let files: string[];
     try {
         files = fs.readdirSync(specDir).filter(f => f.endsWith(".yaml") || f.endsWith(".yml"));
     } catch {
@@ -65,7 +65,7 @@ function requiredToolNamesFromSpecs() {
     return names;
 }
 
-function fail(message, detail) {
+function fail(message: string, detail?: string): never {
     console.error(`\n✖ ${message}\n`);
     if (detail) {console.error(`${detail}\n`);}
     process.exit(1);
@@ -123,7 +123,7 @@ try {
             `${unsatisfied.length} gate tool(s) required by the eval specs do not exist.`,
             `  required but missing: ${unsatisfied.join(", ")}\n\n`
             + `  A \`tool-calls\` grader names these literally, so it can never pass.\n`
-            + `  Either the tool was renamed in evals/mcp/workflow-tools.mjs or the\n`
+            + `  Either the tool was renamed in evals/mcp/workflow-tools.ts or the\n`
             + `  spec has a typo. Registered tools:\n  ${expected.map(t => t.name).sort().join(", ")}`,
         );
     }
@@ -133,7 +133,10 @@ try {
         + ` (${required.size} referenced by graders).`,
     );
 } catch (err) {
-    fail(`Gate tool preflight could not complete: ${err.message}`, err.stack);
+    fail(
+        `Gate tool preflight could not complete: ${err instanceof Error ? err.message : String(err)}`,
+        err instanceof Error ? err.stack : undefined,
+    );
 } finally {
     await session?.disconnect().catch(() => { /* ignore */ });
     await client.stop().catch(() => { /* ignore */ });

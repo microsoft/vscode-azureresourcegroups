@@ -6,7 +6,7 @@
 /**
  * Reads the *shipped* agent definition under `resources/agents/`.
  *
- * This is the half of the old `executor/agent-assets.mjs` that outlives the Vally
+ * This is the half of the old `executor/agent-assets.ts` that outlives the Vally
  * runner. The drift check needs it to know which files constitute the agent and
  * which models the product declares support for; the executor needs it to build a
  * workspace and a skill. Splitting on that line keeps the drift check free of the

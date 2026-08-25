@@ -9,7 +9,7 @@ The two are complementary, not redundant:
 | | `evals/` (Vally) | `evals/msbench/` |
 | --- | --- | --- |
 | Runs | Copilot SDK, headless | Real VS Code + our VSIX |
-| Tools | `evals/mcp/workflow-tools-server.mjs` stand-in | The extension's in-process MCP server |
+| Tools | `evals/mcp/workflow-tools.ts` stand-in | The extension's in-process MCP server |
 | Webviews | Never opened | Actually rendered |
 | Where | GitHub Actions, ~30 min | MSBench CES, with video + screenshots |
 | Role | Fast PR gate | Nightly, pass@k, model sweeps |

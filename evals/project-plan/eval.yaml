@@ -9,7 +9,7 @@ defaults:
   timeout: 10m
   executor: azure-agent-executor
   model: claude-sonnet-4.6
-  # The executor owns skill + instruction setup (evals/executor/agent-assets.mjs):
+  # The executor owns skill + instruction setup (evals/executor/agent-assets.ts):
   # it generates SKILL.md from the shipped resources/agents/azure-project-plan.agent.md
   # and copies the whole instruction folder (including references/) into the workspace,
   # so a rule removed from the product is also removed from the eval.
