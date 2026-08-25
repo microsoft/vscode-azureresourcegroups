@@ -74,7 +74,14 @@ This catches orphaned RGs from region fallback or naming conflict healing. For T
 
 > ⛔ **Prefer the inventory over memory.** `deploy-result.json.createdResources[]` and `orphanedResourceGroups[]` are computed by `capture_deployment_inventory` from a before/after `resources.list()` diff, so they catch orphans the tag filter misses (imperative `az create` fallbacks and resources that never received the session tag). If they are empty/missing, run `capture_deployment_inventory` (`phase: "capture"`) and write its output into `deploy-result.json` before writing this section.
 
-**If `deploy-result.json.orphanedResourceGroups[]` is non-empty**, list each explicitly with delete commands. For orphans with a `subscription` field, include `--subscription {subscription}`. **For every `createdResources[]` entry with `classification: "orphaned"` or `"failed"`**, build and surface the exact `az resource delete --ids {id}` command so the user can remove leftovers from a partial or failed deploy.
+**If `deploy-result.json.orphanedResourceGroups[]` is non-empty**, list each explicitly with delete commands. For orphans with a `subscription` field, include `--subscription {subscription}`.
+
+⛔ **Do not present unattributed resources as safe to delete.** The two classifications carry different confidence and MUST be printed as two separate lists:
+
+- **`classification: "failed"`** — confirmed to belong to this deployment. Print the exact `az resource delete --ids {id}` command under a heading like `🗑️ Failed resources from this deployment (safe to delete):`.
+- **`classification: "orphaned"`** — appeared during the deploy window but no tracked deployment reported it. It may be a healing stray, or it may belong to someone else on a shared subscription. Print it under `⚠️ Resources that appeared during this deploy but could not be matched to it — review before deleting:` with the resource ID and portal link, and **without** a ready-to-run delete command.
+
+⛔ **If `deploy-result.json.inventoryUnverified` is `true`**, the deployment's ARM operations could not be read and nothing could be attributed. Print neither list. Instead say the created-resource inventory could not be verified (include `inventoryUnverifiedReason`; for `"forbidden"` explain the account lacks `Microsoft.Resources/deployments/operations/read`) and point the user at the resource group in the portal. Still print the primary and tag-based cleanup blocks above.
 
 ## Redeploy Command
 

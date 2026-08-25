@@ -92,9 +92,15 @@ export interface DeployResultOrphanedResourceGroup {
 }
 
 /**
- * A single resource flagged by the deterministic inventory as `failed` or
- * `orphaned`, paired with the `az` command that deletes just that resource.
- * Rendered as an itemized cleanup list alongside the bulk `cleanupCommand`.
+ * A single resource surfaced by the deterministic inventory for the user to act on.
+ *
+ * The two classifications carry very different confidence and must not be presented alike:
+ * - `failed` — a tracked ARM deployment reported this resource with a non-succeeded state. It
+ *   definitely belongs to this deployment, so a ready-to-run delete command is appropriate.
+ * - `orphaned` — the resource appeared in the subscription during the deploy window but no tracked
+ *   deployment reported it. It is *probably* a healing/imperative stray, but on a shared
+ *   subscription it may belong to someone else entirely, so it is presented for review without a
+ *   one-click delete command.
  */
 export interface DeployResultCleanupResource {
     /** Friendly resource type, e.g. `Managed Identity`. */
@@ -105,9 +111,13 @@ export interface DeployResultCleanupResource {
     id?: string;
     /** The resource group the resource lives in, when known. */
     resourceGroup?: string;
-    /** Why this resource needs cleanup. */
+    /** How confidently this resource is attributed to the deployment. */
     classification: 'failed' | 'orphaned';
-    /** Azure CLI command that deletes just this resource. */
+    /**
+     * Azure CLI command that deletes just this resource. Only populated for `failed` resources —
+     * `orphaned` ones are unattributed, and pairing a guess with a copyable delete command invites
+     * the user to delete something the deployment never created.
+     */
     deleteCommand: string;
 }
 
@@ -153,10 +163,25 @@ export interface DeployResultData {
     cleanupCommand: string;
 
     /**
-     * Per-resource cleanup list built from the inventory's `failed`/`orphaned`
-     * entries — each carries its own `az resource delete` command.
+     * Resources the deployment is confirmed to have created and left in a failed state. Safe to
+     * offer a delete command for.
      */
     resourcesToCleanup: DeployResultCleanupResource[];
+
+    /**
+     * Resources that appeared during the deploy window but could not be attributed to a tracked
+     * deployment. Shown for review only — no delete commands, because on a shared subscription
+     * these may not belong to this deployment at all.
+     */
+    resourcesToReview: DeployResultCleanupResource[];
+
+    /**
+     * Set when the deployment's ARM operations could not be read, so nothing could be attributed.
+     * The view shows a "couldn't verify" notice instead of any cleanup list.
+     */
+    inventoryUnverified?: boolean;
+    /** Why verification failed (`forbidden`/`throttled`/`error`), used to pick the explanation. */
+    inventoryUnverifiedReason?: string;
 
     parseError?: DeployResultParseError;
 }

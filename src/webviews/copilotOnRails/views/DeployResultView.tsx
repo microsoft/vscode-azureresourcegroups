@@ -19,6 +19,7 @@ import { useCallback, useContext, useEffect, useState, type JSX } from 'react';
 import { StageProgress } from './components/StageProgress';
 import './styles/deployResultView.scss';
 import {
+    type DeployResultCleanupResource,
     type DeployResultData,
     type DeployResultEndpoint,
     type DeployResultHealthStatus,
@@ -81,6 +82,57 @@ const Section = ({ heading, children }: SectionProps): JSX.Element => (
         <h2>{heading}</h2>
         {children}
     </section>
+);
+
+type CleanupResourceListProps = {
+    resources: DeployResultCleanupResource[];
+    /** All resources in one list share a classification, so the badge label is fixed per list. */
+    badgeLabel: string;
+    copiedKey: string | null;
+    copiedLabel: string;
+    copyButtonAriaLabel: string;
+    onCopy: (text: string, key: string) => void;
+};
+
+/**
+ * Renders one inventory bucket. A delete command is only shown when the parser produced one, which
+ * it does exclusively for resources confirmed to belong to this deployment — the review bucket
+ * therefore renders as an identify-only list.
+ */
+const CleanupResourceList = ({ resources, badgeLabel, copiedKey, copiedLabel, copyButtonAriaLabel, onCopy }: CleanupResourceListProps): JSX.Element => (
+    <ul className='cleanupResourceList'>
+        {resources.map((resource) => {
+            const key = resource.id ?? `${resource.type}-${resource.name}`;
+            return (
+                <li key={key} className='cleanupResourceItem'>
+                    <div className='cleanupResourceHeader'>
+                        <span className={`cleanupBadge ${resource.classification}`}>{badgeLabel}</span>
+                        <span className='cleanupResourceName mono'>{resource.name}</span>
+                        <span className='cleanupResourceType'>{resource.type}</span>
+                        {resource.resourceGroup && (
+                            <span className='cleanupResourceGroup'>{resource.resourceGroup}</span>
+                        )}
+                    </div>
+                    {resource.deleteCommand && (
+                        <div className='commandRow'>
+                            <code className='commandText'>{resource.deleteCommand}</code>
+                            <Tooltip
+                                content={copiedKey === key ? copiedLabel : copyButtonAriaLabel}
+                                relationship='label'
+                            >
+                                <Button
+                                    appearance='subtle'
+                                    aria-label={copyButtonAriaLabel}
+                                    icon={<CopyRegular />}
+                                    onClick={() => onCopy(resource.deleteCommand, key)}
+                                />
+                            </Tooltip>
+                        </div>
+                    )}
+                </li>
+            );
+        })}
+    </ul>
 );
 
 export const DeployResultView = (): JSX.Element => {
@@ -366,43 +418,41 @@ export const DeployResultView = (): JSX.Element => {
                 </Section>
             )}
 
+            {result.inventoryUnverified && (
+                <Section heading={strings.unverifiedInventoryHeading}>
+                    <p className='sectionHint'>
+                        {result.inventoryUnverifiedReason === 'forbidden'
+                            ? strings.unverifiedInventoryForbidden
+                            : strings.unverifiedInventoryTransient}
+                    </p>
+                </Section>
+            )}
+
             {result.resourcesToCleanup.length > 0 && (
                 <Section heading={strings.cleanupResourcesHeading}>
                     <p className='sectionHint'>{strings.cleanupResourcesHint}</p>
-                    <ul className='cleanupResourceList'>
-                        {result.resourcesToCleanup.map((resource) => {
-                            const key = resource.id ?? `${resource.type}-${resource.name}`;
-                            const badge = resource.classification === 'failed' ? strings.failedBadge : strings.orphanedBadge;
-                            return (
-                                <li key={key} className='cleanupResourceItem'>
-                                    <div className='cleanupResourceHeader'>
-                                        <span className={`cleanupBadge ${resource.classification}`}>{badge}</span>
-                                        <span className='cleanupResourceName mono'>{resource.name}</span>
-                                        <span className='cleanupResourceType'>{resource.type}</span>
-                                        {resource.resourceGroup && (
-                                            <span className='cleanupResourceGroup'>{resource.resourceGroup}</span>
-                                        )}
-                                    </div>
-                                    {resource.deleteCommand && (
-                                        <div className='commandRow'>
-                                            <code className='commandText'>{resource.deleteCommand}</code>
-                                            <Tooltip
-                                                content={copiedKey === key ? strings.copiedLabel : strings.copyButtonAriaLabel}
-                                                relationship='label'
-                                            >
-                                                <Button
-                                                    appearance='subtle'
-                                                    aria-label={strings.copyButtonAriaLabel}
-                                                    icon={<CopyRegular />}
-                                                    onClick={() => copyItemText(resource.deleteCommand, key)}
-                                                />
-                                            </Tooltip>
-                                        </div>
-                                    )}
-                                </li>
-                            );
-                        })}
-                    </ul>
+                    <CleanupResourceList
+                        resources={result.resourcesToCleanup}
+                        badgeLabel={strings.failedBadge}
+                        copiedKey={copiedKey}
+                        copiedLabel={strings.copiedLabel}
+                        copyButtonAriaLabel={strings.copyButtonAriaLabel}
+                        onCopy={copyItemText}
+                    />
+                </Section>
+            )}
+
+            {result.resourcesToReview.length > 0 && (
+                <Section heading={strings.reviewResourcesHeading}>
+                    <p className='sectionHint'>{strings.reviewResourcesHint}</p>
+                    <CleanupResourceList
+                        resources={result.resourcesToReview}
+                        badgeLabel={strings.orphanedBadge}
+                        copiedKey={copiedKey}
+                        copiedLabel={strings.copiedLabel}
+                        copyButtonAriaLabel={strings.copyButtonAriaLabel}
+                        onCopy={copyItemText}
+                    />
                 </Section>
             )}
 

@@ -38,13 +38,20 @@ export type DeployHealingResult = "fixed" | "still-failing" | "blocked";
  *  Computed deterministically by the `capture_deployment_inventory` MCP tool from a
  *  before/after `resources.list()` diff — NOT inferred from chat history. */
 export type CreatedResourceClassification =
-  /** Reported `Succeeded` by a tracked deployment and located in the final target RG. */
+  /** Reported `Succeeded` by a tracked deployment and located in the final target RG.
+   *  Part of the working deployment — never a cleanup candidate. */
   | "expected"
-  /** Reported by a tracked deployment but with a non-succeeded provisioning state. */
+  /** Reported by a tracked deployment but with a non-succeeded provisioning state.
+   *  Confirmed to belong to this deployment, so a delete command may be offered. */
   | "failed"
-  /** Not reported by any tracked deployment, or created outside the final target RG
-   *  (e.g. a healing retry or an imperative `az` fallback). Surface for cleanup. */
-  | "orphaned";
+  /** Appeared during the deploy window but no tracked deployment reported it, or it landed
+   *  outside the final target RG. Probably a healing retry or an imperative `az` fallback —
+   *  but on a shared subscription it may belong to someone else entirely. Surface for the
+   *  user to REVIEW; never describe it as safe to delete. */
+  | "orphaned"
+  /** The tracked deployment's ARM operations could not be read (permissions, throttling,
+   *  transient failure), so nothing could be attributed. Never a cleanup candidate. */
+  | "unverified";
 
 /** A resource that exists now because of this session (post − baseline diff). */
 export interface CreatedResource {
@@ -132,5 +139,12 @@ export interface DeployResult {
    *  Derived from `createdResources` (resources whose RG != the final target RG).
    *  Surfaced at handoff (Step 9) with manual cleanup commands. */
   orphanedResourceGroups: readonly OrphanResourceGroup[];
+  /** Set when `capture_deployment_inventory` could not read the deployment's ARM operations,
+   *  so `createdResources` could not be attributed. When true, present NO cleanup list and
+   *  tell the user to review the resource group in the portal. */
+  inventoryUnverified?: boolean;
+  /** Why verification failed: `"forbidden"` (missing
+   *  `Microsoft.Resources/deployments/operations/read`), `"throttled"`, or `"error"`. */
+  inventoryUnverifiedReason?: string;
   healingAttempts?: readonly DeployHealingAttempt[];
 }

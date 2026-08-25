@@ -30,9 +30,14 @@ export type CreatedResourceClassification =
     | 'expected'
     /** Reported by a tracked deployment but with a non-succeeded provisioning state. */
     | 'failed'
-    /** Not reported by any tracked deployment, or located outside the expected resource group
-     *  (e.g. left behind by a healing retry or an imperative `az` fallback). */
-    | 'orphaned';
+    /** Appeared during the deploy window but no tracked deployment reported it, or it landed
+     *  outside the expected resource group. Likely left behind by a healing retry or an imperative
+     *  `az` fallback — but on a shared subscription it may equally belong to someone else, so this
+     *  is a "review this" signal, not an assertion that the deployment created it. */
+    | 'orphaned'
+    /** The tracked deployment's operations could not be read (permissions, throttling, transient
+     *  failure), so the resource cannot be attributed either way. Never a cleanup candidate. */
+    | 'unverified';
 
 export interface CreatedResource {
     id: string;
@@ -58,8 +63,26 @@ export interface DeploymentInventoryResult {
     createdResources: CreatedResource[];
     /** Resource groups that hold created resources but are not the expected target group. */
     orphanedResourceGroups: OrphanedResourceGroup[];
-    /** True when any created resource is `failed` or `orphaned`. */
+    /** True when any created resource is `failed` or `orphaned`. Always false when
+     *  {@link targetsUnavailable} is set — nothing can be a cleanup candidate if nothing could be
+     *  attributed. */
     hasCleanupConcerns: boolean;
+    /**
+     * Set when the tracked deployment's operations could not be read, so created resources could
+     * not be attributed. Consumers must present this as "could not verify" rather than rendering a
+     * cleanup list.
+     */
+    targetsUnavailable?: boolean;
+    /** Why the operations were unreadable (`forbidden`/`throttled`/`error`), for telemetry and UI copy. */
+    targetsUnavailableReason?: string;
+}
+
+export interface ComputeInventoryOptions {
+    /**
+     * The deployment operations could not be read. Every created resource is classified
+     * `unverified` and no cleanup is suggested.
+     */
+    targetsUnavailable?: boolean;
 }
 
 /** A deployment target as reported by ARM deployment operations. */
@@ -93,12 +116,14 @@ export function parseResourceGroupFromId(id: string): string | undefined {
  * @param post Resources present after deployment finished (or failed).
  * @param deploymentTargets Targets reported by the tracked ARM deployment(s), keyed by resource ID.
  * @param expectedResourceGroup The resource group the successful deployment was meant to target.
+ * @param options See {@link ComputeInventoryOptions}.
  */
 export function computeDeploymentInventory(
     baseline: readonly string[],
     post: readonly InventoryResource[],
     deploymentTargets: readonly DeploymentTarget[],
     expectedResourceGroup?: string,
+    options: ComputeInventoryOptions = {},
 ): DeploymentInventoryResult {
     const baselineIds = new Set(baseline.map(normalizeResourceId));
 
@@ -110,6 +135,7 @@ export function computeDeploymentInventory(
     }
 
     const expectedRgNormalized = expectedResourceGroup?.toLowerCase();
+    const targetsUnavailable = options.targetsUnavailable === true;
 
     const createdResources: CreatedResource[] = [];
     const orphanRgCounts = new Map<string, { name: string; count: number }>();
@@ -133,7 +159,12 @@ export function computeDeploymentInventory(
         const inExpectedRg = expectedRgNormalized === undefined || resourceGroup?.toLowerCase() === expectedRgNormalized;
 
         let classification: CreatedResourceClassification;
-        if (!inExpectedRg) {
+        if (targetsUnavailable) {
+            // No deployment operations were readable, so "not reported by a deployment" carries no
+            // information. Attributing anything here would hand the user delete commands for
+            // resources that may well be the working deployment.
+            classification = 'unverified';
+        } else if (!inExpectedRg) {
             // Anything outside the final target RG is an orphan regardless of its own state.
             classification = 'orphaned';
         } else if (!target) {
@@ -154,7 +185,7 @@ export function computeDeploymentInventory(
             classification,
         });
 
-        if (resourceGroup && (!inExpectedRg)) {
+        if (resourceGroup && !inExpectedRg && !targetsUnavailable) {
             const key = resourceGroup.toLowerCase();
             const existing = orphanRgCounts.get(key);
             if (existing) {
@@ -169,14 +200,18 @@ export function computeDeploymentInventory(
         .map((v) => ({ name: v.name, resourceCount: v.count }))
         .sort((a, b) => a.name.localeCompare(b.name));
 
-    const hasCleanupConcerns = createdResources.some((r) => r.classification !== 'expected');
+    const hasCleanupConcerns = !targetsUnavailable && createdResources.some((r) => r.classification !== 'expected');
+
+    // Deduped like `baselineCount`, so the two counts are directly comparable.
+    const postIds = new Set(post.filter((r) => r.id).map((r) => normalizeResourceId(r.id)));
 
     return {
         baselineCount: baselineIds.size,
-        postCount: post.length,
+        postCount: postIds.size,
         expectedResourceGroup,
         createdResources,
         orphanedResourceGroups,
         hasCleanupConcerns,
+        ...(targetsUnavailable ? { targetsUnavailable: true } : {}),
     };
 }

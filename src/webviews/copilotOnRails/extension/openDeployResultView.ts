@@ -80,6 +80,7 @@ function emptyDeployResult(): DeployResultData {
         warnings: [],
         cleanupCommand: '',
         resourcesToCleanup: [],
+        resourcesToReview: [],
     };
 }
 

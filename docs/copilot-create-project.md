@@ -267,14 +267,21 @@ Deploying real Azure resources means a failed or partially-completed deployment 
 make this deterministic rather than a guess, the deploy agent records **exactly which resources this session
 created** by snapshotting your subscription with the Azure Resource Manager API **before** the first
 deployment and **after** each attempt, then diffing the two lists. Whatever is present afterward but not
-before was created by this run.
+before appeared while this run was in flight.
 
-Each created resource is classified as **expected**, **failed**, or **orphaned** (created outside the final
-target resource group — for example by a retry that fell back to a new region — or created but never claimed
-by a successful deployment). The results are recorded in the deploy result (`deploy-result.json`) and, on any
-failure, surfaced in chat with copy‑paste `az` delete commands so you can remove leftovers. The baseline is
-held in memory during the deploy — no extra files are written to your workspace. Nothing is ever deleted
-automatically — the capture only reports. See [Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy).
+Each created resource is then checked against what the ARM deployment itself reported, and classified:
+
+| Classification | Meaning |
+|---|---|
+| **expected** | The deployment reported it as succeeded in the target resource group — part of your working app. |
+| **failed** | The deployment reported it, but it didn't provision successfully. Confirmed to be this deployment's, so the view offers a delete command. |
+| **orphaned** | It appeared while the deploy ran, but no deployment reported it. Usually a leftover from a healing retry or an imperative fallback — but on a subscription you share with others it may not be yours at all, so it's listed for **review** rather than with a delete command. |
+| **unverified** | The deployment's operations couldn't be read (for example, the signed-in account lacks `Microsoft.Resources/deployments/operations/read`), so nothing could be attributed. No cleanup list is shown. |
+
+The results are recorded in the deploy result (`deploy-result.json`) and surfaced in the Deployment results
+view. The baseline is held in memory during the deploy — no extra files are written to your workspace.
+Nothing is ever deleted automatically — the capture only reports. See
+[Clean up resources after a failed deploy](#clean-up-resources-after-a-failed-deploy).
 
 When the deploy finishes, the agent writes `deploy-result.json` and opens the **Deployment results** view —
 a read-only report of what actually shipped: status and health, the live endpoints, the Azure resources that
@@ -389,7 +396,7 @@ The extension exposes these tools to Copilot through the `vscode-azureresourcegr
 | `start_local_development` | Starts the `azure-debug-plan` agent in a new session. |
 | `start_azure_debug_generate` | Starts the `azure-debug-generate` agent in a new session. |
 | `start_deployment` | Starts the `azure-deploy` agent in a new session. |
-| `capture_deployment_inventory` | Snapshots the subscription's Azure resources (baseline before deploy, capture after) and diffs them to record what the session created and classify orphaned/failed resources. Report‑only — never deletes; the agent builds cleanup commands from its output. |
+| `capture_deployment_inventory` | Snapshots the subscription's Azure resources (baseline before deploy, capture after) and diffs them to record what the session created, classifying each as expected/failed/orphaned/unverified. Report‑only — never deletes. |
 
 ## Files & state
 
@@ -491,11 +498,22 @@ then diffs the two lists — anything new is a resource this session created.
 
 Where to look, in order:
 
-1. **The chat handoff / failure message.** On both success and failure, the agent surfaces a cleanup section
-   with copy‑paste `az` commands. On a failed or aborted deploy this is printed before it stops.
-2. **`deploy-result.json` (in the App Onboard session folder).** Its `createdResources[]` lists each created
-   resource classified `expected` / `failed` / `orphaned`, and `orphanedResourceGroups[]` lists the resource
-   groups left behind by healing retries. The agent writes these from the capture's output.
+1. **The chat handoff / failure message.** On both success and failure, the agent surfaces a cleanup section.
+   On a failed or aborted deploy this is printed before it stops.
+2. **The Deployment results view / `deploy-result.json`.** `createdResources[]` lists each created resource
+   classified `expected` / `failed` / `orphaned` / `unverified`, and `orphanedResourceGroups[]` lists the
+   resource groups left behind by healing retries.
+
+The view separates these by confidence, and it's worth respecting the distinction:
+
+- **Resources to clean up** — the `failed` ones. A deployment reported them, so they're definitely from this
+  run, and each comes with a delete command.
+- **Resources to review** — the `orphaned` ones. They appeared while the deploy was running but no deployment
+  claimed them. They're listed without a delete command on purpose: if you share the subscription, a
+  coworker's or a concurrent pipeline's resource can land here. Check each one in the portal first.
+- If the view says the inventory **couldn't be verified**, the agent couldn't read the deployment's
+  operations (most often a permissions gap), so nothing was attributed and no list is shown. Review the
+  resource group in the portal.
 
 Cleanup patterns the agent emits (run them yourself — the capture **never deletes anything**):
 
@@ -504,9 +522,10 @@ Cleanup patterns the agent emits (run them yourself — the capture **never dele
 - **Everything from the session (tag‑based):**
   `az group list --tag app-onboard-session-id={id} --query "[].name" -o tsv | ForEach-Object { az group delete -n $_ --yes --no-wait }`
 
-The baseline lives in memory only, so if VS Code is reloaded mid‑deploy the agent can re‑run
-`capture_deployment_inventory` with `phase: "capture"`, but without a baseline it treats every current
-resource as new and may over‑report — so a clean run always captures the baseline before deploying.
+The agent's baseline lives in memory only. If VS Code is reloaded mid‑deploy it can re‑run
+`capture_deployment_inventory` with `phase: "capture"`, and without a baseline the capture falls back to
+reporting only what the tracked ARM deployments touched — it will miss imperative strays, but it never
+reports pre‑existing resources as new. A clean run always captures the baseline before deploying.
 
 ## Re‑download agent instructions
 

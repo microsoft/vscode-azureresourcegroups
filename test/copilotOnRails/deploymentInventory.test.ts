@@ -1,4 +1,4 @@
-/*---------------------------------------------------------------------------------------------
+﻿/*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
@@ -162,6 +162,23 @@ suite('deploymentInventory', () => {
             );
             assert.strictEqual(result.createdResources.find((r) => r.id === app.id)?.classification, 'expected');
             assert.strictEqual(result.createdResources.find((r) => r.id === stray.id)?.classification, 'orphaned');
+        });
+
+        test('targetsUnavailable makes every created resource unverified and suppresses cleanup', () => {
+            const app = resource('rg-app', 'Microsoft.Web/sites', 'app1');
+            const stray = resource('rg-other', 'Microsoft.Web/sites', 'app2');
+            const result = computeDeploymentInventory(
+                [],
+                [app, stray],
+                [],
+                'rg-app',
+                { targetsUnavailable: true },
+            );
+
+            assert.deepStrictEqual(result.createdResources.map((r) => r.classification), ['unverified', 'unverified']);
+            assert.deepStrictEqual(result.orphanedResourceGroups, []);
+            assert.strictEqual(result.hasCleanupConcerns, false);
+            assert.strictEqual(result.targetsUnavailable, true);
         });
     });
 });
