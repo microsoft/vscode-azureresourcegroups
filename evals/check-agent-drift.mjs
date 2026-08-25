@@ -62,6 +62,26 @@ const contracts = [
         grader: "requirements-schema-valid (photo-app-requirements)",
     },
     {
+        file: `${PLAN}.agent.md`,
+        name: "frontend-only-activation",
+        // The skill description is the activation gate. Without frontend-only /
+        // no-backend triggers the agent hand-writes index.html instead of planning.
+        pattern: /^description:[^\n]*(frontend-only|frontend only)[^\n]*$/mi,
+        grader: "no-datastore-converter (file-exists, opens-requirements-view)",
+    },
+    {
+        file: `${PLAN}.agent.md`,
+        name: "no-request-too-simple",
+        pattern: /no request is ["“]?too simple["”]? to plan/i,
+        grader: "no-datastore-converter (file-exists, opens-requirements-view)",
+    },
+    {
+        file: `${PLAN}/instructions.md`,
+        name: "frontend-only-trigger",
+        pattern: /No request is too small to plan/i,
+        grader: "no-datastore-converter (file-exists, opens-requirements-view)",
+    },
+    {
         file: `${PLAN}/requirements.md`,
         name: "no-datastore-option",
         pattern: /`?No datastore required`?/,
