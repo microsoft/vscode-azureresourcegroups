@@ -1,5 +1,5 @@
 # Stimulus 1.1 `photo-app-requirements` from evals/project-plan/eval.yaml.
-# Concatenated onto config/base.yaml by build-config.mjs.
+# Concatenated onto config/base.yaml by build-config.ts.
 
 promptSteps:
   - text: |

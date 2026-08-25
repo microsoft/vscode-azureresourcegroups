@@ -25,11 +25,8 @@ const TOKEN_VARS = ['COPILOT_GITHUB_TOKEN', 'GH_TOKEN', 'GITHUB_TOKEN'];
 /**
  * Mirrors the CLI's resolution order so this check and the run agree on which
  * variable is actually in play.
- *
- * @param {NodeJS.ProcessEnv} env
- * @returns {{ name: string, value: string } | undefined}
  */
-export function resolveToken(env) {
+export function resolveToken(env: NodeJS.ProcessEnv): { name: string; value: string } | undefined {
     for (const name of TOKEN_VARS) {
         const value = env[name];
         if (value) {
@@ -39,11 +36,7 @@ export function resolveToken(env) {
     return undefined;
 }
 
-/**
- * @param {NodeJS.ProcessEnv} env
- * @returns {{ ok: boolean, level: 'error' | 'warning' | 'ok', message: string }}
- */
-export function checkCopilotAuth(env) {
+export function checkCopilotAuth(env: NodeJS.ProcessEnv): { ok: boolean; level: 'error' | 'warning' | 'ok'; message: string } {
     const resolved = resolveToken(env);
     if (!resolved) {
         return {

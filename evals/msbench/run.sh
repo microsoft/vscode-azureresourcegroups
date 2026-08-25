@@ -111,12 +111,12 @@ log "Staged $(basename "$BUILT_VSIX" 2>/dev/null || basename "$VSIX_DEST") ($(du
 # including --skip-build — because they are source files read straight off the
 # working tree: staging a stale copy would grade the wrong contract.
 log "Staging graders"
-node "${HERE}/stage-graders.mjs"
+node "${HERE}/stage-graders.ts"
 
 # `assets/user-overrides.yaml` is generated because run-agent.sh will only ever
 # read that one filename, so selecting a stimulus means writing that file.
 log "Building config for stimulus '${STIMULUS}'"
-node "${HERE}/build-config.mjs" "$STIMULUS"
+node "${HERE}/build-config.ts" "$STIMULUS"
 
 if [ "$BUILD_ONLY" -eq 1 ]; then
     log "Build only; not submitting."

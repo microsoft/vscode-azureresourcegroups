@@ -2,7 +2,7 @@
 
 # Shared preamble for every stimulus.
 #
-# `build-config.mjs <stimulus>` concatenates this file with one file from
+# `build-config.ts <stimulus>` concatenates this file with one file from
 # `stimuli/` to produce `assets/user-overrides.yaml`, which is the LAST of three
 # config layers (base -> benchmark instance -> user overrides, see
 # scripts/run-agent.sh in microsoft/vscode-copilot-evaluation). Merging is a

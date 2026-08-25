@@ -1,5 +1,5 @@
 # Stimulus 1.2 `api-only-inventory` from evals/project-plan/eval.yaml.
-# Concatenated onto config/base.yaml by build-config.mjs.
+# Concatenated onto config/base.yaml by build-config.ts.
 #
 # Four graders plus the reject_tools constraint — no no-dotfile-requirements and
 # no transcript-not-contains here, because the source spec does not ask for them.

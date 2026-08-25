@@ -1028,7 +1028,7 @@
         "eval": "node evals/run-eval.cjs",
         "eval:plan": "node evals/run-eval.cjs --suite project-plan",
         "eval:report": "node evals/generate-report.cjs",
-        "eval:drift": "node evals/check-agent-drift.mjs",
+        "eval:drift": "node evals/check-agent-drift.ts",
         "eval:cor:graders:certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/src/graderCertification.ts",
         "eval:cor:thresholds:validate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/src/releaseThresholds.ts evals/release-thresholds.v1.json"
     },

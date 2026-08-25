@@ -28,6 +28,8 @@
  *   - a missing file (someone moved a validator), and
  *   - a *bare* specifier reachable from a grader (e.g. `vscode-nls`), which would
  *     need node_modules that the container does not have.
+ *
+ * Runs straight off source via Node's built-in type stripping — no build step.
  */
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -54,8 +56,12 @@ const ENTRYPOINTS = [
 // few kilobytes, while reasoning about which imports survive erasure costs correctness.
 const SPECIFIER = /(?:\bfrom|\bimport)\s*\(?\s*['"]([^'"]+)['"]/g;
 
-/** @param {string} repoRelative */
-function collect(repoRelative, seen, trail) {
+/**
+ * Walk the import graph from `repoRelative`, adding every reachable repo-relative
+ * source file to `seen`. `trail` names the importer, so a missing file reports who
+ * asked for it rather than just that it is absent.
+ */
+function collect(repoRelative: string, seen: Set<string>, trail: string): Set<string> {
     if (seen.has(repoRelative)) {
         return seen;
     }
@@ -84,13 +90,12 @@ function collect(repoRelative, seen, trail) {
     return seen;
 }
 
-/** @param {string} p */
-function toPosix(p) {
+function toPosix(p: string): string {
     return p.split(/[\\/]/).join(posix.sep);
 }
 
-function main() {
-    const files = new Set();
+function main(): void {
+    const files = new Set<string>();
     for (const entrypoint of ENTRYPOINTS) {
         collect(entrypoint, files, '<entrypoint>');
     }
