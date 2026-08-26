@@ -1,7 +1,11 @@
 # Vally project configuration
+#
+# `paths.results` is an *output* directory, created on demand and gitignored, so
+# it is correctly absent from a clean checkout. Every other path here is an input
+# and must exist — a path that points at nothing lints clean and silently
+# contributes no evals, which is worse than a missing-file error.
 paths:
   evals: [evals]
-  skills: [evals/skills]
   results: results
 
 environments:
@@ -16,6 +20,3 @@ suites:
   project-plan:
     description: azure-project-plan agent contracts
     evals: ["evals/project-plan/**"]
-  chains:
-    description: End-to-end workflow chains (nightly)
-    evals: ["evals/chains/**"]
