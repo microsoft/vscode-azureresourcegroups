@@ -153,5 +153,5 @@ promptSteps:
       # Recorded, not asserted. On the last step, where the `exec:` graders run.
       # See config/stimuli/photo-app-requirements.yaml.
       - comment: Environment fingerprint for triage
-        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; ls -la . .azure .vscode 2>&1 | head -40'
+        exec: 'uname -sm; echo "cwd=$(pwd)"; echo "node=$(node --version 2>&1 || echo MISSING)"; for b in node npm python3 pip3 func go dotnet docker azd java; do printf "%s=%s\n" "$b" "$(command -v $b || echo MISSING)"; done; ls -la . .azure .vscode 2>&1 | head -40'
         assertZeroExitCode: false

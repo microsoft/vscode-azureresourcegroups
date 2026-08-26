@@ -33,6 +33,10 @@ on:
         description: 'Benchmark instance to borrow for its container image'
         required: false
         default: 'vscbench.say_hello'
+      stimulus:
+        description: 'Stimulus to submit. The default is the cheapest one whose answer we already know.'
+        required: false
+        default: 'scaffold-unapproved-plan'
 
 env:
   NODE_VERSION: '22'
@@ -117,10 +121,21 @@ jobs:
           tenant-id: ${{ secrets.MSBENCH_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.MSBENCH_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Run project-plan eval
+      # STIMULUS is read from the environment by run.sh, the same way BENCHMARK
+      # is, so `--stimulus` on the command line still wins for a local run.
+      #
+      # It is set explicitly rather than left to run.sh's default, which is
+      # `photo-app-requirements` — a full planning run whose result would then
+      # have to be interpreted. The first CI runs are testing the *pipeline*, so
+      # they use a stimulus whose answer is already known locally (6/6 green):
+      # a red then means CI is broken, which is the only question being asked.
+      # A first run against an unknown-answer stimulus cannot separate "CI is
+      # misconfigured" from "the product changed".
+      - name: Run the MSBench eval
         run: ./evals/msbench/run.sh --skip-build --output "$RUNNER_TEMP/report.json" --data_dir "$RUNNER_TEMP/msbench-data"
         env:
           BENCHMARK: ${{ inputs.benchmark }}
+          STIMULUS: ${{ inputs.stimulus }}
 
       # Keep the report and per-instance data so a failure can be diagnosed from
       # the transcript and patch rather than by re-running.
