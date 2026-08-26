@@ -3,7 +3,7 @@
 - Mode: `offline`
 - Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`
 - Outcome: **PASSED**
-- Cases: 81/81 passed
+- Cases: 82/82 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -61,6 +61,7 @@
 | `runtime-health-route-missing` | `reference-node-fullstack` | `runtime-health` | `healthEndpointUnhealthy` | `healthEndpointUnhealthy` | PASS |
 | `runtime-frontend-not-served` | `reference-node-fullstack` | `runtime-frontend` | `frontendNotServed` | `frontendNotServed` | PASS |
 | `runtime-frontend-calls-missing-route` | `reference-node-fullstack` | `runtime-frontend-api` | `frontendApiRouteMissing` | `frontendApiRouteMissing` | PASS |
+| `runtime-health-collection-removed` | `reference-node-fullstack` | `runtime-health` | `passed` | `passed` | PASS |
 | `runtime-crud-write-not-persisted` | `reference-node-fullstack` | `runtime-crud` | `crudRoundTripLost` | `crudRoundTripLost` | PASS |
 | `golden-service-fidelity` | `reference-node-multiservice` | `service-fidelity` | `passed` | `passed` | PASS |
 | `golden-datastore-fidelity` | `reference-node-multiservice` | `datastore-fidelity` | `passed` | `passed` | PASS |

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T06:21:07.991Z",
+  "generatedAt": "2026-08-26T07:55:45.905Z",
   "mode": "offline",
   "fixtures": [
     "sample-agent-output",
@@ -625,6 +625,16 @@
       "actual": [
         "frontendApiRouteMissing"
       ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-health-collection-removed",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-health",
+      "expected": "passed",
+      "actual": [],
       "passed": true,
       "durationMs": 0
     },

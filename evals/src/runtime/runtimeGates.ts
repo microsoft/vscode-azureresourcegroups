@@ -33,7 +33,7 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { discoverFrontendDirectory } from '../artifacts/frontendScaffold.ts';
 import type { ArtifactValidationIssue, ArtifactValidationResult } from '../artifacts/validationTypes.ts';
-import type { NotApplicableReason } from './runtimeTarget.ts';
+import { declaresBackendContract, type NotApplicableReason } from './runtimeTarget.ts';
 import { acquireRuntimeSession, probe, type HttpProbeResponse, type RuntimeSession } from './runtimeSession.ts';
 
 export interface RuntimeValidationResult extends ArtifactValidationResult {
@@ -91,10 +91,23 @@ export interface HealthOptions {
  * "It's alive" — the signal every deployment probe depends on.
  *
  * A *declared* health path that does not answer is an unambiguous product failure: the
- * project committed to it in its own API test collection or debug plan. An *undeclared*
- * one is weaker, so conventional paths are tried and a total miss returns not-applicable
- * rather than a fabricated failure — unless the caller passes `requireHealth`, which is how
- * a stimulus that knows the stack promises a health endpoint gets a real verdict.
+ * project committed to it in its own integration plan, API test collection or debug plan.
+ *
+ * When nothing is declared, conventional paths are tried — and a total miss is **not**
+ * out-of-scope. By the time this runs the app is up and answering HTTP, so seven misses on
+ * a live server is positive evidence that no health endpoint was built, not an absence of
+ * anything to test. Whether that is the *product's* fault turns on whether it owed one:
+ * `.azure/integration-plan.md` is the hand-off artifact the scaffold agent must write, and
+ * `validateIntegrationPlanArtifact` already fails the agent when its Backend section names
+ * no health endpoint path. So its presence makes this a contract the product did not meet —
+ * exit 1 — and its absence leaves a gap we cannot attribute, which is a `coverageGap`
+ * rather than a shrug.
+ *
+ * This originally returned not-applicable in every no-declaration case, which made the gate
+ * unable to fail for the one thing it exists to check: a running app with no health
+ * endpoint scored green. That is the same defect as the retired `noProjectManifestFound` —
+ * a product failure wearing a not-applicable costume — and it survived the review that
+ * caught the other one.
  */
 export async function validateHealthEndpoint(workspaceRoot: string, options: HealthOptions = {}): Promise<RuntimeValidationResult> {
     const session = await acquireRuntimeSession(workspaceRoot);
@@ -144,10 +157,25 @@ export async function validateHealthEndpoint(workspaceRoot: string, options: Hea
             app.output(),
         );
     }
+
+    // The app is up and answering HTTP, and nothing at seven conventional paths responded.
+    // If it went through the scaffold flow it owed a health endpoint, so this is a contract
+    // the product did not meet rather than a question we cannot answer.
+    if (await declaresBackendContract(workspaceRoot)) {
+        return failure(
+            'healthEndpointMissing',
+            '$.health',
+            `the app is listening on ${app.baseUrl} but has no health endpoint: nothing is declared in its API test collections, `
+            + '.azure/integration-plan.md or .azure/vscode-debug-plan.md, and no conventional path answered. '
+            + `The project has an integration plan, whose Backend section is required to name a health endpoint path. Tried: ${attempts.join(', ')}.`,
+            app.output(),
+        );
+    }
     return notApplicable(
         'noHealthPathDeclared',
-        'the project declares no health path in its API test collections or debug plan, and no conventional path '
-        + `answered (tried ${attempts.join(', ')}). Pass --require-health to make this a failure.`,
+        `the app is listening on ${app.baseUrl} but no health endpoint answered (tried ${attempts.join(', ')}), and the workspace `
+        + 'has no .azure/integration-plan.md, so there is no record of it having promised one. The gate has a real question here '
+        + 'and no contract to check it against; pass --require-health to fail instead.',
     );
 }
 
@@ -636,9 +664,10 @@ function excerpt(body: string): string {
 
 function describeHealthSource(source: string | undefined): string {
     return source === 'apiTestCollection' ? 'the generated API test collection'
-        : source === 'debugPlan' ? 'the debug plan'
-            : source === 'stackDeclaration' ? 'the stack declaration'
-                : 'the project';
+        : source === 'integrationPlan' ? '.azure/integration-plan.md'
+            : source === 'debugPlan' ? 'the debug plan'
+                : source === 'stackDeclaration' ? 'the stack declaration'
+                    : 'the project';
 }
 
 function issue(code: string, target: string, message: string): ArtifactValidationIssue {

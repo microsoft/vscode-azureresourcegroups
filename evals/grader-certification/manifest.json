@@ -700,6 +700,15 @@
             "expectedCode": "frontendApiRouteMissing"
         },
         {
+            "id": "runtime-health-collection-removed",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-health",
+            "file": "api-test-collections",
+            "operation": "delete",
+            "expectedCode": "passed"
+        },
+        {
             "id": "runtime-crud-write-not-persisted",
             "tier": "offline",
             "fixture": "reference-node-fullstack",
