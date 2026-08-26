@@ -208,11 +208,13 @@ set +e
 CLI_STATUS=${PIPESTATUS[0]}
 set -e
 
-# A throttled run still prints a normal-looking red results table: the agent
-# produced nothing, so artifact assertions fail while negative assertions pass
-# trivially. That is indistinguishable from a real regression by eye, and was
-# twice mistaken for one while building this. Check before the reader can draw a
-# conclusion from the table.
+# A finished run is not automatically a *result*. Two conditions make the
+# results table mean something other than what it appears to mean, and neither
+# is visible in the table itself: the agent was throttled mid-run (so it
+# produced nothing, and every assertion resolves trivially), or the model that
+# answered was not the model requested. verify-run.ts checks both and owns the
+# verdict; exit 75 means "not a result, retry later" and 65 means "measured the
+# wrong thing", both distinct from the 1 that means a genuine red run.
 RUN_ID="$(grep -oE 'run_id=[0-9]+' "$RUN_LOG" | head -1 | cut -d= -f2 || true)"
 if [ -n "$RUN_ID" ]; then
     RESULTS_ZIP="$(ls "${HOME}/Library/Application Support/msbench/runs/${RUN_ID}/results.zip" \
@@ -221,27 +223,15 @@ if [ -n "$RUN_ID" ]; then
         SCRATCH="$(mktemp -d)"
         unzip -oq "$RESULTS_ZIP" -d "$SCRATCH" 2>/dev/null || true
         find "$SCRATCH" -name '*-output.zip' -exec unzip -oq {} -d "${SCRATCH}/out" \; 2>/dev/null || true
-        RATE_LIMITED=0
-        if [ -f "${SCRATCH}/out/output/error.json" ] \
-                && grep -q '"type": *"RATE_LIMIT"' "${SCRATCH}/out/output/error.json"; then
-            RATE_LIMITED=1
-        fi
+
+        set +e
+        node "${HERE}/verify-run.ts" --run-dir "${SCRATCH}/out" --run-id "$RUN_ID"
+        VERIFY_STATUS=$?
+        set -e
+
         rm -rf "$SCRATCH"
-        if [ "$RATE_LIMITED" -eq 1 ]; then
-            echo
-            echo "  ============================================================"
-            echo "  RATE_LIMIT — this run is NOT a result. Do not read the table."
-            echo "  ============================================================"
-            echo "  The Copilot API throttled the agent mid-run, so it produced"
-            echo "  nothing. Positive assertions fail and negative ones pass"
-            echo "  trivially, which looks exactly like an agent regression."
-            echo
-            echo "  Runs cost ~250k tokens each; roughly 3 in 15 minutes is the"
-            echo "  observed ceiling. Wait ~15 minutes and re-run."
-            echo
-            echo "  Run id: ${RUN_ID}"
-            echo
-            exit 75  # EX_TEMPFAIL: retry later, distinct from a genuine red run
+        if [ "$VERIFY_STATUS" -ne 0 ]; then
+            exit "$VERIFY_STATUS"
         fi
     fi
 fi

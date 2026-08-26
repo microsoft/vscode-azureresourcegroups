@@ -203,8 +203,10 @@ second checked-in copy is exactly the drift this eval exists to catch:
 Edit `config/`, never `assets/`.
 
 Both generators are TypeScript run directly by Node, which strips the types at load
-time — there is no build step and no emitted JavaScript. `evals/tsconfig.json`
-type-checks them (`npm run typecheck`) but emits nothing.
+time — there is no build step and no emitted JavaScript. The same is true of
+[`verify-run.ts`](verify-run.ts), which `run.sh` calls after a run to decide whether the
+results are readable at all. `evals/tsconfig.json` type-checks them
+(`npm run typecheck`) but emits nothing.
 
 ### Why one config file per stimulus
 
@@ -331,6 +333,113 @@ answer than inventing a brittle SQL proxy for a judgement call. It is not a subs
 for `exec:` on anything the validators already decide deterministically.
 
 
+## Is this run a result?
+
+A finished run is not automatically a *result*. Two things can make the results table
+mean something other than what it looks like, and neither is visible in the table:
+
+1. **The agent was throttled mid-run.** It then produced nothing, so artifact assertions
+   fail while negative assertions pass trivially — which reads exactly like a product
+   regression.
+2. **The model that answered was not the model requested.** Every number is then
+   attributed to the wrong model.
+
+`run.sh` runs [`verify-run.ts`](verify-run.ts) on the extracted artifacts before you can
+read the table, and it owns the verdict:
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | The run is a result. Read the table. |
+| `75` | `EX_TEMPFAIL` — throttled. Not a result at all; retry in ~15 minutes. |
+| `65` | `EX_DATAERR` — the run measured something other than what was requested. |
+
+Both are deliberately distinct from `1`, which still means a genuine red run. **A
+detector for false reds is worthless if it also hides true ones**, so this is verified
+against stored runs: it catches the throttled run, passes the six green ones, and still
+reports the genuinely-red negative control (`2026082582510393`) as a real failure.
+
+### Which surface got throttled
+
+`output/vsc-output/capi-proxy.log` records every upstream model call with its path and
+status. From throttled run `2026082583236973`:
+
+```
+23:11:12.786  [8]  POST /v1/messages      -> 200
+23:11:14.772  [9]  POST /v1/messages      -> 429     <-- throttled
+23:11:14.773  [9]  Response body: too many requests
+23:11:15.438  [10] POST /chat/completions -> 200     <-- 666ms later, SUCCEEDS
+```
+
+That 666 ms is the whole point: **the 429 is scoped to the API surface, not to the
+account.** `/v1/messages` is the Anthropic surface (Claude models); `/chat/completions`
+and `/responses` are OpenAI ones. They throttle independently, so being refused on one
+says nothing about the others.
+
+So the banner reports *which* surface ran out and after how many calls — "throttled on
+`POST /v1/messages` after 8 successful upstream calls (2 of them on that surface)" —
+which is what a per-surface token budget can actually act on.
+
+`verify-run.ts` also prints a path census on **every** run, throttled or not, so each run
+is a free datapoint:
+
+```
+    upstream model calls (capi-proxy.log):
+      GET /models                  1x 200
+      POST /chat/completions       9x 200
+      POST /embeddings             2x 200
+      POST /v1/messages            5x 200
+```
+
+The mix is model-dependent — Claude runs use both `/v1/messages` and `/chat/completions`
+(auxiliary models and embeddings go to the latter), while GPT runs touch `/v1/messages`
+zero times. Paths are parsed from the log rather than matched against a known list,
+because the set grows as new models ship — `/responses` arrived with `gpt-5.6-sol` and
+`gpt-5-mini` — and a hardcoded list would silently miss a 429 on a surface added later.
+
+Note the asymmetry: `error.json` → `"type": "RATE_LIMIT"` is the sole authority on
+whether a run is **void**. A 429 in the proxy log only means one request was refused; the
+agent often retries and finishes fine, and voiding those runs would start hiding real
+failures. Such a run is reported as a note and still counts:
+
+```
+    NOTE: POST /responses returned 429 after 2 successful calls,
+          but the run completed. Results stand; budget is running low.
+```
+
+### Did we measure the model we asked for?
+
+`run.sh` selects the model via `modelSelector` in the staged `user-overrides.yaml` (with
+`--model .`). The check here is small, because the harness already covers the dangerous
+case: `selectActiveModel` in `vscode-copilot-evaluation`'s `src/proxy/capiProxyServer.ts`
+looks the requested id up in the **live `GET /models` catalogue** and throws
+`X_MODEL_NOT_FOUND_ERROR` if it is absent, then pins `is_chat_fallback` and
+`model_picker_enabled` on the matched entry so VS Code cannot substitute anything else.
+An unknown id therefore hard-fails at launch, before any agent turn — verified with
+`gpt-5` and `gpt-5.6`, at ~0 tokens each. **There is no silent fallback to a default.**
+
+Existence is not identity, though, so `verify-run.ts` asserts that the model which became
+active is the model requested, by reading the `Set active model to: <id>` line from
+`output/vsc-output/agent-output.log` (mirrored in `entry.log`; present in all seven stored
+runs — it is *not* in `capi-proxy.log`). One line, on artifacts already being read. It
+exists to catch a future regression in model selection during model sweeps, where every
+run is supposed to be a different model and a mislabelled one would collapse N models
+into N runs of the same one.
+
+Three other values look like they would answer this and do not — they are all echoes of
+the request rather than observations of the answer:
+
+| Source | Why it can't disagree |
+| --- | --- |
+| `msbench-cli show_run`, `metadata.json` | `_read_assets_model_selector` (plugin `cli.py`) reads it straight back out of the `user-overrides.yaml` *we* supplied. |
+| `configs/final-agent-config.json` | The same request one layer in. Proves our asset arrived intact; still not the answer. |
+| `configs/msbench-user-overrides.yaml` | Literally our staged file, rendered. |
+
+> **Don't "fix" the model id to match `COPILOT_VENDOR_MODELS`.** That shipped catalogue
+> (28 entries in `cli.py`) is misleading in both directions: `gpt-5.6-sol` is *absent*
+> from it but resolves and runs fine, while `gpt-5` is *present* in it and fails. The
+> live `GET /models` response is the only real authority. `_require_assets_model_selector`
+> only checks that the `modelSelector` key exists — it never validates the id.
+
 ## Results and artifacts
 
 ```bash
@@ -373,16 +482,11 @@ with a clear message:
 - **A red run that is actually rate limiting.** Back-to-back runs get throttled by the
   Copilot API mid-run. The agent then produces nothing, so artifact assertions fail
   while negative assertions pass trivially — indistinguishable from a genuine agent
-  regression at a glance. `run.sh` now detects this and **exits 75 (`EX_TEMPFAIL`) with
-  a loud banner instead of letting you read the results table**, so a throttled run
-  cannot be mistaken for a regression.
+  regression at a glance. `run.sh` **exits 75 (`EX_TEMPFAIL`) with a loud banner instead
+  of letting you read the results table**, so a throttled run cannot be mistaken for a
+  regression. See [Is this run a result?](#is-this-run-a-result) for what it reports.
 
-  The check keys on `output/error.json` → `"type": "RATE_LIMIT"` and is deliberately
-  narrow: verified against three stored runs, it catches the throttled one, passes the
-  green one, and — the case that actually matters — still reports the genuinely-red
-  negative control as a real failure. A detector for false reds is worthless if it
-  also hides true ones. Corroborate manually with
-  `select name, count(*) from spans group by name` against
+  Corroborate manually with `select name, count(*) from spans group by name` against
   `output/vsc-output/agent-traces.db` (note: `spans`/`span_attributes`, not `toolCalls`,
   which is the assertion-time view) — ~13 chat spans is healthy, dying around 6 is
   throttling. A **completely empty `exec` table** is another tell: the graders never ran
