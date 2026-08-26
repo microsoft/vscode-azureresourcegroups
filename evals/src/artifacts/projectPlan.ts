@@ -10,6 +10,7 @@ import {
 } from '../../../src/webviews/copilotOnRails/views/utils/parseScaffoldPlanMarkdown.ts';
 import type { ArtifactValidationIssue, ArtifactValidationResult } from './validationTypes.ts';
 import { createValidationResult } from './validationTypes.ts';
+import { NON_VISUAL_APP_TYPES } from './plannedProject.ts';
 
 const requiredSections = [
     'project overview',
@@ -66,7 +67,7 @@ export function validateProjectPlanArtifact(
     const projectOverview = findSection(plan, 'project overview');
     const appType = projectOverview && findKeyValue(projectOverview, 'App Type');
     const designSystem = findSection(plan, 'design system');
-    const hasNonVisualAppType = !!appType && ['api only', 'background worker'].includes(appType.toLowerCase());
+    const hasNonVisualAppType = !!appType && NON_VISUAL_APP_TYPES.includes(appType.toLowerCase());
     const requiresDesignSystem = !hasNonVisualAppType;
     if (requiresDesignSystem && !designSystem) {
         issues.push(issue('missingSection', '$', 'Missing required "design system" section.'));
