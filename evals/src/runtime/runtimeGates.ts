@@ -51,6 +51,36 @@ const CONVENTIONAL_HEALTH_PATHS = ['/api/health', '/health', '/healthz', '/api/h
 /** Datastore clients that need a server we cannot start — the container has no Docker. */
 const CONTAINER_DATASTORE_PACKAGES = ['pg', 'postgres', 'mysql', 'mysql2', 'mongodb', 'mongoose', 'redis', 'ioredis', 'mssql', 'cassandra-driver'];
 
+/**
+ * **The attribution rule.** Stated once here because every gate in this file needs it and
+ * three sessions have now independently re-derived it, once per gate, at the cost of a
+ * silent pass each time.
+ *
+ * When a gate looks for a capability and does not find it, there are three different
+ * situations behind that one observation, and they take three different exit codes:
+ *
+ *   1. **We could not read well enough to tell** → *harness fault*, exit 3. Our parser's
+ *      limitation is never the agent's defect. This case is the one that gets forgotten,
+ *      because from the outside it looks exactly like the capability being absent.
+ *   2. **Contract evidence says the product owed this, and it is absent** → *product
+ *      failure*, exit 1. A real, reportable defect.
+ *   3. **No contract evidence either way** → *not applicable*. We have a real question and
+ *      nothing to check it against; that is a coverage gap, not a clean bill of health.
+ *
+ * Order matters: (1) is checked first, because a parser that cannot read the frontend
+ * produces the same emptiness as a frontend that does nothing, and reporting the second
+ * when the first is true manufactures a failure — or, as it did here three times, a silent
+ * pass. "Nothing found" is only evidence once you know you could have found something.
+ */
+type AbsenceAttribution = 'cannotTell' | 'productOwedIt' | 'noContract';
+
+function attributeAbsence(evidence: { couldNotRead: boolean; contractDeclared: boolean }): AbsenceAttribution {
+    if (evidence.couldNotRead) {
+        return 'cannotTell';
+    }
+    return evidence.contractDeclared ? 'productOwedIt' : 'noContract';
+}
+
 /** Static roots an app-served frontend is normally read from. */
 const STATIC_ROOTS = ['public', 'wwwroot', 'static', 'client', 'dist', '.'];
 
@@ -270,12 +300,39 @@ export async function validateFrontendApiWiring(workspaceRoot: string): Promise<
         return notApplicable('noFrontendDeclared', 'the app serves no browser document at /, so there is no frontend wiring to check.');
     }
 
-    const calls = await collectApiCalls(app.baseUrl, document.response.body);
+    const { calls, usesHttpClient } = await collectApiCalls(app.baseUrl, document.response.body);
     if (calls.length === 0) {
-        return notApplicable(
-            'noFrontendApiCalls',
-            'the served frontend issues no same-origin API calls, so there is no frontend-to-backend wiring to verify.',
-        );
+        switch (attributeAbsence({
+            couldNotRead: usesHttpClient,
+            contractDeclared: await declaresBackendContract(workspaceRoot),
+        })) {
+            case 'cannotTell':
+                return harnessFault(
+                    'the served frontend issues HTTP requests, but none of their URLs could be resolved statically — '
+                    + 'a computed base (`fetch(`${base}/items`)`) or a client wrapper defeats the extraction. '
+                    + 'This says nothing about whether the frontend is wired; it says this gate cannot read it.',
+                    app.output(),
+                    'frontendApiCallsUnresolvable',
+                );
+            case 'productOwedIt':
+                // The failure this gate exists for, and the one it could not previously
+                // report: an integration plan promising API routes, and a served frontend
+                // that calls nothing at all.
+                return failure(
+                    'frontendMakesNoApiCalls',
+                    '/',
+                    `the served frontend at ${app.baseUrl}/ issues no HTTP requests whatsoever, while `
+                    + '.azure/integration-plan.md declares the API routes it was supposed to call. '
+                    + 'The two halves were built and never connected.',
+                    app.output(),
+                );
+            case 'noContract':
+                return notApplicable(
+                    'noFrontendApiCalls',
+                    'the served frontend issues no HTTP requests, and the workspace has no .azure/integration-plan.md '
+                    + 'declaring routes it should have called, so there is no contract to hold it to.',
+                );
+        }
     }
 
     const issues: ArtifactValidationIssue[] = [];
@@ -331,13 +388,30 @@ export async function validateCrudRoundTrip(workspaceRoot: string): Promise<Runt
     }
 
     const document = await probe(`${app.baseUrl}/`);
-    const collection = document.ok && looksLikeHtml(document.response)
+    const servesFrontend = document.ok && looksLikeHtml(document.response);
+    const collection = servesFrontend
         ? await findCollectionEndpoint(app.baseUrl, document.response.body)
         : undefined;
     if (!collection) {
+        // Same attribution rule as the wiring gate. A frontend that plainly posts, whose
+        // URL or body shape we could not extract, is our limitation — and reporting it as
+        // "this project has no CRUD" is how the gate quietly stopped testing anything.
+        const { usesHttpClient } = servesFrontend
+            ? await collectApiCalls(app.baseUrl, document.response.body)
+            : { usesHttpClient: false };
+        if (usesHttpClient) {
+            return harnessFault(
+                'the served frontend issues HTTP requests, but no collection endpoint could be extracted from them — '
+                + 'a computed URL or a client wrapper defeats the extraction. Declare `project.collectionRoute` in the '
+                + 'stack file to check this stack properly; this gate cannot read it unaided.',
+                app.output(),
+                'collectionRouteUnresolvable',
+            );
+        }
         return notApplicable(
             'noCollectionRouteDeclared',
-            'no collection endpoint could be identified from the served frontend, so there is no round-trip to attempt.',
+            'the served frontend issues no HTTP requests at all, so no collection endpoint could be identified and '
+            + 'there is no round-trip to attempt.',
         );
     }
 
@@ -431,16 +505,34 @@ async function findContainerDatastore(packageDirectory: string): Promise<string 
 }
 
 /** Same-origin paths the served frontend calls, gathered from the document and its scripts. */
-async function collectApiCalls(baseUrl: string, document: string): Promise<string[]> {
+/**
+ * Same-origin paths the served frontend calls, plus whether it makes HTTP calls *at all*.
+ *
+ * The second half is what stops this gate lying. A frontend that writes
+ * `` fetch(`${base}/items`) `` — an env-configured API base, which is the ordinary way a
+ * generated app is written, not an exotic one — defeats the path extraction below while
+ * plainly making calls. Without `usesHttpClient` the gate could not tell that from a
+ * frontend that calls nothing, and reported the second, which is the failure it exists to
+ * catch. Distinguishing them is the difference between "the product is broken" and "our
+ * parser cannot read this".
+ */
+async function collectApiCalls(baseUrl: string, document: string): Promise<{ calls: string[]; usesHttpClient: boolean }> {
     const sources = [document, ...await fetchScripts(baseUrl, document)];
     const calls = new Set<string>();
+    let usesHttpClient = false;
     for (const source of sources) {
         for (const call of findApiCalls(source)) {
             calls.add(call);
         }
+        if (HTTP_CLIENT_TOKENS.test(source)) {
+            usesHttpClient = true;
+        }
     }
-    return [...calls].sort();
+    return { calls: [...calls].sort(), usesHttpClient };
 }
+
+/** Evidence that the frontend issues HTTP requests, independent of whether we can read the URL. */
+const HTTP_CLIENT_TOKENS = /\bfetch\s*\(|\baxios\b|\bXMLHttpRequest\b|\$\.ajax\s*\(|\buseSWR\s*\(|\buseQuery\s*\(/;
 
 async function fetchScripts(baseUrl: string, document: string): Promise<string[]> {
     const bodies: string[] = [];
@@ -700,10 +792,10 @@ function withOutput(result: RuntimeValidationResult, output: string): RuntimeVal
  * agent is never blamed, and the issue makes the golden certification case go red — because
  * a probe that cannot connect for its own reasons must not look like a pass.
  */
-function harnessFault(message: string, output: string): RuntimeValidationResult {
+function harnessFault(message: string, output: string, code = 'runtimeHarnessFault'): RuntimeValidationResult {
     return withOutput({
         valid: false,
-        issues: [issue('runtimeHarnessFault', '$.runtime', message)],
+        issues: [issue(code, '$.runtime', message)],
         harnessFault: message,
         diagnostics: [],
     }, output);

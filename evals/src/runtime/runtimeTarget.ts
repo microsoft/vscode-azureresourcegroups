@@ -96,9 +96,15 @@ export type NotApplicableReason =
  */
 export const RUNTIME_NOT_APPLICABLE_CLASS: Record<NotApplicableReason, 'outOfScope' | 'coverageGap'> = {
     // This project has nothing for the gate to look at, and no remedy would change that.
+    // Down to one code, and that is the expected end state rather than an accident: every
+    // other reason examined closely has turned out to be a coverage gap or a product
+    // failure wearing an out-of-scope costume. The stack schema predicts the same thing
+    // structurally — an `outOfScope` verdict in a real run is close to a bug report.
     noFrontendDeclared: 'outOfScope',
-    noFrontendApiCalls: 'outOfScope',
-    noCollectionRouteDeclared: 'outOfScope',
+    // Reachable only when the served frontend makes no HTTP calls *and* nothing declared
+    // the routes it owed. When either is untrue the gate now has a verdict.
+    noFrontendApiCalls: 'coverageGap',
+    noCollectionRouteDeclared: 'coverageGap',
     // The gate has a real question here and something is missing that could be supplied.
     functionsHostUnavailable: 'coverageGap',
     datastoreRequiresContainer: 'coverageGap',
