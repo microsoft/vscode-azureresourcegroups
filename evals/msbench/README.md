@@ -1191,6 +1191,20 @@ not excluded by a single observation, and n=1 cannot distinguish the two. Record
 with timestamps so it is not re-derived from memory; if the property is ever load
 bearing it deserves a deliberate two-run test rather than inference from this.
 
+#### Retracted: this is no evidence either way
+
+Five repeats of `debug-breakpoint-node` measured dispatch latency directly, and it
+varies by roughly **7×** — runs started at 23:40, 23:46, 23:50 and 00:24 all did the
+same seven seconds of work, with one sitting ~33 minutes against others at ~5.
+
+Against that spread, a 12.5-minute wait ending 35 seconds after an unrelated completion
+is unremarkable. The "striking fit" was reading signal out of a distribution wide enough
+to produce that coincidence routinely, so the observation above is downgraded from
+*striking but unproven* to **no evidence either way**. It is left in place rather than
+deleted, because the reasoning is the useful part: elapsed time tells you almost nothing
+here, and any future claim about queueing needs a deliberate test rather than inference
+from timestamps.
+
 ### Why the model half needs no flag
 
 `--model .` is `ASSET_MODEL_SENTINEL`. It does **not** mean "no model" — it tells the
@@ -2025,6 +2039,22 @@ with a clear message:
   timestamp on every invocation, so running the credential-free gates locally leaves an
   unrelated one-line change staged into whatever you commit next. It has reached review on
   several PRs. `git checkout -- evals/results/` before committing.
+
+- **A `400 BadRequest` from CES at submission time is probably transient — retry before
+  changing anything.** Seen once in five back-to-back submissions, on a run submitted
+  within a second of the previous one completing:
+
+  ```
+  requests.exceptions.HTTPError: 400 Client Error: Bad Request for url:
+  https://ces-dev1.azurewebsites.net/api/ces/benchmark/startRun?smoke_mode=none&bypassProxy=false
+  Response body: 400.0 BadRequest
+  ```
+
+  The next submission, 13 seconds later with a byte-identical config, succeeded. No
+  tokens are spent and no run is created, so the only cost is the confusion. The trap is
+  that `400` reads as *"your config is malformed"*, which invites editing a config that
+  was fine — and the edit then gets credited with the fix when the retry was what worked.
+  Leave a few seconds between submissions and retry once before believing it.
 
 - **A red run that is actually rate limiting.** Back-to-back runs get throttled by the
   Copilot API mid-run. The agent then produces nothing, so artifact assertions fail
