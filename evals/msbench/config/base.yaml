@@ -40,7 +40,8 @@ modelSelector:
 # purely local wait — see README.md, "Timeouts". Do not add that flag.
 timeouts:
   # describe -> requirements -> plan -> scaffold -> build -> run -> debug, all in
-  # ONE chat session. 1h45m is a per-turn budget, not a budget for the chain.
+  # ONE chat session. The schema default of 6300 is a per-turn budget, not a
+  # budget for the chain.
   #
   # Budget, NOT an independent knob. The agent clock starts *after* the job clock
   # (container pull, VS Code + VSIX install, workspace setup, the `script:`
@@ -49,21 +50,44 @@ timeouts:
   # first, the agent timeout never fires, runnerGraceSeconds never runs, and
   # nothing is flushed on exactly the runs that need diagnosing:
   #
-  #   6h job cap - ~15m setup - 15m grace => 5h agent, with margin
+  #   7200s runner cap - ~15m setup - 15m grace => 5400s agent
   #
-  # Re-derive this if the cap is ever confirmed. GitHub documents a 6h cap for
-  # hosted runners and 5 days for self-hosted; runs report `dispatched to GitHub
-  # Actions` with run_platform='linux_container', but we could NOT verify which
-  # pool MSBench uses — that is decided by a server-side workflow we cannot read.
-  # 6h is assumed because it is the safer of the two. Raising it needs
-  # confirmation from CodeExService@microsoft.com.
-  agentSeconds: 18000 # 5h
+  # The 7200s cap is MEASURED, not assumed. Every instance runlog prints
+  # `Using timeout of 7200 seconds` before the agent starts, and that value is
+  # identical in all 30 cached runs — across three days, four models
+  # (claude-sonnet-4.5, gpt-5, gpt-4.1, gpt-5.6) and multi-instance dispatches.
+  # Identical values across different payloads is what rules out its being set
+  # per dispatch, which was the open question that kept this at 18000.
+  #
+  # This previously read 18000 (5h), derived from an *assumed* 6h GitHub-hosted
+  # runner cap. That was 2.5x the real budget, which is precisely the failure the
+  # paragraph above warns about — so the config documented the hazard while
+  # embodying it. See README.md, "Timeouts".
+  #
+  # NOTE: this leaves no margin (5400 + 900 grace + 900 setup = 7200 exactly),
+  # where the old 6h derivation kept 30m back. Nothing has come close — the
+  # longest run to date is 49m — but the first run that does will find the edge.
+  agentSeconds: 5400 # 90m
   # The trap. This is not agent inactivity — it fires only when the agent trace,
   # the CAPI proxy log, the Copilot Chat log AND workspace file activity are all
   # quiet. `npm install`, `azd provision`, a build or a test suite produce none
   # of those four for minutes at a time, so a perfectly healthy run gets killed
   # for looking idle. Quiet is not the same as stuck.
-  stallSeconds: 5400 # 90m
+  #
+  # 2700 is the schema default, chosen rather than derived — but it is not
+  # unexamined. The longest gap between agent steps in any successful cached run
+  # is 211.8s (`2026082614813342`); `scaffold-fullstack`, which runs a real
+  # `npm install` and build, peaks at 82.4s. Those gaps are an UPPER bound on
+  # all-four-quiet, since file activity continues during a step gap, so 2700
+  # sits at least 12.7x above anything observed.
+  #
+  # It must also stay strictly below agentSeconds. At the previous 5400 it would
+  # have equalled it, and a stall could never have fired before the agent budget
+  # expired — an inert timeout that reads as protection.
+  #
+  # Revisit when the deploy gate lands: `azd provision` is the one step plausibly
+  # quiet for tens of minutes, and it has never been measured here.
+  stallSeconds: 2700 # 45m
   # Time the outer runner allows for cleanup after the agent timeout. A long
   # session has far more to flush than a 5-step one (screen recording,
   # trajectory, session.sqlite), and a truncated artifact is an unreadable
