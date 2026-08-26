@@ -84,7 +84,9 @@ async function openSession(workspaceRoot: string): Promise<RuntimeSession> {
         };
     }
 
-    const outcome = await startApp(target);
+    // A stack declaring `project.api: none` is a background worker: asserting it listens
+    // would be a false red on an app behaving exactly as designed, so assert it stays alive.
+    const outcome = await startApp(target, { expect: target.apiKind === 'none' ? 'alive' : 'listening' });
     if (outcome.kind === 'started') {
         return { kind: 'started', app: outcome.app, target };
     }
@@ -112,7 +114,8 @@ export async function releaseRuntimeSessions(): Promise<void> {
             continue;
         }
         await session.app.stop();
-        if (!await waitForPortRelease(session.app.port)) {
+        // A worker holds no port, so there is nothing to wait for its release.
+        if (session.app.port !== undefined && !await waitForPortRelease(session.app.port)) {
             process.stderr.write(
                 `[runtime] WARNING: port ${session.app.port} is still accepting connections after teardown. `
                 + 'A process escaped the group kill and will break later runs on this machine.\n');

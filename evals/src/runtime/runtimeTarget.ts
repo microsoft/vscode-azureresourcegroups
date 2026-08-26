@@ -67,6 +67,7 @@ export type NotApplicableReason =
     | 'frontendDevServerUnsupported'
     | 'noFrontendApiCalls'
     | 'noCollectionRouteDeclared'
+    | 'noHttpSurface'
     | 'datastoreRequiresContainer';
 
 /**
@@ -101,6 +102,9 @@ export const RUNTIME_NOT_APPLICABLE_CLASS: Record<NotApplicableReason, 'outOfSco
     // failure wearing an out-of-scope costume. The stack schema predicts the same thing
     // structurally — an `outOfScope` verdict in a real run is close to a bug report.
     noFrontendDeclared: 'outOfScope',
+    // A declared background worker has no HTTP surface, and no work on our side would
+    // give it one. Genuinely nothing to look at — the case the class was invented for.
+    noHttpSurface: 'outOfScope',
     // Reachable only when the served frontend makes no HTTP calls *and* nothing declared
     // the routes it owed. When either is untrue the gate now has a verdict.
     noFrontendApiCalls: 'coverageGap',
@@ -141,6 +145,16 @@ export interface RuntimeTarget {
     };
     healthPath?: string;
     healthPathSource?: HealthPathSource;
+    /**
+     * What the stack says this project *is*, when a stack declared it.
+     *
+     * `none` means a background worker with no HTTP surface. Without it there is no way to
+     * tell an app that was never going to listen from one that failed to, and the gates
+     * were resolving that ambiguity by reporting a harness fault forever.
+     */
+    apiKind?: 'none' | 'http';
+    /** The stack's declared collection endpoint, replacing a regex over frontend source. */
+    collectionRoute?: string;
     workspaceRoot: string;
     /** Directory of the `package.json` the app belongs to. */
     packageDirectory: string;
@@ -190,8 +204,90 @@ interface PackageManifest {
     dependencies: Record<string, string>;
 }
 
+/**
+ * The stack declaration, as projected to JSON by `build-config`.
+ *
+ * Rung 0 of every discovery chain in this module, and the only rung that is a *statement*
+ * rather than an inference. It is read as JSON rather than YAML deliberately: the graders
+ * run from source in a container with no `node_modules`, and `stage-graders` refuses any
+ * grader reachable from a bare specifier — so importing the `yaml` package here would break
+ * staging rather than fail at runtime.
+ *
+ * Absent fields are omitted rather than nulled, so "declared" and "declared as nothing"
+ * stay distinguishable — a distinction two gate verdicts now turn on.
+ */
+export interface StackProjection {
+    id: string;
+    api: 'none' | 'http';
+    healthPath?: string;
+    collectionRoute?: string;
+    start?: {
+        command: string;
+        args?: string[];
+        cwd?: string;
+        port?: { value: number; remap?: PortRemap };
+    };
+}
+
+/**
+ * Where the projection is staged. `/agent/assets/stack.json` is the container path;
+ * the env var exists so a grader run by hand can be pointed at one.
+ */
+function stackProjectionCandidates(): string[] {
+    const configured = process.env.COR_STACK_PROJECTION;
+    return [
+        ...(configured ? [configured] : []),
+        '/agent/assets/stack.json',
+        path.resolve(import.meta.dirname, '..', '..', 'msbench', 'assets', 'stack.json'),
+    ];
+}
+
+/**
+ * Read the stack declaration, or nothing.
+ *
+ * A missing projection is the normal case outside an MSBench run and must never be an
+ * error: every rung below this one still works, which is the point of a cascade.
+ */
+export async function readStackProjection(): Promise<StackProjection | undefined> {
+    for (const candidate of stackProjectionCandidates()) {
+        const text = await readFileSafe(candidate);
+        if (text === undefined) {
+            continue;
+        }
+        try {
+            const parsed = JSON.parse(text) as StackProjection;
+            if (typeof parsed?.id === 'string' && (parsed.api === 'none' || parsed.api === 'http')) {
+                return parsed;
+            }
+        } catch {
+            // A malformed projection is not worth failing a gate over; the cascade covers it.
+        }
+    }
+    return undefined;
+}
+
 export async function resolveRuntimeTarget(workspaceRoot: string): Promise<RuntimeTargetResolution> {
+    const stack = await readStackProjection();
     const packages = await discoverPackages(workspaceRoot);
+
+    // Rung 0. A stack that declares its own start command is answering for an ecosystem the
+    // rungs below may not be able to walk at all — which is the only place a declaration
+    // earns its keep. Where the cascade works, stacks deliberately declare nothing, so that
+    // rung 0 does not become the place people put things to avoid making discovery work.
+    if (stack?.start) {
+        const cwd = stack.start.cwd ? path.resolve(workspaceRoot, stack.start.cwd) : workspaceRoot;
+        return await completeTarget(workspaceRoot, packageFor(cwd, packages) ?? emptyPackage(cwd), {
+            command: stack.start.command,
+            args: stack.start.args ?? [],
+            cwd,
+            env: {},
+            startSource: 'stackDeclaration',
+            port: stack.start.port
+                ? { declared: stack.start.port.value, source: 'stackDeclaration', remap: stack.start.port.remap }
+                : { source: 'undeclared' },
+        }, stack);
+    }
+
     if (packages.length === 0) {
         return await describeMissingNodeProject(workspaceRoot);
     }
@@ -201,12 +297,12 @@ export async function resolveRuntimeTarget(workspaceRoot: string): Promise<Runti
         return functions;
     }
 
-    const fromLaunch = await resolveFromLaunchConfiguration(workspaceRoot, packages);
+    const fromLaunch = await resolveFromLaunchConfiguration(workspaceRoot, packages, stack);
     if (fromLaunch) {
         return fromLaunch;
     }
 
-    const fromScript = resolveFromStartScript(workspaceRoot, packages);
+    const fromScript = resolveFromStartScript(workspaceRoot, packages, stack);
     if (fromScript) {
         return fromScript;
     }
@@ -229,15 +325,22 @@ export async function resolveRuntimeTarget(workspaceRoot: string): Promise<Runti
 async function completeTarget(
     workspaceRoot: string,
     manifest: PackageManifest,
-    partial: Omit<RuntimeTarget, 'healthPath' | 'healthPathSource' | 'workspaceRoot' | 'packageDirectory' | 'declaresDependencies' | 'dependenciesInstalled'>,
+    partial: Omit<RuntimeTarget, 'healthPath' | 'healthPathSource' | 'apiKind' | 'collectionRoute' | 'workspaceRoot' | 'packageDirectory' | 'declaresDependencies' | 'dependenciesInstalled'>,
+    stack?: StackProjection,
 ): Promise<RuntimeTargetResolution> {
-    const health = await discoverHealthPath(workspaceRoot);
+    // Rung 0 first: a declared health path is a statement, and every rung below it is an
+    // inference from artifacts the agent happened to write.
+    const health = stack?.healthPath
+        ? { path: stack.healthPath, source: 'stackDeclaration' as HealthPathSource }
+        : await discoverHealthPath(workspaceRoot);
     return {
         kind: 'resolved',
         target: {
             ...partial,
             healthPath: health?.path,
             healthPathSource: health?.source,
+            apiKind: stack?.api,
+            collectionRoute: stack?.collectionRoute,
             workspaceRoot,
             packageDirectory: manifest.directory,
             declaresDependencies: Object.keys(manifest.dependencies).length > 0,
@@ -249,6 +352,7 @@ async function completeTarget(
 async function resolveFromLaunchConfiguration(
     workspaceRoot: string,
     packages: PackageManifest[],
+    stack?: StackProjection,
 ): Promise<RuntimeTargetResolution | undefined> {
     const launchPath = path.join(workspaceRoot, '.vscode', 'launch.json');
     let parsed: unknown;
@@ -307,7 +411,7 @@ async function resolveFromLaunchConfiguration(
             startSource: 'launchConfiguration',
             launchConfigName: asString(config.name),
             port: readPort(env, args),
-        });
+        }, stack);
     }
     return undefined;
 }
@@ -315,6 +419,7 @@ async function resolveFromLaunchConfiguration(
 function resolveFromStartScript(
     workspaceRoot: string,
     packages: PackageManifest[],
+    stack?: StackProjection,
 ): Promise<RuntimeTargetResolution> | undefined {
     const manifest = packages.find(value => typeof value.scripts.start === 'string' && value.scripts.start.trim());
     if (!manifest) {
@@ -342,7 +447,7 @@ function resolveFromStartScript(
         port: port.declared === undefined
             ? port
             : { declared: port.declared, source: 'packageJsonStartScript' },
-    });
+    }, stack);
 }
 
 /**
@@ -541,6 +646,10 @@ async function discoverPackages(workspaceRoot: string): Promise<PackageManifest[
 }
 
 /** The package that owns `directory`, preferring the deepest one that contains it. */
+function emptyPackage(directory: string): PackageManifest {
+    return { directory, scripts: {}, dependencies: {} };
+}
+
 function packageFor(directory: string, packages: PackageManifest[]): PackageManifest {
     const containing = packages
         .filter(value => directory === value.directory || directory.startsWith(`${value.directory}${path.sep}`))

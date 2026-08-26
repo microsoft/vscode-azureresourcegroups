@@ -61,6 +61,7 @@ const MAX_CAPTURED_OUTPUT = 64 * 1024;
 
 /** Where the port that answered came from. */
 export type PortProvenance =
+    | 'notApplicable'
     | 'remapped'
     | 'declaredDespiteRemap'
     | 'declared'
@@ -72,9 +73,9 @@ export interface RuntimeFinding {
 }
 
 export interface RunningApp {
-    /** The port the app was found listening on. */
-    readonly port: number;
-    readonly baseUrl: string;
+    /** The port the app was found listening on; absent for a worker with no HTTP surface. */
+    readonly port?: number;
+    readonly baseUrl?: string;
     readonly portProvenance: PortProvenance;
     /**
      * Something true and worth saying that is not this gate's verdict — currently only
@@ -159,7 +160,23 @@ class OutputBuffer {
 
 export interface StartOptions {
     startupTimeoutMs?: number;
+    /**
+     * What counts as "up".
+     *
+     * `listening` is the web case: the app must accept a connection. `alive` is the
+     * background-worker case, where there is no HTTP surface and the only honest positive
+     * assertion is that the process is *still running* after a settling window.
+     *
+     * Deliberately an assertion rather than an exemption. "This stack declares no API, so
+     * skip the check" would be a gate that is wired, runs, and cannot fail — and one that
+     * fails *open on a declaration*, so a mis-declared stack would buy itself immunity. A
+     * worker that exits immediately, or dies two seconds in, still fails.
+     */
+    expect?: 'listening' | 'alive';
 }
+
+/** How long a worker must stay up before we accept that it started. */
+const WORKER_LIVENESS_WINDOW_MS = 5_000;
 
 /**
  * Start `target`, wait for it to listen, and hand back a handle.
@@ -212,6 +229,36 @@ export async function startApp(target: RuntimeTarget, options: StartOptions = {}
     child.once('error', error => {
         spawnError = error;
     });
+
+    if (options.expect === 'alive') {
+        await sleep(WORKER_LIVENESS_WINDOW_MS);
+        const captured = output.read();
+        if (exit) {
+            await stopChild(entry);
+            return {
+                kind: 'productFailure',
+                code: 'appExitedBeforeReadiness',
+                message: `the worker exited ${describeExit(exit)} within ${WORKER_LIVENESS_WINDOW_MS / 1000}s of starting `
+                    + `(started with "${commandLine}" in ${target.cwd}). A background worker is expected to stay running.`,
+                output: captured,
+            };
+        }
+        if (spawnError) {
+            await stopChild(entry);
+            return { kind: 'harnessFault', message: `"${commandLine}" could not be launched: ${spawnError.message}`, output: captured };
+        }
+        return {
+            kind: 'started',
+            app: {
+                port: undefined,
+                baseUrl: undefined,
+                portProvenance: 'notApplicable',
+                findings: [],
+                output: () => output.read(),
+                stop: () => stopChild(entry),
+            },
+        };
+    }
 
     const readiness = await waitForReadiness({
         plan,
