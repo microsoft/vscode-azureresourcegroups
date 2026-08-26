@@ -14,23 +14,27 @@ The two are complementary, not redundant:
 | Where | GitHub Actions, ~30 min | MSBench CES, with video + screenshots |
 | Role | Fast PR gate | Nightly, pass@k, model sweeps |
 
-The four **single-turn** stimuli from [`evals/project-plan/eval.yaml`](../project-plan/eval.yaml)
-are ported here, one config per stimulus in [`config/stimuli/`](config/stimuli).
-`evals/project-plan/eval.yaml` stays the source of truth; this folder is a port of it,
-so changes there need mirroring here until the remaining three (multi-turn) stimuli are
-wired up.
+Five stimuli from [`evals/project-plan/eval.yaml`](../project-plan/eval.yaml) are ported
+here — the four **single-turn** ones and the first **multi-turn** one — with one config
+per stimulus in [`config/stimuli/`](config/stimuli). `evals/project-plan/eval.yaml` stays
+the source of truth; this folder is a port of it, so changes there need mirroring here
+until the remaining two (multi-turn) stimuli are wired up.
 
-| Stimulus | Assertions | Validator flags |
-| --- | --- | --- |
-| `photo-app-requirements` (default) | 8 | — |
-| `api-only-inventory` | 6 | `--assert-no-frontend --assert-blob-storage --assert-cosmosdb` |
-| `multi-service-order-processing` | 5 | `--assert-service-count=3` |
-| `no-datastore-converter` | 5 | `--assert-no-datastore` |
+| Stimulus | Turns | Assertions | Validator flags |
+| --- | --- | --- | --- |
+| `photo-app-requirements` (default) | 1 | 8 | — |
+| `api-only-inventory` | 1 | 6 | `--assert-no-frontend --assert-blob-storage --assert-cosmosdb` |
+| `multi-service-order-processing` | 1 | 5 | `--assert-service-count=3` |
+| `no-datastore-converter` | 1 | 5 | `--assert-no-datastore` |
+| `plan-generation-task-app` | 2 | 9 | — |
 
 Assertion counts differ because they mirror each stimulus's graders one-for-one rather
 than being levelled up — only `photo-app-requirements` specifies
 `no-dotfile-requirements` and `transcript-not-contains`, and only it and
-`api-only-inventory` specify `no-premature-plan`.
+`api-only-inventory` specify `no-premature-plan`. `plan-generation-task-app` is the one
+exception to one-for-one, and deliberately so: it carries a sentinel *per turn* and a
+copy of the `reject_tools` constraint *per turn*, because a step-scoped assertion only
+ever sees its own turn. See [Multi-turn stimuli](#multi-turn-stimuli).
 
 The one assertion every stimulus carries that `eval.yaml` does not specify is the
 **liveness sentinel**, `SELECT COUNT(*) > 0 FROM llm_responses`, which must be first.
@@ -39,7 +43,7 @@ empty table: a run that dies before the session database is populated would othe
 collect full marks on every negative check rather than failing. It is a property of
 *this* harness, not of the source spec, which is why it is not mirrored from there.
 
-All four are verified by a real green run; ids are under
+All four single-turn stimuli are verified by a real green run; ids are under
 [Verified result](#verified-result). Those runs predate the sentinel, so they report
 one assertion fewer than the table above.
 
@@ -332,10 +336,59 @@ than a test double.
 | `program` | `exec:` (defaults to asserting exit code 0) |
 
 Every table carries a `stepIndex`, and `AND stepIndex = :stepIndex` is appended
-automatically so an assertion only sees its own turn — which is what will make the
+automatically so an assertion only sees its own turn — which is what makes the
 multi-turn stimuli straightforward. `llm_responses.response` is user-facing prose
 only, excluding tool output and thinking blocks, so substring assertions don't
 false-match text the agent merely read.
+
+## Multi-turn stimuli
+
+`promptSteps` is natively multi-turn: each entry is one user message into the **same**
+chat session, and each carries its own `assertions`. `plan-generation-task-app` is the
+first stimulus here to use more than one, porting stimulus 1.5 from `eval.yaml`.
+
+The mechanism is `SQLiteAssertionDatabase.formatWithStepIndexFilter` (ported verbatim
+into [`regrade.ts`](regrade.ts)): `:stepIndex` is bound to the index of the step an
+assertion is **declared under**, and the filter is appended to the query. So *where an
+assertion lives is a load-bearing decision*, not a formatting one. An assertion under
+the wrong step still passes — it just stops meaning anything, which is the failure this
+folder keeps having to design against.
+
+Three rules fall out of that, and all three are things a naive port gets wrong:
+
+1. **A grader marked `turn: N` in `eval.yaml` goes under `promptSteps[N]`.** An
+   untargeted Vally grader reads the whole trajectory and the final workspace
+   (`executor/azure-agent-executor.ts` sends every turn into one session and grades once),
+   so it goes under the **last** step. For the plan graders that is also a slightly
+   stronger claim than the source makes — the plan must be written *in the turn after
+   confirmation*, not merely exist by the end — which is the actual product contract.
+2. **One sentinel per turn.** The single sentinel from
+   [PR #1706](https://github.com/microsoft/vscode-azureresourcegroups/pull/1706) only
+   proves *some* turn ran. The multi-turn version of that bug is a run that completes
+   turn 0 and then dies — throttled on the second turn, or stalled. A step-0 sentinel
+   still passes, while every step-1 negative assertion passes vacuously and the step-1
+   positives fail as though the product were broken. Bound to `:stepIndex = 1`, the
+   second sentinel asserts the second turn actually happened.
+3. **A whole-conversation constraint needs a copy per turn.** `constraints.reject_tools`
+   applies to the entire Vally trajectory, but each ported copy sees exactly one turn, so
+   a single copy silently leaves the other turn unchecked. The duplicate also buys
+   attribution: the failing assertion names the turn that misbehaved.
+
+`enableImpliedStepIndexFilter: false` turns the filter off for one assertion, which would
+express rule 3 as a single whole-conversation check and preserve the one-for-one grader
+mapping. It is deliberately **not** used yet — it is unverified against the harness
+version we run, and a config the runner rejects costs a whole run to discover. Plain YAML
+that cannot fail schema validation is worth one extra assertion.
+
+`exec:` needs the same care for a different reason: it runs **after the step it is
+attached to**. The two plan validators are declared under the last step because attached
+to step 0 they would run before `.azure/project-plan.md` exists and go red for a reason
+that has nothing to do with the product.
+
+Assertions can be compile-checked before spending a run, which catches
+[trap 2](#partial-re-runs-when-a-re-grade-isnt-enough) — the filter is appended
+unconditionally, so an assertion that isn't a real table query dies with
+`X_ASSERTION_DOES_NOT_COMPILE` and takes the run with it.
 
 There is also a third assertion type with no Vally equivalent: **LLM-as-judge**. A judge
 model reads whatever rows `promptInputQuery` selects and returns pass/fail.
@@ -861,8 +914,10 @@ with a clear message:
 
 ## Next steps
 
-- The three multi-turn stimuli, using `promptSteps` (native multi-turn). The per-table
-  `stepIndex` scoping already does the hard part.
+- The remaining two multi-turn stimuli (`plan-approval-scrapbook`,
+  `plan-feedback-recipe-app`), following `plan-generation-task-app` — see
+  [Multi-turn stimuli](#multi-turn-stimuli). Both reach the scaffold handoff, so both
+  cost more of the chain than 1.5 does.
 - LLM-as-judge assertions for the qualitative parts of a generated plan.
 - Nightly CI once the CES identity is allowlisted; keep
   [`agent-contracts.yml`](../../.github/workflows/agent-contracts.yml) as the fast PR
