@@ -473,14 +473,77 @@ visible.
 npm run stacks:check
 ```
 
-validates every stack and the inventory, **and** asserts that each of the twenty-four
-deliberately broken files under `config/__fixtures__/` is rejected with the exact error
-code its `# expect:` header names. The code is asserted rather than merely "it threw",
-because a validator broken so that it rejects everything would pass the weaker test — and
-a fixture rejected for the wrong reason proves the wrong rule. It also reports how many of
-the validators' error codes are exercised by a fixture and refuses to let that number
-fall, since a rule with no fixture is unproven and unproven is indistinguishable from
-broken.
+validates every stack and the inventory, **and** asserts that each of the deliberately
+broken files under `config/__fixtures__/` is rejected with the exact error code its
+`# expect:` header names. The code is asserted rather than merely "it threw", because a
+validator broken so that it rejects everything would pass the weaker test — and a fixture
+rejected for the wrong reason proves the wrong rule. It also reports how many of the
+validators' error codes are exercised by a fixture and refuses to let that number fall,
+since a rule with no fixture is unproven and unproven is indistinguishable from broken.
+
+### The derivation: `config/gates.yaml`
+
+The stack says what a project *has*; `config/gates.yaml` says what each gate *needs to look
+at*; `src/gateWiring.ts` intersects them. Wiring is a pure function of
+(stack facts × gate table × phase) — no filesystem, no probing — which is what makes it
+reviewable as a diff and testable without a container.
+
+The rule for `requires:` is the whole design in one line: **put a fact there only when its
+absence means the gate has nothing to look at.**
+
+| Situation | `requires:` it? | Outcome |
+| --- | --- | --- |
+| Nothing to grade (`frontend: none` vs a frontend gate) | yes | never wired; `outOfScope` becomes unreachable |
+| Real question, prerequisite missing (no `func`, no Python support) | **no** | wired, red, declared in the stack's `knownGaps` |
+| The grader cannot parse this ecosystem at all | yes | unwired, and reported in words as a gap in the *gate* |
+
+The third row is narrow and deliberate: `project-builds` runs the real package manager, so
+wiring it against a Python project would make it exit 1 with "no package.json anywhere" —
+**blaming the agent for a project the grader cannot read.** A fabricated product failure is
+worse than a missing one, so it is unwired and the snapshot says why.
+
+`args:` are derived from the same facts with the same predicate language. That is not
+decoration: `--require-health` had existed on `validate-runtime-health` since it was
+written and **nothing had ever passed it**, so the gate could not fail for a missing health
+endpoint. A stack that declares `healthPath` now passes it.
+
+### Wiring snapshots
+
+`config/__snapshots__/<stack>.wiring.md` is generated and checked in, and
+`npm run stacks:check` fails when it drifts (`-- --update` to regenerate). A one-line change
+to a `requires:` can silently unwire a gate across every stack, and a gate wired nowhere
+reads as a clean run — so "this change moves no wiring" has to be something a reviewer can
+see. The check also fails if two stacks ever derive an identical gate set, because that
+would mean the facts are not reaching the derivation at all.
+
+The snapshots are also the demonstration that any of this does something. Same gate table,
+`local` phase, two stacks:
+
+```
+  react-functions-postgres          node-express-postgres
+  runtime-frontend      WIRED       runtime-frontend      not wired (frontend is none)
+  runtime-frontend-api  WIRED       runtime-frontend-api  not wired (frontend is none)
+  runtime-health        not wired   runtime-health        WIRED --require-health
+  runtime-crud          not wired   runtime-crud          WIRED
+```
+
+### Running a stack
+
+```
+./run.sh --stack node-express-postgres --phase plan
+```
+
+`build-config.ts` synthesises the third layer — prompt, liveness sentinel, derived gate
+assertions — instead of reading a hand-written stimulus. Every existing stimulus keeps
+working unchanged; the two sources are mutually exclusive rather than resolved by
+precedence, because silently grading one while the operator asked for the other is the
+expensive failure.
+
+It also **warns, without blocking**, when every gate a phase would run is a declared known
+gap: such a run is pre-determined to produce no new information, and that is computable
+before the money is spent. And it writes `assets/stack.json` — a JSON projection of the
+resolved stack for the container, because graders run from staged source with no
+`node_modules` and so cannot read the YAML.
 
 ## Running the real validators (`exec:`)
 

@@ -1,0 +1,11 @@
+# expect: gatePredicateValue
+# an empty value list matches nothing, unwiring the gate everywhere.
+schemaVersion: 1
+phases: [plan, scaffold, local]
+gates:
+  - id: requirements
+    grader: evals/graders/validate-requirements.ts
+    summary: empty list
+    phases: [plan]
+    requires:
+      project.frontend: []

@@ -1,0 +1,224 @@
+# Which gate looks at what — the table applicability is derived from.
+#
+# A stack says what the project *has* (`config/stacks/<id>.yaml`). This says what
+# each gate *needs to look at*. Wiring is the intersection, computed by
+# `src/gateWiring.ts`. Nothing decides applicability at runtime.
+#
+# ## Why this is one central file
+#
+# The obvious alternative is a declaration next to each grader. It cannot work:
+# every grader calls `runGrader*` at module top level, so **importing a grader
+# executes it**. Applicability has to be computable without running 19 graders,
+# which means reading data rather than code. The second reason is human: "which
+# gates run on this stack?" should be answerable by reading one screen.
+#
+# One block per gate, so two people adding gates conflict on their own lines.
+#
+# ## The rule for `requires:`
+#
+# **Only put a fact here when its absence means the gate has nothing to look at.**
+# That is the difference between the two NOT_APPLICABLE classes, and getting it
+# wrong here is how the schema fails:
+#
+#   - Absence means nothing to grade  ->  `requires:` it, so the gate is never
+#     wired. This is what makes an `outOfScope` verdict unreachable.
+#   - The gate has a real question but we cannot answer it yet (a Go project, a
+#     missing binary)  ->  do NOT put it here. The gate stays wired, goes red,
+#     and the stack declares a `knownGaps` entry. `coverageGap` reds are true
+#     statements that we are not testing something we claim to test.
+#
+# So `ecosystem` appears almost nowhere below. A Python project has a perfectly
+# real "does it start?" question; what is missing is support we have not written.
+#
+# ## `args:`
+#
+# Flags derived from the same facts, using the same predicate language. This is
+# not decoration — `--require-health` has existed on `validate-runtime-health`
+# since it was written and **nothing has ever passed it**, so the gate has never
+# been able to fail for a missing health endpoint. Deriving it from the stack is
+# what makes the flag mean something.
+
+schemaVersion: 1
+
+# The closed set of phase names. A gate naming anything else is a typo, and a
+# typo here silently unwires a gate — the failure that reads as a clean run.
+phases: [plan, scaffold, local]
+
+gates:
+  # --- plan phase ---------------------------------------------------------
+  # These grade the artifacts every project produces, whatever it is built from,
+  # so they carry no requirements at all.
+  - id: requirements
+    grader: evals/graders/validate-requirements.ts
+    summary: .azure/requirements.json satisfies the requirements contract
+    phases: [plan]
+    requires: {}
+    args:
+      - value: --assert-no-frontend
+        when: { project.frontend: [none] }
+      - value: --assert-no-datastore
+        when: { project.datastore: [none] }
+      - value: --assert-cosmosdb
+        when: { project.datastore: [cosmos] }
+      - value: --assert-blob-storage
+        when: { project.datastore: [blob] }
+
+  - id: project-plan
+    grader: evals/graders/validate-project-plan.ts
+    summary: .azure/project-plan.md satisfies the plan contract
+    phases: [plan]
+    requires: {}
+
+  - id: webview-parseable
+    grader: evals/graders/validate-webview-parseable.ts
+    summary: the plan the agent wrote is renderable by the plan webview
+    phases: [plan]
+    requires: {}
+
+  - id: no-scaffold
+    grader: evals/graders/validate-no-scaffold.ts
+    summary: the agent did not scaffold before the plan was approved
+    phases: [plan]
+    requires: {}
+
+  - id: debug-gate
+    grader: evals/graders/validate-debug-gate.ts
+    summary: the approval gate at the end of planning behaved
+    phases: [plan]
+    requires: {}
+
+  # --- scaffold phase -----------------------------------------------------
+  - id: frontend-scaffold
+    grader: evals/graders/validate-frontend-scaffold.ts
+    summary: the generated frontend is preview-embeddable and has an API seam
+    phases: [scaffold]
+    # A project with no frontend has nothing here to grade. This single line is
+    # what unwires the gate, and it is checkable against the prompt by anyone.
+    requires:
+      project.frontend: [spa]
+
+  - id: project-builds
+    grader: evals/graders/validate-project-builds.ts
+    summary: the generated project installs and builds
+    phases: [scaffold]
+    # The one place `ecosystem` appears, and it is NOT the two-tier rule above —
+    # it is a third case worth naming. This grader runs the real package manager,
+    # so it cannot read a Python project at all: wiring it there would make it
+    # exit 1 with "no package.json anywhere", **blaming the agent for a project
+    # the grader cannot parse**. A fabricated product failure is worse than a
+    # missing one, so the gate is unwired and the derivation reports it in words
+    # as a coverage gap in the gate rather than a property of the project.
+    #
+    # The remedy is a Python build grader, not a flag.
+    requires:
+      ecosystem: [node]
+    args:
+      - value: --require-frontend
+        when: { project.frontend: [spa] }
+
+  - id: service-fidelity
+    grader: evals/graders/validate-service-fidelity.ts
+    summary: the scaffold contains the services the plan promised, and only those
+    phases: [scaffold]
+    # No ecosystem requirement on purpose. A Go project has a real "did you build
+    # what you planned?" question; the analyser not understanding Go is a gap to
+    # close, so the gate stays wired and the stack declares it.
+    requires: {}
+
+  - id: datastore-fidelity
+    grader: evals/graders/validate-datastore-fidelity.ts
+    summary: the datastore the scaffold wires is the one the plan chose
+    phases: [scaffold]
+    # A project with no datastore has nothing to compare. Absence, not inability.
+    requires:
+      project.datastore: [postgres, cosmos, blob, queue]
+
+  - id: integration-plan
+    grader: evals/graders/validate-integration-plan.ts
+    summary: .azure/integration-plan.md hands off correctly
+    phases: [scaffold]
+    requires: {}
+    args:
+      - value: --has-frontend
+        when: { project.frontend: [spa] }
+
+  # --- local-dev phase ----------------------------------------------------
+  - id: debug-plan
+    grader: evals/graders/validate-debug-plan.ts
+    summary: .azure/vscode-debug-plan.md satisfies the debug-plan contract
+    phases: [local]
+    requires: {}
+
+  - id: debug-config
+    grader: evals/graders/validate-debug-config.ts
+    summary: .vscode/launch.json and tasks.json are structurally sound
+    phases: [local]
+    requires: {}
+
+  - id: debug-artifacts
+    grader: evals/graders/validate-debug-artifacts.ts
+    summary: the generated workspace matches the plan that specified it
+    phases: [local]
+    requires: {}
+
+  - id: debug-breakpoint
+    grader: evals/graders/validate-debug-breakpoint.ts
+    summary: a real breakpoint is hit under the generated launch configuration
+    phases: [local]
+    requires: {}
+
+  - id: runtime-app-starts
+    grader: evals/graders/validate-runtime-app-starts.ts
+    summary: the application actually starts
+    phases: [local]
+    # Every stack produces something that should start, so there is nothing to
+    # require. Where it cannot be started — no `func`, an ecosystem the harness
+    # does not drive — the stack declares a knownGap and this stays red.
+    requires: {}
+
+  - id: runtime-health
+    grader: evals/graders/validate-runtime-health.ts
+    summary: the health endpoint answers
+    phases: [local]
+    # The declaration that closes a real hole, from the wiring side. The gate
+    # probes seven conventional paths and, on a total miss, reported
+    # `noHealthPathDeclared` classed **outOfScope** — so an agent that shipped no
+    # health endpoint was not failed for it. #1728 fixes the classification at
+    # source (and found the deeper bug: discovery never read the integration
+    # plan, where the scaffold agent is contracted to declare the path).
+    #
+    # This is the other half. `--require-health` has existed on the grader since
+    # it was written and **nothing has ever passed it**, so a capability that
+    # existed only in its own documentation now gets passed by stacks that
+    # contracted for a health endpoint.
+    requires:
+      project.healthPath: present
+    args:
+      - value: --require-health
+        when: { project.healthPath: present }
+
+  - id: runtime-frontend
+    grader: evals/graders/validate-runtime-frontend.ts
+    summary: the browser receives a document
+    phases: [local]
+    requires:
+      project.frontend: [spa]
+    args:
+      - value: --require-frontend
+        when: { project.frontend: [spa] }
+
+  - id: runtime-frontend-api
+    grader: evals/graders/validate-runtime-frontend-api.ts
+    summary: the two halves of the app talk to each other
+    phases: [local]
+    # Needs both halves to exist before there is anything to observe between them.
+    requires:
+      project.frontend: [spa]
+      project.api: [http]
+
+  - id: runtime-crud
+    grader: evals/graders/validate-runtime-crud.ts
+    summary: a record can be written and read back
+    phases: [local]
+    requires:
+      project.collectionRoute: present

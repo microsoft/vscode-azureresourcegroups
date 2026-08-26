@@ -42,15 +42,31 @@
  * Runs straight off source via Node's built-in type stripping — no build step.
  */
 
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { PhaseWiring } from '../src/gateWiring.ts';
+import type { Stack } from '../src/stack.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(HERE, '..', '..');
 const CONFIG = join(HERE, 'config');
 const STIMULI = join(CONFIG, 'stimuli');
 const PHASES = join(CONFIG, 'phases');
-const DEST = join(HERE, 'assets', 'user-overrides.yaml');
+const STACKS = join(CONFIG, 'stacks');
+const ASSETS = join(HERE, 'assets');
+const DEST = join(ASSETS, 'user-overrides.yaml');
+
+/**
+ * The resolved stack, projected as JSON for the container.
+ *
+ * JSON rather than the YAML source because the graders run from staged source
+ * with no `node_modules` — `stage-graders.ts` refuses anything reachable from a
+ * bare specifier, and the stack loader needs the `yaml` package. Written beside
+ * the graders rather than inside `assets/graders/` so it cannot be erased by
+ * `stage-graders.ts`, which wipes that directory on every run.
+ */
+const PROJECTION = join(ASSETS, 'stack.json');
 
 export const DEFAULT_STIMULUS = 'photo-app-requirements';
 export const DEFAULT_PHASE = 'plan';
@@ -65,8 +81,236 @@ function available(): string[] {
         .sort();
 }
 
-function main(): void {
-    const stimulus = process.argv[2] || DEFAULT_STIMULUS;
+async function main(): Promise<void> {
+    const stackFlag = flagValue('--stack');
+    if (stackFlag) {
+        await buildFromStack(stackFlag, flagValue('--phase') ?? DEFAULT_PHASE);
+        return;
+    }
+    buildFromStimulus(process.argv[2] || DEFAULT_STIMULUS);
+}
+
+/**
+ * Load the stack machinery, and only then.
+ *
+ * These modules parse YAML and so import the `yaml` package, while this script
+ * is run by `run.sh` on hosts that have no `node_modules` at all — the MSBench
+ * `eval` job is checkout, setup-node, download-artifact, `run.sh --skip-build`,
+ * and nothing installs anything. Importing them at the top of the file broke the
+ * build immediately, which is the same trap `importScanner.ts` documents for
+ * `stage-graders.ts`: **a script `run.sh` invokes on a clean machine cannot
+ * acquire a third-party dependency without breaking that promise.**
+ *
+ * Deferring the import keeps the stimulus path — the one every current run uses
+ * — dependency-free, and confines the requirement to `--stack`, where `run.sh`
+ * installs the eval dependencies first. A failure here is reported as the
+ * missing install it is, rather than as a stack trace about a package nobody
+ * mentioned.
+ */
+async function loadStackMachinery() {
+    try {
+        const [inventory, table, wiring, stack] = await Promise.all([
+            import('../src/containerInventory.ts'),
+            import('../src/gateTable.ts'),
+            import('../src/gateWiring.ts'),
+            import('../src/stack.ts'),
+        ]);
+        return {
+            loadContainerInventory: inventory.loadContainerInventory,
+            loadGateTable: table.loadGateTable,
+            deriveWiring: wiring.deriveWiring,
+            teachesNothing: wiring.teachesNothing,
+            loadStack: stack.loadStack,
+        };
+    } catch (error) {
+        console.error(
+            `--stack needs the eval dependencies, which are not installed here.\n`
+            + `Run 'npm ci' in evals/ and try again. (${error instanceof Error ? error.message : String(error)})`,
+        );
+        process.exit(1);
+    }
+}
+
+function flagValue(name: string): string | undefined {
+    const index = process.argv.indexOf(name);
+    if (index !== -1) {
+        return process.argv[index + 1];
+    }
+    const inline = process.argv.find(argument => argument.startsWith(`${name}=`));
+    return inline?.slice(name.length + 1);
+}
+
+/**
+ * Build the config from a stack, synthesising layer 3 instead of reading it.
+ *
+ * A stack is **not** a fourth concatenated layer. The merge below is textual and
+ * guarded by "the three files must define disjoint top-level keys", while the
+ * two things a stack controls — the prompt and the gate wiring — both live
+ * inside `promptSteps`, which the stimulus layer owns. Concatenation cannot
+ * merge into a list, so a fourth layer would have to break that guard, and the
+ * guard is what stops a typo becoming a paid run that grades the wrong thing.
+ *
+ * So the stack is a fourth *input*: it produces the same third layer that a
+ * hand-written stimulus would, and every hand-written stimulus keeps working
+ * untouched.
+ */
+async function buildFromStack(stackId: string, phase: string): Promise<void> {
+    const { loadContainerInventory, loadGateTable, deriveWiring, teachesNothing, loadStack } = await loadStackMachinery();
+
+    const stackPath = join(STACKS, `${stackId}.yaml`);
+    if (!existsSync(stackPath)) {
+        console.error(`Unknown stack '${stackId}'. Available:\n${availableIn(STACKS).map(name => `  ${name}`).join('\n')}`);
+        process.exit(1);
+    }
+    const phasePath = join(PHASES, `${phase}.yaml`);
+    if (!existsSync(phasePath)) {
+        console.error(`Unknown phase '${phase}'. Available:\n${availableIn(PHASES).map(name => `  ${name}`).join('\n')}`);
+        process.exit(1);
+    }
+
+    const inventory = loadContainerInventory(join(CONFIG, 'container.yaml'));
+    const table = loadGateTable(join(CONFIG, 'gates.yaml'), REPO_ROOT);
+    const stack = loadStack(stackPath, { inventory, phasesDirectory: PHASES });
+
+    if (!stack.phases.includes(phase)) {
+        console.error(`Stack '${stackId}' does not declare phase '${phase}'. It declares: ${stack.phases.join(', ')}.`);
+        process.exit(1);
+    }
+
+    const wiring = deriveWiring(stack, table, phase);
+    if (wiring.wired.length === 0) {
+        console.error(
+            `Stack '${stackId}' wires no gates in phase '${phase}', so the run would assert nothing beyond the `
+            + `liveness sentinel. Check the gate table's phases, or the stack's project facts.`,
+        );
+        process.exit(1);
+    }
+
+    const merged = [
+        `# GENERATED by build-config.ts from config/base.yaml + config/phases/${phase}.yaml`,
+        `# + config/stacks/${stackId}.yaml (gates derived via config/gates.yaml).`,
+        `# Do not edit — edit those instead.`,
+        `# Regenerate with: ./run.sh --stack ${stackId} --phase ${phase}`,
+        '',
+        readFileSync(join(CONFIG, 'base.yaml'), 'utf8').trimEnd(),
+        '',
+        stripSchemaDirective(readFileSync(phasePath, 'utf8')).trimEnd(),
+        '',
+        renderStimulus(stack, wiring),
+        '',
+    ].join('\n');
+
+    writeFileSync(DEST, merged);
+    assertParses(merged, `stack:${stackId}`, phase);
+    writeProjection(stack);
+
+    console.log(`Built assets/user-overrides.yaml for stack '${stackId}' (phase '${phase}')`);
+    for (const entry of wiring.wired) {
+        const args = entry.args.length > 0 ? ` ${entry.args.join(' ')}` : '';
+        const gap = entry.knownGapReason ? `  [known gap: ${entry.knownGapReason}]` : '';
+        console.log(`  wired: ${entry.gate.id}${args}${gap}`);
+    }
+    for (const entry of wiring.excluded) {
+        console.log(`  not applicable: ${entry.gate.id} — ${entry.because}`);
+    }
+
+    // A warning, deliberately not an error. Someone may want the run as a
+    // control, or for something outside this phase — but "this run is
+    // pre-determined to teach us nothing" is computable before the money is
+    // spent, so it gets said out loud rather than discovered in the report.
+    if (teachesNothing(wiring)) {
+        console.log('');
+        console.log(`WARNING: every gate wired in phase '${phase}' is a declared known gap:`);
+        for (const entry of wiring.wired) {
+            console.log(`  ${entry.gate.id} — ${entry.knownGapReason}`);
+        }
+        console.log('  This run can produce no new information about the product. Submit it only');
+        console.log('  deliberately — as a control, or to exercise something this phase does not gate.');
+    }
+}
+
+/**
+ * Render layer 3: the prompt, the liveness sentinel, the derived gates.
+ *
+ * The sentinel comes first and is not optional. Half of what a stimulus asserts
+ * is negative, and a negative count over an empty table is trivially true — a
+ * run that dies before the session database is populated would otherwise collect
+ * full marks for having produced nothing.
+ */
+function renderStimulus(stack: Stack, wiring: PhaseWiring): string {
+    const lines: string[] = [
+        `# Layer 3, generated from config/stacks/${stack.id}.yaml. ${stack.name}.`,
+        '',
+        'promptSteps:',
+        '  - text: |',
+        ...stack.prompt.trimEnd().split('\n').map(line => `      ${line}`),
+        '    assertions:',
+        '      # Liveness sentinel — must come first. Without it the negative assertions',
+        '      # below pass trivially against an empty table.',
+        '      - comment: Sentinel; session data must exist or the negative checks below are vacuous',
+        "        query: SELECT COUNT(*) > 0 FROM llm_responses",
+        '',
+    ];
+
+    for (const entry of wiring.wired) {
+        const args = entry.args.length > 0 ? ` ${entry.args.join(' ')}` : '';
+        if (entry.knownGapReason) {
+            lines.push(`      # Declared known gap (${entry.knownGapReason}): expected to exit 3 with a`);
+            lines.push('      # NOT_APPLICABLE marker. Red here is not evidence about the generated app.');
+        }
+        lines.push(`      - comment: ${entry.gate.summary}`);
+        lines.push(`        exec: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /agent/assets/graders/${entry.gate.grader}${args}`);
+        lines.push('');
+    }
+
+    // Recorded, never asserted. `config/container.yaml` is mostly documentation
+    // repeated between people rather than observation, and this line is what
+    // turns the next run anybody submits — for any reason — into a measurement
+    // of it, at no extra cost.
+    lines.push('      # Recorded, not asserted: the container inventory config/container.yaml claims.');
+    lines.push('      - comment: Environment fingerprint for triage');
+    lines.push("        exec: 'uname -sm; echo \"cwd=$(pwd)\"; for b in node npm python3 pip3 func go dotnet docker azd java; do printf \"%s=%s\\n\" \"$b\" \"$(command -v $b || echo MISSING)\"; done; python3 -m ensurepip --version 2>&1 | head -1'");
+    lines.push('        assertZeroExitCode: false');
+
+    return lines.join('\n');
+}
+
+/**
+ * Write the resolved stack where the container can read it.
+ *
+ * Only the fields with a named consumer are projected. A field emitted "in case
+ * someone needs it" is a field nobody validates and everybody half-trusts:
+ * `healthPath` and `collectionRoute` become rung 0 of the discovery chains in
+ * `runtime/runtimeTarget.ts`, `start` supplies a command for stacks whose
+ * ecosystem the chain cannot walk, and `api` lets `runtime-app-starts` tell a
+ * background worker that never listens from a web app that failed to.
+ *
+ * Absent fields are **omitted rather than nulled**, so "declared" and "declared
+ * as nothing" cannot be confused — a distinction the health verdict turns on.
+ */
+function writeProjection(stack: Stack): void {
+    const projection: Record<string, unknown> = { id: stack.id, api: stack.project.api };
+    if (stack.project.healthPath) {
+        projection.healthPath = stack.project.healthPath;
+    }
+    if (stack.project.collectionRoute) {
+        projection.collectionRoute = stack.project.collectionRoute;
+    }
+    if (stack.runtime.start) {
+        projection.start = stack.runtime.start;
+    }
+    mkdirSync(ASSETS, { recursive: true });
+    writeFileSync(PROJECTION, `${JSON.stringify(projection, undefined, 2)}\n`);
+}
+
+function availableIn(directory: string): string[] {
+    return readdirSync(directory)
+        .filter(name => name.endsWith('.yaml'))
+        .map(name => name.replace(/\.yaml$/, ''))
+        .sort();
+}
+
+function buildFromStimulus(stimulus: string): void {
     const stimulusPath = join(STIMULI, `${stimulus}.yaml`);
 
     if (!existsSync(stimulusPath)) {
@@ -143,4 +387,4 @@ function assertParses(merged: string, stimulus: string, phase: string): void {
     }
 }
 
-main();
+void main();
