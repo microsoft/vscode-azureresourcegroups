@@ -224,3 +224,26 @@ reads `launch.json` directly and is only handed a configuration *name* — so
 detecting and declining is the only honest option. Certification runs its cases
 strictly sequentially for the same reason. A stack template emitting a hardcoded
 inspector port should be fixed at the source rather than worked around here.
+
+### Why certification runs sequentially
+
+The live tier must not be parallelised. Its cases contend for two ports the
+fixture **hardcodes** — `7071` via `env.PORT` and `9229` via
+`runtimeArgs: ["--inspect=9229"]` — and the probe cannot remap either, because
+VS Code reads `launch.json` directly and is handed only a configuration *name*.
+Run two cases at once and the second finds a port held by the first. The port
+guard turns that into `probeError` rather than a silent wrong answer, so it
+fails loudly — but the suite would look broken instead of parallel. Making it
+faster means fixing the hardcoded ports in the fixture, not removing the
+sequencing. This is repeated as a comment on the loop in `certify.ts`, which is
+where someone optimising for speed will actually be looking.
+
+### One thing the probe does not do
+
+It never binds or allocates a port — it only *connects* to two whose numbers it
+is given. That matters because the allocation path is where this class of bug
+tends to survive a fix: a free-port search that binds `127.0.0.1` can be handed
+an ephemeral port a squatter already holds on `0.0.0.0`, and the caller then
+latches onto the squatter believing it chose a free port. There is no such path
+here by construction, and there should not be one added without the same
+connect-based check.

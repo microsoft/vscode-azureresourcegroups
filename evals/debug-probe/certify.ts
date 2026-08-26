@@ -26,6 +26,10 @@
  *   node certify.ts --offline           offline only (CI default)
  *   node certify.ts --live              live only
  *   node certify.ts --vscode=/path/to/code
+ *
+ * The live tier runs its cases STRICTLY SEQUENTIALLY and must keep doing so —
+ * they contend for two ports the fixture hardcodes and the probe cannot remap.
+ * See the comment on the loop in `runLiveTier` before trying to speed this up.
  */
 
 import { spawn, spawnSync } from 'node:child_process';
@@ -328,6 +332,26 @@ function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {
     const results: CaseResult[] = [];
     const cases = only ? LIVE_CASES.filter(testCase => testCase.id === only) : LIVE_CASES;
     try {
+        // ─────────────────────────────────────────────────────────────────────────
+        // DO NOT PARALLELISE THIS LOOP.
+        //
+        // Not a style preference and not laziness — the cases contend for two
+        // FIXED ports and would corrupt each other's verdicts:
+        //
+        //   7071  the fixture's app port, pinned by `env.PORT` in its launch.json
+        //   9229  the inspector port, pinned by `runtimeArgs: ["--inspect=9229"]`
+        //
+        // Neither can be remapped from here. VS Code reads `launch.json` directly
+        // and is handed only a configuration *name*, so the probe cannot rewrite
+        // the ports the way a harness that spawns the process itself could.
+        //
+        // Run two cases at once and the second one's probe finds a port held by
+        // the first one's app. The port guard turns that into `probeError`, so it
+        // fails loudly rather than silently — but every case after the first
+        // would fail that way, and the suite would look broken instead of
+        // parallel. Speeding this up means fixing the hardcoded ports in the
+        // fixture first, not removing the sequencing here.
+        // ─────────────────────────────────────────────────────────────────────────
         for (const [index, testCase] of cases.entries()) {
             const workspace = join(root, testCase.id);
             cpSync(FIXTURE, workspace, { recursive: true });
