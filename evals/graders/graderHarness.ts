@@ -190,6 +190,90 @@ export function skipAsNotApplicable(
 }
 
 /**
+ * A gate whose input was never produced exits **3**, and names the missing precondition.
+ *
+ * This exists because the phases run as one chain with no seeding: the plan phase's output
+ * is the scaffold phase's input, and the scaffold phase's output is what every local-dev
+ * gate reads. So when scaffold fails, the debug gates and the runtime gates **did not fail.
+ * They never ran.** Reporting them red says a dozen things went wrong when one did, and
+ * none of the dozen is evidence about what those gates measure.
+ *
+ * Measured before it was built: a workspace with planning artifacts and no scaffold output
+ * produced five separate exit-1 product failures from the five runtime gates, each claiming
+ * the agent shipped no runnable application. True once; attributed five times.
+ *
+ * Exit 3 for the same reason as `NOT_APPLICABLE_EXIT_CODE`, and the argument is if anything
+ * stronger here. Exit 0 would hand a run with a broken scaffold eleven free passes, so
+ * `resolved` would improve *because the product got worse* — optimistic and unrecoverable.
+ * The run is already red from the gate that owns the failure, so these verdicts do not
+ * change the outcome; they change the diagnosis, which is the entire point.
+ */
+export const NOT_ATTEMPTED_EXIT_CODE = EXIT_GRADER_ERROR;
+
+/**
+ * The machine-readable not-attempted line, parallel to `NOT_APPLICABLE` and greppable the
+ * same way: `stdErr LIKE 'NOT_ATTEMPTED gate=%'`.
+ *
+ *     NOT_ATTEMPTED gate=<gate-id> reason=<preconditionId> detail="<what was looked for>"
+ *
+ * A distinct marker rather than a reason code on the existing one, because the three exit-3
+ * verdicts answer different questions and want different readers. Not-applicable says *this
+ * stack has no such question*; a harness fault says *this grader broke*; not-attempted says
+ * *ask the gate upstream — nothing here is about me*. Without the marker all three collapse
+ * into `GRADER_EXIT_3` and the reader is sent to the wrong place, which is the failure this
+ * whole vocabulary exists to prevent.
+ */
+export const NOT_ATTEMPTED_MARKER = 'NOT_ATTEMPTED';
+
+/** Thrown to end a grader with a not-attempted verdict; see `NOT_ATTEMPTED_EXIT_CODE`. */
+export class NotAttempted extends Error {
+    readonly gate: string;
+    readonly precondition: string;
+    readonly detail: string;
+
+    constructor(gate: string, precondition: string, detail: string) {
+        super(detail);
+        this.gate = gate;
+        this.precondition = precondition;
+        this.detail = detail;
+    }
+}
+
+/**
+ * Assert a precondition this gate consumes but does not produce.
+ *
+ * **The attribution rule this enforces:** the gate that *owns* producing an output reports
+ * the product failure when it is missing; every gate that merely *consumes* that output
+ * reports not-attempted. Attribution then lands exactly once by construction rather than by
+ * anyone remembering to suppress the other eleven. So the scaffold gate keeps reporting
+ * "the agent shipped no runnable application", and the runtime gates stop claiming it.
+ *
+ * `satisfied` must be a **positive assertion about a named artifact** — "I looked for X at
+ * Y and it is absent" — never an inference from an empty result. That distinction is the
+ * one this repository keeps relearning: a parser that cannot read a frontend produces the
+ * same emptiness as a frontend that does nothing, and only the positive form can tell them
+ * apart. `detail` should therefore say what was looked for and where, not merely that
+ * something was missing.
+ *
+ * This is deliberately called by each gate rather than declared in a table beside them. A
+ * table is a claim *about* a gate, maintained apart from it, and the first audit of that
+ * shape in this repository returned 40% wrong in five rows — not through carelessness, but
+ * because a description of code drifts from code silently. A precondition asserted here runs
+ * on the same path as the read it guards, so it cannot drift, and it is auditable by
+ * execution: point the gate at a workspace missing the artifact and read what it says.
+ */
+export function requirePrecondition(
+    gate: string,
+    precondition: string,
+    satisfied: boolean,
+    detail: string,
+): void {
+    if (!satisfied) {
+        throw new NotAttempted(gate, precondition, detail);
+    }
+}
+
+/**
  * Run a grader body, mapping its outcome onto the exit-code contract above.
  * An unexpected throw (TypeError, ReferenceError, …) exits 3 rather than 1 so a
  * broken grader is never reported as a product regression.
@@ -225,6 +309,17 @@ export async function runGraderAsync(name: string, body: () => Promise<void>): P
 
 function exitForError(name: string, error: unknown): never {
     const gate = gateId();
+    if (error instanceof NotAttempted) {
+        // Read on a red run, like the not-applicable line, so it has to say plainly that
+        // nothing here is a finding about the product — otherwise a cascade gets triaged as
+        // a dozen defects, which is the cost this verdict exists to avoid.
+        console.error(`${NOT_ATTEMPTED_MARKER} gate=${error.gate} reason=${error.precondition} detail=${JSON.stringify(error.detail)}`);
+        console.error(`NOT ATTEMPTED: gate=${gate} — ${name}`);
+        console.error(`  ${error.detail}`);
+        console.error('  This gate never ran: it consumes something an earlier phase did not produce. '
+            + 'Nothing here is evidence about the generated app, and the failure is reported by the gate that owns that output.');
+        process.exit(NOT_ATTEMPTED_EXIT_CODE);
+    }
     if (error instanceof NotApplicable) {
         // `detail` is JSON-encoded rather than quote-substituted so the field survives a
         // parser: JSON.stringify supplies the surrounding quotes and escapes embedded quotes

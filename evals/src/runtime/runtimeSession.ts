@@ -25,6 +25,8 @@ import { startApp, waitForPortRelease, type RunningApp } from './appProcess.ts';
 
 export type RuntimeSession =
     | { kind: 'started'; app: RunningApp; target: RuntimeTarget }
+    /** An input this gate consumes was never produced; see `requirePrecondition`. */
+    | { kind: 'notAttempted'; precondition: string; detail: string }
     | { kind: 'notApplicable'; reason: NotApplicableReason; detail: string }
     | { kind: 'harnessFault'; message: string; output: string }
     | { kind: 'productFailure'; code: string; message: string; output: string };
@@ -48,18 +50,26 @@ async function openSession(workspaceRoot: string): Promise<RuntimeSession> {
         return { kind: 'notApplicable', reason: resolution.reason, detail: resolution.detail };
     }
     if (resolution.kind === 'noApplication') {
-        // The blame call the resolver deliberately declined to make. Planning artifacts in
-        // the tree prove the agent worked here, so "no application" means it shipped none —
-        // a product failure, and one that must not hide behind a not-applicable verdict.
-        // Without them, the likelier story is that EVALUATE_WORKSPACE points somewhere else,
-        // and blaming the agent for our own misconfiguration is the error that poisons the
-        // corpus invisibly.
+        // Planning artifacts with no application means an earlier phase produced plans and
+        // the scaffold produced nothing. That IS a product failure — but it is not this
+        // gate's to report. The runtime gates consume a scaffolded project; they do not
+        // produce one, and `project-builds` already fails with "no package.json anywhere".
+        //
+        // This branch previously returned a product failure, and it was right for a
+        // single-phase run where nothing upstream had already said so. In a chain it made
+        // one scaffold failure into five: measured, all five runtime gates exited 1 claiming
+        // the agent shipped no runnable application. True once, attributed five times, and
+        // none of it evidence about runtime.
+        //
+        // With no planning artifacts either, nothing upstream demonstrably ran here, so the
+        // likelier story is a misconfigured workspace than a phase that failed — and that
+        // ambiguity belongs to the harness rather than the agent.
         return resolution.workspaceLooksStaged
             ? {
-                kind: 'productFailure',
-                code: 'noApplicationScaffolded',
-                message: `${resolution.detail} The workspace does contain .azure planning artifacts, so the agent worked here and produced no runnable application.`,
-                output: '',
+                kind: 'notAttempted',
+                precondition: 'scaffoldedProject',
+                detail: `${resolution.detail} The workspace does contain .azure planning artifacts, so an earlier phase ran here `
+                    + 'and produced no application for this gate to start.',
             }
             : {
                 kind: 'harnessFault',

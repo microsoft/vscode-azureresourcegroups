@@ -759,6 +759,15 @@
             "search": "## Database\n\n| Field | Value |\n|-------|-------|\n| Type | File-backed JSON store |\n| Data file | `data/items.json` |\n| Migration tool | none (no schema to migrate) |\n\nProduction migration would replace the file store with managed storage. **NO seed data is to be created.**\n\n### Collection \u2192 table mapping (whitelisted in `src/services/database.ts`)\n\n| Collection (code) | Store key |\n|-------------------|-----------|\n| `tickets` | `items` |",
             "replacement": "",
             "expectedCode": "missingDatabase"
+        },
+        {
+            "id": "runtime-app-starts-never-scaffolded",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-app-starts",
+            "file": "package.json",
+            "operation": "delete",
+            "expectedCode": "runtimeNotAttempted"
         }
     ]
 }
