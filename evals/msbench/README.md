@@ -1291,6 +1291,35 @@ covers, and in every case the fix was the same move: **make the output claim onl
 knows**. That is why `rate` prints `n/a` rather than `100%`, why N/A is its own bucket, and
 why the out-of-scope section says *for the stacks observed*.
 
+#### The part nothing tests: the sentence attached to the verdict
+
+Of the defects found while building these gates, **four were cases where the logic was
+correct and the wording was the bug**: a reason code named for a product failure when it
+meant a harness gap; a class named `environmentGap` for a missing analyser, sending
+triagers to inspect a container that was fine; a stranded-content check reporting `clean`
+when it had examined only insertions; and a section telling the reader a grader had been
+*blocked* when it had actually run and disowned its own answer.
+
+Every one of them pointed a reader somewhere, and the somewhere was wrong.
+
+What connects them structurally is worth stating, because it bounds what any of this
+tooling can promise. **A gate's prose is the one part of it that nothing tests.**
+Certification asserts verdicts and exit codes; a hostile fixture can prove a gate reaches
+the right *verdict* on input designed to fool it. Neither can assert that the sentence
+attached to that verdict names the right person to go and fix it. So this failure mode is
+not merely hard to catch — it is *structurally uncovered*, inside a suite whose entire
+purpose is coverage.
+
+There is no cheap mechanical answer, and this report does not claim one. Two consequences
+follow anyway:
+
+- **When a report line tells someone where to look, being wrong costs more than being
+  silent.** Wrong advice that reads as authoritative consumes exactly the attention the
+  report exists to direct. That is why the remedies here fork rather than generalise, and
+  why each one names what it actually knows.
+- **A green certification number says nothing about it.** Read the sentence a gate emits,
+  not just the code it exits.
+
 #### And why it is computed rather than judged
 
 The argument for automating any of this is not that people are careless. It is narrower and
@@ -1318,6 +1347,14 @@ ended the argument, the checks re-run against a second case. It needs no clevern
 available to anyone. Its corollary is the half that keeps being missed — *having the
 evidence is not the same as having read it*. All four of those participants ran the thing;
 they read past the answer.
+
+And the part that argues for the mechanical checks more than any of the above: **not one of
+those defects was caught by its own author.** Every fix, in every direction, entered
+because someone else read the code — including a bug report that turned out not to
+reproduce, which was only established by building a fixture instead of accepting a
+confident claim. Deference to a confident report is how a phantom defect earns a permanent
+workaround. The author is the one person who cannot see it, and a stranger happening to
+look is not a mechanism.
 
 That is the same failure this tool exists to catch, one level up. A gate that has failed 16
 times looks routine; nothing about a routine-looking thing invites inspection, which is
