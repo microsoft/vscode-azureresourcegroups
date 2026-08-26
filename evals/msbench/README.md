@@ -1156,6 +1156,26 @@ credits passes it never earned. **Seven of twenty-six instances in the corpus ar
 
 ### Why this has to be mechanical
 
+One failure shape underlies most of what this tool looks for, and it is worth stating
+directly because it tells you what to look for rather than what once happened:
+
+> **A number that is arithmetically correct, answering a wider question than it measured.**
+
+Three separate defects found while building these gates were all this shape:
+
+| Where | The number | What it actually measured |
+| --- | --- | --- |
+| A gate not applicable on every stack | `16/16 passed` | Nothing. An N/A grader exited 0 and was scored as a pass. |
+| A stranded-content check | `clean — fully merged` | Insertions only — a lost *deletion* reported success. |
+| A pass rate including N/A results | `100%` | The applicable observations, silently reweighted by the inapplicable ones. |
+
+None is a bug in the arithmetic. Each is a verdict over a wider domain than the evidence
+covers, and in every case the fix was the same move: **make the output claim only what it
+knows**. That is why `rate` prints `n/a` rather than `100%`, why N/A is its own bucket, and
+why the out-of-scope section says *for the stacks observed*.
+
+#### And why it is computed rather than judged
+
 The argument for automating any of this is not that people are careless. It is narrower and
 less comfortable than that.
 
@@ -1174,6 +1194,13 @@ output.** Not evidence they lacked — evidence they had printed, and read past:
 The pattern is not fatigue. **A plausible mechanism is more satisfying than an unexplained
 observation**, so the mechanism gets adopted and the observation gets quietly re-read to
 fit. Every one of those five hypotheses was mechanically sound and predicted the symptom.
+
+The method that actually produced every genuine finding here is duller than insight: **run
+the thing before believing it.** The pre-registered test, the filesystem birth times that
+ended the argument, the checks re-run against a second case. It needs no cleverness and is
+available to anyone. Its corollary is the half that keeps being missed — *having the
+evidence is not the same as having read it*. All four of those participants ran the thing;
+they read past the answer.
 
 That is the same failure this tool exists to catch, one level up. A gate that has failed 16
 times looks routine; nothing about a routine-looking thing invites inspection, which is
