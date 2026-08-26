@@ -18,6 +18,7 @@
 
 import * as http from 'node:http';
 import * as https from 'node:https';
+import * as net from 'node:net';
 import * as vscode from 'vscode';
 import type {
     AdapterObservation,
@@ -111,15 +112,22 @@ export async function resolveBreakpoint(
 }
 
 /**
- * Fire the trigger until something accepts a connection.
+ * Keep firing the trigger until execution actually stops.
  *
  * WHY "connected" rather than "responded": on a healthy run the breakpoint stops
  * the process mid-request, so the HTTP response never arrives. Awaiting the
  * response would time out against a perfectly working app and be reported as
- * `appFailedToStart`. Connection established is the only honest signal, and we
- * stop early the moment the debuggee actually stops.
+ * `appFailedToStart`. Connection established is the only honest signal.
+ *
+ * WHY it keeps going after the first connection: the app can be listening before
+ * js-debug has bound the breakpoint, in which case the first request sails
+ * straight through and nothing would ever hit the breakpoint again. Stopping at
+ * first connect makes the gate intermittently red against a working project —
+ * a false product failure, and the worst kind because it looks like a real one.
+ * So we keep driving requests until something stops, and only the deadline ends
+ * the loop.
  */
-async function triggerUntilConnected(
+async function driveTrigger(
     url: string,
     deadline: number,
     stopped: () => boolean,
@@ -127,6 +135,7 @@ async function triggerUntilConnected(
 ): Promise<boolean> {
     const request = url.startsWith('https:') ? https.get : http.get;
     let attempts = 0;
+    let everConnected = false;
     while (Date.now() < deadline && !stopped()) {
         attempts++;
         const connected = await new Promise<boolean>(resolve => {
@@ -135,16 +144,21 @@ async function triggerUntilConnected(
             const clientRequest = request(url, () => finish(true));
             clientRequest.on('socket', socket => socket.on('connect', () => finish(true)));
             clientRequest.on('error', () => finish(false));
-            setTimeout(() => { clientRequest.destroy(); finish(false); }, TRIGGER_ATTEMPT_TIMEOUT_MS);
+            // Do not destroy the request on timeout: once we are past the first
+            // connection it may be parked on the breakpoint, and tearing it down
+            // would resume the debuggee before the stack can be read.
+            setTimeout(() => finish(false), TRIGGER_ATTEMPT_TIMEOUT_MS);
         });
-        if (connected) {
+        if (connected && !everConnected) {
+            everConnected = true;
             recorder.log(`trigger connected after ${attempts} attempt(s)`);
-            return true;
         }
         await delay(TRIGGER_RETRY_DELAY_MS);
     }
-    recorder.log(`trigger never connected after ${attempts} attempt(s)`);
-    return false;
+    if (!everConnected) {
+        recorder.log(`trigger never connected after ${attempts} attempt(s)`);
+    }
+    return everConnected;
 }
 
 /** Read the top frame and its locals. Evidence that the stop was real, not just an event. */
@@ -179,6 +193,132 @@ async function readStack(session: vscode.DebugSession, threadId: number, recorde
     }
 }
 
+/**
+ * Is something already listening here?
+ *
+ * Tested by CONNECTING, not by binding. A bind test against `127.0.0.1` reports
+ * "free" while a squatter holds `0.0.0.0` on macOS, which is precisely how a
+ * stranger's process gets mistaken for the application under test.
+ *
+ * This matters more here than it looks. If an unrelated process holds the
+ * trigger port, the probe connects to *it*, the request never reaches our
+ * breakpoint, and the verdict is `breakpointNotHit` — a false product failure
+ * against a project that is perfectly fine. If something holds the inspector
+ * port, node cannot start at all and the verdict is `appFailedToStart`, equally
+ * misattributed. Both are harness conditions and must exit 3.
+ */
+function isPortOccupied(host: string, port: number): Promise<boolean> {
+    return new Promise(resolve => {
+        const socket = new net.Socket();
+        const finish = (occupied: boolean) => {
+            socket.destroy();
+            resolve(occupied);
+        };
+        socket.setTimeout(1_000);
+        socket.once('connect', () => finish(true));
+        socket.once('timeout', () => finish(false));
+        socket.once('error', () => finish(false));
+        socket.connect(port, host);
+    });
+}
+
+/** The inspector port a launch configuration pins, if it pins one. */
+function inspectorPortOf(configuration: Record<string, unknown> | undefined): number | undefined {
+    const runtimeArgs = configuration?.runtimeArgs;
+    if (!Array.isArray(runtimeArgs)) {
+        return undefined;
+    }
+    for (const arg of runtimeArgs) {
+        const match = /^--inspect(?:-brk)?=(?:.*:)?(\d+)$/.exec(String(arg));
+        if (match) {
+            return Number(match[1]);
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Refuse to run when a port we depend on is already taken.
+ *
+ * Returns a human-readable reason, or undefined when the coast is clear.
+ * Deliberately a *precondition* rather than a diagnosis after the fact: once the
+ * run has happened, a squatter is indistinguishable from a broken project.
+ */
+async function findOccupiedPort(
+    spec: ProbeSpec,
+    configuration: Record<string, unknown> | undefined,
+    recorder: Recorder,
+): Promise<string | undefined> {
+    const checks: { label: string; host: string; port: number }[] = [];
+
+    if (spec.trigger) {
+        try {
+            const url = new URL(spec.trigger.url);
+            const port = Number(url.port || (url.protocol === 'https:' ? 443 : 80));
+            checks.push({ label: 'trigger', host: url.hostname, port });
+        } catch {
+            return `trigger.url is not a valid URL: ${spec.trigger.url}`;
+        }
+    }
+
+    const inspectorPort = inspectorPortOf(configuration);
+    if (inspectorPort !== undefined) {
+        // A fixed inspector port in a launch config collides across concurrent
+        // runs and survives a crashed earlier session. We cannot remap it —
+        // VS Code reads launch.json directly and we only pass a config name — so
+        // the honest move is to detect it and decline.
+        checks.push({ label: 'inspector', host: '127.0.0.1', port: inspectorPort });
+    }
+
+    for (const check of checks) {
+        if (await isPortOccupied(check.host, check.port)) {
+            return `${check.label} port ${check.host}:${check.port} is already in use before launch. `
+                + `Something other than the project under test is listening, so any verdict here would be about that process, not the product.`;
+        }
+        recorder.log(`${check.label} port ${check.host}:${check.port} is free`);
+    }
+    return undefined;
+}
+
+/**
+ * Is the debug adapter this configuration needs actually installed?
+ *
+ * Extensions declare the debug types they implement in
+ * `contributes.debuggers[].type`. js-debug ships with VS Code, so `pwa-node` and
+ * friends are always present; `debugpy`, `go`, `coreclr` and the rest are not
+ * unless something installed them.
+ *
+ * This is the difference between a product failure and an environment gap. A
+ * launch configuration naming an adapter we did not install is *correct* — it
+ * would work on a developer machine that has the extension. Only this harness
+ * cannot execute it. Without this check `startDebugging` simply never resolves,
+ * the probe hits its deadline, and the verdict is `appFailedToStart` — exit 1,
+ * blaming the product for a project it built correctly.
+ */
+function debugTypeIsInstalled(type: string): boolean {
+    for (const extension of vscode.extensions.all) {
+        const contributed = (extension.packageJSON as { contributes?: { debuggers?: { type?: string }[] } })?.contributes?.debuggers;
+        if (Array.isArray(contributed) && contributed.some(entry => entry.type === type)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/** Every debug type this environment can actually run, for the diagnostic. */
+function installedDebugTypes(): string[] {
+    const types = new Set<string>();
+    for (const extension of vscode.extensions.all) {
+        const contributed = (extension.packageJSON as { contributes?: { debuggers?: { type?: string }[] } })?.contributes?.debuggers;
+        for (const entry of contributed ?? []) {
+            if (typeof entry.type === 'string') {
+                types.add(entry.type);
+            }
+        }
+    }
+    return [...types].sort();
+}
+
 export async function runProbe(context: ProbeContext, recorder: Recorder): Promise<DebugProbeVerdict> {
     const { folder, spec } = context;
     const startedAt = Date.now();
@@ -200,7 +340,7 @@ export async function runProbe(context: ProbeContext, recorder: Recorder): Promi
     // getConfiguration parses launch.json for us, comments and trailing commas included.
     const configurations = vscode.workspace
         .getConfiguration('launch', folder.uri)
-        .get<{ name?: string }[]>('configurations') ?? [];
+        .get<Record<string, unknown>[]>('configurations') ?? [];
     const names = configurations.map(configuration => configuration.name).filter((name): name is string => typeof name === 'string');
     recorder.log(`launch configurations: ${JSON.stringify(names)}`);
 
@@ -210,6 +350,7 @@ export async function runProbe(context: ProbeContext, recorder: Recorder): Promi
     if (!names.includes(spec.launchConfig)) {
         return finish('launchConfigInvalid', `no launch configuration named "${spec.launchConfig}"; found: ${names.join(', ') || '(none named)'}`);
     }
+    const selected = configurations.find(configuration => configuration.name === spec.launchConfig);
 
     // ---- 2. Place the breakpoint by pattern -------------------------------------------
     const resolution = await resolveBreakpoint(folder, spec, recorder);
@@ -269,7 +410,29 @@ export async function runProbe(context: ProbeContext, recorder: Recorder): Promi
         },
     }));
 
-    // ---- 4. Launch ---------------------------------------------------------------------
+    // ---- 4. Refuse to run if this environment cannot execute the configuration --------
+    // Both checks below must happen BEFORE launch. Afterwards each failure is
+    // indistinguishable from a broken project and gets blamed on the product.
+    const debugType = typeof selected?.type === 'string' ? selected.type : undefined;
+    if (!debugType) {
+        return finish('launchConfigInvalid', `launch configuration "${spec.launchConfig}" declares no "type"`, { resolution });
+    }
+    if (!debugTypeIsInstalled(debugType)) {
+        // Environment gap, not a product defect: the configuration is probably
+        // correct and would work on a machine with that extension installed.
+        return finish('probeError',
+            `launch configuration "${spec.launchConfig}" needs debug adapter "${debugType}", which is not installed in this environment. `
+            + `The project may be perfectly debuggable elsewhere, so this says nothing about it. Installed types: ${installedDebugTypes().join(', ')}`,
+            { resolution });
+    }
+    recorder.log(`debug adapter "${debugType}" is installed`);
+
+    const occupied = await findOccupiedPort(spec, selected, recorder);
+    if (occupied) {
+        return finish('probeError', occupied, { resolution, adapter });
+    }
+
+    // ---- 5. Launch ---------------------------------------------------------------------
     // `true` means "launch was initiated", NOT "the debuggee is running", so it can
     // only rule out a failure, never confirm success.
     //
@@ -293,12 +456,17 @@ export async function runProbe(context: ProbeContext, recorder: Recorder): Promi
         return finish('appFailedToStart', `startDebugging("${spec.launchConfig}") returned false`, { resolution, adapter });
     }
 
-    // ---- 5. Drive execution to the breakpoint -------------------------------------------
+    // ---- 6. Drive execution to the breakpoint -------------------------------------------
+    // Runs until something stops, the debuggee dies, or the budget expires.
     if (spec.trigger) {
-        adapter.triggerConnected = await triggerUntilConnected(spec.trigger.url, deadline, stoppedSignal.settled, recorder);
+        adapter.triggerConnected = await driveTrigger(
+            spec.trigger.url,
+            deadline,
+            () => stoppedSignal.settled() || terminatedSignal.settled(),
+            recorder);
     }
 
-    // ---- 6. Wait for a stop, a termination, or the deadline ------------------------------
+    // ---- 7. Wait for a stop, a termination, or the deadline ------------------------------
     const raced = await Promise.race([
         stoppedSignal.promise.then(value => ({ kind: 'stopped' as const, ...value })),
         terminatedSignal.promise.then(detail => ({ kind: 'terminated' as const, detail })),
@@ -331,7 +499,7 @@ export async function runProbe(context: ProbeContext, recorder: Recorder): Promi
         });
     }
 
-    // ---- 7. Capture the evidence --------------------------------------------------------
+    // ---- 8. Capture the evidence --------------------------------------------------------
     const stopped: StoppedObservation = { reason: 'breakpoint', ...(await readStack(raced.session, raced.threadId, recorder)) };
     await stopDebugging(recorder);
     return finish('hit', `breakpoint hit at ${resolution.match.file}:${resolution.match.line}`, { resolution, adapter, stopped });

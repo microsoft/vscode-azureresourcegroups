@@ -92,6 +92,13 @@ evals/msbench/assets/stack.json
 # truth for a document that already has two.
 evals/msbench/assets/workspace/
 
+# The known-debuggable project the breakpoint stimulus runs against, copied from
+# evals/grader-certification/reference-node-fullstack by run.sh on every run.
+# Same reason as the graders above: a second checked-in copy would drift from the
+# fixture that evals/debug-probe certifies against, and then a green run here and
+# a green certification would stop meaning the same thing.
+evals/msbench/assets/fixtures/
+
 # Mutual-exclusion lock taken by run.sh while it owns assets/.
 evals/msbench/assets/.run.lock/
 

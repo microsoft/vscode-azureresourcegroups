@@ -53,12 +53,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     recorder.log(`activated; trusted=${vscode.workspace.isTrusted}; folder=${folder.uri.fsPath}`);
 
     const specUri = specLocation(folder);
+    if (await readJson(specUri) === undefined) {
+        // Not an error. In the container we cannot verify whether the config's
+        // `script:` preamble seeds the workspace before or after the extension
+        // host finishes starting, and guessing wrong would mean the probe reads
+        // nothing, idles, and reports no verdict — indistinguishable from never
+        // being installed at all. Watching costs nothing and removes the ordering
+        // dependency entirely.
+        recorder.log(`no ${SPEC_RELATIVE_PATH} yet — watching for it`);
+        breadcrumb(folder, `no ${SPEC_RELATIVE_PATH} at activation; watching`);
+        watchForSpec(folder, specUri, context, recorder);
+        return;
+    }
+    await start(folder, specUri, context, recorder);
+}
+
+/** Read the spec, run the probe, write the verdict. Never throws. */
+async function start(
+    folder: vscode.WorkspaceFolder,
+    specUri: vscode.Uri,
+    context: vscode.ExtensionContext,
+    recorder: Recorder,
+): Promise<void> {
     let spec: ProbeSpec | undefined;
     try {
         const raw = await readJson(specUri);
         if (raw === undefined) {
-            recorder.log(`no ${SPEC_RELATIVE_PATH} — probe idle`);
-            return;
+            throw new SpecError(`${specUri.fsPath} disappeared before it could be read`);
         }
         spec = parseProbeSpec(raw);
         const verdict = await runProbe({ folder, spec, subscriptions: context.subscriptions }, recorder);
@@ -85,6 +106,38 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 function specLocation(folder: vscode.WorkspaceFolder): vscode.Uri {
     const override = process.env[SPEC_PATH_ENV_VAR];
     return override ? vscode.Uri.file(override) : vscode.Uri.joinPath(folder.uri, SPEC_RELATIVE_PATH);
+}
+
+/**
+ * Wait for the spec to appear, then run exactly once.
+ *
+ * Guarded by `started` because a create and a change event can both fire for a
+ * single write, and running the probe twice would race two debug sessions
+ * against each other and produce a verdict for neither.
+ */
+function watchForSpec(
+    folder: vscode.WorkspaceFolder,
+    specUri: vscode.Uri,
+    context: vscode.ExtensionContext,
+    recorder: Recorder,
+): void {
+    const watcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(folder, SPEC_RELATIVE_PATH));
+    context.subscriptions.push(watcher);
+
+    let started = false;
+    const onAppeared = (uri: vscode.Uri): void => {
+        if (started) {
+            return;
+        }
+        started = true;
+        watcher.dispose();
+        recorder.log(`${SPEC_RELATIVE_PATH} appeared at ${uri.fsPath}`);
+        breadcrumb(folder, `${SPEC_RELATIVE_PATH} appeared; starting probe`);
+        void start(folder, specUri, context, recorder);
+    };
+    watcher.onDidCreate(onAppeared);
+    watcher.onDidChange(onAppeared);
 }
 
 async function readJson(uri: vscode.Uri): Promise<unknown | undefined> {

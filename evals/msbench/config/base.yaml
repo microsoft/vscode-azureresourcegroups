@@ -76,6 +76,17 @@ installExtensions:
     # Container path. Everything under ./assets is copied to /agent/assets, and
     # unlike a benchmark config this path is NOT rewritten, so it is hardcoded.
     path: /agent/assets/extensions/vscode-azureresourcegroups.vsix
+  # The debug probe (evals/debug-probe). Test-only, never shipped to users: it
+  # drives the generated project to a breakpoint so a gate can assert that F5
+  # actually works, rather than that launch.json merely parses.
+  #
+  # This second entry is the whole reason `installExtensions` concatenating
+  # across layers matters. It is inert unless the workspace contains a
+  # `debug-probe.json`, so it is safe on every run — a stimulus opts in by
+  # writing that file, and every other stimulus is unaffected.
+  - id: ms-azuretools.cor-debug-probe
+    mode: vsix
+    path: /agent/assets/extensions/cor-debug-probe.vsix
 
 # The Vally executor approves every permission request. Without this the
 # webview-opening tools block on a confirmation nothing can answer.

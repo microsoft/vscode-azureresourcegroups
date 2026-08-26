@@ -34,6 +34,8 @@ they are wired directly against the graders merged in #1707.
 | `scaffold-unapproved-plan` | scaffold | 1 | 6 | `unapproved-plan` | — |
 | `debug-plan-approval-gate` | local-dev | 2 | 8 | `approved-fullstack` | — |
 | `debug-generate-artifacts` | local-dev | 4 | 12 | `approved-fullstack` | `--assert-status=Implemented --assert-checklist` |
+| `debug-probe-smoke` | probe-smoke | 1 | 2 | — | — (infrastructure only, see below) |
+| `debug-breakpoint-node` | debug-breakpoint | 1 | 3 | — | — (infrastructure only, see below) |
 
 The six scaffold and local-dev stimuli also each carry a `preConditions` `exec:`
 (except `scaffold-missing-plan`, which seeds nothing), which is not counted above
@@ -477,7 +479,7 @@ second checked-in copy is exactly the drift this eval exists to catch:
 
 | Path | Built by | From |
 | --- | --- | --- |
-| `assets/extensions/*.vsix` | `run.sh` | `npm run build && npm run package` |
+| `assets/extensions/*.vsix` | `run.sh` | `npm run build && npm run package`, plus `evals/debug-probe/extension` |
 | `assets/graders/**` | `stage-graders.ts` | `evals/graders`, `evals/src`, `src/webviews` |
 | `assets/user-overrides.yaml` | `build-config.ts` | `config/base.yaml` + `config/phases/<phase>.yaml` + `config/stimuli/<name>.yaml` |
 | `assets/workspace/**` | `stage-workspace.ts` | the stimulus's `# seed:` directive |
@@ -909,6 +911,34 @@ assertion is worth confirming against `stdErr` before believing it.
 re-runs the grader locally and reports exit 1 and exit 3 separately, so confirming a red
 `exec:` no longer means reading `stdErr` by hand.
 
+### What the `files` table can and cannot see
+
+**A `files`-table assertion can only ever see what the *agent* wrote through the tracked
+channel during a step. Anything written by an extension, by the `script:` preamble, or by
+the container itself is invisible to it.**
+
+It is not a filesystem listing. The schema is `(path, content, stepIndex)` — tracked file
+*contents*, per step — and the harness appends `AND stepIndex = :stepIndex` on top of
+whatever you write.
+
+This is easy to get wrong because the table is *non-empty* on a healthy run and therefore
+looks alive. Run [`2026082620311350`](https://msbenchapp.azurewebsites.net/run-analysis/2026082620311350)
+asserted `SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.eval/probe.log'` against a file
+an extension had demonstrably written — the run's own fingerprint printed its contents —
+and the assertion could never have passed. The whole table was:
+
+```
+0|.gitkeep
+0|.gitignore
+```
+
+The trap is not that the check was careless; it is that **the abstraction lies at the point
+of use.** `files` reads like `find`, and it is not.
+
+Use `exec:` for anything not authored by the agent — `test -f .eval/probe.log` — with a
+relative path, since `exec:` runs with cwd set to the workspace and the runner uses a
+worktree path rather than `/workspace` on some routes.
+
 ### Which assertions are `exec:` and which stay SQL
 
 Only the `program` graders. The `files`, `toolCalls` and `llm_responses` tables cover
@@ -945,6 +975,39 @@ sqlite3 session.sqlite "SELECT output FROM exec WHERE command LIKE '%uname%'"
 sqlite3 session.sqlite "SELECT exitCode, stdErr FROM exec WHERE command LIKE '%validate-%'"
 ```
 
+
+## The second extension: the debug probe
+
+`installExtensions` **concatenates across config layers rather than replacing**, which
+is what lets our VSIX ride alongside `github.copilot-chat`. [`evals/debug-probe`](../debug-probe)
+is the second user of that behaviour: a test-only extension, built and staged by
+`run.sh` next to the product VSIX, that drives a generated project to a breakpoint so a
+gate can assert **F5 actually works** rather than that `launch.json` merely parses.
+
+It is **inert unless the workspace contains `debug-probe.json`**, so it installs on
+every run and stimuli opt in. `run.sh` checks the packaged VSIX contains
+`out/extension.js`, because a probe packaged without compiling looks valid and then
+fails to activate — which from outside the container is indistinguishable from never
+having been installed.
+
+That extension is the one thing in this tree with a **build step**. Graders run
+straight off `.ts` via Node's type stripping; the VS Code extension host cannot strip
+types, so the probe compiles to JavaScript.
+
+`debug-probe-smoke` is the smallest run that answers the only question this design
+could not settle locally — does a second extension install and activate at all. It uses
+the `probe-smoke` phase, which sets no `chatMode` and seeds no agent, so the agent does
+essentially nothing: the evidence is written by the extension host during workspace
+setup, before the first turn. Two assertions, one of which is the liveness sentinel.
+
+### A hazard worth recognising: `--user-data-dir` length
+
+VS Code binds a Unix domain socket inside its `--user-data-dir`, and `sun_path` caps at
+~104 bytes. Exceed it and VS Code starts, opens **no window**, writes **zero** log
+lines, and hangs until something kills it — a failure mode indistinguishable from a
+broken extension, and one that cost a day to diagnose locally. MSBench chooses that
+path rather than this config, so there is nothing to set here; this is written down so
+the next person recognises the symptom instead of suspecting their extension.
 
 ## Why the VSIX route
 
@@ -1106,6 +1169,41 @@ whole reason the values are written down here.
 
 We were opted out by omission until [#1707](https://github.com/microsoft/vscode-azureresourcegroups/pull/1707):
 `run.sh` set no endpoint tag at all.
+
+### One observation, not a property
+
+The only direct measurement we have of the queue actually holding a run:
+
+| | |
+| --- | --- |
+| `scaffold-fullstack` completed | 22:50:28 |
+| `debug-probe-smoke` submitted | 22:38:28 (accepted by CES immediately) |
+| `debug-probe-smoke` dispatched | **22:51:03** — 35s after the run ahead of it finished |
+
+Both carried the correct key on both halves, confirmed from the run's own recorded
+`tags` (`endpoint: copilot-on-rails`) and `model_source: agent_assets`
+(`claude-sonnet-4.5`) rather than from the command line.
+
+Twelve and a half minutes accepted-but-undispatched, ending 35 seconds after an
+unrelated run completed, is a striking fit for serialisation. **It is not proof of it.**
+An ordinary dispatch latency that happens to end just after an unrelated completion is
+not excluded by a single observation, and n=1 cannot distinguish the two. Recorded here
+with timestamps so it is not re-derived from memory; if the property is ever load
+bearing it deserves a deliberate two-run test rather than inference from this.
+
+#### Retracted: this is no evidence either way
+
+Five repeats of `debug-breakpoint-node` measured dispatch latency directly, and it
+varies by roughly **7×** — runs started at 23:40, 23:46, 23:50 and 00:24 all did the
+same seven seconds of work, with one sitting ~33 minutes against others at ~5.
+
+Against that spread, a 12.5-minute wait ending 35 seconds after an unrelated completion
+is unremarkable. The "striking fit" was reading signal out of a distribution wide enough
+to produce that coincidence routinely, so the observation above is downgraded from
+*striking but unproven* to **no evidence either way**. It is left in place rather than
+deleted, because the reasoning is the useful part: elapsed time tells you almost nothing
+here, and any future claim about queueing needs a deliberate test rather than inference
+from timestamps.
 
 ### Why the model half needs no flag
 
@@ -1941,6 +2039,22 @@ with a clear message:
   timestamp on every invocation, so running the credential-free gates locally leaves an
   unrelated one-line change staged into whatever you commit next. It has reached review on
   several PRs. `git checkout -- evals/results/` before committing.
+
+- **A `400 BadRequest` from CES at submission time is probably transient — retry before
+  changing anything.** Seen once in five back-to-back submissions, on a run submitted
+  within a second of the previous one completing:
+
+  ```
+  requests.exceptions.HTTPError: 400 Client Error: Bad Request for url:
+  https://ces-dev1.azurewebsites.net/api/ces/benchmark/startRun?smoke_mode=none&bypassProxy=false
+  Response body: 400.0 BadRequest
+  ```
+
+  The next submission, 13 seconds later with a byte-identical config, succeeded. No
+  tokens are spent and no run is created, so the only cost is the confusion. The trap is
+  that `400` reads as *"your config is malformed"*, which invites editing a config that
+  was fine — and the edit then gets credited with the fix when the retry was what worked.
+  Leave a few seconds between submissions and retry once before believing it.
 
 - **A red run that is actually rate limiting.** Back-to-back runs get throttled by the
   Copilot API mid-run. The agent then produces nothing, so artifact assertions fail

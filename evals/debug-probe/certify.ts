@@ -26,9 +26,13 @@
  *   node certify.ts --offline           offline only (CI default)
  *   node certify.ts --live              live only
  *   node certify.ts --vscode=/path/to/code
+ *
+ * The live tier runs its cases STRICTLY SEQUENTIALLY and must keep doing so —
+ * they contend for two ports the fixture hardcodes and the probe cannot remap.
+ * See the comment on the loop in `runLiveTier` before trying to speed this up.
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -246,6 +250,12 @@ interface LiveCase {
     expectedExit: number;
     /** Applied to the staged copy of the fixture before VS Code runs. */
     mutate?: (workspace: string) => void;
+    /**
+     * Occupy this port from a separate process for the duration of the case.
+     * Separate because `spawnSync` blocks this process's event loop, so an
+     * in-process listener would never accept a connection.
+     */
+    squatPort?: number;
 }
 
 const LIVE_CASES: LiveCase[] = [
@@ -297,6 +307,37 @@ const LIVE_CASES: LiveCase[] = [
         expectedOutcome: 'patternMatchedNothing',
         expectedExit: EXIT_GRADER_ERROR,
     },
+    {
+        id: 'mutation-port-squatted',
+        // A stranger holding the app port would otherwise serve the trigger, the
+        // breakpoint would never be hit, and a perfectly good project would be
+        // failed for it. Binds 0.0.0.0 specifically: a bind-based free-port check
+        // against 127.0.0.1 calls that port free on macOS.
+        description: 'a stranger on the app port is a harness fault, never a product failure',
+        spec: { ...KNOWN_GOOD_SPEC, timeoutMs: 45_000 },
+        squatPort: 7071,
+        expectedOutcome: 'probeError',
+        expectedExit: EXIT_GRADER_ERROR,
+    },
+    {
+        id: 'mutation-debug-adapter-missing',
+        // The project-builds shape, in this gate. A launch config naming an
+        // adapter this environment does not install is CORRECT — it would work
+        // on a developer machine with that extension. Only the harness cannot
+        // execute it. Before the preflight, startDebugging simply never resolved
+        // and the verdict was appFailedToStart: exit 1, blaming the product for a
+        // project it built properly.
+        description: 'a debug adapter this environment lacks is an environment gap, not a product failure',
+        spec: { ...KNOWN_GOOD_SPEC, timeoutMs: 45_000 },
+        expectedOutcome: 'probeError',
+        expectedExit: EXIT_GRADER_ERROR,
+        mutate: workspace => {
+            const launchPath = join(workspace, '.vscode', 'launch.json');
+            const launch = JSON.parse(readFileSync(launchPath, 'utf8')) as { configurations: { type?: string }[] };
+            launch.configurations[0].type = 'debugpy';
+            writeFileSync(launchPath, `${JSON.stringify(launch, null, 4)}\n`, 'utf8');
+        },
+    },
 ];
 
 function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {
@@ -310,6 +351,26 @@ function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {
     const results: CaseResult[] = [];
     const cases = only ? LIVE_CASES.filter(testCase => testCase.id === only) : LIVE_CASES;
     try {
+        // ─────────────────────────────────────────────────────────────────────────
+        // DO NOT PARALLELISE THIS LOOP.
+        //
+        // Not a style preference and not laziness — the cases contend for two
+        // FIXED ports and would corrupt each other's verdicts:
+        //
+        //   7071  the fixture's app port, pinned by `env.PORT` in its launch.json
+        //   9229  the inspector port, pinned by `runtimeArgs: ["--inspect=9229"]`
+        //
+        // Neither can be remapped from here. VS Code reads `launch.json` directly
+        // and is handed only a configuration *name*, so the probe cannot rewrite
+        // the ports the way a harness that spawns the process itself could.
+        //
+        // Run two cases at once and the second one's probe finds a port held by
+        // the first one's app. The port guard turns that into `probeError`, so it
+        // fails loudly rather than silently — but every case after the first
+        // would fail that way, and the suite would look broken instead of
+        // parallel. Speeding this up means fixing the hardcoded ports in the
+        // fixture first, not removing the sequencing here.
+        // ─────────────────────────────────────────────────────────────────────────
         for (const [index, testCase] of cases.entries()) {
             const workspace = join(root, testCase.id);
             cpSync(FIXTURE, workspace, { recursive: true });
@@ -317,6 +378,30 @@ function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {
             testCase.mutate?.(workspace);
             writeFileSync(join(workspace, 'debug-probe.json'), `${JSON.stringify(testCase.spec, null, 2)}\n`, 'utf8');
 
+            // Squat from a separate process; spawnSync below blocks our event loop,
+            // so an in-process server would never accept the probe's connection.
+            //
+            // `detached: false` keeps it in our process group, but that alone does
+            // not save us: if the suite is interrupted (Ctrl-C, a killed shell) the
+            // `finally` never runs and the squatter outlives us, holding 7071. Every
+            // later run then fails its port preflight — the suite poisons itself,
+            // and the symptom looks like a broken gate rather than a stale process.
+            // So it is also killed on the way out under any signal.
+            let squatter: ReturnType<typeof spawn> | undefined;
+            let killSquatter = (): void => { };
+            if (testCase.squatPort !== undefined) {
+                squatter = spawn(process.execPath, [
+                    '-e',
+                    `require('node:net').createServer(s => s.end()).listen(${testCase.squatPort}, '0.0.0.0', () => setTimeout(() => {}, 1e9))`,
+                ], { stdio: 'ignore', detached: false });
+                killSquatter = () => { try { squatter?.kill('SIGKILL'); } catch { /* already gone */ } };
+                for (const signal of ['exit', 'SIGINT', 'SIGTERM'] as const) {
+                    process.once(signal, killSquatter);
+                }
+                spawnSync(process.execPath, ['-e', 'setTimeout(()=>{},1500)']);
+            }
+
+            try {
             process.stderr.write(`  running ${testCase.id} in real VS Code…\n`);
             // Hard wall clock per case. A hung VS Code must fail its own case, not
             // stall the whole certification the way it would stall an MSBench run.
@@ -381,6 +466,12 @@ function runLiveTier(vscodeBinary: string, only?: string): CaseResult[] {
                     ? `outcome=${outcome}, exit ${code} — ${testCase.description}`
                     : `expected outcome=${testCase.expectedOutcome} exit=${testCase.expectedExit}, got outcome=${outcome} exit=${code}. Grader said: ${stderr.split('\n')[0] ?? '(nothing)'}`,
             });
+            } finally {
+                killSquatter();
+                for (const signal of ['exit', 'SIGINT', 'SIGTERM'] as const) {
+                    process.removeListener(signal, killSquatter);
+                }
+            }
         }
         return results;
     } finally {
