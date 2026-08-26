@@ -421,6 +421,14 @@ async function waitForReadiness(args: ReadinessArguments): Promise<ReadinessOutc
     const deadline = started + args.startupTimeoutMs;
 
     while (Date.now() < deadline) {
+        // Liveness first. If the child is already dead, nothing that answers a socket right
+        // now is our application — it is a squatter, or an orphan we leaked — so "the child
+        // exited" has to beat "something answered" in every case, not only when the timing
+        // happens to be kind. Checking this after the connect probes is how a process that
+        // died of EADDRINUSE still gets reported as listening.
+        if (args.hasExited()) {
+            return { kind: 'exited' };
+        }
         if (plan.remappedPort !== undefined && await canConnect(plan.remappedPort)) {
             return { kind: 'listening', port: plan.remappedPort, provenance: 'remapped' };
         }
@@ -570,16 +578,41 @@ function canBind(port: number): Promise<boolean> {
     });
 }
 
-function findFreePort(): Promise<number | undefined> {
+/**
+ * Allocate an ephemeral port that is genuinely free.
+ *
+ * Binds `0.0.0.0`, not loopback. Asking the OS for a free port on `127.0.0.1` asks the
+ * *wrong question* — the same loopback-versus-all-interfaces asymmetry that made the first
+ * squatter fix a no-op. A process holding `0.0.0.0:X` does not always prevent a bind of
+ * `127.0.0.1:X`, so a loopback allocator can hand back a port a squatter already owns; the
+ * app then fails to bind it, and the readiness probe connects to the squatter and calls it
+ * the application. Rare, because the OS usually picks something genuinely unused — and that
+ * rarity is exactly what would have made it an unreproducible "flake" rather than a bug.
+ */
+function bindEphemeralPort(): Promise<number | undefined> {
     return new Promise(resolve => {
         const server = createServer();
         server.once('error', () => resolve(undefined));
-        server.listen(0, '127.0.0.1', () => {
+        server.listen(0, '0.0.0.0', () => {
             const address = server.address();
             const port = typeof address === 'object' && address !== null ? address.port : undefined;
             server.close(() => resolve(port));
         });
     });
+}
+
+/**
+ * Allocate a port and then verify it with the same check used everywhere else.
+ *
+ * The re-check is not redundant with the bind above: it also closes the window between
+ * allocating the port and the child starting, in which something else could take it.
+ */
+async function findFreePort(): Promise<number | undefined> {
+    const port = await bindEphemeralPort();
+    if (port === undefined || !await isPortFree(port)) {
+        return undefined;
+    }
+    return port;
 }
 
 /**

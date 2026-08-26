@@ -62,7 +62,6 @@ export type HealthPathSource = 'stackDeclaration' | 'apiTestCollection' | 'debug
 export type NotApplicableReason =
     | 'functionsHostUnavailable'
     | 'ecosystemNotSupported'
-    | 'noProjectManifestFound'
     | 'noHealthPathDeclared'
     | 'noFrontendDeclared'
     | 'frontendDevServerUnsupported'
@@ -73,14 +72,22 @@ export type NotApplicableReason =
 /**
  * Why a gate had no opinion, at a granularity a report can act on.
  *
- * These two mean genuinely different things and want different follow-up, which is why the
- * marker carries the classification rather than leaving `gateHealth` to hardcode our
- * vocabulary and drift from it:
+ * The test that separates them is **what the remedy is**, not what the missing thing is:
  *
- *   `outOfScope`     — the scenario has nothing to test. Feeds "is this gate dead weight?"
- *   `environmentGap` — the gate would apply, but the machine is missing a prerequisite.
- *                      Nobody's fault, nothing to delete, and fixable by installing
- *                      something. Belongs with cascades, not with dead weight.
+ *   `outOfScope`     — this project genuinely has nothing for the gate to look at. There is
+ *                      no remedy and nothing to build; a gate permanently in this state is
+ *                      dead weight.
+ *   `environmentGap` — the gate has a real question to ask about this project and we cannot
+ *                      ask it. The remedy is to install or build the missing piece, and
+ *                      until then we are not testing something we claim to test.
+ *
+ * `ecosystemNotSupported` sits in the second bucket, which took an argument to get right. A
+ * Python or Go app has a perfectly real "does it start?" question; what is missing is
+ * support *we have not written*. That the missing prerequisite is code rather than a binary
+ * does not change the remedy — "add Python support", not "stop asking" — and filing it as
+ * `outOfScope` would tell the health report to consider deleting a gate whose actual
+ * problem is that nobody has extended it yet. Credit to the fidelity-gates session for
+ * spotting that the same reasoning applied to both of our vocabularies.
  */
 export type NotApplicableClassification = 'outOfScope' | 'environmentGap';
 
@@ -89,17 +96,16 @@ export type NotApplicableClassification = 'outOfScope' | 'environmentGap';
  * one is never a shared line that two sessions edit at once.
  */
 export const RUNTIME_NOT_APPLICABLE_CLASS: Record<NotApplicableReason, NotApplicableClassification> = {
-    // Nothing to test.
-    ecosystemNotSupported: 'outOfScope',
-    noProjectManifestFound: 'outOfScope',
+    // This project has nothing for the gate to look at, and no remedy would change that.
     noHealthPathDeclared: 'outOfScope',
     noFrontendDeclared: 'outOfScope',
     noFrontendApiCalls: 'outOfScope',
     noCollectionRouteDeclared: 'outOfScope',
-    // The gate applies; this machine cannot run it.
+    // The gate has a real question here and something is missing that could be supplied.
     functionsHostUnavailable: 'environmentGap',
     datastoreRequiresContainer: 'environmentGap',
     frontendDevServerUnsupported: 'environmentGap',
+    ecosystemNotSupported: 'environmentGap',
 };
 
 /** How the port may be substituted, when the project lets us choose one. */
@@ -142,6 +148,17 @@ export interface RuntimeTarget {
 export type RuntimeTargetResolution =
     | { kind: 'resolved'; target: RuntimeTarget }
     | { kind: 'notApplicable'; reason: NotApplicableReason; detail: string }
+    /**
+     * There is no application here at all.
+     *
+     * Reported as a fact rather than a verdict, because the verdict depends on something
+     * only the caller knows: `workspaceLooksStaged` says whether the agent demonstrably
+     * worked in this tree (it left planning artifacts behind). If it did and there is still
+     * no application, that is a product failure — it shipped nothing. If it did not, the
+     * likelier explanation is that the grader is pointed at the wrong directory, which is a
+     * harness fault. Same facts, opposite blame, so the resolver assigns neither.
+     */
+    | { kind: 'noApplication'; workspaceLooksStaged: boolean; detail: string }
     | { kind: 'harnessFault'; message: string };
 
 /** Debugger types that mean "this is a Node process". */
@@ -422,14 +439,30 @@ async function describeMissingNodeProject(workspaceRoot: string): Promise<Runtim
         return {
             kind: 'notApplicable',
             reason: 'ecosystemNotSupported',
-            detail: `the runtime gates start Node projects, and this workspace is built with ${path.basename(foreign[0])}.`,
+            detail: `the runtime gates start Node projects, and this workspace is built with ${path.basename(foreign[0])}. `
+                + 'The gate has a real question to ask here; support for this ecosystem has not been written yet.',
         };
     }
+    // No manifest of any kind. Whether that is the agent shipping nothing or the grader
+    // looking in the wrong place turns on whether the agent was ever here, so report the
+    // evidence and let the caller decide.
+    const staged = await exists(path.join(workspaceRoot, '.azure', 'project-plan.md'))
+        || await exists(path.join(workspaceRoot, '.azure', 'requirements.json'));
     return {
-        kind: 'notApplicable',
-        reason: 'noProjectManifestFound',
-        detail: 'no package.json was found anywhere in the workspace, so there is no application to start.',
+        kind: 'noApplication',
+        workspaceLooksStaged: staged,
+        detail: 'no package.json — or any other project manifest — was found anywhere in the workspace, '
+            + 'so there is no application to start.',
     };
+}
+
+async function exists(target: string): Promise<boolean> {
+    try {
+        await fs.access(target);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 async function discoverPackages(workspaceRoot: string): Promise<PackageManifest[]> {

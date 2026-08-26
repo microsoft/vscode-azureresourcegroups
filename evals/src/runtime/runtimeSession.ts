@@ -47,6 +47,26 @@ async function openSession(workspaceRoot: string): Promise<RuntimeSession> {
     if (resolution.kind === 'notApplicable') {
         return { kind: 'notApplicable', reason: resolution.reason, detail: resolution.detail };
     }
+    if (resolution.kind === 'noApplication') {
+        // The blame call the resolver deliberately declined to make. Planning artifacts in
+        // the tree prove the agent worked here, so "no application" means it shipped none —
+        // a product failure, and one that must not hide behind a not-applicable verdict.
+        // Without them, the likelier story is that EVALUATE_WORKSPACE points somewhere else,
+        // and blaming the agent for our own misconfiguration is the error that poisons the
+        // corpus invisibly.
+        return resolution.workspaceLooksStaged
+            ? {
+                kind: 'productFailure',
+                code: 'noApplicationScaffolded',
+                message: `${resolution.detail} The workspace does contain .azure planning artifacts, so the agent worked here and produced no runnable application.`,
+                output: '',
+            }
+            : {
+                kind: 'harnessFault',
+                message: `${resolution.detail} There are no .azure planning artifacts either, so this is more likely the wrong directory than an empty scaffold — check EVALUATE_WORKSPACE.`,
+                output: '',
+            };
+    }
     if (resolution.kind === 'harnessFault') {
         return { kind: 'harnessFault', message: resolution.message, output: '' };
     }
