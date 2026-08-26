@@ -21,20 +21,40 @@ whether the stimulus elicits the behaviour the grader is looking for.
 ## Falsifiable pairs
 
 Two pairs are load-bearing and are the reason four scaffold stimuli exist rather
-than two. In each pair the two files differ in exactly one thing:
+than two. The rule is about the **input**, not the expectations:
 
-| Pair | The single difference | What it discriminates |
+> In each pair, the two stimuli differ in exactly one thing about the *workspace
+> and prompt the agent sees*. Their **assertions necessarily differ**, because
+> the contracted correct behaviour differs — that is what makes the pair
+> falsifiable rather than a tautology.
+
+| Pair | The single input difference | Assertions, which differ by design |
 | --- | --- | --- |
-| `scaffold-fullstack` / `scaffold-autopilot` | the `[AUTOPILOT MODE]` prompt prefix | opens the UI approval gate vs. skips it and hands off |
-| `scaffold-fullstack` / `scaffold-unapproved-plan` | the plan's `**Status**` line | scaffolds vs. refuses |
+| `scaffold-fullstack` / `scaffold-autopilot` | the `[AUTOPILOT MODE]` prompt prefix | inverted: gate opened + no hand-off / gate skipped + hand-off |
+| `scaffold-fullstack` / `scaffold-unapproved-plan` | the plan's `**Status**` line | disjoint: build-and-hand-off contract / refusal contract |
 
-An agent that *always* opens the approval gate fails exactly one member of each
-pair; one that *never* does fails exactly the other. No degenerate strategy
-passes both, which is what makes a green result evidence rather than a
-coincidence — and is a property no single stimulus can have.
+So the pairs are not two copies of one test. `scaffold-autopilot` asserts the
+frontend preview gate was **not** opened, because
+`azure-project-scaffold.agent.md` contracts autopilot to skip it; asserting the
+same thing as `scaffold-fullstack` would be asserting product-*incorrect*
+behaviour.
 
-Any second difference destroys it. `harvest-seed.mjs` (commit `cc75a4e1`, not on
-`feat/CoR`) put the sharp version of the claim:
+The discrimination that buys, stated explicitly:
+
+- An agent that **always** opens the UI approval gate passes `scaffold-fullstack`
+  and fails `scaffold-autopilot`.
+- An agent that **never** opens it passes `scaffold-autopilot` and fails
+  `scaffold-fullstack`.
+- An agent that **always scaffolds** whatever the plan says passes
+  `scaffold-fullstack` and fails `scaffold-unapproved-plan`; one that **always
+  refuses** does the reverse.
+
+No degenerate strategy passes both members of either pair, which is what makes a
+green result evidence rather than a coincidence — and is a property no single
+stimulus can have.
+
+A second *input* difference destroys it. `harvest-seed.mjs` (commit `cc75a4e1`,
+not on `feat/CoR`) put the sharp version of the claim:
 
 > `approved-fullstack` and `unapproved-plan` deliberately come from the *same*
 > run: the pair is only falsifiable if the sole difference is the approval

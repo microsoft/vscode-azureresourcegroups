@@ -524,14 +524,18 @@ level.
 
 #### Falsifiable pairs
 
-Two pairs of scaffold stimuli differ in exactly one thing each —
-`scaffold-fullstack`/`scaffold-autopilot` in the prompt's `[AUTOPILOT MODE]` prefix, and
-`scaffold-fullstack`/`scaffold-unapproved-plan` in the plan's status line. An agent that
-always opens the approval gate fails one member of each pair; one that never does fails
-the other. `stage-workspace.ts` keeps the second pair honest by deriving the unapproved
-plan from the approved one in code and asserting the status line was found — a silent
-no-op there would make the two stimuli identical while both still read green. The
-property and its rules are in [`config/stimuli/README.md`](config/stimuli/README.md).
+Two pairs of scaffold stimuli differ in exactly one thing each **about the input the
+agent sees** — `scaffold-fullstack`/`scaffold-autopilot` in the prompt's
+`[AUTOPILOT MODE]` prefix, and `scaffold-fullstack`/`scaffold-unapproved-plan` in the
+plan's status line. Their *assertions* differ, and must: autopilot is contracted to skip
+the UI approval gate, so asserting the same thing on both would mean asserting
+product-incorrect behaviour on one of them. That asymmetry is the point — an agent that
+always opens the gate passes `scaffold-fullstack` and fails `scaffold-autopilot`; one
+that never opens it does the reverse, so no degenerate strategy passes both.
+`stage-workspace.ts` keeps the second pair honest by deriving the unapproved plan from
+the approved one in code and asserting the status line was found — a silent no-op there
+would make the two stimuli identical while both still read green. The property and its
+rules are in [`config/stimuli/README.md`](config/stimuli/README.md).
 
 #### A whole chain might fit in one run
 
