@@ -1061,6 +1061,177 @@ Two traps, both of which cost real time:
   msbench-cli run … --benchmark <benchmark>.<instance_id> <benchmark>.<instance_id>
   ```
 
+## Auditing the gates themselves
+
+[`gate-health.ts`](gate-health.ts) audits the **instrument** rather than the product. It
+reads past runs and asks, per gate, whether that gate has ever actually done its job.
+
+```bash
+export PATH="$HOME/.msbench-venv/bin:$PATH"
+cd evals && npm run gate-health                    # every run in the local cache
+npm run gate-health -- 2026082579322454 …          # specific runs, extracted on demand
+```
+
+The motivating case comes from the sibling suite in #1669: its `worker` gate recorded
+**16 failures and zero passes across every run ever executed** before anyone noticed the
+storage probe was signing its Azurite requests with a corrupted account key. Azurite
+answered 403 to everything, so no generated app could have passed regardless of quality.
+Ten percent of the corpus was being charged for a harness defect. *A gate that has never
+once passed is far more likely to be broken than the product is to be uniformly incapable
+of exactly that one thing.*
+
+| Verdict | What it suggests | What to do |
+| --- | --- | --- |
+| `never-passed` | The gate may be impossible to satisfy — broken probe, wrong credential, bad fixture | Re-grade the named run and read the grader's own stderr |
+| `never-failed` | The gate may be vacuous; it has never discriminated | Check it can go red at all; certification is the cheap way |
+| `always-not-applicable` | The gate has never rendered a verdict — **and MSBench scored every one as a pass** | Group by `reason=`; usually one missing prerequisite |
+| `never-attempted` | The gate never got the chance to run | Fix what is upstream; the gate is not the problem |
+| `healthy` | Has both passed and failed | Nothing |
+
+**None of these prove a defect.** Each is a reason to look before quoting a score.
+
+### How many runs before a verdict means anything
+
+Verdicts resting on fewer than `--min-runs` runs (default **3**) are printed but marked
+`(low confidence)` and never fail the process. This matters more than it sounds: on the
+current corpus **25 of 30 gates are `never-failed`**, which is what a young suite looks
+like, not a broken one — most gates have one to fourteen observations. The number to watch
+is whether that ratio survives corpus growth, not its value today.
+
+Only a `never-passed` gate with at least `--min-runs` runs sets exit **1**.
+
+### The four inputs, and what had to be inferred
+
+#1669 read a `cor-validation.json` carrying a per-gate `status` and an explicit
+`notAttempted` flag. **No such file exists here.** MSBench records only `passed: true |
+false` plus a nullable `error`, so every distinction is reconstructed from four artifacts
+of an extraction:
+
+| Input | Gives |
+| --- | --- |
+| `vsc-output/eval.json` → `details[]` | the verdicts; the only gate name MSBench carries is the assertion comment |
+| `vsc-output/session.sqlite` → `exec` table | exit **1** vs exit **3** offline, and the N/A marker on stderr |
+| `output/error.json` → `type` | the instance was **void** — see below |
+| `vsc-output/configs/final-agent-config.json` | declared assertions, so a run with **no `eval.json` at all** still names the gates that never ran |
+
+The `assertions` table in `session.sqlite` is always empty; `eval.json` is the authority.
+
+### Void instances corrupt the tally in both directions
+
+#1669's cascade is per-gate, matched on the prose of a failure reason. Ours is structured
+and coarser: `error.json` marks a whole instance void. Every verdict in a void instance is
+discarded — **including the passes**, which is the part #1669 does not model.
+
+That is not theoretical. Two runs in the current corpus:
+
+| Run | Fault | Recorded | What actually happened |
+| --- | --- | --- | --- |
+| [`2026082583236973`](https://msbenchapp.azurewebsites.net/run-analysis/2026082583236973) | `RATE_LIMIT` | 1/4 — including a **pass** for `Agent should not fall back to the chat question tool` | The agent produced **literally nothing**. A `COUNT(*) = 0` assertion is trivially true against an empty table. |
+| [`2026082467189297`](https://msbenchapp.azurewebsites.net/run-analysis/2026082467189297) | `X_EXTENSION_ACTIVATION_ERROR` | 4/7 | **All four "passes" are the negative assertions**; all three "failures" are the extension never activating. |
+
+So a naive pass rate over these manufactures failures the product never earned *and*
+credits passes it never earned. **Seven of twenty-six instances in the corpus are void.**
+
+> **Any run predating #1706 may contain vacuous passes.** The liveness sentinel added
+> there fails such runs outright, but only going forward. Anyone re-grading or
+> trend-plotting historical runs should assume the older half of the corpus is
+> contaminated in both directions.
+
+### This report is the safety mechanism for the not-applicable convention
+
+The fidelity and runtime gates emit a machine-readable marker on stderr:
+
+```
+NOT_APPLICABLE gate=<gate-id> reason=<reasonCode> detail="…"
+```
+
+**and exit 0.** Because `assertZeroExitCode` compiles to `SELECT COUNT(*) > 0 FROM exec
+WHERE exitCode = 0 …`, MSBench scores every N/A as a **pass**. A gate that is N/A across
+the whole corpus therefore reports **16-for-16** — #1669's defect with the sign flipped,
+and the inverted form is worse, because 0-for-16 looks alarming while 16-for-16 looks like
+success and nobody investigates a passing gate. This is live rather than hypothetical: the
+five `runtime-*` gates emit `functionsHostUnavailable` on *every* current stimulus, since
+all four are Azure Functions and the container has no `func` binary.
+
+MSBench assertions are binary — there is no "neither" — so this cannot be fixed at the
+assertion layer. **This report is the only place it can be caught**, which is why exit 0
+was only defensible on the assumption that this tool exists and behaves as follows. If you
+are tempted to simplify any of it, this is what you would be breaking:
+
+1. **N/A is its own bucket**, alongside passed / failed / notAttempted. Never folded into
+   passed, never silently dropped.
+2. **Every rate excludes N/A from both numerator and denominator.** A gate that ran 16
+   times, was N/A 16 times and passed 0 real times has *no applicable observations* — the
+   `rate` column prints `n/a`, and `n/a` never means 100%.
+3. **Always-N/A gates are grouped by `reason=`**, so one absent prerequisite reads as a
+   single actionable line rather than five mystery gates.
+
+Detection keys off the **marker, not the exit code**, so the tool survives the convention
+changing again.
+
+### Gate identity, and a known limitation
+
+MSBench carries no gate id — `eval.json` identifies an assertion only by its comment. That
+is unstable: `requirements.json should be valid JSON carrying a questions array` and
+`requirements.json satisfies the requirements contract` are **the same gate** before and
+after it moved from SQL to `exec:`, so under comment identity it appears as two gates with
+7 and 3 runs rather than one with 10. **A gate can silently reset its own history by being
+reworded.**
+
+The default `--identity gate` mitigates this by keying `exec:` gates on the grader's
+filename — the same id `gate=` is derived from, and the same id the certification manifest
+uses — which also recovers a stable identity for runs recorded *before* the convention
+existed. Two consequences worth knowing:
+
+- It is deliberately **coarser**: every `validate-requirements.ts` invocation is one gate
+  regardless of its flags. Use `--identity comment` for the raw per-assertion view.
+- It only helps `exec:` gates. The SQL assertions over `files` / `toolCalls` /
+  `llm_responses` have no stderr and no grader file, so they stay comment-keyed.
+
+### Where the data lives — and why this is not a laptop-only tool
+
+Worth stating plainly, because the opposite is easy to assume:
+
+- **Run *data* is remote.** `msbench-cli extract` is served by the backend — extracting an
+  unknown id reports `Requesting run metadata from remote service`. **Any run id you have
+  access to can be audited from any machine**, free and without tokens. The local
+  `~/Library/Application Support/msbench/runs` directory is a cache, not the source.
+- **Run *discovery* is local-only today.** With no arguments the tool can only enumerate
+  this machine's cache. The CLI already supports `list runs --kusto --created_by
+  --lookback`, which would make discovery team-wide, but the `MSBench User` role does not
+  appear to grant Kusto DB read:
+
+  ```
+  Corp: Principal 'aaduser=…' is not authorized to read database 'ces_telemetry_prod'
+   AME: Principal 'aaduser=…' is not authorized to read database 'msbench'
+  ```
+
+  (`ces-westus3-adx.westus3` and `msbdikustoprodeus2.eastus2` respectively.) That is a
+  concrete, filable access gap and the entire fix for discovery.
+- **Kusto could not answer this question even with access.** The ingested views —
+  `CESBenchmarkInstanceStatusV2View`, `CESBenchmarkRunStatusV2View`,
+  `CESBenchmarkMetricsDedupView`, `CESBenchmarkMetadataDedupView` — carry run and instance
+  status, timings, tags, agent, model and resolved rate. **Per-assertion `details[]` is
+  ingested nowhere.** Gate-level health is only computable from extracted artifacts.
+
+The tool is therefore **run-id-driven and indifferent to provenance**. The day Kusto read
+lands, `msbench-cli list runs --kusto` piped into `npm run gate-health` works with no
+change to the tool. In CI the ids are known by construction anyway.
+
+### Flags
+
+| Flag | |
+| --- | --- |
+| `--extracted <dir>` | Audit an existing extraction; skips `msbench-cli` entirely. Repeatable. |
+| `--min-runs <n>` | Runs required before a verdict counts as confident (default 3). |
+| `--identity gate\|comment` | Gate identity scheme; see above. |
+| `--refresh` | Re-extract even when the cache has the run. |
+| `--json` | Machine-readable report, including the full declared-but-never-seen list. |
+
+Extractions are cached in `.regrade/<run-id>`, shared with
+[`regrade.ts`](#re-grading-a-past-run-for-free), so a run pulled by either tool is already
+on disk for the other.
+
 ## Running in CI
 
 [`.github/workflows/msbench-evals.yml`](../../.github/workflows/msbench-evals.yml) runs
