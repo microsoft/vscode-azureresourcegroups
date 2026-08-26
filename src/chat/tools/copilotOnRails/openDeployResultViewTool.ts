@@ -8,7 +8,7 @@ import { CopilotTool } from "@microsoft/vscode-inproc-mcp";
 import { UnspecifiedOutputSchema } from "@microsoft/vscode-inproc-mcp/mcp";
 import type { z } from "zod";
 import { azureDeployAgent } from "../../../constants";
-import { DEPLOY_RESULT_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { DEPLOY_RESULT_FILE_GLOBS } from "../../../tree/project/projectPlanFiles";
 import { callWithDiagnosticsAndTelemetryHandling } from "../../../utils/copilotOnRails/telemetryUtils";
 import { openDeployResultViewFromWorkspace } from "../../../webviews/copilotOnRails/extension/openDeployResultView";
 
@@ -28,7 +28,7 @@ export const openDeployResultViewTool: CopilotTool<z.ZodVoid, typeof Unspecified
                 return { message: 'Opened the Deployment Results view.' };
             });
         }) ?? {
-            message: `Failed to open the Deployment Results view. Ensure "${DEPLOY_RESULT_FILE_GLOB}" exists in the current workspace — it is written into the active session folder by the "${azureDeployAgent}" agent at the end of the deploy phase.`,
+            message: `Failed to open the Deployment Results view. Ensure one of "${DEPLOY_RESULT_FILE_GLOBS.join('" or "')}" exists in the current workspace. It is written by the "${azureDeployAgent}" agent at the end of the deploy phase.`,
         };
     }
 };

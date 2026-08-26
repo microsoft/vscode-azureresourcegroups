@@ -17,6 +17,7 @@ export interface AzureLocationOption {
 export interface DeploymentPlanService {
     name: string;
     sku: string;
+    component: string;
     purpose: string;
     region: string;
     resourceName: string;

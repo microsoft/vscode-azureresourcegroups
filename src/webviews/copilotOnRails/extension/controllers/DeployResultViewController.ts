@@ -66,6 +66,16 @@ function getDeployResultViewStrings(): DeployResultViewStrings {
         orphanedHeading: vscode.l10n.t('Resource Groups To Clean Up'),
         orphanedHint: vscode.l10n.t('These resource groups were created while recovering from an error and are no longer used. Delete them to avoid unnecessary charges.'),
 
+        cleanupResourcesHeading: vscode.l10n.t('Resources To Clean Up'),
+        cleanupResourcesHint: vscode.l10n.t('This deployment created these resources and they failed to provision. Delete them to avoid unnecessary charges.'),
+        reviewResourcesHeading: vscode.l10n.t('Resources To Review'),
+        reviewResourcesHint: vscode.l10n.t('These resources appeared in the subscription while this deployment ran, but could not be matched to it. They may be left over from a recovery attempt — or they may belong to someone else. Check each one in the portal before deleting it.'),
+        unverifiedInventoryHeading: vscode.l10n.t('Created Resources Could Not Be Verified'),
+        unverifiedInventoryForbidden: vscode.l10n.t('The signed-in account cannot read this deployment\'s operations, so the resources it created could not be identified. Review the resource group in the Azure portal before deleting anything.'),
+        unverifiedInventoryTransient: vscode.l10n.t('Azure could not be reached to identify the resources this deployment created. Reopen this view to try again, or review the resource group in the Azure portal.'),
+        failedBadge: vscode.l10n.t('Failed'),
+        orphanedBadge: vscode.l10n.t('Unattributed'),
+
         cleanupHeading: vscode.l10n.t('Clean Up'),
         cleanupHint: vscode.l10n.t('Run this command to delete every resource this deployment created.'),
         copyButtonAriaLabel: vscode.l10n.t('Copy command'),

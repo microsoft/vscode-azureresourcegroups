@@ -20,9 +20,19 @@ See [deploy-checklist-template.md § Deployment Summary](../deploy/references/de
 ## Artifact Self-Check
 
 > ⛔ **Artifact self-check — MANDATORY before handoff.** Verify these exist before presenting cleanup or next steps:
-> 1. `deploy-result.json` in session folder — if missing, read [`deploy-schemas.ts`](../deploy/references/deploy-schemas.ts) and write it NOW with status, endpoints, health, `orphanedResourceGroups[]`
-> 2. Portal deployment link printed in chat — if missing, generate from `$resId` pattern (see deploy/instructions.md Step 6) and print now
-> 3. `deployment-summary.md` in session folder — if missing, `create` it NOW with the same content you are about to present in chat (status, subscription, RG, region, services table, endpoints, cleanup commands). One `create` call — do NOT skip.
+> 1. `deploy-result.json` in session folder — if missing, read [`deploy-schemas.ts`](../deploy/references/deploy-schemas.ts) and write it NOW with status, endpoints, health, `createdResources[]`, `orphanedResourceGroups[]`
+> 2. `deploy-result.json.createdResources[]` populated — the deterministic before/after `resources.list()` diff from `capture_deployment_inventory`. If empty/missing, run `capture_deployment_inventory` (`phase: "capture"`) NOW and write its output into `deploy-result.json` so the cleanup section below is derived from data, not memory.
+> 3. Portal deployment link printed in chat — if missing, generate from `$resId` pattern (see deploy/instructions.md Step 6) and print now
+> 4. `deployment-summary.md` in session folder — if missing, `create` it NOW with the same content you are about to present in chat (status, subscription, RG, region, services table, endpoints, cleanup commands). One `create` call — do NOT skip.
+
+## Show the Deployment Results View
+
+> ⛔ **After the artifact self-check passes, call `open_deploy_result_view` — exactly once, before presenting the chat handoff.** This opens the Deployment Results webview, which renders `deploy-result.json` as a structured report: status, endpoints with health, provisioned resources, recovery attempts, and the cleanup command.
+>
+> - Call it only after `deploy-result.json` is **finalized** (`status` is `succeeded` or `failed`, never `in-progress`). The view reads the file from disk, so calling it early shows a half-written report.
+> - Call it on failure too — the view surfaces which resources and endpoints failed, which is exactly what the user needs to debug.
+> - The view **supplements** the chat handoff; it does not replace it. Still present all four handoff sections below.
+> - If the tool reports that no result file was found, the artifact was written somewhere unexpected — re-check the session folder path and fix the artifact, then call the tool again.
 
 ## Show the Deployment Results View
 
@@ -60,7 +70,18 @@ See [deploy-checklist-template.md § Deployment Summary](../deploy/references/de
 ```
 This catches orphaned RGs from region fallback or naming conflict healing. For Terraform: `cd infra && terraform destroy`.
 
+**Deterministic orphan cleanup (from `deploy-result.json.createdResources[]`):**
+
+> ⛔ **Prefer the inventory over memory.** `deploy-result.json.createdResources[]` and `orphanedResourceGroups[]` are computed by `capture_deployment_inventory` from a before/after `resources.list()` diff, so they catch orphans the tag filter misses (imperative `az create` fallbacks and resources that never received the session tag). If they are empty/missing, run `capture_deployment_inventory` (`phase: "capture"`) and write its output into `deploy-result.json` before writing this section.
+
 **If `deploy-result.json.orphanedResourceGroups[]` is non-empty**, list each explicitly with delete commands. For orphans with a `subscription` field, include `--subscription {subscription}`.
+
+⛔ **Do not present unattributed resources as safe to delete.** The two classifications carry different confidence and MUST be printed as two separate lists:
+
+- **`classification: "failed"`** — confirmed to belong to this deployment. Print the exact `az resource delete --ids {id}` command under a heading like `🗑️ Failed resources from this deployment (safe to delete):`.
+- **`classification: "orphaned"`** — appeared during the deploy window but no tracked deployment reported it. It may be a healing stray, or it may belong to someone else on a shared subscription. Print it under `⚠️ Resources that appeared during this deploy but could not be matched to it — review before deleting:` with the resource ID and portal link, and **without** a ready-to-run delete command.
+
+⛔ **If `deploy-result.json.inventoryUnverified` is `true`**, the deployment's ARM operations could not be read and nothing could be attributed. Print neither list. Instead say the created-resource inventory could not be verified (include `inventoryUnverifiedReason`; for `"forbidden"` explain the account lacks `Microsoft.Resources/deployments/operations/read`) and point the user at the resource group in the portal. Still print the primary and tag-based cleanup blocks above.
 
 ## Redeploy Command
 
