@@ -151,6 +151,21 @@ log "Staged $(basename "$BUILT_VSIX" 2>/dev/null || basename "$VSIX_DEST") ($(du
 # their sources have to travel with the run. Staged on every invocation —
 # including --skip-build — because they are source files read straight off the
 # working tree: staging a stale copy would grade the wrong contract.
+# The debug graders import `jsonc-parser` (launch.json is JSON with comments), and
+# the container has no install step, so the package has to travel with the staged
+# tree. Staging is a *copy*, so it needs the package to exist on disk somewhere —
+# it cannot be conjured on a host where nothing was ever installed.
+#
+# stage-graders.ts looks in the repo root as well as evals/, and the repo root is
+# where `jsonc-parser` actually lives (it is a declared dependency of the
+# extension). So this only has to run in the one case neither is populated, which
+# keeps the "a stimulus run on a bare host costs nothing" property for every host
+# that has installed either.
+if [ ! -d "${REPO_ROOT}/node_modules/jsonc-parser" ] && [ ! -d "${HERE}/../node_modules/jsonc-parser" ]; then
+    log "Installing eval dependencies (needed to stage graders)"
+    ( cd "${HERE}/.." && npm install )
+fi
+
 log "Staging graders"
 node "${HERE}/stage-graders.ts"
 
