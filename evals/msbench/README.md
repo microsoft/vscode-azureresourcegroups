@@ -2160,6 +2160,47 @@ credential cannot be added without an owner lifting it.
 failed before concluding anything: `Azure login` red is setup, `Run the MSBench eval` red
 is the pipeline, and only a completed submission says anything about the product.
 
+### CI is the only thing that tests the runner's own portability
+
+The first dispatch that got past `azure/login` immediately found a bug that **could not
+have been found locally**, and it had been there since the file was written:
+
+```
+mktemp: too few X's in template 'msbench-run'
+```
+
+BSD `mktemp` (macOS) accepts a bare `-t PREFIX` and appends its own randomness. GNU
+`mktemp` (Linux) treats the argument as a template and refuses it unless it ends in at
+least three `X`. Every machine this has ever been run from is macOS, so the line worked
+everywhere it was tried and was wrong on the only machine that matters. The fix is
+`mktemp -t msbench-run.XXXXXX`, which both accept.
+
+**This is a category nothing else here covers.** Grader certification, the gate table,
+the hostile fixtures and `gateHealth` all run *wherever you run them* — they cannot
+detect code that is correct on every developer machine and wrong in the container. So
+the CI path is not a convenience that saves typing `./run.sh`; **it is the only
+environment that tests the runner's own portability assumptions.**
+
+The same dispatch exposed a second, quieter instance found by auditing for the first.
+`run.sh` located `results.zip` only under the two *default* data directories, but the
+workflow passes `--data_dir "$RUNNER_TEMP/msbench-data"` and msbench-cli writes to
+`<data_dir>/<run_id>/results.zip`. The lookup would have found nothing and the
+`if` around it would have skipped **silently**, so `verify-run.ts` — the check that
+separates a real result from a throttled run or one answered by the wrong model — would
+never have run in CI, while the job still reported the CLI's exit code as its verdict.
+
+That is worse than the `mktemp` failure, which at least stopped the job. `run.sh` now
+honours `--data_dir` when locating results, and **warns loudly when it cannot find
+them** rather than quietly skipping verification:
+
+```
+WARNING: run <id> completed but results.zip was not found, so
+verify-run.ts did NOT run. This result is UNVERIFIED: ...
+```
+
+An unverified run that reads exactly like a verified one is the vacuous-check failure
+this suite exists to catch, pointed at the verifier itself.
+
 **It stays manual, and not only because of setup.** Every dispatch submits a real run and
 spends real tokens, so a schedule or a PR trigger would spend on every push. Local runs
 need none of the above — `az login` plus the `MSBench User` role is enough, which is why
@@ -2278,6 +2319,22 @@ with a clear message:
   Put the echo inside the chain, check `$?` explicitly, or use `${PIPESTATUS[0]}` after a
   pipe. A false green from your own tooling is worth more suspicion than a red gate,
   because nothing downstream will contradict it.
+
+- **`mktemp -t PREFIX` is not portable, and neither is anything else you only ever run
+  on macOS.** BSD `mktemp` appends its own randomness to a bare prefix; GNU `mktemp`
+  fails with `too few X's in template` unless it ends in at least three `X`. Use
+  `mktemp -t name.XXXXXX`, which both accept. This shipped broken and stayed broken
+  because every machine here is macOS and CI had never got far enough to run it — see
+  [CI is the only thing that tests the runner's own portability](#ci-is-the-only-thing-that-tests-the-runners-own-portability).
+  The usual suspects if you are auditing: `sed -i`, `stat -f`/`stat -c`, `date -r`/`date
+  -d`, `readlink -f`, and `du -h` output formats.
+
+- **`--data_dir` moves where results land, and anything that reads them must follow.**
+  msbench-cli writes to `<data_dir>/<run_id>/results.zip`, and the *default* data dir
+  already ends in `runs` — so a custom value does **not** get a `runs` component. A
+  reader that only checks the defaults finds nothing, and if it skips silently on that,
+  `verify-run.ts` never runs and an unverified result is indistinguishable from a
+  verified one.
 
 - **`results.json` timestamps are naive local time; trajectory steps are UTC.**
   Subtracting one from the other directly yields a ~7h offset — setup times of ~25,400s

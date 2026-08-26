@@ -26,6 +26,11 @@ STIMULUS="${STIMULUS:-photo-app-requirements}"
 STACK=""
 PHASE=""
 PASSTHRU=()
+# Observed, not chosen: msbench-cli writes results to `<data_dir>/<run_id>/`, and
+# `--data_dir` is a passthrough flag we do not otherwise interpret. The results
+# lookup after the run has to know where they landed, so the value is recorded
+# here while still being forwarded to the CLI unchanged.
+DATA_DIR=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --skip-build) SKIP_BUILD=1 ;;
@@ -36,6 +41,14 @@ while [ $# -gt 0 ]; do
         --stack=*) STACK="${1#*=}" ;;
         --phase) shift; [ $# -gt 0 ] || { echo "--phase needs a value" >&2; exit 1; }; PHASE="$1" ;;
         --phase=*) PHASE="${1#*=}" ;;
+        # Recorded AND forwarded. Both spellings, both forms — the CLI accepts
+        # `--data_dir` and `--data-dir`, so matching only one would reintroduce
+        # the silent skip this exists to prevent.
+        --data_dir|--data-dir)
+            PASSTHRU+=("$1"); shift
+            [ $# -gt 0 ] || { echo "--data_dir needs a value" >&2; exit 1; }
+            DATA_DIR="$1"; PASSTHRU+=("$1") ;;
+        --data_dir=*|--data-dir=*) DATA_DIR="${1#*=}"; PASSTHRU+=("$1") ;;
         *) PASSTHRU+=("$1") ;;
     esac
     shift
@@ -338,7 +351,13 @@ sed -n '/^promptSteps:/,/assertions:/p' "${ASSETS}/user-overrides.yaml" \
     | sed -n '2,4p' | sed 's/^/    | /'
 echo
 
-RUN_LOG="$(mktemp -t msbench-run)"
+# The XXXXXX suffix is required, not decorative. BSD mktemp (macOS) accepts a bare
+# `-t PREFIX` and appends its own randomness; GNU mktemp (Linux) treats the whole
+# argument as a template and fails with "too few X's in template" unless it ends in
+# at least three X. Every developer machine here is macOS, so `-t msbench-run`
+# worked everywhere it was ever run and broke the first time it ran on
+# ubuntu-latest. The suffixed form is accepted by both.
+RUN_LOG="$(mktemp -t msbench-run.XXXXXX)"
 trap 'rm -f "$RUN_LOG"; rmdir "$LOCK" 2>/dev/null || true' EXIT
 
 set +e
@@ -362,9 +381,33 @@ set -e
 # wrong thing", both distinct from the 1 that means a genuine red run.
 RUN_ID="$(grep -oE 'run_id=[0-9]+' "$RUN_LOG" | head -1 | cut -d= -f2 || true)"
 if [ -n "$RUN_ID" ]; then
-    RESULTS_ZIP="$(ls "${HOME}/Library/Application Support/msbench/runs/${RUN_ID}/results.zip" \
-                      "${HOME}/.local/share/msbench/runs/${RUN_ID}/results.zip" 2>/dev/null | head -1 || true)"
-    if [ -n "$RESULTS_ZIP" ]; then
+    # msbench-cli writes to `<data_dir>/<run_id>/results.zip`. The default data_dir
+    # is platform-specific (macOS Application Support, Linux XDG), and `--data_dir`
+    # overrides it outright — note the default already ends in `runs`, so a custom
+    # value does NOT get a `runs` component appended.
+    RESULTS_CANDIDATES=(
+        "${HOME}/Library/Application Support/msbench/runs/${RUN_ID}/results.zip"
+        "${HOME}/.local/share/msbench/runs/${RUN_ID}/results.zip"
+    )
+    [ -n "$DATA_DIR" ] && RESULTS_CANDIDATES=("${DATA_DIR}/${RUN_ID}/results.zip" "${RESULTS_CANDIDATES[@]}")
+
+    RESULTS_ZIP=""
+    for candidate in "${RESULTS_CANDIDATES[@]}"; do
+        if [ -f "$candidate" ]; then RESULTS_ZIP="$candidate"; break; fi
+    done
+
+    if [ -z "$RESULTS_ZIP" ]; then
+        # Loud, because the alternative is worse than a failed run. verify-run.ts is
+        # what distinguishes a genuine result from a throttled one or one answered by
+        # the wrong model. If it silently does not run, the CLI's own exit code is
+        # reported as the verdict and an unverified run reads exactly like a verified
+        # one — the vacuous-check failure this suite exists to catch, applied to the
+        # verifier itself. That is precisely what `--data_dir` used to cause in CI.
+        echo "WARNING: run ${RUN_ID} completed but results.zip was not found, so" >&2
+        echo "verify-run.ts did NOT run. This result is UNVERIFIED: a throttled run" >&2
+        echo "or one answered by a different model would look identical to a good one." >&2
+        printf '  looked in: %s\n' "${RESULTS_CANDIDATES[@]}" >&2
+    else
         SCRATCH="$(mktemp -d)"
         unzip -oq "$RESULTS_ZIP" -d "$SCRATCH" 2>/dev/null || true
         find "$SCRATCH" -name '*-output.zip' -exec unzip -oq {} -d "${SCRATCH}/out" \; 2>/dev/null || true
