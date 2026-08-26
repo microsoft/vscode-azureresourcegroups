@@ -58,12 +58,16 @@ All four single-turn plan stimuli are verified by a real green run; ids are unde
 [Verified result](#verified-result). Those runs predate the sentinel, so they report
 one assertion fewer than the table above.
 
-> **None of the six scaffold or local-dev stimuli has ever been run.** They are wired
-> against graders certified offline against hand-authored fixtures, which proves a
-> grader agrees with a fixture and says nothing about whether the stimulus elicits the
-> behaviour that grader looks for. Everything below about how those phases behave is a
-> claim about the *configuration*, not a measurement. Nothing in this section should be
-> read as coverage until there are run ids next to it.
+> **Two of the six scaffold/local-dev stimuli have now been run; four have not.**
+> `scaffold-unapproved-plan` ([`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091), 6/6)
+> and `scaffold-missing-plan` ([`2026082619460117`](https://msbenchapp.azurewebsites.net/run-analysis/2026082619460117), 7/7)
+> are green, `resolved: true`. Both are **refusal** cases, so no run has yet graded
+> a project the agent actually built — `validate-frontend-scaffold`,
+> `validate-integration-plan` and `validate-project-builds` are still wired but
+> unexercised, as are both local-dev stimuli. For those, everything below is a
+> claim about the *configuration*, not a measurement: they are certified offline
+> against hand-authored fixtures, which proves a grader agrees with a fixture and
+> says nothing about whether the stimulus elicits the behaviour it looks for.
 
 A twelfth stimulus, `scaffold-api-only`, is **deliberately not authored**, and the
 coverage that costs is written down in
@@ -136,6 +140,32 @@ genuinely executing under the flags that distinguish them:
 | `no-datastore-converter` | [`2026082585315961`](https://msbenchapp.azurewebsites.net/run-analysis/2026082585315961) | 4/4 |
 | `multi-service-order-processing` | [`2026082586199078`](https://msbenchapp.azurewebsites.net/run-analysis/2026082586199078) | 4/4 |
 | `plan-generation-task-app` (2 turns) | [`2026082614813342`](https://msbenchapp.azurewebsites.net/run-analysis/2026082614813342) | **9/9**, `resolved: true` |
+
+The two scaffold **refusal** stimuli are also verified, and are the first runs in this
+folder to exercise the `scaffold` phase, the workspace seeding, `preConditions` and
+`snapshotWorkspace: false`:
+
+| Stimulus | Run | Result |
+| --- | --- | --- |
+| `scaffold-unapproved-plan` | [`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091) | 6/6, `resolved: true` |
+| `scaffold-missing-plan` | [`2026082619460117`](https://msbenchapp.azurewebsites.net/run-analysis/2026082619460117) | 7/7, `resolved: true` |
+
+A green refusal stimulus is weaker evidence than the tally suggests: every assertion but
+`validate-no-scaffold` is negative, and a run that died early scores the same. So both
+were checked past the tally. In `2026082618693091` the agent called `read_file` and
+refused naming `**Status**: Planning`; in `2026082619460117` it called `read_file`, got a
+genuine not-found, called `file_search`, then emitted the contracted refusal verbatim.
+Those are refusals for the contracted reason, not by luck. `exec` rows are present for
+the grader and the fingerprint in both, so the graders demonstrably ran.
+
+`2026082619460117` also confirms the seed-clear: it ran immediately after
+`2026082618693091` left an unapproved plan in `assets/workspace/`, and its fingerprint
+reports `ls: cannot access '.azure': No such file or directory` in the container. That
+ordering is load-bearing and is written down under
+[Run ordering](config/stimuli/README.md#run-ordering).
+
+**Neither run graded a project the agent built** — both are refusals. The scaffold happy
+path is still unmeasured.
 
 ### What a second turn actually costs
 
@@ -462,6 +492,13 @@ not merely unavailable — it takes the run with it. Every artifact assertion th
 mistake costs milliseconds rather than a submitted run that is rejected in-container
 after the queue wait and the container pull. Exec/command, tool-call and LLM-response
 assertions all keep working with snapshotting off, per the same schema description.
+
+That guard is justified by observation now, not only by reading the schema. Run
+[`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091)
+came back with **`files` at 0 rows**, exactly as `snapshotWorkspace: false` promises — so
+a single `files` query left in that stimulus would have killed the run in-container,
+after the queue wait, the container pull and the payment. The local check costs
+milliseconds and catches the same mistake.
 
 ### Seeding the starting workspace
 

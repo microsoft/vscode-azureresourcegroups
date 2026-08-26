@@ -30,18 +30,40 @@
 # the one thing it is trying to establish — that no plan exists — would silently
 # stop being true while every assertion still passed.
 #
-# ── No preConditions ──────────────────────────────────────────────────────────
-#
-# Deliberately absent, and the only stimulus in the scaffold set without one. The
-# seeded stimuli assert their seed landed because a failed copy would misgrade
-# them; here there is no copy to fail. An `test ! -f` precondition would only
-# restate what `# seed: none` already says, and would go stale silently if the
-# seed were ever changed.
+# RUN ORDERING: this stimulus must be run AFTER a seeded one, never first. See
+# "Run ordering" in config/stimuli/README.md — the precondition below catches a
+# clear that is broken, but only the ordering catches one that is untested.
 #
 # ── snapshotWorkspace is false ────────────────────────────────────────────────
 #
 # Per config/phases/scaffold.yaml, so `files` is empty and every artifact check is
 # an `exec:` grader. See config/stimuli/scaffold-fullstack.yaml.
+
+# ── `# seed: none` states intent; the precondition checks it was honoured ─────
+#
+# These are different claims, and the gap between them is where this stimulus's
+# only real risk lives. `# seed: none` says what the author wanted.
+# stage-workspace.ts clearing assets/workspace/ is the machinery that has to
+# deliver it. A precondition is the only mechanical check that it did.
+#
+# The failure it catches is silent and permanent. If the clear ever stops
+# working, `.azure/project-plan.md` is present with `**Status**: Planning`
+# left over from a previous stimulus. The agent reads it, refuses correctly for
+# *that* document, validate-no-scaffold passes, every negative tool assertion
+# passes, the sentinel passes — a full green board on a stimulus that has
+# quietly become a second copy of scaffold-unapproved-plan and tests the
+# seed-clear not at all. It would keep reading green indefinitely.
+#
+# An earlier version of this file argued the check "only restates what
+# `# seed: none` already says" and would "go stale silently if the seed were
+# ever changed". Both halves were wrong. It does not restate a declaration, it
+# verifies it. And staleness runs the other way: if someone gives this stimulus
+# a non-empty seed, `test !` fails loudly, which is correct — the premise no
+# longer holds and a human should look. A precondition that breaks when its
+# premise breaks is working, not stale.
+preConditions:
+  - comment: No plan may exist before turn 0, or this stimulus silently becomes scaffold-unapproved-plan
+    exec: 'test ! -f /workspace/.azure/project-plan.md'
 
 promptSteps:
   # Byte-identical to the other three scaffold prompts, minus autopilot. The

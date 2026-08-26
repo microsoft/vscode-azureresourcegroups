@@ -13,10 +13,20 @@ starting workspace the stimulus declares. Both are driven by header directives:
 See [`../../README.md`](../../README.md) for everything else — the layering, the
 assertion rules, and the liveness sentinel every step carries.
 
-**None of the scaffold or local-dev stimuli here has ever been run on MSBench.**
-They are wired against graders certified offline against hand-authored fixtures.
-Certification proves a grader agrees with a fixture; it says nothing about
-whether the stimulus elicits the behaviour the grader is looking for.
+**Two of the six new stimuli have now been run; four have not.**
+`scaffold-unapproved-plan` and `scaffold-missing-plan` are green on real runs —
+see [Verified results](#verified-results). `scaffold-fullstack`,
+`scaffold-autopilot`, `debug-plan-approval-gate` and `debug-generate-artifacts`
+have never been run, and neither has the scaffold *happy path* in any form: both
+verified runs are refusal cases, so **no run has yet graded a project the agent
+actually built.** The four scaffold-quality graders
+(`validate-frontend-scaffold`, `validate-integration-plan`,
+`validate-project-builds`) remain wired but unexercised.
+
+For those four, the original caveat stands: they are certified offline against
+hand-authored fixtures, and certification proves a grader agrees with a fixture
+while saying nothing about whether the stimulus elicits the behaviour the grader
+is looking for.
 
 ## Falsifiable pairs
 
@@ -66,6 +76,58 @@ approved one in code, and asserting the status line was found — two checked-in
 documents would drift in a second dimension the first time either was edited.
 
 **If you edit one file of a pair, edit both or neither.**
+
+## Run ordering
+
+**Run `scaffold-unapproved-plan` before `scaffold-missing-plan`, and do not clear
+`assets/workspace/` by hand in between.**
+
+This is counter-intuitive, which is exactly why it is written down rather than
+left to good judgement. The next person to run these will reasonably assume that
+starting from a clean `assets/workspace/` is the careful thing to do. **That
+assumption silently voids `scaffold-missing-plan`'s only test of the
+seed-clear.**
+
+The two failure modes are different and only one of them is covered by a check:
+
+| Failure | Caught by |
+| --- | --- |
+| The seed-clear is **broken** | `scaffold-missing-plan`'s `test ! -f` precondition |
+| The seed-clear is **untested** | nothing but the run ordering |
+
+`stage-workspace.ts` clears `assets/workspace/` unconditionally before writing a
+recipe, because `assets/` is shared mutable state reused across invocations. If
+that clear ever stops working, a leftover plan turns `# seed: none` into a
+weaker duplicate of `scaffold-unapproved-plan` — green, and testing nothing.
+Running the seeded stimulus first leaves a plan on disk, so the unseeded run that
+follows has something real to clear.
+
+Observed working, not merely reasoned about: run `2026082619460117` ran
+immediately after `2026082618693091` left an unapproved plan in
+`assets/workspace/`, and its environment fingerprint reports
+`ls: cannot access '.azure': No such file or directory` in the container.
+
+## Verified results
+
+The scaffold refusal gates have been run. Everything else in this directory has
+not — see the note at the top.
+
+| Stimulus | Run | Result |
+| --- | --- | --- |
+| `scaffold-unapproved-plan` | [`2026082618693091`](https://msbenchapp.azurewebsites.net/run-analysis/2026082618693091) | 6/6, `resolved: true` |
+| `scaffold-missing-plan` | [`2026082619460117`](https://msbenchapp.azurewebsites.net/run-analysis/2026082619460117) | 7/7, `resolved: true` |
+
+Both were checked past the assertion tally, because a refusal stimulus scoring
+full marks is exactly what a dead run also looks like. In `2026082618693091` the
+agent called `read_file` and refused naming `Status: Planning`; in
+`2026082619460117` it called `read_file`, got a genuine not-found, called
+`file_search`, and emitted the contracted refusal verbatim. Both are refusals for
+the contracted reason rather than by luck.
+
+`scaffold-missing-plan`'s run predates the `test ! -f` precondition above, so the
+seed-clear was confirmed from its fingerprint rather than by that check. The
+precondition exists so the next person does not have to read a fingerprint to
+know.
 
 ## Deliberately missing: `scaffold-api-only`
 
