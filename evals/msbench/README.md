@@ -353,6 +353,169 @@ answer than inventing a brittle SQL proxy for a judgement call. It is not a subs
 for `exec:` on anything the validators already decide deterministically.
 
 
+## Run queueing
+
+**If you submit MSBench runs for this eval by any route other than `run.sh`, use exactly
+these two values:**
+
+| Key | Value | Where it comes from |
+| --- | --- | --- |
+| endpoint tag | `copilot-on-rails` | `--tag endpoint=copilot-on-rails` (set by `run.sh`) |
+| model | `claude-sonnet-4.5` | derived from `modelSelector` in [`config/base.yaml`](config/base.yaml) |
+
+CES serialises runs that share the same **(model, endpoint tag)** pair: the second one
+waits in a queue rather than racing the first for the same model capacity. Unqueued runs
+race — ours against each other, and against any other team on the same model.
+
+The catch is that **there is no validation of these strings**. A run tagged
+`copilot_on_rails`, `CopilotOnRails`, or `copilot-on-rails ` is accepted, submitted, and
+put in a *different* queue, where it races the runs it was supposed to wait behind.
+Queueing then silently does nothing and looks exactly like it is working. That is the
+whole reason the values are written down here.
+
+We were opted out by omission until [#1707](https://github.com/microsoft/vscode-azureresourcegroups/pull/1707):
+`run.sh` set no endpoint tag at all.
+
+### Why the model half needs no flag
+
+`--model .` is `ASSET_MODEL_SENTINEL`. It does **not** mean "no model" — it tells the
+`vscode` plugin to read `modelSelector` out of the staged `assets/user-overrides.yaml`
+instead of resolving one itself, and the plugin hands the result back as
+`resolved_model`. The CLI then sets `agent_config.model` from it
+(`model_source: agent_assets`). A dry run confirms the sentinel is resolved before
+submission, not passed through:
+
+```
+"model": "claude-sonnet-4.5",
+"model_source" ... "resolved_model": "claude-sonnet-4.5",
+"runner_notes": [
+  "modelSelector set in user-overrides.yaml; using it because --model . was supplied.",
+  "modelSelector in user-overrides.yaml: copilot/claude-sonnet-4.5."
+]
+```
+
+So `--model .` is fully compatible with queueing, and keeping it is required for other
+reasons (see "Why the VSIX route"). The consequence is only that the model half of the
+queueing key lives in `config/base.yaml` rather than on the command line.
+
+### Never pass `--parallel_repeats`
+
+`--parallel_repeats` exists **specifically to drop the endpoint tag** so repeat attempts
+can run concurrently — it is the documented opt-*out* of queueing. Using it with this
+eval un-does everything in this section.
+
+It cannot be passed accidentally: `run.sh` always sets the endpoint tag, and the two are
+mutually exclusive, so the CLI refuses the run outright rather than quietly dropping the
+tag:
+
+```
+$ ./run.sh --repeat 2 --parallel_repeats
+ERROR --parallel-repeats cannot be used with an endpoint tag. Remove the endpoint tag
+      to allow CES to schedule repeat attempts in parallel.
+```
+
+For the same reason `run.sh` appends its `--tag` **after** any pass-through arguments:
+CLI tags are last-wins, so a caller's `--tag endpoint=...` is overridden by ours (with a
+`Duplicate tag endpoint; overriding` warning) rather than the other way round.
+
+### This is not a rate-limit fix
+
+Queueing stops our runs racing each other and it is the mechanism MSBench documents for
+this, which is reason enough to switch it on. But it is **not established** that it fixes
+the 429s described in "Is this run a result?". Those appear to come from
+`FrontDoorLimiter`, a per-user *request-count* limiter in `copilot-api` — not from
+exhausting token quota, since this eval uses roughly 0.1% of the 31M TPM allocated to the
+`autodev-test` integration. Serialising our own runs does not obviously change a
+per-user request-rate ceiling. Treat the effect on throttling as unmeasured until a run
+demonstrates otherwise; `verify-run.ts` and its exit 75 are still the safety net.
+
+## Smoke mode is pinned off
+
+`run.sh` passes `--smoke_mode none`.
+
+Smoke is a CES preflight for multi-instance runs: it takes the **first requested
+instance**, executes it for real — same image, runner, credentials, agent package and
+model — and only then fans out to the rest. It is a real instance consuming real tokens
+and a real slot.
+
+**This is currently a no-op.** Smoke is opt-in and off by default in msbench-cli
+`0.3.54`; a dry run reports `"smoke_mode": "none"` with the flag absent. It is pinned
+anyway because the wiki states the default will flip to on for eligible runs, and
+`--smoke_mode none` is documented as the opt-out that remains after that flip.
+
+The reason to pin it *now* rather than when it flips: **smoke only applies to runs with
+more than one instance.** It is inert while we submit one stimulus per run, and would
+start silently duplicating a full end-to-end scenario the moment we stop — which is the
+direction this eval is heading. The cost lands exactly when it is least affordable.
+
+What we give up is an early setup-validity check. That is a reasonable trade here: it
+earns its keep when a bad agent package or missing credential would fail every instance
+identically, and `run.sh` already checks the VSIX for `resources/agents/` and
+`dist/extension.bundle.js` and regenerates the config locally before submitting.
+
+The flag is placed **before** `"${PASSTHRU[@]}"`, so `./run.sh --smoke_mode auto` still
+works if you deliberately want it.
+
+> There is no `MSBENCH_DISABLE_SMOKE_TEST` environment variable. It appears in an older
+> *proposed* version of the wiki page; it does not exist in the shipped CLI, and setting
+> it does nothing. `--smoke_mode` is the real control.
+
+## A `missing` instance is probably an oversized artifact
+
+**This is the most likely cause of a `missing` instance, and it is not flaky
+infrastructure — it is deterministic.**
+
+MSBench's artifact ingestor reads each GitHub Actions artifact **fully into memory**
+(`ArtifactIngestor.ReadArtifactStreamToMemoryAsync`) and rejects anything over a
+**1 GiB** cap:
+
+```
+Artifact <name> (id=…) … size <N> bytes exceeds maximum allowed 1073741824 bytes
+```
+
+An `output.zip` over 1 GiB therefore fails **every retry identically**. After
+`MaxDequeueCount = 5` the message is moved to the `artifact-ingestion-poison` queue and
+that artifact is **never** reconciled into blob storage — it reads as a missing blob for
+that instance. The run itself looks fine. The results are simply gone.
+
+We are a strong candidate to hit this: each run captures a screen recording, trajectory
+data and `session.sqlite`, over a session budgeted at up to five hours.
+
+To confirm rather than assume, query the ingestor's App Insights (the queue depth is not
+in Kusto) for the run's window:
+
+| Field | Value |
+| --- | --- |
+| Cluster | `https://ade.applicationinsights.io/subscriptions/d0c05057-7972-46ff-9bcf-3c932250155e/resourcegroups/CodeExecService/providers/microsoft.insights/components/msbench-kusto-ingestor-func-prod-ai` |
+| Database | `msbench-kusto-ingestor-func-prod-ai` |
+| Tables | `traces` (poison-move lines), `exceptions` (op `ArtifactIngestionTrigger` — the real failure) |
+
+### Why we cannot currently bound it
+
+Both obvious levers are unavailable, so this is documented rather than fixed:
+
+- **Screen recording cannot be shortened or disabled.** `TestConfig.schema.json` has no
+  `screenRecording`/`recording` property — nothing matching `record`, `video`, `mp4`, or
+  any artifact size limit. There is no supported setting to turn it down.
+- **`snapshotWorkspace: false` would fail our runs fast, by design.** It defaults to
+  `true` and its own schema description warns it "can produce multi-gigabyte
+  `session.sqlite` files" — precisely our risk, since these stimuli run a real
+  `npm install` and build, so `node_modules` lands in the snapshot. But the schema also
+  says the run **fails fast if snapshotting is disabled while any assertion queries the
+  `files` table**, and *every* stimulus does:
+
+  ```
+  SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
+  ```
+
+  Turning it off means first rewriting every artifact assertion in all four stimuli from
+  SQL to `exec:`. That is a much larger change than a size guard and would alter what the
+  eval measures, so it is deliberately not done here.
+
+If a run ever does come back `missing`, check the artifact size before filing it as
+platform flakiness. The upstream fix — stream oversized artifacts to blob instead of
+buffering, and fail soft on one bad artifact — sits with the MSBench KustoIngestor team.
+
 ## Is this run a result?
 
 A finished run is not automatically a *result*. Two things can make the results table
