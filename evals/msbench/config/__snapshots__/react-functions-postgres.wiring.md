@@ -36,9 +36,7 @@ wired:
   debug-artifacts
   debug-breakpoint
   runtime-app-starts  [known gap: functionsHostUnavailable]
+  runtime-health
   runtime-frontend --require-frontend  [known gap: functionsHostUnavailable]
   runtime-frontend-api  [known gap: functionsHostUnavailable]
-
-not wired:
-  runtime-health — project.healthPath is not declared
-  runtime-crud — project.collectionRoute is not declared
+  runtime-crud
