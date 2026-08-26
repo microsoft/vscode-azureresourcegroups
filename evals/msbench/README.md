@@ -121,40 +121,94 @@ number for the chain that is measured rather than extrapolated from single-turn 
 
 | | Single-turn baseline (mean of 7) | `plan-generation-task-app` (2 turns) | |
 | --- | --- | --- | --- |
-| Total tokens | 206.6k | **1,306.0k** | 6.3x |
-| Uncached input | 22.4k | **87.3k** | 3.9x |
-| Cached input | — | 1,188.9k (93.2% of input) | |
-| Output | — | 29.8k | |
+| Total tokens (as reported) | 206.6k | **1,306.0k** | 6.3x |
+| Total tokens (**incl. subagents**) | 206.6k | **1,575.7k** | 7.6x |
+| Uncached input (as reported) | 22.4k | **87.3k** | 3.9x |
+| Uncached input (**incl. subagents**) | 22.4k | **221.7k** | 9.9x |
+| Cached input | — | 1,188.9k (93.2% of main input) | |
+| Output | — | 29.8k (+11.9k in subagents) | |
 | Steps | 5–10 | **18** | |
 | Agent time | — | 465s (7m46s) | |
 | `output.zip` | — | ~9.5 MB (50 MB unpacked) | 0.9% of the 1 GiB ingest limit |
 
-**One extra turn does not cost one extra turn.** Doubling the turns multiplied total
-tokens by 6.3x, because every step re-sends a transcript that is itself growing — turn 1
-wrote `project-plan.md` plus ~48 KB of `.preview-temp/` mock-ups, and all of it rides
-along in each subsequent request. Marginal cost per step was previously measured rising
-at 24.5k → 26.8k → 35.5k; this run is **72.6k tokens/step**, and the marginal cost of the
-10 steps beyond the single-turn baseline is **~110k tokens/step**. The curve steepens; it
-does not flatten.
+> **`msbench-cli report` undercounts, and the gap is worst on the number you care about.**
+> Its totals are the **main trajectory only**. This run made 4 `runSubagent` calls, each
+> of which produced its own trajectory file with its own spend — 257.8k prompt and 11.9k
+> completion tokens that appear in **no** headline figure. That is +20.7% on total, but
+> **+154% on uncached**, because a subagent starts a fresh context and so caches badly
+> (47.9% cached, against the main trajectory's 93.2%). Sum
+> `trajectories/*.trajectory.json`, not just the report, or every subagent-heavy phase
+> will look cheaper than it is — and scaffold is expected to use more of them, not fewer.
 
-Uncached input is the gentler number (3.9x) because the cache absorbs 93.2% of the input,
-so **billed cost and context pressure diverge** — quote whichever one the question is
-actually about. Note also that ~30% of chat spans went to `gpt-4o-mini` rather than the
-model under test (14 of 46), so not every span is a step of the task.
+**One extra turn does not cost one extra turn.** Doubling the turns multiplied total
+tokens by 6.3x as reported and 7.6x once subagents are counted, because every step
+re-sends a transcript that is itself growing — turn 1 wrote `project-plan.md` plus ~48 KB
+of `.preview-temp/` mock-ups, and all of it rides along in each subsequent request.
+Marginal cost per step was previously measured rising at 24.5k → 26.8k → 35.5k; this run
+is **72.6k tokens/step** as reported, **87.5k/step** including subagents, and the marginal
+cost of the 10 steps beyond the single-turn baseline is **~110k tokens/step**. The curve
+steepens; it does not flatten.
+
+Uncached input is the gentler number *in the main trajectory* (3.9x) because the cache
+absorbs 93.2% of input, so **billed cost and context pressure diverge** — quote whichever
+one the question is actually about. But that reassurance is mostly an artifact of ignoring
+subagents: counted properly, uncached grew **9.9x**, which is worse than the total. Note
+also that ~30% of chat spans went to `gpt-4o-mini` rather than the model under test (14 of
+46), so not every span is a step of the task.
 
 Extrapolating to the full 6-phase chain is where confidence drops sharply — see
 [Extrapolating to the full chain](#extrapolating-to-the-full-chain).
 
+### The run already emits an ATIF trajectory
+
+`output/trajectories/trajectory.json` is a genuine **`ATIF-v1.6`** document, written by the
+VS Code agent without us asking for it. That matters because the per-step accounting this
+section had to reconstruct from `session.sqlite` and `agent-traces.db` is already in there,
+structured:
+
+```
+final_metrics:  total_prompt_tokens 1276211   total_completion_tokens 29790
+                total_cached_tokens 1188942   total_reasoning_tokens   1210
+                total_steps              19   total_tool_calls           22
+
+steps[1]:  prompt_tokens 33185  completion_tokens 323  cached_tokens 9952
+           reasoning_tokens 121  time_to_first_token_ms 1753  duration_ms 6548
+```
+
+Every step carries `prompt_tokens` / `completion_tokens` / `cached_tokens` /
+`reasoning_tokens` / TTFT / duration, so **per-step cached-token accounting is free** —
+that is the marginal-cost curve above, directly, rather than inferred from run totals. The
+`final_metrics` cross-check exactly against `msbench-cli report` (1,276,211 / 29,790 /
+1,188,942), and ATIF additionally surfaces `total_reasoning_tokens`, which the report
+tables do not show at all.
+
+Three reconciliations to know before trusting it:
+
+| | ATIF | Elsewhere | Why |
+| --- | --- | --- | --- |
+| Steps | 19 | 18 (`report`) | ATIF counts the opening user message as `steps[0]`; it carries no `metrics`. The 18 metric-bearing steps are the report's steps. |
+| Tool calls | 22 | 32 (`session.sqlite`) | Sub-agent tool calls live in their own trajectory files, and even summing all five reaches only 26. **`session.sqlite` is the authority for tool calls.** |
+| Tokens | main only | main only | Neither ATIF's `final_metrics` nor the report includes the four sub-agent trajectories. Sum them yourself. |
+
+Each `runSubagent` call writes `trajectories/toolu_<id>.trajectory.json`, a complete ATIF
+document of its own (3 steps, ~63k prompt, ~30k cached each here). Those four files are the
++20.7% total / +154% uncached documented above. Any Kusto ingestion or cost dashboard built
+on ATIF must sum the sub-agent trajectories or it will systematically under-report exactly
+the phases that lean on sub-agents.
+
 ### Extrapolating to the full chain
 
-Straight-line from 2 phases to 6 gives ~3.9M total tokens, ~262k uncached and ~23m of
-agent time. **That is almost certainly an underestimate, and it should not be planned
-against.** Confidence is low, for reasons worth stating plainly:
+Straight-line from 2 phases to 6 gives ~3.9M total tokens and ~262k uncached on the
+reported figures — or **~4.7M total and ~665k uncached once sub-agents are counted** — and
+~23m of agent time. **That is almost certainly an underestimate, and it should not be
+planned against.** Confidence is low, for reasons worth stating plainly:
 
 - **n=1.** One run, one model, one prompt. No variance estimate at all.
-- **The two cheapest phases were the ones measured.** Requirements and plan write two
+- **The two *cheapest* phases were the ones measured.** Requirements and plan write two
   text artifacts. Scaffold, build, local-dev and deploy write whole trees and shell out —
   this run already spent 6 `run_in_terminal` and 4 `runSubagent` calls in turn 1 alone.
+  Sub-agents are the sharp end: they cache badly (47.9% vs 93.2%), they are invisible in
+  every headline figure, and scaffold is expected to use *more* of them.
 - **Growth is superlinear, and linear extrapolation assumes it isn't.** Per-step cost
   doubled between the single-turn baseline and this run.
 - **Context, not cost, is the likelier wall.** 1.28M input tokens across 18 steps means
@@ -257,19 +311,26 @@ it; raising it past 6h needs confirmation from the MSBench team
 (<CodeExService@microsoft.com>).
 
 > **The observed runner cap is 2h, not 6h — so `agentSeconds: 18000` is mis-derived.**
-> The instance runlog for `2026082614813342` says, before the agent starts:
+> The instance runlog for `2026082614813342` says, verbatim, immediately after the
+> benchmark banner and before the agent starts:
 >
 > ```
+> containerName=vscbench.eval.x86_64.say_hello
+> ==== START BENCHMARK RUN ====
+> /entry.sh exists
+> Starting runner using entry.sh
 > Using timeout of 7200 seconds
+> Runner script finished!
 > ```
 >
-> That is 2h, and the 5h `agentSeconds` above was derived from an *assumed* 6h cap. If
-> 7200s is the real per-instance limit then the agent budget is 2.5x the runner's, which
-> is precisely the failure this section warns about: the job is killed first, the agent
-> timeout never fires, `runnerGraceSeconds` never runs because it only starts *after*
-> the agent timeout, and nothing is flushed on the runs that most need diagnosing.
-> Re-derived from the observed cap, the arithmetic gives `7200 − ~15m setup − 15m grace
-> ⇒ ~1.5h agent (5400s)`.
+> That is the outer runner applying a 2h timeout to `entry.sh` — the process that contains
+> the whole agent session — and the 5h `agentSeconds` above was derived from an *assumed*
+> 6h cap. If 7200s is the real per-instance limit then the agent budget is 2.5x the
+> runner's, which is precisely the failure this section warns about: the job is killed
+> first, the agent timeout never fires, `runnerGraceSeconds` never runs because it only
+> starts *after* the agent timeout, and nothing is flushed on the runs that most need
+> diagnosing. Re-derived from the observed cap, the arithmetic gives `7200 − ~15m setup −
+> 15m grace ⇒ ~1.5h agent (5400s)`.
 >
 > This is left unchanged pending confirmation rather than fixed here, for two reasons:
 > it is one observation, and the line does not say whether 7200s is fixed per instance

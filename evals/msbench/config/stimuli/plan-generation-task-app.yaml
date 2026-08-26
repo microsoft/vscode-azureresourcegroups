@@ -38,6 +38,30 @@
 # `exec:` runs after the step it is attached to. Attached to step 0 they would
 # run before `.azure/project-plan.md` exists and fail for a reason that has
 # nothing to do with the product.
+#
+# ─── IF YOU COPY THIS FILE TO ADD ANOTHER MULTI-TURN STIMULUS ───────────────
+#
+# Two rules below are easy to drop because a file that drops them still passes.
+# That is the point: both failures are silent.
+#
+#   1. EVERY step gets its own liveness sentinel as its FIRST assertion.
+#      Not one per file — one per step. PR #1706 added the sentinel because
+#      `COUNT(*) = 0` is trivially true against an empty table. The multi-turn
+#      version of that bug is a run that finishes turn 0 and then dies, and it
+#      defeats a single sentinel: `llm_responses` is non-empty, so a step-0
+#      sentinel passes, and then every step-1 negative assertion passes
+#      VACUOUSLY while the step-1 positives fail as though the product broke.
+#      A sentinel bound to each :stepIndex is what makes that turn's
+#      assertions mean anything.
+#
+#   2. EVERY whole-conversation constraint gets a copy per step.
+#      A Vally `constraints.reject_tools` covers the entire trajectory, but the
+#      implied filter means each ported copy sees exactly ONE turn. One copy
+#      therefore leaves every other turn unchecked while still reading green.
+#
+# The shared property: an assertion in the wrong place, or missing for one
+# turn, does not go red. It quietly stops testing anything. Neither rule is
+# visible in a passing result, so neither can be recovered by looking at one.
 
 promptSteps:
   # ─── Turn 0: describe the app ────────────────────────────────────────────
