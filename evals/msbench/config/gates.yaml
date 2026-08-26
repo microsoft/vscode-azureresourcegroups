@@ -30,6 +30,16 @@
 # So `ecosystem` appears almost nowhere below. A Python project has a perfectly
 # real "does it start?" question; what is missing is support we have not written.
 #
+# The corollary, learned the hard way — `runtime-health` and `runtime-crud` both
+# required the stack declaration they consume, so on the stack matching every
+# stimulus we run, neither was wired at all:
+#
+#   **A declaration may make a gate stricter. It must never decide whether the
+#   gate runs at all.**
+#
+# A fact you `requires:` is a fact whose absence silences the gate. A fact you
+# derive an `args:` flag from only sharpens it. When in doubt, the second.
+#
 # ## `args:`
 #
 # Flags derived from the same facts, using the same predicate language. This is
@@ -191,8 +201,14 @@ gates:
     # it was written and **nothing has ever passed it**, so a capability that
     # existed only in its own documentation now gets passed by stacks that
     # contracted for a health endpoint.
+    #
+    # `requires:` is `api: http`, **not** `healthPath: present`. Requiring the
+    # declaration made this gate wireable only where a health path existed to be
+    # probed — the case it passes — and silent on a stack that declared none,
+    # which is where a missing health endpoint would actually be caught. The
+    # declaration still makes the gate *stricter* via `--require-health` below.
     requires:
-      project.healthPath: present
+      project.api: [http]
     args:
       - value: --require-health
         when: { project.healthPath: present }
@@ -220,5 +236,15 @@ gates:
     grader: evals/graders/validate-runtime-crud.ts
     summary: a record can be written and read back
     phases: [local]
+    # Same correction as `runtime-health`. A stack that declares no
+    # `collectionRoute` still has CRUD to check — the gate extracts the endpoint
+    # from the served frontend, and #1730 made a failure to read it a visible
+    # exit 3 rather than a silent stand-down. Requiring the declaration threw
+    # that away on every stack that did not opt in.
+    #
+    # Deliberately not requiring a datastore, though `datastore: none` arguably
+    # has nothing to persist to: spelling it as a list of the kinds that are not
+    # `none` silently unwires this gate the day someone adds a datastore kind,
+    # and it fails in the invisible direction.
     requires:
-      project.collectionRoute: present
+      project.api: [http]
