@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ext } from "../../../../extensionVariables";
 import { type DeployResultData } from "../../views/utils/deployResultTypes";
 import { type DeployResultViewConfiguration, type DeployResultViewStrings } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
 export type { DeployResultViewConfiguration, DeployResultViewStrings };
@@ -78,7 +78,7 @@ function getDeployResultViewStrings(): DeployResultViewStrings {
     };
 }
 
-export class DeployResultViewController extends WebviewController<DeployResultViewConfiguration> {
+export class DeployResultViewController extends CopilotOnRailsWebviewController<DeployResultViewConfiguration> {
     private resultData: DeployResultData;
     private sourceFileUri: vscode.Uri | undefined;
 

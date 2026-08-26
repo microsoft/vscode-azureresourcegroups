@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
@@ -19,8 +18,9 @@ import { armDebugPlanImplementedWatcher } from "../debugPlanImplementedWatcher";
 import { openLoadingView } from "../openLoadingView";
 import { suppressTrackedViewCloseOnce } from "../projectSession";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 
-export class LocalPlanViewController extends WebviewController<Record<string, never>> {
+export class LocalPlanViewController extends CopilotOnRailsWebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
     private _isRefreshingPrereqs = false;
     private _refreshPrereqsTimer: ReturnType<typeof setTimeout> | undefined;

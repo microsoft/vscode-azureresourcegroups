@@ -4,7 +4,6 @@
 *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { launchAgentAndRecordOutcome } from "../../../../commands/copilotOnRails/openChatWithAgent";
@@ -19,10 +18,11 @@ import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation
 import { openLoadingView } from "../openLoadingView";
 import { recordModel } from "../projectSession";
 import { recordRecentPrompt } from "../recentPrompts";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 
 export type { CreateProjectViewControllerType };
 
-export class CreateProjectViewController extends WebviewController<CreateProjectViewControllerType> {
+export class CreateProjectViewController extends CopilotOnRailsWebviewController<CreateProjectViewControllerType> {
     constructor(viewConfig: CreateProjectViewControllerType) {
         super(ext.context, viewConfig.title, 'createProjectView', viewConfig, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
 

@@ -4,17 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { copilotOnRailsCommandIds } from "../../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { ext } from "../../../../extensionVariables";
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 
 type ScaffoldAction = 'setupLocal' | 'deploy';
 
-export class ScaffoldNextStepsViewController extends WebviewController<Record<string, never>> {
+export class ScaffoldNextStepsViewController extends CopilotOnRailsWebviewController<Record<string, never>> {
     constructor(initialConfig: Record<string, never>) {
         super(
             ext.context,
