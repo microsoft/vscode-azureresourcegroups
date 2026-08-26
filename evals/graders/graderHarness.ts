@@ -192,7 +192,13 @@ function exitForError(name: string, error: unknown): never {
     const gate = gateId();
     if (error instanceof NotApplicable) {
         console.error(`NOT_APPLICABLE gate=${error.gate} class=${error.classification} reason=${error.reason} detail="${error.detail.replace(/"/g, "'")}"`);
-        console.error(`SKIP: gate=${error.gate} — ${name} did not apply here; see the NOT_APPLICABLE line above.`);
+        console.error(`SKIP: gate=${error.gate} — ${name} did not apply here.`);
+        console.error(error.classification === 'environmentGap'
+            ? '  This gate applies to this project but could not run, so we are not testing something we claim to test.'
+            : '  This project has nothing for this gate to test, which is a question about how the gate is wired.');
+        // Under exit 3 a human reads this on a red run, and the expensive mistake is
+        // concluding the red says something about the agent's output. It says nothing.
+        console.error('  Nothing here is evidence about the generated app.');
         process.exit(NOT_APPLICABLE_EXIT_CODE);
     }
     if (error instanceof ProductFailure) {
