@@ -139,6 +139,17 @@ number for the chain that is measured rather than extrapolated from single-turn 
 > (47.9% cached, against the main trajectory's 93.2%). Sum
 > `trajectories/*.trajectory.json`, not just the report, or every subagent-heavy phase
 > will look cheaper than it is — and scaffold is expected to use more of them, not fewer.
+>
+> **This failure is silent.** You do not get an error or an obviously odd figure; you get
+> a plausible number that is 20% low on total and 154% low on uncached. Nothing about the
+> report says a trajectory was omitted.
+>
+> **It applies to anything downstream, including Kusto.** Trend reporting, cost
+> dashboards and model sweeps built on *either* `msbench-cli report` totals *or* ATIF's
+> `final_metrics` inherit the same blind spot — and once a trend series is accumulating
+> under-counted points it is far harder to notice, and to correct retroactively, than it
+> is to sum the sub-agent files up front. See
+> [The run already emits an ATIF trajectory](#the-run-already-emits-an-atif-trajectory).
 
 **One extra turn does not cost one extra turn.** Doubling the turns multiplied total
 tokens by 6.3x as reported and 7.6x once subagents are counted, because every step
@@ -192,9 +203,16 @@ Three reconciliations to know before trusting it:
 
 Each `runSubagent` call writes `trajectories/toolu_<id>.trajectory.json`, a complete ATIF
 document of its own (3 steps, ~63k prompt, ~30k cached each here). Those four files are the
-+20.7% total / +154% uncached documented above. Any Kusto ingestion or cost dashboard built
-on ATIF must sum the sub-agent trajectories or it will systematically under-report exactly
-the phases that lean on sub-agents.
++20.7% total / +154% uncached documented above.
+
+**Anything ingesting these must sum `trajectories/*.trajectory.json`, not just
+`trajectory.json`** — Kusto trend reporting, cost dashboards and per-model sweeps included.
+An ingestor reading only the main trajectory (or only `msbench-cli report` totals, which
+have the same blind spot) will systematically under-report exactly the phases that lean on
+sub-agents, and it will do so silently: the series looks well-formed, just low. Scaffold and
+deploy delegate more than planning does, so the error grows with the phases we have not
+measured yet — and a trend built on under-counted points is much harder to correct after the
+fact than to get right now.
 
 ### Extrapolating to the full chain
 
