@@ -421,7 +421,53 @@ function diagnoseEmptyExtraction(runId: string): string {
         'was not loaded — treat this as a bug in this tool or in extraction, NOT as a corpus fact.';
 }
 
-/** The cached archive MSBench keeps per run, if this machine has it. */
+/**
+ * Whether MSBench considers this run finished, from `results.json`'s `timestamps.completed`.
+ *
+ * This is the primary guard against auditing a run that has not finished, and it exists because a
+ * real incident was misdiagnosed twice before the mechanism was found. A run was audited ~50s
+ * before it even initialized and ~5 minutes before it completed; extraction succeeded, exited 0,
+ * and produced run metadata with no instance output. Two plausible mechanisms were proposed and
+ * investigated — an order-dependent archive reader, and non-atomic blob reconciliation — and both
+ * were wrong. The run was simply still executing.
+ *
+ * A blob-presence check does not catch this: the absence was total, so there was nothing partial to
+ * detect. `timestamps.completed` fires deterministically whether the read is five seconds early or
+ * five hours early, and it is already written by the CLI, so it costs nothing.
+ *
+ * Returns undefined when there is no cached `results.json` to consult — an explicitly extracted
+ * directory, typically — in which case the run is audited rather than skipped, because refusing to
+ * audit data someone handed us directly would be worse than the risk.
+ */
+function runCompletedAt(runId: string): string | undefined {
+    if (!/^\d+$/u.test(runId)) {
+        return undefined;
+    }
+    for (const root of msbenchRunRoots()) {
+        const parsed = readJson<{ timestamps?: { completed?: string } }>(join(root, runId, 'results.json'));
+        if (parsed) {
+            return parsed.timestamps?.completed;
+        }
+    }
+    return undefined;
+}
+
+/**
+ * `results.json` exists but carries no completion timestamp: the run is still executing, or died
+ * without recording one. Either way its results are not a result yet.
+ */
+function isIncompleteRun(runId: string): boolean {
+    if (!/^\d+$/u.test(runId)) {
+        return false;
+    }
+    for (const root of msbenchRunRoots()) {
+        const path = join(root, runId, 'results.json');
+        if (existsSync(path)) {
+            return runCompletedAt(runId) === undefined;
+        }
+    }
+    return false;
+}
 function runArchivePath(runId: string): string | undefined {
     if (!/^\d+$/u.test(runId)) {
         return undefined;
@@ -979,6 +1025,10 @@ function printPreamble(runs: string[], instances: number, voidInstances: number,
     readerFaults: string[], skipped: string[]): void {
     console.log('');
     console.log('Gate health — auditing the instrument, not the product');
+    // Stamped because this report describes a corpus that changes underneath it. A stale reading of
+    // a transient condition is what made a still-running run look like a permanent anomaly, and
+    // cost several round trips to unpick. It costs nothing to say when the data was read.
+    console.log(`Read at ${new Date().toISOString()}`);
     console.log(`${runs.length} run(s), ${instances} instance(s). Verdicts below ${minRuns} runs are marked low confidence.`);
     if (readerFaults.length > 0) {
         // Loud, and deliberately separate from a pending run: this says the numbers below are
@@ -1045,6 +1095,14 @@ async function main(): Promise<void> {
     let voidInstances = 0;
 
     for (const { runId, dir } of roots) {
+        // Primary guard: never audit a run MSBench has not marked complete. Checked before the
+        // instance scan, because an unfinished run legitimately has no instances and must not be
+        // reported as though that were a fact about the corpus.
+        if (isIncompleteRun(runId)) {
+            log(`  ! ${runId}: skipped — no timestamps.completed in results.json; the run has not finished`);
+            skipped.push(runId);
+            continue;
+        }
         const instances = findInstances(dir);
         if (instances.length === 0) {
             // Never just shrug and continue: a dropped run under-reports coverage invisibly, and it
@@ -1086,9 +1144,12 @@ async function main(): Promise<void> {
 
     if (options.json) {
         console.log(JSON.stringify({
+            readAt: new Date().toISOString(),
             runs: auditedRuns,
             instances: instanceCount,
             voidInstances,
+            readerFaults,
+            skipped,
             minRuns: options.minRuns,
             gates: rows.map(({ gate, tally, verdict, confident }) => ({
                 gate,
