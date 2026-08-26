@@ -8,6 +8,21 @@ promptSteps:
       and an Azure Functions backend with PostgreSQL for the data. Make it with
       full test coverage.
     assertions:
+      # Liveness sentinel — must come first, and every stimulus needs one.
+      #
+      # Half the assertions below are negative (`COUNT(*) = 0`), and a negative
+      # count over an *empty* table is trivially true. So a run that dies before
+      # the session database is populated — a rate limit, a container that never
+      # reached the first turn — does not fail: it quietly collects full marks on
+      # every negative check and scores partial credit. Run 2026082555313888 did
+      # exactly that. This assertion is what makes the rest of them mean anything.
+      #
+      # `llm_responses` rather than `toolCalls`, because an agent that correctly
+      # refuses a request may legitimately call no tools, and that must not be
+      # indistinguishable from an agent that never started.
+      - comment: Sentinel; session data must exist or the negative checks below are vacuous
+        query: SELECT COUNT(*) > 0 FROM llm_responses
+
       # vally: file-exists .azure/requirements.json
       - comment: Agent should have written the requirements artifact
         query: SELECT COUNT(*) > 0 FROM files WHERE path LIKE '%.azure/requirements.json'
