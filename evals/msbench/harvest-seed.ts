@@ -88,6 +88,9 @@ Options:
   --extracted <dir> Harvest from an already-extracted directory instead of
                     downloading. The run id is still required, because
                     provenance that cannot name its run is not auditable.
+  --extract-dir <d> Where to extract (default: evals/msbench/.regrade/<run-id>).
+                    Use a short path on Windows: these archives contain ~290
+                    character log paths, and MAX_PATH is 260.
   --check           Report whether the harvested seed is still current, and exit
                     0 (fresh) / 1 (stale) / 2 (never harvested).
   --self-test       Assert this tool's behaviour against synthetic extractions.
@@ -135,8 +138,15 @@ function reportFreshness(freshness: Freshness): number {
 
 function selectInstance(root: string, wanted: string | undefined): Instance {
     const { instances, incomplete } = findInstances(root);
+    // Two different causes, and the fix differs: the run's output blob never arrived, or
+    // the local extraction could not write every file. On Windows the second is the usual
+    // one and does not look like a path problem from here — the archives carry ~290
+    // character log paths and MAX_PATH is 260, so the unzip stops partway and
+    // `session.sqlite` is simply absent.
     const describeIncomplete = incomplete.length
-        ? `\nInstances with no session.sqlite (output blob never arrived): ${incomplete.join(', ')}`
+        ? `\nInstances with no session.sqlite: ${incomplete.join(', ')}\n` +
+        '  Either the run produced no output blob, or the extraction could not write every\n' +
+        '  file. On Windows, retry somewhere short first: --extract-dir C:\\mb'
         : '';
 
     if (instances.length === 0) {
@@ -240,8 +250,8 @@ function assertPlanIsUsable(content: string, source: string): void {
     }
 }
 
-function harvest(runId: string, wanted: string | undefined, extractedDir: string | undefined): void {
-    const root = resolveExtraction({ runId, instance: wanted, extractedDir });
+function harvest(runId: string, wanted: string | undefined, extractedDir: string | undefined, extractDir: string | undefined): void {
+    const root = resolveExtraction({ runId, instance: wanted, extractedDir, extractDir });
     const instance = selectInstance(root, wanted);
     const { path, content } = readPlanFromRun(instance);
     assertPlanIsUsable(content, `${instance.name} ${path}`);
@@ -437,6 +447,7 @@ function main(): number {
     let runId: string | undefined;
     let instance: string | undefined;
     let extractedDir: string | undefined;
+    let extractDir: string | undefined;
     let check = false;
     let selfTestOnly = false;
 
@@ -466,6 +477,14 @@ function main(): number {
                     throw new MsBenchToolError('--extracted needs a value');
                 }
                 extractedDir = value;
+                break;
+            }
+            case '--extract-dir': {
+                const value = argv[++index];
+                if (value === undefined) {
+                    throw new MsBenchToolError('--extract-dir needs a value');
+                }
+                extractDir = value;
                 break;
             }
             default:
@@ -499,7 +518,7 @@ function main(): number {
     if (!runId) {
         throw new MsBenchToolError(`Give a run id to harvest, or --check.\n\n${USAGE}`);
     }
-    harvest(runId, instance, extractedDir);
+    harvest(runId, instance, extractedDir, extractDir);
     return EXIT_FRESH;
 }
 
