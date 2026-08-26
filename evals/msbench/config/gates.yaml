@@ -40,6 +40,25 @@
 # A fact you `requires:` is a fact whose absence silences the gate. A fact you
 # derive an `args:` flag from only sharpens it. When in doubt, the second.
 #
+# ## Say why, especially when you require nothing
+#
+# `requires: {}` is the one predicate that can never be observed to be wrong. A
+# gate that requires a fact can be seen going dark on a stack that lacks it; a
+# gate that requires nothing is wired everywhere and looks correct by
+# construction. So an empty predicate is exactly where a stated reason carries
+# the most weight, and where its absence is least visible.
+#
+# `project-builds` is the model. Its `ecosystem: [node]` reads as a violation of
+# the rule above, and the comment is what lets a reader tell a deliberate
+# exception from a mistake **without opening the grader**. Every row should be
+# legible that way.
+#
+# Rows marked `# unreviewed` have no stated reason yet. That marker is not a
+# claim the row is wrong — it is the gap made visible, and it should be replaced
+# by the owner's actual reason rather than by a plausible-sounding one. A
+# fabricated justification is worse than a blank, because it converts an open
+# question into a settled one.
+#
 # ## `args:`
 #
 # Flags derived from the same facts, using the same predicate language. This is
@@ -147,6 +166,9 @@ gates:
     grader: evals/graders/validate-integration-plan.ts
     summary: .azure/integration-plan.md hands off correctly
     phases: [scaffold]
+    # unreviewed: no stated reason for requiring nothing. Not a claim that the row
+    # is wrong — a claim that nobody has written down why it is right, which is
+    # indistinguishable from nobody having considered it.
     requires: {}
     args:
       - value: --has-frontend
@@ -157,24 +179,36 @@ gates:
     grader: evals/graders/validate-debug-plan.ts
     summary: .azure/vscode-debug-plan.md satisfies the debug-plan contract
     phases: [local]
+    # unreviewed: no stated reason for requiring nothing. Not a claim that the row
+    # is wrong — a claim that nobody has written down why it is right, which is
+    # indistinguishable from nobody having considered it.
     requires: {}
 
   - id: debug-config
     grader: evals/graders/validate-debug-config.ts
     summary: .vscode/launch.json and tasks.json are structurally sound
     phases: [local]
+    # unreviewed: no stated reason for requiring nothing. Not a claim that the row
+    # is wrong — a claim that nobody has written down why it is right, which is
+    # indistinguishable from nobody having considered it.
     requires: {}
 
   - id: debug-artifacts
     grader: evals/graders/validate-debug-artifacts.ts
     summary: the generated workspace matches the plan that specified it
     phases: [local]
+    # unreviewed: no stated reason for requiring nothing. Not a claim that the row
+    # is wrong — a claim that nobody has written down why it is right, which is
+    # indistinguishable from nobody having considered it.
     requires: {}
 
   - id: debug-breakpoint
     grader: evals/graders/validate-debug-breakpoint.ts
     summary: a real breakpoint is hit under the generated launch configuration
     phases: [local]
+    # unreviewed: no stated reason for requiring nothing. Not a claim that the row
+    # is wrong — a claim that nobody has written down why it is right, which is
+    # indistinguishable from nobody having considered it.
     requires: {}
 
   - id: runtime-app-starts
