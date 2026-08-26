@@ -872,6 +872,15 @@ async function declaredToday(identityByComment: boolean): Promise<Map<string, st
     return declared;
 }
 
+/** The commonest few causes, for a one-line summary. */
+function topReasons(counter: Map<string, number>, limit = 2): string {
+    return [...counter.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([reason, count]) => `${reason}\u00d7${count}`)
+        .join(', ');
+}
+
 function printTable(rows: GateRow[]): void {
     const width = Math.min(Math.max(...rows.map(row => row.gate.length)) + 2, 70);
     console.log('');
@@ -1010,18 +1019,32 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
         console.log('output. At this corpus size that is expected rather than alarming: a young suite');
         console.log('mostly passes. Watch whether it stays true as the corpus grows.');
         if (declined.length > 0) {
+            // One selector, two remedies. Selection merges the buckets deliberately — the question
+            // is "has anyone ever seen this gate discriminate?", and a gate that keeps not running
+            // has not, whatever the cause. The *advice* cannot merge them: telling someone to audit
+            // the not-applicable branch of a gate that was only ever blocked upstream sends them to
+            // audit correct code and find nothing, which wastes exactly the attention this section
+            // exists to direct.
+            const swallowing = declined.filter(row => row.tally.notApplicable > 0);
+            const starved = declined.filter(row => row.tally.notApplicable === 0);
             console.log('');
-            console.log('  NEVER RED, AND SOMETIMES DECLINED TO ANSWER — look at these first, ahead of');
-            console.log('  the rest. A gate that only ever passes or excuses itself may have a failing');
-            console.log('  branch that cannot be reached; check that its not-applicable case is not');
-            console.log('  swallowing the evidence that should have made it fail.');
-            for (const { gate, tally } of declined) {
-                const excused = [...tally.notApplicableReasons.entries(), ...tally.notAttemptedReasons.entries()]
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 2)
-                    .map(([reason, count]) => `${reason}\u00d7${count}`)
-                    .join(', ');
-                console.log(`  * ${gate}: ${tally.passed} pass, 0 fail, ${tally.notApplicable + tally.notAttempted} declined (${excused})`);
+            console.log('  NEVER RED, AND NEVER SEEN TO DISCRIMINATE — look at these first, ahead of the');
+            console.log('  rest. Each one passed or stood down every time it had the chance to object.');
+            if (swallowing.length > 0) {
+                console.log('');
+                console.log('  Stood down on its own judgement — check that the not-applicable case is not');
+                console.log('  swallowing the evidence that should have made the gate fail:');
+                for (const { gate, tally } of swallowing) {
+                    console.log(`  * ${gate}: ${tally.passed} pass, 0 fail, ${tally.notApplicable} declined (${topReasons(tally.notApplicableReasons)})`);
+                }
+            }
+            if (starved.length > 0) {
+                console.log('');
+                console.log('  Blocked before it could run — the gate is innocent here; the fault is');
+                console.log('  upstream, and it has simply never had a chance to object:');
+                for (const { gate, tally } of starved) {
+                    console.log(`  * ${gate}: ${tally.passed} pass, 0 fail, ${tally.notAttempted} blocked (${topReasons(tally.notAttemptedReasons)})`);
+                }
             }
         }
         const plain = confident.filter(row => !declined.includes(row));
