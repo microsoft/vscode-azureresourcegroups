@@ -507,6 +507,57 @@ decoration: `--require-health` had existed on `validate-runtime-health` since it
 written and **nothing had ever passed it**, so the gate could not fail for a missing health
 endpoint. A stack that declares `healthPath` now passes it.
 
+### What is verified here, and what is not
+
+**The mechanism is verified. The table it operates on is not.** Those are different claims
+and the difference is easy to lose, so it is written down here rather than left implied.
+
+Verified, and mechanically: the derivation is a pure function, so the same inputs always
+produce the same wiring; the wiring snapshots fail on drift; the check fails if two stacks
+ever derive an identical gate set; a growing corpus of rejection fixtures each assert their
+own error code, under a coverage ratchet that may only go up. A green `npm run stacks:check`
+means all of that held.
+
+**It does not mean the wiring is right.** Each `requires:` row encodes a judgement about
+what one grader actually inspects, and those judgements were made by reading grader headers
+and flags. Nothing mechanical checks them.
+
+The first five rows were audited by the session that owns those graders. **Two were wrong** —
+`runtime-health` and `runtime-crud` each required the very declaration they consume, so both
+were dark on `react-functions-postgres`, the stack matching every stimulus we run (#1736).
+Fourteen rows remain unaudited, and are unaudited rather than presumed correct.
+
+Three properties of that audit are worth carrying, because a clean line from it is exactly
+the kind of thing that gets read as a verdict:
+
+- **It clears no row.** It flagged one, confirmed three frontend exclusions, and was silent
+  on the rest.
+- **It detects one failure direction only** — a gate going *dark* — and is structurally
+  blind to two others. The first is a gate wired where it has nothing to look at:
+  `project-builds` on a Python stack, real, caught only by a human reasoning about it. The
+  second is worse, because the gate genuinely belongs where it is wired: a gate that is
+  applicable but then **demands something inapplicable**. `validate-integration-plan`
+  checked for a Database section unconditionally, so the first stack with
+  `datastore: none` would have been failed for correctly omitting one — a fabricated
+  product failure, latent only because both current stacks use PostgreSQL.
+- **Twelve of nineteen rows are `requires: {}`**, which can never go dark. All twelve come
+  back clean and that result means nothing. **A trivially-satisfied computation is not
+  evidence** — and those twelve rows are simultaneously where the risk concentrates and
+  where a clean line is most misleading. It is the `COUNT(*) = 0` trap wearing another hat.
+
+That second blind spot moved the question this table should be audited against. It is not
+*"why does this row require nothing?"* — the `integration-plan` row's `requires: {}` was
+correct, and the defect was one field below it in `args:`, where no scrutiny of the
+predicate could have found it. The question is:
+
+> **Why does this row demand what it demands?**
+
+which covers `args:` as well as `requires:`, and is the one that would have caught it.
+
+So: a row with a stated reason has been thought about; a row without one is indistinguishable
+from a row nobody considered. `project-builds` is the model — its comment is the only one
+that let a reviewer tell a deliberate exception from a mistake *without opening the grader*.
+
 ### Wiring snapshots
 
 `config/__snapshots__/<stack>.wiring.md` is generated and checked in, and
@@ -520,12 +571,17 @@ The snapshots are also the demonstration that any of this does something. Same g
 `local` phase, two stacks:
 
 ```
-  react-functions-postgres          node-express-postgres
-  runtime-frontend      WIRED       runtime-frontend      not wired (frontend is none)
-  runtime-frontend-api  WIRED       runtime-frontend-api  not wired (frontend is none)
-  runtime-health        not wired   runtime-health        WIRED --require-health
-  runtime-crud          not wired   runtime-crud          WIRED
+  react-functions-postgres                node-express-postgres
+  runtime-frontend      WIRED             runtime-frontend      not wired (frontend is none)
+  runtime-frontend-api  WIRED             runtime-frontend-api  not wired (frontend is none)
+  runtime-health        WIRED             runtime-health        WIRED --require-health
+  runtime-crud          WIRED             runtime-crud          WIRED
 ```
+
+The health and CRUD rows read the same on both stacks and differ only in strictness — that
+is the corrected behaviour from #1736, and the earlier version of this table showed them
+unwired on the left, which was the bug. A declaration makes a gate stricter; it must never
+decide whether the gate runs at all.
 
 ### Running a stack
 
@@ -1585,6 +1641,12 @@ allowlisted a scheduled run would only ever be red. Local runs need none of this
 
 Failure modes that cost real time while building this. Most now fail fast in `run.sh`
 with a clear message:
+
+- **`git status` dirty after running the checks.** `npm run certify` rewrites
+  `evals/results/grader-certification/offline/report.json` with a fresh `generatedAt`
+  timestamp on every invocation, so running the credential-free gates locally leaves an
+  unrelated one-line change staged into whatever you commit next. It has reached review on
+  several PRs. `git checkout -- evals/results/` before committing.
 
 - **A red run that is actually rate limiting.** Back-to-back runs get throttled by the
   Copilot API mid-run. The agent then produces nothing, so artifact assertions fail

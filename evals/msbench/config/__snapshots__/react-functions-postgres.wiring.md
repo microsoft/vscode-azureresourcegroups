@@ -36,7 +36,7 @@ wired:
   debug-artifacts
   debug-breakpoint
   runtime-app-starts  [known gap: functionsHostUnavailable]
-  runtime-health
+  runtime-health  [known gap: functionsHostUnavailable]
   runtime-frontend --require-frontend  [known gap: functionsHostUnavailable]
   runtime-frontend-api  [known gap: functionsHostUnavailable]
-  runtime-crud
+  runtime-crud  [known gap: functionsHostUnavailable]
