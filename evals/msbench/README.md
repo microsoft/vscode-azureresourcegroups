@@ -1084,7 +1084,7 @@ of exactly that one thing.*
 | --- | --- | --- |
 | `never-passed` | The gate may be impossible to satisfy — broken probe, wrong credential, bad fixture | Re-grade the named run and read the grader's own stderr |
 | `never-failed` | The gate may be vacuous; it has never discriminated | Check it can go red at all; certification is the cheap way |
-| `always-not-applicable` | The gate has never rendered a verdict — **and MSBench scored every one as a pass** | Group by `reason=`; usually one missing prerequisite |
+| `always-not-applicable` | The gate has never rendered a verdict — **and MSBench scored every one as a failure** | Group by `reason=`; usually one missing prerequisite |
 | `never-attempted` | The gate never got the chance to run | Fix what is upstream; the gate is not the problem |
 | `healthy` | Has both passed and failed | Nothing |
 
@@ -1154,37 +1154,68 @@ credits passes it never earned. **Seven of twenty-six instances in the corpus ar
 > trend-plotting historical runs should assume the older half of the corpus is
 > contaminated in both directions.
 
-### This report is the safety mechanism for the not-applicable convention
+### Not-applicable, and the convention that got reversed
 
 The fidelity and runtime gates emit a machine-readable marker on stderr:
 
 ```
-NOT_APPLICABLE gate=<gate-id> reason=<reasonCode> detail="…"
+NOT_APPLICABLE gate=<gate-id> class=<outOfScope|environmentGap> reason=<reasonCode> detail="…"
 ```
 
-**and exit 0.** Because `assertZeroExitCode` compiles to `SELECT COUNT(*) > 0 FROM exec
-WHERE exitCode = 0 …`, MSBench scores every N/A as a **pass**. A gate that is N/A across
-the whole corpus therefore reports **16-for-16** — #1669's defect with the sign flipped,
-and the inverted form is worse, because 0-for-16 looks alarming while 16-for-16 looks like
-success and nobody investigates a passing gate. This is live rather than hypothetical: the
-five `runtime-*` gates emit `functionsHostUnavailable` on *every* current stimulus, since
-all four are Azure Functions and the container has no `func` binary.
+**and exit 3**, which MSBench records as `passed: false`. So an N/A is scored as a
+**failure**, and a gate that is N/A across the whole corpus reads **0-for-16** — the story
+at the top of this section exactly, except this time the gate is fine and the environment
+is the problem. That is live rather than hypothetical: the five `runtime-*` gates emit
+`functionsHostUnavailable` on *every* current stimulus, because all four are Azure
+Functions and the container has no `func` binary.
 
-MSBench assertions are binary — there is no "neither" — so this cannot be fixed at the
-assertion layer. **This report is the only place it can be caught**, which is why exit 0
-was only defensible on the assumption that this tool exists and behaves as follows. If you
-are tempted to simplify any of it, this is what you would be breaking:
+**It was very nearly the opposite, and the reversal is worth recording.** Exit 0 was ruled
+first, explicitly on the grounds that this tool's always-not-applicable verdict made it
+safe. That premise was false. MSBench writes `exitCode = 0` as `passed: true`, `resolved`
+derives from it, and the run-analysis site, `msbench-cli report` and Kusto all publish that
+number — so this report could say "not applicable" while the headline said green, and
+**nobody investigates green**. Observing inflation is not the same as being able to undo
+it. The ruling was reversed on that basis: exit 3 is *pessimistic and recoverable*, exit 0
+was *optimistic and unrecoverable*.
+
+MSBench assertions are binary — there is no "neither" — so neither convention can be fixed
+at the assertion layer, and this report stays the only place N/A is visible as N/A. Three
+behaviours are therefore a **contract**, not a preference. If you are tempted to simplify
+any of them, this is what you would be breaking:
 
 1. **N/A is its own bucket**, alongside passed / failed / notAttempted. Never folded into
-   passed, never silently dropped.
+   `passed` — and, under exit 3, **never folded into `failed`**, which is now the live risk
+   and would charge the product for a missing binary.
 2. **Every rate excludes N/A from both numerator and denominator.** A gate that ran 16
    times, was N/A 16 times and passed 0 real times has *no applicable observations* — the
-   `rate` column prints `n/a`, and `n/a` never means 100%.
-3. **Always-N/A gates are grouped by `reason=`**, so one absent prerequisite reads as a
-   single actionable line rather than five mystery gates.
+   `rate` column prints `n/a`, which means nothing was judged, not 0% and not 100%.
+3. **Always-N/A gates are grouped by `reason=`.** Under exit 3 this is what separates "five
+   gates are broken" from "one binary is missing, here is the install command".
 
-Detection keys off the **marker, not the exit code**, so the tool survives the convention
-changing again.
+Detection keys off the **marker, not the exit code** — which is why reversing exit 0 to
+exit 3 needed no code change at all. One ordering detail matters: the marker is checked
+*before* the exit-3 grader-error branch, so a genuinely crashed grader (exit 3, no marker)
+stays distinct from a not-applicable one.
+
+#### The two classes, and why the split is mechanical
+
+`class=` is on the line rather than in a lookup table here, so a new reason code cannot
+silently default into the wrong bucket. Each gate family owns its own reason-to-class
+mapping, so adding a reason is never a shared edit.
+
+| `class=` | Means | Tallied as | Because |
+| --- | --- | --- | --- |
+| `outOfScope` | The scenario genuinely does not apply — `ecosystemNotSupported`, `noFrontendDeclared` | `notApplicable` | This is what "dead weight" is meant to find |
+| `environmentGap` | A prerequisite is missing — `functionsHostUnavailable`, `datastoreRequiresContainer` | `notAttempted` | Nobody decided the gate was unnecessary; the environment could not run it |
+
+An unrecognised or absent `class=` is read as `environmentGap`. That is the safe direction:
+it reports "something is in the way" rather than "this gate is pointless". `noProjectManifestFound`
+is the case that motivates it — it most likely means the tree was never staged, and reporting
+that as dead weight would invite deleting a gate to fix a staging bug.
+
+A reason meaning *"we tried and it did not work"* does not belong on this path at all. That
+is a product failure and must go red; routing one through N/A turns a real bug into a
+self-suppressing green.
 
 ### Gate identity, and a known limitation
 

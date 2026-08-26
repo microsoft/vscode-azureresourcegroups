@@ -87,35 +87,66 @@ const EXIT_GRADER_ERROR = 3;
 /**
  * The structured not-applicable marker, agreed with the fidelity-gates and runtime-gates sessions:
  *
- *   NOT_APPLICABLE gate=<gate-id> reason=<reasonCode> detail="…"
+ *   NOT_APPLICABLE gate=<gate-id> class=<outOfScope|environmentGap> reason=<reasonCode> detail="…"
  *
- * ## This detection is the safety mechanism for the whole not-applicable convention
+ * `class=` is the mechanical split this tool asked for, and it is on the line rather than in a
+ * lookup table here so that a new reason code cannot silently default into the wrong bucket. Each
+ * gate family owns its own reason-to-class mapping, so adding a reason is never a shared edit:
  *
- * An N/A grader **exits 0**. MSBench's `assertZeroExitCode` compiles to
- * `SELECT COUNT(*) > 0 FROM exec WHERE exitCode = 0 …`, so **MSBench scores every N/A as a pass.**
- * A gate that is not applicable across the entire corpus therefore reports 16-for-16.
+ *   outOfScope     — the scenario genuinely does not apply (`ecosystemNotSupported`). Dead weight,
+ *                    and the thing the always-not-applicable verdict is looking for.
+ *   environmentGap — a prerequisite is missing (`functionsHostUnavailable`). **Not** dead weight:
+ *                    nobody has decided this gate is unnecessary, the environment simply cannot run
+ *                    it. Tallied with cascade, because that is what it is.
  *
- * That is the 0-for-16 defect in this file's header with the sign flipped, and the inverted form is
- * worse: 0-for-16 looks alarming, 16-for-16 looks like success, and nobody investigates a passing
- * gate. MSBench assertions are binary — there is no "neither" — so this cannot be fixed at the
- * assertion layer. **This report is the only place it can be caught**, which is why exit 0 was only
- * defensible on the assumption that this tool exists and behaves as documented below.
+ * That distinction is load-bearing. `noProjectManifestFound` most likely means the tree was never
+ * staged; reported as dead weight it would read "this gate is unnecessary, delete it" — the exact
+ * inversion this whole tool exists to prevent. A missing or unrecognised `class=` is therefore read
+ * as `environmentGap`, which is the safe direction: it says "something is in the way" rather than
+ * "this gate is pointless".
+ *
+ * Note what does **not** belong here at all: a reason meaning "we tried and it did not work" is a
+ * product failure and must go red. Routing one through the N/A path turns a real bug into a
+ * self-suppressing green.
+ *
+ * ## Why this detection matters, and why it survived the convention changing
+ *
+ * An N/A grader **exits 3**, and MSBench records that as `passed: false`. So an N/A is scored as a
+ * **failure**, and a gate that is not applicable across the whole corpus reads 0-for-16 — which is
+ * this file's opening story exactly, except the gate is fine and the environment is the problem.
+ *
+ * It was very nearly the opposite. Exit 0 was ruled first, on the explicit grounds that this tool's
+ * always-not-applicable verdict made it safe. That premise was wrong: MSBench writes `exitCode = 0`
+ * as `passed: true`, `resolved` derives from it, and the run-analysis site, `msbench-cli report` and
+ * Kusto all publish that number. This report could say "not applicable" while the headline said
+ * green, and **nobody investigates green**. Observing inflation is not the same as undoing it. The
+ * ruling was reversed on that basis: exit 3 is pessimistic and recoverable, exit 0 was optimistic
+ * and unrecoverable.
  *
  * The contract, which is deliberately stated as a contract and not a preference:
  *
- *   1. N/A is its own bucket, alongside passed / failed / notAttempted. Never folded into passed,
- *      never silently dropped.
+ *   1. N/A is its own bucket, alongside passed / failed / notAttempted. It is never folded into
+ *      `passed` **and never into `failed`** — under exit 3 the second is the live risk, and it
+ *      would charge the product for a missing binary.
  *   2. Every rate excludes N/A from **both** numerator and denominator. A gate that ran 16 times,
  *      was N/A 16 times and passed 0 real times has no pass rate — it has *no applicable
- *      observations*. See `passRate`, which returns undefined rather than 100%.
- *   3. Always-N/A gates are grouped by reason code, so one missing prerequisite reads as one
- *      actionable line rather than N alarming ones.
+ *      observations*. See `passRate`, which returns undefined rather than 0%.
+ *   3. Always-N/A gates are grouped by reason code. Under exit 3 this is what separates "five gates
+ *      are broken" from "one binary is missing, here is the install command".
  *
- * Detection keys off **the marker, not the exit code**. That was the right call while the exit code
- * was still being argued, and it stays right: it means this tool keeps working if the convention
- * ever changes again.
+ * Detection keys off **the marker, not the exit code** — which is why the reversal from exit 0 to
+ * exit 3 required no change to any of it. That ordering matters in one specific way: the marker is
+ * checked *before* the exit-3 grader-error branch, so a legitimately-crashed grader (exit 3, no
+ * marker) stays distinct from a not-applicable one.
  */
-const NOT_APPLICABLE_MARKER = /^NOT_APPLICABLE\s+(?:gate=(\S+)\s+)?(?:reason=(\S+))?/mu;
+const NOT_APPLICABLE_MARKER = /^NOT_APPLICABLE\b([^\n]*)/mu;
+
+/**
+ * `key=value` on the marker line. Parsed order-independently rather than as one fixed-order regex:
+ * the token order is not part of the agreed contract, and a producer reordering them must not
+ * silently turn every N/A back into a pass.
+ */
+const MARKER_TOKEN = /\b(gate|class|reason)=("[^"]*"|\S+)/gu;
 
 /**
  * `gate=<id>` on a `PASS:` / `FAIL:` / `NOT_APPLICABLE` line. Fidelity derives the id from the
@@ -430,14 +461,25 @@ function execCommandOf(comment: string): string | undefined {
 
 interface NotApplicable {
     reason: string;
+    /** `true` only when the grader positively declared the scenario out of scope. */
+    outOfScope: boolean;
 }
 
 function parseNotApplicable(stdErr: string): NotApplicable | undefined {
-    const match = stdErr.match(NOT_APPLICABLE_MARKER);
-    if (!match) {
+    const line = stdErr.match(NOT_APPLICABLE_MARKER);
+    if (!line) {
         return undefined;
     }
-    return { reason: match[2] ?? 'unspecified' };
+    const tokens = new Map<string, string>();
+    for (const [, key, value] of line[1].matchAll(MARKER_TOKEN)) {
+        tokens.set(key, value.replace(/^"|"$/gu, ''));
+    }
+    return {
+        reason: tokens.get('reason') ?? 'unspecified',
+        // Anything other than an explicit outOfScope is treated as an environment gap — see
+        // NOT_APPLICABLE_MARKER. Never guess a gate into the dead-weight bucket.
+        outOfScope: tokens.get('class') === 'outOfScope',
+    };
 }
 
 /**
@@ -575,8 +617,16 @@ function analyzeInstance(
         } else if (notApplicable) {
             // Never `passed`, even though the grader exited 0 and MSBench scored it as a pass.
             // This branch is the entire safety mechanism for the exit-0 convention.
-            tally.notApplicable++;
-            bump(tally.notApplicableReasons, notApplicable.reason);
+            if (notApplicable.outOfScope) {
+                tally.notApplicable++;
+                bump(tally.notApplicableReasons, notApplicable.reason);
+            } else {
+                // An environment gap is not dead weight: nobody decided this gate was unnecessary,
+                // the environment just could not run it. Reporting it as dead weight would invite
+                // deleting a gate to fix a missing binary.
+                tally.notAttempted++;
+                bump(tally.notAttemptedReasons, notApplicable.reason);
+            }
         } else if (detail.error) {
             // The assertion never compiled or returned a non-boolean. `passed: false` would launder
             // a harness fault into a product verdict.
@@ -632,14 +682,6 @@ function passRate(tally: GateTally): number | undefined {
 // ---------------------------------------------------------------------------
 // Reporting
 // ---------------------------------------------------------------------------
-
-function topReasons(counter: Map<string, number>, limit = 3): string {
-    return [...counter.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, limit)
-        .map(([reason, count]) => `${reason}\u00d7${count}`)
-        .join(', ');
-}
 
 /** Gates declared in today's stimuli. A gate here that no run mentions has never been exercised. */
 async function declaredToday(identityByComment: boolean): Promise<Map<string, string[]>> {
@@ -734,20 +776,32 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
         console.log('');
         console.log('NEVER ATTEMPTED — these never got the chance to run. This indicts whatever is');
         console.log('upstream of them, not the gates, and it says nothing at all about the product.');
-        for (const { gate, tally } of starved) {
-            console.log(`  * ${gate}`);
-            console.log(`      ${tally.notAttempted} blocked observation(s) over ${tally.runs.size} run(s): ${topReasons(tally.notAttemptedReasons)}`);
+        console.log('A gate here is not dead weight: nobody decided it was unnecessary, something is');
+        console.log('simply in its way. Fix the cause, not the gate.');
+        // Grouped by cause, so one absent prerequisite reads as a single actionable line rather
+        // than N separate mystery gates — which is the difference between "install a binary" and
+        // "five probes are broken".
+        const byCause = new Map<string, GateRow[]>();
+        for (const row of starved) {
+            const [cause] = [...row.tally.notAttemptedReasons.entries()].sort((a, b) => b[1] - a[1])[0] ?? ['unknown'];
+            byCause.set(cause, [...(byCause.get(cause) ?? []), row]);
         }
-        console.log('  Fix the upstream cause; these gates cannot report anything until you do.');
+        for (const [cause, gates] of [...byCause.entries()].sort((a, b) => b[1].length - a[1].length)) {
+            console.log('');
+            console.log(`  * ${cause} — ${gates.length} gate(s) blocked, 0 real verdicts between them`);
+            for (const { gate, tally } of gates) {
+                console.log(`      ${gate} (${tally.notAttempted} blocked over ${tally.runs.size} run(s))`);
+            }
+        }
     }
 
     if (dead.length > 0) {
         actionable++;
         console.log('');
         console.log('ALWAYS NOT-APPLICABLE — these have never rendered a verdict about the product.');
-        console.log('MSBench scored every one of them as a PASS, because an N/A grader exits 0. Left to');
-        console.log('the raw numbers each of these gates looks perfect while testing nothing, so this');
-        console.log('section is the only thing standing between a coverage hole and a green dashboard.');
+        console.log('MSBench scored every one of them as a FAILURE, because an N/A grader exits 3.');
+        console.log('Left to the raw numbers each looks like a broken gate; grouped by reason they are');
+        console.log('usually one missing prerequisite or one gate wired to a stack it never covered.');
         // Grouped by reason so a single missing prerequisite reads as one line, not N mystery gates.
         const byReason = new Map<string, string[]>();
         for (const { gate, tally } of dead) {
@@ -758,8 +812,8 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
             console.log('');
             console.log(`  * reason=${reason} — ${gates.length} gate(s), 0 applicable observations`);
             console.log(`      ${gates.join(', ')}`);
-            console.log('      Either a stimulus that exercises this is missing, or a prerequisite is');
-            console.log(`      absent from the run environment. One cause, ${gates.length} gate(s) to recover.`);
+            console.log('      The grader declared the scenario out of scope. Either a stimulus that');
+            console.log(`      exercises this is missing, or ${gates.length > 1 ? 'these gates are' : 'this gate is'} genuinely dead weight.`);
         }
     }
 
