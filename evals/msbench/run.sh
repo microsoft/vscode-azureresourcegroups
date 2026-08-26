@@ -22,7 +22,7 @@ set -euo pipefail
 
 SKIP_BUILD=0
 BUILD_ONLY=0
-STIMULUS="photo-app-requirements"
+STIMULUS="${STIMULUS:-photo-app-requirements}"
 STACK=""
 PHASE=""
 PASSTHRU=()
