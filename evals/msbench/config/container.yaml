@@ -88,18 +88,21 @@ binaries:
   # every single run — the 0-for-N pattern that gate-health.ts exists to flag,
   # except here the gates are fine and the container is the problem.
   #
-  # `config/phases/local.yaml` now runs the command below in its preamble, so the
-  # local-dev phase should have `func` on PATH by the time the agent starts. The
-  # status stays `absent` because this row describes the **image**, not the state
-  # after a preamble — a row that claimed `present` would make every stack check
-  # believe the binary is there on phases that never install it.
+  # `config/phases/local.yaml` runs the command below in its preamble. Run
+  # 2026082682123151 measured the result for the first time, and it FAILED:
   #
-  # `evidence: asserted` is still the honest value: the install command has never
-  # been observed to succeed in-container. The stimuli's environment fingerprint
-  # probes `func` and is recorded-not-asserted, so the next local-dev run answers
-  # this without costing an assertion — `func=MISSING` means the install failed and
-  # the five gates are red for the reason stated here, anything else means it
-  # worked and the knownGaps entry in the Functions stacks can go.
+  #     npm error code E401
+  #     npm error Unable to authenticate, your authentication token seems to be invalid.
+  #
+  # So the install command recorded here is not sufficient on its own. The failure
+  # is registry authentication, not the package, the platform or `--unsafe-perm`:
+  # npm itself works in this image, since `validate-project-builds` runs `npm ci`
+  # in it. The preamble now retries against the public registry explicitly, which
+  # is the next thing to measure.
+  #
+  # `evidence` stays `asserted` because that field describes the *status* claim —
+  # that `func` is absent from the image — and nothing has measured that directly
+  # either. What has now been measured is that the install does not fix it.
   func:
     status: absent
     install: npm install -g azure-functions-core-tools@4 --unsafe-perm true

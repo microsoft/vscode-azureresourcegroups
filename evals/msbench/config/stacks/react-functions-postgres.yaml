@@ -60,12 +60,13 @@ knownGaps:
     reason: functionsHostUnavailable
     binary: func
     tracking: >-
-      config/phases/local.yaml now installs azure-functions-core-tools in the
-      preamble, fail-soft, so this gap should close on the next local-dev run.
-      It is deliberately still declared: the install has never been observed to
-      succeed in-container, and removing the entry on the strength of an
-      unverified command would turn a stated gap into a silent one. The stimuli
-      fingerprint records `func=` either way — clear this entry once a run shows
-      a path rather than MISSING, and not before.
+      config/phases/local.yaml installs azure-functions-core-tools in the
+      preamble, fail-soft. Run 2026082682123151 measured it for the first time
+      and it FAILED with npm E401 "Unable to authenticate" — the container's npm
+      resolves through an authenticated registry this process has no token for.
+      The preamble now retries against the public registry explicitly. This gap
+      therefore stays, and is no longer a guess: it is the observed state. Clear
+      it when a run reports a path for `func` rather than MISSING, and not
+      before.
 
 phases: [plan]
