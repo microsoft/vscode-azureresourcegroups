@@ -1,6 +1,6 @@
 # Stimulus 2.2 `debug-generate-artifacts` from evals/local-dev/eval.yaml.
 #
-# phase: local-dev
+# phase: local
 # seed: approved-fullstack
 #
 # Ports the second local-development stimulus: the approved debug plan is carried
@@ -72,7 +72,7 @@ promptSteps:
         query: SELECT COUNT(*) = 0 FROM toolCalls WHERE tool LIKE '%askQuestion%'
 
   # ─── Turn 1: SETUP — produce the debug plan ───────────────────────────────
-  # Inherits chatMode: azure-debug-plan from config/phases/local-dev.yaml.
+  # Inherits chatMode: azure-debug-plan from config/phases/local.yaml.
   # The gate behaviour this turn produces is graded in full by
   # config/stimuli/debug-plan-approval-gate.yaml; here it is a step on the way,
   # so only the harness-level assertions are attached.

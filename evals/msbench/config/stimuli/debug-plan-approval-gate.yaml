@@ -1,6 +1,6 @@
 # Stimulus 2.1 `debug-plan-approval-gate` from evals/local-dev/eval.yaml.
 #
-# phase: local-dev
+# phase: local
 # seed: approved-fullstack
 #
 # Ports the first local-development stimulus: `azure-debug-plan` scans a real
@@ -36,7 +36,7 @@
 # as azure-debug-plan, in ONE chat session. `promptSteps[].chatMode` does exactly
 # that: the schema describes it as "Override the test-level chatMode for this
 # step", and a step without one inherits the top-level value — which
-# config/phases/local-dev.yaml sets to azure-debug-plan.
+# config/phases/local.yaml sets to azure-debug-plan.
 #
 # There is a strictly more faithful mechanism, and it is deliberately not used.
 # The schema also defines a `promptSteps[].handoff: { id }` step type — "Execute a
@@ -53,7 +53,7 @@
 #
 # ── snapshotWorkspace is false, so file-exists becomes exec: ──────────────────
 #
-# config/phases/local-dev.yaml disables snapshotting because the chained scaffold
+# config/phases/local.yaml disables snapshotting because the chained scaffold
 # runs a real `npm install`. `files` is therefore empty and the schema fails the
 # run fast if anything queries it, so eval.yaml's `file-exists debug-plan-exists`
 # does not port to SQL. It is not ported to a bare `test -f` either: the contract
@@ -103,7 +103,7 @@ promptSteps:
   # ─── Turn 1: the phase under test ─────────────────────────────────────────
   #
   # No `chatMode`, so this inherits azure-debug-plan from
-  # config/phases/local-dev.yaml. That inheritance is the whole reason the phase
+  # config/phases/local.yaml. That inheritance is the whole reason the phase
   # layer sets a top-level chatMode rather than every step naming its own.
   - text: |
       Now set up local debugging for this project so I can hit F5 in VS Code.

@@ -967,7 +967,7 @@ The local-dev stimuli need more than one agent in one session: a setup turn that
 scaffolds a real project as `azure-project-scaffold`, then graded turns as
 `azure-debug-plan`. `promptSteps[].chatMode` does that — the schema calls it an override
 of "the test-level chatMode for this step", and a step without one inherits the
-top-level value, which `config/phases/local-dev.yaml` sets. So the phase file names the
+top-level value, which `config/phases/local.yaml` sets. So the phase file names the
 mode of the *graded* turns and only the setup turns override it.
 
 There is a strictly more faithful mechanism, and it is deliberately not used for exactly
