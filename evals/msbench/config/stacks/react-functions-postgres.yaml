@@ -50,7 +50,13 @@ knownGaps:
   # cannot ask it because the Functions host is not in the container. They stay
   # red on purpose: "we are not testing something we claim to test" is true, and
   # a green here would be a lie that no later report could undo.
-  - gates: [runtime-app-starts, runtime-frontend, runtime-frontend-api]
+  # All five runtime gates, not three. The original list named only the gates
+  # that were wired at the time — and two of them were dark because the
+  # runtime-health and runtime-crud rows in gates.yaml each required the
+  # declaration they consume (#1736). Corrected together, because a knownGaps
+  # list that faithfully tracks a broken derivation is worth less than no list:
+  # it makes the wrong wiring look accounted for.
+  - gates: [runtime-app-starts, runtime-health, runtime-crud, runtime-frontend, runtime-frontend-api]
     reason: functionsHostUnavailable
     binary: func
     tracking: >-
