@@ -798,11 +798,16 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
     if (dead.length > 0) {
         actionable++;
         console.log('');
-        console.log('ALWAYS NOT-APPLICABLE — these have never rendered a verdict about the product.');
-        console.log('MSBench scored every one of them as a FAILURE, because an N/A grader exits 3.');
-        console.log('Left to the raw numbers each looks like a broken gate; grouped by reason they are');
-        console.log('usually one missing prerequisite or one gate wired to a stack it never covered.');
-        // Grouped by reason so a single missing prerequisite reads as one line, not N mystery gates.
+        console.log('ALWAYS OUT-OF-SCOPE — these declared class=outOfScope every time they ran, and');
+        console.log('MSBench scored each as a FAILURE, because an N/A grader exits 3. Nothing here is');
+        console.log('evidence about the generated app.');
+        console.log('');
+        console.log('Applicability is a wiring-time decision. A gate that is out of scope for the stack');
+        console.log('it was wired to is a WIRING BUG WITH AN OWNER — fix the stack declaration, not the');
+        console.log('gate. "Dead weight, consider deleting" is only the right reading if the gate is out');
+        console.log('of scope for every stack in the corpus, which this report cannot tell you on its');
+        console.log('own; check the stack declarations before removing anything.');
+        // Grouped by reason so a single cause reads as one line, not N mystery gates.
         const byReason = new Map<string, string[]>();
         for (const { gate, tally } of dead) {
             const [reason] = [...tally.notApplicableReasons.entries()].sort((a, b) => b[1] - a[1])[0] ?? ['unspecified'];
@@ -812,8 +817,8 @@ function printFindings(rows: GateRow[], minRuns: number, unexercised: Map<string
             console.log('');
             console.log(`  * reason=${reason} — ${gates.length} gate(s), 0 applicable observations`);
             console.log(`      ${gates.join(', ')}`);
-            console.log('      The grader declared the scenario out of scope. Either a stimulus that');
-            console.log(`      exercises this is missing, or ${gates.length > 1 ? 'these gates are' : 'this gate is'} genuinely dead weight.`);
+            console.log(`      Wired to ${gates.length > 1 ? 'stacks these gates' : 'a stack this gate'} cannot answer for, or never wired to one`);
+            console.log('      that exercises it.');
         }
     }
 

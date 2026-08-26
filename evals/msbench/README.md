@@ -1084,8 +1084,8 @@ of exactly that one thing.*
 | --- | --- | --- |
 | `never-passed` | The gate may be impossible to satisfy — broken probe, wrong credential, bad fixture | Re-grade the named run and read the grader's own stderr |
 | `never-failed` | The gate may be vacuous; it has never discriminated | Check it can go red at all; certification is the cheap way |
-| `always-not-applicable` | The gate has never rendered a verdict — **and MSBench scored every one as a failure** | Group by `reason=`; usually one missing prerequisite |
-| `never-attempted` | The gate never got the chance to run | Fix what is upstream; the gate is not the problem |
+| `always-not-applicable` | Declared `class=outOfScope` every time — the gate was wired to a stack it cannot answer for | Fix the stack wiring; only consider deleting if it's out of scope everywhere |
+| `never-attempted` | The gate never got the chance to run — cascade, or `class=environmentGap` | Fix what is upstream or install the prerequisite; the gate is not the problem |
 | `healthy` | Has both passed and failed | Nothing |
 
 **None of these prove a defect.** Each is a reason to look before quoting a score.
@@ -1205,17 +1205,25 @@ mapping, so adding a reason is never a shared edit.
 
 | `class=` | Means | Tallied as | Because |
 | --- | --- | --- | --- |
-| `outOfScope` | The scenario genuinely does not apply — `ecosystemNotSupported`, `noFrontendDeclared` | `notApplicable` | This is what "dead weight" is meant to find |
-| `environmentGap` | A prerequisite is missing — `functionsHostUnavailable`, `datastoreRequiresContainer` | `notAttempted` | Nobody decided the gate was unnecessary; the environment could not run it |
+| `outOfScope` | The gate should not have been wired to this stack — `ecosystemNotSupported`, `noFrontendDeclared` | `notApplicable` | Applicability is a wiring-time decision; seeing it at runtime is a config bug with an owner |
+| `environmentGap` | The gate applies, the machine cannot run it — `functionsHostUnavailable`, `datastoreRequiresContainer` | `notAttempted` | Nobody decided the gate was unnecessary; we genuinely are not testing something we claim to |
 
 An unrecognised or absent `class=` is read as `environmentGap`. That is the safe direction:
-it reports "something is in the way" rather than "this gate is pointless". `noProjectManifestFound`
-is the case that motivates it — it most likely means the tree was never staged, and reporting
-that as dead weight would invite deleting a gate to fix a staging bug.
+it reports "something is in the way" rather than "this gate should not be here".
+`noProjectManifestFound` is the case that motivates it — it most likely means the tree was
+never staged, and reporting that as a wiring or scope problem would invite deleting a gate
+to fix a staging bug.
+
+Note what `always-not-applicable` does **not** license. Because applicability is decided at
+wiring time, a gate reporting `outOfScope` is a **wiring bug with an owner** — it was
+attached to a stack it cannot answer for. "Dead weight, consider deleting" is only correct
+if the gate is out of scope for *every* stack in the corpus, which this report cannot tell
+you by itself. Read the stack declarations before removing anything.
 
 A reason meaning *"we tried and it did not work"* does not belong on this path at all. That
 is a product failure and must go red; routing one through N/A turns a real bug into a
-self-suppressing green.
+self-suppressing green. Naming matters here too: a reason code that describes a harness
+capability gap as though it were a product outcome tells the reader not to investigate.
 
 ### Gate identity, and a known limitation
 
