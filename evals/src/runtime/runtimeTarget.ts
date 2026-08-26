@@ -74,12 +74,12 @@ export type NotApplicableReason =
  *
  * The test that separates them is **what the remedy is**, not what the missing thing is:
  *
- *   `outOfScope`     — this project genuinely has nothing for the gate to look at. There is
- *                      no remedy and nothing to build; a gate permanently in this state is
- *                      dead weight.
- *   `environmentGap` — the gate has a real question to ask about this project and we cannot
- *                      ask it. The remedy is to install or build the missing piece, and
- *                      until then we are not testing something we claim to test.
+ *   `outOfScope`   — this project genuinely has nothing for the gate to look at. There is no
+ *                    remedy and nothing to build; a gate permanently in this state is dead
+ *                    weight.
+ *   `coverageGap`  — the gate has a real question to ask about this project and we cannot
+ *                    ask it. The remedy is to install or build the missing piece, and until
+ *                    then we are not testing something we claim to test.
  *
  * `ecosystemNotSupported` sits in the second bucket, which took an argument to get right. A
  * Python or Go app has a perfectly real "does it start?" question; what is missing is
@@ -88,24 +88,23 @@ export type NotApplicableReason =
  * `outOfScope` would tell the health report to consider deleting a gate whose actual
  * problem is that nobody has extended it yet. Credit to the fidelity-gates session for
  * spotting that the same reasoning applied to both of our vocabularies.
+ *
+ * The union is spelled out here rather than imported from `graderHarness`: the classes are a
+ * grader-side concept, and this module stays free of grader imports so the debug-probe
+ * extension can consume it. It is checked against the harness's `NotApplicableClass` at the
+ * call site in `runtimeGate.ts`, so a divergence is a compile error rather than a surprise.
  */
-export type NotApplicableClassification = 'outOfScope' | 'environmentGap';
-
-/**
- * Owned here rather than centrally: each gate family classifies its own reasons, so adding
- * one is never a shared line that two sessions edit at once.
- */
-export const RUNTIME_NOT_APPLICABLE_CLASS: Record<NotApplicableReason, NotApplicableClassification> = {
+export const RUNTIME_NOT_APPLICABLE_CLASS: Record<NotApplicableReason, 'outOfScope' | 'coverageGap'> = {
     // This project has nothing for the gate to look at, and no remedy would change that.
     noHealthPathDeclared: 'outOfScope',
     noFrontendDeclared: 'outOfScope',
     noFrontendApiCalls: 'outOfScope',
     noCollectionRouteDeclared: 'outOfScope',
     // The gate has a real question here and something is missing that could be supplied.
-    functionsHostUnavailable: 'environmentGap',
-    datastoreRequiresContainer: 'environmentGap',
-    frontendDevServerUnsupported: 'environmentGap',
-    ecosystemNotSupported: 'environmentGap',
+    functionsHostUnavailable: 'coverageGap',
+    datastoreRequiresContainer: 'coverageGap',
+    frontendDevServerUnsupported: 'coverageGap',
+    ecosystemNotSupported: 'coverageGap',
 };
 
 /** How the port may be substituted, when the project lets us choose one. */

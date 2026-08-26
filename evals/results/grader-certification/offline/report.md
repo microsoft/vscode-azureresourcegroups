@@ -3,7 +3,7 @@
 - Mode: `offline`
 - Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`
 - Outcome: **PASSED**
-- Cases: 70/70 passed
+- Cases: 81/81 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -37,6 +37,11 @@
 | `golden-debug-plan` | `reference-node-fullstack` | `debug-plan` | `passed` | `passed` | PASS |
 | `golden-debug-config` | `reference-node-fullstack` | `debug-config` | `passed` | `passed` | PASS |
 | `golden-debug-artifacts` | `reference-node-fullstack` | `debug-artifacts` | `passed` | `passed` | PASS |
+| `golden-runtime-app-starts` | `reference-node-fullstack` | `runtime-app-starts` | `passed` | `passed` | PASS |
+| `golden-runtime-health` | `reference-node-fullstack` | `runtime-health` | `passed` | `passed` | PASS |
+| `golden-runtime-frontend` | `reference-node-fullstack` | `runtime-frontend` | `passed` | `passed` | PASS |
+| `golden-runtime-frontend-api` | `reference-node-fullstack` | `runtime-frontend-api` | `passed` | `passed` | PASS |
+| `golden-runtime-crud` | `reference-node-fullstack` | `runtime-crud` | `passed` | `passed` | PASS |
 | `debug-plan-table-concatenated` | `reference-node-fullstack` | `debug-plan` | `tableRowConcatenated` | `tableRowConcatenated, invalidGenerateMarker` | PASS |
 | `debug-plan-checklist-stub` | `reference-node-fullstack` | `debug-plan` | `checklistStub` | `checklistStub` | PASS |
 | `debug-plan-diagram-dropped` | `reference-node-fullstack` | `debug-plan` | `missingSection` | `missingSection` | PASS |
@@ -51,6 +56,12 @@
 | `debug-config-duplicate-task-label` | `reference-node-fullstack` | `debug-config` | `duplicateTaskLabels` | `duplicateTaskLabels, dependsOnUnresolved, dependsOnCycle` | PASS |
 | `debug-artifacts-extension-recommendations` | `reference-node-fullstack` | `debug-artifacts` | `invalidExtensionRecommendations` | `invalidExtensionRecommendations` | PASS |
 | `debug-artifacts-redacted-secret` | `reference-node-fullstack` | `debug-artifacts` | `redactedSecretPlaceholder` | `redactedSecretPlaceholder` | PASS |
+| `runtime-app-crashes-on-boot` | `reference-node-fullstack` | `runtime-app-starts` | `appExitedBeforeListening` | `appExitedBeforeListening` | PASS |
+| `runtime-health-returns-500` | `reference-node-fullstack` | `runtime-health` | `healthEndpointUnhealthy` | `healthEndpointUnhealthy` | PASS |
+| `runtime-health-route-missing` | `reference-node-fullstack` | `runtime-health` | `healthEndpointUnhealthy` | `healthEndpointUnhealthy` | PASS |
+| `runtime-frontend-not-served` | `reference-node-fullstack` | `runtime-frontend` | `frontendNotServed` | `frontendNotServed` | PASS |
+| `runtime-frontend-calls-missing-route` | `reference-node-fullstack` | `runtime-frontend-api` | `frontendApiRouteMissing` | `frontendApiRouteMissing` | PASS |
+| `runtime-crud-write-not-persisted` | `reference-node-fullstack` | `runtime-crud` | `crudRoundTripLost` | `crudRoundTripLost` | PASS |
 | `golden-service-fidelity` | `reference-node-multiservice` | `service-fidelity` | `passed` | `passed` | PASS |
 | `golden-datastore-fidelity` | `reference-node-multiservice` | `datastore-fidelity` | `passed` | `passed` | PASS |
 | `fidelity-planned-service-dropped` | `reference-node-multiservice` | `service-fidelity` | `plannedServiceMissing` | `plannedServiceMissing` | PASS |

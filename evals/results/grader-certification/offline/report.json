@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T05:42:30.387Z",
+  "generatedAt": "2026-08-26T06:21:07.991Z",
   "mode": "offline",
   "fixtures": [
     "sample-agent-output",
@@ -348,6 +348,56 @@
       "durationMs": 0
     },
     {
+      "id": "golden-runtime-app-starts",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-app-starts",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-runtime-health",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-health",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-runtime-frontend",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-frontend",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-runtime-frontend-api",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-frontend-api",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-runtime-crud",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-crud",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
       "id": "debug-plan-table-concatenated",
       "tier": "offline",
       "fixture": "reference-node-fullstack",
@@ -514,6 +564,78 @@
       "expected": "redactedSecretPlaceholder",
       "actual": [
         "redactedSecretPlaceholder"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-app-crashes-on-boot",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-app-starts",
+      "expected": "appExitedBeforeListening",
+      "actual": [
+        "appExitedBeforeListening"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-health-returns-500",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-health",
+      "expected": "healthEndpointUnhealthy",
+      "actual": [
+        "healthEndpointUnhealthy"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-health-route-missing",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-health",
+      "expected": "healthEndpointUnhealthy",
+      "actual": [
+        "healthEndpointUnhealthy"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-frontend-not-served",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-frontend",
+      "expected": "frontendNotServed",
+      "actual": [
+        "frontendNotServed"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-frontend-calls-missing-route",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-frontend-api",
+      "expected": "frontendApiRouteMissing",
+      "actual": [
+        "frontendApiRouteMissing"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-crud-write-not-persisted",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-crud",
+      "expected": "crudRoundTripLost",
+      "actual": [
+        "crudRoundTripLost"
       ],
       "passed": true,
       "durationMs": 0
