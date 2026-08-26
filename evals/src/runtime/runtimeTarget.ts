@@ -587,8 +587,14 @@ async function describeMissingNodeProject(workspaceRoot: string): Promise<Runtim
     // No manifest of any kind. Whether that is the agent shipping nothing or the grader
     // looking in the wrong place turns on whether the agent was ever here, so report the
     // evidence and let the caller decide.
-    const staged = await exists(path.join(workspaceRoot, '.azure', 'project-plan.md'))
-        || await exists(path.join(workspaceRoot, '.azure', 'requirements.json'));
+    // Any of the flow's artifacts is evidence an earlier phase ran here, and the later ones
+    // are the stronger evidence: `integration-plan.md` is written by the scaffold agent
+    // itself, so its presence with no application is precisely "scaffold ran and produced
+    // nothing". Checking only for the two planning artifacts missed that, and a workspace
+    // the scaffold phase had demonstrably worked in was read as the wrong directory.
+    const staged = (await Promise.all([
+        'project-plan.md', 'requirements.json', 'integration-plan.md', 'vscode-debug-plan.md',
+    ].map(name => exists(path.join(workspaceRoot, '.azure', name))))).some(Boolean);
     return {
         kind: 'noApplication',
         workspaceLooksStaged: staged,

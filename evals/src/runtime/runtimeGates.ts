@@ -39,6 +39,12 @@ import { acquireRuntimeSession, probe, type HttpProbeResponse, type RuntimeSessi
 export interface RuntimeValidationResult extends ArtifactValidationResult {
     /** Set when the grader itself could not run — maps to exit 3, never blamed on the agent. */
     harnessFault?: string;
+    /**
+     * Set when an input this gate consumes was never produced upstream. Distinct from a
+     * harness fault: nothing is broken here, the gate simply never got its input, and the
+     * gate that owns producing it reports the failure.
+     */
+    notAttempted?: { precondition: string; detail: string };
     /** Set when this gate has no opinion about this stack — maps to the NOT_APPLICABLE marker. */
     notApplicable?: { reason: NotApplicableReason; detail: string };
     /** Context worth printing whatever the verdict is. */
@@ -536,6 +542,8 @@ function describeUnusableSession(session: RuntimeSession): RuntimeValidationResu
             return undefined;
         case 'notApplicable':
             return notApplicable(session.reason, session.detail);
+        case 'notAttempted':
+            return notAttempted(session.precondition, session.detail);
         case 'harnessFault':
             return harnessFault(session.message, session.output);
         case 'productFailure':
@@ -870,6 +878,23 @@ function harnessFault(message: string, output: string, code = 'runtimeHarnessFau
  * gate here *can* answer for, so an N/A against it means discovery broke, and certification
  * must show that rather than certify a gate that declined to look.
  */
+/**
+ * This gate never ran, because something it consumes was not produced.
+ *
+ * Recorded as an issue as well as a flag, for the same reason the other two non-verdicts
+ * are: the reference fixture is a workspace where every precondition holds, so a
+ * not-attempted verdict against it means discovery broke, and certification must go red
+ * rather than certify a gate that never got as far as looking.
+ */
+function notAttempted(precondition: string, detail: string): RuntimeValidationResult {
+    return {
+        valid: false,
+        issues: [issue('runtimeNotAttempted', '$.runtime', `${precondition}: ${detail}`)],
+        notAttempted: { precondition, detail },
+        diagnostics: [],
+    };
+}
+
 function notApplicable(reason: NotApplicableReason, detail: string): RuntimeValidationResult {
     return {
         valid: false,

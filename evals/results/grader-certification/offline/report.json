@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T08:52:34.771Z",
+  "generatedAt": "2026-08-26T18:51:23.859Z",
   "mode": "offline",
   "fixtures": [
     "sample-agent-output",
@@ -683,6 +683,18 @@
       "expected": "frontendMakesNoApiCalls",
       "actual": [
         "frontendMakesNoApiCalls"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-app-starts-never-scaffolded",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-app-starts",
+      "expected": "runtimeNotAttempted",
+      "actual": [
+        "runtimeNotAttempted"
       ],
       "passed": true,
       "durationMs": 0
