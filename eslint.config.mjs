@@ -5,6 +5,7 @@
 
 import { azExtEslintRecommended } from '@microsoft/vscode-azext-eng/eslint'; // Other configurations exist
 import { defineConfig } from 'eslint/config';
+import tseslint from 'typescript-eslint';
 
 export default defineConfig([
     azExtEslintRecommended,
@@ -12,6 +13,10 @@ export default defineConfig([
         ignores: [
             'api/dist/**',
             'api/out/**',
+            'evals/grader-certification/reference-node-fullstack/**',
+            'evals/grader-certification/sample-agent-output/**',
+            'evals/msbench/.staged/**',
+            'evals/vscode-parity/**',
             'src/webviews/copilotOnRails/views/react-shim.js',
         ],
     },
@@ -25,6 +30,36 @@ export default defineConfig([
                     },
                 ],
             }],
+        },
+    },
+    {
+        // The eval harness is plain Node JS (.cjs/.mjs) run directly by node — it is not
+        // part of the extension's TypeScript program, so the type-aware project service
+        // can't resolve these files. Lint them without type information, against Node globals.
+        files: ['evals/**/*.{js,cjs,mjs}'],
+        extends: [tseslint.configs.disableTypeChecked],
+        languageOptions: {
+            parserOptions: {
+                projectService: false,
+                project: null,
+            },
+            globals: {
+                __dirname: 'readonly',
+                __filename: 'readonly',
+                Buffer: 'readonly',
+                console: 'readonly',
+                crypto: 'readonly',
+                exports: 'writable',
+                module: 'writable',
+                process: 'readonly',
+                require: 'readonly',
+            },
+        },
+        rules: {
+            // Nothing under evals/ is CommonJS any more — the two .cjs entry points
+            // belonged to the deleted headless runner. The exemption for
+            // `no-require-imports` went with them, so a stray `require()` in a new
+            // eval script is now correctly a lint error.
         },
     },
     {

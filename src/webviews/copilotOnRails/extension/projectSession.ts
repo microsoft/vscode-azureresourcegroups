@@ -6,7 +6,7 @@
 import * as vscode from 'vscode';
 import { azureDebugGenerateAgent, azureDebugPlanAgent, azureDeployAgent, azureProjectIntegrateAgent, azureProjectPlanAgent, azureProjectScaffoldAgent } from '../../../constants';
 import { ext } from '../../../extensionVariables';
-import { DEBUG_PLAN_FILE_GLOB, DEPLOYMENT_PLAN_FILE_GLOB, INTEGRATION_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB, REQUIREMENTS_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
+import { APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB, DEBUG_PLAN_FILE_GLOB, INTEGRATION_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB, REQUIREMENTS_FILE_GLOB } from '../../../tree/project/projectPlanFiles';
 
 /**
  * Single, extension-owned source of truth for where the user is in the
@@ -84,7 +84,7 @@ const PHASE_CONFIG: Readonly<Record<ProjectPhase, PhaseConfig>> = {
     deploy: {
         agent: azureDeployAgent,
         label: vscode.l10n.t('Deployment'),
-        contextRefs: [DEPLOYMENT_PLAN_FILE_GLOB],
+        contextRefs: [APP_ONBOARD_ACTIVE_SESSION_FILE_GLOB],
     },
 };
 
@@ -259,9 +259,13 @@ export function resumeAgentFor(phase: ProjectPhase): string {
  */
 export function buildResumePrompt(state: CopilotSessionState): string {
     const refs = state.contextRefs.map((r) => `\`${r}\``).join(', ');
+    const deployResumeInstruction = state.phase === 'deploy'
+        ? ' After the user confirms the App Onboard session should resume and its subscription is resolved, call `capture_deployment_inventory` with `phase: "baseline"` before running any command that can provision resources. Preserve the existing deploy-result inventory and merge later capture results into it.'
+        : '';
     return vscode.l10n.t(
-        'Resume the {0} phase of this Copilot project. Read the existing project artifacts ({1}) to determine what has already been done, then continue from where it left off. Do NOT restart the project or re-gather information the artifacts already capture.',
+        'Resume the {0} phase of this Copilot project. Read the existing project artifacts ({1}) to determine what has already been done, then continue from where it left off. Do NOT restart the project or re-gather information the artifacts already capture.{2}',
         phaseLabel(state.phase),
         refs,
+        deployResumeInstruction,
     );
 }

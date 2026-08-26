@@ -39,6 +39,11 @@ suite('localDebugPlanTelemetryUtils', () => {
                 debugAzureDependencies: 'azure storage|postgresql,azure storage|postgresql,none',
                 proxyDetected: true,
 
+                hasDebugChecklist: false,
+                debugChecklistTotalCount: 0,
+                debugChecklistPassedCount: 0,
+                debugChecklistFailedCount: 0,
+
                 orchestrator: 'docker compose',
 
                 emulatorCount: 2,
@@ -90,6 +95,11 @@ suite('localDebugPlanTelemetryUtils', () => {
                 debugAzureDependencies: 'azure storage|postgresql,none',
                 proxyDetected: true,
 
+                hasDebugChecklist: true,
+                debugChecklistTotalCount: 4,
+                debugChecklistPassedCount: 4,
+                debugChecklistFailedCount: 0,
+
                 orchestrator: 'docker compose',
 
                 emulatorCount: 2,
@@ -133,6 +143,8 @@ suite('localDebugPlanTelemetryUtils', () => {
             assert.strictEqual(telemetry.hasDatabase, false);
             assert.strictEqual(telemetry.hasMigrationSection, false);
             assert.strictEqual(telemetry.apiTestTotalCount, 0);
+            assert.strictEqual(telemetry.hasDebugChecklist, false);
+            assert.strictEqual(telemetry.debugChecklistTotalCount, 0);
         });
 
         test('reports parse errors via planParsedOk', () => {
@@ -260,6 +272,60 @@ suite('localDebugPlanTelemetryUtils', () => {
 
             assert.strictEqual(telemetry.debugProjectTypes, 'background-worker,app-service');
             assert.strictEqual(telemetry.debugRuntimes, 'rust,dotnet');
+        });
+
+        test('counts Debug Configuration Checklist pass and fail markers', () => {
+            const markdown = [
+                '## Debug Configuration Checklist',
+                '',
+                'Debug Configuration Checklist:',
+                '✅ API (debug) — ready signal observed; curl returned 200',
+                '❌ Web (debug) — dev server never became ready',
+                '✅ Debug All Services — all member configs passed',
+            ].join('\n');
+
+            const telemetry = getLocalDebugPlanTelemetry(parseLocalDebugPlanMarkdown(markdown));
+
+            assert.strictEqual(telemetry.hasDebugChecklist, true);
+            assert.strictEqual(telemetry.debugChecklistTotalCount, 3);
+            assert.strictEqual(telemetry.debugChecklistPassedCount, 2);
+            assert.strictEqual(telemetry.debugChecklistFailedCount, 1);
+        });
+
+        test('checklist counting is robust to separators, bullets, and non-entry lines', () => {
+            const markdown = [
+                '## Debug Configuration Checklist',
+                '',
+                'Debug Configuration Checklist:',              // lead-in, ignored
+                '- ✅ API (debug) - hyphen separator, bullet prefixed',
+                '✅ Web (debug) — em dash separator',
+                'Everything otherwise looks good ✅',           // trailing emoji, not a result line
+                '❌ Worker — failed to attach the debugger',
+            ].join('\n');
+
+            const telemetry = getLocalDebugPlanTelemetry(parseLocalDebugPlanMarkdown(markdown));
+
+            assert.strictEqual(telemetry.hasDebugChecklist, true);
+            assert.strictEqual(telemetry.debugChecklistPassedCount, 2);
+            assert.strictEqual(telemetry.debugChecklistFailedCount, 1);
+            assert.strictEqual(telemetry.debugChecklistTotalCount, 3);
+        });
+
+        test('reports a missing Debug Configuration Checklist as absent', () => {
+            const markdown = [
+                '## Debug Configurations',
+                '',
+                '| Generate | Debug Config Name | Project Type | Runtime |',
+                '|---|---|---|---|',
+                '| [x] | API | functions | node-ts |',
+            ].join('\n');
+
+            const telemetry = getLocalDebugPlanTelemetry(parseLocalDebugPlanMarkdown(markdown));
+
+            assert.strictEqual(telemetry.hasDebugChecklist, false);
+            assert.strictEqual(telemetry.debugChecklistTotalCount, 0);
+            assert.strictEqual(telemetry.debugChecklistPassedCount, 0);
+            assert.strictEqual(telemetry.debugChecklistFailedCount, 0);
         });
     });
 });

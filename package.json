@@ -408,6 +408,11 @@
                 "category": "Azure"
             },
             {
+                "command": "copilotOnRails.openDeployResultView",
+                "title": "%copilotOnRails.openDeployResultView%",
+                "category": "Azure"
+            },
+            {
                 "command": "copilotOnRails.openRequirementsView",
                 "title": "%copilotOnRails.openRequirementsView%",
                 "category": "Azure"
@@ -1019,13 +1024,17 @@
         "lint": "eslint --max-warnings 0",
         "test": "vscode-test",
         "all": "npm i && npm run lint && npm run build && npm run package && npm test",
-        "api-extractor": "cd api && npm run api-extractor"
+        "api-extractor": "cd api && npm run api-extractor",
+        "eval:drift": "node evals/check-agent-drift.ts",
+        "eval:cor:graders:certify": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/src/graderCertification.ts",
+        "eval:cor:thresholds:validate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/src/releaseThresholds.ts evals/release-thresholds.v1.json"
     },
     "devDependencies": {
         "@azure/arm-msi": "^2.1.0",
         "@azure/arm-resources-subscriptions": "^3.0.0-beta.1",
         "@microsoft/api-extractor": "^7.58.2",
         "@microsoft/vscode-azext-eng": "^1.1.0-alpha.1",
+        "@modelcontextprotocol/server": "^2.0.0-beta.4",
         "@types/fs-extra": "^11.0.4",
         "@types/node": "22.x",
         "@types/semver": "^7.7.1",
@@ -1040,7 +1049,7 @@
         "esbuild-plugin-copy": "*",
         "mermaid": "^11.15.0",
         "sass": "~1.79.6",
-        "tsx": "*"
+        "typescript-eslint": "^8.61.1"
     },
     "dependencies": {
         "@azure/arm-resources": "^5.2.0",
@@ -1049,7 +1058,7 @@
         "@microsoft/vscode-azext-azureutils": "^4.3.0",
         "@microsoft/vscode-azext-utils": "^4.1.0",
         "@microsoft/vscode-azext-webview": "^1.0.2",
-        "@microsoft/vscode-inproc-mcp": "^0.3.0",
+        "@microsoft/vscode-inproc-mcp": "^1.0.0",
         "form-data": "^4.0.6",
         "fs-extra": "^11.3.0",
         "jsonc-parser": "^2.2.1",

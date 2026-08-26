@@ -1,0 +1,20 @@
+# expect: stackProjectUnknownKey
+# `frontent` is a typo. In a permissive schema it would leave `frontend` at its
+# default and quietly change which gates are wired — invisible in review, and
+# expensive in a run that has already been paid for.
+schemaVersion: 1
+id: typo-in-project-key
+name: Fixture
+ecosystem: node
+prompt: |
+  I need a backend API for tracking warehouse inventory — products, quantities
+  and locations. No UI, just the API.
+project:
+  frontent: none
+  api: http
+  datastore: none
+  hosting: appService
+runtime:
+  binaries: [node, npm]
+knownGaps: []
+phases: [plan]

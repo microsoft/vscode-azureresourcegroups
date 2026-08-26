@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as path from "path";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
@@ -24,11 +23,12 @@ import { replaceProjectPlanStatus, writeProjectPlanStatusAtUri } from "../utils/
 import { PREVIEW_FOLDER_RELATIVE_PATH, readPreviewPages, type PreviewPagesResult } from "../utils/previewPagesReader";
 import { getScaffoldPlanTelemetry, SCAFFOLD_PLAN_TELEMETRY_PREFIX } from "../utils/scaffoldPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 
 /** Prompt to raise max requests for guided runs below this threshold. */
 const MIN_RECOMMENDED_MAX_REQUESTS = 1000;
 
-export class ScaffoldPlanViewController extends WebviewController<Record<string, never>> {
+export class ScaffoldPlanViewController extends CopilotOnRailsWebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
     private planData: ScaffoldPlanData;
     private previewFolderUri: vscode.Uri | undefined;
@@ -159,10 +159,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
         }
         setCorProp(context, 'autopilot', confirmedAutopilot);
 
-        if (!(await ensureAgentInstructions(context, 'azure-project-scaffold'))) {
-            setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
-            return false;
-        }
+        await ensureAgentInstructions(context, 'azure-project-scaffold');
 
         const planBeforeApproval = this.sourceFileUri
             ? await writeProjectPlanStatusAtUri(this.sourceFileUri, ProjectPlanStatus.approved)
@@ -323,10 +320,7 @@ export class ScaffoldPlanViewController extends WebviewController<Record<string,
                 setCorProp(context, 'autopilot', autopilot);
 
                 const refreshOutcomeKey = 'refreshOutcome';
-                if (!(await ensureAgentInstructions(context, 'azure-project-plan'))) {
-                    setCorProp(context, refreshOutcomeKey, 'agentInstructionsMissing');
-                    return;
-                }
+                await ensureAgentInstructions(context, 'azure-project-plan');
 
                 this._isRefreshingPrereqs = true;
                 void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });

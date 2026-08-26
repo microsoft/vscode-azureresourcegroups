@@ -1,0 +1,1016 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-26T18:51:23.859Z",
+  "mode": "offline",
+  "fixtures": [
+    "sample-agent-output",
+    "reference-node-fullstack",
+    "reference-node-multiservice",
+    "reference-python-api",
+    "reference-dotnet-api",
+    "reference-go-unsupported",
+    "api-only-no-datastore"
+  ],
+  "outcome": "passed",
+  "cases": [
+    {
+      "id": "golden-requirements",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-project-plan",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-plan-gate",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "plan-gate",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-preview",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-integration-plan",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-frontend-scaffold",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "requirements-schema-version",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "requirements",
+      "expected": "schemaVersion",
+      "actual": [
+        "schemaVersion"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "project-plan-numbering",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "project-plan",
+      "expected": "nonSequentialHeading",
+      "actual": [
+        "nonSequentialHeading",
+        "nonSequentialHeading"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "plan-gate-frontend-dropped",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "plan-gate",
+      "expected": "frontendIntentMismatch",
+      "actual": [
+        "frontendIntentMismatch"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "plan-gate-preview-manifest-missing",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "plan-gate",
+      "expected": "previewManifestMissingAtGate",
+      "actual": [
+        "previewManifestMissingAtGate"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "preview-not-ready",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "preview",
+      "expected": "previewNotReady",
+      "actual": [
+        "previewNotReady"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-preview-not-embeddable",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "devServerRejectsWebviewOrigin",
+      "actual": [
+        "devServerRejectsWebviewOrigin"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-dev-script-does-not-serve",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "devScriptDoesNotServe",
+      "actual": [
+        "devScriptDoesNotServe"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-frame-busting-csp",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "previewFrameBusting",
+      "actual": [
+        "previewFrameBusting"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-api-seam-bypassed",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "apiSeamBypassed",
+      "actual": [
+        "apiSeamBypassed"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-missing-no-seed-rule",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "missingNoSeedRule",
+      "actual": [
+        "missingNoSeedRule"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-missing-backend-run-command",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "missingBackendCommand",
+      "actual": [
+        "missingBackendCommand"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-missing-route-inventory",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "missingRouteInventory",
+      "actual": [
+        "missingRouteInventory"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-route-inventory-shadowed-by-auth-heading",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-missing-api-seam",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "missingApiSeam",
+      "actual": [
+        "missingApiSeam"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-missing-service-classification",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "missingServiceClassification",
+      "actual": [
+        "missingServiceClassification"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-api-client-interface-dropped",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "missingApiClientInterface",
+      "actual": [
+        "missingApiClientInterface"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "frontend-mock-client-dropped",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "frontend-scaffold",
+      "expected": "missingMockClient",
+      "actual": [
+        "missingMockClient"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-no-seed-rule-in-heading",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-no-seed-rule-as-table-row",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-port-inside-run-command",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-missing-backend-port",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "missingBackendPort",
+      "actual": [
+        "missingBackendPort"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "integration-plan-database-section-dropped",
+      "tier": "offline",
+      "fixture": "sample-agent-output",
+      "validator": "integration-plan",
+      "expected": "missingDatabase",
+      "actual": [
+        "missingDatabase"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-debug-plan",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-debug-config",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-config",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-debug-artifacts",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-artifacts",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-runtime-app-starts",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-app-starts",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-runtime-health",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-health",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-runtime-frontend",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-frontend",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-runtime-frontend-api",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-frontend-api",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-runtime-crud",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-crud",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-table-concatenated",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "tableRowConcatenated",
+      "actual": [
+        "tableRowConcatenated",
+        "invalidGenerateMarker"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-checklist-stub",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "checklistStub",
+      "actual": [
+        "checklistStub"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-diagram-dropped",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "missingSection",
+      "actual": [
+        "missingSection"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-plan-status-regressed",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-plan",
+      "expected": "unexpectedStatus",
+      "actual": [
+        "unexpectedStatus"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-config-prelaunch-dangling",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-config",
+      "expected": "preLaunchTaskUnresolved",
+      "actual": [
+        "preLaunchTaskUnresolved"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-config-dependson-dangling",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-config",
+      "expected": "dependsOnUnresolved",
+      "actual": [
+        "dependsOnUnresolved"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-config-dependson-cycle",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-config",
+      "expected": "dependsOnCycle",
+      "actual": [
+        "dependsOnCycle"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-artifacts-unchecked-config-generated",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-artifacts",
+      "expected": "uncheckedConfigGenerated",
+      "actual": [
+        "uncheckedConfigGenerated"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-artifacts-script-not-registered",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-artifacts",
+      "expected": "scriptNotRegistered",
+      "actual": [
+        "scriptNotRegistered"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-artifacts-api-collection-empty",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-artifacts",
+      "expected": "apiCollectionEmpty",
+      "actual": [
+        "apiCollectionEmpty"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-config-task-run-options",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-config",
+      "expected": "invalidTaskRunOptions",
+      "actual": [
+        "invalidTaskRunOptions"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-config-duplicate-task-label",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-config",
+      "expected": "duplicateTaskLabels",
+      "actual": [
+        "duplicateTaskLabels",
+        "dependsOnUnresolved",
+        "dependsOnCycle"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-artifacts-extension-recommendations",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-artifacts",
+      "expected": "invalidExtensionRecommendations",
+      "actual": [
+        "invalidExtensionRecommendations"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "debug-artifacts-redacted-secret",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "debug-artifacts",
+      "expected": "redactedSecretPlaceholder",
+      "actual": [
+        "redactedSecretPlaceholder"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-app-crashes-on-boot",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-app-starts",
+      "expected": "appExitedBeforeListening",
+      "actual": [
+        "appExitedBeforeListening"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-health-returns-500",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-health",
+      "expected": "healthEndpointUnhealthy",
+      "actual": [
+        "healthEndpointUnhealthy"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-health-route-missing",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-health",
+      "expected": "healthEndpointUnhealthy",
+      "actual": [
+        "healthEndpointUnhealthy"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-frontend-not-served",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-frontend",
+      "expected": "frontendNotServed",
+      "actual": [
+        "frontendNotServed"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-frontend-calls-missing-route",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-frontend-api",
+      "expected": "frontendApiRouteMissing",
+      "actual": [
+        "frontendApiRouteMissing"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-health-collection-removed",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-health",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-crud-write-not-persisted",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-crud",
+      "expected": "crudRoundTripLost",
+      "actual": [
+        "crudRoundTripLost"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-frontend-api-unresolvable-url",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-frontend-api",
+      "expected": "frontendApiCallsUnresolvable",
+      "actual": [
+        "frontendApiCallsUnresolvable"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-frontend-api-nothing-called",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-frontend-api",
+      "expected": "frontendMakesNoApiCalls",
+      "actual": [
+        "frontendMakesNoApiCalls"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "runtime-app-starts-never-scaffolded",
+      "tier": "offline",
+      "fixture": "reference-node-fullstack",
+      "validator": "runtime-app-starts",
+      "expected": "runtimeNotAttempted",
+      "actual": [
+        "runtimeNotAttempted"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-service-fidelity",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-datastore-fidelity",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "datastore-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-planned-service-dropped",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "plannedServiceMissing",
+      "actual": [
+        "plannedServiceMissing"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-service-invented",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "unplannedServiceScaffolded",
+      "actual": [
+        "unplannedServiceScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-frontend-missing",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "frontendMissingFromScaffold",
+      "actual": [
+        "frontendMissingFromScaffold",
+        "plannedServiceMissing",
+        "serviceFrameworkMismatch"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-frontend-invented",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "frontendNotPlanned",
+      "actual": [
+        "frontendNotPlanned",
+        "unexpectedFrontendSection"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-language-swapped",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "serviceLanguageMismatch",
+      "actual": [
+        "serviceLanguageMismatch"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-framework-swapped",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "serviceFrameworkMismatch",
+      "actual": [
+        "serviceFrameworkMismatch"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-plan-declares-no-services",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "service-fidelity",
+      "expected": "planDeclaresNoServices",
+      "actual": [
+        "planDeclaresNoServices"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-datastore-import-swapped",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "datastore-fidelity",
+      "expected": "plannedDatastoreNotWired",
+      "actual": [
+        "plannedDatastoreNotWired",
+        "unplannedDatastoreWired"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-datastore-invented",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "datastore-fidelity",
+      "expected": "unplannedDatastoreWired",
+      "actual": [
+        "unplannedDatastoreWired"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-datastore-dependency-dropped",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "datastore-fidelity",
+      "expected": "datastoreDependencyMissing",
+      "actual": [
+        "datastoreDependencyMissing"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-resource-never-wired",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "datastore-fidelity",
+      "expected": "plannedResourceNotWired",
+      "actual": [
+        "plannedResourceNotWired"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-services-required-table-unreadable",
+      "tier": "offline",
+      "fixture": "reference-node-multiservice",
+      "validator": "datastore-fidelity",
+      "expected": "plannedResourcesUnreadable",
+      "actual": [
+        "plannedResourcesUnreadable"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-service-fidelity",
+      "tier": "offline",
+      "fixture": "reference-python-api",
+      "validator": "service-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-datastore-fidelity",
+      "tier": "offline",
+      "fixture": "reference-python-api",
+      "validator": "datastore-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-datastore-swapped-python",
+      "tier": "offline",
+      "fixture": "reference-python-api",
+      "validator": "datastore-fidelity",
+      "expected": "unplannedDatastoreWired",
+      "actual": [
+        "plannedDatastoreNotWired",
+        "unplannedDatastoreWired"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-datastore-unwired-python",
+      "tier": "offline",
+      "fixture": "reference-python-api",
+      "validator": "datastore-fidelity",
+      "expected": "plannedDatastoreNotWired",
+      "actual": [
+        "plannedDatastoreNotWired",
+        "unplannedDatastoreWired"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-nothing-scaffolded-python",
+      "tier": "offline",
+      "fixture": "reference-python-api",
+      "validator": "datastore-fidelity",
+      "expected": "noServicesScaffolded",
+      "actual": [
+        "noServicesScaffolded"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-orm-owns-the-driver-python",
+      "tier": "offline",
+      "fixture": "reference-python-api",
+      "validator": "datastore-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-service-fidelity",
+      "tier": "offline",
+      "fixture": "reference-dotnet-api",
+      "validator": "service-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-datastore-fidelity",
+      "tier": "offline",
+      "fixture": "reference-dotnet-api",
+      "validator": "datastore-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-datastore-swapped-dotnet",
+      "tier": "offline",
+      "fixture": "reference-dotnet-api",
+      "validator": "datastore-fidelity",
+      "expected": "plannedDatastoreNotWired",
+      "actual": [
+        "plannedDatastoreNotWired",
+        "unplannedDatastoreWired"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "fidelity-orm-owns-the-driver-dotnet",
+      "tier": "offline",
+      "fixture": "reference-dotnet-api",
+      "validator": "datastore-fidelity",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-service-fidelity",
+      "tier": "offline",
+      "fixture": "reference-go-unsupported",
+      "validator": "service-fidelity",
+      "expected": "ecosystemNotSupported",
+      "actual": [
+        "ecosystemNotSupported"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-datastore-fidelity",
+      "tier": "offline",
+      "fixture": "reference-go-unsupported",
+      "validator": "datastore-fidelity",
+      "expected": "ecosystemNotSupported",
+      "actual": [
+        "ecosystemNotSupported"
+      ],
+      "passed": true,
+      "durationMs": 0
+    },
+    {
+      "id": "golden-integration-plan",
+      "tier": "offline",
+      "fixture": "api-only-no-datastore",
+      "validator": "integration-plan",
+      "expected": "passed",
+      "actual": [],
+      "passed": true,
+      "durationMs": 0
+    }
+  ]
+}

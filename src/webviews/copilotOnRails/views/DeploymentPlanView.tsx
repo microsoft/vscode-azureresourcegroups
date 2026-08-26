@@ -22,7 +22,7 @@ function format(template: string, ...args: string[]): string {
 }
 
 type SkuKey = `sku:${number}`;
-type SettingKey = 'subscription' | 'location';
+type SettingKey = 'location';
 
 type FeedbackItem =
     | { id: string; kind: 'dropdown'; cell: SkuKey; rowIdx: number; field: string; from: string; to: string }
@@ -46,7 +46,7 @@ function buildFeedbackPrompt(items: FeedbackItem[]): string {
         .filter(t => t.length > 2);
 
     const lines: string[] = [
-        'Please revise the deployment plan based on my feedback and update plan.md.',
+        'Please revise the deployment plan based on my feedback and update the prepare-plan.json',
         'Keep existing sections unchanged unless a change below implies otherwise. Wait for my approval after updating the file.',
         '',
     ];
@@ -79,14 +79,9 @@ export const DeploymentPlanView = (): JSX.Element => {
         [feedbackItems, freeformDraft],
     );
 
-    const isAlreadyApproved = useMemo(() => {
-        const s = plan?.status?.trim().toLowerCase();
-        return s === 'approved';
-    }, [plan?.status]);
-
     const missingRequiredSelection = useMemo(
-        () => !plan?.subscription?.trim() || !plan?.locationCode?.trim(),
-        [plan?.subscription, plan?.locationCode],
+        () => !plan?.locationCode?.trim(),
+        [plan?.locationCode],
     );
 
     const editedRows = useMemo(() => {
@@ -123,7 +118,7 @@ export const DeploymentPlanView = (): JSX.Element => {
     }, []);
 
     const handleApprove = useCallback(() => {
-        if (!plan || isAlreadyApproved || missingRequiredSelection) {
+        if (!plan || missingRequiredSelection) {
             return;
         }
         if (hasEdits) {
@@ -131,42 +126,7 @@ export const DeploymentPlanView = (): JSX.Element => {
             return;
         }
         vscodeApi.postMessage({ command: 'approve', data: plan });
-    }, [vscodeApi, plan, hasEdits, isAlreadyApproved, missingRequiredSelection]);
-
-    const handleSubscriptionChange = useCallback((value: string) => {
-        if (!plan) { return; }
-        const key: SettingKey = 'subscription';
-        const original = originalSettings.current.get(key) ?? plan.subscription;
-        if (!originalSettings.current.has(key)) {
-            originalSettings.current.set(key, plan.subscription);
-        }
-
-        setPlan(prev => {
-            if (!prev) { return prev; }
-            return { ...prev, subscription: value };
-        });
-        vscodeApi.postMessage({ command: 'subscriptionChanged', data: value });
-
-        setFeedbackItems(prev => {
-            const existingIdx = prev.findIndex(i => i.kind === 'setting' && i.key === key);
-            if (value === original) {
-                originalSettings.current.delete(key);
-                if (existingIdx >= 0) {
-                    const next = prev.slice();
-                    next.splice(existingIdx, 1);
-                    return next;
-                }
-                return prev;
-            }
-            const item: FeedbackItem = { id: existingIdx >= 0 ? prev[existingIdx].id : nextId(), kind: 'setting', key, field: 'Subscription', from: original, to: value };
-            if (existingIdx >= 0) {
-                const next = prev.slice();
-                next[existingIdx] = item;
-                return next;
-            }
-            return [...prev, item];
-        });
-    }, [vscodeApi, plan]);
+    }, [vscodeApi, plan, hasEdits, missingRequiredSelection]);
 
     const handleLocationChange = useCallback((value: string) => {
         if (!plan) { return; }
@@ -174,7 +134,7 @@ export const DeploymentPlanView = (): JSX.Element => {
         const locations = plan.availableLocations ?? [];
         const selected = locations.find(l => l.code === value);
         const displayValue = selected ? `${selected.name} (${selected.code})` : value;
-        const originalDisplay = plan.location ? `${plan.location} (${plan.locationCode})` : plan.locationCode;
+        const originalDisplay = formatLocation(plan.location, plan.locationCode);
         const original = originalSettings.current.get(key) ?? originalDisplay;
         if (!originalSettings.current.has(key)) {
             originalSettings.current.set(key, originalDisplay);
@@ -279,14 +239,10 @@ export const DeploymentPlanView = (): JSX.Element => {
                 originalSkuValues.current.delete(item.cell);
             } else if (item?.kind === 'setting') {
                 // Revert the setting to its original value
+                // Parse "Name (code)" back to parts
                 const original = item.from;
-                if (item.key === 'subscription') {
-                    setPlan(p => p ? { ...p, subscription: original } : p);
-                } else if (item.key === 'location') {
-                    // Parse "Name (code)" back to parts
-                    const match = original.match(/^(.+?)\s*\(([^)]+)\)$/);
-                    setPlan(p => p ? { ...p, location: match?.[1] ?? original, locationCode: match?.[2] ?? original } : p);
-                }
+                const match = original.match(/^(.+?)\s*\(([^)]+)\)$/);
+                setPlan(p => p ? { ...p, location: match?.[1] ?? original, locationCode: match?.[2] ?? original } : p);
                 originalSettings.current.delete(item.key);
             }
             return prev.filter(i => i.id !== id);
@@ -310,12 +266,8 @@ export const DeploymentPlanView = (): JSX.Element => {
                     mutateSku(item.rowIdx, item.from);
                 } else if (item.kind === 'setting') {
                     const original = item.from;
-                    if (item.key === 'subscription') {
-                        setPlan(p => p ? { ...p, subscription: original } : p);
-                    } else if (item.key === 'location') {
-                        const match = original.match(/^(.+?)\s*\(([^)]+)\)$/);
-                        setPlan(p => p ? { ...p, location: match?.[1] ?? original, locationCode: match?.[2] ?? original } : p);
-                    }
+                    const match = original.match(/^(.+?)\s*\(([^)]+)\)$/);
+                    setPlan(p => p ? { ...p, location: match?.[1] ?? original, locationCode: match?.[2] ?? original } : p);
                 }
             }
             return [];
@@ -377,9 +329,6 @@ export const DeploymentPlanView = (): JSX.Element => {
                         <div className='headerTop'>
                             <div>
                                 <h1>{strings.title}</h1>
-                                <div className='metadataBadges'>
-                                    {plan.status && plan.status !== 'Unknown' && <span className='badge status'>{plan.status}</span>}
-                                </div>
                             </div>
                             <div className='headerActions'>
                                 <Tooltip content={strings.feedbackButtonTooltip} relationship='label'>
@@ -404,13 +353,13 @@ export const DeploymentPlanView = (): JSX.Element => {
                                     />
                                 </Tooltip>
                                 <Tooltip
-                                    content={isAlreadyApproved ? strings.approveButtonAlreadyApprovedTooltip : missingRequiredSelection ? strings.approveButtonMissingSelectionTooltip : strings.approveButtonTooltip}
+                                    content={missingRequiredSelection ? strings.approveButtonMissingSelectionTooltip : strings.approveButtonTooltip}
                                     relationship='label'
                                 >
                                     <Button
                                         appearance='primary'
                                         icon={<CheckmarkRegular />}
-                                        disabled={isAwaitingRevision || isAlreadyApproved || missingRequiredSelection}
+                                        disabled={isAwaitingRevision || missingRequiredSelection}
                                         onClick={handleApprove}
                                     >
                                         {strings.approveButton}
@@ -430,29 +379,6 @@ export const DeploymentPlanView = (): JSX.Element => {
 
                 <div className='infoCards'>
                     <div className='infoCard'>
-                        <span className='infoLabel'>{strings.subscriptionLabel}<span className='requiredMarker' aria-hidden='true'> *</span></span>
-                        {plan.availableSubscriptions && plan.availableSubscriptions.length > 0 ? (
-                            <select
-                                className='cellDropdown'
-                                value={plan.subscription}
-                                disabled={isAwaitingRevision}
-                                onChange={(e) => handleSubscriptionChange(e.target.value)}
-                            >
-                                {!plan.subscription && (
-                                    <option value='' disabled>{strings.selectSubscriptionPlaceholder}</option>
-                                )}
-                                {plan.subscription && !plan.availableSubscriptions.includes(plan.subscription) && (
-                                    <option value={plan.subscription}>{plan.subscription}</option>
-                                )}
-                                {plan.availableSubscriptions.map(sub => (
-                                    <option key={sub} value={sub}>{sub}</option>
-                                ))}
-                            </select>
-                        ) : (
-                            <span className='infoValue'>{plan.subscription}</span>
-                        )}
-                    </div>
-                    <div className='infoCard'>
                         <span className='infoLabel'>{strings.locationLabel}<span className='requiredMarker' aria-hidden='true'> *</span></span>
                         {plan.availableLocations && plan.availableLocations.length > 0 ? (
                             <select
@@ -465,33 +391,40 @@ export const DeploymentPlanView = (): JSX.Element => {
                                     <option value='' disabled>{strings.selectLocationPlaceholder}</option>
                                 )}
                                 {plan.locationCode && !plan.availableLocations.some(l => l.code === plan.locationCode) && (
-                                    <option value={plan.locationCode}>{plan.location} ({plan.locationCode})</option>
+                                    <option value={plan.locationCode}>{formatLocation(plan.location, plan.locationCode)}</option>
                                 )}
                                 {plan.availableLocations.map(loc => (
                                     <option key={loc.code} value={loc.code}>{loc.name} ({loc.code})</option>
                                 ))}
                             </select>
                         ) : (
-                            <span className='infoValue'>{plan.location} <code>{plan.locationCode}</code></span>
+                            <>
+                                <span className='infoValue'>{formatLocation(plan.location, plan.locationCode)}</span>
+                                {plan.locationsUnavailable && (
+                                    <span className='infoHint'>
+                                        {plan.locationsUnavailable === 'signedOut' ? strings.locationsSignedOutHint : strings.locationsFailedHint}
+                                    </span>
+                                )}
+                            </>
                         )}
                     </div>
+                    {plan.deploymentVariables?.environmentName && (
+                        <div className='infoCard'>
+                            <span className='infoLabel'>{strings.environmentNameLabel}</span>
+                            <span className='infoValue'>{plan.deploymentVariables.environmentName}</span>
+                        </div>
+                    )}
+                    {plan.costEstimate && (
+                        <div className='infoCard'>
+                            <span className='infoLabel'>{strings.estimatedCostLabel}</span>
+                            <span className='infoValue'>{formatMonthlyCost(plan.costEstimate.monthlyUsd, plan.costEstimate.currency)}</span>
+                        </div>
+                    )}
                 </div>
 
-                {plan.architecture.length > 0 && (
-                    <details className='sectionCard' open>
-                        <summary><h2>{strings.architectureHeading}</h2></summary>
-                        {plan.architecture.map((section, i) => (
-                            <div key={i}>
-                                {section.title && <h3>{section.title}</h3>}
-                                <PlanTable table={section.table} />
-                            </div>
-                        ))}
-                    </details>
-                )}
-
                 {plan.resources.rows.length > 0 && (
-                    <details className='sectionCard'>
-                        <summary><h2>{plan.resourcesHeading || strings.azureResourcesHeading}</h2></summary>
+                    <details className='sectionCard' open>
+                        <summary><h2>{strings.azureResourcesHeading}</h2></summary>
                         <ResourcesTable
                             table={plan.resources}
                             disabled={isAwaitingRevision}
@@ -501,12 +434,59 @@ export const DeploymentPlanView = (): JSX.Element => {
                     </details>
                 )}
 
-                {plan.workspaceScan.rows.length > 0 && (
-                    <details className='sectionCard'>
-                        <summary><h2>{strings.workspaceScanHeading}</h2></summary>
-                        <PlanTable table={plan.workspaceScan} />
+                {plan.costEstimate && plan.costEstimate.breakdown.length > 0 && (
+                    <details className='sectionCard' open>
+                        <summary><h2>{strings.costEstimateHeading}</h2></summary>
+                        <table className='planTable'>
+                            <thead>
+                                <tr>
+                                    <th>{strings.costServiceHeader}</th>
+                                    <th>{strings.costSkuHeader}</th>
+                                    <th>{strings.costMonthlyHeader}</th>
+                                    <th>{strings.costNotesHeader}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {plan.costEstimate.breakdown.map((item, i) => (
+                                    <tr key={i}>
+                                        <td>{item.service}</td>
+                                        <td>{item.sku}</td>
+                                        <td>{formatMonthlyCost(item.monthlyUsd, plan.costEstimate?.currency)}</td>
+                                        <td>{item.note}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colSpan={2}><strong>{strings.costEstimateTotalLabel}</strong></td>
+                                    <td colSpan={2}><strong>{formatMonthlyCost(plan.costEstimate.monthlyUsd, plan.costEstimate.currency)}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        {plan.costEstimate.disclaimer && <p className='sectionNote'>{plan.costEstimate.disclaimer}</p>}
                     </details>
                 )}
+
+                {plan.postDeployRecommendations && plan.postDeployRecommendations.length > 0 && (
+                    <details className='sectionCard'>
+                        <summary><h2>{strings.recommendationsHeading}</h2></summary>
+                        <ul className='recommendationList'>
+                            {plan.postDeployRecommendations.map((rec, i) => (
+                                <li key={i}>
+                                    <div className='recommendationTitle'>
+                                        <strong>{rec.title}</strong>
+                                        {rec.effort && <span className={`badge effort ${rec.effort}`}>{strings.recommendationEffortLabel}: {rec.effort}</span>}
+                                    </div>
+                                    <div className='recommendationReason'>{rec.reason}</div>
+                                    {rec.services && rec.services.length > 0 && (
+                                        <div className='recommendationServices'>{rec.services.join(', ')}</div>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </details>
+                )}
+
             </div>
 
             {drawerOpen && !isAwaitingRevision && (
@@ -665,28 +645,33 @@ const SubmitEditsDialog = ({ strings, open, editCount, onCancel, onSubmit }: Sub
     );
 };
 
-const PlanTable = ({ table }: { table: DeploymentPlanTable }): JSX.Element => (
-    <table className='planTable'>
-        <thead>
-            <tr>{table.headers.map((h, i) => <th key={i}>{h}</th>)}</tr>
-        </thead>
-        <tbody>
-            {table.rows.map((row, ri) => (
-                <tr key={ri}>
-                    {row.map((cell, ci) => <td key={ci}>{cell}</td>)}
-                </tr>
-            ))}
-        </tbody>
-    </table>
-);
+/** Formats a location as `Display Name (code)`, or just the code when the display name is unknown. */
+function formatLocation(name: string, code: string): string {
+    return name ? `${name} (${code})` : code;
+}
 
+/** Formats a monthly cost figure, e.g. `$23.00/mo`. */
+function formatMonthlyCost(monthlyUsd: number, currency?: string): string {
+    const symbol = !currency || currency === 'USD' ? '$' : `${currency} `;
+    return `${symbol}${monthlyUsd.toFixed(2)}/mo`;
+}
+
+// Keys are the resource labels rendered in the first column of the resources table — the
+// friendly names the prepare-plan.json parser derives from `services[].name`.
 const skuOptions: Record<string, string[]> = {
     'Static Web Apps': ['Free', 'Standard'],
-    'Functions App': ['Consumption (Y1)', 'Premium (EP1)', 'Premium (EP2)', 'Premium (EP3)'],
-    'Storage Account': ['Standard LRS (required by Functions)', 'Standard GRS', 'Standard ZRS'],
+    'Functions App': ['Consumption (Y1)', 'FlexConsumption (FC1)', 'Premium (EP1)', 'Premium (EP2)', 'Premium (EP3)'],
+    'Storage Account': ['Standard_LRS', 'Standard_GRS', 'Standard_ZRS'],
     'Cosmos DB account': ['Serverless, NoSQL', 'Provisioned (400 RU/s), NoSQL', 'Provisioned (1000 RU/s), NoSQL'],
-    'Key Vault': ['Standard', 'Premium'],
+    'Key Vault': ['standard', 'premium'],
     'Log Analytics Workspace': ['PerGB2018', 'CapacityReservation', 'Free'],
+    'App Service': ['F1', 'B1', 'B2', 'S1', 'P0v3', 'P1v3'],
+    'App Service Plan': ['F1', 'B1', 'B2', 'S1', 'P0v3', 'P1v3'],
+    'Container App': ['Consumption', 'Dedicated'],
+    'PostgreSQL Flexible Server': ['Standard_B1ms', 'Standard_B2s', 'Standard_D2ds_v4'],
+    'MySQL Flexible Server': ['Standard_B1ms', 'Standard_B2s', 'Standard_D2ds_v4'],
+    'Azure OpenAI': ['S0'],
+    'Azure Cache for Redis': ['Basic C0', 'Basic C1', 'Standard C1'],
 };
 
 interface ResourcesTableProps {
@@ -700,7 +685,7 @@ const ResourcesTable = ({ table, disabled, editedRows, onSkuChange }: ResourcesT
     const skuColIdx = table.headers.length - 1;
 
     return (
-        <table className='planTable'>
+        <table className='planTable resourcesTable'>
             <thead>
                 <tr>{table.headers.map((h, i) => <th key={i}>{h}</th>)}</tr>
             </thead>

@@ -1,0 +1,158 @@
+{
+  "services": [
+    {
+      "name": "functions",
+      "sku": "FlexConsumption (FC1)",
+      "purpose": "Host attendance-api Azure Functions v4 (HTTP triggers). Node 20, TypeScript.",
+      "component": "attendance-api",
+      "region": "westus2",
+      "resourceName": "func-attendance-dev-7c42"
+    },
+    {
+      "name": "staticWebApp",
+      "sku": "Free",
+      "purpose": "Host attendance-web React SPA (static Vite build). Free tier CDN.",
+      "component": "attendance-web",
+      "region": "westus2",
+      "resourceName": "swa-attendance-dev-7c42"
+    },
+    {
+      "name": "storageAccount",
+      "sku": "Standard_LRS",
+      "purpose": "AzureWebJobsStorage for the Functions host plus the Flex Consumption deployment package.",
+      "component": "attendance-api",
+      "region": "westus2",
+      "resourceName": "stattendancedev7c42"
+    },
+    {
+      "name": "postgresFlexibleServer",
+      "sku": "Standard_B1ms",
+      "purpose": "Application relational DB (policies, attendance entries, future plans).",
+      "component": "attendance-api",
+      "region": "westus2",
+      "resourceName": "psql-attendance-dev-7c42",
+      "version": "16"
+    },
+    {
+      "name": "keyVault",
+      "sku": "standard",
+      "purpose": "Store the DB admin password and the Entra ID client secret. Function App reads via managed identity.",
+      "component": "attendance-api",
+      "region": "westus2",
+      "resourceName": "kv-attendance-dev-7c42"
+    },
+    {
+      "name": "userAssignedIdentity",
+      "sku": "n/a",
+      "purpose": "Managed identity for the Function App to access Storage, Key Vault, and Postgres without secrets.",
+      "component": "attendance-api",
+      "region": "westus2",
+      "resourceName": "id-attendance-dev-7c42"
+    },
+    {
+      "name": "logAnalyticsWorkspace",
+      "sku": "PerGB2018",
+      "purpose": "Backing workspace for Application Insights and platform diagnostics.",
+      "component": "shared",
+      "region": "westus2",
+      "resourceName": "log-attendance-dev-7c42"
+    },
+    {
+      "name": "applicationInsights",
+      "sku": "n/a",
+      "purpose": "APM + telemetry for the Function App.",
+      "component": "attendance-api",
+      "region": "westus2",
+      "resourceName": "appi-attendance-dev-7c42"
+    }
+  ],
+  "costEstimate": {
+    "monthlyUsd": 18.1,
+    "currency": "USD",
+    "breakdown": [
+      { "service": "Azure Functions Flex Consumption (FC1)", "sku": "FC1 (Node 20)", "monthlyUsd": 0.0, "note": "First 100k executions + 100k GB-seconds free monthly grant; this workload stays within the grant." },
+      { "service": "Azure Static Web Apps", "sku": "Free", "monthlyUsd": 0.0, "note": "Free tier: 100 GB bandwidth/mo, 2 custom domains, SSL included." },
+      { "service": "Storage Account (Blob + Files)", "sku": "Standard_LRS", "monthlyUsd": 1.0, "note": "<5 GB storage, low transaction volume." },
+      { "service": "PostgreSQL Flexible Server", "sku": "Standard_B1ms (Burstable, 1 vCPU, 2 GiB)", "monthlyUsd": 12.5, "note": "Burstable compute; single AZ; 7-day PITR." },
+      { "service": "PostgreSQL storage + backup", "sku": "32 GiB", "monthlyUsd": 4.0, "note": "Included storage + free backup up to server size." },
+      { "service": "Key Vault", "sku": "standard", "monthlyUsd": 0.1, "note": "$0.03 per 10k operations; a handful of secret reads/mo." },
+      { "service": "Application Insights + Log Analytics", "sku": "PerGB2018", "monthlyUsd": 0.5, "note": "First 5 GB/mo ingestion free; small overage." }
+    ],
+    "disclaimer": "Estimates based on public Azure retail pricing for westus2 at plan time. Actual cost varies with traffic and storage growth. Review https://azure.microsoft.com/pricing/calculator for authoritative numbers."
+  },
+  "rejectedAlternatives": [
+    { "service": "App Service (B1)", "reason": "The API is an Azure Functions v4 project — Functions Flex Consumption is the native, cheaper (scale-to-zero) fit." },
+    { "service": "Azure SQL Database (Basic)", "reason": "The schema uses PostgreSQL-specific types (uuid, timestamptz); migrating dialects would violate deploy-as-is." },
+    { "service": "Cosmos DB Serverless", "reason": "Compliance queries need relational aggregates over date ranges; NoSQL rework rejected." },
+    { "service": "Container Apps", "reason": "No Dockerfile present; the app builds to the Functions runtime, so container hosting adds cost with no benefit." }
+  ],
+  "naming": {
+    "pattern": "{abbreviation}-{project}-{env}-{suffix}",
+    "resourcePrefix": "attendance-dev-7c42",
+    "resources": [
+      { "type": "resourceGroup", "name": "rg-attendance-dev-7c42" },
+      { "type": "functionApp", "name": "func-attendance-dev-7c42" },
+      { "type": "staticWebApp", "name": "swa-attendance-dev-7c42" },
+      { "type": "storageAccount", "name": "stattendancedev7c42" },
+      { "type": "postgresFlexibleServer", "name": "psql-attendance-dev-7c42" },
+      { "type": "postgresDatabase", "name": "attendance" },
+      { "type": "keyVault", "name": "kv-attendance-dev-7c42" },
+      { "type": "userAssignedIdentity", "name": "id-attendance-dev-7c42" },
+      { "type": "logAnalytics", "name": "log-attendance-dev-7c42" },
+      { "type": "appInsights", "name": "appi-attendance-dev-7c42" }
+    ]
+  },
+  "quotas": [
+    {
+      "resource": "Microsoft.DBforPostgreSQL/flexibleServers",
+      "region": "westus2",
+      "required": 1,
+      "available": 10,
+      "sufficient": true,
+      "provider": "Microsoft.DBforPostgreSQL",
+      "currentUsage": 0,
+      "currentLimit": 10,
+      "adjustable": true,
+      "source": "cli"
+    }
+  ],
+  "assumptions": [
+    "PostgreSQL admin password will be auto-generated at deploy time and stored in Key Vault (never surfaced to the user).",
+    "Microsoft Entra ID app registration already exists; its client ID and tenant ID are supplied as deployment variables and the client secret is stored in Key Vault.",
+    "Static Web App is provisioned separately from Functions (BYO backend model) with CORS on the Function App locked to the SWA hostname.",
+    "Region westus2 chosen for combined Postgres Flexible Server + Functions Flex Consumption availability; fallback to westus3 if quota healing is needed."
+  ],
+  "iacFormat": "bicep",
+  "appDbName": "attendance",
+  "postDeployRecommendations": [
+    { "title": "Enable Application Insights availability tests against /api/health", "reason": "Continuous uptime monitoring with alerting.", "effort": "low", "services": ["appInsights"] },
+    { "title": "Extend PostgreSQL PITR retention and enable geo-redundant backup", "reason": "Default 7-day PITR is thin for attendance history that must be retained.", "effort": "medium", "services": ["postgresFlexibleServer"] },
+    { "title": "Move Postgres to VNet + private endpoint", "reason": "Public network access with firewall is convenient but not defense-in-depth.", "effort": "medium", "services": ["postgresFlexibleServer"] }
+  ],
+  "instrumentation": {
+    "appInsightsEnabled": true,
+    "reason": "The Function App will be provisioned with APPLICATIONINSIGHTS_CONNECTION_STRING wired to the shared workspace-based Application Insights resource."
+  },
+  "deploymentVariables": {
+    "environmentName": "attendance-dev-7c42",
+    "location": "westus2",
+    "sessionId": "7c42a108-25b6-4f0e-9a3d-1c8f5b2e40d7",
+    "deployedBy": "Test Fixture"
+  },
+  "quotaValidation": {
+    "verified": true,
+    "method": "cli",
+    "verifiedRegion": "westus2",
+    "verifiedSku": "Standard_B1ms",
+    "checkedRegions": ["westus2", "westus3"],
+    "failedResources": [],
+    "offerRestrictions": [
+      { "provider": "Microsoft.DBforPostgreSQL", "region": "westus2", "restricted": false }
+    ],
+    "offerRestrictionsVerified": true
+  },
+  "deployStrategy": {
+    "codeDeployPattern": "oryx-auto",
+    "reason": "Azure Functions Flex Consumption uses zip deploy with remote build. tsc runs via the Functions build pipeline; no native modules."
+  }
+}

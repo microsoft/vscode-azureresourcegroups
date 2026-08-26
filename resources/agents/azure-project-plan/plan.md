@@ -206,7 +206,7 @@ For each page above, list 3–6 representative records using that page's primary
 1. Run **azure-project-scaffold** to execute this plan
 2. Run **azure-project-integrate** to wire the frontend to live data, smoke-test the backend, and create the migrations
 3. Run **azure-debug-plan** → **azure-debug-generate** for Docker emulators and VS Code debugging
-4. Run **azure-prepare** → **azure-deploy** when ready to deploy
+4. Run the **azure-deploy** agent when ready; it uses **azure-app-onboard** for architecture, cost estimation, IaC generation, provisioning, and health verification
 ````
 
 #### After Writing the Plan
@@ -419,7 +419,7 @@ The webview watches the entire `.azure/.preview-temp/` folder, so the manifest u
 | Blob Storage | `STORAGE_CONNECTION_STRING` | `UseDevelopmentStorage=true` |
 | Queue Storage | `STORAGE_CONNECTION_STRING` | `UseDevelopmentStorage=true` |
 | Table Storage | `STORAGE_CONNECTION_STRING` | `UseDevelopmentStorage=true` |
-| PostgreSQL | `DATABASE_URL` | `postgresql://localdev:localdevpassword@localhost:5432/{dbname}` |
+| PostgreSQL | `DATABASE_URL` | `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/{dbname}` |
 | CosmosDB | `COSMOSDB_CONNECTION_STRING` | `AccountEndpoint=https://localhost:8081/;AccountKey=...` |
 | Redis | `REDIS_URL` | `redis://localhost:6379` |
 | Azure SQL | `SQL_CONNECTION_STRING` | `Server=localhost,1433;Database={db};...` |

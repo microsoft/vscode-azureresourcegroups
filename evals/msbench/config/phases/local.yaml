@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/vscode-copilot-evaluation/main/doc/references/TestConfig.schema.json
+
+# Phase: `local-dev` — the local development / F5-debugging phase.
+#
+# See config/phases/plan.yaml for what a phase file is and why the layer exists.
+# This one drives `azure-debug-plan`, which scans an already-scaffolded project
+# and writes `.azure/vscode-debug-plan.md`.
+#
+# The workspace it needs is a whole scaffolded project, and the stimuli here do
+# NOT seed one. They seed only the approved plan and then chain the *real*
+# scaffold agent as a setup turn, using `promptSteps[].chatMode`. That mirrors
+# evals/local-dev/eval.yaml, which explains the reasoning: chain the real scaffold
+# agent "so the debug agents analyse genuine generated output rather than a
+# hand-written fixture that can drift from what scaffold emits". A seeded
+# scaffolded project would be exactly such a fixture, and a much larger one than
+# a single plan document.
+#
+# The top-level chatMode below is therefore the mode of the *graded* turns.
+# The setup turn overrides it per step — see the stimuli.
+
+chatMode: azure-debug-plan
+
+# Off, for the same reason as the scaffold phase, and here the argument is
+# stronger rather than weaker: these stimuli chain a full scaffold before the
+# phase under test even begins, so `node_modules` is guaranteed present by the
+# time the graded turns run.
+#
+# The schema's default is `true` — snapshot the entire workspace into the `files`
+# table after each step — and its description warns that doing so "can produce
+# multi-gigabyte session.sqlite files (and time out the run)".
+#
+# Disabling it makes the `files` table unavailable, and the schema enforces that
+# rather than letting it degrade quietly:
+#
+#   "To avoid silent/confusing results, the run fails fast if snapshotting is
+#    disabled while any assertion queries the 'files' table."
+#
+# So `file-exists` graders port to `exec:` here instead of to SQL over `files`.
+# exec/command, tool-call and LLM-response assertions all keep working with
+# snapshotting off, which is everything these stimuli use. build-config.ts
+# enforces the same rule locally so the mistake is caught before submitting.
+snapshotWorkspace: false
+
+# Identical to config/phases/scaffold.yaml: unpack the agent definitions from the
+# VSIX under test (never cloned, so the instructions cannot drift from the build),
+# then copy in the seeded workspace if the stimulus asked for one.
+#
+# Every agent in the chain — azure-project-scaffold for the setup turn,
+# azure-debug-plan and azure-debug-generate for the graded ones — is seeded by
+# this single copy, because it unpacks resources/agents/* wholesale.
+script: |
+  set -eux
+  VSIX=/agent/assets/extensions/vscode-azureresourcegroups.vsix
+  rm -rf /tmp/corext && mkdir -p /tmp/corext
+  unzip -q -o "$VSIX" 'extension/resources/agents/*' -d /tmp/corext
+  mkdir -p /workspace/.github/agents
+  cp -r /tmp/corext/extension/resources/agents/. /workspace/.github/agents/
+  ls -la /workspace/.github/agents/
+  if [ -d /agent/assets/workspace ]; then
+    cp -r /agent/assets/workspace/. /workspace/
+  fi
+  ls -la /workspace/ /workspace/.azure 2>&1 || true

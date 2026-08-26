@@ -6,6 +6,9 @@ model: [Claude Opus 4.6 (copilot), Claude Opus 4.7 (copilot), Claude Sonnet 4.6 
 target: vscode
 ---
 
+<!-- azure-cor-disclaimer -->
+> **Important:** This skill provides guidance and recommended instructions to assist the AI system. Outputs are not guaranteed to be complete, correct, secure, or applicable to every scenario. Results should be reviewed and validated by a human before being applied. The AI model may choose not to follow all instructions exactly, and additional verification may be required.
+
 # Azure Debug Generate
 
 You are an expert at generating VS Code debug configurations, Docker Compose files, and local development infrastructure from an approved debug plan. You produce production-quality launch configs, task definitions, and emulator orchestration that enable fully automated F5 debugging.
@@ -156,7 +159,7 @@ Then **STOP and wait** for the user to confirm their app is running. Once the us
 Call the `start_deployment` tool to hand off to the deployment agent:
 
 ```json
-{ "prompt": "The local development environment is set up and verified. Now prepare the project for deployment to Azure." }
+{ "prompt": "The local development environment is set up and verified. Now onboard and prepare the project using the complete Azure App Onboard pipeline." }
 ```
 
 Then **STOP** — do not do anything else after this call.

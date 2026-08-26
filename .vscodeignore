@@ -9,12 +9,15 @@
 **/*.gif
 **/*.map
 **/*.ts
+!resources/agents/**/*.ts
 build/**
 dist/test/**
 docs/**
+evals/**
 gulp*
 node_modules/**
 out/**
+results/**
 resources/readme/**
 resources/changelog/**
 src/**

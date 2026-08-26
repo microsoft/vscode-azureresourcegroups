@@ -1,0 +1,150 @@
+name: MSBench Evals
+
+# Runs the project-plan eval on MSBench against a real VSIX build of this
+# extension, rather than against agent instructions in isolation.
+#
+# Split into two jobs on purpose:
+#
+#   build - packages the VSIX and asserts what ended up inside it, using the same
+#           guards run.sh applies locally. The shared build template
+#           (microsoft/vscode-azuretools jobs.yml) already compiles and packages,
+#           but it never inspects the archive, so a .vscodeignore rule that drops
+#           resources/agents/ passes every other check in the repo and then shows
+#           up as an agent that mysteriously ignores its instructions. Needs no
+#           credentials, so it catches that on a PR instead of in an MSBench run.
+#   eval  - submits to MSBench. Needs Azure auth, so it is manual-only; see
+#           evals/msbench/README.md ("Running in CI") for the one-time setup.
+#
+# Unlike the credential-free gates in agent-contracts.yml, this cannot ride on
+# GITHUB_TOKEN: MSBench runs on CES, which authenticates callers by Entra client id.
+on:
+  pull_request:
+    paths:
+      - 'evals/msbench/**'
+      - '.github/workflows/msbench-evals.yml'
+      # The build job's lasting value is asserting what ends up *inside* the
+      # VSIX, which the shared build template does not check. Both inputs to
+      # that live outside evals/, so they have to trigger it themselves.
+      - '.vscodeignore'
+      - 'resources/agents/**'
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        description: 'Benchmark instance to borrow for its container image'
+        required: false
+        default: 'vscbench.say_hello'
+      stimulus:
+        description: 'Stimulus to submit. The default is the cheapest one whose answer we already know.'
+        required: false
+        default: 'scaffold-unapproved-plan'
+
+env:
+  NODE_VERSION: '22'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # Everything that can be verified without credentials.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # `stage-graders.ts` copies an allowlist of dependency-free packages out of
+      # evals/node_modules into the staged tree, so a grader's bare import (today
+      # `jsonc-parser`, for the JSON-with-comments in launch.json) resolves inside
+      # the container, which has no install step. It hard-errors rather than
+      # staging a partial tree, so without this the build job fails before the
+      # VSIX assertions it exists to run.
+      - name: Install eval dependencies
+        run: npm ci
+        working-directory: evals
+
+      - name: Build and verify the VSIX
+        run: ./evals/msbench/run.sh --build-only
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msbench-vsix
+          path: evals/msbench/assets/extensions/*.vsix
+          retention-days: 7
+
+  eval:
+    # Manual only: the Azure identity has to be allowlisted by the MSBench team
+    # before this can pass, so running it on PRs would only ever be red.
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    # A cold run is ~15 min; the timeout is generous so a slow queue does not
+    # look like a product failure.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write # Fetch an OIDC token for azure/login.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: msbench-vsix
+          path: evals/msbench/assets/extensions
+
+      # Needed here too, not just in `build`: `--skip-build` skips the VSIX, but
+      # graders are staged on every invocation because they are read straight off
+      # the working tree, and staging them needs evals/node_modules for the
+      # allowlisted packages.
+      - name: Install eval dependencies
+        run: npm ci
+        working-directory: evals
+
+      # run.sh mints the MSBench feed token with `az account get-access-token`,
+      # so it only needs an already-authenticated az. A self-hosted runner that
+      # is already signed in can skip this step entirely.
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.MSBENCH_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.MSBENCH_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.MSBENCH_AZURE_SUBSCRIPTION_ID }}
+
+      # STIMULUS is read from the environment by run.sh, the same way BENCHMARK
+      # is, so `--stimulus` on the command line still wins for a local run.
+      #
+      # It is set explicitly rather than left to run.sh's default, which is
+      # `photo-app-requirements` — a full planning run whose result would then
+      # have to be interpreted. The first CI runs are testing the *pipeline*, so
+      # they use a stimulus whose answer is already known locally (6/6 green):
+      # a red then means CI is broken, which is the only question being asked.
+      # A first run against an unknown-answer stimulus cannot separate "CI is
+      # misconfigured" from "the product changed".
+      - name: Run the MSBench eval
+        run: ./evals/msbench/run.sh --skip-build --output "$RUNNER_TEMP/report.json" --data_dir "$RUNNER_TEMP/msbench-data"
+        env:
+          BENCHMARK: ${{ inputs.benchmark }}
+          STIMULUS: ${{ inputs.stimulus }}
+
+      # Keep the report and per-instance data so a failure can be diagnosed from
+      # the transcript and patch rather than by re-running.
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msbench-results
+          path: |
+            ${{ runner.temp }}/report.json
+            ${{ runner.temp }}/msbench-data/**
+          if-no-files-found: ignore

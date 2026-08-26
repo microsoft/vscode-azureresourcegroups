@@ -14,13 +14,14 @@
 1. **Update plan progressively** — Mark steps complete as you go; update **Last Updated** timestamp on every status change
 2. ❌ **Destructive actions require `ask_user`** — Always confirm before overwriting, deleting, or modifying existing files
 3. **Preserve existing config** — Never silently overwrite project configuration files or `docker-compose.yml`. Merge or ask first.
-4. **Scope — VS Code debug setup only** — This instruction set classifies the workspace and generates a plan. Cloud deployment is handled by **azure-prepare** → **azure-validate** → **azure-deploy**.
+4. **Scope — VS Code debug setup only** — This instruction set classifies the workspace and generates a plan. Cloud architecture, IaC generation, provisioning, and deployment are handled by the **azure-deploy** agent through the complete **azure-app-onboard** pipeline.
 ---
 
 ## Autopilot mode (overrides the approval STOP)
 **Active when** the invoking chat query begins with `[AUTOPILOT MODE]`, **or** `.azure/project-plan.md` records `executionMode: auto` or equivalent. When active, run fully unattended:
 - **Phase 0–1 still run in full**.  When generating the plan `.azure/vscode-debug-plan.md`, also record `executionMode: auto` or similar.  Follow any specific instructions per the template.
 - Skip the step that instructs to run `openLocalPlanView` and do NOT wait for approval. Set status straight to `Approved`, then invoke `azure-debug-generate` as you normally would, but with the chat arg prefixed with `[AUTOPILOT MODE] `.
+- **Reuse the project-plan prerequisites.** When `.azure/project-plan.md` already lists Prerequisites, carry them over wholesale instead of re-deriving them — see [inventory.md § Step 1](references/inventory.md) for the detail.
 - Never call `ask_user` for non-destructive steps. Scan completeness is unchanged — autopilot suppresses **the preview and approval gates only**.
 
 ## Workflow
@@ -38,7 +39,7 @@ Scan the workspace for service roots. Produce a `services[]` list.
 
 | Action | Reference |
 |--------|-----------|
-| Check for `.azure/project-plan.md` — if found, read for advisory context. **Optional.** | — |
+| Check for `.azure/project-plan.md` — if found, read it for advisory context. | — |
 | Scan all subdirectories; detect project type + runtime per service root | [classify.md](references/classify.md) |
 | If 2+ service roots: assign service IDs, deduplicate emulators, plan compound debug config | [multi-service.md](references/multi-service.md) |
 

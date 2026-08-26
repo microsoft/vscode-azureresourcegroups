@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
-import { ensureAzureDeploymentPrerequisites } from "../../../../commands/copilotOnRails/deploymentPrerequisites";
+import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
 import { buildChatOpenOptions } from "../../../../commands/copilotOnRails/openChatWithAgent";
 import { azureDeployAgent } from "../../../../constants";
 import { ext } from "../../../../extensionVariables";
@@ -16,6 +15,7 @@ import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../.
 import { type DeploymentPlanData } from "../../views/utils/deploymentPlanTypes";
 import { type DeploymentPlanViewConfiguration, type DeploymentPlanViewStrings } from "../../views/utils/viewConfigTypes";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 import { DEPLOYMENT_PLAN_TELEMETRY_PREFIX, getDeploymentPlanTelemetry } from "../utils/deploymentPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
 
@@ -26,20 +26,26 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
     return {
         title: vscode.l10n.t('Azure Deployment Plan'),
         loading: vscode.l10n.t('Loading deployment plan...'),
-        subscriptionLabel: vscode.l10n.t('Subscription'),
         locationLabel: vscode.l10n.t('Location'),
-        selectSubscriptionPlaceholder: vscode.l10n.t('Select a subscription...'),
         selectLocationPlaceholder: vscode.l10n.t('Select a location...'),
-        architectureHeading: vscode.l10n.t('Architecture'),
-        workspaceScanHeading: vscode.l10n.t('Workspace Scan'),
-        decisionsHeading: vscode.l10n.t('Decisions'),
+        locationsSignedOutHint: vscode.l10n.t('Sign in to Azure to pick a different region.'),
+        locationsFailedHint: vscode.l10n.t('Couldn\u2019t load Azure regions \u2014 showing the planned region only.'),
         azureResourcesHeading: vscode.l10n.t('Azure Resources'),
+        costEstimateHeading: vscode.l10n.t('Cost Estimate'),
+        costEstimateTotalLabel: vscode.l10n.t('Estimated monthly total'),
+        costServiceHeader: vscode.l10n.t('Service'),
+        costSkuHeader: vscode.l10n.t('SKU'),
+        costMonthlyHeader: vscode.l10n.t('Monthly'),
+        costNotesHeader: vscode.l10n.t('Notes'),
+        recommendationsHeading: vscode.l10n.t('Post-Deploy Recommendations'),
+        recommendationEffortLabel: vscode.l10n.t('Effort'),
+        environmentNameLabel: vscode.l10n.t('Environment'),
+        estimatedCostLabel: vscode.l10n.t('Estimated cost'),
         approveButton: vscode.l10n.t('Approve Plan'),
         feedbackButtonAriaLabel: vscode.l10n.t('Feedback'),
         feedbackButtonTooltip: vscode.l10n.t('Request changes to the plan before approving'),
         approveButtonTooltip: vscode.l10n.t('Approve the plan and continue with Copilot'),
-        approveButtonAlreadyApprovedTooltip: vscode.l10n.t('Plan already approved'),
-        approveButtonMissingSelectionTooltip: vscode.l10n.t('Select a subscription and location before approving the plan'),
+        approveButtonMissingSelectionTooltip: vscode.l10n.t('Select a location before approving the plan'),
         feedbackDrawerInfoTooltip: vscode.l10n.t('Your feedback will be sent to Copilot as a prompt. Copilot will revise the plan and update the file. The updated plan will reload here for your final approval.'),
         revisingBanner: vscode.l10n.t('Copilot is revising the plan…'),
         requestChangesHeading: vscode.l10n.t('Request changes'),
@@ -58,13 +64,13 @@ function getDeploymentPlanViewStrings(): DeploymentPlanViewStrings {
         cancelButton: vscode.l10n.t('Cancel'),
         submitEditsButton: vscode.l10n.t('Submit'),
         parseFailureTitle: vscode.l10n.t('We couldn\u2019t render this plan'),
-        parseFailureFallbackMessage: vscode.l10n.t('The deployment plan couldn\u2019t be rendered as a structured view. The generated markdown didn\u2019t match the expected layout.'),
+        parseFailureFallbackMessage: vscode.l10n.t('The deployment plan couldn\u2019t be rendered as a structured view. The generated plan file didn\u2019t match the expected layout.'),
         parseFailureFileLabel: vscode.l10n.t('Plan file'),
         openPlanFileButton: vscode.l10n.t('Open plan file'),
     };
 }
 
-export class DeploymentPlanViewController extends WebviewController<DeploymentPlanViewConfiguration> {
+export class DeploymentPlanViewController extends CopilotOnRailsWebviewController<DeploymentPlanViewConfiguration> {
     private planData: DeploymentPlanData;
     private sourceFileUri: vscode.Uri | undefined;
 
@@ -127,13 +133,11 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
 
     private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
         const approvalOutcomeKey = 'approvalOutcome';
-        if (!(await ensureAzureDeploymentPrerequisites(context))) {
-            setCorProp(context, approvalOutcomeKey, 'deploymentPrerequisitesMissing');
-            return false;
-        }
+        await ensureAgentInstructions(context, azureDeployAgent);
 
-        // Fresh chat session for the approval hand-off so the next phase starts with a clean context window.
-        await vscode.commands.executeCommand('workbench.action.chat.newChat');
+        // Reuse the current session so the agent continues the deployment in the
+        // conversation the user has been following, rather than dropping them into
+        // an empty chat that has lost the plan discussion.
         await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
             mode: azureDeployAgent,
             query: 'I approve the deployment plan. Continue with generating the infrastructure and deployment artifacts.',
@@ -147,10 +151,7 @@ export class DeploymentPlanViewController extends WebviewController<DeploymentPl
         return await callWithTelemetryAndErrorHandling(corId('submitDeploymentPlanFeedback'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDeploymentPlanFeedback' }, async (context: CopilotOnRailsContext) => {
                 const feedbackOutcomeKey = 'feedbackOutcome';
-                if (!(await ensureAzureDeploymentPrerequisites(context))) {
-                    setCorProp(context, feedbackOutcomeKey, 'deploymentPrerequisitesMissing');
-                    return false;
-                }
+                await ensureAgentInstructions(context, azureDeployAgent);
 
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
                 await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {

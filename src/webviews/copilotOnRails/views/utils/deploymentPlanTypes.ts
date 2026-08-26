@@ -8,25 +8,67 @@ export interface DeploymentPlanTable {
     rows: string[][];
 }
 
+/** A region the plan can target: `name` is the display name, `code` the ARM region name. */
+export interface AzureLocationOption {
+    name: string;
+    code: string;
+}
+
+export interface DeploymentPlanService {
+    name: string;
+    sku: string;
+    component: string;
+    purpose: string;
+    region: string;
+    resourceName: string;
+    /** Exact engine version for managed database services (e.g. PostgreSQL `16`). */
+    version?: string;
+}
+
+export interface DeploymentPlanCostBreakdownItem {
+    service: string;
+    sku: string;
+    monthlyUsd: number;
+    note?: string;
+}
+
+export interface DeploymentPlanCostEstimate {
+    monthlyUsd: number;
+    currency: string;
+    breakdown: DeploymentPlanCostBreakdownItem[];
+    disclaimer?: string;
+}
+
+export interface DeploymentPlanRecommendation {
+    title: string;
+    reason: string;
+    effort?: string;
+    services?: string[];
+}
+
+export interface DeploymentPlanDeploymentVariables {
+    environmentName?: string;
+    location?: string;
+}
+
 export interface DeploymentPlanData {
-    status: string;
-    mode: string;
-    subscription: string;
-    availableSubscriptions?: string[];
+    /** Display name of the target region, resolved from the live location list. */
     location: string;
+    /** ARM region code the plan targets (e.g. `westus2`). */
     locationCode: string;
-    availableLocations?: { name: string; code: string }[];
-    architecture: { title?: string; table: DeploymentPlanTable }[];
-    workspaceScan: DeploymentPlanTable;
-    decisions: DeploymentPlanTable;
+    availableLocations?: AzureLocationOption[];
+    /**
+     * Why {@link availableLocations} is absent, so the view can explain the read-only region
+     * instead of silently dropping the picker. Omitted once the live list loads.
+     */
+    locationsUnavailable?: 'signedOut' | 'failed';
+    /** Services the plan will provision, projected into an editable `Service … SKU` table. */
     resources: DeploymentPlanTable;
-    resourcesHeading?: string;
-    /** The `Attribute | Value` requirements table (Classification, Scale, Budget, Subscription, Location). */
-    requirements?: DeploymentPlanTable;
-    /** Selected deployment recipe as authored (e.g. `AZD (Bicep)`). */
-    recipe?: string;
-    /** Selected architecture stack as authored (e.g. `Serverless + Static Web Apps`). */
-    stack?: string;
+    /** Services the plan will provision, in plan order. */
+    services?: DeploymentPlanService[];
+    costEstimate?: DeploymentPlanCostEstimate;
+    postDeployRecommendations?: DeploymentPlanRecommendation[];
+    deploymentVariables?: DeploymentPlanDeploymentVariables;
     parseError?: DeploymentPlanParseError;
 }
 

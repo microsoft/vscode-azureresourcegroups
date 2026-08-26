@@ -8,6 +8,8 @@ import * as vscode from 'vscode';
 import { copilotOnRailsCommandIds } from "../../../commands/copilotOnRails/registerCopilotOnRailsCommands";
 import { DEBUG_PLAN_FILE_GLOB, PROJECT_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
 import { CreateProjectViewController } from "./controllers/CreateProjectViewController";
+import { getRecentPrompts } from "./recentPrompts";
+import { consumeReloadResumePrompt } from "./reloadResumePrompt";
 import { writePendingCreateMarker } from "./resumePendingCreateWithCopilot";
 
 const localDev = vscode.l10n.t('Local Development');
@@ -50,6 +52,18 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
     }
 
     // Nothing detected => start from scratch.
+    openCreateProjectView();
+}
+
+/** Re-opens the create view pre-filled after a reload-to-discover-agents; no-ops when nothing was stashed. */
+export async function resumeCreateProjectViewAfterReload(): Promise<void> {
+    const resume = await consumeReloadResumePrompt();
+    if (resume) {
+        openCreateProjectView(resume.prompt, resume.model);
+    }
+}
+
+function openCreateProjectView(initialPrompt?: string, initialModel?: string): void {
     const controller = new CreateProjectViewController({
         title: vscode.l10n.t('Create with Copilot'),
         heading: vscode.l10n.t('What would you like to build?'),
@@ -63,6 +77,9 @@ export async function createProjectWithCopilot(_context: IActionContext): Promis
             'Claude Opus 4.7 (copilot)',
             'Claude Sonnet 4.6 (copilot)',
         ],
+        recentPrompts: getRecentPrompts(),
+        initialPrompt,
+        initialModel,
     });
     controller.revealToForeground();
 }

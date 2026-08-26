@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
@@ -17,6 +16,7 @@ import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotO
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { ProjectPlanStatus } from "../../views/utils/projectPlanStatus";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 import { type RunningDevServer, startDevServer } from "../utils/devServerManager";
 import { writeProjectPlanStatus } from "../utils/planStatus";
 
@@ -39,7 +39,7 @@ interface IncomingMessage {
  * UX. Feedback is forwarded to the scaffold agent as a chat prompt; the dev
  * server keeps running so the agent's edits hot-reload in the iframe.
  */
-export class FrontendPreviewViewController extends WebviewController<Record<string, never>> {
+export class FrontendPreviewViewController extends CopilotOnRailsWebviewController<Record<string, never>> {
     private devServer: RunningDevServer | undefined;
     private state: PreviewState = { status: 'starting' };
 
@@ -155,10 +155,7 @@ export class FrontendPreviewViewController extends WebviewController<Record<stri
                 setCorProp(context, 'devServerStatus', this.state.status);
 
                 const approvalOutcomeKey = 'approvalOutcome';
-                if (!(await ensureAgentInstructions(context, 'azure-project-integrate'))) {
-                    setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
-                    return;
-                }
+                await ensureAgentInstructions(context, 'azure-project-integrate');
                 // Approving the final UX preview moves the plan into the integration
                 // phase, so flip the plan status before handing off. This is a
                 // deterministic UI signal, so record it in extension code rather than

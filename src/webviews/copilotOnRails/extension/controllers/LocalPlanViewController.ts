@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
-import { WebviewController } from "@microsoft/vscode-azext-webview";
 import * as vscode from "vscode";
 import { ViewColumn } from "vscode";
 import { ensureAgentInstructions } from "../../../../commands/copilotOnRails/agentInstructions";
@@ -15,14 +14,14 @@ import { CopilotOnRailsContext } from "../../../../utils/copilotOnRails/CopilotO
 import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../../utils/copilotOnRails/telemetryUtils";
 import { type LocalPlanData } from "../../views/utils/parseLocalDebugPlanMarkdown";
 import { getCopilotOnRailsBundleLocation } from "../copilotOnRailsBundleLocation";
+import { armDebugPlanImplementedWatcher } from "../debugPlanImplementedWatcher";
 import { openLoadingView } from "../openLoadingView";
 import { suppressTrackedViewCloseOnce } from "../projectSession";
-import { getLocalDebugPlanTelemetry, LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX } from "../utils/localDebugPlanTelemetryUtils";
 import { openSourceFileOrWarn } from "../utils/singletonViewHost";
+import { CopilotOnRailsWebviewController } from "./CopilotOnRailsWebviewController";
 
-export class LocalPlanViewController extends WebviewController<Record<string, never>> {
+export class LocalPlanViewController extends CopilotOnRailsWebviewController<Record<string, never>> {
     private sourceFileUri: vscode.Uri | undefined;
-    private planData: LocalPlanData;
     private _isRefreshingPrereqs = false;
     private _refreshPrereqsTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -30,7 +29,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         super(ext.context, 'Local Dev Plan', 'localPlanView', {}, ViewColumn.Active, undefined, getCopilotOnRailsBundleLocation());
 
         this.sourceFileUri = sourceFileUri;
-        this.planData = planData;
 
         this.panel.webview.onDidReceiveMessage((message: { command: string; data?: LocalPlanData; prompt?: string }) => {
             switch (message.command) {
@@ -66,7 +64,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
                 }
 
                 suppressTrackedViewCloseOnce();
-                this.recordPlanTelemetry(context);
+                await armDebugPlanImplementedWatcher();
                 this.panel.dispose();
 
                 openLoadingView({
@@ -79,24 +77,9 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         });
     }
 
-    private recordPlanTelemetry(context: CopilotOnRailsContext): void {
-        try {
-            const telemetry = getLocalDebugPlanTelemetry(this.planData);
-            for (const [key, value] of Object.entries(telemetry)) {
-                setCorProp(context, `${LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX}${key}`, value);
-            }
-        } catch {
-            // Telemetry extraction must never block the approval flow; swallow any parsing errors.
-            setCorProp(context, `${LOCAL_DEBUG_PLAN_TELEMETRY_PREFIX}parseFailed`, true);
-        }
-    }
-
     private async trySubmitPlanApproval(context: CopilotOnRailsContext): Promise<boolean> {
         const approvalOutcomeKey = 'approvalOutcome';
-        if (!(await ensureAgentInstructions(context, azureDebugPlanAgent))) {
-            setCorProp(context, approvalOutcomeKey, 'agentInstructionsMissing');
-            return false;
-        }
+        await ensureAgentInstructions(context, azureDebugPlanAgent);
 
         // Fresh chat session for the approval hand-off so the next phase starts with a
         // clean context window.
@@ -114,10 +97,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
         const feedbackOutcomeKey = 'feedbackOutcome';
         return await callWithTelemetryAndErrorHandling(corId('submitDebugPlanFeedback'), async (actionContext: IActionContext) => {
             return await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'submitDebugPlanFeedback' }, async (context: CopilotOnRailsContext) => {
-                if (!(await ensureAgentInstructions(context, azureDebugPlanAgent))) {
-                    setCorProp(context, feedbackOutcomeKey, 'agentInstructionsMissing');
-                    return false;
-                }
+                await ensureAgentInstructions(context, azureDebugPlanAgent);
 
                 // Reuse the current session so the agent iterates on the plan with the existing conversation.
                 await vscode.commands.executeCommand('workbench.action.chat.open', await buildChatOpenOptions(context, {
@@ -148,10 +128,7 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
             actionContext.errorHandling.suppressDisplay = true;
             await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'webviewAction', name: 'refreshDebugPrerequisites' }, async (context: CopilotOnRailsContext) => {
                 const refreshOutcomeKey = 'refreshOutcome';
-                if (!(await ensureAgentInstructions(context, azureDebugPlanAgent))) {
-                    setCorProp(context, refreshOutcomeKey, 'agentInstructionsMissing');
-                    return;
-                }
+                await ensureAgentInstructions(context, azureDebugPlanAgent);
 
                 this._isRefreshingPrereqs = true;
                 void this.panel.webview.postMessage({ command: 'prerequisitesRefreshing' });
@@ -173,7 +150,6 @@ export class LocalPlanViewController extends WebviewController<Record<string, ne
     }
 
     updatePlanData(planData: LocalPlanData, sourceFileUri?: vscode.Uri): void {
-        this.planData = planData;
         if (sourceFileUri) {
             this.sourceFileUri = sourceFileUri;
         }

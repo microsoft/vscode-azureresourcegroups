@@ -1,0 +1,773 @@
+{
+    "schemaVersion": 2,
+    "fixtures": [
+        {
+            "id": "sample-agent-output",
+            "path": "evals/grader-certification/sample-agent-output",
+            "description": "Workspace as the planning and scaffold agents leave it \u2014 the artifacts those phases are contracted to produce.",
+            "offlineValidators": [
+                "requirements",
+                "project-plan",
+                "plan-gate",
+                "preview",
+                "integration-plan",
+                "frontend-scaffold"
+            ]
+        },
+        {
+            "id": "reference-node-fullstack",
+            "path": "evals/grader-certification/reference-node-fullstack",
+            "description": "A real, runnable Node full-stack app plus the local-debug artifacts generated for it. The debug validators grade artifacts against the project they describe, so they certify here rather than against the scaffold fixture.",
+            "offlineValidators": [
+                "debug-plan",
+                "debug-config",
+                "debug-artifacts",
+                "runtime-app-starts",
+                "runtime-health",
+                "runtime-frontend",
+                "runtime-frontend-api",
+                "runtime-crud"
+            ]
+        },
+        {
+            "id": "reference-node-multiservice",
+            "path": "evals/grader-certification/reference-node-multiservice",
+            "description": "A plan and a scaffold that agree: three declared services (API, web, worker) plus a shared library, wiring the PostgreSQL, Blob Storage and Queue Storage resources the plan's Services Required table promises. The fidelity validators compare a plan to a tree, so they need a fixture whose plan actually describes its own tree.",
+            "offlineValidators": [
+                "service-fidelity",
+                "datastore-fidelity"
+            ]
+        },
+        {
+            "id": "reference-python-api",
+            "path": "evals/grader-certification/reference-python-api",
+            "description": "The same contract on a Python stack \u2014 psycopg against requirements.txt. Exists so 'works across ecosystems' is executed rather than asserted: a datastore check that only understands npm would pass this fixture's golden case while being unable to fail any mutation of it.",
+            "offlineValidators": [
+                "service-fidelity",
+                "datastore-fidelity"
+            ]
+        },
+        {
+            "id": "reference-dotnet-api",
+            "path": "evals/grader-certification/reference-dotnet-api",
+            "description": "The same contract on a .NET stack \u2014 Npgsql declared in a .csproj and imported with a using directive, neither of which resembles a package.json.",
+            "offlineValidators": [
+                "service-fidelity",
+                "datastore-fidelity"
+            ]
+        },
+        {
+            "id": "reference-go-unsupported",
+            "path": "evals/grader-certification/reference-go-unsupported",
+            "description": "A stack no analyser covers. Its golden case must report ecosystemNotSupported rather than passing: a silent pass on an unsupported stack is the vacuous-gate failure, and this is the case that stops the not-applicable escape hatch quietly becoming green.",
+            "offlineValidators": [
+                "service-fidelity",
+                "datastore-fidelity"
+            ],
+            "offlineExpectations": {
+                "service-fidelity": "ecosystemNotSupported",
+                "datastore-fidelity": "ecosystemNotSupported"
+            }
+        },
+        {
+            "id": "api-only-no-datastore",
+            "path": "evals/grader-certification/api-only-no-datastore",
+            "description": "An API-only project with no datastore and no frontend, whose hand-off plan correctly omits the Database and Frontend sections. Certifies that the gate does not demand what this project has no reason to have.",
+            "offlineValidators": [
+                "integration-plan"
+            ]
+        }
+    ],
+    "mutations": [
+        {
+            "id": "requirements-schema-version",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "requirements",
+            "file": ".azure/requirements.json",
+            "operation": "replace",
+            "search": "\"schemaVersion\": \"2\"",
+            "replacement": "\"schemaVersion\": \"1\"",
+            "expectedCode": "schemaVersion"
+        },
+        {
+            "id": "project-plan-numbering",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "project-plan",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "## 3. Prerequisites",
+            "replacement": "## 4. Prerequisites",
+            "expectedCode": "nonSequentialHeading"
+        },
+        {
+            "id": "plan-gate-frontend-dropped",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "plan-gate",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "**App Type**: Web Application",
+            "replacement": "**App Type**: API only",
+            "expectedCode": "frontendIntentMismatch"
+        },
+        {
+            "id": "plan-gate-preview-manifest-missing",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "plan-gate",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "delete",
+            "expectedCode": "previewManifestMissingAtGate"
+        },
+        {
+            "id": "preview-not-ready",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "preview",
+            "file": ".azure/.preview-temp/manifest.json",
+            "operation": "replace",
+            "search": "\"previewStatus\": \"ready\"",
+            "replacement": "\"previewStatus\": \"draft\"",
+            "expectedCode": "previewNotReady"
+        },
+        {
+            "id": "frontend-preview-not-embeddable",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/vite.config.ts",
+            "operation": "replace",
+            "search": "allowedHosts: true,",
+            "replacement": "",
+            "expectedCode": "devServerRejectsWebviewOrigin"
+        },
+        {
+            "id": "frontend-dev-script-does-not-serve",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/package.json",
+            "operation": "replace",
+            "search": "\"dev\": \"vite\"",
+            "replacement": "\"dev\": \"vite build --watch\"",
+            "expectedCode": "devScriptDoesNotServe"
+        },
+        {
+            "id": "frontend-frame-busting-csp",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/index.html",
+            "operation": "replace",
+            "search": "<title>",
+            "replacement": "<meta http-equiv=\"Content-Security-Policy\" content=\"frame-ancestors 'none'\" /><title>",
+            "expectedCode": "previewFrameBusting"
+        },
+        {
+            "id": "frontend-api-seam-bypassed",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/src/pages/TicketsPage.tsx",
+            "operation": "replace",
+            "search": "from '../api'",
+            "replacement": "from '../api/mockClient'",
+            "expectedCode": "apiSeamBypassed"
+        },
+        {
+            "id": "integration-plan-missing-no-seed-rule",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "**NO seed data is to be created.**",
+            "replacement": "",
+            "expectedCode": "missingNoSeedRule"
+        },
+        {
+            "id": "integration-plan-missing-backend-run-command",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "| Run command | `npm start` |\n",
+            "replacement": "",
+            "expectedCode": "missingBackendCommand"
+        },
+        {
+            "id": "integration-plan-missing-route-inventory",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "## API Routes",
+            "replacement": "## Notes on the API",
+            "expectedCode": "missingRouteInventory"
+        },
+        {
+            "id": "integration-plan-route-inventory-shadowed-by-auth-heading",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "## API Routes",
+            "replacement": "## Auth (required on every route except `/api/health`)\n\nMock API key \u2014 send `X-API-Key: <API_KEY>`. Missing key \u2192 `401 UNAUTHORIZED`.\n\n## API Routes",
+            "expectedCode": "passed"
+        },
+        {
+            "id": "integration-plan-missing-api-seam",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "| API seam file | `public/js/api/index.js` |\n",
+            "replacement": "",
+            "expectedCode": "missingApiSeam"
+        },
+        {
+            "id": "integration-plan-missing-service-classification",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "| File repository (IItemRepository) | Essential | Persist project records |\n| Static file server | Essential | Serve HTML, JS, and CSS from `public/` |",
+            "replacement": "| File repository (IItemRepository) | Persist project records |\n| Static file server | Serve HTML, JS, and CSS from `public/` |",
+            "expectedCode": "missingServiceClassification"
+        },
+        {
+            "id": "frontend-api-client-interface-dropped",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/src/api/client.ts",
+            "operation": "replace",
+            "search": "export interface ApiClient {",
+            "replacement": "export interface TicketGateway {",
+            "expectedCode": "missingApiClientInterface"
+        },
+        {
+            "id": "frontend-mock-client-dropped",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "frontend-scaffold",
+            "file": "services/web/src/api/mockClient.ts",
+            "operation": "replace",
+            "search": "export const mockClient: ApiClient =",
+            "replacement": "export const mockClient =",
+            "expectedCode": "missingMockClient"
+        },
+        {
+            "id": "integration-plan-no-seed-rule-in-heading",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "## Database\n",
+            "replacement": "## Database \u2014 migrations to create (**NO seed data**)\n",
+            "expectedCode": "passed"
+        },
+        {
+            "id": "integration-plan-no-seed-rule-as-table-row",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "Production migration would replace the file store with managed storage. **NO seed data is to be created.**",
+            "replacement": "| **Seed data** | **NONE. Do not create seed data.** |",
+            "expectedCode": "passed"
+        },
+        {
+            "id": "integration-plan-port-inside-run-command",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "| Run command | `npm start` |\n| Port | 7071 (override with `PORT`) |",
+            "replacement": "| Run command | `npm start`, listens on port **7071** |",
+            "expectedCode": "passed"
+        },
+        {
+            "id": "integration-plan-missing-backend-port",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "| Port | 7071 (override with `PORT`) |\n| Health endpoint | `GET /api/health` |",
+            "replacement": "| Health endpoint | `GET /api/health` |",
+            "expectedCode": "missingBackendPort"
+        },
+        {
+            "id": "debug-plan-table-concatenated",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "|---|---|---|---|---|---|---|---|\n",
+            "replacement": "|---|---|---|---|---|---|---|---|| [x] | Ghost App (debug) | Ghost App | `./ghost` | Backend | Node.js | 22.x | None |\n",
+            "expectedCode": "tableRowConcatenated"
+        },
+        {
+            "id": "debug-plan-checklist-stub",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "\u2705 Persistence \u2014 Created project remained visible after restarting the service, confirming the local JSON store is written through.",
+            "replacement": "\u2705 Persistence \u2014 TBD",
+            "expectedCode": "checklistStub"
+        },
+        {
+            "id": "debug-plan-diagram-dropped",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "## Architecture Diagram",
+            "replacement": "## Architecture Notes",
+            "expectedCode": "missingSection"
+        },
+        {
+            "id": "debug-plan-status-regressed",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-plan",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "> **Status:** Implemented",
+            "replacement": "> **Status:** Planning",
+            "expectedCode": "unexpectedStatus"
+        },
+        {
+            "id": "debug-config-prelaunch-dangling",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-config",
+            "file": ".vscode/launch.json",
+            "operation": "replace",
+            "search": "\"preLaunchTask\": \"prepare\"",
+            "replacement": "\"preLaunchTask\": \"prepare-everything\"",
+            "expectedCode": "preLaunchTaskUnresolved"
+        },
+        {
+            "id": "debug-config-dependson-dangling",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-config",
+            "file": ".vscode/tasks.json",
+            "operation": "replace",
+            "search": "\"dependsOn\": \"install\"",
+            "replacement": "\"dependsOn\": \"restore\"",
+            "expectedCode": "dependsOnUnresolved"
+        },
+        {
+            "id": "debug-config-dependson-cycle",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-config",
+            "file": ".vscode/tasks.json",
+            "operation": "replace",
+            "search": "\"command\": \"npm ci --ignore-scripts\",",
+            "replacement": "\"command\": \"npm ci --ignore-scripts\",\n            \"dependsOn\": \"prepare\",",
+            "expectedCode": "dependsOnCycle"
+        },
+        {
+            "id": "debug-artifacts-unchecked-config-generated",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-artifacts",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "| [x] | Golden App (debug) |",
+            "replacement": "| [ ] | Golden App (debug) |",
+            "expectedCode": "uncheckedConfigGenerated"
+        },
+        {
+            "id": "debug-artifacts-script-not-registered",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-artifacts",
+            "file": ".azure/vscode-debug-plan.md",
+            "operation": "replace",
+            "search": "| [x] | start | ./package.json |",
+            "replacement": "| [x] | serve | ./package.json |",
+            "expectedCode": "scriptNotRegistered"
+        },
+        {
+            "id": "debug-artifacts-api-collection-empty",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-artifacts",
+            "file": "api-test-collections/golden-app/health/invoke.sh",
+            "operation": "delete",
+            "expectedCode": "apiCollectionEmpty"
+        },
+        {
+            "id": "debug-config-task-run-options",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-config",
+            "file": ".vscode/tasks.json",
+            "operation": "replace",
+            "search": "\"instancePolicy\": \"silent\"",
+            "replacement": "\"instancePolicy\": \"prompt\"",
+            "expectedCode": "invalidTaskRunOptions"
+        },
+        {
+            "id": "debug-config-duplicate-task-label",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-config",
+            "file": ".vscode/tasks.json",
+            "operation": "replace",
+            "search": "\"label\": \"build\",",
+            "replacement": "\"label\": \"install\",",
+            "expectedCode": "duplicateTaskLabels"
+        },
+        {
+            "id": "debug-artifacts-extension-recommendations",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-artifacts",
+            "file": ".vscode/extensions.json",
+            "operation": "replace",
+            "search": "\"ms-vscode.js-debug\"",
+            "replacement": "\"js-debug\"",
+            "expectedCode": "invalidExtensionRecommendations"
+        },
+        {
+            "id": "debug-artifacts-redacted-secret",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "debug-artifacts",
+            "file": ".env.example",
+            "operation": "replace",
+            "replacement": "DATABASE_URL=postgres://golden:******@localhost:5432/golden",
+            "expectedCode": "redactedSecretPlaceholder",
+            "search": "PORT=7071"
+        },
+        {
+            "id": "fidelity-planned-service-dropped",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": "services/worker",
+            "operation": "delete",
+            "expectedCode": "plannedServiceMissing"
+        },
+        {
+            "id": "fidelity-service-invented",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "## 4. Worker \u2014 Background Jobs\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n",
+            "replacement": "",
+            "expectedCode": "unplannedServiceScaffolded"
+        },
+        {
+            "id": "fidelity-frontend-missing",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": "services/web",
+            "operation": "delete",
+            "expectedCode": "frontendMissingFromScaffold"
+        },
+        {
+            "id": "fidelity-frontend-invented",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "**App Type**: SPA + API",
+            "replacement": "**App Type**: API only",
+            "expectedCode": "frontendNotPlanned"
+        },
+        {
+            "id": "fidelity-language-swapped",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "## 2. Backend \u2014 Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |",
+            "replacement": "## 2. Backend \u2014 Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | Python |",
+            "expectedCode": "serviceLanguageMismatch"
+        },
+        {
+            "id": "fidelity-framework-swapped",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "| **Framework** | React + Vite |",
+            "replacement": "| **Framework** | Angular |",
+            "expectedCode": "serviceFrameworkMismatch"
+        },
+        {
+            "id": "fidelity-plan-declares-no-services",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "service-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "## 2. Backend \u2014 Azure Functions\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n## 3. Frontend \u2014 Web App\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Framework** | React + Vite |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n\n## 4. Worker \u2014 Background Jobs\n\n| Component | Technology |\n|-----------|-----------|\n| **Language** | TypeScript |\n| **Runtime** | Node |\n| **Package Manager** | npm |\n| **Test Runner** | vitest |\n| **Test Command** | npm test |\n| **Orchestration** | docker-compose |\n\n",
+            "replacement": "",
+            "expectedCode": "planDeclaresNoServices"
+        },
+        {
+            "id": "fidelity-datastore-import-swapped",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "datastore-fidelity",
+            "file": "services/api/src/db.ts",
+            "operation": "replace",
+            "search": "import { Pool } from 'pg';",
+            "replacement": "import { Pool } from 'sqlite3';",
+            "expectedCode": "plannedDatastoreNotWired"
+        },
+        {
+            "id": "fidelity-datastore-invented",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "datastore-fidelity",
+            "file": "services/api/src/db.ts",
+            "operation": "replace",
+            "search": "import { Pool } from 'pg';",
+            "replacement": "import { Pool } from 'pg';\nimport { MongoClient } from 'mongodb';",
+            "expectedCode": "unplannedDatastoreWired"
+        },
+        {
+            "id": "fidelity-datastore-dependency-dropped",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "datastore-fidelity",
+            "file": "services/api/package.json",
+            "operation": "replace",
+            "search": ",\n        \"pg\": \"^8.13.1\"",
+            "replacement": "",
+            "expectedCode": "datastoreDependencyMissing"
+        },
+        {
+            "id": "fidelity-resource-never-wired",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "datastore-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "| Blob Storage | Store ticket attachments | STORAGE_CONNECTION_STRING |",
+            "replacement": "| Blob Storage | Store ticket attachments | ATTACHMENTS_CONNECTION_STRING |",
+            "expectedCode": "plannedResourceNotWired"
+        },
+        {
+            "id": "fidelity-services-required-table-unreadable",
+            "tier": "offline",
+            "fixture": "reference-node-multiservice",
+            "validator": "datastore-fidelity",
+            "file": ".azure/project-plan.md",
+            "operation": "replace",
+            "search": "| Azure Service | Role in App | Environment Variable | Default Value (Local) | Classification |",
+            "replacement": "| Name | Responsibility | Variable | Local Default | Classification |",
+            "expectedCode": "plannedResourcesUnreadable"
+        },
+        {
+            "id": "fidelity-datastore-swapped-python",
+            "tier": "offline",
+            "fixture": "reference-python-api",
+            "validator": "datastore-fidelity",
+            "file": "services/api/main.py",
+            "operation": "replace",
+            "search": "from psycopg import connect",
+            "replacement": "from aiosqlite import connect",
+            "expectedCode": "unplannedDatastoreWired"
+        },
+        {
+            "id": "fidelity-datastore-unwired-python",
+            "tier": "offline",
+            "fixture": "reference-python-api",
+            "validator": "datastore-fidelity",
+            "file": "services/api/main.py",
+            "operation": "replace",
+            "search": "from psycopg import connect",
+            "replacement": "from aiosqlite import connect",
+            "expectedCode": "plannedDatastoreNotWired"
+        },
+        {
+            "id": "fidelity-nothing-scaffolded-python",
+            "tier": "offline",
+            "fixture": "reference-python-api",
+            "validator": "datastore-fidelity",
+            "file": "services/api/requirements.txt",
+            "operation": "delete",
+            "expectedCode": "noServicesScaffolded"
+        },
+        {
+            "id": "fidelity-datastore-swapped-dotnet",
+            "tier": "offline",
+            "fixture": "reference-dotnet-api",
+            "validator": "datastore-fidelity",
+            "file": "services/api/Program.cs",
+            "operation": "replace",
+            "search": "using Npgsql;",
+            "replacement": "using Microsoft.Data.Sqlite;",
+            "expectedCode": "plannedDatastoreNotWired"
+        },
+        {
+            "id": "fidelity-orm-owns-the-driver-python",
+            "tier": "offline",
+            "fixture": "reference-python-api",
+            "validator": "datastore-fidelity",
+            "file": "services/api/main.py",
+            "operation": "replace",
+            "search": "from psycopg import connect",
+            "replacement": "from sqlalchemy import create_engine",
+            "expectedCode": "passed"
+        },
+        {
+            "id": "fidelity-orm-owns-the-driver-dotnet",
+            "tier": "offline",
+            "fixture": "reference-dotnet-api",
+            "validator": "datastore-fidelity",
+            "file": "services/api/Program.cs",
+            "operation": "replace",
+            "search": "using Npgsql;",
+            "replacement": "using Npgsql.EntityFrameworkCore.PostgreSQL;",
+            "expectedCode": "passed"
+        },
+        {
+            "id": "runtime-app-crashes-on-boot",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-app-starts",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "'use strict';",
+            "replacement": "'use strict';\nthrow new Error('boom: the generated app crashes on boot');",
+            "expectedCode": "appExitedBeforeListening"
+        },
+        {
+            "id": "runtime-health-returns-500",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-health",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "send(response, 200, 'application/json', JSON.stringify({ status: 'ok' }));",
+            "replacement": "send(response, 500, 'application/json', JSON.stringify({ status: 'degraded' }));",
+            "expectedCode": "healthEndpointUnhealthy"
+        },
+        {
+            "id": "runtime-health-route-missing",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-health",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "requestUrl.pathname === '/api/health'",
+            "replacement": "requestUrl.pathname === '/api/health-removed'",
+            "expectedCode": "healthEndpointUnhealthy"
+        },
+        {
+            "id": "runtime-frontend-not-served",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-frontend",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "const asset = requestUrl.pathname === '/' ? 'index.html' : requestUrl.pathname.slice(1);",
+            "replacement": "const asset = requestUrl.pathname.slice(1);",
+            "expectedCode": "frontendNotServed"
+        },
+        {
+            "id": "runtime-frontend-calls-missing-route",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-frontend-api",
+            "file": "public/app.js",
+            "operation": "replace",
+            "search": "await fetch('/api/items');",
+            "replacement": "await fetch('/api/projects');",
+            "expectedCode": "frontendApiRouteMissing"
+        },
+        {
+            "id": "runtime-health-collection-removed",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-health",
+            "file": "api-test-collections",
+            "operation": "delete",
+            "expectedCode": "passed"
+        },
+        {
+            "id": "runtime-crud-write-not-persisted",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-crud",
+            "file": "src/server.js",
+            "operation": "replace",
+            "search": "await writeItems(dataFile, [...items, item]);",
+            "replacement": "void items;",
+            "expectedCode": "crudRoundTripLost"
+        },
+        {
+            "id": "runtime-frontend-api-unresolvable-url",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-frontend-api",
+            "file": "public/app.js",
+            "operation": "replace",
+            "search": "    const response = await fetch('/api/items');\n    render(await response.json());\n}\n\nform.addEventListener('submit', async event => {\n    event.preventDefault();\n    const response = await fetch('/api/items', {",
+            "replacement": "    const apiBase = '/api';\n    const response = await fetch(`${apiBase}/items`);\n    render(await response.json());\n}\n\nform.addEventListener('submit', async event => {\n    event.preventDefault();\n    const response = await fetch(`${apiBase}/items`, {",
+            "expectedCode": "frontendApiCallsUnresolvable"
+        },
+        {
+            "id": "runtime-frontend-api-nothing-called",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-frontend-api",
+            "file": "public/index.html",
+            "operation": "replace",
+            "search": "    <script src=\"/app.js\"></script>\n",
+            "replacement": "",
+            "expectedCode": "frontendMakesNoApiCalls"
+        },
+        {
+            "id": "integration-plan-database-section-dropped",
+            "tier": "offline",
+            "fixture": "sample-agent-output",
+            "validator": "integration-plan",
+            "file": ".azure/integration-plan.md",
+            "operation": "replace",
+            "search": "## Database\n\n| Field | Value |\n|-------|-------|\n| Type | File-backed JSON store |\n| Data file | `data/items.json` |\n| Migration tool | none (no schema to migrate) |\n\nProduction migration would replace the file store with managed storage. **NO seed data is to be created.**\n\n### Collection \u2192 table mapping (whitelisted in `src/services/database.ts`)\n\n| Collection (code) | Store key |\n|-------------------|-----------|\n| `tickets` | `items` |",
+            "replacement": "",
+            "expectedCode": "missingDatabase"
+        },
+        {
+            "id": "runtime-app-starts-never-scaffolded",
+            "tier": "offline",
+            "fixture": "reference-node-fullstack",
+            "validator": "runtime-app-starts",
+            "file": "package.json",
+            "operation": "delete",
+            "expectedCode": "runtimeNotAttempted"
+        }
+    ]
+}

@@ -10,6 +10,7 @@ export class StateStageNode implements ProgressNode {
     constructor(
         private readonly stageId: string,
         private readonly startCommandId: string,
+        private readonly label = vscode.l10n.t('Start'),
     ) { }
 
     getChildren(): ProgressNode[] {
@@ -17,11 +18,10 @@ export class StateStageNode implements ProgressNode {
     }
 
     getTreeItem(): vscode.TreeItem {
-        const label = vscode.l10n.t('Start');
-        const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
+        const item = new vscode.TreeItem(this.label, vscode.TreeItemCollapsibleState.None);
         item.id = `${this.stageId}.start`;
         item.iconPath = new vscode.ThemeIcon('play-circle');
-        item.tooltip = label;
+        item.tooltip = this.label;
         item.command = {
             command: this.startCommandId,
             title: '',

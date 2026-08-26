@@ -44,11 +44,11 @@ When a frontend service proxies to a local backend (e.g., a dev server proxy for
 
 #### Pattern
 
-**1. Generate a sequenced compound task** that starts services in order:
+**1. Generate a sequenced compound task** that starts services in order. Give it any descriptive label (referred to below as `{sequenced-compound-task}`):
 
 ```json
 {
-  "label": "Start All Services",
+  "label": "{sequenced-compound-task}",
   "dependsOn": [
     "{backend-service-id}: {backend-top-level-task}",
     "{frontend-service-id}: {frontend-top-level-task}"
@@ -65,7 +65,7 @@ The backend is listed first. Its `problemMatcher` (from `project-types/{type}.md
 {
   "name": "{Launch Config Name from plan's compound row}",
   "configurations": ["{Backend Launch Config Name}", "{Frontend Launch Config Name}"],
-  "preLaunchTask": "Start All Services",
+  "preLaunchTask": "{sequenced-compound-task}",
   "stopAll": true
 }
 ```
@@ -88,7 +88,7 @@ The backend is listed first. Its `problemMatcher` (from `project-types/{type}.md
 
 **4. Set `instanceLimit: 1` and `instancePolicy: "silent"` on background tasks** to prevent duplicate instances.
 
-When the compound runs, "Start All Services" starts both services via `dependsOrder: "sequence"`. Then each individual configuration's `preLaunchTask` fires again — but those services are already running. With `instanceLimit: 1` and `instancePolicy: "silent"`, the duplicate invocation is silently skipped and the existing instance keeps running.
+When the compound runs, the sequenced compound task starts both services via `dependsOrder: "sequence"`. Then each individual configuration's `preLaunchTask` fires again — but those services are already running. With `instanceLimit: 1` and `instancePolicy: "silent"`, the duplicate invocation is silently skipped and the existing instance keeps running.
 
 #### Why This Pattern Is Necessary
 
@@ -99,3 +99,17 @@ When the compound runs, "Start All Services" starts both services via `dependsOr
 | Debuggers must not attach before services are running | The compound's `preLaunchTask` ensures all services are started before any debugger attaches |
 | Individual configs must still work standalone | Each config has its own `preLaunchTask` pointing to its service's top-level task |
 | Duplicate task invocations from compound + individual preLaunchTasks | `instanceLimit: 1` + `instancePolicy: "silent"` silently skips the duplicate — the first instance keeps running |
+
+---
+
+### Deduplicated Startup Graph
+
+Any generated compound configuration MUST satisfy **all** of the following. Each rule is checkable against `tasks.json` / `launch.json`:
+
+| # | Rule | How to check |
+|---|------|--------------|
+| 1 | **Each service's top-level task appears exactly once** across the compound's effective task graph (the transitive `dependsOn` closure of the sequenced compound task). No service's start task is reachable via two different paths. | Expand the `dependsOn` closure of the sequenced compound task; every service's top-level task label occurs exactly once. |
+| 2 | **The sequenced compound task is the single owner of startup ordering.** No per-service task re-declares a `dependsOn` on another service's start task; ordering lives only in the sequenced compound task. | No service start task lists another service's start task in its own `dependsOn`. |
+| 3 | **Every background task sets `instanceLimit: 1` and `instancePolicy: "silent"`.** | Every long-running task in the chain carries both properties. |
+
+Because the individual configs keep their own `preLaunchTask` (so they work standalone), the compound WILL invoke each service's start task a second time. Rule 3 makes that second invocation a silent no-op instead of a duplicate process, while Rules 1 and 2 ensure the *first* pass never double-starts a service either.

@@ -3,16 +3,23 @@
  *  Licensed under the MIT License. See License.md in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzExtFsExtra } from "@microsoft/vscode-azext-utils";
+import { AzExtFsExtra, callWithTelemetryAndErrorHandling, type IActionContext } from "@microsoft/vscode-azext-utils";
 import * as vscode from "vscode";
 import { ext } from "../../../extensionVariables";
-import { DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { createProjectPlanFileWatcher, DEBUG_PLAN_FILE_GLOB } from "../../../tree/project/projectPlanFiles";
+import { CopilotOnRailsContext } from "../../../utils/copilotOnRails/CopilotOnRailsContext";
+import { callWithDiagnosticsAndTelemetryHandling, corId, setCorProp } from "../../../utils/copilotOnRails/telemetryUtils";
 import { settingUtils } from "../../../utils/settingUtils";
+import { getDebugPlanStatus, LocalDebugPlanStatus, parseLocalDebugPlanMarkdown } from "../views/utils/parseLocalDebugPlanMarkdown";
+import { isApprovedOrLater } from "../views/utils/projectPlanStatus";
+import { armDebugPlanImplementedWatcher } from "./debugPlanImplementedWatcher";
+import { ensureLocalHarnessOn } from "./harnessSettings";
 
 /**
  * Autopilot mode for the create-project workflow.
  * It temporarily enables global chat tool auto-approve and restores it later.
- * It also raises workspace chat request budget for long unattended runs.
+ * It also raises workspace chat request budget for long unattended runs, and forces the
+ * experimental "Copilot Harness" chat settings off at Workspace scope for the run.
  */
 
 const AUTO_APPROVE_SECTION = 'chat.tools.global';
@@ -42,6 +49,8 @@ const STATE_PRIOR_VALUE = 'copilotOnRails.autopilot.priorAutoApprove';
 const STATE_PRIOR_PERMISSION_LEVEL = 'copilotOnRails.autopilot.priorPermissionLevel';
 /** Epoch ms after which an active run is considered stale and auto-restored. */
 const STATE_DEADLINE = 'copilotOnRails.autopilot.deadline';
+/** Set once per run to ensure the debug-plan approval telemetry has been recorded */
+const STATE_DEBUG_APPROVAL_RECORDED = 'copilotOnRails.autopilot.debugPlanApprovalRecorded';
 
 /** Command id used by the status-bar item to turn autopilot off. */
 export const DISABLE_AUTOPILOT_COMMAND = 'azureResourceGroups.disableAutopilot';
@@ -50,6 +59,8 @@ let statusBarItem: vscode.StatusBarItem | undefined;
 let completionWatcher: vscode.FileSystemWatcher | undefined;
 let safetyTimer: ReturnType<typeof setTimeout> | undefined;
 let extensionContext: vscode.ExtensionContext | undefined;
+/** In-process copy of the persisted {@link STATE_DEBUG_APPROVAL_RECORDED} flag, so overlapping create/change watcher events can't each record the approval before the persisted write completes. */
+let debugPlanApprovalRecorded = false;
 
 export function isAutopilotActive(): boolean {
     if (ext.context.globalState.get<boolean>(STATE_ACTIVE) !== true) {
@@ -141,21 +152,16 @@ function scheduleSafetyTimer(deadline: number): void {
 
 /** Arms the user-facing run aids: status bar, completion watcher, safety timeout. */
 function armAutopilot(deadline: number): void {
+    debugPlanApprovalRecorded = extensionContext?.workspaceState.get<boolean>(STATE_DEBUG_APPROVAL_RECORDED) === true;
     showStatusBarItem();
-    registerCompletionWatcher();
+    registerDebugCompletionWatcher();
     scheduleSafetyTimer(deadline);
 }
 
 /** Returns true when the debug plan file content indicates the chain is finished. */
-export function isDebugPlanImplemented(content: string): boolean {
-    // Tolerates markdown formatting around the status line, e.g.
-    // `> **Status:** Implemented`, `Status: Implemented`, `**Status**: implemented`.
-    return /status\b[^a-z0-9]{0,8}implemented\b/i.test(content);
-}
-
-function registerCompletionWatcher(): void {
+function registerDebugCompletionWatcher(): void {
     disposeCompletionWatcher();
-    completionWatcher = vscode.workspace.createFileSystemWatcher(DEBUG_PLAN_FILE_GLOB);
+    completionWatcher = createProjectPlanFileWatcher(DEBUG_PLAN_FILE_GLOB);
     const check = async (uri: vscode.Uri): Promise<void> => {
         let content: string;
         try {
@@ -163,12 +169,72 @@ function registerCompletionWatcher(): void {
         } catch {
             return;
         }
-        if (isDebugPlanImplemented(content)) {
-            await disableAutopilot();
-        }
+        await checkDebugPlanCompletion(content);
     };
     completionWatcher.onDidCreate((uri) => void check(uri));
     completionWatcher.onDidChange((uri) => void check(uri));
+
+    // `createFileSystemWatcher` only reports changes made after it arms, so any milestone the plan
+    // already reached before this point would never fire an event and be silently missed. Eagerly reconcile
+    // against the current file state.
+    void checkCurrentDebugPlanState();
+}
+
+/** Reacts to the current debug plan content: records the auto-approval milestone and/or ends the run. */
+async function checkDebugPlanCompletion(content: string): Promise<void> {
+    if (!debugPlanApprovalRecorded && isApprovedOrLater(parseLocalDebugPlanMarkdown(content).status)) {
+        await recordAutopilotDebugPlanApproval();
+    }
+
+    if (getDebugPlanStatus(content)?.toLowerCase() === LocalDebugPlanStatus.Implemented) {
+        await disableAutopilot();
+    }
+}
+
+/** Reads the current debug plan (if any) and reconciles it, so milestones reached before arming aren't lost. */
+async function checkCurrentDebugPlanState(): Promise<void> {
+    const [uri] = await vscode.workspace.findFiles(DEBUG_PLAN_FILE_GLOB, undefined, 1);
+    if (!uri) {
+        return;
+    }
+    let content: string;
+    try {
+        content = await AzExtFsExtra.readFile(uri);
+    } catch {
+        return;
+    }
+    await checkDebugPlanCompletion(content);
+}
+
+/**
+ * Records the "submit debug plan approval" telemetry action on the autopilot path.
+ * In autopilot the plan is auto-approved, so the manual approval UI action in the
+ * local plan view never fires. This ensures the same event fires in autopilot mode.
+ */
+async function recordAutopilotDebugPlanApproval(): Promise<void> {
+    const context = extensionContext;
+    if (!context || !isAutopilotActive() || debugPlanApprovalRecorded) {
+        return;
+    }
+
+    debugPlanApprovalRecorded = true;
+
+    try {
+        await armDebugPlanImplementedWatcher();
+
+        await callWithTelemetryAndErrorHandling(corId('submitDebugPlanApproval'), async (actionContext: IActionContext) => {
+            actionContext.errorHandling.suppressDisplay = true;
+            await callWithDiagnosticsAndTelemetryHandling(actionContext, { type: 'extensionAction', name: 'submitDebugPlanApproval' }, (corContext: CopilotOnRailsContext) => {
+                setCorProp(corContext, 'approvalOutcome', 'submitted');
+                return Promise.resolve();
+            });
+        });
+
+        await context.workspaceState.update(STATE_DEBUG_APPROVAL_RECORDED, true);
+    } catch (error) {
+        debugPlanApprovalRecorded = false;
+        throw error;
+    }
 }
 
 /**
@@ -178,11 +244,11 @@ function registerCompletionWatcher(): void {
  */
 export async function enableAutopilot(context: vscode.ExtensionContext): Promise<void> {
     extensionContext = context;
-
     // Don't clobber a previously-saved prior value if autopilot is already on.
     if (context.globalState.get<boolean>(STATE_ACTIVE) !== true) {
         await context.globalState.update(STATE_PRIOR_VALUE, getAutoApproveValue() ?? null);
         await context.globalState.update(STATE_PRIOR_PERMISSION_LEVEL, getPermissionLevelValue() ?? null);
+        await context.workspaceState.update(STATE_DEBUG_APPROVAL_RECORDED, undefined);
     }
     const deadline = Date.now() + MAX_RUN_DURATION_MS;
     await context.globalState.update(STATE_ACTIVE, true);
@@ -191,6 +257,7 @@ export async function enableAutopilot(context: vscode.ExtensionContext): Promise
     await setAutoApproveValue(true);
     await raiseWorkspaceMaxRequests();
     await setPermissionLevelValue('autopilot');
+    await ensureLocalHarnessOn();
     armAutopilot(deadline);
 }
 
@@ -218,7 +285,10 @@ export async function disableAutopilot(): Promise<void> {
         await context.globalState.update(STATE_PRIOR_VALUE, undefined);
         await context.globalState.update(STATE_PRIOR_PERMISSION_LEVEL, undefined);
         await context.globalState.update(STATE_DEADLINE, undefined);
+        await context.workspaceState.update(STATE_DEBUG_APPROVAL_RECORDED, undefined);
     }
+
+    debugPlanApprovalRecorded = false;
 
     clearSafetyTimer();
     hideStatusBarItem();

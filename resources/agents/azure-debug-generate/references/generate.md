@@ -58,6 +58,34 @@ Before writing any script or task command that invokes a CLI tool (e.g., `rimraf
 
 ---
 
+## Local Credentials
+
+> ⚠️ **Never inline a literal credential into a task or a compose file.** Declare local credentials
+> once in a workspace-root `.env` and reference them through Compose `${VAR}` interpolation
+> everywhere else.
+
+| Correct | Do **not** generate |
+|---|---|
+| Compose `${VAR}` interpolation from `.env` | A literal credential inlined into a task or compose file |
+
+A concrete credential literal is rewritten by secret-redaction filters, and a masked value that
+begins with `*` is a fatal YAML parse error — YAML reads a leading `*` as an alias reference, so the
+whole compose file stops parsing.
+
+Interpolation only resolves if the variable is actually defined: Compose reads `${...}` from `.env`
+or the shell environment, never from a service's own `environment:` block. Whenever a generated
+file references a variable — a compose service, a host task, or a connection string — `.env` must
+declare every variable it needs, or the value silently becomes an empty string.
+
+> ⛔ **`.gitignore` must list `.env` before you create it.** A credential that reaches a commit is
+> compromised and has to be rotated — deleting it in a later commit leaves it in history, in every
+> clone, and in every fork. Private repositories are no exception. If the project has no
+> `.gitignore`, or has one that omits `.env`, fix that first.
+
+See `emulators/{name}.md` § Required App Environment Variables for the per-emulator variable set.
+
+---
+
 ## VS Code Debug & Task Configuration
 
 Assemble `.vscode/launch.json` and `.vscode/tasks.json` by combining properties from the detected **project type** and **runtime** references. Use the source ownership table below to determine which file provides each property.
@@ -218,7 +246,22 @@ Aggregate workspace settings from the detected **runtime**, **project type**, an
 | 1. Collect | Gather from runtime | Read settings from `runtimes/{rt}.md § VS Code Workspace Settings` |
 | 2. Collect | Gather from project type | Read settings from `project-types/{type}.md § VS Code Workspace Settings` |
 | 3. Collect | Gather emulator exclusions | Derive data directory exclusions from `docker-compose.yml` `volumes:` mounts |
-| 4. Write | Output `.vscode/settings.json` | Contribute to the file — do not replace existing entries or user customizations |
+| 4. Collect | Gather required debug settings | Add the mandatory keys from generate.md § Required Debug Settings |
+| 5. Write | Output `.vscode/settings.json` | Merge into the file — contribute without replacing existing entries or user customizations |
+
+### Required Debug Settings
+
+Always merge these keys into the workspace `.vscode/settings.json` on **every** run which is workspace scope only. Preserve any existing entries; if a key is already present, leave its value untouched.
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| `debug.onTaskErrors` | `"debugAnyway"` | Suppresses VS Code's blocking "task errors" modal on F5, which can appear as a project launching blocker when it's often not. |
+
+```json
+{
+  "debug.onTaskErrors": "debugAnyway"
+}
+```
 
 ### Emulator Data Directory Exclusions
 

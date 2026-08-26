@@ -1,0 +1,325 @@
+# Which gate looks at what — the table applicability is derived from.
+#
+# A stack says what the project *has* (`config/stacks/<id>.yaml`). This says what
+# each gate *needs to look at*. Wiring is the intersection, computed by
+# `src/gateWiring.ts`. Nothing decides applicability at runtime.
+#
+# ## Why this is one central file
+#
+# The obvious alternative is a declaration next to each grader. It cannot work:
+# every grader calls `runGrader*` at module top level, so **importing a grader
+# executes it**. Applicability has to be computable without running 19 graders,
+# which means reading data rather than code. The second reason is human: "which
+# gates run on this stack?" should be answerable by reading one screen.
+#
+# One block per gate, so two people adding gates conflict on their own lines.
+#
+# ## The rule for `requires:`
+#
+# **Only put a fact here when its absence means the gate has nothing to look at.**
+# That is the difference between the two NOT_APPLICABLE classes, and getting it
+# wrong here is how the schema fails:
+#
+#   - Absence means nothing to grade  ->  `requires:` it, so the gate is never
+#     wired. This is what makes an `outOfScope` verdict unreachable.
+#   - The gate has a real question but we cannot answer it yet (a Go project, a
+#     missing binary)  ->  do NOT put it here. The gate stays wired, goes red,
+#     and the stack declares a `knownGaps` entry. `coverageGap` reds are true
+#     statements that we are not testing something we claim to test.
+#
+# So `ecosystem` appears almost nowhere below. A Python project has a perfectly
+# real "does it start?" question; what is missing is support we have not written.
+#
+# The corollary, learned the hard way — `runtime-health` and `runtime-crud` both
+# required the stack declaration they consume, so on the stack matching every
+# stimulus we run, neither was wired at all:
+#
+#   **A declaration may make a gate stricter. It must never decide whether the
+#   gate runs at all.**
+#
+# A fact you `requires:` is a fact whose absence silences the gate. A fact you
+# derive an `args:` flag from only sharpens it. When in doubt, the second.
+#
+# ## Say why, especially when you require nothing
+#
+# `requires: {}` is the one predicate that can never be observed to be wrong. A
+# gate that requires a fact can be seen going dark on a stack that lacks it; a
+# gate that requires nothing is wired everywhere and looks correct by
+# construction. So an empty predicate is exactly where a stated reason carries
+# the most weight, and where its absence is least visible.
+#
+# `project-builds` is the model. Its `ecosystem: [node]` reads as a violation of
+# the rule above, and the comment is what lets a reader tell a deliberate
+# exception from a mistake **without opening the grader**. Every row should be
+# legible that way.
+#
+# Rows marked `# unreviewed` have no stated reason yet. That marker is not a
+# claim the row is wrong — it is the gap made visible, and it should be replaced
+# by the owner's actual reason rather than by a plausible-sounding one. A
+# fabricated justification is worse than a blank, because it converts an open
+# question into a settled one.
+#
+# ## Spelling: prefer `{ not: [...] }` over an allow-list
+#
+# When a row means "this fact must be *something*", write the deny-list. An
+# allow-list over an enum is a maintenance liability every time: it is correct on
+# the day it is written and silently unwires its gate the day a value is added to
+# the enum — and a gate wired nowhere reads as a clean run.
+#
+# This is not a style preference. Two sessions independently produced the same
+# failure — a gate quietly not running — from opposite causes: one required a
+# fact whose absence did not mean absence of a question, the other required the
+# right fact spelled in a way that decays. **A construct that is correct only
+# when someone remembers to choose it will eventually not be chosen**, so the
+# safe form is the default and the allow-list is for when you genuinely mean an
+# enumerated subset (`frontend: [spa]` does; `datastore: [postgres, cosmos, blob,
+# queue]` did not).
+#
+# ## `args:`
+#
+# Flags derived from the same facts, using the same predicate language. This is
+# not decoration — `--require-health` has existed on `validate-runtime-health`
+# since it was written and **nothing has ever passed it**, so the gate has never
+# been able to fail for a missing health endpoint. Deriving it from the stack is
+# what makes the flag mean something.
+
+schemaVersion: 1
+
+# The closed set of phase names. A gate naming anything else is a typo, and a
+# typo here silently unwires a gate — the failure that reads as a clean run.
+phases: [plan, scaffold, local]
+
+gates:
+  # --- plan phase ---------------------------------------------------------
+  # These grade the artifacts every project produces, whatever it is built from,
+  # so they carry no requirements at all.
+  - id: requirements
+    grader: evals/graders/validate-requirements.ts
+    summary: .azure/requirements.json satisfies the requirements contract
+    phases: [plan]
+    requires: {}
+    args:
+      - value: --assert-no-frontend
+        when: { project.frontend: [none] }
+      - value: --assert-no-datastore
+        when: { project.datastore: [none] }
+      - value: --assert-cosmosdb
+        when: { project.datastore: [cosmos] }
+      - value: --assert-blob-storage
+        when: { project.datastore: [blob] }
+
+  - id: project-plan
+    grader: evals/graders/validate-project-plan.ts
+    summary: .azure/project-plan.md satisfies the plan contract
+    phases: [plan]
+    requires: {}
+
+  - id: webview-parseable
+    grader: evals/graders/validate-webview-parseable.ts
+    summary: the plan the agent wrote is renderable by the plan webview
+    phases: [plan]
+    requires: {}
+
+  - id: no-scaffold
+    grader: evals/graders/validate-no-scaffold.ts
+    summary: the agent did not scaffold before the plan was approved
+    phases: [plan]
+    requires: {}
+
+  - id: debug-gate
+    grader: evals/graders/validate-debug-gate.ts
+    summary: the approval gate at the end of planning behaved
+    phases: [plan]
+    requires: {}
+
+  # --- scaffold phase -----------------------------------------------------
+  - id: frontend-scaffold
+    grader: evals/graders/validate-frontend-scaffold.ts
+    summary: the generated frontend is preview-embeddable and has an API seam
+    phases: [scaffold]
+    # A project with no frontend has nothing here to grade. This single line is
+    # what unwires the gate, and it is checkable against the prompt by anyone.
+    requires:
+      project.frontend: [spa]
+
+  - id: project-builds
+    grader: evals/graders/validate-project-builds.ts
+    summary: the generated project installs and builds
+    phases: [scaffold]
+    # The one place `ecosystem` appears, and it is NOT the two-tier rule above —
+    # it is a third case worth naming. This grader runs the real package manager,
+    # so it cannot read a Python project at all: wiring it there would make it
+    # exit 1 with "no package.json anywhere", **blaming the agent for a project
+    # the grader cannot parse**. A fabricated product failure is worse than a
+    # missing one, so the gate is unwired and the derivation reports it in words
+    # as a coverage gap in the gate rather than a property of the project.
+    #
+    # The remedy is a Python build grader, not a flag.
+    requires:
+      ecosystem: [node]
+    args:
+      - value: --require-frontend
+        when: { project.frontend: [spa] }
+
+  - id: service-fidelity
+    grader: evals/graders/validate-service-fidelity.ts
+    summary: the scaffold contains the services the plan promised, and only those
+    phases: [scaffold]
+    # No ecosystem requirement on purpose. A Go project has a real "did you build
+    # what you planned?" question; the analyser not understanding Go is a gap to
+    # close, so the gate stays wired and the stack declares it.
+    requires: {}
+
+  - id: datastore-fidelity
+    grader: evals/graders/validate-datastore-fidelity.ts
+    summary: the datastore the scaffold wires is the one the plan chose
+    phases: [scaffold]
+    # A project with no datastore has nothing to compare. Absence, not inability.
+    #
+    # Spelled as a deny-list, not as the four kinds that are not `none`. The
+    # reasoning was always "not none"; the allow-list spelling silently unwires
+    # this gate the day someone adds a datastore kind, which fails in the
+    # invisible direction. Same defect as the `runtime-crud` row below had, from
+    # the opposite cause: that one required a fact whose absence did not mean
+    # absence of a question, this one required the right fact spelled in a way
+    # that decays.
+    requires:
+      project.datastore: { not: [none] }
+
+  - id: integration-plan
+    grader: evals/graders/validate-integration-plan.ts
+    summary: .azure/integration-plan.md hands off correctly
+    phases: [scaffold]
+    # Every project the flow scaffolds is contracted to produce this artifact — it
+    # is the hand-off between the scaffold and local-dev phases, written whatever
+    # the ecosystem, hosting or datastore. There is no project shape that
+    # legitimately omits it, so no fact's absence leaves this gate nothing to read.
+    # Verified against the grader: every issue code it emits is structural, and the
+    # `func start` / `npm start` mentions are format examples, not ecosystem checks.
+    requires: {}
+    args:
+      - value: --has-frontend
+        when: { project.frontend: [spa] }
+      # `[none]` rather than `{ not: [...] }`, and that is deliberate: this flag
+      # names the one value that relaxes the gate, so a new datastore kind must not
+      # be added to it. The deny-list is right for "must be something"; an
+      # allow-list is right for "is exactly this".
+      - value: --no-datastore
+        when: { project.datastore: [none] }
+
+  # --- local-dev phase ----------------------------------------------------
+  - id: debug-plan
+    grader: evals/graders/validate-debug-plan.ts
+    summary: .azure/vscode-debug-plan.md satisfies the debug-plan contract
+    phases: [local]
+    # unreviewed: no stated reason for requiring nothing. Not a claim that the row
+    # is wrong — a claim that nobody has written down why it is right, which is
+    # indistinguishable from nobody having considered it.
+    requires: {}
+
+  - id: debug-config
+    grader: evals/graders/validate-debug-config.ts
+    summary: .vscode/launch.json and tasks.json are structurally sound
+    phases: [local]
+    # unreviewed: no stated reason for requiring nothing. Not a claim that the row
+    # is wrong — a claim that nobody has written down why it is right, which is
+    # indistinguishable from nobody having considered it.
+    requires: {}
+
+  - id: debug-artifacts
+    grader: evals/graders/validate-debug-artifacts.ts
+    summary: the generated workspace matches the plan that specified it
+    phases: [local]
+    # unreviewed: no stated reason for requiring nothing. Not a claim that the row
+    # is wrong — a claim that nobody has written down why it is right, which is
+    # indistinguishable from nobody having considered it.
+    requires: {}
+
+  - id: debug-breakpoint
+    grader: evals/graders/validate-debug-breakpoint.ts
+    summary: a real breakpoint is hit under the generated launch configuration
+    phases: [local]
+    # unreviewed: no stated reason for requiring nothing. Not a claim that the row
+    # is wrong — a claim that nobody has written down why it is right, which is
+    # indistinguishable from nobody having considered it.
+    requires: {}
+
+  - id: runtime-app-starts
+    grader: evals/graders/validate-runtime-app-starts.ts
+    summary: the application actually starts
+    phases: [local]
+    # Every stack produces something that should start, so there is nothing to
+    # require. Where it cannot be started — no `func`, an ecosystem the harness
+    # does not drive — the stack declares a knownGap and this stays red.
+    requires: {}
+
+  - id: runtime-health
+    grader: evals/graders/validate-runtime-health.ts
+    summary: the health endpoint answers
+    phases: [local]
+    # The declaration that closes a real hole, from the wiring side. The gate
+    # probes seven conventional paths and, on a total miss, reported
+    # `noHealthPathDeclared` classed **outOfScope** — so an agent that shipped no
+    # health endpoint was not failed for it. #1728 fixes the classification at
+    # source (and found the deeper bug: discovery never read the integration
+    # plan, where the scaffold agent is contracted to declare the path).
+    #
+    # This is the other half. `--require-health` has existed on the grader since
+    # it was written and **nothing has ever passed it**, so a capability that
+    # existed only in its own documentation now gets passed by stacks that
+    # contracted for a health endpoint.
+    #
+    # `requires:` is `api: http`, **not** `healthPath: present`. Requiring the
+    # declaration made this gate wireable only where a health path existed to be
+    # probed — the case it passes — and silent on a stack that declared none,
+    # which is where a missing health endpoint would actually be caught. The
+    # declaration still makes the gate *stricter* via `--require-health` below.
+    requires:
+      project.api: [http]
+    args:
+      - value: --require-health
+        when: { project.healthPath: present }
+
+  - id: runtime-frontend
+    grader: evals/graders/validate-runtime-frontend.ts
+    summary: the browser receives a document
+    phases: [local]
+    requires:
+      project.frontend: [spa]
+    args:
+      - value: --require-frontend
+        when: { project.frontend: [spa] }
+
+  - id: runtime-frontend-api
+    grader: evals/graders/validate-runtime-frontend-api.ts
+    summary: the two halves of the app talk to each other
+    phases: [local]
+    # Needs both halves to exist before there is anything to observe between them.
+    requires:
+      project.frontend: [spa]
+      project.api: [http]
+
+  - id: runtime-crud
+    grader: evals/graders/validate-runtime-crud.ts
+    summary: a record can be written and read back
+    phases: [local]
+    # Same correction as `runtime-health`. A stack that declares no
+    # `collectionRoute` still has CRUD to check — the gate extracts the endpoint
+    # from the served frontend, and #1730 made a failure to read it a visible
+    # exit 3 rather than a silent stand-down. Requiring the declaration threw
+    # that away on every stack that did not opt in.
+    #
+    # A datastore is deliberately NOT required, and this was very nearly changed to
+    # `{ not: [none] }` on the reasoning that `datastore: none` has nothing to
+    # persist to. Checking the grader first showed the opposite: it stands down
+    # only when a *container-requiring* datastore package is present (`pg`,
+    # `mongodb`, `redis`, …), because there is no Docker to run a server. A
+    # project storing in memory is the one shape where this gate can currently go
+    # green at all.
+    #
+    # So requiring a datastore would unwire the gate on precisely the stack where
+    # it works — the same failure this row was already corrected for once, and the
+    # reason the audit question is "why does this row demand what it demands?"
+    # rather than "does this row look reasonable?".
+    requires:
+      project.api: [http]
