@@ -1,9 +1,9 @@
 # Copilot on Rails Grader Certification
 
 - Mode: `offline`
-- Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`
+- Fixtures: `sample-agent-output`, `reference-node-fullstack`, `reference-node-multiservice`, `reference-python-api`, `reference-dotnet-api`, `reference-go-unsupported`, `api-only-no-datastore`
 - Outcome: **PASSED**
-- Cases: 84/84 passed
+- Cases: 86/86 passed
 
 | Case | Fixture | Validator | Expected | Actual | Result |
 |---|---|---|---|---|---|
@@ -34,6 +34,7 @@
 | `integration-plan-no-seed-rule-as-table-row` | `sample-agent-output` | `integration-plan` | `passed` | `passed` | PASS |
 | `integration-plan-port-inside-run-command` | `sample-agent-output` | `integration-plan` | `passed` | `passed` | PASS |
 | `integration-plan-missing-backend-port` | `sample-agent-output` | `integration-plan` | `missingBackendPort` | `missingBackendPort` | PASS |
+| `integration-plan-database-section-dropped` | `sample-agent-output` | `integration-plan` | `missingDatabase` | `missingDatabase` | PASS |
 | `golden-debug-plan` | `reference-node-fullstack` | `debug-plan` | `passed` | `passed` | PASS |
 | `golden-debug-config` | `reference-node-fullstack` | `debug-config` | `passed` | `passed` | PASS |
 | `golden-debug-artifacts` | `reference-node-fullstack` | `debug-artifacts` | `passed` | `passed` | PASS |
@@ -91,4 +92,5 @@
 | `fidelity-orm-owns-the-driver-dotnet` | `reference-dotnet-api` | `datastore-fidelity` | `passed` | `passed` | PASS |
 | `golden-service-fidelity` | `reference-go-unsupported` | `service-fidelity` | `ecosystemNotSupported` | `ecosystemNotSupported` | PASS |
 | `golden-datastore-fidelity` | `reference-go-unsupported` | `datastore-fidelity` | `ecosystemNotSupported` | `ecosystemNotSupported` | PASS |
+| `golden-integration-plan` | `api-only-no-datastore` | `integration-plan` | `passed` | `passed` | PASS |
 

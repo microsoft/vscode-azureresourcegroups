@@ -226,6 +226,7 @@ const OFFLINE_VALIDATORS: Record<
     'integration-plan': async (workspace, scenario) =>
         validateIntegrationPlanArtifact(await readArtifact(workspace, '.azure/integration-plan.md'), {
             hasFrontend: (scenario.tags.frontend ?? 'none') !== 'none',
+            hasDatastore: (scenario.tags.database ?? 'none') !== 'none',
         }),
     'plan-gate': async (workspace, scenario) => {
         const azure = path.join(workspace, '.azure');
