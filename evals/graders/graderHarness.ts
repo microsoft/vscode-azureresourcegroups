@@ -50,23 +50,34 @@ export const EXIT_GRADER_ERROR = 3;
 export const NOT_APPLICABLE_EXIT_CODE = EXIT_GRADER_ERROR;
 
 /**
- * What kind of gap a not-applicable verdict describes. The two demand opposite responses, so
- * a verdict in the wrong bucket sends whoever reads the run in the wrong direction.
+ * What kind of gap a not-applicable verdict describes. `class=` answers exactly one
+ * question — **is this gate dead weight, or a hole worth closing?** — because that is the
+ * question that changes what someone does about it. The test for a new reason code is: does
+ * this get fixed by *unwiring the gate*, or by *closing a hole*?
  *
  * - `outOfScope` — the scenario has nothing for this gate to test. Under exit 3 an
  *   `outOfScope` red is a complaint about the **wiring**: this gate should not be attached
- *   to this stack, and the fix is in configuration.
- * - `environmentGap` — the gate would apply, but a prerequisite is missing (a tool the
- *   machine lacks, an analyser nobody has written yet). An `environmentGap` red is a true
+ *   to this stack, and the fix is in configuration. This must stay reachable — a gate that
+ *   is out of scope on every stack we run should be deleted, and saying so is half the point
+ *   of measuring gate health at all.
+ * - `coverageGap` — the gate applies here and could not run. A `coverageGap` red is a true
  *   statement that we are not testing something we claim to test, and is *correct* to stay
  *   red until it is fixed.
+ *
+ * `coverageGap` deliberately does not say *who* closes the gap. Its predecessor was called
+ * `environmentGap`, which implied the machine was at fault; for a missing analyser the fix
+ * is unwritten code in this repository, so whoever triaged the red would go inspect the
+ * container, find nothing wrong, and conclude the marker was broken. A name that sends the
+ * reader to the wrong place suppresses its own investigation. The owner — install a binary
+ * versus write an analyser — is a difference of backlog, and `reason=` already carries it as
+ * a closed, groupable vocabulary.
  *
  * Note what is deliberately absent: "we tried and it did not work" is neither of these. That
  * is a product failure and must exit 1. A reason code that quietly means "the thing was
  * supposed to work and did not" makes a real bug self-suppressing, and files it under "no
  * scenario ever exercised this" — which is the most expensive way to lose a defect.
  */
-export type NotApplicableClass = 'outOfScope' | 'environmentGap';
+export type NotApplicableClass = 'outOfScope' | 'coverageGap';
 
 /** Raised for a bad artifact — anything else thrown is treated as a harness fault. */
 export class ProductFailure extends Error { }
@@ -193,8 +204,8 @@ function exitForError(name: string, error: unknown): never {
     if (error instanceof NotApplicable) {
         console.error(`NOT_APPLICABLE gate=${error.gate} class=${error.classification} reason=${error.reason} detail="${error.detail.replace(/"/g, "'")}"`);
         console.error(`SKIP: gate=${error.gate} — ${name} did not apply here.`);
-        console.error(error.classification === 'environmentGap'
-            ? '  This gate applies to this project but could not run, so we are not testing something we claim to test.'
+        console.error(error.classification === 'coverageGap'
+            ? '  This gate applies here but could not run, so we are not testing something we claim to test. This is a gap to close, not a gate to unwire.'
             : '  This project has nothing for this gate to test, which is a question about how the gate is wired.');
         // Under exit 3 a human reads this on a red run, and the expensive mistake is
         // concluding the red says something about the agent's output. It says nothing.

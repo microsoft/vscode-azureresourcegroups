@@ -22,7 +22,7 @@ import { failWithIssues, gateId, readArtifact, runGraderAsync, skipAsNotApplicab
  * in a shared registry so adding a fidelity reason never collides with another gate family
  * doing the same thing — but still a table, so a code cannot reach the marker unclassified.
  */
-const FIDELITY_NOT_APPLICABLE = { ecosystemNotSupported: 'environmentGap' } as const;
+const FIDELITY_NOT_APPLICABLE = { ecosystemNotSupported: 'coverageGap' } as const;
 
 void runGraderAsync('scaffolded services match the ones the plan declared', async () => {
     const planMarkdown = readArtifact('.azure/project-plan.md');

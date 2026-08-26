@@ -57,12 +57,12 @@ export type DatastoreFamily =
  * wrong", mapped to the class each implies. The grader turns these into a not-applicable
  * verdict; they must never be reported as a product failure.
  *
- * `environmentGap` rather than `outOfScope`: a Go project is not a scenario with nothing to
+ * `coverageGap` rather than `outOfScope`: a Go project is not a scenario with nothing to
  * test, it is one we are failing to test. The remedy is "write the analyser", not "unwire
  * the gate", and the class is what tells those apart.
  */
-export const DATASTORE_NOT_APPLICABLE_CODES: Record<string, 'outOfScope' | 'environmentGap'> = {
-    ecosystemNotSupported: 'environmentGap',
+export const DATASTORE_NOT_APPLICABLE_CODES: Record<string, 'outOfScope' | 'coverageGap'> = {
+    ecosystemNotSupported: 'coverageGap',
 };
 
 interface FamilySignature {
@@ -210,7 +210,7 @@ export async function validateDatastoreFidelity(
         // harness's gap reported as the agent's fault. See serviceFidelity for the same rule.
         const languages = [...new Set(tree.unsupported.map(entry => entry.language))].join(', ');
         return createValidationResult([issue('ecosystemNotSupported', tree.unsupported[0].file,
-            `The tree contains ${languages} manifests, which no dependency analyser covers yet.`)]);
+            `This gate has no dependency analyser for ${languages} yet, so it cannot tell whether the planned datastore was wired. The fix is unwritten code in evals/src/artifacts/datastoreFidelity.ts, not a missing tool on this machine.`)]);
     }
 
     if (!plan.resourcesTableRecognised) {

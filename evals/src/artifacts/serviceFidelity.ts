@@ -143,7 +143,7 @@ function describeUnanalysableTree(tree: ScaffoldTree): ArtifactValidationIssue |
     }
     const languages = [...new Set(tree.unsupported.map(entry => entry.language))].join(', ');
     return issue('ecosystemNotSupported', tree.unsupported[0].file,
-        `The tree contains ${languages} manifests, which no analyser covers yet; the rest of the tree cannot be graded without them.`);
+        `This gate has no analyser for ${languages} yet, so it cannot see that part of the tree and will not guess about the rest. The fix is unwritten code in evals/src/artifacts/scaffoldTree.ts, not a missing tool on this machine.`);
 }
 
 /**
